@@ -14,7 +14,7 @@ object Main {
     println()
     println("List of Arguments")
     println("=================")
-    List.range(0, args.length) zip args map {case (i,x) => "Argument #" + i + ": " + x} foreach println
+    args.zipWithIndex map (_.swap) map { case (i, x) => "Argument #" + i + ": " + x} foreach println
 
 
     println()
