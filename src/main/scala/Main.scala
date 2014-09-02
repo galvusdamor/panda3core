@@ -1,11 +1,13 @@
 /**
- * Created by gregor on 02.09.14.
+ * Main object of PANDA 3
+ *
+ * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 object Main {
 
   def main(args: Array[String]) {
 
-    println("Hello World")
+    println("PANDA3 says \"Hello World!\".")
 
     args map {x => "Argument : " + x} foreach println
 
