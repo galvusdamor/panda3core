@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3
 
+import de.uniulm.ki.panda3.plan.implementation.EfficientPlan
+
 /**
  * Main object of PANDA 3
  *
@@ -17,7 +19,10 @@ object Main {
     args.zipWithIndex map (_.swap) map { case (i, x) => "Argument #" + i + ": " + x} foreach println
 
 
-    println()
+    val plan = new EfficientPlan()
+
+
+    println(plan.planSteps()(0).id)
     println()
     println("EXITING PANDA3")
   }
