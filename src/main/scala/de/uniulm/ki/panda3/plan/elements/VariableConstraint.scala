@@ -1,8 +1,8 @@
 package de.uniulm.ki.panda3.plan.elements
 
 /**
- * Created by gregor on 17.09.14.
+ * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-class VariableConstraint {
+trait VariableConstraint {
 
 }

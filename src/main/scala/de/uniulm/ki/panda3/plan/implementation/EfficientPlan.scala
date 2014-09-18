@@ -8,9 +8,8 @@ import de.uniulm.ki.panda3.plan.elements.{CausalLink, OrderingConstraint, PlanSt
  */
 class EfficientPlan extends Plan {
 
-
   override def planSteps(): Array[PlanStep] = {
-    val x: Array[PlanStep] = Array(new PlanStep(55))
+    val x: Array[PlanStep] = Array()
     x
   }
 

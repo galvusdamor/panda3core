@@ -22,7 +22,7 @@ object Main {
     val plan = new EfficientPlan()
 
 
-    println(plan.planSteps()(0).id)
+    println(plan.planSteps()(0))
     println()
     println("EXITING PANDA3")
   }
