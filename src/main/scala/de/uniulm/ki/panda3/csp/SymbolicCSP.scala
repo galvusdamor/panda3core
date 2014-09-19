@@ -61,36 +61,35 @@ case class SymbolicCSP(variables : Set[Variable],
             case (Right(const1), Right(const2)) => if (const1 != const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
           }
       }
+  }
 
 
-    override def reducedDomainOf(v : Variable) : Iterable[Constant] = ???
+  override def reducedDomainOf(v : Variable) : Iterable[Constant] = ???
 
-    override def areCompatible(v1 : Variable, v2 : Variable) : Option[Boolean] = ???
+  override def areCompatible(v1 : Variable, v2 : Variable) : Option[Boolean] = ???
 
-    override def addConstraint(constraint : VariableConstraint) : CSP = ???
+  override def addConstraint(constraint : VariableConstraint) : CSP = ???
 
-    override def isSolvable : Option[Boolean] =
-    {
-      if (isPotentiallySolvable)
-        None
-      else Some(false)
-    }
+  override def isSolvable : Option[Boolean] = {
+    if (isPotentiallySolvable)
+      None
+    else Some(false)
+  }
 
-    /** computes the solution of this CSP, might be computationally expensive */
-    override def solution : Predef.Map[Variable, Constant] = ???
+  /** computes the solution of this CSP, might be computationally expensive */
+  override def solution : Predef.Map[Variable, Constant] = ???
 
-    /** returns best known unique representative for a given variable */
-    override def getRepresentative(v : Variable) : Either[Variable, Constant] =
-    {
-      unionFind(v) match {
-        case Right(c) => Right(c)
-        case Left(parent) =>
-          if (parent == v) Left(v)
-          else {
-            val representative = getRepresentative(parent)
-            unionFind(v) = representative
-            representative
-          }
-      }
+  /** returns best known unique representative for a given variable */
+  override def getRepresentative(v : Variable) : Either[Variable, Constant] = {
+    unionFind(v) match {
+      case Right(c) => Right(c)
+      case Left(parent) =>
+        if (parent == v) Left(v)
+        else {
+          val representative = getRepresentative(parent)
+          unionFind(v) = representative
+          representative
+        }
     }
   }
+}
