@@ -24,11 +24,13 @@ class SymbolicTaskOrdering(val originalOrderingConstraints: IndexedSeq[OrderingC
 
     // run floyd-warshall
     {
-      for (newEdge <- originalOrderingConstraints.length - lastKOrderingsAreNew to arrangement.length - 1) {
-        for (from <- 0 to arrangement.length - 1) for (to <- 0 to arrangement.length - 1) {
-
+        for {
+        newEdge <- originalOrderingConstraints.length - lastKOrderingsAreNew to arrangement.length - 1
+        from <- 0 to arrangement.length - 1
+        to <- 0 to arrangement.length - 1
+        }{
+            
         }
-      }
     }
 
     isTransitiveHullComputed = true
