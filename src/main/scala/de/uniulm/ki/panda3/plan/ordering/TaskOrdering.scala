@@ -10,4 +10,8 @@ import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
 trait TaskOrdering extends PartialOrdering[PlanStep] {
 
   def originalOrderingConstraints(): IndexedSeq[OrderingConstraint]
+
+  def isConsistent: Boolean
+
+  def addOrdering(x: PlanStep, y: PlanStep): TaskOrdering
 }

@@ -9,8 +9,8 @@ trait Task {
 
   val name: String
   val isPrimitive: Boolean
-  val parameterTypes: Array[Sort]
-  val preconditions: Array[Literal]
-  val effects: Array[Literal]
+  val parameterTypes: IndexedSeq[Sort]
+  val preconditions: IndexedSeq[Literal]
+  val effects: IndexedSeq[Literal]
 
 }
