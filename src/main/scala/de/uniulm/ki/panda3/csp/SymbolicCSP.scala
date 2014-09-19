@@ -1,20 +1,21 @@
 package de.uniulm.ki.panda3.csp
 
 import scala.collection.mutable
-import scala.collection.mutable._
 
+
+//TODO rename object
 
 /**
  *
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class SymbolicCSP(override val variables : Set[Variable],
-                       override val constraints : Set[VariableConstraint]) extends CSP {
+case class SymbolicCSP(variables : Set[Variable],
+                       constraints : Set[VariableConstraint]) extends CSP {
 
   private var unequal : mutable.Set[(Variable, Variable)] = new mutable.HashSet[(Variable, Variable)]()
 
-  private var remainingDomain : mutable.Map[Variable, mutable.Set[Object]] = new mutable.HashMap[Variable, Set[Object]]()
+  private var remainingDomain : mutable.Map[Variable, mutable.Set[Object]] = new mutable.HashMap[Variable, mutable.Set[Object]]()
 
   // contains the union-find for all variables
   // entry may also point to object if it known that they can only have this value
@@ -26,7 +27,7 @@ case class SymbolicCSP(override val variables : Set[Variable],
    */
   def initialiseExplicitly(lastKConstraintsAreNew : Int = constraints.size,
                            previousUnequal : mutable.Set[(Variable, Variable)] = new mutable.HashSet[(Variable, Variable)](),
-                           previousRemainingDomain : mutable.Map[Variable, mutable.Set[Object]] = new mutable.HashMap[Variable, Set[Object]](),
+                           previousRemainingDomain : mutable.Map[Variable, mutable.Set[Object]] = new mutable.HashMap[Variable, mutable.Set[Object]](),
                            previousUnionfind : mutable.Map[Variable, Either[Variable, Object]] = new mutable.HashMap[Variable, Either[Variable, Object]]()) : Unit = {
     // get really new copies of the previous data structures
     unequal = previousUnequal.clone()
