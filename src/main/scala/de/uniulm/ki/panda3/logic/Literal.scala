@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.plan.logic
+package de.uniulm.ki.panda3.logic
 
 /**
  * A simple literal in First Order Logic

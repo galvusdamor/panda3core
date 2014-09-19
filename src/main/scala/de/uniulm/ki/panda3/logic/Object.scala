@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.plan.logic
+package de.uniulm.ki.panda3.logic
 
 /**
  * An object of first order logic we use to represented states
