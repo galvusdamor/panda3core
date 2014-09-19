@@ -1,22 +1,26 @@
 package de.uniulm.ki.panda3.csp
 
-import de.uniulm.ki.panda3.logic.Sort
+import de.uniulm.ki.panda3.logic.{Constant, Sort}
 
 /**
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 trait VariableConstraint {
 
-  object ConstraintType extends Enumeration {
-    type ConstraintType = Value
-    val equal, unequal, ofSort, notOfSort = Value
+  def compileNotOfSort : Set[VariableConstraint] = {
+    this match {
+      case Equals(_, _) | NotEquals(_, _) | OfSort(_, _) => Set(this)
+      case NotOfSort(v, s) => s.elements.map(element => NotEquals(v, Right(element))).toSet[VariableConstraint]
+    }
   }
-
-  import ConstraintType._
-
-  val firstVariable: Variable
-  val constraintType: ConstraintType
-  val secondVariable: Option[Variable]
-  val sort: Option[Sort]
-
 }
+
+
+case class Equals(left : Variable, right : Either[Variable, Constant]) extends VariableConstraint {}
+
+case class NotEquals(left : Variable, right : Either[Variable, Constant]) extends VariableConstraint {}
+
+case class OfSort(left : Variable, right : Sort) extends VariableConstraint {}
+
+case class NotOfSort(left : Variable, right : Sort) extends VariableConstraint {}
+

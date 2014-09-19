@@ -5,6 +5,6 @@ package de.uniulm.ki.panda3.logic
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-class Object(val name: String) {
+class Constant(val name : String) {
 
 }

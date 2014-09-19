@@ -5,6 +5,6 @@ package de.uniulm.ki.panda3.logic
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-class Sort(val name: String, val elements: Array[Object]) {
+class Sort(val name : String, val elements : IndexedSeq[Constant]) {
 
 }
