@@ -15,19 +15,19 @@ import org.scalatest.FlatSpec
 class SymbolicOrderingTest extends FlatSpec {
 
 
-  def getPlanStep(i: Int): PlanStep = new PlanStep {
-    override val arguments: IndexedSeq[Variable] = Vector()
-    override val schema: Task = new Task {
-      override val parameterTypes: IndexedSeq[Sort] = Vector()
-      override val isPrimitive: Boolean = false
-      override val preconditions: IndexedSeq[Literal] = Vector()
-      override val name: String = ""
-      override val effects: IndexedSeq[Literal] = Vector()
+  def getPlanStep(i : Int) : PlanStep = new PlanStep {
+    override val arguments : IndexedSeq[Variable] = Vector()
+    override val schema : Task = new Task {
+      override val parameterTypes : IndexedSeq[Sort] = Vector()
+      override val isPrimitive : Boolean = false
+      override val preconditions : IndexedSeq[Literal] = Vector()
+      override val name : String = ""
+      override val effects : IndexedSeq[Literal] = Vector()
     }
-    override val id: Int = i
+    override val id : Int = i
   }
 
-  def getOrdering(i: Int, j: Int): OrderingConstraint = OrderingConstraint(getPlanStep(i), getPlanStep(j))
+  def getOrdering(i : Int, j : Int) : OrderingConstraint = OrderingConstraint(getPlanStep(i), getPlanStep(j))
 
   "Orderings inference" must "allow simple inference" in {
     // a dummy plan
@@ -51,6 +51,8 @@ class SymbolicOrderingTest extends FlatSpec {
     assert(order.lteq(getPlanStep(0), getPlanStep(5)))
     assert(order.lteq(getPlanStep(6), getPlanStep(4)))
     assert(order.lteq(getPlanStep(6), getPlanStep(7)))
+    assert(!order.lteq(getPlanStep(4), getPlanStep(5)))
+    assert(!order.lteq(getPlanStep(5), getPlanStep(1)))
     assert(order.tryCompare(getPlanStep(6), getPlanStep(1)) === None)
     assert(order.tryCompare(getPlanStep(5), getPlanStep(7)) === Some(1))
     assert(order.tryCompare(getPlanStep(6), getPlanStep(4)) === Some(-1))
@@ -61,9 +63,6 @@ class SymbolicOrderingTest extends FlatSpec {
   "Orderings update" must "allow incremntal calculations" in {
     // a dummy plan
     val order1 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), 3)
-
-    assert(order1.isConsistent)
-    assert(order1.lteq(getPlanStep(0), getPlanStep(2)))
 
     val order2 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7), 8)
     order2.initialiseExplicitly(5, 5, order1.arrangement())
