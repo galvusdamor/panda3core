@@ -1,8 +1,11 @@
 ///////////////// start SBT plugins for code style and coverage
 org.scalastyle.sbt.ScalastylePlugin.Settings
 
+// activate HMTL highlighting
+
 instrumentSettings
 
+ScoverageKeys.highlighting := true
 
 //// actual project
 
