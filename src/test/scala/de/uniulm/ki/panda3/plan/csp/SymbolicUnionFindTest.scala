@@ -49,10 +49,8 @@ class SymbolicUnionFindTest extends FlatSpec {
     assert(union.getRepresentative(Variable("v4", someSort)) == Right(Constant("a")))
 
     union.addVariable(Variable("v5", someSort))
-    assert(union.assertEqual(Variable("v1", someSort), Left(Variable("v5", someSort))))
-    assert(union.getRepresentative(Variable("v5", someSort)) == (union.getRepresentative(Variable("v1", someSort))))
-    assert(union.getRepresentative(Variable("v5", someSort)) == (union.getRepresentative(Variable("v2", someSort))))
-    assert(union.getRepresentative(Variable("v5", someSort)) == (union.getRepresentative(Variable("v3", someSort))))
+    assert(union.assertEqual(Variable("v4", someSort), Left(Variable("v5", someSort))))
+    assert(union.getRepresentative(Variable("v5", someSort)) == (union.getRepresentative(Variable("v4", someSort))))
   }
 
   it must "be uneqal" in {
@@ -81,7 +79,8 @@ class SymbolicUnionFindTest extends FlatSpec {
     // check whether it was the same ...
     assert(newUnion.getRepresentative(Variable("v2", someSort)) == newUnion.getRepresentative(Variable("v3", someSort)))
     assert(newUnion.getRepresentative(Variable("v1", someSort)) == newUnion.getRepresentative(Variable("v3", someSort)))
-    assert(newUnion.getRepresentative(Variable("v5", someSort)) == newUnion.getRepresentative(Variable("v3", someSort)))
+
+    assert(newUnion.getRepresentative(Variable("v5", someSort)) == newUnion.getRepresentative(Variable("v4", someSort)))
 
     assert(newUnion.getRepresentative(Variable("v1", someSort)) != newUnion.getRepresentative(Variable("v4", someSort)))
 
@@ -89,7 +88,7 @@ class SymbolicUnionFindTest extends FlatSpec {
     assert(newUnion.getRepresentative(Variable("v2", someSort)) == Right(Constant("b")))
     assert(newUnion.getRepresentative(Variable("v3", someSort)) == Right(Constant("b")))
     assert(newUnion.getRepresentative(Variable("v4", someSort)) == Right(Constant("a")))
-    assert(newUnion.getRepresentative(Variable("v5", someSort)) == Right(Constant("b")))
+    assert(newUnion.getRepresentative(Variable("v5", someSort)) == Right(Constant("a")))
 
   }
 }

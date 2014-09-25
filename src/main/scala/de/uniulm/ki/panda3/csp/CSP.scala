@@ -23,6 +23,8 @@ trait CSP {
   /** returns best known unique representative for a given variable */
   def getRepresentative(v : Variable) : Either[Variable, Constant]
 
+  def getRepresentative(vOrC : Either[Variable, Constant]) : Either[Variable, Constant]
+
   /** computes the solution of this CSP, might be computationally expensive */
   def solution : Map[Variable, Constant]
 

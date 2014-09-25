@@ -8,13 +8,13 @@ import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering._
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class SymbolicTaskOrdering(val originalOrderingConstraints: IndexedSeq[OrderingConstraint], val numberOfTasks: Int) extends TaskOrdering {
+case class SymbolicTaskOrdering(val originalOrderingConstraints : IndexedSeq[OrderingConstraint], val numberOfTasks : Int) extends TaskOrdering {
 
-  private var isTransitiveHullComputed: Boolean = false
-  private val innerArrangement: Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
+  private var isTransitiveHullComputed : Boolean = false
+  private val innerArrangement : Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
   private var computedInconsistent = false
 
-  def initialiseExplicitly(lastKOrderingsAreNew: Int = originalOrderingConstraints.length, lastKTasksAreNew: Int = numberOfTasks, prevArrangement: Array[Array[Byte]] = Array.ofDim(0, 0)): Unit = {
+  def initialiseExplicitly(lastKOrderingsAreNew : Int = originalOrderingConstraints.length, lastKTasksAreNew : Int = numberOfTasks, prevArrangement : Array[Array[Byte]] = Array.ofDim(0, 0)) : Unit = {
     // init the current arrangement with the old one
     Range(0, prevArrangement.length).foreach(i => prevArrangement(i).copyToArray(innerArrangement(i)))
     // update the arrangement
@@ -29,24 +29,24 @@ case class SymbolicTaskOrdering(val originalOrderingConstraints: IndexedSeq[Orde
       Range(numberOfTasks - lastKTasksAreNew, numberOfTasks).foreach(i => innerArrangement(i)(i) = SAME)
 
       // run floyd-warshall for new edges
-      for (newEdge <- originalOrderingConstraints.length - lastKOrderingsAreNew until originalOrderingConstraints.length ;
+      for (newEdge <- originalOrderingConstraints.length - lastKOrderingsAreNew until originalOrderingConstraints.length;
            from <- 0 until innerArrangement.length) {
-          val edgeTypeFromNew = innerArrangement(from)(originalOrderingConstraints(newEdge).before.id)
-          if (edgeTypeFromNew != DONTKNOW)
-            for (to <- 0 until innerArrangement.length) {
-              val edgeTypeNewTo = innerArrangement(originalOrderingConstraints(newEdge).after.id)(to)
-              (edgeTypeFromNew, edgeTypeNewTo) match {
-                case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) =>
-                  innerArrangement(from)(to) = BEFORE
-                  innerArrangement(to)(from) = AFTER
-                case (_, _) => ()
-              }
+        val edgeTypeFromNew = innerArrangement(from)(originalOrderingConstraints(newEdge).before.id)
+        if (edgeTypeFromNew != DONTKNOW)
+          for (to <- 0 until innerArrangement.length) {
+            val edgeTypeNewTo = innerArrangement(originalOrderingConstraints(newEdge).after.id)(to)
+            (edgeTypeFromNew, edgeTypeNewTo) match {
+              case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) =>
+                innerArrangement(from)(to) = BEFORE
+                innerArrangement(to)(from) = AFTER
+              case (_, _) => ()
             }
-        }
+          }
+      }
 
       // run floyd-warshall for new tasks
-      for (middle <- numberOfTasks - lastKTasksAreNew until numberOfTasks)
-        for (from <- 0 until innerArrangement.length) if (innerArrangement(from)(middle) != DONTKNOW) for (to <- 0 until innerArrangement.length)
+      for (middle <- numberOfTasks - lastKTasksAreNew until numberOfTasks; from <- 0 until innerArrangement.length)
+        if (innerArrangement(from)(middle) != DONTKNOW) for (to <- 0 until innerArrangement.length)
           (innerArrangement(from)(middle), innerArrangement(middle)(to)) match {
             case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME) => innerArrangement(from)(to) = AFTER
             case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) => innerArrangement(from)(to) = BEFORE
@@ -60,28 +60,28 @@ case class SymbolicTaskOrdering(val originalOrderingConstraints: IndexedSeq[Orde
     }
   }
 
-  def isConsistent: Boolean = {
+  def isConsistent : Boolean = {
     if (!isTransitiveHullComputed)
       initialiseExplicitly()
 
     !computedInconsistent
   }
 
-  def arrangement(): Array[Array[Byte]] = {
+  def arrangement() : Array[Array[Byte]] = {
     if (!isTransitiveHullComputed)
       initialiseExplicitly()
 
     innerArrangement
   }
 
-  override def tryCompare(x: PlanStep, y: PlanStep): Option[Int] = {
+  override def tryCompare(x : PlanStep, y : PlanStep) : Option[Int] = {
     arrangement()(x.id)(y.id) match {
       case DONTKNOW => None
       case i => Some(i)
     }
   }
 
-  override def lteq(x: PlanStep, y: PlanStep): Boolean = {
+  override def lteq(x : PlanStep, y : PlanStep) : Boolean = {
     tryCompare(x, y) match {
       case None => false
       case Some(BEFORE) => true
@@ -90,9 +90,9 @@ case class SymbolicTaskOrdering(val originalOrderingConstraints: IndexedSeq[Orde
   }
 
 
-  def addOrdering(x: PlanStep, y: PlanStep): SymbolicTaskOrdering = {
-    val newNumberOfVariables: Int = math.max(numberOfTasks, math.max(x.id + 1, y.id + 1))
-    val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints :+ OrderingConstraint(x, y), newNumberOfVariables)
+  def addOrdering(x : PlanStep, y : PlanStep) : SymbolicTaskOrdering = {
+    val newNumberOfVariables : Int = math.max(numberOfTasks, math.max(x.id + 1, y.id + 1))
+    val newOrdering : SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints :+ OrderingConstraint(x, y), newNumberOfVariables)
 
     // if this ordering was already initialised let the new one know what we did so far
     if (isTransitiveHullComputed)
@@ -105,8 +105,8 @@ case class SymbolicTaskOrdering(val originalOrderingConstraints: IndexedSeq[Orde
 
 
 object SymbolicTaskOrdering {
-  private val AFTER: Byte = 1
-  private val BEFORE: Byte = -1
-  private val SAME: Byte = 0
-  private val DONTKNOW: Byte = 2
+  private val AFTER : Byte = 1
+  private val BEFORE : Byte = -1
+  private val SAME : Byte = 0
+  private val DONTKNOW : Byte = 2
 }
