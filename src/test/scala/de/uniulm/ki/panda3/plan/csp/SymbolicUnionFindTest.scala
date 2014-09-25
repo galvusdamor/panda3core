@@ -47,6 +47,12 @@ class SymbolicUnionFindTest extends FlatSpec {
     assert(union.assertEqual(Variable("v4", someSort), Right(Constant("a"))))
 
     assert(union.getRepresentative(Variable("v4", someSort)) == Right(Constant("a")))
+
+    union.addVariable(Variable("v5", someSort))
+    assert(union.assertEqual(Variable("v1", someSort), Left(Variable("v5", someSort))))
+    assert(union.getRepresentative(Variable("v5", someSort)) == (union.getRepresentative(Variable("v1", someSort))))
+    assert(union.getRepresentative(Variable("v5", someSort)) == (union.getRepresentative(Variable("v2", someSort))))
+    assert(union.getRepresentative(Variable("v5", someSort)) == (union.getRepresentative(Variable("v3", someSort))))
   }
 
   it must "be uneqal" in {
@@ -55,7 +61,9 @@ class SymbolicUnionFindTest extends FlatSpec {
 
 
     assert(union.assertEqual(Variable("v2", someSort), Right(Constant("b"))))
+    assert(union.getRepresentative(Variable("v1", someSort)) == Right(Constant("b")))
     assert(union.getRepresentative(Variable("v2", someSort)) == Right(Constant("b")))
+    assert(union.getRepresentative(Variable("v3", someSort)) == Right(Constant("b")))
   }
 
   "Equal Constants" must "be equal" in {
@@ -64,5 +72,24 @@ class SymbolicUnionFindTest extends FlatSpec {
 
   "Unequal Constants" must "be equal" in {
     assert(!union.assertEqual(Variable("v3", someSort), Right(Constant("a"))))
+  }
+
+  "UnionFinds" must "be clonable" in {
+    val newUnion = new SymbolicUnionFind
+    newUnion.cloneFrom(union)
+
+    // check whether it was the same ...
+    assert(newUnion.getRepresentative(Variable("v2", someSort)) == newUnion.getRepresentative(Variable("v3", someSort)))
+    assert(newUnion.getRepresentative(Variable("v1", someSort)) == newUnion.getRepresentative(Variable("v3", someSort)))
+    assert(newUnion.getRepresentative(Variable("v5", someSort)) == newUnion.getRepresentative(Variable("v3", someSort)))
+
+    assert(newUnion.getRepresentative(Variable("v1", someSort)) != newUnion.getRepresentative(Variable("v4", someSort)))
+
+    assert(newUnion.getRepresentative(Variable("v1", someSort)) == Right(Constant("b")))
+    assert(newUnion.getRepresentative(Variable("v2", someSort)) == Right(Constant("b")))
+    assert(newUnion.getRepresentative(Variable("v3", someSort)) == Right(Constant("b")))
+    assert(newUnion.getRepresentative(Variable("v4", someSort)) == Right(Constant("a")))
+    assert(newUnion.getRepresentative(Variable("v5", someSort)) == Right(Constant("b")))
+
   }
 }
