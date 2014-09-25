@@ -3,10 +3,10 @@ package de.uniulm.ki.panda3.csp
 import de.uniulm.ki.panda3.logic.Constant
 
 import scala.collection.mutable
-
+import scala.util.Right
 
 /**
- *
+ * Implementation of a symbolic CSP used as a part of a plan
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
@@ -18,9 +18,7 @@ case class SymbolicCSP(variables : Set[Variable],
   // this is only kept for the top elements of the union-find
   private var remainingDomain : mutable.Map[Variable, mutable.Set[Constant]] = new mutable.HashMap[Variable, mutable.Set[Constant]]()
 
-  // contains the union-find for all variables
-  // entry may also point to Constant if it known that they can only have this value
-  private var unionFind : mutable.Map[Variable, Either[Variable, Constant]] = new mutable.HashMap[Variable, Either[Variable, Constant]]()
+  private val unionFind : SymbolicUnionFind = new SymbolicUnionFind
 
   private var isPotentiallySolvable = true
 
@@ -30,11 +28,11 @@ case class SymbolicCSP(variables : Set[Variable],
   def initialiseExplicitly(lastKConstraintsAreNew : Int = constraints.size,
                            previousUnequal : mutable.Set[(Variable, Variable)] = new mutable.HashSet[(Variable, Variable)](),
                            previousRemainingDomain : mutable.Map[Variable, mutable.Set[Constant]] = new mutable.HashMap[Variable, mutable.Set[Constant]](),
-                           previousUnionFind : mutable.Map[Variable, Either[Variable, Constant]] = new mutable.HashMap[Variable, Either[Variable, Constant]]()) : Unit = {
+                           previousUnionFind : SymbolicUnionFind = new SymbolicUnionFind) : Unit = {
     // get really new copies of the previous data structures
     unequal = previousUnequal.clone()
     remainingDomain = previousRemainingDomain.clone()
-    unionFind = previousUnionFind.clone()
+    unionFind cloneFrom previousUnionFind
 
     // add all new constraints
     for (originalConstraint <- constraints.drop(constraints.size - lastKConstraintsAreNew);
@@ -80,16 +78,5 @@ case class SymbolicCSP(variables : Set[Variable],
   override def solution : Predef.Map[Variable, Constant] = ???
 
   /** returns best known unique representative for a given variable */
-  override def getRepresentative(v : Variable) : Either[Variable, Constant] = {
-    unionFind(v) match {
-      case Right(c) => Right(c)
-      case Left(parent) =>
-        if (parent == v) Left(v)
-        else {
-          val representative = getRepresentative(parent)
-          unionFind(v) = representative
-          representative
-        }
-    }
-  }
+  override def getRepresentative(v : Variable) : Either[Variable, Constant] = ???
 }
