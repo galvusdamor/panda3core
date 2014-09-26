@@ -11,7 +11,7 @@ import scala.util.{Left, Right}
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 case class SymbolicCSP(variables : Set[Variable],
-                       constraints : Set[VariableConstraint]) extends CSP {
+                       constraints : List[VariableConstraint]) extends CSP {
 
   private var unequal : mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]]()
   // this is only kept for the top elements of the union-find
@@ -157,19 +157,25 @@ case class SymbolicCSP(variables : Set[Variable],
 
   override def reducedDomainOf(v : Variable) : Iterable[Constant] = {
     if (!isReductionComputed) initialiseExplicitly()
-    getRepresentative(v) match {
-      case Left(variable) => remainingDomain(variable)
-      case Right(constant) => Vector() :+ constant
-    }
+    if (isPotentiallySolvable)
+      getRepresentative(v) match {
+        case Left(variable) => remainingDomain(variable)
+        case Right(constant) => Vector() :+ constant
+      }
+    else
+      Vector()
   }
 
   override def areCompatible(v1 : Variable, v2 : Variable) : Option[Boolean] = {
     if (!isReductionComputed) initialiseExplicitly()
-    (getRepresentative(v1), getRepresentative(v2)) match {
-      case (Right(c1), Right(c2)) => if (c1 == c2) Some(true) else Some(false)
-      case (Left(v1), Left(v2)) => if (v1 == v2) Some(true) else None
-      case _ => None // possibly, but we are not sure
-    }
+    if (isPotentiallySolvable)
+      (getRepresentative(v1), getRepresentative(v2)) match {
+        case (Right(c1), Right(c2)) => if (c1 == c2) Some(true) else Some(false)
+        case (Left(v1), Left(v2)) => if (v1 == v2) Some(true) else None
+        case _ => None // possibly, but we are not sure
+      }
+    else
+      Option(false)
   }
 
   override def addConstraint(constraint : VariableConstraint) : CSP = {
@@ -182,7 +188,7 @@ case class SymbolicCSP(variables : Set[Variable],
       case NotOfSort(v, _) => Set(v)
     }) -- variables
 
-    val newCSP = SymbolicCSP(variables ++ newVariables, constraints + constraint)
+    val newCSP = SymbolicCSP(variables ++ newVariables, constraints :+ constraint)
 
     if (isReductionComputed)
       newCSP.initialiseExplicitly(unequal, remainingDomain, unionFind, 1, newVariables)
@@ -198,9 +204,34 @@ case class SymbolicCSP(variables : Set[Variable],
     else Some(false)
   }
 
-  // TODO: add a real implementation
   /** computes the solution of this CSP, might be computationally expensive */
-  override def solution : Predef.Map[Variable, Constant] = Map()
+  override def solution : Option[Map[Variable, Constant]] = {
+    // returns partial solution
+    def searchSolution(remainingDomain : Map[Variable, Set[Constant]]) : Option[Map[Variable, Constant]] = {
+      if (remainingDomain.isEmpty) Some(Map())
+      else {
+        val resolutionVariable : (Variable, Set[Constant]) = remainingDomain.last // this will not fail, since the map is not empty
+        val domainsWithout_1 : Map[Variable, Set[Constant]] = remainingDomain - resolutionVariable._1 // remove variable
+        if (resolutionVariable._2.isEmpty) None
+        else {
+          resolutionVariable._2.foldLeft[Option[Map[Variable, Constant]]](None)({ case (ret@Some(_), _) => ret;
+          case (None, const) => // try assigning _1 == const
+            searchSolution(domainsWithout_1.map({ case (other, values) => if (unequal(resolutionVariable._1).contains(other)) other -> (values - const) else other -> values})) match {
+              case Some(partialSolution) => Some(partialSolution + (resolutionVariable._1 -> const))
+              case _ => None
+            }
+          })
+        }
+      }
+    }
+
+    if (!isReductionComputed) initialiseExplicitly()
+
+    if (!isPotentiallySolvable)
+      None
+    else
+      searchSolution((remainingDomain map { case (variable, viableConstants) => variable -> viableConstants.toSet}).toMap)
+  }
 
   /** returns best known unique representative for a given variable */
   override def getRepresentative(v : Variable) : Either[Variable, Constant] = {
