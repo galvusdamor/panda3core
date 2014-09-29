@@ -13,6 +13,7 @@ class SymbolicCSPTest extends FlatSpec {
 
   val sort1 : Sort = Sort("sort1", Vector() :+ Constant("a") :+ Constant("b"))
   val sort1sub1 : Sort = Sort("sort1sub1", Vector() :+ Constant("a"))
+  val sort1sub2 : Sort = Sort("sort1sub1", Vector() :+ Constant("b"))
   val sort2 : Sort = Sort("sort2", Vector() :+ Constant("x") :+ Constant("y") :+ Constant("z"))
   val sort2sub1 : Sort = Sort("sort1sub1", Vector() :+ Constant("x"))
   val sort2sub2 : Sort = Sort("sort1sub1", Vector() :+ Constant("y") :+ Constant("z"))
@@ -59,7 +60,14 @@ class SymbolicCSPTest extends FlatSpec {
 
   it must "support detect unsolvable situations" in {
     val csp1 : SymbolicCSP = SymbolicCSP(Set(v3, v4), NotEquals(v3, Left(v4)) :: Equals(v3, Right(Constant("x"))) :: Equals(v4, Right(Constant("x"))) :: Nil)
+    assert(csp1.areCompatible(v3, v4) == Some(false))
     assert(csp1.isSolvable == Some(false))
+
+    val csp2 : SymbolicCSP = SymbolicCSP(Set(v1), Equals(v1, Right(Constant("a"))) :: OfSort(v1, sort1sub2) :: Nil)
+    assert(csp2.isSolvable == Some(false))
+
+    val csp3 : SymbolicCSP = SymbolicCSP(Set(v1, v2), Equals(v1, Right(Constant("a"))) :: Equals(v2, Right(Constant("b"))) :: Equals(v1, Left(v2)) :: Nil)
+    assert(csp3.isSolvable == Some(false))
   }
 
   it must "support detect unsolvable situations in advanced" in {
@@ -78,6 +86,10 @@ class SymbolicCSPTest extends FlatSpec {
     assert(csp1.reducedDomainOf(v3).forall(x => x == Constant("y") || x == Constant("z")))
     assert(csp1.reducedDomainOf(v3).exists(x => x == Constant("y")))
     assert(csp1.reducedDomainOf(v3).exists(x => x == Constant("z")))
+
+    val csp2 : SymbolicCSP = SymbolicCSP(Set(v1), Equals(v1, Right(Constant("a"))) :: OfSort(v1, sort1sub1) :: Nil)
+    assert(csp2.isSolvable != Some(false))
+    assert(csp2.getRepresentative(v1) == Right(Constant("a")))
   }
 
   it must "support NotOfSort and infer" in {
@@ -88,6 +100,8 @@ class SymbolicCSPTest extends FlatSpec {
     assert(csp1.reducedDomainOf(v3).forall(x => x == Constant("y") || x == Constant("z")))
     assert(csp1.reducedDomainOf(v3).exists(x => x == Constant("y")))
     assert(csp1.reducedDomainOf(v3).exists(x => x == Constant("z")))
+    assert(csp1.reducedDomainOf(v2).size == 1)
+    assert(csp1.reducedDomainOf(v2).exists(_ == Constant("a")))
     assert(csp1.getRepresentative(v4) == Right(Constant("x")))
   }
 
