@@ -18,10 +18,10 @@ case class SymbolicPlan(planSteps : Seq[PlanStep],
                         variableConstraints : SymbolicCSP) extends Plan {
 
   /** list of all causal threads in this plan */
-  override def causalThreads : Seq[CausalThread] = Nil
+  override lazy val causalThreads : Seq[CausalThread] = Nil
 
   /** list fo all open preconditions in this plan */
-  override def openPreconditions : Seq[OpenPrecondition] = allPreconditions() filterNot {
+  override lazy val openPreconditions : Seq[OpenPrecondition] = allPreconditions filterNot {
     case (ps, literal) => causalLinks exists { case CausalLink(_, consumer, condition) => (consumer =?= ps)(variableConstraints) && (condition =?= literal)(variableConstraints)}
   } map { case (ps, literal) => OpenPrecondition(ps, literal)}
 
@@ -32,6 +32,6 @@ case class SymbolicPlan(planSteps : Seq[PlanStep],
   // =================== Local Helper ==================== //
 
   /** list containing all preconditions in this plan */
-  def allPreconditions() : Seq[(PlanStep, Literal)] = (planSteps map { ps => ps.substitutedPreconditions map { prec => (ps, prec)}}).flatten
+  lazy val allPreconditions : Seq[(PlanStep, Literal)] = (planSteps map { ps => ps.substitutedPreconditions map { prec => (ps, prec)}}).flatten
 
 }
