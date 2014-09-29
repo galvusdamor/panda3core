@@ -11,15 +11,18 @@ import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
  */
 class EfficientPlan extends Plan {
 
-  override def planSteps(): IndexedSeq[PlanStep] = ???
+  override def planSteps() : IndexedSeq[PlanStep] = ???
 
-  override def causalLinks(): IndexedSeq[CausalLink] = ???
+  override def causalLinks() : IndexedSeq[CausalLink] = ???
 
-  override def orderingConstraints(): TaskOrdering = ???
+  override def orderingConstraints() : TaskOrdering = ???
 
-  override def variableConstraints(): CSP = ???
+  override def variableConstraints() : CSP = ???
 
-  override def causalThreads: IndexedSeq[CausalThread] = ???
+  override def causalThreads : IndexedSeq[CausalThread] = ???
 
-  override def openPreconditions: IndexedSeq[OpenPrecondition] = ???
+  override def openPreconditions : IndexedSeq[OpenPrecondition] = ???
+
+  /** returns (if possible), whether this plan can be refined into a solution or not */
+  override def isSolvable : Option[Boolean] = ???
 }

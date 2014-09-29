@@ -8,7 +8,7 @@ import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering._
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class SymbolicTaskOrdering(val originalOrderingConstraints : IndexedSeq[OrderingConstraint], val numberOfTasks : Int) extends TaskOrdering {
+case class SymbolicTaskOrdering(originalOrderingConstraints : Seq[OrderingConstraint], numberOfTasks : Int) extends TaskOrdering {
 
   private var isTransitiveHullComputed : Boolean = false
   private val innerArrangement : Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)

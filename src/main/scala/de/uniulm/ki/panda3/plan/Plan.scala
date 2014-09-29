@@ -10,19 +10,24 @@ import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
  */
 trait Plan {
 
-  def planSteps: IndexedSeq[PlanStep]
+  def planSteps : Seq[PlanStep]
 
-  def causalLinks: IndexedSeq[CausalLink]
+  def causalLinks : Seq[CausalLink]
 
   def orderingConstraints: TaskOrdering
 
   def variableConstraints: CSP
 
 
-  def causalThreads: IndexedSeq[CausalThread]
+  /** list of all causal threads in this plan */
+  def causalThreads : Seq[CausalThread]
 
-  def openPreconditions: IndexedSeq[OpenPrecondition]
+  /** list fo all open preconditions in this plan */
+  def openPreconditions : Seq[OpenPrecondition]
 
+  /** list of all flaws in this plan */
+  def flaws : Seq[Flaw] = causalThreads ++ openPreconditions
 
-  def flaws: IndexedSeq[Flaw] = causalThreads ++ openPreconditions
+  /** returns (if possible), whether this plan can be refined into a solution or not */
+  def isSolvable : Option[Boolean]
 }

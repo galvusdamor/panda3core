@@ -11,18 +11,20 @@ import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 class DummyPlan extends Plan {
-  override def planSteps: IndexedSeq[PlanStep] = ???
+  override def planSteps : IndexedSeq[PlanStep] = ???
 
-  override def variableConstraints: CSP = ???
+  override def variableConstraints : CSP = ???
 
-  override def openPreconditions: IndexedSeq[OpenPrecondition] = ???
+  override def openPreconditions : IndexedSeq[OpenPrecondition] = ???
 
-  override def causalLinks: IndexedSeq[CausalLink] = ???
+  override def causalLinks : IndexedSeq[CausalLink] = ???
 
-  override def causalThreads: IndexedSeq[CausalThread] = ???
+  override def causalThreads : IndexedSeq[CausalThread] = ???
 
-  override def orderingConstraints: TaskOrdering = ???
+  override def orderingConstraints : TaskOrdering = ???
 
+  /** returns (if possible), whether this plan can be refined into a solution or not */
+  override def isSolvable : Option[Boolean] = ???
 }
 
 object DummyPlan extends DummyPlan {

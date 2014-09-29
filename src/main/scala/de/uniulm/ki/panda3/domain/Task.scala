@@ -1,16 +1,11 @@
 package de.uniulm.ki.panda3.domain
 
-import de.uniulm.ki.panda3.logic.{Literal, Sort}
+import de.uniulm.ki.panda3.csp.Variable
+import de.uniulm.ki.panda3.logic.Literal
 
 /**
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait Task {
-
-  val name: String
-  val isPrimitive: Boolean
-  val parameterTypes: IndexedSeq[Sort]
-  val preconditions: IndexedSeq[Literal]
-  val effects: IndexedSeq[Literal]
+case class Task(name : String, isPrimitive : Boolean, parameters : Seq[Variable], preconditions : Seq[Literal], effects : Seq[Literal]) {
 
 }

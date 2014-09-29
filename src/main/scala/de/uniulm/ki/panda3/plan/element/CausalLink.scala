@@ -7,9 +7,5 @@ import de.uniulm.ki.panda3.logic.Literal
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait CausalLink {
-  val producer: PlanStep
-  val consumer: PlanStep
-
-  val condition: Literal
+case class CausalLink(producer : PlanStep, consumer : PlanStep, condition : Literal) {
 }

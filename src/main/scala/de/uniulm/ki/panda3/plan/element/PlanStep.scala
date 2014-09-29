@@ -1,16 +1,29 @@
 package de.uniulm.ki.panda3.plan.element
 
-import de.uniulm.ki.panda3.csp.Variable
+import de.uniulm.ki.panda3.csp.{CSP, Variable}
 import de.uniulm.ki.panda3.domain.Task
+import de.uniulm.ki.panda3.logic.Literal
 
 /**
  *
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait PlanStep {
-  // the unique id of this planstep inside a plan
-  val id: Int
-  val schema: Task
-  val arguments: IndexedSeq[Variable]
+case class PlanStep(id : Int, schema : Task, arguments : Seq[Variable]) {
+
+  def substitute(literals : Seq[Literal]) = literals map {
+    case Literal(predicate, isInverted, parameterVariables) =>
+      Literal(predicate, isInverted, parameterVariables map { schemaParameter => arguments(schema.parameters.indexOf(schemaParameter))})
+  }
+
+  /** check whether two literals are identical given a CSP */
+  def =?=(that : PlanStep)(csp : CSP) = this.schema == that.schema &&
+    ((this.arguments zip that.arguments) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2)})
+
+
+  /** returns a version of the preconditions */
+  lazy val substitutedPreconditions : Seq[Literal] = substitute(schema.preconditions)
+
+  /** returns a version of the effects */
+  lazy val substitutedEffects : Seq[Literal] = substitute(schema.effects)
 }

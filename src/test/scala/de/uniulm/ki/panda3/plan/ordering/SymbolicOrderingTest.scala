@@ -1,8 +1,6 @@
 package de.uniulm.ki.panda3.plan.ordering
 
-import de.uniulm.ki.panda3.csp.Variable
 import de.uniulm.ki.panda3.domain.Task
-import de.uniulm.ki.panda3.logic.{Literal, Sort}
 import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
 import org.scalatest.FlatSpec
 
@@ -15,17 +13,7 @@ import org.scalatest.FlatSpec
 class SymbolicOrderingTest extends FlatSpec {
 
 
-  def getPlanStep(i : Int) : PlanStep = new PlanStep {
-    override val arguments : IndexedSeq[Variable] = Vector()
-    override val schema : Task = new Task {
-      override val parameterTypes : IndexedSeq[Sort] = Vector()
-      override val isPrimitive : Boolean = false
-      override val preconditions : IndexedSeq[Literal] = Vector()
-      override val name : String = ""
-      override val effects : IndexedSeq[Literal] = Vector()
-    }
-    override val id : Int = i
-  }
+  def getPlanStep(i : Int) : PlanStep = PlanStep(i, Task("", false, Vector(), Vector(), Vector()), Vector())
 
   def getOrdering(i : Int, j : Int) : OrderingConstraint = OrderingConstraint(getPlanStep(i), getPlanStep(j))
 
