@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.csp
 
 import de.uniulm.ki.panda3.logic.{Constant, Sort}
 
+import scala.collection.immutable.HashSet
 import scala.collection.mutable
 import scala.util.{Left, Right}
 
@@ -192,6 +193,15 @@ case class SymbolicCSP(variables : Set[Variable],
 
     if (isReductionComputed)
       newCSP.initialiseExplicitly(unequal, remainingDomain, unionFind, 1, newVariables)
+
+    newCSP
+  }
+
+  override def addVariable(variable : Variable) = {
+    val newCSP = SymbolicCSP(variables + variable, constraints)
+
+    if (isReductionComputed)
+      newCSP.initialiseExplicitly(unequal, remainingDomain, unionFind, 1, HashSet())
 
     newCSP
   }

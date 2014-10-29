@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.csp.SymbolicCSP
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
-import de.uniulm.ki.panda3.plan.flaw.{CausalThread, OpenPrecondition}
+import de.uniulm.ki.panda3.plan.flaw.OpenPrecondition
 import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering
 
 /**
@@ -17,8 +17,16 @@ case class SymbolicPlan(planSteps : Seq[PlanStep],
                         orderingConstraints : SymbolicTaskOrdering,
                         variableConstraints : SymbolicCSP) extends Plan {
 
+  // TODO : add the given causal links to the symbolic task ordering ....
+
+
   /** list of all causal threads in this plan */
-  override lazy val causalThreads : Seq[CausalThread] = Nil
+  // Seq[CausalThread]
+  override lazy val causalThreads = Nil
+  //(causalLinks map { case CausalLink(producer,consumer,literal) => planSteps map {
+  // ps =>
+  //        val
+  //  }}).flatten
 
   /** list fo all open preconditions in this plan */
   override lazy val openPreconditions : Seq[OpenPrecondition] = allPreconditions filterNot {

@@ -16,14 +16,15 @@ case class PlanStep(id : Int, schema : Task, arguments : Seq[Variable]) {
       Literal(predicate, isInverted, parameterVariables map { schemaParameter => arguments(schema.parameters.indexOf(schemaParameter))})
   }
 
-  /** check whether two literals are identical given a CSP */
-  def =?=(that : PlanStep)(csp : CSP) = this.schema == that.schema &&
-    ((this.arguments zip that.arguments) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2)})
-
-
   /** returns a version of the preconditions */
   lazy val substitutedPreconditions : Seq[Literal] = substitute(schema.preconditions)
 
   /** returns a version of the effects */
   lazy val substitutedEffects : Seq[Literal] = substitute(schema.effects)
+
+  /** check whether two literals are identical given a CSP */
+  def =?=(that : PlanStep)(csp : CSP) = this.schema == that.schema &&
+    ((this.arguments zip that.arguments) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2)})
+
+  //def matchingLiteral(target : Literal, )
 }
