@@ -26,5 +26,4 @@ case class PlanStep(id : Int, schema : Task, arguments : Seq[Variable]) {
   def =?=(that : PlanStep)(csp : CSP) = this.schema == that.schema &&
     ((this.arguments zip that.arguments) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2)})
 
-  //def matchingLiteral(target : Literal, )
 }

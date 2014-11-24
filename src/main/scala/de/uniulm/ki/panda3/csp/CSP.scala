@@ -43,6 +43,8 @@ trait CSP {
 
   def addConstraint(constraint : VariableConstraint) : CSP
 
+  def addConstraints(constraints : Seq[VariableConstraint]) : CSP = (constraints foldLeft this)({ case (c, vc) => c.addConstraint(vc)})
+
   /** adds a variable without adding any constraints for it */
   def addVariable(variable : Variable) : CSP
 }

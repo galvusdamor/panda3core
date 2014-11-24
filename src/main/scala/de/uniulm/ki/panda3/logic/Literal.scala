@@ -26,18 +26,13 @@ case class Literal(predicate : Predicate, isInverted : Boolean, parameterVariabl
       (this.parameterVariables zip that.parameterVariables).foldLeft((csp, Vector[VariableConstraint]()))(
       {
         case ((currentCSP, unification), (v1, v2)) =>
-          if (currentCSP.isSolvable != Some(false) || csp.getRepresentative(v1) == csp.getRepresentative(v2)) (currentCSP, unification)
+          if (currentCSP.isSolvable == Some(false) || csp.getRepresentative(v1) == csp.getRepresentative(v2)) (currentCSP, unification)
           else if (currentCSP.areCompatible(v1, v2) == Option(false)) (UnsolvableCSP, Vector())
           else (currentCSP.addConstraint(Equals(v1, Left(v2))), unification :+ Equals(v1, Left(v2)))
       })
-
+    // if the resulting CSP is not solvable any more, the two literals aren't unifiable
     if (result._1.isSolvable != Some(false))
       Some(result._2)
     else None
   }
-
-
-  //    &&
-  //    ((this.parameterVariables zip that.parameterVariables) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2)})
-
 }

@@ -1,6 +1,5 @@
-package de.uniulm.ki.panda3.plan.csp
+package de.uniulm.ki.panda3.csp
 
-import de.uniulm.ki.panda3.csp._
 import de.uniulm.ki.panda3.logic.{Constant, Sort}
 import org.scalatest.FlatSpec
 
