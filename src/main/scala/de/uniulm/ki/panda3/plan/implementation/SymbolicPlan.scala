@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.csp.SymbolicCSP
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
-import de.uniulm.ki.panda3.plan.flaw.OpenPrecondition
+import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition}
 import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering
 
 /**
@@ -22,11 +22,10 @@ case class SymbolicPlan(planSteps : Seq[PlanStep],
 
   /** list of all causal threads in this plan */
   // Seq[CausalThread]
-  override lazy val causalThreads = Nil
-  //(causalLinks map { case CausalLink(producer,consumer,literal) => planSteps map {
-  // ps =>
-  //        val
-  //  }}).flatten
+  override lazy val causalThreads : Seq[CausalThreat] =
+    (for (causalLink@CausalLink(producer, consumer, literal) <- causalLinks; planStep <- planSteps; effect <- planStep.substitutedEffects) yield
+      ((effect #?# literal)(variableConstraints), CausalThreat(causalLink, planStep, effect))) collect { case (Some(_), x) => x}
+
 
   /** list fo all open preconditions in this plan */
   override lazy val openPreconditions : Seq[OpenPrecondition] = allPreconditions filterNot {

@@ -11,16 +11,16 @@ import de.uniulm.ki.panda3.logic.Literal
  */
 case class PlanStep(id : Int, schema : Task, arguments : Seq[Variable]) {
 
-  def substitute(literals : Seq[Literal]) = literals map {
+  def substitute(literal : Literal) : Literal = {
     case Literal(predicate, isInverted, parameterVariables) =>
       Literal(predicate, isInverted, parameterVariables map { schemaParameter => arguments(schema.parameters.indexOf(schemaParameter))})
   }
 
   /** returns a version of the preconditions */
-  lazy val substitutedPreconditions : Seq[Literal] = substitute(schema.preconditions)
+  lazy val substitutedPreconditions : Seq[Literal] = schema.preconditions map substitute
 
   /** returns a version of the effects */
-  lazy val substitutedEffects : Seq[Literal] = substitute(schema.effects)
+  lazy val substitutedEffects : Seq[Literal] = schema.effects map substitute
 
   /** check whether two literals are identical given a CSP */
   def =?=(that : PlanStep)(csp : CSP) = this.schema == that.schema &&

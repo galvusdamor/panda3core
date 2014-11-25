@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.plan.implementation
 import de.uniulm.ki.panda3.csp.CSP
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
-import de.uniulm.ki.panda3.plan.flaw.{CausalThread, OpenPrecondition}
+import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition}
 import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
 
 /**
@@ -19,7 +19,7 @@ class EfficientPlan extends Plan {
 
   override def variableConstraints() : CSP = ???
 
-  override def causalThreads : IndexedSeq[CausalThread] = ???
+  override def causalThreads : IndexedSeq[CausalThreat] = ???
 
   override def openPreconditions : IndexedSeq[OpenPrecondition] = ???
 

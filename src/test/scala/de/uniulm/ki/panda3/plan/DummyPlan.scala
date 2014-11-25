@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.CSP
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
-import de.uniulm.ki.panda3.plan.flaw.{CausalThread, OpenPrecondition}
+import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition}
 import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
 
 /**
@@ -19,7 +19,7 @@ class DummyPlan extends Plan {
 
   override def causalLinks : IndexedSeq[CausalLink] = ???
 
-  override def causalThreads : IndexedSeq[CausalThread] = ???
+  override def causalThreads : IndexedSeq[CausalThreat] = ???
 
   override def orderingConstraints : TaskOrdering = ???
 

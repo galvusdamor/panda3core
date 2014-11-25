@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.CSP
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
-import de.uniulm.ki.panda3.plan.flaw.{CausalThread, Flaw, OpenPrecondition}
+import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, Flaw, OpenPrecondition}
 import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
 
 /**
@@ -20,7 +20,7 @@ trait Plan {
 
 
   /** list of all causal threads in this plan */
-  def causalThreads : Seq[CausalThread]
+  def causalThreads : Seq[CausalThreat]
 
   /** list fo all open preconditions in this plan */
   def openPreconditions : Seq[OpenPrecondition]
