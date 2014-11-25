@@ -9,6 +9,9 @@ import de.uniulm.ki.panda3.csp._
  */
 case class Literal(predicate : Predicate, isInverted : Boolean, parameterVariables : Seq[Variable]) extends Formula {
 
+  /** negated version of the literal */
+  lazy val negate : Literal = Literal(predicate, !isInverted, parameterVariables)
+
   /** check whether two literals are identical given a CSP */
   def =?=(that : Literal)(csp : CSP) : Boolean = this.predicate == that.predicate && this.isInverted == that.isInverted &&
     ((this.parameterVariables zip that.parameterVariables) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2)})

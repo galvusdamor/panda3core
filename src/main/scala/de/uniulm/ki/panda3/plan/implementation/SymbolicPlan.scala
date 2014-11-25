@@ -17,14 +17,14 @@ case class SymbolicPlan(planSteps : Seq[PlanStep],
                         orderingConstraints : SymbolicTaskOrdering,
                         variableConstraints : SymbolicCSP) extends Plan {
 
-  // TODO : add the given causal links to the symbolic task ordering ....
-
-
   /** list of all causal threads in this plan */
-  // Seq[CausalThread]
-  override lazy val causalThreads : Seq[CausalThreat] =
-    (for (causalLink@CausalLink(producer, consumer, literal) <- causalLinks; planStep <- planSteps; effect <- planStep.substitutedEffects) yield
-      ((effect #?# literal)(variableConstraints), CausalThreat(causalLink, planStep, effect))) collect { case (Some(_), x) => x}
+  lazy val causalThreads : Seq[CausalThreat] =
+    for (causalLink@CausalLink(producer, consumer, literal) <- causalLinks; planStep <- planSteps
+         if (planStep != producer && planStep != consumer && !orderingConstraints.lt(planStep, producer) && !orderingConstraints.gt(planStep, consumer));
+         effect <- planStep.substitutedEffects
+         if ((effect #?# literal.negate)(variableConstraints) != None)
+    ) yield
+      CausalThreat(causalLink, planStep, effect)
 
 
   /** list fo all open preconditions in this plan */
@@ -39,6 +39,5 @@ case class SymbolicPlan(planSteps : Seq[PlanStep],
   // =================== Local Helper ==================== //
 
   /** list containing all preconditions in this plan */
-  lazy val allPreconditions : Seq[(PlanStep, Literal)] = (planSteps map { ps => ps.substitutedPreconditions map { prec => (ps, prec)}}).flatten
-
+  lazy val allPreconditions : Seq[(PlanStep, Literal)] = planSteps flatMap { ps => ps.substitutedPreconditions map { prec => (ps, prec)}}
 }

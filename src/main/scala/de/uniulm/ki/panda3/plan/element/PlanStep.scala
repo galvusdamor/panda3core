@@ -11,7 +11,7 @@ import de.uniulm.ki.panda3.logic.Literal
  */
 case class PlanStep(id : Int, schema : Task, arguments : Seq[Variable]) {
 
-  def substitute(literal : Literal) : Literal = {
+  def substitute(literal : Literal) : Literal = literal match {
     case Literal(predicate, isInverted, parameterVariables) =>
       Literal(predicate, isInverted, parameterVariables map { schemaParameter => arguments(schema.parameters.indexOf(schemaParameter))})
   }
