@@ -15,10 +15,10 @@ class SymbolicUnionFind {
   // contains the union-find for all variables
   // entry may also point to Constant if it known that they can only have this value
   // if the entry points to itself, then this is a top element
-  private var unionFind : mutable.Map[Variable, Either[Variable, Constant]] = new mutable.HashMap[Variable, Either[Variable, Constant]]()
+  private var unionFind: mutable.Map[Variable, Either[Variable, Constant]] = new mutable.HashMap[Variable, Either[Variable, Constant]]()
 
   /** returns best known unique representative for a given variable */
-  def getRepresentative(v : Variable) : Either[Variable, Constant] = {
+  def getRepresentative(v: Variable): Either[Variable, Constant] = {
     unionFind(v) match {
       case Right(c) => Right(c)
       case Left(parent) =>
@@ -32,10 +32,10 @@ class SymbolicUnionFind {
   }
 
   /** Make the two arguments equal in the union-find */
-  def assertEqual(v1 : Variable, v2 : Either[Variable, Constant]) : Boolean = {
+  def assertEqual(v1: Variable, v2: Either[Variable, Constant]): Boolean = {
     // obtains representatives
-    val v1_representative : Either[Variable, Constant] = getRepresentative(v1)
-    val v2_representative : Either[Variable, Constant] = v2 match {
+    val v1_representative: Either[Variable, Constant] = getRepresentative(v1)
+    val v2_representative: Either[Variable, Constant] = v2 match {
       case Left(variable) => getRepresentative(variable)
       case Right(constant) => Right(constant)
     }
@@ -53,11 +53,11 @@ class SymbolicUnionFind {
   }
 
   /** add a new variable to the union find */
-  def addVariable(v : Variable) : Unit = {
+  def addVariable(v: Variable): Unit = {
     unionFind(v) = Left(v)
   }
 
-  def cloneFrom(from : SymbolicUnionFind) = {
+  def cloneFrom(from: SymbolicUnionFind) = {
     unionFind = from.unionFind.clone()
   }
 }

@@ -6,6 +6,6 @@ import de.uniulm.ki.panda3.logic.Literal
 /**
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class Task(name : String, isPrimitive : Boolean, parameters : Seq[Variable], preconditions : Seq[Literal], effects : Seq[Literal]) {
+case class Task(name: String, isPrimitive: Boolean, parameters: Seq[Variable], preconditions: Seq[Literal], effects: Seq[Literal]) {
 
 }

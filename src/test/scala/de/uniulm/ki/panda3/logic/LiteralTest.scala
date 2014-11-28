@@ -27,7 +27,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Checking equality" must "be possible" in {
-    val csp : CSP = SymbolicCSP(HashSet(v1, v2, v3, v4, v5), Nil)
+    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4, v5), Nil)
 
     val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
     val l2 : Literal = Literal(p1, true, v1 :: v1 :: Nil)
@@ -42,7 +42,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Checking equality" must "be possible using constraings" in {
-    val csp : CSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, Left(v2)))
+    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, Left(v2)))
 
     val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
     val l2 : Literal = Literal(p1, false, v1 :: v1 :: Nil)
@@ -59,7 +59,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Unification" must "be possible" in {
-    val csp : CSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, Left(v2)))
+    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, Left(v2)))
 
     val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
     val l3 : Literal = Literal(p1, false, v1 :: v3 :: Nil)

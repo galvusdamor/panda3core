@@ -8,6 +8,6 @@ import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class CausalThreat(link : CausalLink, planStep : PlanStep, effect : Literal) extends Flaw {
+case class CausalThreat(link: CausalLink, planStep: PlanStep, effect: Literal) extends Flaw {
 
 }

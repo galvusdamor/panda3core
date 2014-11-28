@@ -108,7 +108,7 @@ class SymbolicCSPTest extends FlatSpec {
     val csp1 : SymbolicCSP = SymbolicCSP(Set(v1), Nil)
     assert(csp1.isSolvable != Some(false))
 
-    val csp2 : CSP = csp1.addConstraint(Equals(v1, Left(v2)))
+    val csp2 : SymbolicCSP = csp1.addConstraint(Equals(v1, Left(v2)))
     assert(csp2.isSolvable != Some(false))
     assert(csp2.getRepresentative(v1) == csp2.getRepresentative(v2))
     assert(csp2.reducedDomainOf(v1).forall(x => x == Constant("a") || x == Constant("b")))
@@ -161,7 +161,7 @@ class SymbolicCSPTest extends FlatSpec {
   }
 
   "Finding solutions" must "work" in {
-    val csp1 : CSP = SymbolicCSP(Set(), Nil).addConstraint(NotEquals(v1, Left(v2)))
+    val csp1 : SymbolicCSP = SymbolicCSP(Set(), Nil).addConstraint(NotEquals(v1, Left(v2)))
 
     assert(csp1.isSolvable != Some(false))
     csp1.solution match {

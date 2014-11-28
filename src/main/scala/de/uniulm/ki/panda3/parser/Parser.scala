@@ -9,6 +9,6 @@ import de.uniulm.ki.panda3.domain.Domain
  */
 trait Parser {
 
-  def parseFromFile(filename : String) : Domain
+  def parseFromFile(filename: String): Domain
 
 }
