@@ -1,8 +1,7 @@
-package de.uniulm.ki.panda3.plan.implementation
+package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.SymbolicCSP
 import de.uniulm.ki.panda3.logic.Literal
-import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition}
 import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering
