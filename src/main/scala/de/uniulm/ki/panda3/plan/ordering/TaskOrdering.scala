@@ -13,5 +13,7 @@ trait TaskOrdering extends PartialOrdering[PlanStep] {
 
   def isConsistent : Boolean
 
-  def addOrdering(x : PlanStep, y : PlanStep) : TaskOrdering
+  def addOrdering(ordering : OrderingConstraint) : TaskOrdering = addOrdering(ordering.before, ordering.after)
+
+  def addOrdering(before : PlanStep, after : PlanStep) : TaskOrdering
 }

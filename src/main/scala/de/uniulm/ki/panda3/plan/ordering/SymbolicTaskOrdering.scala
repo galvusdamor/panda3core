@@ -90,9 +90,9 @@ case class SymbolicTaskOrdering(originalOrderingConstraints : Seq[OrderingConstr
   }
 
 
-  def addOrdering(x : PlanStep, y : PlanStep) : SymbolicTaskOrdering = {
-    val newNumberOfVariables : Int = math.max(numberOfTasks, math.max(x.id + 1, y.id + 1))
-    val newOrdering : SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints :+ OrderingConstraint(x, y), newNumberOfVariables)
+  def addOrdering(before : PlanStep, after : PlanStep) : SymbolicTaskOrdering = {
+    val newNumberOfVariables : Int = math.max(numberOfTasks, math.max(before.id + 1, after.id + 1))
+    val newOrdering : SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints :+ OrderingConstraint(before, after), newNumberOfVariables)
 
     // if this ordering was already initialised let the new one know what we did so far
     if (isTransitiveHullComputed)

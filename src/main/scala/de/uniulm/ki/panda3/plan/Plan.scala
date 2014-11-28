@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.plan
 import de.uniulm.ki.panda3.csp.CSP
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, Flaw, OpenPrecondition}
+import de.uniulm.ki.panda3.plan.modification.Modification
 import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
 
 /**
@@ -10,13 +11,14 @@ import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
  */
 trait Plan {
 
+  /** Main members describing a plan */
   def planSteps : Seq[PlanStep]
 
   def causalLinks : Seq[CausalLink]
 
-  def orderingConstraints: TaskOrdering
+  def orderingConstraints : TaskOrdering
 
-  def variableConstraints: CSP
+  def variableConstraints : CSP
 
 
   /** list of all causal threads in this plan */
@@ -30,4 +32,7 @@ trait Plan {
 
   /** returns (if possible), whether this plan can be refined into a solution or not */
   def isSolvable : Option[Boolean]
+
+
+  def apply(modification : Modification) : Plan;
 }

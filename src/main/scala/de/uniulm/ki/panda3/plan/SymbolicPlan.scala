@@ -2,8 +2,9 @@ package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.SymbolicCSP
 import de.uniulm.ki.panda3.logic.Literal
-import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
+import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition}
+import de.uniulm.ki.panda3.plan.modification.Modification
 import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering
 
 /**
@@ -19,9 +20,9 @@ case class SymbolicPlan(planSteps : Seq[PlanStep],
   /** list of all causal threads in this plan */
   lazy val causalThreads : Seq[CausalThreat] =
     for (causalLink@CausalLink(producer, consumer, literal) <- causalLinks; planStep <- planSteps
-         if (planStep != producer && planStep != consumer && !orderingConstraints.lt(planStep, producer) && !orderingConstraints.gt(planStep, consumer));
+         if planStep != producer && planStep != consumer && !orderingConstraints.lt(planStep, producer) && !orderingConstraints.gt(planStep, consumer);
          effect <- planStep.substitutedEffects
-         if ((effect #?# literal.negate)(variableConstraints) != None)
+         if (effect #?# literal.negate)(variableConstraints) != None
     ) yield
       CausalThreat(causalLink, planStep, effect)
 
@@ -33,6 +34,21 @@ case class SymbolicPlan(planSteps : Seq[PlanStep],
 
   /** returns (if possible), whether this plan can be refined into a solution or not */
   override def isSolvable : Option[Boolean] = if (!orderingConstraints.isConsistent || variableConstraints.isSolvable == Some(false)) Some(false) else None
+
+
+  override def apply(modification : Modification) : SymbolicPlan = {
+    val newPlanSteps = (planSteps intersect (modification.removedPlanSteps)) union (modification.addedPlanSteps)
+    val newCausalLinks = (causalLinks intersect (modification.removedCausalLinks)) union (modification.addedCausalLinks)
+
+    if (modification.removedOrderingConstraints.size == 0)
+      (modification.addedOrderingConstraints foldLeft orderingConstraints) {case (ordering,constraint) => ordering.addOrdering(constraint)}
+    else SymbolicTaskOrdering()
+
+    val newOrderingConstraints = orderingConstraints;
+    val newVariableConstraints = variableConstraints;
+
+    SymbolicPlan(newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints)
+  }
 
 
   // =================== Local Helper ==================== //

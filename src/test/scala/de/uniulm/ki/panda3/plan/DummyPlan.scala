@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.plan
 import de.uniulm.ki.panda3.csp.CSP
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition}
+import de.uniulm.ki.panda3.plan.modification.Modification
 import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
 
 /**
@@ -25,6 +26,8 @@ class DummyPlan extends Plan {
 
   /** returns (if possible), whether this plan can be refined into a solution or not */
   override def isSolvable : Option[Boolean] = ???
+
+  override def apply(modification : Modification) = ???
 }
 
 object DummyPlan extends DummyPlan {
