@@ -8,3 +8,15 @@ import de.uniulm.ki.panda3.logic.Sort
 case class Variable(name: String, sort: Sort) {
 
 }
+
+object Variable {
+  private var globalVariableCounter = 42
+  private val generatedVariablePrefix = "generated_variable_#"
+
+  def newVariable(sort : Sort) : Variable = {
+    val v = Variable(generatedVariablePrefix + globalVariableCounter,sort)
+    globalVariableCounter = globalVariableCounter + 1
+
+    v
+  }
+}

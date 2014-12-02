@@ -66,4 +66,9 @@ case class SymbolicPlan(planSteps: Seq[PlanStep],
 
   /** list containing all preconditions in this plan */
   override lazy val allPreconditions: Seq[(PlanStep, Literal)] = planSteps flatMap { ps => ps.substitutedPreconditions map { prec => (ps, prec)}}
+
+
+  def getNewId() : Int = {
+    1 + (planSteps foldLeft  0) {case (m,ps : PlanStep) => math.max(m,ps.id)}
+  }
 }

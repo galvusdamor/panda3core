@@ -34,6 +34,4 @@ trait Modification {
   def removedOrderingConstraints: Seq[OrderingConstraint] = Nil
 
   def removedVariableConstraints: Seq[VariableConstraint] = Nil
-
-
 }

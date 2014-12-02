@@ -21,12 +21,12 @@ case class Literal(predicate: Predicate, isInverted: Boolean, parameterVariables
    * check whether two literals can be unified given a CSP
    * @return an option to the mgu, if None, there is no such unifier
    */
-  def #?#(that: Literal)(csp: CSP): Option[Seq[VariableConstraint]] = if (this.predicate != that.predicate || this.isInverted != that.isInverted)
+  def #?#(that: Literal)(csp: CSP): Option[Seq[Equals]] = if (this.predicate != that.predicate || this.isInverted != that.isInverted)
     None
   else {
     // try building a unification and test it
-    val result: (CSP, IndexedSeq[VariableConstraint]) =
-      (this.parameterVariables zip that.parameterVariables).foldLeft((csp, Vector[VariableConstraint]()))(
+    val result: (CSP, IndexedSeq[Equals]) =
+      (this.parameterVariables zip that.parameterVariables).foldLeft((csp, Vector[Equals]()))(
       {
         case ((currentCSP, unification), (v1, v2)) =>
           if (currentCSP.isSolvable == Some(false) || csp.getRepresentative(v1) == csp.getRepresentative(v2)) (currentCSP, unification)
