@@ -1,11 +1,11 @@
 package de.uniulm.ki.panda3.plan
 
-import de.uniulm.ki.panda3.csp.SymbolicCSP
+import de.uniulm.ki.panda3.csp.{CSP, SymbolicCSP}
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition}
 import de.uniulm.ki.panda3.plan.modification.Modification
-import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering
+import de.uniulm.ki.panda3.plan.ordering.{TaskOrdering, SymbolicTaskOrdering}
 
 /**
  * Simple implementation of a plan, based on symbols
@@ -14,11 +14,11 @@ import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering
 
 case class SymbolicPlan(planSteps: Seq[PlanStep],
                         causalLinks: Seq[CausalLink],
-                        orderingConstraints: SymbolicTaskOrdering,
-                        variableConstraints: SymbolicCSP) {
+                        orderingConstraints: TaskOrdering,
+                        variableConstraints: CSP) extends Plan {
 
   /** list of all causal threads in this plan */
-  lazy val causalThreads: Seq[CausalThreat] =
+  override lazy val causalThreads: Seq[CausalThreat] =
     for {causalLink@CausalLink(producer, consumer, literal) <- causalLinks
          planStep <- planSteps
          if planStep != producer && planStep != consumer && !orderingConstraints.lt(planStep, producer) && !orderingConstraints.gt(planStep, consumer)
@@ -29,15 +29,15 @@ case class SymbolicPlan(planSteps: Seq[PlanStep],
 
 
   /** list fo all open preconditions in this plan */
-  lazy val openPreconditions: Seq[OpenPrecondition] = allPreconditions filterNot {
+  override lazy val openPreconditions: Seq[OpenPrecondition] = allPreconditions filterNot {
     case (ps, literal) => causalLinks exists { case CausalLink(_, consumer, condition) => (consumer =?= ps)(variableConstraints) && (condition =?= literal)(variableConstraints)}
   } map { case (ps, literal) => OpenPrecondition(ps, literal)}
 
   /** returns (if possible), whether this plan can be refined into a solution or not */
-  def isSolvable: Option[Boolean] = if (!orderingConstraints.isConsistent || variableConstraints.isSolvable == Some(false)) Some(false) else None
+  override def isSolvable: Option[Boolean] = if (!orderingConstraints.isConsistent || variableConstraints.isSolvable == Some(false)) Some(false) else None
 
 
-  def modify(modification: Modification): SymbolicPlan = {
+  override def modify(modification: Modification): SymbolicPlan = {
     val newPlanSteps = (planSteps diff modification.removedPlanSteps) union modification.addedPlanSteps
     val newCausalLinks = (causalLinks diff modification.removedCausalLinks) union modification.addedCausalLinks
 
@@ -65,5 +65,5 @@ case class SymbolicPlan(planSteps: Seq[PlanStep],
   // =================== Local Helper ==================== //
 
   /** list containing all preconditions in this plan */
-  lazy val allPreconditions: Seq[(PlanStep, Literal)] = planSteps flatMap { ps => ps.substitutedPreconditions map { prec => (ps, prec)}}
+  override lazy val allPreconditions: Seq[(PlanStep, Literal)] = planSteps flatMap { ps => ps.substitutedPreconditions map { prec => (ps, prec)}}
 }

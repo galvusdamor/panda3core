@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.plan.element
 
-import de.uniulm.ki.panda3.csp.{SymbolicCSP, Variable}
+import de.uniulm.ki.panda3.csp.{CSP, Variable}
 import de.uniulm.ki.panda3.domain.Task
 import de.uniulm.ki.panda3.logic.Literal
 
@@ -23,7 +23,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) {
   lazy val substitutedEffects: Seq[Literal] = schema.effects map substitute
 
   /** check whether two literals are identical given a CSP */
-  def =?=(that: PlanStep)(csp: SymbolicCSP) = this.schema == that.schema &&
+  def =?=(that: PlanStep)(csp: CSP) = this.schema == that.schema &&
     ((this.arguments zip that.arguments) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2)})
 
 }

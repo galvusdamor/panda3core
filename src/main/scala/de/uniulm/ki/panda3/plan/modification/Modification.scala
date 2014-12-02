@@ -11,28 +11,29 @@ import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanSte
 trait Modification {
 
   /* Adding modifications*/
-  def addedPlanSteps: Seq[PlanStep]
 
-  def addedVariables: Seq[Variable]
+  def addedPlanSteps: Seq[PlanStep] = Nil
 
-  def addedCausalLinks: Seq[CausalLink]
+  def addedVariables: Seq[Variable] = Nil
 
-  def addedOrderingConstraints: Seq[OrderingConstraint]
+  def addedCausalLinks: Seq[CausalLink] = Nil
 
-  def addedVariableConstraints: Seq[VariableConstraint]
+  def addedOrderingConstraints: Seq[OrderingConstraint] = Nil
+
+  def addedVariableConstraints: Seq[VariableConstraint] = Nil
 
 
   /* removing modifications */
 
-  def removedPlanSteps: Seq[PlanStep]
+  def removedPlanSteps: Seq[PlanStep] = Nil
 
-  def removedVariables: Seq[Variable]
+  def removedVariables: Seq[Variable] = Nil
 
-  def removedCausalLinks: Seq[CausalLink]
+  def removedCausalLinks: Seq[CausalLink] = Nil
 
-  def removedOrderingConstraints: Seq[OrderingConstraint]
+  def removedOrderingConstraints: Seq[OrderingConstraint] = Nil
 
-  def removedVariableConstraints: Seq[VariableConstraint]
+  def removedVariableConstraints: Seq[VariableConstraint] = Nil
 
 
 }

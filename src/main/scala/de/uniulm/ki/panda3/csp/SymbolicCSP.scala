@@ -12,7 +12,7 @@ import scala.util.{Left, Right}
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 case class SymbolicCSP(variables: Set[Variable],
-                       constraints: List[VariableConstraint]) {
+                       constraints: List[VariableConstraint]) extends CSP {
 
   private var unequal: mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]]()
   // this is only kept for the top elements of the union-find
@@ -156,7 +156,7 @@ case class SymbolicCSP(variables: Set[Variable],
   }
 
 
-  def reducedDomainOf(v: Variable): Iterable[Constant] = {
+  override def reducedDomainOf(v: Variable): Iterable[Constant] = {
     if (!isReductionComputed) initialiseExplicitly()
     if (isPotentiallySolvable)
       getRepresentative(v) match {
@@ -167,21 +167,7 @@ case class SymbolicCSP(variables: Set[Variable],
       Vector()
   }
 
-  def areCompatible(vOrC1: Either[Variable, Constant], vOrC2: Either[Variable, Constant]): Option[Boolean] = (vOrC1, vOrC2) match {
-    case (Left(v1), Left(v2)) => areCompatible(v1, v2)
-    case (Right(c), Left(v)) => if (reducedDomainOf(v) exists {
-      _ == c
-    }) None
-    else Some(false)
-    case (Left(v), Right(c)) => if (reducedDomainOf(v) exists {
-      _ == c
-    }) None
-    else Some(false)
-    case (Right(c1), Right(c2)) => Some(c1 == c2)
-  }
-
-
-  def areCompatible(v1: Variable, v2: Variable): Option[Boolean] = {
+  override def areCompatible(v1: Variable, v2: Variable): Option[Boolean] = {
     if (!isReductionComputed) initialiseExplicitly()
     if (isPotentiallySolvable)
       (getRepresentative(v1), getRepresentative(v2)) match {
@@ -193,7 +179,7 @@ case class SymbolicCSP(variables: Set[Variable],
       Option(false)
   }
 
-  def addConstraint(constraint: VariableConstraint): SymbolicCSP = {
+  override def addConstraint(constraint: VariableConstraint): SymbolicCSP = {
     val newVariables = (constraint match {
       case Equals(v1, Left(v2)) => Set(v1, v2)
       case Equals(v, Right(_)) => Set(v)
@@ -211,9 +197,7 @@ case class SymbolicCSP(variables: Set[Variable],
     newCSP
   }
 
-  def addConstraints(constraints: Seq[VariableConstraint]): SymbolicCSP = (constraints foldLeft this)({ case (c: SymbolicCSP, vc) => c.addConstraint(vc)})
-
-  def addVariable(variable: Variable) = {
+  override def addVariable(variable: Variable): SymbolicCSP = {
     val newCSP = SymbolicCSP(variables + variable, constraints)
 
     if (isReductionComputed)
@@ -222,9 +206,7 @@ case class SymbolicCSP(variables: Set[Variable],
     newCSP
   }
 
-  def addVariables(variables: Seq[Variable]): SymbolicCSP = (variables foldLeft this)({ case (c: SymbolicCSP, v) => c.addVariable(v)})
-
-  def isSolvable: Option[Boolean] = {
+  override def isSolvable: Option[Boolean] = {
     if (!isReductionComputed) initialiseExplicitly()
 
     if (isPotentiallySolvable)
@@ -233,7 +215,7 @@ case class SymbolicCSP(variables: Set[Variable],
   }
 
   /** computes the solution of this CSP, might be computationally expensive */
-  def solution: Option[Map[Variable, Constant]] = {
+  override def solution: Option[Map[Variable, Constant]] = {
     // returns partial solution
     def searchSolution(remainingDomain: Map[Variable, Set[Constant]]): Option[Map[Variable, Constant]] = {
       if (remainingDomain.isEmpty) Some(Map())
@@ -262,15 +244,9 @@ case class SymbolicCSP(variables: Set[Variable],
   }
 
   /** returns best known unique representative for a given variable */
-  def getRepresentative(v: Variable): Either[Variable, Constant] = {
+  override def getRepresentative(v: Variable): Either[Variable, Constant] = {
     if (!isReductionComputed) if (!isReductionComputed) initialiseExplicitly()
     unionFind.getRepresentative(v)
-  }
-
-  /** returns best known unique representative for a given variable */
-  def getRepresentative(vOrC: Either[Variable, Constant]): Either[Variable, Constant] = vOrC match {
-    case Left(v) => getRepresentative(v)
-    case _ => vOrC // constant
   }
 }
 

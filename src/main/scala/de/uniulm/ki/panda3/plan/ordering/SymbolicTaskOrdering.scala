@@ -1,14 +1,15 @@
 package de.uniulm.ki.panda3.plan.ordering
 
 import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
-import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering._
 
 /**
  *
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], numberOfTasks: Int) extends PartialOrdering[PlanStep] {
+case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], numberOfTasks: Int) extends TaskOrdering {
+
+  import de.uniulm.ki.panda3.plan.ordering.TaskOrdering._
 
   private var isTransitiveHullComputed: Boolean = false
   private val innerArrangement: Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
@@ -61,14 +62,14 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     }
   }
 
-  def isConsistent: Boolean = {
+  override def isConsistent: Boolean = {
     if (!isTransitiveHullComputed)
       initialiseExplicitly()
 
     !computedInconsistent
   }
 
-  def arrangement(): Array[Array[Byte]] = {
+  override def arrangement(): Array[Array[Byte]] = {
     if (!isTransitiveHullComputed)
       initialiseExplicitly()
 
@@ -82,19 +83,7 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     }
   }
 
-  override def lteq(x: PlanStep, y: PlanStep): Boolean = {
-    tryCompare(x, y) match {
-      case None => false
-      case Some(BEFORE) => true
-      case _ => false
-    }
-  }
-
-  def addOrderings(orderings: Seq[OrderingConstraint]) = (orderings foldLeft this) { case (ordering: SymbolicTaskOrdering, constraint) => ordering.addOrdering(constraint)}
-
-  def addOrdering(ordering: OrderingConstraint): SymbolicTaskOrdering = addOrdering(ordering.before, ordering.after)
-
-  def addOrdering(before: PlanStep, after: PlanStep): SymbolicTaskOrdering = {
+  override def addOrdering(before: PlanStep, after: PlanStep): SymbolicTaskOrdering = {
     val newNumberOfVariables: Int = math.max(numberOfTasks, math.max(before.id + 1, after.id + 1))
     val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints :+ OrderingConstraint(before, after),
                                                                      newNumberOfVariables)
@@ -106,12 +95,4 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     newOrdering
   }
 
-}
-
-
-object SymbolicTaskOrdering {
-  private val AFTER: Byte = 1
-  private val BEFORE: Byte = -1
-  private val SAME: Byte = 0
-  private val DONTKNOW: Byte = 2
 }
