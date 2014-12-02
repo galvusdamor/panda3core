@@ -12,7 +12,7 @@ import scala.collection.immutable.HashSet
  */
 class LiteralTest extends FlatSpec {
 
-  val sort1 : Sort = Sort("sort1", Vector() :+ Constant("a") :+ Constant("c") :+ Constant("c"))
+  val sort1 : Sort = Sort("sort1", Vector() :+ Constant("a") :+ Constant("b") :+ Constant("c"))
   val sort2 : Sort = Sort("sort2", Vector() :+ Constant("x") :+ Constant("y") :+ Constant("z"))
 
   val p1 : Predicate = Predicate("p1", sort1 :: sort1 :: Nil)
@@ -42,7 +42,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Checking equality" must "be possible using constraings" in {
-    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, Left(v2)))
+    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, v2))
 
     val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
     val l2 : Literal = Literal(p1, false, v1 :: v1 :: Nil)
@@ -51,7 +51,7 @@ class LiteralTest extends FlatSpec {
     assert((l1 =?= l2)(csp))
     assert(!(l1 =?= l3)(csp))
 
-    val csp2 = csp.addConstraint(Equals(v1, Right(Constant("a")))).addConstraint(Equals(v3, Right(Constant("a"))))
+    val csp2 = csp.addConstraint(Equals(v1, Right(Constant("a")))).addConstraint(Equals(v3, Constant("a")))
 
     assert((l1 =?= l2)(csp2))
     assert((l1 =?= l3)(csp2))
@@ -59,7 +59,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Unification" must "be possible" in {
-    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, Left(v2)))
+    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, v2))
 
     val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
     val l3 : Literal = Literal(p1, false, v1 :: v3 :: Nil)
@@ -79,4 +79,30 @@ class LiteralTest extends FlatSpec {
     val equalCsp = csp.addConstraints(unifier)
     assert((l1 =?= l3)(equalCsp))
   }
+
+  "Unification" must "be impossible for non-equal predicates" in {
+    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, v2))
+
+    val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
+    val l3 : Literal = Literal(p2, false, v1 :: v5 :: Nil)
+
+    // compute the most general unifier
+    val mgu = (l1 #?# l3)(csp)
+
+    assert(mgu == None)
+  }
+
+
+  "Unification" must "be impossible of the CSP says so" in {
+    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(NotEquals(v2, v3))
+
+    val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
+    val l3 : Literal = Literal(p1, false, v1 :: v3 :: Nil)
+
+    // compute the most general unifier
+    val mgu = (l1 #?# l3)(csp)
+
+    assert(mgu == None)
+  }
+
 }

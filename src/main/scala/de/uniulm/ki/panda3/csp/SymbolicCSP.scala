@@ -172,7 +172,7 @@ case class SymbolicCSP(variables: Set[Variable],
     if (isPotentiallySolvable)
       (getRepresentative(v1), getRepresentative(v2)) match {
         case (Right(c1), Right(c2)) => if (c1 == c2) Some(true) else Some(false)
-        case (Left(v1), Left(v2)) => if (v1 == v2) Some(true) else None
+        case (Left(v1), Left(v2)) => if (v1 == v2) Some(true) else if (unequal(v1).contains(v2)) Some(false) else None
         case _ => None // possibly, but we are not sure
       }
     else
