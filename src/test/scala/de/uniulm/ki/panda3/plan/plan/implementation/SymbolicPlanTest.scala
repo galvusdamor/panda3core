@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.plan.plan.implementation
 
 import de.uniulm.ki.panda3.csp.{SymbolicCSP, Variable}
-import de.uniulm.ki.panda3.domain.Task
+import de.uniulm.ki.panda3.domain.{EmptyDomain, Task}
 import de.uniulm.ki.panda3.logic.{Constant, Literal, Predicate, Sort}
 import de.uniulm.ki.panda3.plan.SymbolicPlan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
@@ -37,7 +37,7 @@ class SymbolicPlanTest extends FlatSpec {
   val schemaDestr : Task = Task("task_destr", true, d_v1 :: d_v2 :: Nil, Nil, Literal(predicate1, isInverted = true, d_v1 :: d_v2 :: Nil) :: Nil)
 
   "Computing open preconditions" must "be possible" in {
-    val plan1 : SymbolicPlan = SymbolicPlan(PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: Nil, Nil, SymbolicTaskOrdering(Nil, 1), SymbolicCSP(Set(p_v1, p_v2), Nil))
+    val plan1: SymbolicPlan = SymbolicPlan(EmptyDomain, PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: Nil, Nil, SymbolicTaskOrdering(Nil, 1), SymbolicCSP(Set(p_v1, p_v2), Nil))
 
     assert(plan1.allPreconditions.size == 1)
     assert(plan1.openPreconditions.size == 1)
@@ -45,7 +45,7 @@ class SymbolicPlanTest extends FlatSpec {
 
 
   "Computing open preconditions" must "not contain protected preconditions" in {
-    val plan1 : SymbolicPlan = SymbolicPlan(PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil) :: Nil,
+    val plan1: SymbolicPlan = SymbolicPlan(EmptyDomain, PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil) :: Nil,
                                             CausalLink(PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil), PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil), Literal(predicate1, false, p_v1 :: p_v2 :: Nil)) :: Nil,
                                             SymbolicTaskOrdering(Nil, 2), SymbolicCSP(Set(p_v1, p_v2), Nil))
 
@@ -59,7 +59,7 @@ class SymbolicPlanTest extends FlatSpec {
     val ps0 = PlanStep(0, schemaProd, p_v1 :: p_v2 :: Nil);
     val ps1 = PlanStep(1, schemaCons, p_v1 :: p_v2 :: Nil)
     val ps2 = PlanStep(2, schemaDestr, p_v3 :: p_v4 :: Nil)
-    val plan1 : SymbolicPlan = SymbolicPlan(ps0 :: ps1 :: ps2 :: Nil,
+    val plan1: SymbolicPlan = SymbolicPlan(EmptyDomain, ps0 :: ps1 :: ps2 :: Nil,
                                             CausalLink(ps0, ps1, Literal(predicate1, isInverted = false, p_v1 :: p_v2 :: Nil)) :: Nil,
                                             SymbolicTaskOrdering(Nil, 3), SymbolicCSP(Set(p_v1, p_v2, p_v3, p_v4), Nil))
 

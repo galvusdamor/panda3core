@@ -38,4 +38,11 @@ case class Literal(predicate: Predicate, isInverted: Boolean, parameterVariables
       Some(result._2)
     else None
   }
+
+
+  /**
+   * Returns a list of all differentiater, i.e. a all possible constraints that can make the two literals unequal
+   */
+  def !?!(that: Literal)(csp: CSP): Seq[NotEquals] = if (this.predicate != that.predicate || this.isInverted != that.isInverted) Nil
+  else (this.parameterVariables zip that.parameterVariables) collect { case (v1, v2) if csp.getRepresentative(v1) != csp.getRepresentative(v2) => NotEquals(v1, v2)}
 }

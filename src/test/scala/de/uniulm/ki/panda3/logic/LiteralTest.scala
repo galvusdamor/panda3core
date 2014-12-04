@@ -105,4 +105,23 @@ class LiteralTest extends FlatSpec {
     assert(mgu == None)
   }
 
+  "Differentiation" must "be possible for two Literals" in {
+    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(NotEquals(v2, v3))
+
+    val l1: Literal = Literal(p1, false, v1 :: v2 :: Nil)
+    val l2: Literal = Literal(p1, false, v1 :: v3 :: Nil)
+    val l3: Literal = Literal(p1, true, v3 :: v4 :: Nil)
+
+    val diff1 = (l1 !?! l2)(csp)
+    assert(diff1.size == 1)
+    assert(diff1(0) == NotEquals(v2, v3) || diff1(0) == NotEquals(v3, v2))
+
+    val diff2 = (l1 !?! l3)(csp)
+    assert(diff2.size == 0)
+
+    val diff3 = (l1 !?! l3.negate)(csp)
+    assert(diff3.size == 2)
+    assert(diff3 exists { p => p == NotEquals(v1, v3) || p == NotEquals(v3, v1)})
+    assert(diff3 exists { p => p == NotEquals(v2, v4) || p == NotEquals(v4, v2)})
+  }
 }

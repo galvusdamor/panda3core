@@ -31,4 +31,6 @@ object InsertPlanStepWithLink {
 
     producer.substitutedEffects map { l => (l #?# precondition)(plan.variableConstraints)} collect { case Some(mgu) => InsertPlanStepWithLink(producer, link, mgu)}
   }
+
+  def apply(plan: Plan, consumer: PlanStep, precondition: Literal): Seq[InsertPlanStepWithLink] = plan.domain.tasks flatMap { schema => apply(plan, schema, consumer, precondition)}
 }
