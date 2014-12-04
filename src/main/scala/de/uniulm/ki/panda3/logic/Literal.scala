@@ -7,13 +7,13 @@ import de.uniulm.ki.panda3.csp._
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class Literal(predicate: Predicate, isInverted: Boolean, parameterVariables: Seq[Variable]) extends Formula {
+case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables: Seq[Variable]) extends Formula {
 
   /** negated version of the literal */
-  lazy val negate: Literal = copy(isInverted = !isInverted)
+  lazy val negate: Literal = copy(isPositive = !isPositive)
 
   /** check whether two literals are identical given a CSP */
-  def =?=(that: Literal)(csp: CSP): Boolean = this.predicate == that.predicate && this.isInverted == that.isInverted &&
+  def =?=(that: Literal)(csp: CSP): Boolean = this.predicate == that.predicate && this.isPositive == that.isPositive &&
     ((this.parameterVariables zip that.parameterVariables) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2)})
 
 
@@ -21,7 +21,7 @@ case class Literal(predicate: Predicate, isInverted: Boolean, parameterVariables
    * check whether two literals can be unified given a CSP
    * @return an option to the mgu, if None, there is no such unifier
    */
-  def #?#(that: Literal)(csp: CSP): Option[Seq[Equals]] = if (this.predicate != that.predicate || this.isInverted != that.isInverted)
+  def #?#(that: Literal)(csp: CSP): Option[Seq[Equals]] = if (this.predicate != that.predicate || this.isPositive != that.isPositive)
     None
   else {
     // try building a unification and test it
@@ -43,6 +43,6 @@ case class Literal(predicate: Predicate, isInverted: Boolean, parameterVariables
   /**
    * Returns a list of all differentiater, i.e. a all possible constraints that can make the two literals unequal
    */
-  def !?!(that: Literal)(csp: CSP): Seq[NotEquals] = if (this.predicate != that.predicate || this.isInverted != that.isInverted) Nil
+  def !?!(that: Literal)(csp: CSP): Seq[NotEquals] = if (this.predicate != that.predicate || this.isPositive != that.isPositive) Nil
   else (this.parameterVariables zip that.parameterVariables) collect { case (v1, v2) if csp.getRepresentative(v1) != csp.getRepresentative(v2) => NotEquals(v1, v2)}
 }

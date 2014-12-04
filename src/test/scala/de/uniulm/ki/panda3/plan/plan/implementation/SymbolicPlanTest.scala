@@ -32,9 +32,9 @@ class SymbolicPlanTest extends FlatSpec {
   val p_v4 = Variable("p_v2", sort1)
 
 
-  val schemaProd : Task = Task("task_prod", true, d_v1 :: d_v2 :: Nil, Nil, Literal(predicate1, isInverted = false, d_v1 :: d_v2 :: Nil) :: Nil)
-  val schemaCons : Task = Task("task_cons", true, d_v1 :: d_v2 :: Nil, Literal(predicate1, isInverted = false, d_v1 :: d_v2 :: Nil) :: Nil, Nil)
-  val schemaDestr : Task = Task("task_destr", true, d_v1 :: d_v2 :: Nil, Nil, Literal(predicate1, isInverted = true, d_v1 :: d_v2 :: Nil) :: Nil)
+  val schemaProd: Task = Task("task_prod", true, d_v1 :: d_v2 :: Nil, Nil, Literal(predicate1, isPositive = true, d_v1 :: d_v2 :: Nil) :: Nil)
+  val schemaCons: Task = Task("task_cons", true, d_v1 :: d_v2 :: Nil, Literal(predicate1, isPositive = true, d_v1 :: d_v2 :: Nil) :: Nil, Nil)
+  val schemaDestr: Task = Task("task_destr", true, d_v1 :: d_v2 :: Nil, Nil, Literal(predicate1, isPositive = false, d_v1 :: d_v2 :: Nil) :: Nil)
 
   "Computing open preconditions" must "be possible" in {
     val plan1: SymbolicPlan = SymbolicPlan(EmptyDomain, PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: Nil, Nil, SymbolicTaskOrdering(Nil, 1), SymbolicCSP(Set(p_v1, p_v2), Nil))
@@ -46,7 +46,8 @@ class SymbolicPlanTest extends FlatSpec {
 
   "Computing open preconditions" must "not contain protected preconditions" in {
     val plan1: SymbolicPlan = SymbolicPlan(EmptyDomain, PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil) :: Nil,
-                                            CausalLink(PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil), PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil), Literal(predicate1, false, p_v1 :: p_v2 :: Nil)) :: Nil,
+                                           CausalLink(PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil), PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil), Literal(predicate1, isPositive = true, p_v1
+                                             :: p_v2 :: Nil)) :: Nil,
                                             SymbolicTaskOrdering(Nil, 2), SymbolicCSP(Set(p_v1, p_v2), Nil))
 
     assert(plan1.allPreconditions.size == 2)
@@ -56,11 +57,11 @@ class SymbolicPlanTest extends FlatSpec {
 
 
   "Computing causal threats" must "be possible" in {
-    val ps0 = PlanStep(0, schemaProd, p_v1 :: p_v2 :: Nil);
+    val ps0 = PlanStep(0, schemaProd, p_v1 :: p_v2 :: Nil)
     val ps1 = PlanStep(1, schemaCons, p_v1 :: p_v2 :: Nil)
     val ps2 = PlanStep(2, schemaDestr, p_v3 :: p_v4 :: Nil)
     val plan1: SymbolicPlan = SymbolicPlan(EmptyDomain, ps0 :: ps1 :: ps2 :: Nil,
-                                            CausalLink(ps0, ps1, Literal(predicate1, isInverted = false, p_v1 :: p_v2 :: Nil)) :: Nil,
+                                           CausalLink(ps0, ps1, Literal(predicate1, isPositive = true, p_v1 :: p_v2 :: Nil)) :: Nil,
                                             SymbolicTaskOrdering(Nil, 3), SymbolicCSP(Set(p_v1, p_v2, p_v3, p_v4), Nil))
 
     assert(plan1.causalThreads.size == 1)
