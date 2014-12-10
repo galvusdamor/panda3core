@@ -1,4 +1,5 @@
 package de.uniulm.ki.panda3.plan.ordering
+
 import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
 
 /**
@@ -6,7 +7,7 @@ import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait TaskOrdering extends PartialOrdering[PlanStep]{
+trait TaskOrdering extends PartialOrdering[PlanStep] {
 
   def originalOrderingConstraints: Seq[OrderingConstraint]
 
@@ -26,11 +27,17 @@ trait TaskOrdering extends PartialOrdering[PlanStep]{
     }
   }
 
-  def addOrderings(orderings: Seq[OrderingConstraint]) : TaskOrdering = (orderings foldLeft this){ case (ordering , constraint) => ordering.addOrdering(constraint)}
+  def addOrderings(orderings: Seq[OrderingConstraint]): TaskOrdering = (orderings foldLeft this) { case (ordering, constraint) => ordering.addOrdering(constraint)}
 
-  def addOrdering(ordering: OrderingConstraint): TaskOrdering  = addOrdering(ordering.before, ordering.after)
+  def addOrdering(ordering: OrderingConstraint): TaskOrdering = addOrdering(ordering.before, ordering.after)
 
   def addOrdering(before: PlanStep, after: PlanStep): TaskOrdering
+
+
+  /** registers a new plan step at this ordering */
+  def addPlanStep(ps: PlanStep): TaskOrdering
+
+  def addPlanSteps(pss: Seq[PlanStep]) = (pss foldLeft this) { case (ordering, ps) => ordering.addPlanStep(ps)}
 }
 
 object TaskOrdering {

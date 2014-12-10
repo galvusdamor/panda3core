@@ -2,9 +2,8 @@ package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.CSP
 import de.uniulm.ki.panda3.domain.Domain
-import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
-import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition}
+import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, Flaw, OpenPrecondition, UnboundVariable}
 import de.uniulm.ki.panda3.plan.modification.Modification
 import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
 
@@ -15,9 +14,15 @@ import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
  */
 trait Plan {
 
+  lazy val flaws: Seq[Flaw] = {
+    val hardFlaws = causalThreads ++ openPreconditions
+    if (hardFlaws.size == 0)
+      unboundVariables
+    else hardFlaws
+  }
   val causalThreads: Seq[CausalThreat]
   val openPreconditions: Seq[OpenPrecondition]
-  val allPreconditions: Seq[(PlanStep, Literal)]
+  val unboundVariables: Seq[UnboundVariable]
 
   def domain: Domain
 
@@ -28,6 +33,10 @@ trait Plan {
   def orderingConstraints: TaskOrdering
 
   def variableConstraints: CSP
+
+  def init: PlanStep
+
+  def goal: PlanStep
 
   /** returns (if possible), whether this plan can be refined into a solution or not */
   def isSolvable: Option[Boolean]

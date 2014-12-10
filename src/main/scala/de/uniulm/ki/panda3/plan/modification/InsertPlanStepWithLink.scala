@@ -1,17 +1,17 @@
 package de.uniulm.ki.panda3.plan.modification
 
-import de.uniulm.ki.panda3.csp.{Variable, VariableConstraint}
+import de.uniulm.ki.panda3.csp.{Equal, Variable, VariableConstraint}
 import de.uniulm.ki.panda3.domain.Task
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.Plan
-import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
+import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 
 /**
  *
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class InsertPlanStepWithLink(planStep: PlanStep, causalLink: CausalLink, equalityConstraints: Seq[Equals]) extends Modification {
+case class InsertPlanStepWithLink(planStep: PlanStep, causalLink: CausalLink, equalityConstraints: Seq[Equal], plan: Plan) extends Modification {
   override def addedPlanSteps: Seq[PlanStep] = planStep :: Nil
 
   override def addedCausalLinks: Seq[CausalLink] = causalLink :: Nil
@@ -21,6 +21,7 @@ case class InsertPlanStepWithLink(planStep: PlanStep, causalLink: CausalLink, eq
 
   override def addedVariableConstraints: Seq[VariableConstraint] = equalityConstraints map { case c: VariableConstraint => c}
 
+  override def addedOrderingConstraints: Seq[OrderingConstraint] = OrderingConstraint(plan.init, planStep) :: OrderingConstraint(planStep, plan.goal) :: Nil
 }
 
 object InsertPlanStepWithLink {
@@ -29,7 +30,9 @@ object InsertPlanStepWithLink {
     val producer = PlanStep(plan.getNewId(), schema, parameter)
     val link = CausalLink(producer, consumer, precondition)
 
-    producer.substitutedEffects map { l => (l #?# precondition)(plan.variableConstraints)} collect { case Some(mgu) => InsertPlanStepWithLink(producer, link, mgu)}
+    val extendedCSP = plan.variableConstraints.addVariables(parameter)
+
+    producer.substitutedEffects map { l => (l #?# precondition)(extendedCSP)} collect { case Some(mgu) => InsertPlanStepWithLink(producer, link, mgu, plan)}
   }
 
   def apply(plan: Plan, consumer: PlanStep, precondition: Literal): Seq[InsertPlanStepWithLink] = plan.domain.tasks flatMap { schema => apply(plan, schema, consumer, precondition)}

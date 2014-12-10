@@ -14,111 +14,14 @@ import scala.util.{Left, Right}
 case class SymbolicCSP(variables: Set[Variable],
                        constraints: List[VariableConstraint]) extends CSP {
 
+  private val unionFind: SymbolicUnionFind = new SymbolicUnionFind
   private var unequal: mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]]()
   // this is only kept for the top elements of the union-find
   private var remainingDomain: mutable.Map[Variable, mutable.Set[Constant]] = new mutable.HashMap[Variable, mutable.Set[Constant]]()
-  private val unionFind: SymbolicUnionFind = new SymbolicUnionFind
   private var isReductionComputed = false
 
   // if this flag is false, i.e. we know this CSP is unsolvable, the internal data might become inconsistent ... it is simply not necessary to have it still intact
   private var isPotentiallySolvable = true
-
-
-  /** returns best known unique representative for a given variable */
-  private def getRepresentativeUnsafe(v: Variable): Either[Variable, Constant] = unionFind.getRepresentative(v)
-
-  /** returns best known unique representative for a given variable */
-  private def getRepresentativeUnsafe(vOrC: Either[Variable, Constant]): Either[Variable, Constant] = vOrC match {
-    case Left(v) => getRepresentativeUnsafe(v)
-    case _ => vOrC // constant
-  }
-
-
-  /** function to detect all unit propagations */
-  private def detectUnitPropagation(): Iterable[Variable] = remainingDomain filter { case (variable, values) => values.size == 1} map { case (variable, values) => variable}
-
-  private def detectUnsolvability() = remainingDomain exists { case (variable, values) => values.size == 0}
-
-  private def unitPropagation(toPropagate: Iterable[Variable] = detectUnitPropagation()): Unit = if (toPropagate.size == 0) ()
-  else {
-    val x: Iterable[Variable] = (toPropagate map { variable =>
-      if (!isPotentiallySolvable)
-        Vector()
-      else {
-        val constant = remainingDomain(variable).last // this one exists and is the only element
-
-        // remove this variable add assert
-        unionFind.assertEqual(variable, Right(constant))
-        remainingDomain.remove(variable)
-
-        // propagate
-        unequal(variable) foreach { other =>
-          remainingDomain(other).remove(constant)
-          if (remainingDomain(other).size == 0)
-            isPotentiallySolvable = false
-          unequal(other) -= variable
-        }
-
-        // find new propagations
-        val newPropagation = unequal(variable) collect { case other if (remainingDomain(other).size == 1) => other}
-
-        // removed from the datastructure
-        unequal -= variable
-
-        newPropagation
-      }
-    }).flatten.toSet // eliminate duplicates
-
-    if (isPotentiallySolvable)
-      unitPropagation(x)
-  }
-
-  /** adds a single constraint to the CSP, but does not perform unit propagation */
-  private def addSingleConstraint(constraint: VariableConstraint): Unit = {
-    val equalsConstEliminated = constraint match {
-      case equalConstr@Equals(v1, v2) => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-        case (Left(rv), Right(const)) => OfSort(rv, Sort("temp", Vector() :+ const))
-        case (Right(const), Left(rv)) => OfSort(rv, Sort("temp", Vector() :+ const))
-        case _ => equalConstr
-      }
-      case x => x
-    }
-
-    // all actually different cases
-    equalsConstEliminated match {
-      case NotEquals(v1, v2) =>
-        (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-          case (Left(rv1), Left(rv2)) => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {
-            case (x, y) => unequal(x) += y
-          }
-          case (Left(rv), Right(const)) => remainingDomain(rv).remove(const)
-          case (Right(const), Left(rv)) => remainingDomain(rv).remove(const)
-          case (Right(const1), Right(const2)) => if (const1 == const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
-        }
-      case Equals(v1, v2) => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-        case (Left(rv1), Left(rv2)) => {
-          // intersect domains
-          val intersectionDomain = remainingDomain(rv1) intersect remainingDomain(rv2)
-
-          unionFind.assertEqual(rv1, Left(rv2))
-          // find out which representative the union-find uses and remove the other from the real CSP
-          if (getRepresentativeUnsafe(rv1) == Left(rv1)) (rv2, rv1)
-          else (rv1, rv2) match {
-            case (remove, rep) =>
-              remainingDomain.remove(remove)
-              remainingDomain(rep) = intersectionDomain
-          }
-        }
-        case (Right(const1), Right(const2)) => if (const1 != const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
-      }
-      // sort of and var = const constraints
-      case OfSort(v, sort) => getRepresentativeUnsafe(v) match {
-        case Right(constant) => if (!sort.elements.contains(constraints)) isPotentiallySolvable = false
-        case Left(rv) =>
-          remainingDomain(rv) = remainingDomain(rv) filter { x => sort.elements.contains(x)}
-      }
-    }
-  }
 
   /**
    * Process all unprocessed constrains of the CSP and reduce maximally
@@ -155,7 +58,6 @@ case class SymbolicCSP(variables: Set[Variable],
     isReductionComputed = true
   }
 
-
   override def reducedDomainOf(v: Variable): Iterable[Constant] = {
     if (!isReductionComputed) initialiseExplicitly()
     if (isPotentiallySolvable)
@@ -181,10 +83,10 @@ case class SymbolicCSP(variables: Set[Variable],
 
   override def addConstraint(constraint: VariableConstraint): SymbolicCSP = {
     val newVariables = (constraint match {
-      case Equals(v1, Left(v2)) => Set(v1, v2)
-      case Equals(v, Right(_)) => Set(v)
-      case NotEquals(v1, Left(v2)) => Set(v1, v2)
-      case NotEquals(v, Right(_)) => Set(v)
+      case Equal(v1, Left(v2)) => Set(v1, v2)
+      case Equal(v, Right(_)) => Set(v)
+      case NotEqual(v1, Left(v2)) => Set(v1, v2)
+      case NotEqual(v, Right(_)) => Set(v)
       case OfSort(v, _) => Set(v)
       case NotOfSort(v, _) => Set(v)
     }) -- variables
@@ -247,6 +149,101 @@ case class SymbolicCSP(variables: Set[Variable],
   override def getRepresentative(v: Variable): Either[Variable, Constant] = {
     if (!isReductionComputed) if (!isReductionComputed) initialiseExplicitly()
     unionFind.getRepresentative(v)
+  }
+
+  /** returns best known unique representative for a given variable */
+  private def getRepresentativeUnsafe(v: Variable): Either[Variable, Constant] = unionFind.getRepresentative(v)
+
+  /** returns best known unique representative for a given variable */
+  private def getRepresentativeUnsafe(vOrC: Either[Variable, Constant]): Either[Variable, Constant] = vOrC match {
+    case Left(v) => getRepresentativeUnsafe(v)
+    case _ => vOrC // constant
+  }
+
+  /** function to detect all unit propagations */
+  private def detectUnitPropagation(): Iterable[Variable] = remainingDomain filter { case (variable, values) => values.size == 1} map { case (variable, values) => variable}
+
+  private def detectUnsolvability() = remainingDomain exists { case (variable, values) => values.size == 0}
+
+  private def unitPropagation(toPropagate: Iterable[Variable] = detectUnitPropagation()): Unit = if (toPropagate.size == 0) ()
+  else {
+    val x: Iterable[Variable] = (toPropagate map { variable =>
+      if (!isPotentiallySolvable)
+        Vector()
+      else {
+        val constant = remainingDomain(variable).last // this one exists and is the only element
+
+        // remove this variable add assert
+        unionFind.assertEqual(variable, Right(constant))
+        remainingDomain.remove(variable)
+
+        // propagate
+        unequal(variable) foreach { other =>
+          remainingDomain(other).remove(constant)
+          if (remainingDomain(other).size == 0)
+            isPotentiallySolvable = false
+          unequal(other) -= variable
+        }
+
+        // find new propagations
+        val newPropagation = unequal(variable) collect { case other if (remainingDomain(other).size == 1) => other}
+
+        // removed from the datastructure
+        unequal -= variable
+
+        newPropagation
+      }
+    }).flatten.toSet // eliminate duplicates
+
+    if (isPotentiallySolvable)
+      unitPropagation(x)
+  }
+
+  /** adds a single constraint to the CSP, but does not perform unit propagation */
+  private def addSingleConstraint(constraint: VariableConstraint): Unit = {
+    val equalsConstEliminated = constraint match {
+      case equalConstr@Equal(v1, v2) => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
+        case (Left(rv), Right(const)) => OfSort(rv, Sort("temp", Vector() :+ const))
+        case (Right(const), Left(rv)) => OfSort(rv, Sort("temp", Vector() :+ const))
+        case _ => equalConstr
+      }
+      case x => x
+    }
+
+    // all actually different cases
+    equalsConstEliminated match {
+      case NotEqual(v1, v2) =>
+        (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
+          case (Left(rv1), Left(rv2)) => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {
+            case (x, y) => unequal(x) += y
+          }
+          case (Left(rv), Right(const)) => remainingDomain(rv).remove(const)
+          case (Right(const), Left(rv)) => remainingDomain(rv).remove(const)
+          case (Right(const1), Right(const2)) => if (const1 == const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
+        }
+      case Equal(v1, v2) => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
+        case (Left(rv1), Left(rv2)) => {
+          // intersect domains
+          val intersectionDomain = remainingDomain(rv1) intersect remainingDomain(rv2)
+
+          unionFind.assertEqual(rv1, Left(rv2))
+          // find out which representative the union-find uses and remove the other from the real CSP
+          if (getRepresentativeUnsafe(rv1) == Left(rv1)) (rv2, rv1)
+          else (rv1, rv2) match {
+            case (remove, rep) =>
+              remainingDomain.remove(remove)
+              remainingDomain(rep) = intersectionDomain
+          }
+        }
+        case (Right(const1), Right(const2)) => if (const1 != const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
+      }
+      // sort of and var = const constraints
+      case OfSort(v, sort) => getRepresentativeUnsafe(v) match {
+        case Right(constant) => if (!sort.elements.contains(constraints)) isPotentiallySolvable = false
+        case Left(rv) =>
+          remainingDomain(rv) = remainingDomain(rv) filter { x => sort.elements.contains(x)}
+      }
+    }
   }
 }
 

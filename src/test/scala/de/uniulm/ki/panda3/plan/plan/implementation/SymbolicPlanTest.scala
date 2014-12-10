@@ -37,7 +37,7 @@ class SymbolicPlanTest extends FlatSpec {
   val schemaDestr: Task = Task("task_destr", true, d_v1 :: d_v2 :: Nil, Nil, Literal(predicate1, isPositive = false, d_v1 :: d_v2 :: Nil) :: Nil)
 
   "Computing open preconditions" must "be possible" in {
-    val plan1: SymbolicPlan = SymbolicPlan(EmptyDomain, PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: Nil, Nil, SymbolicTaskOrdering(Nil, 1), SymbolicCSP(Set(p_v1, p_v2), Nil))
+    val plan1: SymbolicPlan = SymbolicPlan(EmptyDomain, PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: Nil, Nil, SymbolicTaskOrdering(Nil, 1), SymbolicCSP(Set(p_v1, p_v2), Nil), null, null)
 
     assert(plan1.allPreconditions.size == 1)
     assert(plan1.openPreconditions.size == 1)
@@ -48,7 +48,7 @@ class SymbolicPlanTest extends FlatSpec {
     val plan1: SymbolicPlan = SymbolicPlan(EmptyDomain, PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil) :: Nil,
                                            CausalLink(PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil), PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil), Literal(predicate1, isPositive = true, p_v1
                                              :: p_v2 :: Nil)) :: Nil,
-                                            SymbolicTaskOrdering(Nil, 2), SymbolicCSP(Set(p_v1, p_v2), Nil))
+                                           SymbolicTaskOrdering(Nil, 2), SymbolicCSP(Set(p_v1, p_v2), Nil), null, null)
 
     assert(plan1.allPreconditions.size == 2)
     assert(plan1.openPreconditions.size == 1)
@@ -62,7 +62,7 @@ class SymbolicPlanTest extends FlatSpec {
     val ps2 = PlanStep(2, schemaDestr, p_v3 :: p_v4 :: Nil)
     val plan1: SymbolicPlan = SymbolicPlan(EmptyDomain, ps0 :: ps1 :: ps2 :: Nil,
                                            CausalLink(ps0, ps1, Literal(predicate1, isPositive = true, p_v1 :: p_v2 :: Nil)) :: Nil,
-                                            SymbolicTaskOrdering(Nil, 3), SymbolicCSP(Set(p_v1, p_v2, p_v3, p_v4), Nil))
+                                           SymbolicTaskOrdering(Nil, 3), SymbolicCSP(Set(p_v1, p_v2, p_v3, p_v4), Nil), null, null)
 
     assert(plan1.causalThreads.size == 1)
   }

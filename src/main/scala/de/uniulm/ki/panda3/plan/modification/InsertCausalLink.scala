@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.plan.modification
 
-import de.uniulm.ki.panda3.csp.VariableConstraint
+import de.uniulm.ki.panda3.csp.{Equal, VariableConstraint}
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
@@ -10,14 +10,18 @@ import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class InsertCausalLink(causalLink: CausalLink, equalityConstraints: Seq[Equals]) extends Modification {
+case class InsertCausalLink(causalLink: CausalLink, equalityConstraints: Seq[Equal]) extends Modification {
   override def addedCausalLinks: Seq[CausalLink] = causalLink :: Nil
 
   override def addedVariableConstraints: Seq[VariableConstraint] = equalityConstraints map { case c: VariableConstraint => c}
 }
 
 object InsertCausalLink {
-  /** creates causal links for the preconditions of the given consumer, supported by an effects of the producer*/
+
+  def apply(plan: Plan, consumer: PlanStep, precondition: Literal): Seq[InsertCausalLink] =
+    plan.planSteps flatMap { p => apply(plan, p, consumer, precondition)}
+
+  /** creates causal links for the preconditions of the given consumer, supported by an effect of the producer */
   def apply(plan : Plan, producer: PlanStep, consumer: PlanStep, precondition: Literal): Seq[InsertCausalLink] = {
     val link = CausalLink(producer, consumer, precondition)
     producer.substitutedEffects map {l => (l #?# precondition)(plan.variableConstraints)} collect {case Some(mgu) => InsertCausalLink(link, mgu)}

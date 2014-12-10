@@ -21,18 +21,19 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
    * check whether two literals can be unified given a CSP
    * @return an option to the mgu, if None, there is no such unifier
    */
-  def #?#(that: Literal)(csp: CSP): Option[Seq[Equals]] = if (this.predicate != that.predicate || this.isPositive != that.isPositive)
+  def #?#(that: Literal)(csp: CSP): Option[Seq[Equal]] = if (this.predicate != that.predicate || this.isPositive != that.isPositive)
     None
   else {
+    val parameterPairs = this.parameterVariables zip that.parameterVariables
+
     // try building a unification and test it
-    val result: (CSP, IndexedSeq[Equals]) =
-      (this.parameterVariables zip that.parameterVariables).foldLeft((csp, Vector[Equals]()))(
-      {
-        case ((currentCSP, unification), (v1, v2)) =>
-          if (currentCSP.isSolvable == Some(false) || csp.getRepresentative(v1) == csp.getRepresentative(v2)) (currentCSP, unification)
-          else if (currentCSP.areCompatible(v1, v2) == Option(false)) (UnsolvableCSP, Vector())
-          else (currentCSP.addConstraint(Equals(v1, v2)), unification :+ Equals(v1, v2))
-      })
+    val result: (CSP, IndexedSeq[Equal]) = parameterPairs.foldLeft((csp, Vector[Equal]()))(
+    {
+      case ((currentCSP, unification), (v1, v2)) =>
+        if (currentCSP.isSolvable == Some(false) || csp.getRepresentative(v1) == csp.getRepresentative(v2)) (currentCSP, unification)
+        else if (currentCSP.areCompatible(v1, v2) == Option(false)) (UnsolvableCSP, Vector())
+        else (currentCSP.addConstraint(Equal(v1, v2)), unification :+ Equal(v1, v2))
+    })
     // if the resulting CSP is not solvable any more, the two literals aren't unifiable
     if (result._1.isSolvable != Some(false))
       Some(result._2)
@@ -43,6 +44,6 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
   /**
    * Returns a list of all differentiater, i.e. a all possible constraints that can make the two literals unequal
    */
-  def !?!(that: Literal)(csp: CSP): Seq[NotEquals] = if (this.predicate != that.predicate || this.isPositive != that.isPositive) Nil
-  else (this.parameterVariables zip that.parameterVariables) collect { case (v1, v2) if csp.getRepresentative(v1) != csp.getRepresentative(v2) => NotEquals(v1, v2)}
+  def !?!(that: Literal)(csp: CSP): Seq[NotEqual] = if (this.predicate != that.predicate || this.isPositive != that.isPositive) Nil
+  else (this.parameterVariables zip that.parameterVariables) collect { case (v1, v2) if csp.getRepresentative(v1) != csp.getRepresentative(v2) => NotEqual(v1, v2)}
 }

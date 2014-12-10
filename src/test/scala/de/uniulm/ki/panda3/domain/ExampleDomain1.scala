@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.domain
 
 import de.uniulm.ki.panda3.csp.Variable
 import de.uniulm.ki.panda3.logic.{Constant, Literal, Predicate, Sort}
+import de.uniulm.ki.panda3.plan.element.PlanStep
 
 /**
  *
@@ -17,7 +18,7 @@ trait HasExampleDomain1 {
   val constant4sort1: Constant = Constant("constant_4_sort_1")
 
   // sorts
-  val sort1: Sort = Sort("sort 1", constant1sort1 +: Vector())
+  val sort1: Sort = Sort("sort 1", constant1sort1 +: constant2sort1 +: constant3sort1 +: constant4sort1 +: Vector())
 
   // predicates
   val predicate1: Predicate = Predicate("predicate1", sort1 :: Nil)
@@ -28,8 +29,24 @@ trait HasExampleDomain1 {
   val variable1sort3: Variable = Variable("variable_3_sort1", sort1)
 
   // tasks
-  val task1: Task = Task("task1", isPrimitive = true, variable1sort1 :: Nil, Literal(predicate1, isPositive = true, variable1sort1 :: Nil) :: Nil,
-                         Literal(predicate1, isPositive = false, variable1sort1 :: Nil) :: Nil)
+  val task1: Task = Task("task1", isPrimitive = true, variable1sort1 :: Nil, preconditions = Literal(predicate1, isPositive = false, variable1sort1 :: Nil) :: Nil, effects = Literal
+    (predicate1, isPositive = true, variable1sort1 :: Nil) :: Nil)
+  val init: Task = Task("init", isPrimitive = true, variable1sort1 :: Nil, preconditions = Nil, effects = Literal(predicate1, isPositive = false, variable1sort1 :: Nil) :: Nil)
+  val goal: Task = Task("goal", isPrimitive = true, variable1sort1 :: Nil, preconditions = Literal(predicate1, isPositive = true, variable1sort1 :: Nil) :: Nil, effects = Nil)
+
+
+  ////////////////////////////
+  // instance
+  ///////////////////////////
+
+  // variables
+  val instance_variable1sort1: Variable = Variable("variable_1_sort1", sort1)
+  val instance_variable1sort2: Variable = Variable("variable_2_sort1", sort1)
+  val instance_variable1sort3: Variable = Variable("variable_3_sort1", sort1)
+
+  // plan steps
+  val planstep0init = PlanStep(0, init, instance_variable1sort1 :: Nil)
+  val planstep1goal = PlanStep(1, goal, instance_variable1sort2 :: Nil)
 
 
   val exampleDomain1: Domain = Domain(sort1 :: Nil, constant1sort1 :: constant2sort1 :: constant3sort1 :: constant4sort1 :: Nil, predicate1 :: Nil, task1 :: Nil, Nil, Nil)

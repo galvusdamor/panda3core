@@ -18,6 +18,8 @@ class LiteralTest extends FlatSpec {
   val p1 : Predicate = Predicate("p1", sort1 :: sort1 :: Nil)
   val p2 : Predicate = Predicate("p2", sort1 :: sort2 :: Nil)
   val p3 : Predicate = Predicate("p3", sort1 :: sort1 :: sort1 :: sort1 :: Nil)
+  val p4: Predicate = Predicate("p4", sort1 :: Nil)
+
 
   val v1 : Variable = Variable("v1", sort1)
   val v2 : Variable = Variable("v2", sort1)
@@ -42,7 +44,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Checking equality" must "be possible using constraings" in {
-    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, v2))
+    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equal(v1, v2))
 
     val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
     val l2 : Literal = Literal(p1, false, v1 :: v1 :: Nil)
@@ -51,7 +53,7 @@ class LiteralTest extends FlatSpec {
     assert((l1 =?= l2)(csp))
     assert(!(l1 =?= l3)(csp))
 
-    val csp2 = csp.addConstraint(Equals(v1, Right(Constant("a")))).addConstraint(Equals(v3, Constant("a")))
+    val csp2 = csp.addConstraint(Equal(v1, Right(Constant("a")))).addConstraint(Equal(v3, Constant("a")))
 
     assert((l1 =?= l2)(csp2))
     assert((l1 =?= l3)(csp2))
@@ -59,7 +61,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Unification" must "be possible" in {
-    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, v2))
+    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equal(v1, v2))
 
     val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
     val l3 : Literal = Literal(p1, false, v1 :: v3 :: Nil)
@@ -73,15 +75,38 @@ class LiteralTest extends FlatSpec {
     // exactly one unification is necessary
     assert(unifier.size == 1);
     // and this is "v2 equals v3"
-    assert(unifier(0) == Equals(v2, v3))
+    assert(unifier(0) == Equal(v2, v3))
 
     // after unification, the expressions must be equal
     val equalCsp = csp.addConstraints(unifier)
     assert((l1 =?= l3)(equalCsp))
   }
 
+
+  "Unification of literals with only a single argument" must "be possible" in {
+    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2), Nil)
+
+    val l1: Literal = Literal(p4, false, v1 :: Nil)
+    val l2: Literal = Literal(p4, false, v2 :: Nil)
+
+    // compute the most general unifier
+    val mgu = (l1 #?# l2)(csp)
+
+    assert(mgu match { case Some(x) => true; case None => false})
+
+    val unifier: Seq[VariableConstraint] = mgu match {case Some(x) => x};
+    // exactly one unification is necessary
+    assert(unifier.size == 1);
+    // and this is "v2 equals v3"
+    assert(unifier(0) == Equal(v1, v2) || unifier(0) == Equal(v2, v1))
+
+    // after unification, the expressions must be equal
+    val equalCsp = csp.addConstraints(unifier)
+    assert((l1 =?= l2)(equalCsp))
+  }
+
   "Unification" must "be impossible for non-equal predicates" in {
-    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equals(v1, v2))
+    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equal(v1, v2))
 
     val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
     val l3 : Literal = Literal(p2, false, v1 :: v5 :: Nil)
@@ -94,7 +119,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Unification" must "be impossible of the CSP says so" in {
-    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(NotEquals(v2, v3))
+    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(NotEqual(v2, v3))
 
     val l1 : Literal = Literal(p1, false, v1 :: v2 :: Nil)
     val l3 : Literal = Literal(p1, false, v1 :: v3 :: Nil)
@@ -106,7 +131,7 @@ class LiteralTest extends FlatSpec {
   }
 
   "Differentiation" must "be possible for two Literals" in {
-    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(NotEquals(v2, v3))
+    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(NotEqual(v2, v3))
 
     val l1: Literal = Literal(p1, false, v1 :: v2 :: Nil)
     val l2: Literal = Literal(p1, false, v1 :: v3 :: Nil)
@@ -114,14 +139,14 @@ class LiteralTest extends FlatSpec {
 
     val diff1 = (l1 !?! l2)(csp)
     assert(diff1.size == 1)
-    assert(diff1(0) == NotEquals(v2, v3) || diff1(0) == NotEquals(v3, v2))
+    assert(diff1(0) == NotEqual(v2, v3) || diff1(0) == NotEqual(v3, v2))
 
     val diff2 = (l1 !?! l3)(csp)
     assert(diff2.size == 0)
 
     val diff3 = (l1 !?! l3.negate)(csp)
     assert(diff3.size == 2)
-    assert(diff3 exists { p => p == NotEquals(v1, v3) || p == NotEquals(v3, v1)})
-    assert(diff3 exists { p => p == NotEquals(v2, v4) || p == NotEquals(v4, v2)})
+    assert(diff3 exists { p => p == NotEqual(v1, v3) || p == NotEqual(v3, v1)})
+    assert(diff3 exists { p => p == NotEqual(v2, v4) || p == NotEqual(v4, v2)})
   }
 }

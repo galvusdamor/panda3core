@@ -16,11 +16,15 @@ trait Modification {
 
   def addedVariables: Seq[Variable] = Nil
 
+  def addedVariableConstraints: Seq[VariableConstraint] = Nil
+
+  /** all added orderings constraints. contains the explicitly ones and the implicit ones, which are based on causal links */
+  def allAddedOrderingConstraints: Seq[OrderingConstraint] = addedOrderingConstraints ++
+    (addedCausalLinks collect { case CausalLink(producer, consumer, _) if producer.schema.isPrimitive && consumer.schema.isPrimitive => OrderingConstraint(producer, consumer)})
+
   def addedCausalLinks: Seq[CausalLink] = Nil
 
   def addedOrderingConstraints: Seq[OrderingConstraint] = Nil
-
-  def addedVariableConstraints: Seq[VariableConstraint] = Nil
 
 
   /* removing modifications */

@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.csp.{CSP, SymbolicCSP}
 import de.uniulm.ki.panda3.domain.Domain
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
-import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition}
+import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition, UnboundVariable}
 import de.uniulm.ki.panda3.plan.modification.Modification
 import de.uniulm.ki.panda3.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
 
@@ -16,7 +16,9 @@ import de.uniulm.ki.panda3.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
 case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep],
                         causalLinks: Seq[CausalLink],
                         orderingConstraints: TaskOrdering,
-                        variableConstraints: CSP) extends Plan {
+                        variableConstraints: CSP,
+                        init: PlanStep,
+                        goal: PlanStep) extends Plan {
 
   /** list of all causal threads in this plan */
   override lazy val causalThreads: Seq[CausalThreat] =
@@ -34,7 +36,16 @@ case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep],
     case (ps, literal) => causalLinks exists { case CausalLink(_, consumer, condition) => (consumer =?= ps)(variableConstraints) && (condition =?= literal)(variableConstraints)}
   } map { case (ps, literal) => OpenPrecondition(this, ps, literal)}
   /** list containing all preconditions in this plan */
-  override lazy val allPreconditions: Seq[(PlanStep, Literal)] = planSteps flatMap { ps => ps.substitutedPreconditions map { prec => (ps, prec)}}
+  lazy val allPreconditions: Seq[(PlanStep, Literal)] = planSteps flatMap { ps => ps.substitutedPreconditions map { prec => (ps, prec)}}
+
+
+  override lazy val unboundVariables: Seq[UnboundVariable] = (variableConstraints.variables collect { case v if variableConstraints.getRepresentative(v).isLeft => variableConstraints
+    .getRepresentative(v) match {
+    case Left(v) => v
+  }
+  } map {
+    case v => UnboundVariable(this, v)
+  }).toSeq
 
   /** returns (if possible), whether this plan can be refined into a solution or not */
   override def isSolvable: Option[Boolean] = if (!orderingConstraints.isConsistent || variableConstraints.isSolvable == Some(false)) Some(false) else None
@@ -42,15 +53,15 @@ case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep],
   // =================== Local Helper ==================== //
 
   override def modify(modification: Modification): SymbolicPlan = {
-    val newPlanSteps = (planSteps diff modification.removedPlanSteps) union modification.addedPlanSteps
+    val newPlanSteps: Seq[PlanStep] = (planSteps diff modification.removedPlanSteps) union modification.addedPlanSteps
     val newCausalLinks = (causalLinks diff modification.removedCausalLinks) union modification.addedCausalLinks
 
     // compute new ordering constraints ... either update the old ones incrementally, or ,if some were removed, compute them anew
     val newOrderingConstraints = if (modification.removedOrderingConstraints.size == 0)
-      orderingConstraints.addOrderings(modification.addedOrderingConstraints)
+      orderingConstraints.addPlanSteps(modification.addedPlanSteps).addOrderings(modification.allAddedOrderingConstraints)
     else {
-      val newOrderingConstraints = (orderingConstraints.originalOrderingConstraints diff modification.removedOrderingConstraints) union modification.addedOrderingConstraints
-      SymbolicTaskOrdering(newOrderingConstraints, newPlanSteps.size)
+      val newOrderingConstraints = (orderingConstraints.originalOrderingConstraints diff modification.removedOrderingConstraints) union modification.allAddedOrderingConstraints
+      SymbolicTaskOrdering(newOrderingConstraints, newPlanSteps.maxBy(_.id).id + 1)
     }
 
 
@@ -63,7 +74,7 @@ case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep],
       SymbolicCSP(newVariableSet, newConstraintSet)
     }
 
-    SymbolicPlan(domain, newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints)
+    SymbolicPlan(domain, newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, init, goal)
   }
 
   def getNewId(): Int = {

@@ -11,9 +11,16 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
 
   import de.uniulm.ki.panda3.plan.ordering.TaskOrdering._
 
-  private var isTransitiveHullComputed: Boolean = false
   private val innerArrangement: Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
+  private var isTransitiveHullComputed: Boolean = false
   private var computedInconsistent = false
+
+  override def isConsistent: Boolean = {
+    if (!isTransitiveHullComputed)
+      initialiseExplicitly()
+
+    !computedInconsistent
+  }
 
   def initialiseExplicitly(lastKOrderingsAreNew: Int = originalOrderingConstraints.length, lastKTasksAreNew: Int = numberOfTasks,
                            prevArrangement: Array[Array[Byte]] = Array.ofDim(0, 0)): Unit = {
@@ -62,11 +69,11 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     }
   }
 
-  override def isConsistent: Boolean = {
-    if (!isTransitiveHullComputed)
-      initialiseExplicitly()
-
-    !computedInconsistent
+  override def tryCompare(x: PlanStep, y: PlanStep): Option[Int] = {
+    arrangement()(x.id)(y.id) match {
+      case DONTKNOW => None
+      case i => Some(i)
+    }
   }
 
   override def arrangement(): Array[Array[Byte]] = {
@@ -76,21 +83,25 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     innerArrangement
   }
 
-  override def tryCompare(x: PlanStep, y: PlanStep): Option[Int] = {
-    arrangement()(x.id)(y.id) match {
-      case DONTKNOW => None
-      case i => Some(i)
-    }
-  }
-
   override def addOrdering(before: PlanStep, after: PlanStep): SymbolicTaskOrdering = {
     val newNumberOfVariables: Int = math.max(numberOfTasks, math.max(before.id + 1, after.id + 1))
-    val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints :+ OrderingConstraint(before, after),
-                                                                     newNumberOfVariables)
+    val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints :+ OrderingConstraint(before, after), newNumberOfVariables)
 
     // if this ordering was already initialised let the new one know what we did so far
     if (isTransitiveHullComputed)
       newOrdering.initialiseExplicitly(1, newNumberOfVariables - numberOfTasks, innerArrangement)
+
+    newOrdering
+  }
+
+
+  override def addPlanStep(ps: PlanStep): SymbolicTaskOrdering = {
+    val newNumberOfVariables: Int = math.max(numberOfTasks, ps.id + 1)
+    val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints, newNumberOfVariables)
+
+    // if this ordering was already initialised let the new one know what we did so far
+    if (isTransitiveHullComputed)
+      newOrdering.initialiseExplicitly(0, newNumberOfVariables - numberOfTasks, innerArrangement)
 
     newOrdering
   }

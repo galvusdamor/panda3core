@@ -51,4 +51,15 @@ trait CSP {
     case Left(v) => getRepresentative(v)
     case _ => vOrC // constant
   }
+
+  // boxing
+  def equal(v1: Variable, v2: Variable): Boolean = equal(Left(v1), Left(v2))
+
+  def equal(v1: Variable, c2: Constant): Boolean = equal(Left(v1), Right(c2))
+
+  def equal(c1: Constant, v2: Variable): Boolean = equal(Right(c1), Left(v2))
+
+  def equal(c1: Constant, c2: Constant): Boolean = equal(Right(c1), Right(c2))
+
+  def equal(vOrC1: Either[Variable, Constant], vOrC2: Either[Variable, Constant]): Boolean = getRepresentative(vOrC1) == getRepresentative(vOrC2)
 }
