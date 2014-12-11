@@ -3,9 +3,12 @@ package de.uniulm.ki.panda3.csp
 import de.uniulm.ki.panda3.logic.{Constant, Sort}
 
 /**
+ * Variable Constraints are symbolic representations of relations between variables.
+ * A [[CSP]]
+ *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait VariableConstraint {
+sealed trait VariableConstraint {
 
   def compileNotOfSort: Set[VariableConstraint] = {
     this match {

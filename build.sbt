@@ -1,10 +1,9 @@
 ///////////////// start SBT plugins for code style and coverage
 org.scalastyle.sbt.ScalastylePlugin.Settings
 
-// activate HMTL highlighting
-
 instrumentSettings
 
+// activate HMTL highlighting
 ScoverageKeys.highlighting := true
 
 //// actual project
@@ -25,6 +24,4 @@ startYear := Some(2014)
 
 //licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-
 scalaVersion := "2.11.2"
-
