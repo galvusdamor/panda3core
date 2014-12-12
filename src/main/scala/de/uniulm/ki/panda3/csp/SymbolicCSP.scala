@@ -7,56 +7,29 @@ import scala.collection.mutable
 import scala.util.{Left, Right}
 
 /**
- * Implementation of a symbolic CSP used as a part of a plan
+ * CSP implemented using an object oriented structure.
+ *
+ * This CSP can handle four kinds of variable constraints: [[Equal]], [[NotEqual]], [[OfSort]], [[NotOfSort]].
+ * It uses the AC3 algorithm to reduce the possible domains for every variable and maintains equivalence classes of equal variables.
+ *
+ * A solution can be generated via backtracking.
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 case class SymbolicCSP(variables: Set[Variable],
                        constraints: List[VariableConstraint]) extends CSP {
 
+  // holds equivalent variables
   private val unionFind: SymbolicUnionFind = new SymbolicUnionFind
+  // contains information about unqeual variables
   private var unequal: mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]]()
   // this is only kept for the top elements of the union-find
   private var remainingDomain: mutable.Map[Variable, mutable.Set[Constant]] = new mutable.HashMap[Variable, mutable.Set[Constant]]()
+  // marker for the compuatation of the reduction
   private var isReductionComputed = false
 
   // if this flag is false, i.e. we know this CSP is unsolvable, the internal data might become inconsistent ... it is simply not necessary to have it still intact
   private var isPotentiallySolvable = true
-
-  /**
-   * Process all unprocessed constrains of the CSP and reduce maximally
-   */
-  def initialiseExplicitly(previousUnequal: mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]](),
-                           previousRemainingDomain: mutable.Map[Variable, mutable.Set[Constant]] = new mutable.HashMap[Variable, mutable.Set[Constant]](),
-                           previousUnionFind: SymbolicUnionFind = new SymbolicUnionFind,
-                           lastKConstraintsAreNew: Int = constraints.size,
-                           newVariables: Set[Variable] = variables): Unit = {
-    // get really new copies of the previous data structures
-    unequal = previousUnequal.clone()
-    remainingDomain = previousRemainingDomain.clone()
-    unionFind cloneFrom previousUnionFind
-
-    // add completely new variables
-    for (variable <- newVariables) {
-      unionFind.addVariable(variable)
-      remainingDomain(variable) = new mutable.HashSet[Constant]() ++ variable.sort.elements
-      unequal(variable) = new mutable.HashSet[Variable]()
-    }
-
-    // add all new constraints
-    for (originalConstraint <- constraints.drop(constraints.size - lastKConstraintsAreNew);
-         constraint <- originalConstraint.compileNotOfSort)
-    // treat each single constraint
-      addSingleConstraint(constraint)
-
-    if (detectUnsolvability())
-      isPotentiallySolvable = false
-    // unit propagation
-    if (isPotentiallySolvable)
-      unitPropagation()
-
-    isReductionComputed = true
-  }
 
   override def reducedDomainOf(v: Variable): Iterable[Constant] = {
     if (!isReductionComputed) initialiseExplicitly()
@@ -116,7 +89,6 @@ case class SymbolicCSP(variables: Set[Variable],
     else Some(false)
   }
 
-  /** computes the solution of this CSP, might be computationally expensive */
   override def solution: Option[Map[Variable, Constant]] = {
     // returns partial solution
     def searchSolution(remainingDomain: Map[Variable, Set[Constant]]): Option[Map[Variable, Constant]] = {
@@ -126,13 +98,18 @@ case class SymbolicCSP(variables: Set[Variable],
         val domainsWithout_1: Map[Variable, Set[Constant]] = remainingDomain - resolutionVariable._1 // remove variable
         if (resolutionVariable._2.isEmpty) None
         else {
-          resolutionVariable._2.foldLeft[Option[Map[Variable, Constant]]](None)({ case (ret@Some(_), _) => ret;
-          case (None, const) => // try assigning _1 == const
-            searchSolution(domainsWithout_1.map({ case (other, values) => if (unequal(resolutionVariable._1).contains(other)) other -> (values - const) else other -> values})) match {
-              case Some(partialSolution) => Some(partialSolution + (resolutionVariable._1 -> const))
-              case _ => None
-            }
-                                                                                })
+          resolutionVariable._2.foldLeft[Option[Map[Variable, Constant]]](None)(
+          {
+            case (ret@Some(_), _) => ret;
+            case (None, const) => // try assigning _1 == const
+              searchSolution(domainsWithout_1.map({ case (other, values) => if (unequal(resolutionVariable._1)
+                .contains(other)) other -> (values - const)
+              else other -> values
+                                                  })) match {
+                case Some(partialSolution) => Some(partialSolution + (resolutionVariable._1 -> const))
+                case _ => None
+              }
+          })
         }
       }
     }
@@ -149,6 +126,43 @@ case class SymbolicCSP(variables: Set[Variable],
   override def getRepresentative(v: Variable): Either[Variable, Constant] = {
     if (!isReductionComputed) if (!isReductionComputed) initialiseExplicitly()
     unionFind.getRepresentative(v)
+  }
+
+  /**
+   * Runs AC3.
+   * Process all unprocessed constrains of the CSP and reduce maximally.
+   * This function must not be called from an other class.
+   */
+  private def initialiseExplicitly(previousUnequal: mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]](),
+                                   previousRemainingDomain: mutable.Map[Variable, mutable.Set[Constant]] = new mutable.HashMap[Variable, mutable.Set[Constant]](),
+                                   previousUnionFind: SymbolicUnionFind = new SymbolicUnionFind,
+                                   lastKConstraintsAreNew: Int = constraints.size,
+                                   newVariables: Set[Variable] = variables): Unit = {
+    // get really new copies of the previous data structures
+    unequal = previousUnequal.clone()
+    remainingDomain = previousRemainingDomain.clone()
+    unionFind cloneFrom previousUnionFind
+
+    // add completely new variables
+    for (variable <- newVariables) {
+      unionFind.addVariable(variable)
+      remainingDomain(variable) = new mutable.HashSet[Constant]() ++ variable.sort.elements
+      unequal(variable) = new mutable.HashSet[Variable]()
+    }
+
+    // add all new constraints
+    for (originalConstraint <- constraints.drop(constraints.size - lastKConstraintsAreNew);
+         constraint <- originalConstraint.compileNotOfSort)
+    // treat each single constraint
+      addSingleConstraint(constraint)
+
+    if (detectUnsolvability())
+      isPotentiallySolvable = false
+    // unit propagation
+    if (isPotentiallySolvable)
+      unitPropagation()
+
+    isReductionComputed = true
   }
 
   /** returns best known unique representative for a given variable */
