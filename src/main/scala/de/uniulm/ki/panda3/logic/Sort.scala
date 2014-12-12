@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.logic
 
 /**
- * Sorts of objects
+ * Sorts aggregate constants of First Order Logic
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */

@@ -22,13 +22,39 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     !computedInconsistent
   }
 
+  override def tryCompare(x: PlanStep, y: PlanStep): Option[Int] = {
+    arrangement()(x.id)(y.id) match {
+      case DONTKNOW => None
+      case i => Some(i)
+    }
+  }
+
+  override def arrangement(): Array[Array[Byte]] = {
+    if (!isTransitiveHullComputed)
+      initialiseExplicitly()
+
+    innerArrangement
+  }
+
+  override def addOrdering(before: PlanStep, after: PlanStep): SymbolicTaskOrdering = {
+    val newNumberOfVariables: Int = math.max(numberOfTasks, math.max(before.id + 1, after.id + 1))
+    val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints :+ OrderingConstraint(before, after), newNumberOfVariables)
+
+    // if this ordering was already initialised let the new one know what we did so far
+    if (isTransitiveHullComputed)
+      newOrdering.initialiseExplicitly(1, newNumberOfVariables - numberOfTasks, innerArrangement)
+
+    newOrdering
+  }
+
   def initialiseExplicitly(lastKOrderingsAreNew: Int = originalOrderingConstraints.length, lastKTasksAreNew: Int = numberOfTasks,
                            prevArrangement: Array[Array[Byte]] = Array.ofDim(0, 0)): Unit = {
     // init the current arrangement with the old one
     Range(0, prevArrangement.length).foreach(i => prevArrangement(i).copyToArray(innerArrangement(i)))
     // update the arrangement
     Range(originalOrderingConstraints.length - lastKOrderingsAreNew, originalOrderingConstraints.length).foreach(i => {
-      if (innerArrangement(originalOrderingConstraints(i).before.id)(originalOrderingConstraints(i).after.id) != DONTKNOW) computedInconsistent = true
+      if (innerArrangement(originalOrderingConstraints(i).before.id)(originalOrderingConstraints(i).after.id) == AFTER) computedInconsistent = true
+      if (innerArrangement(originalOrderingConstraints(i).before.id)(originalOrderingConstraints(i).after.id) == SAME) computedInconsistent = true
       innerArrangement(originalOrderingConstraints(i).before.id)(originalOrderingConstraints(i).after.id) = BEFORE
       innerArrangement(originalOrderingConstraints(i).after.id)(originalOrderingConstraints(i).before.id) = AFTER
     })
@@ -68,32 +94,6 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
       isTransitiveHullComputed = true
     }
   }
-
-  override def tryCompare(x: PlanStep, y: PlanStep): Option[Int] = {
-    arrangement()(x.id)(y.id) match {
-      case DONTKNOW => None
-      case i => Some(i)
-    }
-  }
-
-  override def arrangement(): Array[Array[Byte]] = {
-    if (!isTransitiveHullComputed)
-      initialiseExplicitly()
-
-    innerArrangement
-  }
-
-  override def addOrdering(before: PlanStep, after: PlanStep): SymbolicTaskOrdering = {
-    val newNumberOfVariables: Int = math.max(numberOfTasks, math.max(before.id + 1, after.id + 1))
-    val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints :+ OrderingConstraint(before, after), newNumberOfVariables)
-
-    // if this ordering was already initialised let the new one know what we did so far
-    if (isTransitiveHullComputed)
-      newOrdering.initialiseExplicitly(1, newNumberOfVariables - numberOfTasks, innerArrangement)
-
-    newOrdering
-  }
-
 
   override def addPlanStep(ps: PlanStep): SymbolicTaskOrdering = {
     val newNumberOfVariables: Int = math.max(numberOfTasks, ps.id + 1)

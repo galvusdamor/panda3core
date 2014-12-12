@@ -38,14 +38,12 @@ trait CSP {
    */
   def areCompatible(vOrC1: Either[Variable, Constant], vOrC2: Either[Variable, Constant]): Option[Boolean] = (vOrC1, vOrC2) match {
     case (Left(v1), Left(v2)) => areCompatible(v1, v2)
-    case (Right(c), Left(v)) => if (reducedDomainOf(v) exists {
-      _ == c
-    }) None
-    else Some(false)
-    case (Left(v), Right(c)) => if (reducedDomainOf(v) exists {
-      _ == c
-    }) None
-    else Some(false)
+    case (Right(c), Left(v)) => if (getRepresentative(v) == Right(c)) Some(true)
+                                else if (reducedDomainOf(v) exists {_ == c}) None
+                                else Some(false)
+    case (Left(v), Right(c)) => if (getRepresentative(v) == Right(c)) Some(true)
+                                else if (reducedDomainOf(v) exists {_ == c}) None
+                                else Some(false)
     case (Right(c1), Right(c2)) => Some(c1 == c2)
   }
 

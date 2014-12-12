@@ -76,7 +76,7 @@ case class SymbolicCSP(variables: Set[Variable],
     val newCSP = SymbolicCSP(variables + variable, constraints)
 
     if (isReductionComputed)
-      newCSP.initialiseExplicitly(unequal, remainingDomain, unionFind, 1, HashSet())
+      newCSP.initialiseExplicitly(unequal, remainingDomain, unionFind, 1, HashSet() + variable)
 
     newCSP
   }
@@ -177,8 +177,10 @@ case class SymbolicCSP(variables: Set[Variable],
   /** function to detect all unit propagations */
   private def detectUnitPropagation(): Iterable[Variable] = remainingDomain filter { case (variable, values) => values.size == 1} map { case (variable, values) => variable}
 
+  /** simple test for unsolvability: a CSP is unsolvable if a variable exsists whose domain is empty */
   private def detectUnsolvability() = remainingDomain exists { case (variable, values) => values.size == 0}
 
+  /** executes uni propagation on a set of given variables */
   private def unitPropagation(toPropagate: Iterable[Variable] = detectUnitPropagation()): Unit = if (toPropagate.size == 0) ()
   else {
     val x: Iterable[Variable] = (toPropagate map { variable =>

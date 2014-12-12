@@ -36,6 +36,8 @@ class SymbolicCSPTest extends FlatSpec {
     assert(csp1.isSolvable != Some(false))
     assert(csp1.getRepresentative(v1) == csp1.getRepresentative(v2))
     assert(csp1.getRepresentative(v2) == Right(Constant("a")))
+    assert(csp1.areCompatible(Left(v2), Right(Constant("a"))) == Some(true))
+    assert(csp1.areCompatible(Right(Constant("a")), Left(v2)) == Some(true))
   }
 
   it must "support absolute inference along unequal constraints" in {
@@ -60,6 +62,7 @@ class SymbolicCSPTest extends FlatSpec {
   it must "support detect unsolvable situations" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v3, v4), NotEqual(v3, Left(v4)) :: Equal(v3, Right(Constant("x"))) :: Equal(v4, Right(Constant("x"))) :: Nil)
     assert(csp1.areCompatible(v3, v4) == Some(false))
+    assert(csp1.areCompatible(Left(v3), Left(v4)) == Some(false))
     assert(csp1.isSolvable == Some(false))
 
     val csp2: SymbolicCSP = SymbolicCSP(Set(v1), Equal(v1, Right(Constant("a"))) :: OfSort(v1, sort1sub2) :: Nil)

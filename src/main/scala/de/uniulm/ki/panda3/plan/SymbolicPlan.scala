@@ -48,7 +48,10 @@ case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep],
   }).toSeq
 
   /** returns (if possible), whether this plan can be refined into a solution or not */
-  override def isSolvable: Option[Boolean] = if (!orderingConstraints.isConsistent || variableConstraints.isSolvable == Some(false)) Some(false) else None
+  override def isSolvable: Option[Boolean] = if (!orderingConstraints.isConsistent || variableConstraints.isSolvable == Some(false)) Some(false)
+                                             else if (flaws.size == 0) Some(true)
+                                             else
+                                               None
 
   // =================== Local Helper ==================== //
 

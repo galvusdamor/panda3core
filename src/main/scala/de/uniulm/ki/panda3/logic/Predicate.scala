@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.logic
 
 /**
- * Predicate of first order logic
+ * Predicate of First Order Logic
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
