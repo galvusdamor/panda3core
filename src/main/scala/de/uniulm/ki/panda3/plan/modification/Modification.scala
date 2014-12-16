@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.plan.modification
 
 import de.uniulm.ki.panda3.csp.{Variable, VariableConstraint}
+import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 
 /**
@@ -12,17 +13,19 @@ import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanSte
  */
 trait Modification {
 
-  /* Adding modifications*/
-
-  def addedPlanSteps: Seq[PlanStep] = Nil
+  val plan: Plan
 
   def addedVariables: Seq[Variable] = Nil
 
   def addedVariableConstraints: Seq[VariableConstraint] = Nil
 
   /** all added orderings constraints. contains the explicitly ones and the implicit ones, which are based on causal links */
-  final def addedOrderingConstraints: Seq[OrderingConstraint] = nonInducedAddedOrderingConstraints ++
+  final def addedOrderingConstraints: Seq[OrderingConstraint] = (nonInducedAddedOrderingConstraints ++
     (addedCausalLinks collect { case CausalLink(producer, consumer, _) if producer.schema.isPrimitive && consumer.schema.isPrimitive => OrderingConstraint(producer, consumer)})
+    ++ (addedPlanSteps flatMap { ps => OrderingConstraint(plan.init, ps) :: OrderingConstraint(ps, plan.goal) :: Nil})).distinct
+
+  /* Adding modifications*/
+  def addedPlanSteps: Seq[PlanStep] = Nil
 
   def addedCausalLinks: Seq[CausalLink] = Nil
 
@@ -30,7 +33,6 @@ trait Modification {
 
 
   /* removing modifications */
-
   def removedPlanSteps: Seq[PlanStep] = Nil
 
   def removedVariables: Seq[Variable] = Nil

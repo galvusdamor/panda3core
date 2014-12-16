@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.csp.{Equal, Variable, VariableConstraint}
 import de.uniulm.ki.panda3.domain.Task
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.Plan
-import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 
 /**
  *
@@ -20,8 +20,6 @@ case class InsertPlanStepWithLink(planStep: PlanStep, causalLink: CausalLink, eq
   override def addedVariables: Seq[Variable] = planStep.arguments
 
   override def addedVariableConstraints: Seq[VariableConstraint] = equalityConstraints map { case c: VariableConstraint => c}
-
-  override def nonInducedAddedOrderingConstraints: Seq[OrderingConstraint] = OrderingConstraint(plan.init, planStep) :: OrderingConstraint(planStep, plan.goal) :: Nil
 }
 
 object InsertPlanStepWithLink {
