@@ -42,7 +42,7 @@ class AddOrderingTest extends FlatSpec with HasExampleDomain2 {
     val cl = CausalLink(ps2, psgoal, psgoal.substitutedPreconditions(0))
 
 
-    val plan: SymbolicPlan = SymbolicPlan(exampleDomain2, psgoal :: ps2 :: ps3 :: Nil, Nil, SymbolicTaskOrdering(Nil, 4).addOrdering(ps2, psgoal),
+    val plan: SymbolicPlan = SymbolicPlan(exampleDomain2, psinit :: psgoal :: ps2 :: ps3 :: Nil, cl :: Nil, SymbolicTaskOrdering(Nil, 4).addOrdering(ps2, psgoal),
                                           SymbolicCSP(Set(instance_variable1sort1, instance_variable1sort2, instance_variable1sort3), Nil), psinit, psgoal)
 
     val singleOrderingModification = AddOrdering(plan, ps3, cl)
