@@ -2,7 +2,6 @@ package de.uniulm.ki.panda3.domain
 
 import de.uniulm.ki.panda3.csp.Variable
 import de.uniulm.ki.panda3.logic.{Constant, Literal, Predicate, Sort}
-import de.uniulm.ki.panda3.plan.element.PlanStep
 
 /**
  *
@@ -25,14 +24,14 @@ trait HasExampleDomain1 {
 
   // variables
   val variable1sort1: Variable = Variable("variable_1_sort1", sort1)
-  val variable1sort2: Variable = Variable("variable_2_sort1", sort1)
-  val variable1sort3: Variable = Variable("variable_3_sort1", sort1)
+  val variable2sort1: Variable = Variable("variable_2_sort1", sort1)
+  val variable3sort1: Variable = Variable("variable_3_sort1", sort1)
 
   // tasks
   val task1: Task = Task("task1", isPrimitive = true, variable1sort1 :: Nil, preconditions = Literal(predicate1, isPositive = false, variable1sort1 :: Nil) :: Nil, effects = Literal
     (predicate1, isPositive = true, variable1sort1 :: Nil) :: Nil)
   val init: Task = Task("init", isPrimitive = true, variable1sort1 :: Nil, preconditions = Nil, effects = Literal(predicate1, isPositive = false, variable1sort1 :: Nil) :: Nil)
-  val goal: Task = Task("goal", isPrimitive = true, variable1sort1 :: Nil, preconditions = Literal(predicate1, isPositive = true, variable1sort1 :: Nil) :: Nil, effects = Nil)
+  val goal1: Task = Task("goal", isPrimitive = true, variable1sort1 :: Nil, preconditions = Literal(predicate1, isPositive = true, variable1sort1 :: Nil) :: Nil, effects = Nil)
 
 
   ////////////////////////////
@@ -43,11 +42,12 @@ trait HasExampleDomain1 {
   val instance_variable1sort1: Variable = Variable("variable_1_sort1", sort1)
   val instance_variable1sort2: Variable = Variable("variable_2_sort1", sort1)
   val instance_variable1sort3: Variable = Variable("variable_3_sort1", sort1)
-
-  // plan steps
-  val planstep0init = PlanStep(0, init, instance_variable1sort1 :: Nil)
-  val planstep1goal = PlanStep(1, goal, instance_variable1sort2 :: Nil)
+  val instance_variable1sort4: Variable = Variable("variable_4_sort1", sort1)
+  val instance_variable1sort5: Variable = Variable("variable_5_sort1", sort1)
 
 
+  ////////////////////////////
+  // the actual domain
+  ////////////////////////////
   val exampleDomain1: Domain = Domain(sort1 :: Nil, constant1sort1 :: constant2sort1 :: constant3sort1 :: constant4sort1 :: Nil, predicate1 :: Nil, task1 :: Nil, Nil, Nil)
 }

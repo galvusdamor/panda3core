@@ -4,7 +4,9 @@ import de.uniulm.ki.panda3.csp.{Variable, VariableConstraint}
 import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 
 /**
- * Trait describint an abstract modification. Every specific modification should extend this trait
+ * Trait describing an abstract modification. Every specific modification should extend this trait.
+ *
+ * The actually induced ordering constraints are inferred from the explicitly induced ones and those implicitly given as causal links
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
@@ -19,12 +21,12 @@ trait Modification {
   def addedVariableConstraints: Seq[VariableConstraint] = Nil
 
   /** all added orderings constraints. contains the explicitly ones and the implicit ones, which are based on causal links */
-  def allAddedOrderingConstraints: Seq[OrderingConstraint] = addedOrderingConstraints ++
+  final def addedOrderingConstraints: Seq[OrderingConstraint] = nonInducedAddedOrderingConstraints ++
     (addedCausalLinks collect { case CausalLink(producer, consumer, _) if producer.schema.isPrimitive && consumer.schema.isPrimitive => OrderingConstraint(producer, consumer)})
 
   def addedCausalLinks: Seq[CausalLink] = Nil
 
-  def addedOrderingConstraints: Seq[OrderingConstraint] = Nil
+  def nonInducedAddedOrderingConstraints: Seq[OrderingConstraint] = Nil
 
 
   /* removing modifications */

@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.{Equal, SymbolicCSP}
 import de.uniulm.ki.panda3.domain.HasExampleDomain1
-import de.uniulm.ki.panda3.plan.element.CausalLink
+import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{OpenPrecondition, UnboundVariable}
 import de.uniulm.ki.panda3.plan.modification.{BindVariableToValue, InsertCausalLink, InsertPlanStepWithLink}
 import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering
@@ -15,10 +15,14 @@ import org.scalatest.FlatSpec
  */
 class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
 
+  val planstep0init = PlanStep(0, init, instance_variable1sort1 :: Nil)
+  val planstep1goal = PlanStep(1, goal1, instance_variable1sort2 :: Nil)
+
+
   "Modifications" must "be computed for Open Preconditions" in {
     val plan1: SymbolicPlan = SymbolicPlan(exampleDomain1, planstep0init :: planstep1goal :: Nil, Nil, SymbolicTaskOrdering(Nil, 2).addOrdering(planstep0init, planstep1goal),
                                            SymbolicCSP(Set(instance_variable1sort1, instance_variable1sort2), Nil), planstep0init, planstep1goal)
-    // it should be possbile to solve the plan
+    // it should be possible to solve the plan
     assert(plan1.isSolvable == None)
 
 

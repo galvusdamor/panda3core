@@ -21,7 +21,7 @@ case class InsertPlanStepWithLink(planStep: PlanStep, causalLink: CausalLink, eq
 
   override def addedVariableConstraints: Seq[VariableConstraint] = equalityConstraints map { case c: VariableConstraint => c}
 
-  override def addedOrderingConstraints: Seq[OrderingConstraint] = OrderingConstraint(plan.init, planStep) :: OrderingConstraint(planStep, plan.goal) :: Nil
+  override def nonInducedAddedOrderingConstraints: Seq[OrderingConstraint] = OrderingConstraint(plan.init, planStep) :: OrderingConstraint(planStep, plan.goal) :: Nil
 }
 
 object InsertPlanStepWithLink {

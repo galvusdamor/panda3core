@@ -61,9 +61,9 @@ case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep],
 
     // compute new ordering constraints ... either update the old ones incrementally, or ,if some were removed, compute them anew
     val newOrderingConstraints = if (modification.removedOrderingConstraints.size == 0)
-      orderingConstraints.addPlanSteps(modification.addedPlanSteps).addOrderings(modification.allAddedOrderingConstraints)
+                                   orderingConstraints.addPlanSteps(modification.addedPlanSteps).addOrderings(modification.addedOrderingConstraints)
     else {
-      val newOrderingConstraints = (orderingConstraints.originalOrderingConstraints diff modification.removedOrderingConstraints) union modification.allAddedOrderingConstraints
+      val newOrderingConstraints = (orderingConstraints.originalOrderingConstraints diff modification.removedOrderingConstraints) union modification.addedOrderingConstraints
       SymbolicTaskOrdering(newOrderingConstraints, newPlanSteps.maxBy(_.id).id + 1)
     }
 
