@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.plan
 
-import de.uniulm.ki.panda3.csp.CSP
+import de.uniulm.ki.panda3.csp.{CSP, Variable}
 import de.uniulm.ki.panda3.domain.Domain
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, Flaw, OpenPrecondition, UnboundVariable}
@@ -23,6 +23,8 @@ trait Plan {
   val causalThreads: Seq[CausalThreat]
   val openPreconditions: Seq[OpenPrecondition]
   val unboundVariables: Seq[UnboundVariable]
+  val getFirstFreePlanStepID: Int = 1 + (planSteps foldLeft 0) { case (m, ps: PlanStep) => math.max(m, ps.id)}
+  val getFirstFreeVariableID: Int = 1 + (variableConstraints.variables foldLeft 0) { case (m, v: Variable) => math.max(m, v.id)}
 
   def domain: Domain
 
@@ -43,5 +45,6 @@ trait Plan {
 
   def modify(modification: Modification): Plan
 
-  def getNewId() : Int
+  /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.domain.DecompositionMethod]]s. */
+  def newInstance(): Plan
 }

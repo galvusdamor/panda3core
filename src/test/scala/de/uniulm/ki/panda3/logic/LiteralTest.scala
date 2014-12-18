@@ -21,11 +21,11 @@ class LiteralTest extends FlatSpec {
   val p4: Predicate = Predicate("p4", sort1 :: Nil)
 
 
-  val v1 : Variable = Variable("v1", sort1)
-  val v2 : Variable = Variable("v2", sort1)
-  val v3 : Variable = Variable("v3", sort1)
-  val v4 : Variable = Variable("v4", sort1)
-  val v5 : Variable = Variable("v5", sort2)
+  val v1: Variable = Variable(1, "v1", sort1)
+  val v2: Variable = Variable(2, "v2", sort1)
+  val v3: Variable = Variable(3, "v3", sort1)
+  val v4: Variable = Variable(4, "v4", sort1)
+  val v5: Variable = Variable(5, "v5", sort2)
 
 
   "Checking equality" must "be possible" in {

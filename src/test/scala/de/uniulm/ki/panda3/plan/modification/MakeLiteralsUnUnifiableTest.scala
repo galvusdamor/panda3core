@@ -34,6 +34,6 @@ class MakeLiteralsUnUnifiableTest extends FlatSpec with HasExampleDomain2 {
     val singleOrderingModification = MakeLiteralsUnUnifiable(plan, ps3.substitutedEffects(0).negate, ps2.substitutedEffects(0))
 
     assert(singleOrderingModification.size == 1)
-    assert(singleOrderingModification exists { case MakeLiteralsUnUnifiable(ne) => ne == NotEqual(instance_variable1sort2, instance_variable1sort3)})
+    assert(singleOrderingModification exists { case MakeLiteralsUnUnifiable(_, ne) => ne == NotEqual(instance_variable1sort2, instance_variable1sort3)})
   }
 }

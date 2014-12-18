@@ -9,10 +9,10 @@ import de.uniulm.ki.panda3.plan.Plan
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class BindVariableToValue(variable: Variable, value: Constant) extends Modification {
+case class BindVariableToValue(plan: Plan, variable: Variable, value: Constant) extends Modification {
   override def addedVariableConstraints: Seq[VariableConstraint] = Equal(variable, value) :: Nil
 }
 
 object BindVariableToValue {
-  def apply(plan: Plan, variable: Variable): Seq[BindVariableToValue] = plan.variableConstraints.reducedDomainOf(variable).toSeq map { c => BindVariableToValue(variable, c)}
+  def apply(plan: Plan, variable: Variable): Seq[BindVariableToValue] = plan.variableConstraints.reducedDomainOf(variable).toSeq map { c => BindVariableToValue(plan, variable, c)}
 }

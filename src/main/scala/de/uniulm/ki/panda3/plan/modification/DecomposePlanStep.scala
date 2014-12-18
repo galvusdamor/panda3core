@@ -1,7 +1,6 @@
 package de.uniulm.ki.panda3.plan.modification
 
 import de.uniulm.ki.panda3.csp.{Variable, VariableConstraint}
-import de.uniulm.ki.panda3.domain.DecompositionMethod
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 
@@ -45,10 +44,9 @@ case class DecomposePlanStep(ps: PlanStep, newSubPlan: Plan, inheritedCausalLink
 object DecomposePlanStep {
 
 
-  def apply(plan: Plan, ps: PlanStep): Seq[DecomposePlanStep] = plan.domain.decompositionMethods flatMap {apply(plan, ps, _)}
-
-  def apply(plan: Plan, ps: PlanStep, method: DecompositionMethod): Seq[DecomposePlanStep] = if (ps.schema != method.abstractTask) Nil
-                                                                                             else {
-                                                                                               Nil
-                                                                                             }
+  //def apply(plan: Plan, ps: PlanStep): Seq[DecomposePlanStep] = plan.domain.decompositionMethods flatMap {apply(plan, ps, _)}
+  /* def apply(plan: Plan, ps: PlanStep, method: DecompositionMethod): Seq[DecomposePlanStep] = if (ps.schema != method.abstractTask) Nil
+                                                                                              else {
+                                                                                                method.subPlan
+                                                                                             }*/
 }

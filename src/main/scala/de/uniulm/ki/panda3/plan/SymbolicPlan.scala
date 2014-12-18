@@ -80,7 +80,17 @@ case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep],
     SymbolicPlan(domain, newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, init, goal)
   }
 
-  def getNewId(): Int = {
-    1 + (planSteps foldLeft 0) { case (m, ps: PlanStep) => math.max(m, ps.id)}
+  /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.domain.DecompositionMethod]]s. */
+  override def newInstance(): Plan = {
+
+    /* domain: Domain, planSteps: Seq[PlanStep],
+     causalLinks: Seq[CausalLink],
+     orderingConstraints: TaskOrdering,
+     variableConstraints: CSP,
+     init: PlanStep,
+     goal: PlanSte
+ */ null
+
+
   }
 }

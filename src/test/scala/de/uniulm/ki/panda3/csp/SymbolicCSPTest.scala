@@ -17,13 +17,13 @@ class SymbolicCSPTest extends FlatSpec {
   val sort2sub1 : Sort = Sort("sort1sub1", Vector() :+ Constant("x"))
   val sort2sub2 : Sort = Sort("sort1sub1", Vector() :+ Constant("y") :+ Constant("z"))
 
-  val v1 = Variable("v1", sort1)
-  val v2 = Variable("v2", sort1)
-  val v3 = Variable("v3", sort2)
-  val v4 = Variable("v4", sort2)
-  val v5 = Variable("v5", sort2)
-  val v6 = Variable("v6", sort2)
-  val v7 = Variable("v7", sort2)
+  val v1 = Variable(1, "v1", sort1)
+  val v2 = Variable(2, "v2", sort1)
+  val v3 = Variable(3, "v3", sort2)
+  val v4 = Variable(4, "v4", sort2)
+  val v5 = Variable(5, "v5", sort2)
+  val v6 = Variable(6, "v6", sort2)
+  val v7 = Variable(7, "v7", sort2)
 
   "CSP" must "support equal constraints on variables" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v1, v2), Equal(v1, Left(v2)) :: Nil)

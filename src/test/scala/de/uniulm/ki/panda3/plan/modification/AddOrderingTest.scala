@@ -22,11 +22,11 @@ class AddOrderingTest extends FlatSpec with HasExampleDomain2 {
     val ps2 = PlanStep(2, task1, instance_variable1sort3 :: Nil)
     val ps3 = PlanStep(3, task1, instance_variable1sort4 :: Nil)
 
-    val singleOrderingModification = AddOrdering(ps2, ps3)
+    val singleOrderingModification = AddOrdering(null, ps2, ps3)
 
 
     assert(singleOrderingModification.size == 1)
-    assert(singleOrderingModification exists { case AddOrdering(OrderingConstraint(before, after)) => before == ps2 && after == ps3})
+    assert(singleOrderingModification exists { case AddOrdering(_, OrderingConstraint(before, after)) => before == ps2 && after == ps3})
   }
 
   "Generating Ordering Modifications for causal threads" must "produce promotion and demotion" in {
@@ -48,8 +48,8 @@ class AddOrderingTest extends FlatSpec with HasExampleDomain2 {
     val singleOrderingModification = AddOrdering(plan, ps3, cl)
 
     assert(singleOrderingModification.size == 2)
-    assert(singleOrderingModification exists { case AddOrdering(OrderingConstraint(before, after)) => before == ps3 && after == ps2})
-    assert(singleOrderingModification exists { case AddOrdering(OrderingConstraint(before, after)) => before == psgoal && after == ps3})
+    assert(singleOrderingModification exists { case AddOrdering(_, OrderingConstraint(before, after)) => before == ps3 && after == ps2})
+    assert(singleOrderingModification exists { case AddOrdering(_, OrderingConstraint(before, after)) => before == psgoal && after == ps3})
   }
 
 
@@ -73,6 +73,6 @@ class AddOrderingTest extends FlatSpec with HasExampleDomain2 {
     val singleOrderingModification = AddOrdering(plan, ps3, cl)
 
     assert(singleOrderingModification.size == 1)
-    assert(singleOrderingModification exists { case AddOrdering(OrderingConstraint(before, after)) => before == ps3 && after == ps2})
+    assert(singleOrderingModification exists { case AddOrdering(_, OrderingConstraint(before, after)) => before == ps3 && after == ps2})
   }
 }

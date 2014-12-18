@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.plan.modification
 
-import de.uniulm.ki.panda3.csp.{Equal, Variable, VariableConstraint}
+import de.uniulm.ki.panda3.csp.{Variable, VariableConstraint}
 import de.uniulm.ki.panda3.domain.Task
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.Plan
@@ -11,7 +11,7 @@ import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class InsertPlanStepWithLink(planStep: PlanStep, causalLink: CausalLink, equalityConstraints: Seq[Equal], plan: Plan) extends Modification {
+case class InsertPlanStepWithLink(planStep: PlanStep, causalLink: CausalLink, constraints: Seq[VariableConstraint], plan: Plan) extends Modification {
   override def addedPlanSteps: Seq[PlanStep] = planStep :: Nil
 
   override def addedCausalLinks: Seq[CausalLink] = causalLink :: Nil
@@ -19,18 +19,24 @@ case class InsertPlanStepWithLink(planStep: PlanStep, causalLink: CausalLink, eq
   // automatically infer which variables to add
   override def addedVariables: Seq[Variable] = planStep.arguments
 
-  override def addedVariableConstraints: Seq[VariableConstraint] = equalityConstraints map { case c: VariableConstraint => c}
+  override def addedVariableConstraints: Seq[VariableConstraint] = constraints
 }
 
 object InsertPlanStepWithLink {
   def apply(plan: Plan, schema: Task, consumer: PlanStep, precondition: Literal): Seq[InsertPlanStepWithLink] = {
-    val parameter = for (schemaParameter <- schema.parameters) yield Variable.newVariable(schemaParameter.sort)
-    val producer = PlanStep(plan.getNewId(), schema, parameter)
+    // generate new variables
+    val firstFreeVariableID = plan.getFirstFreeVariableID
+    val parameter = for (newVar <- schema.parameters zip (firstFreeVariableID until firstFreeVariableID + schema.parameters.size)) yield Variable(newVar._2, newVar._1.name, newVar._1.sort)
+    val newConstraints = schema.parameterConstraints map { c => schema.substitute(c, parameter)}
+
+    // new plan step
+    val producer = PlanStep(plan.getFirstFreePlanStepID, schema, parameter)
     val link = CausalLink(producer, consumer, precondition)
 
-    val extendedCSP = plan.variableConstraints.addVariables(parameter)
+    // new csp, for tight checking of possible causal links
+    val extendedCSP = plan.variableConstraints.addVariables(parameter).addConstraints(newConstraints)
 
-    producer.substitutedEffects map { l => (l #?# precondition)(extendedCSP)} collect { case Some(mgu) => InsertPlanStepWithLink(producer, link, mgu, plan)}
+    producer.substitutedEffects map { l => (l #?# precondition)(extendedCSP)} collect { case Some(mgu) => InsertPlanStepWithLink(producer, link, newConstraints ++ mgu, plan)}
   }
 
   def apply(plan: Plan, consumer: PlanStep, precondition: Literal): Seq[InsertPlanStepWithLink] = plan.domain.tasks flatMap { schema => apply(plan, schema, consumer, precondition)}

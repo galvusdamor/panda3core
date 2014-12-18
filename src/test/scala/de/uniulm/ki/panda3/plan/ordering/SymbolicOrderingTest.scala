@@ -13,9 +13,9 @@ import org.scalatest.FlatSpec
 class SymbolicOrderingTest extends FlatSpec {
 
 
-  def getPlanStep(i : Int) : PlanStep = PlanStep(i, Task("", false, Vector(), Vector(), Vector()), Vector())
-
   def getOrdering(i : Int, j : Int) : OrderingConstraint = OrderingConstraint(getPlanStep(i), getPlanStep(j))
+
+  def getPlanStep(i: Int): PlanStep = PlanStep(i, Task("", false, Nil, Vector(), Vector(), Vector()), Vector())
 
   "Orderings inference" must "allow simple inference" in {
     // a dummy plan

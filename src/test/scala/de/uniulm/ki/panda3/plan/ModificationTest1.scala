@@ -73,11 +73,11 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     val plan2flawModifications = plan2flaws(0).resolvants
 
     assert(plan2flawModifications.size == 1)
-    assert(plan2flawModifications exists { case InsertCausalLink(cl, _) => cl.producer == planstep0init})
-    assert(plan2flawModifications exists { case InsertCausalLink(cl, _) => cl.consumer == plan2.planSteps(2)})
-    assert(plan2flawModifications exists { case InsertCausalLink(_, constr) => constr.size == 1})
-    assert(plan2flawModifications exists { case InsertCausalLink(_, constr) => constr(0) == Equal(planstep0init.arguments(0), plan2.planSteps(2).arguments(0))})
-    assert(plan2flawModifications exists { case InsertCausalLink(cl, constr) =>
+    assert(plan2flawModifications exists { case InsertCausalLink(_, cl, _) => cl.producer == planstep0init})
+    assert(plan2flawModifications exists { case InsertCausalLink(_, cl, _) => cl.consumer == plan2.planSteps(2)})
+    assert(plan2flawModifications exists { case InsertCausalLink(_, _, constr) => constr.size == 1})
+    assert(plan2flawModifications exists { case InsertCausalLink(_, _, constr) => constr(0) == Equal(planstep0init.arguments(0), plan2.planSteps(2).arguments(0))})
+    assert(plan2flawModifications exists { case InsertCausalLink(_, cl, constr) =>
       val csp = plan2.variableConstraints.addConstraints(constr)
       (cl.condition =?= planstep0init.substitutedEffects(0))(csp) && (cl.condition =?= plan2.planSteps(2).substitutedPreconditions(0))(csp)
     })
@@ -95,7 +95,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     val plan3flawModifications = plan3flaws(0).resolvants
     assert(plan3flawModifications.size == 4)
     assert(plan3flawModifications.toSet.size == 4)
-    assert(plan3flawModifications forall { case BindVariableToValue(v, value) => plan3.variableConstraints.equal(v, plan3.init.arguments(0)) && v.sort.elements.contains(value)})
+    assert(plan3flawModifications forall { case BindVariableToValue(_, v, value) => plan3.variableConstraints.equal(v, plan3.init.arguments(0)) && v.sort.elements.contains(value)})
 
     val plan4 = plan3.modify(plan3flawModifications(0))
     // it should be possible to solve the plan
