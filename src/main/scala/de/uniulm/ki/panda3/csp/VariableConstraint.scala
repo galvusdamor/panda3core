@@ -17,10 +17,12 @@ sealed trait VariableConstraint {
       case NotOfSort(v, s) => s.elements.map(element => NotEqual(v, Right(element))).toSet[VariableConstraint]
     }
   }
+
+  def substitute(sub: Substitution): VariableConstraint
 }
 
-// the 4 kinds of constraints the CSPs currently support
 
+// the 4 kinds of constraints the CSPs currently support
 /**
  * Represents the constraint v_1 = v_2 or v = c, i.e. either forced equality between two variables or a variable and a constant.
  */
@@ -37,6 +39,13 @@ case class Equal(left: Variable, right: Either[Variable, Constant]) extends Vari
       case _ => false
     }
 
+  override def substitute(sub: Substitution): VariableConstraint = {
+    val newLeft = sub(left)
+    right match {
+      case Left(v)  => Equal(newLeft, sub(v))
+      case Right(c) => Equal(newLeft, c)
+    }
+  }
 }
 
 
@@ -62,6 +71,14 @@ case class NotEqual(left: Variable, right: Either[Variable, Constant]) extends V
         (thatLeft == this.left && thatRight == this.right) || (this.left == thatRightContent && thisRightContent == thatLeft)
       case _ => false
     }
+
+  override def substitute(sub: Substitution): VariableConstraint = {
+    val newLeft = sub(left)
+    right match {
+      case Left(v)  => NotEqual(newLeft, sub(v))
+      case Right(c) => NotEqual(newLeft, c)
+    }
+  }
 }
 
 object NotEqual {
@@ -74,9 +91,15 @@ object NotEqual {
 /**
  * Represents the constraint v_1 element-of S, for some sort S
  */
-case class OfSort(left: Variable, right: Sort) extends VariableConstraint {}
+case class OfSort(left: Variable, right: Sort) extends VariableConstraint {
+  override def substitute(sub: Substitution): VariableConstraint = OfSort(sub(left), right)
+
+}
 
 /**
  * Represents the constraint v_1 not-element-of S, for some sort S
  */
-case class NotOfSort(left: Variable, right: Sort) extends VariableConstraint {}
+case class NotOfSort(left: Variable, right: Sort) extends VariableConstraint {
+  override def substitute(sub: Substitution): VariableConstraint = NotOfSort(sub(left), right)
+
+}

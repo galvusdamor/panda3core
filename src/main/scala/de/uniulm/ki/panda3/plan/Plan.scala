@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.plan
 
-import de.uniulm.ki.panda3.csp.{CSP, Variable}
+import de.uniulm.ki.panda3.csp.{CSP, Substitution, Variable}
 import de.uniulm.ki.panda3.domain.Domain
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, Flaw, OpenPrecondition, UnboundVariable}
@@ -46,5 +46,5 @@ trait Plan {
   def modify(modification: Modification): Plan
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.domain.DecompositionMethod]]s. */
-  def newInstance(): Plan
+  def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int): (Plan, Substitution)
 }

@@ -13,20 +13,8 @@ import de.uniulm.ki.panda3.logic.Literal
  */
 case class Task(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], preconditions: Seq[Literal], effects: Seq[Literal]) {
 
-  def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = Literal(literal.predicate, literal.isPositive, literal.parameterVariables map {substitute(_, newParameter)})
-
-  private def substitute(v: Variable, newParameter: Seq[Variable]): Variable = newParameter(parameters.indexOf(v))
-
-  def substitute(constraint: VariableConstraint, newParameter: Seq[Variable]): VariableConstraint = {
-    def sub(v: Variable): Variable = substitute(v, newParameter)
-
-    constraint match {
-      case Equal(v1, Left(v2))    => Equal(sub(v1), sub(v2))
-      case Equal(v1, Right(c))    => Equal(sub(v1), c)
-      case NotEqual(v1, Left(v2)) => NotEqual(sub(v1), sub(v2))
-      case NotEqual(v1, Left(c))  => NotEqual(sub(v1), c)
-      case OfSort(v, s)           => OfSort(sub(v), s)
-      case NotOfSort(v, s)        => NotOfSort(sub(v), s)
-    }
+  def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = {
+    val sub = Substitution(parameters, newParameter)
+    Literal(literal.predicate, literal.isPositive, literal.parameterVariables map sub)
   }
 }

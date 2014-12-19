@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.plan.modification
 
-import de.uniulm.ki.panda3.csp.{Variable, VariableConstraint}
+import de.uniulm.ki.panda3.csp.{Substitution, Variable, VariableConstraint}
 import de.uniulm.ki.panda3.domain.Task
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.Plan
@@ -27,7 +27,8 @@ object InsertPlanStepWithLink {
     // generate new variables
     val firstFreeVariableID = plan.getFirstFreeVariableID
     val parameter = for (newVar <- schema.parameters zip (firstFreeVariableID until firstFreeVariableID + schema.parameters.size)) yield Variable(newVar._2, newVar._1.name, newVar._1.sort)
-    val newConstraints = schema.parameterConstraints map { c => schema.substitute(c, parameter)}
+    val sub = Substitution(schema.parameters, parameter)
+    val newConstraints = schema.parameterConstraints map {c => c.substitute(sub)}
 
     // new plan step
     val producer = PlanStep(plan.getFirstFreePlanStepID, schema, parameter)
@@ -36,8 +37,8 @@ object InsertPlanStepWithLink {
     // new csp, for tight checking of possible causal links
     val extendedCSP = plan.variableConstraints.addVariables(parameter).addConstraints(newConstraints)
 
-    producer.substitutedEffects map { l => (l #?# precondition)(extendedCSP)} collect { case Some(mgu) => InsertPlanStepWithLink(producer, link, newConstraints ++ mgu, plan)}
+    producer.substitutedEffects map {l => (l #?# precondition)(extendedCSP)} collect {case Some(mgu) => InsertPlanStepWithLink(producer, link, newConstraints ++ mgu, plan)}
   }
 
-  def apply(plan: Plan, consumer: PlanStep, precondition: Literal): Seq[InsertPlanStepWithLink] = plan.domain.tasks flatMap { schema => apply(plan, schema, consumer, precondition)}
+  def apply(plan: Plan, consumer: PlanStep, precondition: Literal): Seq[InsertPlanStepWithLink] = plan.domain.tasks flatMap {schema => apply(plan, schema, consumer, precondition)}
 }
