@@ -58,7 +58,7 @@ case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep], causalLinks: S
                                  else {
                                    val newOrderingConstraints = (orderingConstraints.originalOrderingConstraints diff modification.removedOrderingConstraints) union modification
                                      .addedOrderingConstraints
-                                   SymbolicTaskOrdering(newOrderingConstraints, newPlanSteps.maxBy(_.id).id + 1)
+      SymbolicTaskOrdering(newOrderingConstraints, newPlanSteps)
                                  }
 
 
@@ -92,7 +92,10 @@ case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep], causalLinks: S
 
     val newOrderingConstraints = SymbolicTaskOrdering(orderingConstraints.originalOrderingConstraints map {
       case OrderingConstraint(b, a) => OrderingConstraint(substitutePlanStep(b), substitutePlanStep(a))
-    }, orderingConstraints.numberOfTasks)
+    }, newPlanSteps)
+    // transfer the computed arrangement, this has a side effect!!!!
+    newOrderingConstraints.initialiseExplicitly(0, 0, orderingConstraints.arrangement())
+
     // includes only "internal causal links"
     val newCausalLinks = causalLinks map {
       case CausalLink(p, c, l) => CausalLink(substitutePlanStep(p), substitutePlanStep(c), Literal(l.predicate, l.isPositive, l.parameterVariables map sub))

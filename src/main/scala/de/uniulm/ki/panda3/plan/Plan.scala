@@ -20,6 +20,8 @@ trait Plan {
       unboundVariables
     else hardFlaws
   }
+
+
   val causalThreads: Seq[CausalThreat]
   val openPreconditions: Seq[OpenPrecondition]
   val unboundVariables: Seq[UnboundVariable]

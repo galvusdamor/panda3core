@@ -13,13 +13,16 @@ import org.scalatest.FlatSpec
 class SymbolicOrderingTest extends FlatSpec {
 
 
-  def getOrdering(i : Int, j : Int) : OrderingConstraint = OrderingConstraint(getPlanStep(i), getPlanStep(j))
+  def getOrdering(i: Int, j: Int): OrderingConstraint = OrderingConstraint(getPlanStep(i), getPlanStep(j))
 
   def getPlanStep(i: Int): PlanStep = PlanStep(i, Task("", false, Nil, Vector(), Vector(), Vector()), Vector())
 
+  /** get a list of plansetps ranging von 0 to i-1 */
+  def getPlanStepList(i: Int): Seq[PlanStep] = if (i == 0) Nil else getPlanStepList(i - 1) :+ getPlanStep(i - 1)
+
   "Orderings inference" must "allow simple inference" in {
     // a dummy plan
-    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), 3)
+    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), getPlanStepList(3))
 
     assert(order.isConsistent)
     assert(order.lteq(getPlanStep(0), getPlanStep(2)))
@@ -29,8 +32,9 @@ class SymbolicOrderingTest extends FlatSpec {
 
   it must "allow almost simple inference" in {
     // a dummy plan
-    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7) :+ getOrdering(7, 3),
-      8)
+    val order = new SymbolicTaskOrdering(
+      Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7) :+ getOrdering(7, 3),
+      getPlanStepList(8))
 
     assert(order.isConsistent)
     assert(order.lteq(getPlanStep(0), getPlanStep(2)))
@@ -50,9 +54,10 @@ class SymbolicOrderingTest extends FlatSpec {
 
   "Orderings update" must "allow incremntal calculations" in {
     // a dummy plan
-    val order1 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), 3)
+    val order1 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), getPlanStepList(3))
 
-    val order2 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7), 8)
+    val order2 = new SymbolicTaskOrdering(
+      Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7), getPlanStepList(8))
     order2.initialiseExplicitly(5, 5, order1.arrangement())
 
     assert(order2.isConsistent)
@@ -66,8 +71,9 @@ class SymbolicOrderingTest extends FlatSpec {
     assert(order2.tryCompare(getPlanStep(5), getPlanStep(7)) === None)
     assert(order2.tryCompare(getPlanStep(6), getPlanStep(4)) === Some(-1))
 
-    val order3 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7) :+ getOrdering(7, 3),
-      8)
+    val order3 = new SymbolicTaskOrdering(
+      Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7) :+ getOrdering(7, 3),
+      getPlanStepList(8))
     order3.initialiseExplicitly(1, 0, order2.arrangement())
 
     assert(order3.isConsistent)
@@ -86,14 +92,13 @@ class SymbolicOrderingTest extends FlatSpec {
 
   it must "allow add Ordering" in {
     // a dummy plan
-    val order1 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), 3)
+    val order1 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), getPlanStepList(3))
 
     assert(order1.isConsistent)
     assert(order1.lteq(getPlanStep(0), getPlanStep(2)))
 
-    val order2 = order1.addOrdering(getPlanStep(0), getPlanStep(1)).addOrdering(getPlanStep(1), getPlanStep(2)).
-      addOrdering(getPlanStep(2), getPlanStep(3)).addOrdering(getPlanStep(3), getPlanStep(4)).
-      addOrdering(getPlanStep(3), getPlanStep(5)).addOrdering(getPlanStep(6), getPlanStep(2)).addOrdering(getPlanStep(2), getPlanStep(7))
+    val order2 = order1.addOrdering(getPlanStep(0), getPlanStep(1)).addOrdering(getPlanStep(1), getPlanStep(2)).addOrdering(getPlanStep(2), getPlanStep(3))
+      .addOrdering(getPlanStep(3), getPlanStep(4)).addOrdering(getPlanStep(3), getPlanStep(5)).addOrdering(getPlanStep(6), getPlanStep(2)).addOrdering(getPlanStep(2), getPlanStep(7))
 
     order2.initialiseExplicitly(5, 5, order1.arrangement())
 
@@ -128,14 +133,14 @@ class SymbolicOrderingTest extends FlatSpec {
 
   "Orderings inconsistencies" must "find simple inconsistencies" in {
     // a dummy plan
-    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 0), 3)
+    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 0), getPlanStepList(3))
 
     assert(!order.isConsistent)
   }
 
   it must "find tricky inconsistencies" in {
     // a dummy plan
-    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 0), 2)
+    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 0), getPlanStepList(2))
 
     assert(!order.isConsistent)
   }
@@ -143,10 +148,28 @@ class SymbolicOrderingTest extends FlatSpec {
   it must "find complex inconsistencies" in {
     // a dummy plan
     val order = new SymbolicTaskOrdering(
-      Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7) :+ getOrdering(7, 3) :+ getOrdering(5, 1), 8)
+      Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7) :+ getOrdering(7, 3) :+
+        getOrdering(5, 1), getPlanStepList(8))
 
     assert(!order.isConsistent)
   }
 
 
+  "Reduced Orderings" must "be computable" in {
+    val order = new SymbolicTaskOrdering(
+      Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7) :+ getOrdering(7, 3) :+
+        getOrdering(6, 5), getPlanStepList(8))
+
+    val minimalOrdering = order.minimalOrderingConstraints()
+
+    // check whether the reduction is correct
+    assert(minimalOrdering.size == 7)
+    assert(minimalOrdering contains getOrdering(0, 1))
+    assert(minimalOrdering contains getOrdering(1, 2))
+    assert(minimalOrdering contains getOrdering(2, 7))
+    assert(minimalOrdering contains getOrdering(7, 3))
+    assert(minimalOrdering contains getOrdering(3, 4))
+    assert(minimalOrdering contains getOrdering(3, 5))
+    assert(minimalOrdering contains getOrdering(6, 2))
+  }
 }

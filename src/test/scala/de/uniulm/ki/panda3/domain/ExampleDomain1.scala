@@ -45,7 +45,6 @@ trait HasExampleDomain1 {
   val instance_variable1sort4: Variable = Variable(4, "variable_4_sort1", sort1)
   val instance_variable1sort5: Variable = Variable(5, "variable_5_sort1", sort1)
 
-
   ////////////////////////////
   // the actual domain
   ////////////////////////////

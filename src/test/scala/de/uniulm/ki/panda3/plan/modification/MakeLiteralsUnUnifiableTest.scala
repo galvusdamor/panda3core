@@ -28,7 +28,8 @@ class MakeLiteralsUnUnifiableTest extends FlatSpec with HasExampleDomain2 {
     val ps3 = PlanStep(3, task2, instance_variable1sort3 :: Nil)
 
 
-    val plan: SymbolicPlan = SymbolicPlan(exampleDomain2, psgoal :: ps2 :: ps3 :: Nil, Nil, SymbolicTaskOrdering(Nil, 4),
+    val planPlanSteps = psgoal :: ps2 :: ps3 :: Nil
+    val plan: SymbolicPlan = SymbolicPlan(exampleDomain2, psgoal :: ps2 :: ps3 :: Nil, Nil, SymbolicTaskOrdering(Nil, planPlanSteps),
                                           SymbolicCSP(Set(instance_variable1sort2, instance_variable1sort3), Nil), ps2, psgoal)
 
     val singleOrderingModification = MakeLiteralsUnUnifiable(plan, ps3.substitutedEffects(0).negate, ps2.substitutedEffects(0))
