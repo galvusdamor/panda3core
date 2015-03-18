@@ -12,7 +12,6 @@ import org.scalatest.FlatSpec
  */
 class SymbolicOrderingTest extends FlatSpec {
 
-
   def getOrdering(i: Int, j: Int): OrderingConstraint = OrderingConstraint(getPlanStep(i), getPlanStep(j))
 
   def getPlanStep(i: Int): PlanStep = PlanStep(i, Task("", false, Nil, Vector(), Vector(), Vector()), Vector())

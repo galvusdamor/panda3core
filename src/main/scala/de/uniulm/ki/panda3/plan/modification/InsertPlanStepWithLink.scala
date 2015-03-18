@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.plan.modification
 
 import de.uniulm.ki.panda3.csp.{Substitution, Variable, VariableConstraint}
-import de.uniulm.ki.panda3.domain.Task
+import de.uniulm.ki.panda3.domain.{Domain, Task}
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
@@ -40,5 +40,5 @@ object InsertPlanStepWithLink {
     producer.substitutedEffects map {l => (l #?# precondition)(extendedCSP)} collect {case Some(mgu) => InsertPlanStepWithLink(producer, link, newConstraints ++ mgu, plan)}
   }
 
-  def apply(plan: Plan, consumer: PlanStep, precondition: Literal): Seq[InsertPlanStepWithLink] = plan.domain.tasks flatMap {schema => apply(plan, schema, consumer, precondition)}
+  def apply(plan: Plan, consumer: PlanStep, precondition: Literal, domain: Domain): Seq[InsertPlanStepWithLink] = domain.tasks flatMap {schema => apply(plan, schema, consumer, precondition)}
 }

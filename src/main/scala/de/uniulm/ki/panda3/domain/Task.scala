@@ -11,6 +11,7 @@ import de.uniulm.ki.panda3.logic.Literal
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
+// TODO: check, whether the parameter constraints of a task schema are always observed correctly
 case class Task(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], preconditions: Seq[Literal], effects: Seq[Literal]) {
 
   def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = {

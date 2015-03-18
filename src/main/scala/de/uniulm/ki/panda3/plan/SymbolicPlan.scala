@@ -1,7 +1,6 @@
 package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.{CSP, Substitution, SymbolicCSP, Variable}
-import de.uniulm.ki.panda3.domain.Domain
 import de.uniulm.ki.panda3.logic.Literal
 import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, OpenPrecondition, UnboundVariable}
@@ -12,7 +11,7 @@ import de.uniulm.ki.panda3.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
  * Simple implementation of a plan, based on symbols
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering, variableConstraints: CSP, init: PlanStep,
+case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering, variableConstraints: CSP, init: PlanStep,
                         goal: PlanStep) extends Plan {
 
   /** list of all causal threads in this plan */
@@ -71,7 +70,7 @@ case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep], causalLinks: S
                                    SymbolicCSP(newVariableSet, newConstraintSet)
                                  }
 
-    SymbolicPlan(domain, newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, init, goal)
+    SymbolicPlan(newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, init, goal)
   }
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.domain.DecompositionMethod]]s. */
@@ -103,6 +102,6 @@ case class SymbolicPlan(domain: Domain, planSteps: Seq[PlanStep], causalLinks: S
 
     val newVariableConstraints = SymbolicCSP(newVariables.toSet, variableConstraints.constraints map {_.substitute(sub)})
 
-    (SymbolicPlan(domain, newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, newInit, newGoal), sub)
+    (SymbolicPlan(newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, newInit, newGoal), sub)
   }
 }

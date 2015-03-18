@@ -26,12 +26,16 @@ trait HasExampleDomain1 {
   val variable1sort1: Variable = Variable(1, "variable_1_sort1", sort1)
   val variable2sort1: Variable = Variable(2, "variable_2_sort1", sort1)
   val variable3sort1: Variable = Variable(3, "variable_3_sort1", sort1)
+  val variable4sort1: Variable = Variable(3, "variable_4_sort1", sort1)
+  val variable5sort1: Variable = Variable(3, "variable_5_sort1", sort1)
+  val variable6sort1: Variable = Variable(3, "variable_6_sort1", sort1)
+  val variable7sort1: Variable = Variable(3, "variable_7_sort1", sort1)
 
   // tasks
-  val task1: Task = Task("task1", isPrimitive = true, variable1sort1 :: Nil, Nil, preconditions = Literal(predicate1, isPositive = false, variable1sort1 :: Nil) :: Nil, effects = Literal
-    (predicate1, isPositive = true, variable1sort1 :: Nil) :: Nil)
-  val init: Task = Task("init", isPrimitive = true, variable1sort1 :: Nil, Nil, preconditions = Nil, effects = Literal(predicate1, isPositive = false, variable1sort1 :: Nil) :: Nil)
-  val goal1: Task = Task("goal", isPrimitive = true, variable1sort1 :: Nil, Nil, preconditions = Literal(predicate1, isPositive = true, variable1sort1 :: Nil) :: Nil, effects = Nil)
+  val task1: Task = Task("task1", isPrimitive = true, variable2sort1 :: Nil, Nil, preconditions = Literal(predicate1, isPositive = false, variable2sort1 :: Nil) :: Nil,
+                         effects = Literal(predicate1, isPositive = true, variable2sort1 :: Nil) :: Nil)
+  val init : Task = Task("init", isPrimitive = true, variable3sort1 :: Nil, Nil, preconditions = Nil, effects = Literal(predicate1, isPositive = false, variable3sort1 :: Nil) :: Nil)
+  val goal1: Task = Task("goal", isPrimitive = true, variable4sort1 :: Nil, Nil, preconditions = Literal(predicate1, isPositive = true, variable4sort1 :: Nil) :: Nil, effects = Nil)
 
 
   ////////////////////////////
@@ -39,11 +43,11 @@ trait HasExampleDomain1 {
   ///////////////////////////
 
   // variables
-  val instance_variable1sort1: Variable = Variable(1, "variable_1_sort1", sort1)
-  val instance_variable1sort2: Variable = Variable(2, "variable_2_sort1", sort1)
-  val instance_variable1sort3: Variable = Variable(3, "variable_3_sort1", sort1)
-  val instance_variable1sort4: Variable = Variable(4, "variable_4_sort1", sort1)
-  val instance_variable1sort5: Variable = Variable(5, "variable_5_sort1", sort1)
+  val instance_variable1sort1: Variable = Variable(1, "instance_variable_1_sort1", sort1)
+  val instance_variable2sort1: Variable = Variable(2, "instance_variable_2_sort1", sort1)
+  val instance_variable3sort1: Variable = Variable(3, "instance_variable_3_sort1", sort1)
+  val instance_variable4sort1: Variable = Variable(4, "instance_variable_4_sort1", sort1)
+  val instance_variable5sort1: Variable = Variable(5, "instance_variable_5_sort1", sort1)
 
   ////////////////////////////
   // the actual domain

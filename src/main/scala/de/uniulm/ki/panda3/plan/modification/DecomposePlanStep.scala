@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.plan.modification
 
 import de.uniulm.ki.panda3.csp._
-import de.uniulm.ki.panda3.domain.DecompositionMethod
+import de.uniulm.ki.panda3.domain.{DecompositionMethod, Domain}
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 
@@ -31,13 +31,13 @@ Modification {
     case OrderingConstraint(b, a) =>
       b != init && b != goal && a != init && a != goal
   }) ++ (plan.orderingConstraints.originalOrderingConstraints flatMap {
-    case OrderingConstraint(p, ps) => addedPlanSteps map {OrderingConstraint(p, _)}
-    case OrderingConstraint(ps, p) => addedPlanSteps map {OrderingConstraint(_, p)}
+    case OrderingConstraint(p, `decomposedPS`) => addedPlanSteps map {OrderingConstraint(p, _)}
+    case OrderingConstraint(`decomposedPS`, p) => addedPlanSteps map {OrderingConstraint(_, p)}
     case _                         => Nil
   })
 
   // remove init and goal task of the subplan
-  override def addedPlanSteps: Seq[PlanStep] = (newSubPlan.planSteps) filter {p => p != init && p != goal}
+  override def addedPlanSteps: Seq[PlanStep] = newSubPlan.planSteps filter {p => p != init && p != goal}
 
   override def addedCausalLinks: Seq[CausalLink] = (newSubPlan.causalLinks filter {case cl => !cl.containsOne(init, goal)}) ++ inheritedCausalLinks
 
@@ -54,7 +54,7 @@ Modification {
 
 object DecomposePlanStep {
 
-  def apply(plan: Plan, decomposedPS: PlanStep): Seq[DecomposePlanStep] = plan.domain.decompositionMethods flatMap {apply(plan, decomposedPS, _)}
+  def apply(plan: Plan, decomposedPS: PlanStep, domain: Domain): Seq[DecomposePlanStep] = domain.decompositionMethods flatMap {apply(plan, decomposedPS, _)}
 
   def apply(currentPlan: Plan, decomposedPS: PlanStep, method: DecompositionMethod): Seq[DecomposePlanStep] =
     if (decomposedPS.schema != method.abstractTask) Nil

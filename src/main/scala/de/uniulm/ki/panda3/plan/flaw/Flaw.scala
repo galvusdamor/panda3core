@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.plan.flaw
 
+import de.uniulm.ki.panda3.domain.Domain
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.modification.Modification
 
@@ -12,6 +13,6 @@ trait Flaw {
 
   val plan: Plan
 
-  def resolvants: Seq[Modification]
+  def resolvants(domain: Domain): Seq[Modification]
 
 }

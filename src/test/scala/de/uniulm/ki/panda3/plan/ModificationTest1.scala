@@ -16,13 +16,13 @@ import org.scalatest.FlatSpec
 class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
 
   val planstep0init = PlanStep(0, init, instance_variable1sort1 :: Nil)
-  val planstep1goal = PlanStep(1, goal1, instance_variable1sort2 :: Nil)
+  val planstep1goal = PlanStep(1, goal1, instance_variable2sort1 :: Nil)
 
 
   "Modifications" must "be computed for Open Preconditions" in {
     val plan1PlanSteps = planstep0init :: planstep1goal :: Nil
-    val plan1: SymbolicPlan = SymbolicPlan(exampleDomain1, plan1PlanSteps, Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps).addOrdering(planstep0init, planstep1goal),
-                                           SymbolicCSP(Set(instance_variable1sort1, instance_variable1sort2), Nil), planstep0init, planstep1goal)
+    val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps).addOrdering(planstep0init, planstep1goal),
+                                           SymbolicCSP(Set(instance_variable1sort1, instance_variable2sort1), Nil), planstep0init, planstep1goal)
     // it should be possible to solve the plan
     assert(plan1.isSolvable == None)
 
@@ -35,7 +35,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
 
 
     val plan1flaw = plan1flaws(0)
-    val plan1flawModifications = plan1flaw.resolvants
+    val plan1flawModifications = plan1flaw.resolvants(exampleDomain1)
     // there should be exactly one modification
     assert(plan1flawModifications.size == 1)
     // and it should a the needed plan step
@@ -44,7 +44,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, _, _) => cl.producer == ps})
     assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, _, _) => cl.consumer == planstep1goal})
     assert(plan1flawModifications exists { case InsertPlanStepWithLink(_, _, constr, _) => constr.size == 1})
-    assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, _, constr, _) => constr(0) == Equal(ps.arguments(0), instance_variable1sort2)})
+    assert(plan1flawModifications exists {case InsertPlanStepWithLink(ps, _, constr, _) => constr(0) == Equal(ps.arguments(0), instance_variable2sort1)})
     assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, constr, _) =>
       val newCSP = plan1.variableConstraints.addVariables(ps.arguments).addConstraints(constr)
       (cl.condition =?= planstep1goal.substitutedPreconditions(0))(newCSP) &&
@@ -71,7 +71,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     assert(plan2flaws exists { case OpenPrecondition(_, planStep, precondition) => planStep == plan2.planSteps(2) && precondition == plan2.planSteps(2).substitutedPreconditions(0)})
 
     // generate all modifications for the only flaw
-    val plan2flawModifications = plan2flaws(0).resolvants
+    val plan2flawModifications = plan2flaws(0).resolvants(exampleDomain1)
 
     assert(plan2flawModifications.size == 1)
     assert(plan2flawModifications exists { case InsertCausalLink(_, cl, _) => cl.producer == planstep0init})
@@ -93,7 +93,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     assert(plan3flaws.size == 1)
     assert(plan3flaws exists { case UnboundVariable(_, v) => plan3.variableConstraints.equal(v, plan3.init.arguments(0))})
 
-    val plan3flawModifications = plan3flaws(0).resolvants
+    val plan3flawModifications = plan3flaws(0).resolvants(exampleDomain1)
     assert(plan3flawModifications.size == 4)
     assert(plan3flawModifications.toSet.size == 4)
     assert(plan3flawModifications forall { case BindVariableToValue(_, v, value) => plan3.variableConstraints.equal(v, plan3.init.arguments(0)) && v.sort.elements.contains(value)})
