@@ -13,7 +13,7 @@ import org.scalatest.FlatSpec
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 class MakeLiteralsUnUnifiableTest extends FlatSpec with HasExampleDomain2 {
-  val psgoal = PlanStep(1, goal1, instance_variable2sort1 :: Nil)
+  val psgoal = PlanStep(1, goal1, instance_variableSort1(2) :: Nil)
 
 
   "UnUnifiying Literals in a plan" must "be possible" in {
@@ -24,17 +24,18 @@ class MakeLiteralsUnUnifiableTest extends FlatSpec with HasExampleDomain2 {
       *
       *           :ps3:-p(v3),q(v3)
       */
-    val ps2 = PlanStep(2, task1, instance_variable2sort1 :: Nil)
-    val ps3 = PlanStep(3, task2, instance_variable3sort1 :: Nil)
+    val ps2 = PlanStep(2, task1, instance_variableSort1(2) :: Nil)
+    val ps3 = PlanStep(3, task2, instance_variableSort1(3) :: Nil)
 
 
     val planPlanSteps = psgoal :: ps2 :: ps3 :: Nil
-    val plan: SymbolicPlan = SymbolicPlan(psgoal :: ps2 :: ps3 :: Nil, Nil, SymbolicTaskOrdering(Nil, planPlanSteps), SymbolicCSP(Set(instance_variable2sort1, instance_variable3sort1), Nil),
+    val plan: SymbolicPlan = SymbolicPlan(psgoal :: ps2 :: ps3 :: Nil, Nil, SymbolicTaskOrdering(Nil, planPlanSteps),
+                                          SymbolicCSP(Set(instance_variableSort1(2), instance_variableSort1(3)), Nil),
                                           ps2, psgoal)
 
     val singleOrderingModification = MakeLiteralsUnUnifiable(plan, ps3.substitutedEffects(0).negate, ps2.substitutedEffects(0))
 
     assert(singleOrderingModification.size == 1)
-    assert(singleOrderingModification exists {case MakeLiteralsUnUnifiable(_, ne) => ne == NotEqual(instance_variable2sort1, instance_variable3sort1)})
+    assert(singleOrderingModification exists {case MakeLiteralsUnUnifiable(_, ne) => ne == NotEqual(instance_variableSort1(2), instance_variableSort1(3))})
   }
 }

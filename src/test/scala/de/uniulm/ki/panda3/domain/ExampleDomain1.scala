@@ -10,32 +10,24 @@ import de.uniulm.ki.panda3.logic.{Constant, Literal, Predicate, Sort}
  */
 trait HasExampleDomain1 {
 
-  // constants
-  val constant1sort1: Constant = Constant("constant_1_sort_1")
-  val constant2sort1: Constant = Constant("constant_2_sort_1")
-  val constant3sort1: Constant = Constant("constant_3_sort_1")
-  val constant4sort1: Constant = Constant("constant_4_sort_1")
-
   // sorts
-  val sort1: Sort = Sort("sort 1", constant1sort1 +: constant2sort1 +: constant3sort1 +: constant4sort1 +: Vector())
-
+  val sort1: Sort = Sort("sort 1", constantSort1(1) +: constantSort1(2) +: constantSort1(3) +: constantSort1(4) +: Vector())
   // predicates
   val predicate1: Predicate = Predicate("predicate1", sort1 :: Nil)
-
-  // variables
-  val variable1sort1: Variable = Variable(1, "variable_1_sort1", sort1)
-  val variable2sort1: Variable = Variable(2, "variable_2_sort1", sort1)
-  val variable3sort1: Variable = Variable(3, "variable_3_sort1", sort1)
-  val variable4sort1: Variable = Variable(3, "variable_4_sort1", sort1)
-  val variable5sort1: Variable = Variable(3, "variable_5_sort1", sort1)
-  val variable6sort1: Variable = Variable(3, "variable_6_sort1", sort1)
-  val variable7sort1: Variable = Variable(3, "variable_7_sort1", sort1)
-
   // tasks
-  val task1: Task = Task("task1", isPrimitive = true, variable2sort1 :: Nil, Nil, preconditions = Literal(predicate1, isPositive = false, variable2sort1 :: Nil) :: Nil,
-                         effects = Literal(predicate1, isPositive = true, variable2sort1 :: Nil) :: Nil)
-  val init : Task = Task("init", isPrimitive = true, variable3sort1 :: Nil, Nil, preconditions = Nil, effects = Literal(predicate1, isPositive = false, variable3sort1 :: Nil) :: Nil)
-  val goal1: Task = Task("goal", isPrimitive = true, variable4sort1 :: Nil, Nil, preconditions = Literal(predicate1, isPositive = true, variable4sort1 :: Nil) :: Nil, effects = Nil)
+  val task1         : Task   = Task("task1", isPrimitive = true, variableSort1(2) :: Nil, Nil, preconditions = Literal(predicate1, isPositive = false, variableSort1(2) :: Nil) :: Nil,
+                                    effects = Literal(predicate1, isPositive = true, variableSort1(2) :: Nil) :: Nil)
+  val init          : Task   = Task("init", isPrimitive = true, variableSort1(3) :: Nil, Nil, preconditions = Nil,
+                                    effects = Literal(predicate1, isPositive = false, variableSort1(3) :: Nil) :: Nil)
+  val goal1         : Task   = Task("goal", isPrimitive = true, variableSort1(4) :: Nil, Nil, preconditions = Literal(predicate1, isPositive = true, variableSort1(4) :: Nil) :: Nil,
+                                    effects = Nil)
+  ////////////////////////////
+  // the actual domain
+  ////////////////////////////
+  val exampleDomain1: Domain = Domain(sort1 :: Nil, constantSort1(1) :: constantSort1(2) :: constantSort1(3) :: constantSort1(4) :: Nil, predicate1 :: Nil, task1 :: Nil, Nil, Nil)
+
+  // constants
+  def constantSort1(i: Int): Constant = Constant("constant_" + i + "_sort_1")
 
 
   ////////////////////////////
@@ -43,14 +35,8 @@ trait HasExampleDomain1 {
   ///////////////////////////
 
   // variables
-  val instance_variable1sort1: Variable = Variable(1, "instance_variable_1_sort1", sort1)
-  val instance_variable2sort1: Variable = Variable(2, "instance_variable_2_sort1", sort1)
-  val instance_variable3sort1: Variable = Variable(3, "instance_variable_3_sort1", sort1)
-  val instance_variable4sort1: Variable = Variable(4, "instance_variable_4_sort1", sort1)
-  val instance_variable5sort1: Variable = Variable(5, "instance_variable_5_sort1", sort1)
+  def variableSort1(i: Int): Variable = Variable(i, "variable_" + i + "_sort1", sort1)
 
-  ////////////////////////////
-  // the actual domain
-  ////////////////////////////
-  val exampleDomain1: Domain = Domain(sort1 :: Nil, constant1sort1 :: constant2sort1 :: constant3sort1 :: constant4sort1 :: Nil, predicate1 :: Nil, task1 :: Nil, Nil, Nil)
+  // variables
+  def instance_variableSort1(i: Int): Variable = Variable(i, "instance_variable_" + i + "_sort1", sort1)
 }

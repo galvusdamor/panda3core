@@ -15,14 +15,14 @@ import org.scalatest.FlatSpec
  */
 class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
 
-  val planstep0init = PlanStep(0, init, instance_variable1sort1 :: Nil)
-  val planstep1goal = PlanStep(1, goal1, instance_variable2sort1 :: Nil)
+  val planstep0init = PlanStep(0, init, instance_variableSort1(1) :: Nil)
+  val planstep1goal = PlanStep(1, goal1, instance_variableSort1(2) :: Nil)
 
 
   "Modifications" must "be computed for Open Preconditions" in {
     val plan1PlanSteps = planstep0init :: planstep1goal :: Nil
     val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps).addOrdering(planstep0init, planstep1goal),
-                                           SymbolicCSP(Set(instance_variable1sort1, instance_variable2sort1), Nil), planstep0init, planstep1goal)
+                                           SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2)), Nil), planstep0init, planstep1goal)
     // it should be possible to solve the plan
     assert(plan1.isSolvable == None)
 
@@ -44,7 +44,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, _, _) => cl.producer == ps})
     assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, _, _) => cl.consumer == planstep1goal})
     assert(plan1flawModifications exists { case InsertPlanStepWithLink(_, _, constr, _) => constr.size == 1})
-    assert(plan1flawModifications exists {case InsertPlanStepWithLink(ps, _, constr, _) => constr(0) == Equal(ps.arguments(0), instance_variable2sort1)})
+    assert(plan1flawModifications exists {case InsertPlanStepWithLink(ps, _, constr, _) => constr(0) == Equal(ps.arguments(0), instance_variableSort1(2))})
     assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, constr, _) =>
       val newCSP = plan1.variableConstraints.addVariables(ps.arguments).addConstraints(constr)
       (cl.condition =?= planstep1goal.substitutedPreconditions(0))(newCSP) &&

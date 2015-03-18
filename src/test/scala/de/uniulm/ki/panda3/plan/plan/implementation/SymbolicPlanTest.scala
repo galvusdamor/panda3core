@@ -43,7 +43,6 @@ class SymbolicPlanTest extends FlatSpec {
     assert(plan1.openPreconditions.size == 1)
   }
 
-
   "Computing open preconditions" must "not contain protected preconditions" in {
     val plan1PlanSteps = PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil) :: Nil
     val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, CausalLink(plan1PlanSteps(1), plan1PlanSteps(0), Literal(predicate1, isPositive = true, p_v1
