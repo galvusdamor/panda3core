@@ -20,8 +20,7 @@ trait Plan {
       unboundVariables
     else hardFlaws
   }
-
-
+  lazy val planStepWithoutInitGoal: Seq[PlanStep] = planSteps filter {ps => ps != init && ps != goal}
   val causalThreads: Seq[CausalThreat]
   val openPreconditions: Seq[OpenPrecondition]
   val unboundVariables: Seq[UnboundVariable]
@@ -49,4 +48,5 @@ trait Plan {
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.domain.DecompositionMethod]]s. */
   def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int): (Plan, Substitution)
+
 }
