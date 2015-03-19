@@ -29,6 +29,8 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleDomain3 {
     val possibleDecompositions: Seq[DecomposePlanStep] = DecomposePlanStep(plan, psAbstract, domain3)
 
     assert(possibleDecompositions.size == 1)
+    val decomp = possibleDecompositions.head
+    assert(decomp.addedPlanSteps.size == 1)
   }
 
 }
