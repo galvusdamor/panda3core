@@ -44,6 +44,6 @@ trait Plan {
   def modify(modification: Modification): Plan
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.domain.DecompositionMethod]]s. */
-  def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int): (Plan, Substitution)
+  def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution = Substitution(Nil, Nil)): (Plan, Substitution)
 
 }

@@ -17,8 +17,8 @@ object Main {
                                        val pivot: Int = l(0)
                                        val rest: Seq[Int] = l.tail
 
-                                       val smaller = rest filter {x => x < pivot}
-                                       val greater = rest filter {x => x > pivot}
+    val smaller = rest filter {_ < pivot}
+    val greater = rest filter {_ > pivot}
 
                                        (quick(smaller) :+ pivot) ++ quick(greater)
                                      }

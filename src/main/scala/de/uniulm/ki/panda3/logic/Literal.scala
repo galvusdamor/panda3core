@@ -40,7 +40,6 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
     else None
   }
 
-
   /**
    * Returns a list of all differentiater, i.e. a all possible constraints that can make the two literals unequal
    */

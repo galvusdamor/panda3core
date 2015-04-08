@@ -5,6 +5,5 @@ package de.uniulm.ki.panda3.logic
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class Constant(val name: String) {
-
+case class Constant(name: String) {
 }
