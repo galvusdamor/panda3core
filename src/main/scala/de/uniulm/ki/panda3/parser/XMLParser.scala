@@ -22,6 +22,4 @@ class XMLParser extends Parser {
 
     ???
   }
-
-
 }

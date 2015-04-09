@@ -21,8 +21,8 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleDomain3 with HasExam
   val psAbstract1    = PlanStep(2, abstractTask1, instance_variableSort1(1) :: Nil)
   val planPlanSteps1 = psInit1 :: psGoal1 :: psAbstract1 :: Nil
 
-  val causalLinkInitAbstract = CausalLink(psInit1, psAbstract1, psInit1.substitutedEffects(0))
-  val causalLinkAbstractGoal = CausalLink(psAbstract1, psGoal1, psGoal1.substitutedPreconditions(0))
+  val causalLinkInitAbstract = CausalLink(psInit1, psAbstract1, psInit1.substitutedEffects.head)
+  val causalLinkAbstractGoal = CausalLink(psAbstract1, psGoal1, psGoal1.substitutedPreconditions.head)
 
   // create a plan  init| -> a1 -> |goal (without causal links)
   val plan1WithoutCausalLinks = SymbolicPlan(planPlanSteps1, Nil,
@@ -48,11 +48,17 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleDomain3 with HasExam
   val psAbstract2    = PlanStep(2, abstractTask2, instance_variableSort1(1) :: Nil)
   val planPlanSteps2 = psInit2 :: psGoal2 :: psAbstract2 :: Nil
 
-  val causalLinkInit2Abstract2 = CausalLink(psInit2, psAbstract2, psInit2.substitutedEffects(0))
+  val causalLinkInit2Abstract2P1 = CausalLink(psInit2, psAbstract2, psInit2.substitutedEffects.head)
+  val causalLinkInit2Abstract2P2 = CausalLink(psInit2, psAbstract2, psInit2.substitutedEffects(1))
+
+  // create a plan  init| -> a1 -> |goal (with one causal link)
+  val plan2WithOneLink = SymbolicPlan(planPlanSteps2, causalLinkInit2Abstract2P1 :: Nil, SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2),
+                                      SymbolicCSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2)
 
   // create a plan  init| -> a1 -> |goal (without causal links)
-  val plan2 = SymbolicPlan(planPlanSteps2, causalLinkInit2Abstract2 :: Nil, SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps1),
-                           SymbolicCSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2)
+  val plan2WithTwoLinks = SymbolicPlan(planPlanSteps2, causalLinkInit2Abstract2P1 :: causalLinkInit2Abstract2P2 :: Nil,
+                                       SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2), SymbolicCSP(Set(instance_variableSort1(1)), Nil),
+                                       psInit2, psGoal2)
 
 
   // returns the single added plan step
@@ -130,8 +136,8 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleDomain3 with HasExam
     assert(decomposition.addedCausalLinks.size == 2)
     assert(decomposition.removedCausalLinks.size == 2)
     // they should look like this:
-    assert(decomposition.addedCausalLinks.exists { ps => ps.producer == psInit1 && ps.consumer == addedPlanStep && ps.condition == psInit1.substitutedEffects(0) })
-    assert(decomposition.addedCausalLinks.exists { ps => ps.producer == addedPlanStep && ps.consumer == psGoal1 && ps.condition == psGoal1.substitutedPreconditions(0) })
+    assert(decomposition.addedCausalLinks.exists { ps => ps.producer == psInit1 && ps.consumer == addedPlanStep && ps.condition == psInit1.substitutedEffects.head })
+    assert(decomposition.addedCausalLinks.exists { ps => ps.producer == addedPlanStep && ps.consumer == psGoal1 && ps.condition == psGoal1.substitutedPreconditions.head })
   }
 
   it must "prohibit decomposition if not inherited" in {
@@ -154,8 +160,8 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleDomain3 with HasExam
     assert(decomposition.addedCausalLinks.size == 2)
     assert(decomposition.removedCausalLinks.size == 2)
     // they should look like this:
-    assert(decomposition.addedCausalLinks.exists { ps => ps.producer == psInit1 && ps.consumer == addedPlanStep && ps.condition == psInit1.substitutedEffects(0) })
-    assert(decomposition.addedCausalLinks.exists { ps => ps.producer == addedPlanStep && ps.consumer == psGoal1 && ps.condition == psGoal1.substitutedPreconditions(0) })
+    assert(decomposition.addedCausalLinks.exists { ps => ps.producer == psInit1 && ps.consumer == addedPlanStep && ps.condition == psInit1.substitutedEffects.head })
+    assert(decomposition.addedCausalLinks.exists { ps => ps.producer == addedPlanStep && ps.consumer == psGoal1 && ps.condition == psGoal1.substitutedPreconditions.head })
   }
 
 
@@ -164,9 +170,31 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleDomain3 with HasExam
     assert(possibleDecompositionsNone.size == 2)
   }
 
-  // Does not work yet
-  /*  it must "be found if multiple possibilities exist" in {
-      val possibleDecompositionsNone: Seq[DecomposePlanStep] = DecomposePlanStep(plan2, psAbstract2, decompositionMethod3)
-      assert(possibleDecompositionsNone.size == 2)
-    }*/
+  it must "be found if multiple possibilities exist (1 links)" in {
+    val possibleDecompositionsNone: Seq[DecomposePlanStep] = DecomposePlanStep(plan2WithOneLink, psAbstract2, decompositionMethod3)
+    assert(possibleDecompositionsNone.size == 2)
+
+    possibleDecompositionsNone forall {_.addedCausalLinks.size == 1}
+    possibleDecompositionsNone forall {_.addedVariables.size == 4}
+    possibleDecompositionsNone forall {_.addedPlanSteps.size == 4}
+    possibleDecompositionsNone exists { ps => val cl = ps.addedCausalLinks.head; cl.producer == psInit2 && cl.consumer.schema.isPrimitive }
+    possibleDecompositionsNone exists { ps => val cl = ps.addedCausalLinks.head; cl.producer == psInit2 && !cl.consumer.schema.isPrimitive }
+  }
+
+
+  it must "be found if multiple possibilities exist (2 links)" in {
+    val possibleDecompositionsNone: Seq[DecomposePlanStep] = DecomposePlanStep(plan2WithTwoLinks, psAbstract2, decompositionMethod3)
+    assert(possibleDecompositionsNone.size == 4)
+
+    possibleDecompositionsNone forall {_.addedCausalLinks.size == 2}
+    possibleDecompositionsNone forall {_.addedVariables.size == 4}
+    possibleDecompositionsNone forall {_.addedPlanSteps.size == 4}
+    possibleDecompositionsNone forall { d => val cls = d.addedCausalLinks.partition {_.condition.predicate == predicate1}; cls._1.size == 1 && cls._2.size == 2 }
+    possibleDecompositionsNone forall {_.addedCausalLinks forall {_.producer == psInit2}}
+
+    for (p1 <- true :: false :: Nil; p2 <- true :: false :: Nil)
+      possibleDecompositionsNone exists { d => val cls = d.addedCausalLinks.partition {_.condition.predicate == predicate1};
+        cls._1.head.consumer.schema.isPrimitive == p1 && cls._2.head.consumer.schema.isPrimitive == p2
+      }
+  }
 }
