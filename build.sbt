@@ -24,4 +24,4 @@ startYear := Some(2014)
 
 //licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.11.5"
+scalaVersion := "2.11.2"
