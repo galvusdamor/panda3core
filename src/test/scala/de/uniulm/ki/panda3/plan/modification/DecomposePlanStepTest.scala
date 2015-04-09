@@ -193,7 +193,7 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleDomain3 with HasExam
     possibleDecompositionsNone forall {_.addedCausalLinks forall {_.producer == psInit2}}
 
     for (p1 <- true :: false :: Nil; p2 <- true :: false :: Nil)
-      possibleDecompositionsNone exists { d => val cls = d.addedCausalLinks.partition {_.condition.predicate == predicate1};
+      possibleDecompositionsNone exists { d => val cls = d.addedCausalLinks.partition {_.condition.predicate == predicate1}
         cls._1.head.consumer.schema.isPrimitive == p1 && cls._2.head.consumer.schema.isPrimitive == p2
       }
   }
