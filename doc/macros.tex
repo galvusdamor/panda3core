@@ -1,0 +1,187 @@
+ 
+
+%\newcommand\todo[1]{}
+\newcommand{\todo}[1]{\textbf{\textcolor{red}{TODO: {#1}}}}
+
+% \newtheorem{lemma}             {Lemma}
+% % \newtheorem{theorem}           {Theorem}
+% \newtheorem{corollary}         {Corollary}
+% \theoremstyle{definition}
+% \newtheorem{definition}        {Definition}
+\newtheorem{theorem}{Theorem}
+
+%List within theorem
+\newcounter{theoremlistno}
+\newenvironment{theoremlist}{%
+\begin{list}{\arabic{theoremlistno}.}{\usecounter{theoremlistno}
+  \setlength{\leftmargin}{10pt}
+  \setlength{\labelsep}{6pt}
+  \setlength{\labelwidth}{6pt}
+  \sl}}
+{\end{list}}
+
+
+\newtheorem{definition}{Definition}
+
+%List within theorem
+\newcounter{definitionlistno}
+\newenvironment{definitionlist}{%
+\begin{list}{\arabic{definitionlistno}.}{\usecounter{definitionlistno}
+  \setlength{\leftmargin}{10pt}
+  \setlength{\labelsep}{6pt}
+  \setlength{\labelwidth}{6pt}
+  \sl}}
+{\end{list}}
+
+\newtheorem{corollary}{Corollary}
+
+%List within corollary
+\newcounter{corollarylistno}
+\newenvironment{corollarylist}{%
+\begin{list}{\arabic{corollarylistno}.}{\usecounter{corollarylistno}
+  \setlength{\leftmargin}{10pt}
+  \setlength{\labelsep}{6pt}
+  \setlength{\labelwidth}{6pt}
+  \sl}}
+{\end{list}}
+
+\newtheorem{lemma}{Lemma}
+
+%List within lemma
+\newcounter{lemmalistno}
+\newenvironment{lemmalist}{%
+\begin{list}{\arabic{lemmalistno}.}{\usecounter{lemmalistno}
+  \setlength{\leftmargin}{10pt}
+  \setlength{\labelsep}{6pt}
+  \setlength{\labelwidth}{6pt}
+  \sl}}
+{\end{list}}
+
+\newtheorem{proposition}{Proposition}
+
+%List within lemma
+\newcounter{propositionlistno}
+\newenvironment{propositionlist}{%
+\begin{list}{\arabic{propositionlistno}.}{\usecounter{propositionlistno}
+  \setlength{\leftmargin}{10pt}
+  \setlength{\labelsep}{6pt}
+  \setlength{\labelwidth}{6pt}
+  \sl}}
+{\end{list}}
+
+%%% references
+\newcommand{\refdef}[1]{Definition~\ref{#1}}
+\newcommand{\refalg}[1]{Algorithm~\ref{#1}}
+\newcommand{\refcorollary}[1]{Corollary~\ref{#1}}
+\newcommand{\reflemma}[1]{Lemma~\ref{#1}}
+\newcommand{\reftheorem}[1]{Theorem~\ref{#1}}
+\newcommand{\reffig}[1]{Figure~\ref{#1}}
+
+\newenvironment{proof}{\textit{Proof:}}{\hfill $\Box$\\}
+\newenvironment{proofs}{\textit{Proof sketch:}}{\hfill $\Box$}
+
+% Klassen für Text
+\newcommand{\Hyb}              {\textsc{TiHtn}}
+\newcommand{\htntext}          {\textsc{Htn}}
+\newcommand{\pocltext}         {\textsc{Pocl}}
+
+% HTN subclasses
+\newcommand{\htn}              {\ensuremath{\mathit{HTN}}}
+\newcommand{\tihtn}            {\ensuremath{\mathit{TIHTN}}}%{\ensuremath{\mathit{HTN_{TI}}}}
+\newcommand{\htnnoloop}        {\ensuremath{\mathit{HTN_{acyc}}}}
+\newcommand{\htnnoloopdone}    {\ensuremath{\mathit{HTN_{acyc}}^{1}}}
+\newcommand{\htntwo}           {\ensuremath{\mathit{HTN}_{2dec}}}
+\newcommand{\htnone}           {\ensuremath{\mathit{HTN}_{1dec}}}
+\newcommand{\htnordered}       {\ensuremath{\mathit{HTN_{ordered}}}}
+\newcommand{\htnunordered}     {\ensuremath{\mathit{HTN_{unordered}}}}
+\newcommand{\htnall}           {\ensuremath{\mathit{\htn_{all}}}}
+\newcommand{\noeff}            {\ensuremath{0\,\mathit{eff}}}
+\newcommand{\nopre}            {\ensuremath{0\,\mathit{pre}}}
+\newcommand{\htnnope}          {\ensuremath{\htn_{\noeff}^{\nopre}}} % HTN without preconditions and effects
+\newcommand{\tihtnnope}        {\ensuremath{\tihtn_{\noeff}^{\nopre}}}
+\newcommand{\minl}             {\ensuremath{ m }}
+\newcommand{\ExePlan}          {\ensuremath{\mathit{EXE}}}
+
+\newcommand{\reg}{\ensuremath{\mathit{REG}}} % regular language
+\newcommand{\cfl}{\ensuremath{\mathit{CF}}} % context free language
+\newcommand{\csl}{\ensuremath{\mathit{CS}}} % context sensitive language
+%\newcommand{\rel}{\ensuremath{\mathit{RE}}}  % recursivly enumerable language
+
+% basic definitions
+%
+\newcommand{\Prob}             {\ensuremath{\mathcal{P}}}
+\newcommand{\methods}          {\ensuremath{M}}
+\newcommand{\allTNsX}          {\ensuremath{\mathit{TN}_{\hspace{-0.1em}X}}}
+\newcommand{\allTNsP}          {\ensuremath{\mathit{TN}_{\hspace{-0.1em}O}}}
+\newcommand{\allTNsC}          {\ensuremath{\mathit{TN}_{\hspace{-0.1em}C \cup O}}}
+\newcommand{\Prec}             {\text{prec}}   % operator precondition
+\newcommand{\Add}              {\text{add}}    % operator add list
+\newcommand{\Del}              {\text{del}}    % operator delete list
+\newcommand{\Eff}              {\text{eff}}    % operator effects
+\newcommand{\tn}               {\ensuremath{\mathrm{tn}}}
+\newcommand{\ti}               {c_I}
+\newcommand{\OrdUn}            {\ensuremath{\mathord{\prec}}}
+\newcommand{\sol}              {\ensuremath{\mathrm{Sol}_\htn{}}}
+\newcommand{\solti}            {\ensuremath{\mathrm{Sol}_\tihtn{}}}
+\newcommand{\yield}            {\mathrm{yield}}
+\newcommand{\Goal}             {\mathrm{goal}}
+\newcommand{\Edges}            {E}
+\newcommand{\Children}[2]      {\ensuremath{\mathit{ch}(#2,#1)}}   %1==task, 2==tree
+\newcommand{\Ind}[2]           {\ensuremath{\mathit{ind}(#2,#1)}}  %1==task, 2==tree
+
+% old version criticised by reviewers
+%\newcommand{\phat}             {\ensuremath{\hat {\mathcal P}}} 
+%\newcommand{\pzero}            {\ensuremath{\mathcal P^0}}
+\newcommand{\phat}             {\ensuremath{\mathcal P^{\text{no}}_{\textsc{h}}}}
+\newcommand{\pzero}            {\ensuremath{\mathcal P^{\text{no}}_{\textsc{pe}}}}
+
+% technical definitions
+%
+\newcommand{\Shortcite}[1]     {\citeauthor{#1}~\shortcite{#1}}
+\newcommand{\with}             {\mid}
+\newcommand{\restrict}[1]      {|_{#1}}
+\newcommand{\card}[1]          {\left| #1 \right|}
+\newcommand{\cardSigma}[1]     {\left| #1 \right|_\Sigma}
+\newcommand{\defeq}            {\mathbin{:=}}
+\newcommand{\stsubst}[3]       {#1 [ #2 \! \leftarrow \! #3]}
+
+
+% insertions and decompositions
+%
+\newcommand{\MyRightarrow}[1]  {\raisebox{2pt}{$\smash{\xrightarrow[\smash{\raisebox{2pt}{$\scriptstyle{#1}$}}]{}}$}}
+\newcommand{\decompose}[2]     {\ensuremath{\mathbin{\MyRightarrow{#1,#2}}}}
+\newcommand{\leqd}             {\rightarrow_D^*}
+\newcommand{\leqi}             {\rightarrow_I^*}
+\newcommand{\ttr}             {\succ_D^*}
+
+% complexity classes
+%
+\newcommand{\ClassP}               {\textbf{P}}
+\newcommand{\ClassPComplete}       {\textbf{P-complete}}
+\newcommand{\ClassNP}              {\textbf{NP}}
+\newcommand{\ClassNPComplete}      {\textbf{NP-complete}}
+\newcommand{\ClassNPCompleteness}  {\textbf{NP-completeness}}
+\newcommand{\ClassGI}              {\textbf{GI}}
+\newcommand{\ClassGIHard}          {\textbf{GI-hard}}
+\newcommand{\ClassGIComplete}      {\textbf{GI-complete}}
+
+\newcommand{\ClassNPHard}          {\textbf{NP-hard}}
+\newcommand{\ClassNPHardness}      {\textbf{NP-hardness}}
+\newcommand{\ClassPSPACE}          {\textbf{\textsc{Pspace}}}
+\newcommand{\ClassPSPACEComplete}  {\textbf{\textsc{Pspace}-complete}}
+\newcommand{\ClassEXPSPACE}        {\textbf{\textsc{Expspace}}}
+\newcommand{\undecidable}          {\textbf{undecidable}}
+
+\newcommand{\ONF} {NF$_{\neq1}$}
+\newcommand{\TNF} {NF$_{\geq2}$}
+
+\newcommand{\scalefactor} {0.9125}
+
+% Problemklassen für Text
+\newcommand{\planreg}{\textsc{PlanReg}}
+\newcommand{\verify}{\textsc{VerifyTN}}
+\newcommand{\seqverify}{\textsc{VerifySeq}}
+\newcommand{\PlanCompat}{\textsc{PlanCompatibility}}
+\newcommand{\reachable}{\textsc{DecompReachable}}
+\newcommand{\vertexcover}{\textsc{VertexCover}}
+\newcommand{\si}{\textsc{SubgraphIso}}
