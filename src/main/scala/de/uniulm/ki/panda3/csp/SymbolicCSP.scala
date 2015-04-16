@@ -219,8 +219,8 @@ case class SymbolicCSP(variables: Set[Variable],
   private def addSingleConstraint(constraint: VariableConstraint): Unit = {
     val equalsConstEliminated = constraint match {
       case equalConstr@Equal(v1, v2) => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-        case (Left(rv), Right(const)) => OfSort(rv, Sort("temp", Vector() :+ const))
-        case (Right(const), Left(rv)) => OfSort(rv, Sort("temp", Vector() :+ const))
+        case (Left(rv), Right(const)) => OfSort(rv, Sort("temp", Vector() :+ const, None))
+        case (Right(const), Left(rv)) => OfSort(rv, Sort("temp", Vector() :+ const, None))
         case _ => equalConstr
       }
       case x => x
