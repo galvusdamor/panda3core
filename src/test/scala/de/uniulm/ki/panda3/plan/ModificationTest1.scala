@@ -35,7 +35,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
 
 
     val plan1flaw = plan1flaws(0)
-    val plan1flawModifications = plan1flaw.resolvants(exampleDomain1)
+    val plan1flawModifications = plan1flaw.resolvents(exampleDomain1)
     // there should be exactly one modification
     assert(plan1flawModifications.size == 1)
     // and it should a the needed plan step
@@ -71,7 +71,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     assert(plan2flaws exists { case OpenPrecondition(_, planStep, precondition) => planStep == plan2.planSteps(2) && precondition == plan2.planSteps(2).substitutedPreconditions(0)})
 
     // generate all modifications for the only flaw
-    val plan2flawModifications = plan2flaws(0).resolvants(exampleDomain1)
+    val plan2flawModifications = plan2flaws(0).resolvents(exampleDomain1)
 
     assert(plan2flawModifications.size == 1)
     assert(plan2flawModifications exists { case InsertCausalLink(_, cl, _) => cl.producer == planstep0init})
@@ -93,7 +93,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     assert(plan3flaws.size == 1)
     assert(plan3flaws exists { case UnboundVariable(_, v) => plan3.variableConstraints.equal(v, plan3.init.arguments(0))})
 
-    val plan3flawModifications = plan3flaws(0).resolvants(exampleDomain1)
+    val plan3flawModifications = plan3flaws(0).resolvents(exampleDomain1)
     assert(plan3flawModifications.size == 4)
     assert(plan3flawModifications.toSet.size == 4)
     assert(plan3flawModifications forall { case BindVariableToValue(_, v, value) => plan3.variableConstraints.equal(v, plan3.init.arguments(0)) && v.sort.elements.contains(value)})

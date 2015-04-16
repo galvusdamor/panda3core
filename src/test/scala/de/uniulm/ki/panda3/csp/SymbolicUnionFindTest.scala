@@ -17,7 +17,7 @@ class SymbolicUnionFindTest extends FlatSpec {
   val v4 = Variable(4, "v4", someSort)
   val v5 = Variable(5, "v5", someSort)
 
-  def someSort: Sort = Sort("someSort", Vector())
+  def someSort: Sort = Sort("someSort", Vector(), None)
 
   "Variables" must "be insertable and must be unequal by default" in {
 

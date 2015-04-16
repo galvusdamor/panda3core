@@ -15,7 +15,7 @@ import org.scalatest.FlatSpec
  */
 class SymbolicPlanTest extends FlatSpec {
 
-  val sort1 : Sort = Sort("sort1", Vector() :+ Constant("a") :+ Constant("b"))
+  val sort1: Sort = Sort("sort1", Vector() :+ Constant("a") :+ Constant("b"), None)
   val predicate1 : Predicate = Predicate("predicate1", sort1 :: sort1 :: Nil)
 
   val d_v1 = Variable(1, "d_v1", sort1)

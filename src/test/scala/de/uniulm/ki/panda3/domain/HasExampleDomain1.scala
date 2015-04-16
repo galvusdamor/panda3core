@@ -11,7 +11,7 @@ import de.uniulm.ki.panda3.logic.{Constant, Literal, Predicate, Sort}
 trait HasExampleDomain1 {
 
   // sorts
-  val sort1: Sort = Sort("sort 1", constantSort1(1) +: constantSort1(2) +: constantSort1(3) +: constantSort1(4) +: Vector())
+  val sort1: Sort = Sort("sort 1", constantSort1(1) +: constantSort1(2) +: constantSort1(3) +: constantSort1(4) +: Vector(), None)
   // predicates
   val predicate1: Predicate = Predicate("predicate1", sort1 :: Nil)
   // tasks

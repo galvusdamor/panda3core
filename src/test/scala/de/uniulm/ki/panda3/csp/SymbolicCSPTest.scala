@@ -16,12 +16,12 @@ class SymbolicCSPTest extends FlatSpec {
   val cy = Constant("y")
   val cz = Constant("z")
 
-  val sort1    : Sort = Sort("sort1", Vector() :+ ca :+ cb)
-  val sort1sub1: Sort = Sort("sort1sub1", Vector() :+ ca)
-  val sort1sub2: Sort = Sort("sort1sub1", Vector() :+ cb)
-  val sort2    : Sort = Sort("sort2", Vector() :+ cx :+ cy :+ cz)
-  val sort2sub1: Sort = Sort("sort1sub1", Vector() :+ cx)
-  val sort2sub2: Sort = Sort("sort1sub1", Vector() :+ cy :+ cz)
+  val sort1    : Sort = Sort("sort1", Vector() :+ ca :+ cb, None)
+  val sort1sub1: Sort = Sort("sort1sub1", Vector() :+ ca, None)
+  val sort1sub2: Sort = Sort("sort1sub1", Vector() :+ cb, None)
+  val sort2    : Sort = Sort("sort2", Vector() :+ cx :+ cy :+ cz, None)
+  val sort2sub1: Sort = Sort("sort1sub1", Vector() :+ cx, None)
+  val sort2sub2: Sort = Sort("sort1sub1", Vector() :+ cy :+ cz, None)
 
   val v1 = Variable(1, "v1", sort1)
   val v2 = Variable(2, "v2", sort1)
@@ -137,7 +137,7 @@ class SymbolicCSPTest extends FlatSpec {
     assert(csp3.reducedDomainOf(v4).exists(x => x == cz))
 
 
-    val csp4 = csp3.addConstraint(NotOfSort(v4, Sort("temp", Vector() :+ cx)))
+    val csp4 = csp3.addConstraint(NotOfSort(v4, Sort("temp", Vector() :+ cx, None)))
     assert(csp4.isSolvable != Some(false))
     assert(csp4.reducedDomainOf(v4).forall(x => x == cy || x == cz))
     assert(csp4.reducedDomainOf(v4).exists(x => x == cy))

@@ -12,8 +12,8 @@ import scala.collection.immutable.HashSet
  */
 class LiteralTest extends FlatSpec {
 
-  val sort1 : Sort = Sort("sort1", Vector() :+ Constant("a") :+ Constant("b") :+ Constant("c"))
-  val sort2 : Sort = Sort("sort2", Vector() :+ Constant("x") :+ Constant("y") :+ Constant("z"))
+  val sort1: Sort = Sort("sort1", Vector() :+ Constant("a") :+ Constant("b") :+ Constant("c"), None)
+  val sort2: Sort = Sort("sort2", Vector() :+ Constant("x") :+ Constant("y") :+ Constant("z"), None)
 
   val p1 : Predicate = Predicate("p1", sort1 :: sort1 :: Nil)
   val p2 : Predicate = Predicate("p2", sort1 :: sort2 :: Nil)

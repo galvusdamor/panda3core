@@ -47,7 +47,7 @@ class CausalThreatTest extends FlatSpec with HasExampleDomain2 {
     val threats: Seq[CausalThreat] = flaws collect { case cl: CausalThreat => cl}
     assert(threats.size == 1)
 
-    val resolvers = threats(0).resolvants(exampleDomain2)
+    val resolvers = threats(0).resolvents(exampleDomain2)
 
     assert(resolvers.size == 2)
     assert(resolvers exists {case MakeLiteralsUnUnifiable(_, ne) => ne == NotEqual(instance_variableSort1(2), instance_variableSort1(3)); case _ => false})
