@@ -17,6 +17,25 @@ trait Graph[T] {
   /** adjacency list of the graph */
   def edges: Map[T, Seq[T]]
 
+  require(edges.size == nodes.size)
+
+  /** list of all edges as a list of pairs */
+  final lazy val edgeList: Seq[(T, T)] = edges.toSeq flatMap { case (node1, neighbours) => neighbours map {(node1, _)} }
+
+  /** in- and out- degrees of all nodes */
+  lazy val degrees: Map[T, (Int, Int)] = {
+    val degCount: mutable.Map[T, (Int, Int)] = mutable.Map().default((0, 0))
+
+    edgeList foreach { case (from, to) =>
+      val degFrom = degCount(from)
+      degCount(from) = (degFrom._1, degFrom._2 + 1)
+      val degTo = degCount(to)
+      degCount(to) = (degTo._1 + 1, degTo._2)
+    }
+    // convert to immutable map
+    degCount.toMap
+  }
+
 
   lazy val stronglyConnectedComponents: Seq[Seq[T]] = {
     // use Tarjan's algorithm to find the SCCs
@@ -62,13 +81,16 @@ trait Graph[T] {
         recursionResult :+ sccNodes.toSeq
       } else recursionResult
     }
-
-
     nodes flatMap { node => if (!dfsNumber.contains(node)) tarjan(node) else Nil }
-
   }
 
+  def getComponentOf(node: T): Option[Seq[T]] = stronglyConnectedComponents find {_.contains(node)}
 
+
+  lazy val condensation: Graph[Seq[T]] =
+    SimpleGraph(stronglyConnectedComponents, (edgeList map { case (from, to) => (getComponentOf(from).get, getComponentOf(to).get) }) collect { case e@(from, to) if from != to => e })
+
+  lazy val sources: Seq[T] = (degrees collect { case (node, (in, _)) if in == 0 => node }).toSeq
 }
 
 
