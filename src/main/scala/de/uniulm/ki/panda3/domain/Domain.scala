@@ -11,7 +11,7 @@ import de.uniulm.ki.panda3.logic.{Constant, DecompositionAxiom, Predicate, Sort}
  *
  * A planning domain contains:
  * - a list of sorts (or types)
- * - a list of constants, each belonging to exactly one sort
+ * - a list of constants
  * - a list of FOL predicates
  * - a list of tasks
  * - a list of decomposition methods
@@ -24,4 +24,5 @@ import de.uniulm.ki.panda3.logic.{Constant, DecompositionAxiom, Predicate, Sort}
 case class Domain(sorts: Seq[Sort], constants: Seq[Constant], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
                   decompositionAxioms: Seq[DecompositionAxiom]) {
 
+  lazy val possibleGeneratorDecompositions: Map[Predicate, DecompositionMethod] = ???
 }
