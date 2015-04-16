@@ -13,6 +13,6 @@ trait Flaw {
 
   val plan: Plan
 
-  def resolvants(domain: Domain): Seq[Modification]
+  def resolvents(domain: Domain): Seq[Modification]
 
 }

@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.domain
 
+import de.uniulm.ki.panda3.domain.datastructures.TaskSchemaTransitionGraph
 import de.uniulm.ki.panda3.logic.{Constant, DecompositionAxiom, Predicate, Sort}
 
 /**
@@ -24,5 +25,6 @@ import de.uniulm.ki.panda3.logic.{Constant, DecompositionAxiom, Predicate, Sort}
 case class Domain(sorts: Seq[Sort], constants: Seq[Constant], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
                   decompositionAxioms: Seq[DecompositionAxiom]) {
 
-  lazy val possibleGeneratorDecompositions: Map[Predicate, DecompositionMethod] = ???
+  lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
+
 }

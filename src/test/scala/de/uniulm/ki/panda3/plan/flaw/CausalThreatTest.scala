@@ -37,7 +37,7 @@ class CausalThreatTest extends FlatSpec with HasExampleDomain2 {
     val threats: Seq[CausalThreat] = flaws collect { case cl: CausalThreat => cl}
 
     assert(threats.size == 1)
-    assert(threats exists {_.planStep == ps3})
+    assert(threats exists {_.threater == ps3})
     assert(threats exists {_.link == cl})
     assert(threats exists {_.effectOfThreater == ps3.substitutedEffects(0)})
   }

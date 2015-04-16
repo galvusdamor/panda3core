@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.{CSP, Substitution, Variable}
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
-import de.uniulm.ki.panda3.plan.flaw.{CausalThreat, Flaw, OpenPrecondition, UnboundVariable}
+import de.uniulm.ki.panda3.plan.flaw._
 import de.uniulm.ki.panda3.plan.modification.Modification
 import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
 
@@ -14,14 +14,23 @@ import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
 trait Plan {
 
   lazy val flaws: Seq[Flaw] = {
-    val hardFlaws = causalThreads ++ openPreconditions
+    val hardFlaws = causalThreats ++ openPreconditions ++ abstractPlanSteps
     if (hardFlaws.size == 0)
       unboundVariables
     else hardFlaws
   }
   lazy val planStepWithoutInitGoal: Seq[PlanStep] = planSteps filter {ps => ps != init && ps != goal}
-  val causalThreads: Seq[CausalThreat]
+
+  /** all abstract plan steps */
+  val abstractPlanSteps: Seq[AbstractPlanStep]
+
+  /** all causal threads in this plan */
+  val causalThreats: Seq[CausalThreat]
+
+  /** all open preconditions in this plan */
   val openPreconditions: Seq[OpenPrecondition]
+
+  /** all variables which are not bound to a constant, yet */
   val unboundVariables: Seq[UnboundVariable]
   val getFirstFreePlanStepID: Int = 1 + (planSteps foldLeft 0) { case (m, ps: PlanStep) => math.max(m, ps.id)}
   val getFirstFreeVariableID: Int = 1 + (variableConstraints.variables foldLeft 0) { case (m, v: Variable) => math.max(m, v.id)}

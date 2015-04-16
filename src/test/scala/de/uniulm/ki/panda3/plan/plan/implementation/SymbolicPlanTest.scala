@@ -63,7 +63,7 @@ class SymbolicPlanTest extends FlatSpec {
                                            CausalLink(ps0, ps1, Literal(predicate1, isPositive = true, p_v1 :: p_v2 :: Nil)) :: Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps),
                                            SymbolicCSP(Set(p_v1, p_v2, p_v3, p_v4), Nil), null, null)
 
-    assert(plan1.causalThreads.size == 1)
+    assert(plan1.causalThreats.size == 1)
   }
 
 }
