@@ -5,6 +5,6 @@ package de.uniulm.ki.panda3.logic
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class Sort(name: String, elements: Seq[Constant]) {
+case class Sort(name: String, elements: Seq[Constant], parentSort: Option[Sort]) {
 
 }
