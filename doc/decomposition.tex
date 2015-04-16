@@ -92,7 +92,7 @@ We define the non-recursive restriction of $\Delta^*(\tn,p)$ as $\Delta_f^*(\tn,
 \begin{align*}
 \Delta^*_f(\tn,p) = \{\tn' \mid &\tn = \tn_1 \decompose{t_1}{m_1} \tn_2 \decompose{t_2}{m_2} \dots \decompose{t_{l-2}}{m_{l-2}} \tn_{l-1} \decompose{t_{l-1}}{m_{l-1}} \tn_l = \tn', \\
 & \forall i \in [l-1]: \tn_{i+1} \in \Delta_p(\tn_i), \text{ and iff } i\neq 1: t_i \in T(\tn_i) \setminus T(\tn_{i-1})\\
-& \forall 1 \leq j < i: t_i \neq t_j \}
+& \forall 1 \leq j < i: \alpha(\tn_i)(t_i) \neq \alpha(\tn_j)(t_j) \}
 \end{align*}
 Further, let $c$ be a compound task and $p$ a proposition symbol.
 Then the set $\Pi_f(c,p)$ of all non-recursively directly decomposable task networks, which probide $p$ is defined as:
