@@ -6,3 +6,7 @@
 /.classpath
 /.cache
 /.project
+/doc/*.pdf
+/doc/*.toc
+/doc/*.aux
+/doc/*.log
