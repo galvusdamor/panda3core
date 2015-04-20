@@ -23,7 +23,7 @@ class CausalThreatTest extends FlatSpec with HasExampleDomain2 {
   val psgoal = PlanStep(1, goal2, instance_variableSort1(2) :: Nil)
   val ps2    = PlanStep(2, task1, instance_variableSort1(2) :: Nil)
   val ps3    = PlanStep(3, task2, instance_variableSort1(3) :: Nil)
-  val cl = CausalLink(ps2, psgoal, psgoal.substitutedPreconditions(0))
+  val cl = CausalLink(ps2, psgoal, psgoal.substitutedPreconditions.head)
 
 
   val planPlanSteps      = psinit :: psgoal :: ps2 :: ps3 :: Nil
@@ -39,7 +39,7 @@ class CausalThreatTest extends FlatSpec with HasExampleDomain2 {
     assert(threats.size == 1)
     assert(threats exists {_.threater == ps3})
     assert(threats exists {_.link == cl})
-    assert(threats exists {_.effectOfThreater == ps3.substitutedEffects(0)})
+    assert(threats exists {_.effectOfThreater == ps3.substitutedEffects.head})
   }
 
   "Resolving causal threads" must "lead to promotion/demotion and unUnification" in {
@@ -47,11 +47,11 @@ class CausalThreatTest extends FlatSpec with HasExampleDomain2 {
     val threats: Seq[CausalThreat] = flaws collect { case cl: CausalThreat => cl}
     assert(threats.size == 1)
 
-    val resolvers = threats(0).resolvents(exampleDomain2)
+    val resolvers = threats.head.resolvents(exampleDomain2)
 
     assert(resolvers.size == 2)
     assert(resolvers exists {case MakeLiteralsUnUnifiable(_, ne) => ne == NotEqual(instance_variableSort1(2), instance_variableSort1(3)); case _ => false})
-    assert(resolvers exists { case AddOrdering(_, OrderingConstraint(ps3, ps2)) => true; case _ => false})
+    assert(resolvers exists { case AddOrdering(_, OrderingConstraint(`ps3`, `ps2`)) => true; case _ => false })
 
     val unUnify: MakeLiteralsUnUnifiable = (resolvers collect { case r: MakeLiteralsUnUnifiable => r}).head
 
