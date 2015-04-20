@@ -175,11 +175,10 @@ class SymbolicCSPTest extends FlatSpec {
     assert(csp1.isSolvable != Some(false))
     csp1.solution match {
       case None => assert(false) // it must have a solution
-      case Some(solution : Map[Variable, Constant]) => {
+      case Some(solution: Map[Variable, Constant]) =>
         assert(solution(v1) != solution(v2))
         assert(solution(v1) == ca || solution(v1) == cb)
         assert(solution(v2) == ca || solution(v2) == cb)
-      }
     }
   }
 

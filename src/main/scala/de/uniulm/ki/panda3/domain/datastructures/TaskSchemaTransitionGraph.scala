@@ -18,7 +18,7 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends Graph[Task] {
     def dfs(scc: Seq[Task]): Unit = {
       // if any node of the scc is already in the map, simply ignore it
       if (!decompositionMap.contains(scc.head)) {
-        condensation.edges(scc) foreach {dfs(_)}
+        condensation.edges(scc) foreach dfs
 
         val allPredicates = scc ++ (condensation.edges(scc) flatMap { neighbour => decompositionMap(neighbour.head) })
 
@@ -26,15 +26,15 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends Graph[Task] {
       }
     }
     // run the dfs on all source SCCs of the condensation
-    condensation.sources foreach {dfs(_)}
+    condensation.sources foreach dfs
 
     decompositionMap.toMap
   }
 
 
-  lazy val canBeDecomposedIntoVia: Map[Task, Seq[(DecompositionMethod, Task)]] = (canBeDirectlyDecomposedIntoVia map { case (task, directDecomps) => (task, directDecomps
+  lazy val canBeDecomposedIntoVia: Map[Task, Seq[(DecompositionMethod, Task)]] = canBeDirectlyDecomposedIntoVia map { case (task, directDecomps) => (task, directDecomps
     .toSeq flatMap { case (method, subtask) => canBeDecomposedInto(subtask) map {(method, _)} })
-  }).toMap
+  }
 
 
   /** a list of all node of the graph */

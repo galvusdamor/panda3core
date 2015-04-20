@@ -14,7 +14,7 @@ object Main {
 
   def quick(l: Seq[Int]): Seq[Int] = if (l.size == 0 || l.size == 1) l
                                      else {
-                                       val pivot: Int = l(0)
+    val pivot: Int = l.head
                                        val rest: Seq[Int] = l.tail
 
     val smaller = rest filter {_ < pivot}

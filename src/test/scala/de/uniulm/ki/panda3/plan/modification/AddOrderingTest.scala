@@ -39,7 +39,7 @@ class AddOrderingTest extends FlatSpec with HasExampleDomain2 {
       */
     val ps2 = PlanStep(2, task1, instance_variableSort1(2) :: Nil)
     val ps3 = PlanStep(3, task2, instance_variableSort1(3) :: Nil)
-    val cl = CausalLink(ps2, psgoal, psgoal.substitutedPreconditions(0))
+    val cl = CausalLink(ps2, psgoal, psgoal.substitutedPreconditions.head)
 
 
     val planPlanSteps = psinit :: psgoal :: ps2 :: ps3 :: Nil
@@ -64,7 +64,7 @@ class AddOrderingTest extends FlatSpec with HasExampleDomain2 {
      */
     val ps2 = PlanStep(2, task1, instance_variableSort1(2) :: Nil)
     val ps3 = PlanStep(3, task2, instance_variableSort1(3) :: Nil)
-    val cl = CausalLink(ps2, psgoal, psgoal.substitutedPreconditions(0))
+    val cl = CausalLink(ps2, psgoal, psgoal.substitutedPreconditions.head)
 
 
     val planPlanSteps = psinit :: psgoal :: ps2 :: ps3 :: Nil

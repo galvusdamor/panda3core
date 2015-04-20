@@ -55,7 +55,7 @@ class SymbolicUnionFindTest extends FlatSpec {
 
     union.addVariable(v5)
     assert(union.assertEqual(v4, Left(v5)))
-    assert(union.getRepresentative(v5) == (union.getRepresentative(v4)))
+    assert(union.getRepresentative(v5) == union.getRepresentative(v4))
   }
 
   it must "be uneqal" in {

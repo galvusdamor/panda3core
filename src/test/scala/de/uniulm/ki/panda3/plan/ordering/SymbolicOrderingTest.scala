@@ -14,7 +14,7 @@ class SymbolicOrderingTest extends FlatSpec {
 
   def getOrdering(i: Int, j: Int): OrderingConstraint = OrderingConstraint(getPlanStep(i), getPlanStep(j))
 
-  def getPlanStep(i: Int): PlanStep = PlanStep(i, Task("", false, Nil, Vector(), Vector(), Vector()), Vector())
+  def getPlanStep(i: Int): PlanStep = PlanStep(i, Task("", isPrimitive = false, Nil, Vector(), Vector(), Vector()), Vector())
 
   /** get a list of plansetps ranging von 0 to i-1 */
   def getPlanStepList(i: Int): Seq[PlanStep] = if (i == 0) Nil else getPlanStepList(i - 1) :+ getPlanStep(i - 1)

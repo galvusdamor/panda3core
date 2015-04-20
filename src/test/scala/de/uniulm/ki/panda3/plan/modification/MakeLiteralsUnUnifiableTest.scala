@@ -33,7 +33,7 @@ class MakeLiteralsUnUnifiableTest extends FlatSpec with HasExampleDomain2 {
                                           SymbolicCSP(Set(instance_variableSort1(2), instance_variableSort1(3)), Nil),
                                           ps2, psgoal)
 
-    val singleOrderingModification = MakeLiteralsUnUnifiable(plan, ps3.substitutedEffects(0).negate, ps2.substitutedEffects(0))
+    val singleOrderingModification = MakeLiteralsUnUnifiable(plan, ps3.substitutedEffects.head.negate, ps2.substitutedEffects.head)
 
     assert(singleOrderingModification.size == 1)
     assert(singleOrderingModification exists {case MakeLiteralsUnUnifiable(_, ne) => ne == NotEqual(instance_variableSort1(2), instance_variableSort1(3))})

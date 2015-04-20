@@ -18,5 +18,5 @@ object AddOrdering {
 
   /** modify to solve a causal thread, this is either promotion or demotion */
   def apply(plan: Plan, ps: PlanStep, cl: CausalLink): Seq[AddOrdering] =
-    (ps, cl.producer) ::(cl.consumer, ps) :: Nil collect { case (before, after) if (!plan.orderingConstraints.gteq(before, after)) => AddOrdering(plan, OrderingConstraint(before, after))}
+    (ps, cl.producer) ::(cl.consumer, ps) :: Nil collect { case (before, after) if !plan.orderingConstraints.gteq(before, after) => AddOrdering(plan, OrderingConstraint(before, after)) }
 }

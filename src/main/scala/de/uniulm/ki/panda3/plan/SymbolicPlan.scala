@@ -34,7 +34,7 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
 
   override lazy val unboundVariables: Seq[UnboundVariable] = (variableConstraints.variables collect { case v if variableConstraints.getRepresentative(v).isLeft => variableConstraints
     .getRepresentative(v) match {
-    case Left(v) => v
+    case Left(rv) => rv
   }
   } map { case v => UnboundVariable(this, v)
   }).toSeq

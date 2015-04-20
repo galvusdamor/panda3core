@@ -8,5 +8,3 @@ package de.uniulm.ki.panda3.logic
 case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) {
 
 }
-
-r

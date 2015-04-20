@@ -12,7 +12,7 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   import de.uniulm.ki.panda3.plan.ordering.TaskOrdering._
 
 
-  private lazy val arrangemetnIndexToPlanStep: Map[Int, PlanStep] = tasks.zipWithIndex.map(_.swap) toMap
+  private lazy val arrangemetnIndexToPlanStep: Map[Int, PlanStep] = tasks.zipWithIndex.map(_.swap).toMap
   private      val numberOfTasks                                  = tasks.length
   private      val innerArrangement          : Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
   private      val planStepToArrangemetnIndex: Map[PlanStep, Int] = tasks.zipWithIndex.toMap
@@ -168,15 +168,14 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
       val allPairs = for (from <- 0 until ord.length; to <- from + 1 until ord.length) yield (from, to)
 
 
-      allPairs collect {
-        case (x, y) if (ord(x)(y) == AFTER)  => OrderingConstraint(arrangemetnIndexToPlanStep(y), arrangemetnIndexToPlanStep(x))
-        case (x, y) if (ord(x)(y) == BEFORE) => OrderingConstraint(arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
+      allPairs collect { case (x, y) if ord(x)(y) == AFTER => OrderingConstraint(arrangemetnIndexToPlanStep(y), arrangemetnIndexToPlanStep(x))
+      case (x, y) if ord(x)(y) == BEFORE => OrderingConstraint(arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
       }
     }
   }
 
   private def readOrderingConstraintsFromArrangement(arrangement: Array[Array[Byte]]): Seq[OrderingConstraint] =
-    (0 until arrangement.length flatMap {case x => (x + 1) until arrangement.length map ((x, _))}) collect {
-      case (x, y) if (arrangement(x)(y) == BEFORE) => OrderingConstraint(arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
+    (0 until arrangement.length flatMap {case x => (x + 1) until arrangement.length map ((x, _))}) collect { case (x, y) if arrangement(x)(y) == BEFORE => OrderingConstraint(
+      arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
     }
 }

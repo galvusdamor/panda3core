@@ -31,9 +31,9 @@ class SymbolicPlanTest extends FlatSpec {
   val p_v4 = Variable(6, "p_v2", sort1)
 
 
-  val schemaProd: Task = Task("task_prod", true, d_v1 :: d_v2 :: Nil, Nil, Nil, Literal(predicate1, isPositive = true, d_v1 :: d_v2 :: Nil) :: Nil)
-  val schemaCons: Task = Task("task_cons", true, d_v1 :: d_v2 :: Nil, Nil, Literal(predicate1, isPositive = true, d_v1 :: d_v2 :: Nil) :: Nil, Nil)
-  val schemaDestr: Task = Task("task_destr", true, d_v1 :: d_v2 :: Nil, Nil, Nil, Literal(predicate1, isPositive = false, d_v1 :: d_v2 :: Nil) :: Nil)
+  val schemaProd : Task = Task("task_prod", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, Nil, Literal(predicate1, isPositive = true, d_v1 :: d_v2 :: Nil) :: Nil)
+  val schemaCons : Task = Task("task_cons", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, Literal(predicate1, isPositive = true, d_v1 :: d_v2 :: Nil) :: Nil, Nil)
+  val schemaDestr: Task = Task("task_destr", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, Nil, Literal(predicate1, isPositive = false, d_v1 :: d_v2 :: Nil) :: Nil)
 
   "Computing open preconditions" must "be possible" in {
     val plan1PlanSteps = PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: Nil
@@ -45,7 +45,7 @@ class SymbolicPlanTest extends FlatSpec {
 
   "Computing open preconditions" must "not contain protected preconditions" in {
     val plan1PlanSteps = PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil) :: Nil
-    val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, CausalLink(plan1PlanSteps(1), plan1PlanSteps(0), Literal(predicate1, isPositive = true, p_v1
+    val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, CausalLink(plan1PlanSteps(1), plan1PlanSteps.head, Literal(predicate1, isPositive = true, p_v1
                                              :: p_v2 :: Nil)) :: Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps), SymbolicCSP(Set(p_v1, p_v2), Nil), null, null)
 
     assert(plan1.allPreconditions.size == 2)
