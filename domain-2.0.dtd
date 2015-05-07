@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+	Requested Changes:
+		This is a list of changes that will break downward compability:
+			- inline elements "leftHandSide" and "rightHandSide"
+			- reorganize the usage of variables in methods: task nodes should get a list of variables instead of varDeclarations.
+			  The variables may reference the varDeclarations of the method. This requires to add a taskNode to method as the
+			  implemented task and maybe surround the subtasks with a "subTasks" element
+
+-->
+
+<!ELEMENT domain (meta*, documentation?, sortDeclaration*, constantDeclaration*, relationDeclaration*, decompositionAxiom*, taskSchemaDeclaration+, methodDeclaration*)>
+<!ATTLIST domain name ID #REQUIRED>
+<!ATTLIST domain type (non-hierarchical|pure-hierarchical|hybrid) #REQUIRED>
+
+<!-- Documentation -->
+
+<!ELEMENT documentation (#PCDATA)>
+
+<!-- Sorts -->
+
+<!ELEMENT sortDeclaration (documentation?, subSort*)>
+<!ATTLIST sortDeclaration name ID #REQUIRED>
+<!ATTLIST sortDeclaration type (abstract|concrete) #REQUIRED>
+<!ELEMENT subSort EMPTY>
+<!ATTLIST subSort sort IDREF #REQUIRED>
+
+<!-- Relation Declarations -->
+
+<!ELEMENT relationDeclaration (documentation?, argumentSort*)>
+<!ATTLIST relationDeclaration name ID #REQUIRED>
+<!ATTLIST relationDeclaration type (rigid|flexible) #REQUIRED>
+
+<!ELEMENT argumentSort EMPTY>
+<!ATTLIST argumentSort sort IDREF #REQUIRED>
+
+<!-- Constant Declarations -->
+
+<!ELEMENT constantDeclaration EMPTY>
+<!ATTLIST constantDeclaration name ID #REQUIRED>
+<!ATTLIST constantDeclaration sort IDREF #REQUIRED>
+
+<!-- Variable Declarations -->
+
+<!ELEMENT variableDeclaration EMPTY>
+<!ATTLIST variableDeclaration name ID #REQUIRED>
+<!ATTLIST variableDeclaration sort IDREF #REQUIRED>
+<!ATTLIST variableDeclaration displayName CDATA "">
+
+<!-- Terms -->
+
+<!ELEMENT constant EMPTY>
+<!ATTLIST constant name IDREF #REQUIRED>
+
+<!ELEMENT variable EMPTY>
+<!ATTLIST variable name IDREF #REQUIRED>
+
+<!-- Formulas -->
+
+<!ELEMENT atomic ((variable|constant)*)>
+<!ATTLIST atomic relation IDREF #REQUIRED>
+
+<!ELEMENT not (atomic|not|and|or|imply|forall|exists)>
+<!ELEMENT imply ((atomic|not|and|or|imply|forall|exists), (atomic|not|and|or|imply|forall|exists))>
+<!ELEMENT and (atomic|not|and|or|imply|forall|exists)+>
+<!ELEMENT or (atomic|not|and|or|imply|forall|exists)+>
+<!ELEMENT forall (variableDeclaration, (atomic|not|and|or|imply|forall|exists))>
+<!ELEMENT exists (variableDeclaration, (atomic|not|and|or|imply|forall|exists))>
+
+<!-- Decomposition Axioms -->
+
+<!ELEMENT decompositionAxiom (documentation?, variableDeclaration+, leftHandSide, rightHandSide)>
+<!ATTLIST decompositionAxiom name ID #REQUIRED>
+<!ELEMENT leftHandSide (atomic)>
+<!ELEMENT rightHandSide ((atomic|not|and|or|imply|forall|exists)+)>
+<!-- decomposition axioms are interpreted as equivalence of atomic and enclosed formula.
+     The list of formulae is interpreted as a disjunction -->
+
+<!-- Task Declarations -->
+
+<!ELEMENT taskSchemaDeclaration (documentation?, variableDeclaration*, (atomic|not|and|or|imply|forall|exists|true), (atomic|not|and|or|imply|forall|exists|true))>
+<!ATTLIST taskSchemaDeclaration name ID #REQUIRED>
+<!ATTLIST taskSchemaDeclaration type (primitive|complex) #REQUIRED>
+<!ATTLIST taskSchemaDeclaration cost CDATA "1">
+
+<!ELEMENT true EMPTY>
+
+<!-- Method Declarations -->
+
+<!ELEMENT methodDeclaration (documentation?, variableDeclaration*, taskNode+, orderingConstraint*, (valueRestriction|sortRestriction)*, causalLink*)>
+<!ATTLIST methodDeclaration name ID #REQUIRED>
+<!ATTLIST methodDeclaration taskSchema IDREF #REQUIRED>
+
+<!ELEMENT taskNode (variableDeclaration*)>
+<!ATTLIST taskNode name ID #REQUIRED>
+<!ATTLIST taskNode taskSchema IDREF #REQUIRED>
+<!ATTLIST taskNode displayName CDATA "">
+
+<!ELEMENT orderingConstraint EMPTY>
+<!ATTLIST orderingConstraint predecessor IDREF #REQUIRED>
+<!ATTLIST orderingConstraint successor IDREF #REQUIRED>
+
+<!ELEMENT valueRestriction (variable|constant)>
+<!ATTLIST valueRestriction type (eq|neq) #REQUIRED>
+<!ATTLIST valueRestriction variable IDREF #REQUIRED>
+
+<!ELEMENT sortRestriction EMPTY>
+<!ATTLIST sortRestriction type (eq|neq) #REQUIRED>
+<!ATTLIST sortRestriction variable IDREF #REQUIRED>
+<!ATTLIST sortRestriction sort IDREF #REQUIRED>
+
+<!ELEMENT causalLink (atomic|not|and|or|imply|forall|exists)>
+<!ATTLIST causalLink producer IDREF #REQUIRED>
+<!ATTLIST causalLink consumer IDREF #REQUIRED>

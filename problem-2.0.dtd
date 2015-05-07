@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+
+    Requested Changes:
+        This is a list of changes that will break downward compability:
+            - add varDeclarations to problem and replace attribute "varDeclaration" in element "taskNode" with "variable"
+            - remove "fact" from element list of "goalStateDescription", "forall", "exists", "and", "or", "not", "preference", "causalLink"
+
+-->
+
+<!ELEMENT problem (documentation?, constantDeclaration*, initialState, goals?, initialTaskNetwork?)>
+<!ATTLIST problem name ID #REQUIRED>
+<!ATTLIST problem domain CDATA #REQUIRED>
+<!ATTLIST problem type (non-hierarchical|pure-hierarchical|hybrid) #REQUIRED>
+
+<!-- Documentation -->
+
+<!ELEMENT documentation (#PCDATA)>
+
+<!-- Constant Declarations -->
+
+<!ELEMENT constantDeclaration EMPTY>
+<!ATTLIST constantDeclaration name ID #REQUIRED>
+<!ATTLIST constantDeclaration sort CDATA #REQUIRED>
+
+<!-- Variable Declarations -->
+
+<!ELEMENT variableDeclaration EMPTY>
+<!ATTLIST variableDeclaration name ID #REQUIRED>
+<!ATTLIST variableDeclaration sort CDATA #REQUIRED>
+
+<!-- Terms -->
+
+<!-- The name attribute of a constant is not an IDREF as a constant can also be defined in a domain -->
+<!ELEMENT constant EMPTY>
+<!ATTLIST constant name CDATA #REQUIRED>
+
+<!ELEMENT variable EMPTY>
+<!ATTLIST variable name IDREF #REQUIRED>
+
+<!-- Formulas -->
+
+<!ELEMENT atomic ((variable|constant)*)>
+<!ATTLIST atomic relation CDATA #REQUIRED>
+
+<!ELEMENT fact (constant*)>
+<!ATTLIST fact relation CDATA #REQUIRED>
+
+<!ELEMENT not (atomic|fact|not|and|or|imply|forall|exists)>
+<!ELEMENT imply ((atomic|not|and|or|imply|forall|exists), (atomic|not|and|or|imply|forall|exists))>
+<!ELEMENT and (atomic|fact|not|and|or|imply|forall|exists)+>
+<!ELEMENT or (atomic|fact|not|and|or|imply|forall|exists)+>
+<!ELEMENT forall (variableDeclaration, (atomic|fact|not|and|or|imply|forall|exists))>
+<!ELEMENT exists (variableDeclaration, (atomic|fact|not|and|or|imply|forall|exists))>
+
+<!-- Initial and Goal State -->
+
+<!ELEMENT initialState (documentation?, fact*)>
+<!ELEMENT goals (documentation?, (atomic|fact|not|and|or|imply|forall|exists|preference)*)>
+
+<!ELEMENT preference (atomic|fact|not|and|or|imply|forall|exists)>
+<!ATTLIST preference name CDATA #REQUIRED>
+
+<!-- Initial Task Network -->
+
+<!ELEMENT initialTaskNetwork (documentation?, taskNode+, orderingConstraint*, (valueRestriction|sortRestriction)*, causalLink*)>
+
+<!ELEMENT taskNode (variableDeclaration*)>
+<!ATTLIST taskNode name ID #REQUIRED>
+<!ATTLIST taskNode taskSchema CDATA #REQUIRED>
+
+<!ELEMENT orderingConstraint EMPTY>
+<!ATTLIST orderingConstraint predecessor IDREF #REQUIRED>
+<!ATTLIST orderingConstraint successor IDREF #REQUIRED>
+
+<!ELEMENT valueRestriction (variable|constant)>
+<!ATTLIST valueRestriction type (eq|neq) #REQUIRED>
+<!ATTLIST valueRestriction variable IDREF #REQUIRED>
+
+<!ELEMENT sortRestriction EMPTY>
+<!ATTLIST sortRestriction type (eq|neq) #REQUIRED>
+<!ATTLIST sortRestriction variable IDREF #REQUIRED>
+<!ATTLIST sortRestriction sort CDATA #REQUIRED>
+
+<!ELEMENT causalLink (atomic|fact|not|and|or|imply|forall|exists)>
+<!ATTLIST causalLink producer IDREF #REQUIRED>
+<!ATTLIST causalLink consumer IDREF #REQUIRED>
