@@ -27,4 +27,6 @@ case class Domain(sorts: Seq[Sort], constants: Seq[Constant], predicates: Seq[Pr
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
 
+  lazy val allConstants: Seq[Constant] = sorts flatMap {_.elements}
+
 }
