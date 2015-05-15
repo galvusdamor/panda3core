@@ -2,12 +2,13 @@ package de.uniulm.ki.panda3.parser
 
 
 import java.io.FileInputStream
-import javax.xml.bind.{JAXBContext, Unmarshaller}
+import javax.xml.bind.{JAXBContext, JAXBElement, Unmarshaller}
 import javax.xml.parsers.SAXParserFactory
 import javax.xml.transform.sax.SAXSource
 
-import de.uniulm.ki.panda3.domain.Domain
-import de.uniulm.ki.panda3.logic.{Constant, Sort}
+import de.uniulm.ki.panda3.csp.{Equal, Variable, VariableConstraint}
+import de.uniulm.ki.panda3.domain.{Domain, Task}
+import de.uniulm.ki.panda3.logic.{Constant, Literal, Predicate, Sort}
 import de.uniulm.ki.panda3.parser.xml._
 import org.xml.sax.XMLReader
 
@@ -38,10 +39,7 @@ object XMLParser extends Parser {
 
 
     val constantMap: mutable.Map[String, Seq[Constant]] = mutable.Map()
-    val doneSort: mutable.Set[String] = mutable.Set()
-
     /**
-     *
      * @param input the whole sequence of constants from XMLDomain
      * @return the whole sequence of constants used in Domain
      *         also: generates a map of type (String -> Seq[Constant])
@@ -58,48 +56,101 @@ object XMLParser extends Parser {
       Constant(const.getName)
     }
     val constantSeq = createConstantSeq(JavaConversions.asScalaBuffer(dom.getConstantDeclaration))
+    val xmlConstantToScalaConstant: Map[ConstantDeclaration, Constant] = (JavaConversions.asScalaBuffer(dom.getConstantDeclaration) zip constantSeq).toMap
+    val stringToXMLConstant: Map[String, ConstantDeclaration] = (JavaConversions.asScalaBuffer(dom.getConstantDeclaration) map { decl => (decl.getName, decl) }).toMap
     // needed for Domain
-    // from here: implementation not tested yet!
-    var sortSeq: Seq[Sort] = Nil
-    // deeded for Domain
+    val generatedSorts: mutable.Map[SortDeclaration, Sort] = mutable.HashMap()
     /**
-     *
      * @param input a single SortDeclaration
      * @return the proper Object of type Sort
      *         also: generates sortSeq and doneSort by adding already constructed sorts
      */
-    def createSortSeq(input: SortDeclaration): Sort = {
+    def createSortSeq(input: SortDeclaration): Sort = if (generatedSorts.contains(input)) generatedSorts(input)
+    else {
       val subSorts: Seq[SubSort] = JavaConversions.asScalaBuffer(input.getSubSort)
       val subSortSeq: Seq[Sort] = for (x <- subSorts) yield createSortSeq(x.getSort.asInstanceOf[SortDeclaration])
 
-      val res = Sort(input.getName, constantMap(input.getName), subSortSeq)
-      if (!(doneSort contains res.name)) {
-        sortSeq ++= Seq(res)
-        doneSort += res.name
+      val newSort = Sort(input.getName, constantMap.getOrElse(input.getName, Nil), subSortSeq)
+      generatedSorts += (input -> newSort)
+
+      newSort
+    }
+    val sortSeq: Seq[Sort] = for (x <- JavaConversions.asScalaBuffer(dom.getSortDeclaration)) yield createSortSeq(x)
+    val xmlSortsToScalaSorts: Map[SortDeclaration, Sort] = generatedSorts.toMap
+
+
+    val predicates: Seq[Predicate] = JavaConversions.asScalaBuffer(dom.getRelationDeclaration) map { relation =>
+      Predicate(relation.getName, JavaConversions.asScalaBuffer(relation.getArgumentSort) map { argument => xmlSortsToScalaSorts(argument.getSort.asInstanceOf[SortDeclaration]) })
+    }
+    val xmlPredicateToScalaPredicate: Map[RelationDeclaration, Predicate] = (JavaConversions.asScalaBuffer(dom.getRelationDeclaration) zip predicates).toMap
+
+    val tasks: Seq[Task] = JavaConversions.asScalaBuffer(dom.getTaskSchemaDeclaration) map { taskSchema =>
+
+      // split the content
+      val splitContent = JavaConversions.asScalaBuffer(taskSchema.getContent) filter {!_.isInstanceOf[JAXBElement[Any]]} partition {_.isInstanceOf[VariableDeclaration]}
+      assert(splitContent._2.size == 2)
+      val xmlVariableDeclarations = splitContent._1 map {_.asInstanceOf[VariableDeclaration]}
+      val variables = (xmlVariableDeclarations.zipWithIndex) map { case (variableDeclaration, idx) => Variable(idx, variableDeclaration.getName, xmlSortsToScalaSorts(
+        variableDeclaration.getSort.asInstanceOf[SortDeclaration]))
       }
-      res
+      val varDeclToVariable: Map[VariableDeclaration, Variable] = (xmlVariableDeclarations zip variables).toMap
+
+      var variableConstraints: Seq[VariableConstraint] = Nil
+
+      def toLiteralList(xmlStruct: Any, positive: Boolean): Seq[Literal] = {
+        if (xmlStruct.isInstanceOf[And]) {
+          if (positive) {
+            JavaConversions.asScalaBuffer(xmlStruct.asInstanceOf[And].getAtomicOrNotOrAnd) flatMap {toLiteralList(_, positive)}
+          } else {
+            assert(false)
+            Nil
+          }
+        } else if (xmlStruct.isInstanceOf[Or]) {
+          if (!positive) {
+            JavaConversions.asScalaBuffer(xmlStruct.asInstanceOf[And].getAtomicOrNotOrAnd) flatMap {toLiteralList(_, positive)}
+          } else {
+            assert(false)
+            Nil
+          }
+        } else if (xmlStruct.isInstanceOf[Not])
+          toLiteralList(getAnyFromNot(xmlStruct.asInstanceOf[Not]), !positive)
+        else if (xmlStruct.isInstanceOf[Atomic]) {
+          val atomic: Atomic = xmlStruct.asInstanceOf[Atomic]
+          val parameterVariables: Seq[Variable] = JavaConversions.asScalaBuffer(atomic.getVariableOrConstant) map { case variable: xml.Variable => varDeclToVariable(
+            variable.getName.asInstanceOf[VariableDeclaration])
+          case constant: xml.Constant =>
+            val constDeclaration: ConstantDeclaration = constant.getName.asInstanceOf[ConstantDeclaration]
+            val newVariable = Variable(variables.size + variableConstraints.size, "ConstantVariable" + constant.getName,
+                                       xmlSortsToScalaSorts(constDeclaration.getSort.asInstanceOf[SortDeclaration]))
+            variableConstraints = variableConstraints :+ Equal(newVariable, xmlConstantToScalaConstant(constDeclaration))
+            newVariable
+          }
+          Literal(xmlPredicateToScalaPredicate(atomic.getRelation.asInstanceOf[RelationDeclaration]), positive, parameterVariables) :: Nil
+        } else Nil
+        // TODO: handle exisistential quantifier
+      }
+
+      val preconditions = toLiteralList(splitContent._2(0), positive = true)
+      val effects = toLiteralList(splitContent._2(1), positive = true)
+      // TODO: add constant variables
+      Task(taskSchema.getName, taskSchema.getType == "primitive", variables ++ (variableConstraints map { case Equal(vari, _) => vari }), variableConstraints, preconditions, effects)
     }
-    /**
-     *
-     * @param input the whole sequence of sorts from XMLDomain calling createSortSeq if not already constructed
-     */
-    def checkSorts(input: Seq[SortDeclaration]) = {
-      for (x <- input)
-        if (doneSort contains x.getName) createSortSeq(x)
-    }
-    checkSorts(JavaConversions.asScalaBuffer(dom.getSortDeclaration))
 
 
     // already done:
     // Sequence of Constants (constantSeq)
     // Sequence of Sorts     (sortSeq)
-    // still to do:
     // Sequence of Predicates
     // Sequence of Tasks
+    // still to do:
     // Sequence of Decomposition Methods
     // Sequence of Decomposition Axioms
 
-    Domain(sortSeq, constantSeq, Nil, Nil, Nil, Nil)
+    Domain(sortSeq, constantSeq, predicates, Nil, Nil, Nil)
   }
+
+
+  private def getAnyFromNot(not: Not): Any = ((not.getAnd :: not.getAtomic :: not.getExists :: not.getForall :: not.getImply :: not.getNot :: not.getOr :: Nil) find {_ != null}).get
+
 
 }

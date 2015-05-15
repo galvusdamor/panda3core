@@ -13,6 +13,9 @@ class XMLParserTest extends FlatSpec {
 
   "Parsing Files " must "be possible without error" in {
     val dom: Domain = XMLParser.parseFromFile("src/test/resources/de/uniulm/ki/panda3/parser/AssemblyTask_domain.xml")
+
+    assert(dom.constants.size == 0)
+    assert(dom.sorts.size == 34)
   }
 
 
