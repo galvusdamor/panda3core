@@ -1,5 +1,5 @@
 (define (domain transport)
-  (:requirements :typing :action-costs :htn )
+  (:requirements :typing :action-costs :hierachie )
   (:types
         location target locatable - object
         vehicle package - locatable
@@ -58,6 +58,7 @@
         (capacity ?v ?s2)
       )
     :effect (and
+        (when (at ?v ?l) (and (in ?p ?v)))
         (not (at ?p ?l))
         (in ?p ?v)
         (capacity ?v ?s1)

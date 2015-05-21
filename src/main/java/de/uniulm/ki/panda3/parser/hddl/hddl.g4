@@ -16,6 +16,7 @@ hddl_file : domain | problem;
 domain : '(' 'define' '(' 'domain' domain_symbol ')'
              require_def?
              type_def?
+             const_def?
              predicates_def?
              task_def*
              method_def*
@@ -26,19 +27,26 @@ domain_symbol : NAME;
 //
 // requirement statement
 //
-require_def : '(' ':requirements' alldefs=require_defs ')';
+require_def : '(' ':requirements' require_defs ')';
 require_defs : REQUIRE_NAME+;
 
 //
 // type-definition
 //
-type_def : '(' ':types' (NAME+ '-' var_type)+ ')';
+type_def : '(' ':types' one_def+ ')';
+one_def : new_types '-' var_type;
+new_types : NAME+;
+
+//
+// domain constant definition
+//
+const_def : '(' ':constants' typed_obj_list ')';
 
 //
 // predicate definition
 //
-predicates_def : '(' ':predicates' atomic_formular_skeleton+ ')';
-atomic_formular_skeleton : '(' predicate typed_var_list ')';
+predicates_def : '(' ':predicates' atomic_formula_skeleton+ ')';
+atomic_formula_skeleton : '(' predicate typed_var_list ')';
 
 //
 // task definition
@@ -67,7 +75,7 @@ task_symbol : NAME;
 method_def :
    '(' ':method' method_symbol
       ':parameters' '(' typed_var_list ')'
-      ':task' '(' task_symbol VAR_NAME* ')'
+      ':task' '(' task_symbol var_or_const* ')'
       (':precondition' gd)?
       (':subtasks' subtask_defs)?
       (':ordering' ordering_defs)?
@@ -84,7 +92,7 @@ method_symbol : NAME;
 // TODO: define EBNF for TR
 //
 subtask_defs : subtask_def | '(' 'and' subtask_def+ ')';
-subtask_def : '(' subtask_id '(' task_symbol VAR_NAME+ ')' ')';
+subtask_def : '(' subtask_id '(' task_symbol var_or_const+ ')' ')';
 subtask_id : NAME;
 
 //
@@ -94,9 +102,9 @@ subtask_id : NAME;
 //   (t1 < t2)
 //
 // TODO: define EBNF for TR
-// TODO: add "totalorder"-tag as syntactic sugar
+// TODO: addParent "totalorder"-tag as syntactic sugar
 //
-ordering_defs : ordering_def | '(' 'and' ordering_def+ ')';
+ordering_defs : '(' ')' | ordering_def | '(' 'and' ordering_def+ ')';
 ordering_def : '(' subtask_id '<' subtask_id ')';
 
 //
@@ -109,8 +117,8 @@ ordering_def : '(' subtask_id '<' subtask_id ')';
 // TODO: define EBNF for TR
 // TODO: prefix or infix?
 //
-constraint_defs : constraint_def | '(' 'and' constraint_def+ ')';
-constraint_def : '(' 'not' '(' '=' VAR_NAME VAR_NAME')' ')' | '(' '=' VAR_NAME VAR_NAME ')';
+constraint_defs : '(' ')' | constraint_def | '(' 'and' constraint_def+ ')';
+constraint_def : '(' ')' | '(' 'not' '(' '=' var_or_const var_or_const')' ')' | '(' '=' var_or_const var_or_const ')';
 
 //
 // action definition
@@ -127,41 +135,54 @@ action_symbol : NAME;
 // goal description
 // - gd ^= goal description and is used in goals and preconditions
 //
-gd : '(' ')' | atomic_formular | '(' ('and'|'or') gd+ ')'| '(' 'not' gd ')';
+gd : gd_empty | atomic_formula | gd_negation | gd_conjuction | gd_disjuction;
+
+gd_empty : '(' ')';
+gd_conjuction : '(' 'and' gd+ ')';
+gd_disjuction : '(' 'or' gd+ ')';
+gd_negation : '(' 'not' gd ')';
 
 //
 // effects
 //
 // - enables forall and when statements
 //
-effect_body : '(' ')' | c_effect | '(' 'and' c_effect+ ')';
+effect_body : eff_empty | c_effect | eff_conjuntion;
 
-c_effect : p_effect
-           | '(' 'forall' '(' VAR_NAME* ')' effect_body ')'
-           | '(' 'when' gd cond_effect ')';
+eff_conjuntion : '(' 'and' c_effect+ ')';
+eff_empty : '(' ')';
+c_effect : literal | forall_effect | conditional_effect;
 
-p_effect : '(' 'not' atomic_formular ')' | atomic_formular;
-cond_effect : p_effect | '(' 'and' p_effect+ ')';
+forall_effect : '(' 'forall' '(' var_or_const* ')' effect_body ')';
+conditional_effect : '(' 'when' gd cond_effect ')';
+
+literal : neg_atomic_formula | atomic_formula;
+neg_atomic_formula : '(' 'not' atomic_formula ')';
+cond_effect : literal | '(' 'and' literal+ ')';
 
 //
 // basic definitions
 //
 
 // predicates
-atomic_formular : '('predicate VAR_NAME*')';
+atomic_formula : '('predicate var_or_const*')';
 predicate : NAME;
 
-// list of typed variables
+// list of typed variables and objects
 typed_var_list : typed_vars*;
+typed_obj_list : typed_objs*;
 
 // one or more variable names, followed by a type
-typed_vars : (VAR_NAME)+ '-' var_type;
+typed_vars : VAR_NAME+ '-' var_type;
+typed_objs : new_consts '-' var_type;
+new_consts : NAME+;
 var_type : NAME;
 
 // "require"-statements start with a ":"-symbol
 REQUIRE_NAME : ':'NAME;
 
 // names of variables with a "?"
+var_or_const : NAME | VAR_NAME;
 VAR_NAME : '?'NAME;
 
 // basic name definition
@@ -173,5 +194,23 @@ WS : [ \t\r\n]+ -> skip ;
 //
 // Problem Definition
 //
-problem: '';
-// TODO: define problem
+// TODO: define EBNF for TR
+// TODO: Metric makes no sense without functions
+
+problem : '(' 'define' '(' 'problem' NAME ')'
+              '(' ':domain' NAME ')'
+              require_def?
+              p_object_declaration?
+              p_htn
+              p_init
+              p_goal
+              ')';
+
+p_object_declaration : '(' ':objects' typed_obj_list')';
+p_init : '(' ':init' literal* ')';
+p_goal : '(' ':goal' gd ')';
+
+p_htn : '(' (':htn'|':htnti')
+      (':tasks' subtask_defs)?
+      (':ordering' ordering_defs)?
+      (':constraints' constraint_defs)? ')';
