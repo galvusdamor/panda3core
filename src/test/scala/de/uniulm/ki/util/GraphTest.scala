@@ -42,13 +42,21 @@ class GraphTest extends FlatSpec {
     assert(g.degrees(5) ==(1, 1))
   }
 
+  val condens = g.condensation
+
   "Condensation" must "be correct" in {
-    val condens = g.condensation
 
     assert(condens.nodes.size == 2)
     assert(condens.nodes exists {_.toSet == Set(0, 1, 2)})
     assert(condens.nodes exists {_.toSet == Set(3, 4, 5)})
     assert(condens.edgeList.size == 1)
     assert(condens.edgeList exists { case (from, to) => from.toSet == Set(0, 1, 2) && to.toSet == Set(3, 4, 5) })
+  }
+
+  "Sources" must "be computed correctly" in {
+    assert(g.sources.size == 0)
+
+    assert(condens.sources.size == 1)
+    assert(condens.sources exists {_.toSet == Set(0, 1, 2)})
   }
 }
