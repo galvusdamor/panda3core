@@ -1,6 +1,6 @@
-package de.uniulm.ki.panda3.csp
+package de.uniulm.ki.panda3.logic
 
-import de.uniulm.ki.panda3.logic.Sort
+import de.uniulm.ki.panda3.csp.CSP
 
 /**
  * Represents variables of a [[CSP]].
@@ -8,5 +8,5 @@ import de.uniulm.ki.panda3.logic.Sort
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class Variable(id: Int, name: String, sort: Sort) {
+case class Variable(id: Int, name: String, sort: Sort) extends Value {
 }

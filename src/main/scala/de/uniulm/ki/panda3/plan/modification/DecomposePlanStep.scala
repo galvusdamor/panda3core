@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.plan.modification
 
 import de.uniulm.ki.panda3.csp._
 import de.uniulm.ki.panda3.domain.{DecompositionMethod, Domain}
+import de.uniulm.ki.panda3.logic.Variable
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 

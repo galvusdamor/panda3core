@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.plan.flaw
 
-import de.uniulm.ki.panda3.csp.Variable
 import de.uniulm.ki.panda3.domain.Domain
+import de.uniulm.ki.panda3.logic.Variable
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.modification.{BindVariableToValue, Modification}
 

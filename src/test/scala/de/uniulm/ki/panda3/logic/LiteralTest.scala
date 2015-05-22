@@ -43,7 +43,7 @@ class LiteralTest extends FlatSpec {
   }
 
 
-  "Checking equality" must "be possible using constraings" in {
+  "Checking equality" must "be possible using constraints" in {
     val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equal(v1, v2))
 
     val l1: Literal = Literal(p1, isPositive = false, v1 :: v2 :: Nil)
@@ -53,7 +53,7 @@ class LiteralTest extends FlatSpec {
     assert((l1 =?= l2)(csp))
     assert(!(l1 =?= l3)(csp))
 
-    val csp2 = csp.addConstraint(Equal(v1, Right(Constant("a")))).addConstraint(Equal(v3, Constant("a")))
+    val csp2 = csp.addConstraint(Equal(v1, Constant("a"))).addConstraint(Equal(v3, Constant("a")))
 
     assert((l1 =?= l2)(csp2))
     assert((l1 =?= l3)(csp2))

@@ -1,8 +1,8 @@
 package de.uniulm.ki.panda3.plan.plan.implementation
 
-import de.uniulm.ki.panda3.csp.{SymbolicCSP, Variable}
+import de.uniulm.ki.panda3.csp.SymbolicCSP
 import de.uniulm.ki.panda3.domain.Task
-import de.uniulm.ki.panda3.logic.{Constant, Literal, Predicate, Sort}
+import de.uniulm.ki.panda3.logic._
 import de.uniulm.ki.panda3.plan.SymbolicPlan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.ordering.SymbolicTaskOrdering

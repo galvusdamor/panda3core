@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.csp
 
-import de.uniulm.ki.panda3.logic.{Constant, Sort}
+import de.uniulm.ki.panda3.logic.{Constant, Sort, Value, Variable}
 
 /**
  * Variable Constraints are symbolic representations of relations between variables.
@@ -14,7 +14,7 @@ sealed trait VariableConstraint {
   def compileNotOfSort: Set[VariableConstraint] = {
     this match {
       case Equal(_, _) | NotEqual(_, _) | OfSort(_, _) => Set(this)
-      case NotOfSort(v, s) => s.elements.map(element => NotEqual(v, Right(element))).toSet[VariableConstraint]
+      case NotOfSort(v, s) => s.elements.map(element => NotEqual(v, element)).toSet[VariableConstraint]
     }
   }
 
@@ -26,67 +26,46 @@ sealed trait VariableConstraint {
 /**
  * Represents the constraint v_1 = v_2 or v = c, i.e. either forced equality between two variables or a variable and a constant.
  */
-case class Equal(left: Variable, right: Either[Variable, Constant]) extends VariableConstraint {
+case class Equal(left: Variable, right: Value) extends VariableConstraint {
 
   /** equals respects the equivalence of v_1 = v_2 and v_2 = v_1 */
   override def equals(that: Any) =
     that match {
-      case Equal(thatLeft, thatRight) =>
-        val thatRightContent: Any = thatRight match {case Left(v) => v; case Right(c) => c}
-        val thisRightContent: Any = this.right match {case Left(v) => v; case Right(c) => c}
-
-        (thatLeft == this.left && thatRight == this.right) || (this.left == thatRightContent && thisRightContent == thatLeft)
+      case Equal(thatLeft, thatRight) => (thatLeft == this.left && thatRight == this.right) || (this.left == thatRight && this.right == thatLeft)
       case _ => false
     }
 
   override def substitute(sub: Substitution): VariableConstraint = {
     val newLeft = sub(left)
     right match {
-      case Left(v)  => Equal(newLeft, sub(v))
-      case Right(c) => Equal(newLeft, c)
+      case v: Variable => Equal(newLeft, sub(v))
+      case c: Constant => Equal(newLeft, c)
     }
   }
 }
 
-
-object Equal {
-  //convenience methods for creating equality constraints
-  def apply(left: Variable, right: Variable): Equal = Equal(left, Left(right))
-
-  def apply(left: Variable, right: Constant): Equal = Equal(left, Right(right))
-}
 
 /**
  * Represents the constraint v_1 != v_2 or v != c, i.e. either forced un-equality between two variables or a variable and a constant.
  */
-case class NotEqual(left: Variable, right: Either[Variable, Constant]) extends VariableConstraint {
+case class NotEqual(left: Variable, right: Value) extends VariableConstraint {
 
   /** equals respects the equivalence of v_1 = v_2 and v_2 = v_1 */
   override def equals(that: Any) =
     that match {
-      case NotEqual(thatLeft, thatRight) =>
-        val thatRightContent: Any = thatRight match {case Left(v) => v; case Right(c) => c}
-        val thisRightContent: Any = this.right match {case Left(v) => v; case Right(c) => c}
-
-        (thatLeft == this.left && thatRight == this.right) || (this.left == thatRightContent && thisRightContent == thatLeft)
+      case NotEqual(thatLeft, thatRight) => (thatLeft == this.left && thatRight == this.right) || (this.left == thatRight && this.right == thatLeft)
       case _ => false
     }
 
   override def substitute(sub: Substitution): VariableConstraint = {
     val newLeft = sub(left)
     right match {
-      case Left(v)  => NotEqual(newLeft, sub(v))
-      case Right(c) => NotEqual(newLeft, c)
+      case v: Variable => NotEqual(newLeft, sub(v))
+      case c: Constant => NotEqual(newLeft, c)
     }
   }
 }
 
-object NotEqual {
-  //convenience methods for creating equality constraints
-  def apply(left: Variable, right: Variable): NotEqual = NotEqual(left, Left(right))
-
-  def apply(left: Variable, right: Constant): NotEqual = NotEqual(left, Right(right))
-}
 
 /**
  * Represents the constraint v_1 element-of S, for some sort S

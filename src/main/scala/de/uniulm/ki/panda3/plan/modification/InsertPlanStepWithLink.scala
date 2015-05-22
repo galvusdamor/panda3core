@@ -1,8 +1,8 @@
 package de.uniulm.ki.panda3.plan.modification
 
-import de.uniulm.ki.panda3.csp.{Substitution, Variable, VariableConstraint}
+import de.uniulm.ki.panda3.csp.{Substitution, VariableConstraint}
 import de.uniulm.ki.panda3.domain.{Domain, Task}
-import de.uniulm.ki.panda3.logic.Literal
+import de.uniulm.ki.panda3.logic.{Literal, Variable}
 import de.uniulm.ki.panda3.plan.Plan
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 

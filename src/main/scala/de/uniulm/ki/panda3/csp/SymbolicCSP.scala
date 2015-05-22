@@ -1,10 +1,9 @@
 package de.uniulm.ki.panda3.csp
 
-import de.uniulm.ki.panda3.logic.{Constant, Sort}
+import de.uniulm.ki.panda3.logic.{Constant, Sort, Value, Variable}
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable
-import scala.util.{Left, Right}
 
 /**
  * CSP implemented using an object oriented structure.
@@ -30,12 +29,12 @@ case class SymbolicCSP(variables: Set[Variable], constraints: List[VariableConst
   // if this flag is false, i.e. we know this CSP is unsolvable, the internal data might become inconsistent ... it is simply not necessary to have it still intact
   private var isPotentiallySolvable = true
 
-  override def reducedDomainOf(v: Variable): Iterable[Constant] = {
+  override def reducedDomainOf(v: Variable): Seq[Constant] = {
     if (!isReductionComputed) initialiseExplicitly()
     if (isPotentiallySolvable)
       getRepresentative(v) match {
-        case Left(variable) => remainingDomain(variable)
-        case Right(constant) => Vector() :+ constant
+        case variable: Variable => remainingDomain(variable).toSeq
+        case constant: Constant => Vector() :+ constant
       } else
       Vector()
   }
@@ -44,8 +43,8 @@ case class SymbolicCSP(variables: Set[Variable], constraints: List[VariableConst
     if (!isReductionComputed) initialiseExplicitly()
     if (isPotentiallySolvable)
       (getRepresentative(v1), getRepresentative(v2)) match {
-        case (Right(rc1), Right(rc2)) => if (rc1 == rc2) Some(true) else Some(false)
-        case (Left(rv1), Left(rv2)) => if (rv1 == rv2) Some(true) else if (unequal(rv1).contains(rv2)) Some(false) else None
+        case (rc1: Constant, rc2: Constant) => if (rc1 == rc2) Some(true) else Some(false)
+        case (rv1: Variable, rv2: Variable) => if (rv1 == rv2) Some(true) else if (unequal(rv1).contains(rv2)) Some(false) else None
         case _ => None // possibly, but we are not sure
       } else
       Option(false)
@@ -53,10 +52,10 @@ case class SymbolicCSP(variables: Set[Variable], constraints: List[VariableConst
 
   override def addConstraint(constraint: VariableConstraint): SymbolicCSP = {
     val newVariables = (constraint match {
-      case Equal(v1, Left(v2)) => Set(v1, v2)
-      case Equal(v, Right(_)) => Set(v)
-      case NotEqual(v1, Left(v2)) => Set(v1, v2)
-      case NotEqual(v, Right(_)) => Set(v)
+      case Equal(v1, v2: Variable) => Set(v1, v2)
+      case Equal(v, _: Constant) => Set(v)
+      case NotEqual(v1, v2: Variable) => Set(v1, v2)
+      case NotEqual(v, _: Constant) => Set(v)
       case OfSort(v, _) => Set(v)
       case NotOfSort(v, _) => Set(v)
     }) -- variables
@@ -117,7 +116,7 @@ case class SymbolicCSP(variables: Set[Variable], constraints: List[VariableConst
   }
 
   /** returns best known unique representative for a given variable */
-  override def getRepresentative(v: Variable): Either[Variable, Constant] = {
+  override def getRepresentative(v: Variable): Value = {
     if (!isReductionComputed) if (!isReductionComputed) initialiseExplicitly()
     unionFind.getRepresentative(v)
   }
@@ -158,12 +157,9 @@ case class SymbolicCSP(variables: Set[Variable], constraints: List[VariableConst
   }
 
   /** returns best known unique representative for a given variable */
-  private def getRepresentativeUnsafe(v: Variable): Either[Variable, Constant] = unionFind.getRepresentative(v)
-
-  /** returns best known unique representative for a given variable */
-  private def getRepresentativeUnsafe(vOrC: Either[Variable, Constant]): Either[Variable, Constant] = vOrC match {
-    case Left(v) => getRepresentativeUnsafe(v)
-    case _ => vOrC // constant
+  private def getRepresentativeUnsafe(value: Value): Value = value match {
+    case v: Variable => unionFind.getRepresentative(v)
+    case _: Constant => value // constant
   }
 
   /** function to detect all unit propagations */
@@ -181,7 +177,7 @@ case class SymbolicCSP(variables: Set[Variable], constraints: List[VariableConst
       else {
         val constant = remainingDomain(variable).last // this one exists and is the only element
         // remove this variable add assert
-        unionFind.assertEqual(variable, Right(constant))
+        unionFind.assertEqual(variable, constant)
         remainingDomain.remove(variable)
 
         // propagate
@@ -210,8 +206,8 @@ case class SymbolicCSP(variables: Set[Variable], constraints: List[VariableConst
   private def addSingleConstraint(constraint: VariableConstraint): Unit = {
     val equalsConstEliminated = constraint match {
       case equalConstr@Equal(v1, v2) => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-        case (Left(rv), Right(const)) => OfSort(rv, Sort("temp", Vector() :+ const, Nil))
-        case (Right(const), Left(rv)) => OfSort(rv, Sort("temp", Vector() :+ const, Nil))
+        case (rv: Variable, const: Constant) => OfSort(rv, Sort("temp", Vector() :+ const, Nil))
+        case (const: Constant, rv: Variable) => OfSort(rv, Sort("temp", Vector() :+ const, Nil))
         case _ => equalConstr
       }
       case x => x
@@ -221,32 +217,33 @@ case class SymbolicCSP(variables: Set[Variable], constraints: List[VariableConst
     equalsConstEliminated match {
       case NotEqual(v1, v2) =>
         (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-          case (Left(rv1), Left(rv2)) => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {
+          case (rv1: Variable, rv2: Variable) => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {
             case (x, y) => unequal(x) += y
           }
-          case (Left(rv), Right(const)) => remainingDomain(rv).remove(const)
-          case (Right(const), Left(rv)) => remainingDomain(rv).remove(const)
-          case (Right(const1), Right(const2)) => if (const1 == const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
+          case (rv: Variable, const: Constant) => remainingDomain(rv).remove(const)
+          case (const: Constant, rv: Variable) => remainingDomain(rv).remove(const)
+          case (const1: Constant, const2: Constant) => if (const1 == const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
         }
       case Equal(v1, v2) => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-        case (Left(rv1), Left(rv2)) =>
+        case (rv1: Variable, rv2: Variable) => if (rv1 != rv2) {
           // intersect domains
           val intersectionDomain = remainingDomain(rv1) intersect remainingDomain(rv2)
+          unionFind.assertEqual(rv1, rv2)
 
-          unionFind.assertEqual(rv1, Left(rv2))
+
           // find out which representative the union-find uses and remove the other from the real CSP
-          if (getRepresentativeUnsafe(rv1) == Left(rv1)) (rv2, rv1)
-          else (rv1, rv2) match {
+          (if (getRepresentativeUnsafe(rv1) == rv1) (rv2, rv1) else (rv1, rv2)) match {
             case (remove, rep) =>
               remainingDomain.remove(remove)
               remainingDomain(rep) = intersectionDomain
           }
-        case (Right(const1), Right(const2)) => if (const1 != const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
+        }
+        case (const1: Constant, const2: Constant) => if (const1 != const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
       }
       // sort of and var = const constraints
       case OfSort(v, sort) => getRepresentativeUnsafe(v) match {
-        case Right(constant) => if (!sort.elements.contains(constant)) isPotentiallySolvable = false
-        case Left(rv) =>
+        case constant: Constant => if (!sort.elements.contains(constant)) isPotentiallySolvable = false
+        case rv: Variable =>
           remainingDomain(rv) = remainingDomain(rv) filter { x => sort.elements.contains(x) }
       }
     }
@@ -256,7 +253,7 @@ case class SymbolicCSP(variables: Set[Variable], constraints: List[VariableConst
 
 object UnsolvableCSP extends SymbolicCSP(Set(), Nil) {
 
-  override def reducedDomainOf(v: Variable): Iterable[Constant] = Nil
+  override def reducedDomainOf(v: Variable): Seq[Constant] = Nil
 
   /** If true is returned it is guaranteed, that a solution exists is v1 and v2 are set equal. Likewise, if false is returned such a CSP is unsolvable. */
   override def areCompatible(v1: Variable, v2: Variable): Option[Boolean] = Some(false)
@@ -271,7 +268,5 @@ object UnsolvableCSP extends SymbolicCSP(Set(), Nil) {
   override def isSolvable: Option[Boolean] = Some(false)
 
   /** returns best known unique representative for a given variable */
-  override def getRepresentative(v: Variable): Either[Variable, Constant] = Left(v)
-
-  override def getRepresentative(vOrC: Either[Variable, Constant]): Either[Variable, Constant] = vOrC
+  override def getRepresentative(v: Variable): Value = v
 }

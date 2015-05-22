@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.plan.modification
 
-import de.uniulm.ki.panda3.csp.{Equal, Variable, VariableConstraint}
-import de.uniulm.ki.panda3.logic.Constant
+import de.uniulm.ki.panda3.csp.{Equal, VariableConstraint}
+import de.uniulm.ki.panda3.logic.{Constant, Variable}
 import de.uniulm.ki.panda3.plan.Plan
 
 /**

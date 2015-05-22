@@ -6,9 +6,10 @@ import javax.xml.bind.{JAXBContext, JAXBElement, Unmarshaller}
 import javax.xml.parsers.SAXParserFactory
 import javax.xml.transform.sax.SAXSource
 
-import de.uniulm.ki.panda3.csp.{Equal, Variable, VariableConstraint}
+import de.uniulm.ki.panda3.csp.{Equal, VariableConstraint}
 import de.uniulm.ki.panda3.domain.{Domain, Task}
-import de.uniulm.ki.panda3.logic.{Constant, Literal, Predicate, Sort}
+import de.uniulm.ki.panda3.logic
+import de.uniulm.ki.panda3.logic.{Constant, Variable, _}
 import de.uniulm.ki.panda3.parser.xml._
 import org.xml.sax.XMLReader
 
@@ -38,20 +39,20 @@ object XMLParser extends Parser {
 
 
 
-    val constantMap: mutable.Map[String, Seq[Constant]] = mutable.Map()
+    val constantMap: mutable.Map[String, Seq[logic.Constant]] = mutable.Map()
     /**
      * @param input the whole sequence of constants from XMLDomain
      * @return the whole sequence of constants used in Domain
      *         also: generates a map of type (String -> Seq[Constant])
      */
-    def createConstantSeq(input: Seq[ConstantDeclaration]): Seq[Constant] = input map { const =>
+    def createConstantSeq(input: Seq[ConstantDeclaration]): Seq[logic.Constant] = input map { const =>
       val sort = const.getSort.asInstanceOf[SortDeclaration].getName
       if (constantMap contains sort) {
-        val buffer = Seq(Constant(const.getName)) ++ constantMap(sort)
+        val buffer = Seq(logic.Constant(const.getName)) ++ constantMap(sort)
         constantMap -= sort
         constantMap += (sort -> buffer)
       } else {
-        constantMap += (sort -> Seq(Constant(const.getName)))
+        constantMap += (sort -> Seq(logic.Constant(const.getName)))
       }
       Constant(const.getName)
     }
@@ -90,43 +91,43 @@ object XMLParser extends Parser {
       val splitContent = JavaConversions.asScalaBuffer(taskSchema.getContent) filter {!_.isInstanceOf[JAXBElement[Any]]} partition {_.isInstanceOf[VariableDeclaration]}
       assert(splitContent._2.size == 2)
       val xmlVariableDeclarations = splitContent._1 map {_.asInstanceOf[VariableDeclaration]}
-      val variables = (xmlVariableDeclarations.zipWithIndex) map { case (variableDeclaration, idx) => Variable(idx, variableDeclaration.getName, xmlSortsToScalaSorts(
+      val variables = xmlVariableDeclarations.zipWithIndex map { case (variableDeclaration, idx) => Variable(idx, variableDeclaration.getName, xmlSortsToScalaSorts(
         variableDeclaration.getSort.asInstanceOf[SortDeclaration]))
       }
-      val varDeclToVariable: Map[VariableDeclaration, Variable] = (xmlVariableDeclarations zip variables).toMap
+      val varDeclToVariable: Map[VariableDeclaration, logic.Variable] = (xmlVariableDeclarations zip variables).toMap
 
       var variableConstraints: Seq[VariableConstraint] = Nil
 
       def toLiteralList(xmlStruct: Any, positive: Boolean): Seq[Literal] = {
-        if (xmlStruct.isInstanceOf[And]) {
-          if (positive) {
-            JavaConversions.asScalaBuffer(xmlStruct.asInstanceOf[And].getAtomicOrNotOrAnd) flatMap {toLiteralList(_, positive)}
-          } else {
-            assert(false)
-            Nil
-          }
-        } else if (xmlStruct.isInstanceOf[Or]) {
-          if (!positive) {
-            JavaConversions.asScalaBuffer(xmlStruct.asInstanceOf[And].getAtomicOrNotOrAnd) flatMap {toLiteralList(_, positive)}
-          } else {
-            assert(false)
-            Nil
-          }
-        } else if (xmlStruct.isInstanceOf[Not])
-          toLiteralList(getAnyFromNot(xmlStruct.asInstanceOf[Not]), !positive)
-        else if (xmlStruct.isInstanceOf[Atomic]) {
-          val atomic: Atomic = xmlStruct.asInstanceOf[Atomic]
-          val parameterVariables: Seq[Variable] = JavaConversions.asScalaBuffer(atomic.getVariableOrConstant) map { case variable: xml.Variable => varDeclToVariable(
-            variable.getName.asInstanceOf[VariableDeclaration])
-          case constant: xml.Constant =>
-            val constDeclaration: ConstantDeclaration = constant.getName.asInstanceOf[ConstantDeclaration]
-            val newVariable = Variable(variables.size + variableConstraints.size, "ConstantVariable" + constant.getName,
-                                       xmlSortsToScalaSorts(constDeclaration.getSort.asInstanceOf[SortDeclaration]))
-            variableConstraints = variableConstraints :+ Equal(newVariable, xmlConstantToScalaConstant(constDeclaration))
-            newVariable
-          }
-          Literal(xmlPredicateToScalaPredicate(atomic.getRelation.asInstanceOf[RelationDeclaration]), positive, parameterVariables) :: Nil
-        } else Nil
+        xmlStruct match {
+          case and: xml.And =>
+            if (positive) {
+              JavaConversions.asScalaBuffer(and.getAtomicOrNotOrAnd) flatMap {toLiteralList(_, positive)}
+            } else {
+              assert(false)
+              Nil
+            }
+          case or: xml.Or =>
+            if (!positive) {
+              JavaConversions.asScalaBuffer(or.asInstanceOf[xml.Or].getAtomicOrNotOrAnd) flatMap {toLiteralList(_, positive)}
+            } else {
+              assert(false)
+              Nil
+            }
+          case not: xml.Not => toLiteralList(getAnyFromNot(not), !positive)
+          case atomic: Atomic =>
+            val parameterVariables: scala.Seq[Variable] = JavaConversions.asScalaBuffer(atomic.getVariableOrConstant) map { case variable: xml.Variable => varDeclToVariable(
+              variable.getName.asInstanceOf[VariableDeclaration])
+            case constant: xml.Constant =>
+              val constDeclaration: ConstantDeclaration = constant.getName.asInstanceOf[ConstantDeclaration]
+              val newVariable = Variable(variables.size + variableConstraints.size, "ConstantVariable" + constant.getName,
+                                         xmlSortsToScalaSorts(constDeclaration.getSort.asInstanceOf[SortDeclaration]))
+              variableConstraints = variableConstraints :+ Equal(newVariable, xmlConstantToScalaConstant(constDeclaration))
+              newVariable
+            }
+            Literal(xmlPredicateToScalaPredicate(atomic.getRelation.asInstanceOf[RelationDeclaration]), positive, parameterVariables) :: Nil
+          case _ => Nil
+        }
         // TODO: handle exisistential quantifier
       }
 
@@ -150,7 +151,7 @@ object XMLParser extends Parser {
   }
 
 
-  private def getAnyFromNot(not: Not): Any = ((not.getAnd :: not.getAtomic :: not.getExists :: not.getForall :: not.getImply :: not.getNot :: not.getOr :: Nil) find {_ != null}).get
+  private def getAnyFromNot(not: xml.Not): Any = ((not.getAnd :: not.getAtomic :: not.getExists :: not.getForall :: not.getImply :: not.getNot :: not.getOr :: Nil) find {_ != null}).get
 
 
 }

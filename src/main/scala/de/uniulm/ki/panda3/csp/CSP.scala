@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.csp
 
-import de.uniulm.ki.panda3.logic.Constant
+import de.uniulm.ki.panda3.logic.{Constant, Value, Variable}
 
 /**
  * Handels Constraint-Satisfaction-Problems. The implementation decides which types of constraints can be handled.
@@ -20,7 +20,7 @@ trait CSP {
   def constraints: List[VariableConstraint]
 
   /** returns all (potentially) possible values of v in this CSP, this does not imply that for every such constant c, there is a solution in which v = c */
-  def reducedDomainOf(v: Variable): Iterable[Constant]
+  def reducedDomainOf(v: Variable): Seq[Constant]
 
   /**
    * checks whether it is possible to unify two variables.
@@ -30,34 +30,11 @@ trait CSP {
    */
   def areCompatible(v1: Variable, v2: Variable): Option[Boolean]
 
-  /**
-   * checks whether it is possible to unify two variables.
-   * If Some(false) is returned this is not possible, i.e. the CSP implies v1 != v2.
-   * If Some(true) is returned it is guaranteed, that if this CSP is solvable so is it if v1=v2 is added as a constraint.
-   * In any other case None is returned.
-   */
-  def areCompatible(vOrC1: Either[Variable, Constant], vOrC2: Either[Variable, Constant]): Option[Boolean] = (vOrC1, vOrC2) match {
-    case (Left(v1), Left(v2)) => areCompatible(v1, v2)
-    case (Right(c), Left(v)) => if (getRepresentative(v) == Right(c)) Some(true)
-                                else if (reducedDomainOf(v) exists {_ == c}) None
-                                else Some(false)
-    case (Left(v), Right(c)) => if (getRepresentative(v) == Right(c)) Some(true)
-                                else if (reducedDomainOf(v) exists {_ == c}) None
-                                else Some(false)
-    case (Right(c1), Right(c2)) => Some(c1 == c2)
-  }
-
   /** returns a new CSP containing all current constraints and the constraint passed as an argument */
   def addConstraint(constraint: VariableConstraint): CSP
 
-  /** returns a new CSP containing all current constraints and the constraints passed as arguments */
-  def addConstraints(constraints: Seq[VariableConstraint]): CSP = (constraints foldLeft this)({ case (c, vc) => c.addConstraint(vc)})
-
   /** returns a new CSP containing all current variables and the variable passed as an argument */
   def addVariable(variable: Variable): CSP
-
-  /** returns a new CSP containing all current variables and the variables passed as arguments */
-  def addVariables(variables: Seq[Variable]): CSP = (variables foldLeft this)({ case (c, v) => c.addVariable(v)})
 
   /** May return information on whether this CSP has a solution or not. If None is returned to information can be provided */
   def isSolvable: Option[Boolean]
@@ -66,27 +43,35 @@ trait CSP {
   def solution: Option[Map[Variable, Constant]]
 
   /** returns best known unique representative for a given variable */
-  def getRepresentative(v: Variable): Either[Variable, Constant]
+  protected def getRepresentative(v: Variable): Value
 
-  /** returns best known unique representative for a given variable or constant */
-  def getRepresentative(vOrC: Either[Variable, Constant]): Either[Variable, Constant] = vOrC match {
-    case Left(v) => getRepresentative(v)
-    case _ => vOrC // constant
+
+  /**
+   * checks whether it is possible to unify two variables.
+   * If Some(false) is returned this is not possible, i.e. the CSP implies v1 != v2.
+   * If Some(true) is returned it is guaranteed, that if this CSP is solvable so is it if v1=v2 is added as a constraint.
+   * In any other case None is returned.
+   */
+  def areCompatible(v1: Value, v2: Value): Option[Boolean] = (v1, v2) match {
+    case (var1: Variable, var2: Variable) => areCompatible(var1, var2)
+    case (c: Constant, v: Variable) => if (getRepresentative(v) == c) Some(true) else if (reducedDomainOf(v) contains c) None else Some(false)
+    case (v: Variable, c: Constant) => if (getRepresentative(v) == c) Some(true) else if (reducedDomainOf(v) contains c) None else Some(false)
+    case (c1: Constant, c2: Constant) => Some(c1 == c2)
   }
 
-  // boxing
-  /** determines whether two variables must be equal in this CSP */
-  def equal(v1: Variable, v2: Variable): Boolean = equal(Left(v1), Left(v2))
 
-  /** determines whether a variable and a constant must be equal in this CSP */
-  def equal(v1: Variable, c2: Constant): Boolean = equal(Left(v1), Right(c2))
+  /** returns a new CSP containing all current constraints and the constraints passed as arguments */
+  def addConstraints(constraints: Seq[VariableConstraint]): CSP = (constraints foldLeft this)({ case (c, vc) => c.addConstraint(vc) })
 
-  /** determines whether a variable and a constant must be equal in this CSP */
-  def equal(c1: Constant, v2: Variable): Boolean = equal(Right(c1), Left(v2))
+  /** returns a new CSP containing all current variables and the variables passed as arguments */
+  def addVariables(variables: Seq[Variable]): CSP = (variables foldLeft this)({ case (c, v) => c.addVariable(v) })
 
-  /** determines whether two constants must be equal in this CSP */
-  def equal(c1: Constant, c2: Constant): Boolean = equal(Right(c1), Right(c2))
+  /** returns best known unique representative for a given variable or constant */
+  def getRepresentative(value: Value): Value = value match {
+    case v: Variable => getRepresentative(v)
+    case _ => value // constant
+  }
 
   /** determines whether two variables or constants must be equal in this CSP */
-  def equal(vOrC1: Either[Variable, Constant], vOrC2: Either[Variable, Constant]): Boolean = getRepresentative(vOrC1) == getRepresentative(vOrC2)
+  def equal(v1: Value, v2: Value): Boolean = getRepresentative(v1) == getRepresentative(v2)
 }

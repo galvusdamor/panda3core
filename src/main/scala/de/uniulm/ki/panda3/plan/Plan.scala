@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.plan
 
-import de.uniulm.ki.panda3.csp.{CSP, Substitution, Variable}
+import de.uniulm.ki.panda3.csp.{CSP, Substitution}
+import de.uniulm.ki.panda3.logic.Variable
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw._
 import de.uniulm.ki.panda3.plan.modification.Modification

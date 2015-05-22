@@ -1,7 +1,6 @@
 package de.uniulm.ki.panda3.domain
 
-import de.uniulm.ki.panda3.csp.Variable
-import de.uniulm.ki.panda3.logic.{Constant, Literal, Predicate, Sort}
+import de.uniulm.ki.panda3.logic._
 
 /**
  *

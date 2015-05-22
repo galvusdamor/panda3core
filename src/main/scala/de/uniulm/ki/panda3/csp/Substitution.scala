@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.csp
 
+import de.uniulm.ki.panda3.logic.Variable
+
 /**
  * Represents a simple substitution, given by two lists of
  *

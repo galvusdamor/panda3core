@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.domain
 
 import de.uniulm.ki.panda3.csp._
-import de.uniulm.ki.panda3.logic.Literal
+import de.uniulm.ki.panda3.logic.{Literal, Variable}
 
 /**
  * Tasks are blue-prints for actions, actually contained in plans, i.e. they describe which variables a [[de.uniulm.ki.panda3.plan.element.PlanStep]] of their type must have and which

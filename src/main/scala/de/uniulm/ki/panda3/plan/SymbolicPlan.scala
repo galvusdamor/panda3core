@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.plan
 
-import de.uniulm.ki.panda3.csp.{CSP, Substitution, SymbolicCSP, Variable}
-import de.uniulm.ki.panda3.logic.Literal
+import de.uniulm.ki.panda3.csp.{CSP, Substitution, SymbolicCSP}
+import de.uniulm.ki.panda3.logic.{Literal, Variable}
 import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{AbstractPlanStep, CausalThreat, OpenPrecondition, UnboundVariable}
 import de.uniulm.ki.panda3.plan.modification.Modification
@@ -32,12 +32,8 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
   override lazy val abstractPlanSteps: Seq[AbstractPlanStep] = planSteps filter {!_.schema.isPrimitive} map {AbstractPlanStep(this, _)}
 
 
-  override lazy val unboundVariables: Seq[UnboundVariable] = (variableConstraints.variables collect { case v if variableConstraints.getRepresentative(v).isLeft => variableConstraints
-    .getRepresentative(v) match {
-    case Left(rv) => rv
-  }
-  } map { case v => UnboundVariable(this, v)
-  }).toSeq
+  override lazy val unboundVariables: Seq[UnboundVariable] =
+    ((variableConstraints.variables map variableConstraints.getRepresentative) collect { case v: Variable => UnboundVariable(this, v) }).toSeq
 
   override def isSolvable: Option[Boolean] = if (!orderingConstraints.isConsistent || variableConstraints.isSolvable == Some(false)) Some(false)
   else if (flaws.size == 0) Some(true)

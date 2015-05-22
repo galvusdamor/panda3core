@@ -1,8 +1,8 @@
 package de.uniulm.ki.panda3.plan.element
 
-import de.uniulm.ki.panda3.csp.{CSP, Variable}
+import de.uniulm.ki.panda3.csp.CSP
 import de.uniulm.ki.panda3.domain.Task
-import de.uniulm.ki.panda3.logic.Literal
+import de.uniulm.ki.panda3.logic.{Literal, Variable}
 
 /**
  *
