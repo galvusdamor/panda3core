@@ -24,7 +24,7 @@ trait Graph[T] {
 
   /** in- and out- degrees of all nodes */
   lazy val degrees: Map[T, (Int, Int)] = {
-    val degCount: mutable.Map[T, (Int, Int)] = mutable.Map().default((0, 0))
+    val degCount: mutable.Map[T, (Int, Int)] = mutable.Map().withDefaultValue((0, 0))
 
     edgeList foreach { case (from, to) =>
       val degFrom = degCount(from)

@@ -22,11 +22,11 @@ import de.uniulm.ki.panda3.logic.{Constant, DecompositionAxiom, Predicate, Sort}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class Domain(sorts: Seq[Sort], constants: Seq[Constant], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
+case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
                   decompositionAxioms: Seq[DecompositionAxiom]) {
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
 
-  lazy val allConstants: Seq[Constant] = sorts flatMap {_.elements}
+  lazy val constants: Seq[Constant] = (sorts flatMap {_.elements}).distinct
 
 }

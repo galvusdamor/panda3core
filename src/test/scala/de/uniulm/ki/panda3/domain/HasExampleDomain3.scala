@@ -59,6 +59,5 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
   val decompositionMethod2: DecompositionMethod = DecompositionMethod(abstractTask1, planOfDecompositionMethod2)
 
 
-  val domain3: Domain = Domain(sort1 :: Nil, constantSort1(1) :: constantSort1(2) :: Nil, predicate1 :: Nil, abstractTask1 :: task1 :: init :: goal1 :: Nil, decompositionMethod1 ::
-    decompositionMethod2 :: Nil, Nil)
+  val domain3: Domain = Domain(sort1 :: Nil, predicate1 :: Nil, abstractTask1 :: task1 :: init :: goal1 :: Nil, decompositionMethod1 :: decompositionMethod2 :: Nil, Nil)
 }

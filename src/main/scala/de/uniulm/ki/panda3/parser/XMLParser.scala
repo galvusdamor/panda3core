@@ -146,7 +146,7 @@ object XMLParser extends Parser {
     // Sequence of Decomposition Methods
     // Sequence of Decomposition Axioms
 
-    Domain(sortSeq, constantSeq, predicates, Nil, Nil, Nil)
+    Domain(sortSeq, predicates, Nil, Nil, Nil)
   }
 
 

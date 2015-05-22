@@ -24,7 +24,7 @@ trait HasExampleDomain1 {
   ////////////////////////////
   // the actual domain
   ////////////////////////////
-  val exampleDomain1: Domain = Domain(sort1 :: Nil, constantSort1(1) :: constantSort1(2) :: constantSort1(3) :: constantSort1(4) :: Nil, predicate1 :: Nil, task1 :: Nil, Nil, Nil)
+  val exampleDomain1: Domain = Domain(sort1 :: Nil, predicate1 :: Nil, task1 :: Nil, Nil, Nil)
 
   // constants
   def constantSort1(i: Int): Constant = Constant("constant_" + i + "_sort_1")

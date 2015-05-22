@@ -19,7 +19,5 @@ trait HasExampleDomain2 extends HasExampleDomain1 {
                            = true, variableSort1(6) :: Nil) :: Nil, effects = Nil)
 
 
-  val exampleDomain2: Domain = Domain(sort1 :: Nil, constantSort1(1) :: constantSort1(2) :: constantSort1(3) :: constantSort1(4) :: Nil, predicate1 :: predicate2 :: Nil, task1 :: task2 ::
-    Nil, Nil,
-                                      Nil)
+  val exampleDomain2: Domain = Domain(sort1 :: Nil, predicate1 :: predicate2 :: Nil, task1 :: task2 :: Nil, Nil, Nil)
 }
