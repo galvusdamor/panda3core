@@ -171,4 +171,15 @@ class SymbolicOrderingTest extends FlatSpec {
     assert(minimalOrdering contains getOrdering(3, 5))
     assert(minimalOrdering contains getOrdering(6, 2))
   }
+
+  "Removing Tasks" must "be corrent" in {
+    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4), getPlanStepList(5))
+
+    val order2Removed: TaskOrdering = order.removePlanStep(getPlanStep(2))
+
+    assert(order2Removed.tasks.size == 4)
+    assert(!order2Removed.tasks.contains(getPlanStep(2)))
+    assert(order2Removed.lt(getPlanStep(0), getPlanStep(4)))
+
+  }
 }

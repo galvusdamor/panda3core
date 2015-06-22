@@ -17,7 +17,7 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   private      val innerArrangement          : Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
   private      val planStepToArrangemetnIndex: Map[PlanStep, Int] = tasks.zipWithIndex.toMap
   private var isTransitiveHullComputed: Boolean = false
-  private var computedInconsistent = false
+  private var computedInconsistent              = false
 
   override def isConsistent: Boolean = {
     ensureTransitiveHull()
@@ -43,18 +43,24 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   def removePlanStep(ps: PlanStep): TaskOrdering =
     if (!(tasks contains ps)) this
     else {
-      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints, tasks filterNot {_ == ps})
+      val keptOrderingConstraints = originalOrderingConstraints filterNot {_ contains ps}
+      val newContraintsForTransitivity =
+        for (before <- originalOrderingConstraints collect { case OrderingConstraint(b, `ps`) => b }; after <- originalOrderingConstraints collect { case OrderingConstraint(`ps`, a) => a
+        }) yield OrderingConstraint(before, after)
+
+
+      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(keptOrderingConstraints ++ newContraintsForTransitivity, tasks filterNot {_ == ps})
 
       // don't initialise
+      // TODO: use old arrangement to initialize  ....
       newOrdering
     }
 
   def replacePlanStep(psOld: PlanStep, psNew: PlanStep): TaskOrdering =
     if (!(tasks contains psOld)) this
     else {
-      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints, tasks map {
-        case ps => if (ps == psOld) psNew
-                   else ps
+      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints, tasks map { case ps => if (ps == psOld) psNew
+      else ps
       })
 
       // if this ordering was already initialised let the new one know what we did so far
@@ -160,9 +166,9 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
           for (to <- 0 until ord.length)
             if (from != middle && to != middle && from != to)
               (ord(from)(middle), ord(middle)(to)) match {
-                case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME)     => ord(from)(to) = DONTKNOW
+                case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME) => ord(from)(to) = DONTKNOW
                 case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) => ord(from)(to) = DONTKNOW
-                case (_, _)                                             => ()
+                case (_, _) => ()
               }
 
       val allPairs = for (from <- 0 until ord.length; to <- from + 1 until ord.length) yield (from, to)
@@ -175,7 +181,7 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   }
 
   private def readOrderingConstraintsFromArrangement(arrangement: Array[Array[Byte]]): Seq[OrderingConstraint] =
-    (0 until arrangement.length flatMap {case x => (x + 1) until arrangement.length map ((x, _))}) collect { case (x, y) if arrangement(x)(y) == BEFORE => OrderingConstraint(
+    (0 until arrangement.length flatMap { case x => (x + 1) until arrangement.length map ((x, _)) }) collect { case (x, y) if arrangement(x)(y) == BEFORE => OrderingConstraint(
       arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
     }
 }

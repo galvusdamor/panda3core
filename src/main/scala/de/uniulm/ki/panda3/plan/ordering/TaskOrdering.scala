@@ -9,6 +9,8 @@ import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
  */
 trait TaskOrdering extends PartialOrdering[PlanStep] {
 
+  def tasks: Seq[PlanStep]
+
   def originalOrderingConstraints: Seq[OrderingConstraint]
 
   def isConsistent: Boolean
@@ -25,7 +27,7 @@ trait TaskOrdering extends PartialOrdering[PlanStep] {
     }
   }
 
-  def addOrderings(orderings: Seq[OrderingConstraint]): TaskOrdering = (orderings foldLeft this) {case (ordering, constraint) => ordering.addOrdering(constraint)}
+  def addOrderings(orderings: Seq[OrderingConstraint]): TaskOrdering = (orderings foldLeft this) { case (ordering, constraint) => ordering.addOrdering(constraint) }
 
   def addOrdering(ordering: OrderingConstraint): TaskOrdering = addOrdering(ordering.before, ordering.after)
 
@@ -35,18 +37,21 @@ trait TaskOrdering extends PartialOrdering[PlanStep] {
   /** registers a new plan step at this ordering */
   def addPlanStep(ps: PlanStep): TaskOrdering
 
-  /** removed a plan step from a task ordering, all connections to it will be lost, including those inferred transitively */
+  /** adds a sequence of plan steps */
+  def addPlanSteps(pss: Seq[PlanStep]) = (pss foldLeft this) { case (ordering, ps) => ordering.addPlanStep(ps) }
+
+  /** removed a plan step from a task ordering --> this may infer new ordering constraints as it will keep the transitive closure identical */
   def removePlanStep(ps: PlanStep): TaskOrdering
+
+  /** removes several plan steps */
+  def removePlanSteps(pss: Seq[PlanStep]) = (pss foldLeft this) { case (ordering, ps) => ordering.removePlanStep(ps) }
+
 
   /** replace an old plan step with a new one, all orderings will be inherited */
   def replacePlanStep(psOld: PlanStep, psNew: PlanStep): TaskOrdering
 
-  /** adds a sequence of plan steps */
-  def addPlanSteps(pss: Seq[PlanStep]) = (pss foldLeft this) {case (ordering, ps) => ordering.addPlanStep(ps)}
-
   /** computes a minimal set of ordering constraints, s.t. their transitive hull is this task ordering */
   def minimalOrderingConstraints(): Seq[OrderingConstraint]
-
 }
 
 object TaskOrdering {
