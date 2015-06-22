@@ -10,7 +10,9 @@ import org.scalatest.FlatSpec
 class GraphTest extends FlatSpec {
 
   val edges = (0, 1) ::(1, 2) ::(2, 0) ::(2, 3) ::(3, 4) ::(4, 5) ::(5, 3) :: Nil
-  val g     = SimpleGraph(0 until 6, edges)
+  val g  = SimpleDirectedGraphGraph(0 until 6, edges)
+  val g2 = SimpleDirectedGraphGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) :: edges)
+  val g3 = SimpleDirectedGraphGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) ::(3, 7) :: edges)
 
   "Graphs" must "have the correct SCCs" in {
     val sccs = g.stronglyConnectedComponents
@@ -46,9 +48,9 @@ class GraphTest extends FlatSpec {
 
   "Condensation" must "be correct" in {
 
-    assert(condens.nodes.size == 2)
-    assert(condens.nodes exists {_.toSet == Set(0, 1, 2)})
-    assert(condens.nodes exists {_.toSet == Set(3, 4, 5)})
+    assert(condens.vertices.size == 2)
+    assert(condens.vertices exists {_.toSet == Set(0, 1, 2)})
+    assert(condens.vertices exists {_.toSet == Set(3, 4, 5)})
     assert(condens.edgeList.size == 1)
     assert(condens.edgeList exists { case (from, to) => from.toSet == Set(0, 1, 2) && to.toSet == Set(3, 4, 5) })
   }
@@ -58,5 +60,36 @@ class GraphTest extends FlatSpec {
 
     assert(condens.sources.size == 1)
     assert(condens.sources exists {_.toSet == Set(0, 1, 2)})
+  }
+
+  "Reachability" must "be computed correctly" in {
+    val reachabilityMap = g2.reachable
+    assert(reachabilityMap.size == 9)
+
+    for (v <- (0 until 3) :+ 6) {
+      assert(reachabilityMap(v).size == 8)
+      assert((0 until 6) :+ 7 :+ 8 forall {reachabilityMap(v).contains(_)})
+    }
+
+    for (v <- 3 until 6) {
+      assert(reachabilityMap(v).size == 5)
+      assert((3 until 6) :+ 7 :+ 8 forall {reachabilityMap(v).contains(_)})
+    }
+
+    // the outside nodes
+    assert(reachabilityMap(7).size == 1)
+    assert(reachabilityMap(7) contains 8)
+    assert(reachabilityMap(8).size == 0)
+  }
+
+  it must "not contain duplicats" in {
+    val reachabilityMap = g3.reachable
+
+    assert(reachabilityMap.size == 9)
+
+    assert(reachabilityMap(6).size == 8)
+    assert((0 until 6) :+ 7 :+ 8 forall {reachabilityMap(6).contains(_)})
+
+    for (v <- 0 until 9) assert(reachabilityMap(v).size == reachabilityMap(v).toSet.size)
   }
 }

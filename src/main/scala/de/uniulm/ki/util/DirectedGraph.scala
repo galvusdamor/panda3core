@@ -9,15 +9,15 @@ import scala.collection.mutable
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait Graph[T] {
+trait DirectedGraph[T] {
 
   /** a list of all node of the graph */
-  def nodes: Seq[T]
+  def vertices: Seq[T]
 
   /** adjacency list of the graph */
   def edges: Map[T, Seq[T]]
 
-  require(edges.size == nodes.size)
+  require(edges.size == vertices.size)
 
   /** list of all edges as a list of pairs */
   final lazy val edgeList: Seq[(T, T)] = edges.toSeq flatMap { case (node1, neighbours) => neighbours map {(node1, _)} }
@@ -81,21 +81,48 @@ trait Graph[T] {
         recursionResult :+ sccNodes.toSeq
       } else recursionResult
     }
-    nodes flatMap { node => if (!dfsNumber.contains(node)) tarjan(node) else Nil }
+    vertices flatMap { node => if (!dfsNumber.contains(node)) tarjan(node) else Nil }
   }
 
   def getComponentOf(node: T): Option[Seq[T]] = stronglyConnectedComponents find {_.contains(node)}
 
 
-  lazy val condensation: Graph[Seq[T]] =
-    SimpleGraph(stronglyConnectedComponents, (edgeList map { case (from, to) => (getComponentOf(from).get, getComponentOf(to).get) }) collect { case e@(from, to) if from != to => e })
+  lazy val condensation: DirectedGraph[Seq[T]] =
+    SimpleDirectedGraphGraph(stronglyConnectedComponents,
+                             (edgeList map { case (from, to) => (getComponentOf(from).get, getComponentOf(to).get) }) collect { case e@(from, to) if from != to => e })
 
   lazy val sources: Seq[T] = (degrees collect { case (node, (in, _)) if in == 0 => node }).toSeq
+
+
+  /** computes for each node, which other nodes can be reached from it using the edges of the graph */
+  // TODO: this computation might be inefficient
+  lazy val reachable: Map[T, Seq[T]] = {
+    val reachabilityMap: mutable.Map[T, Seq[T]] = mutable.HashMap()
+
+    def dfs(scc: Seq[T]): Unit = {
+      // if any node of the scc is already in the map, simply ignore it
+      if (!reachabilityMap.contains(scc.head)) {
+        condensation.edges(scc) foreach dfs
+
+        val allReachable =
+          ((if (scc.size > 1) scc else Nil) ++ (condensation.edges(scc) flatMap { neighbour => reachabilityMap(neighbour.head) ++ (if (neighbour.size == 1) neighbour else Nil) })).toSet
+            .toSeq
+
+        scc foreach {reachabilityMap(_) = allReachable}
+      }
+    }
+    // run the dfs on all source SCCs of the condensation
+    condensation.sources foreach dfs
+
+    reachabilityMap.toMap
+  }
+
+  lazy val transitiveClosure = SimpleDirectedGraphGraph(vertices, reachable)
 }
 
 
-case class SimpleGraph[T](nodes: Seq[T], edges: Map[T, Seq[T]]) extends Graph[T] {}
+case class SimpleDirectedGraphGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraph[T] {}
 
-object SimpleGraph {
-  def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): SimpleGraph[T] = SimpleGraph(nodes, (nodes zip (nodes map { n => edges.filter({_._1 == n}).map({_._2}) })).toMap)
+object SimpleDirectedGraphGraph {
+  def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): SimpleDirectedGraphGraph[T] = SimpleDirectedGraphGraph(nodes, (nodes zip (nodes map { n => edges.filter({_._1 == n}).map({_._2}) })).toMap)
 }
