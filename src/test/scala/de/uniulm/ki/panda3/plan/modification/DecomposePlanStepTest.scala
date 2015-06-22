@@ -77,10 +77,6 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleDomain3 with HasExam
     assert(decomposition.addedOrderingConstraints.contains(OrderingConstraint(psInit1, addedPlanStep)))
     assert(decomposition.addedOrderingConstraints.contains(OrderingConstraint(addedPlanStep, psGoal1)))
 
-    assert(decomposition.removedOrderingConstraints.size == 2)
-    assert(decomposition.removedOrderingConstraints.contains(OrderingConstraint(psInit1, psAbstract1)))
-    assert(decomposition.removedOrderingConstraints.contains(OrderingConstraint(psAbstract1, psGoal1)))
-
     // nothing else should have been touched, except maybe causal links
     assert(decomposition.addedVariables.size == 0)
     assert(decomposition.removedVariables.size == 0)

@@ -48,9 +48,9 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
     val newPlanSteps: Seq[PlanStep] = (planSteps diff modification.removedPlanSteps) union modification.addedPlanSteps
     val newCausalLinks = (causalLinks diff modification.removedCausalLinks) union modification.addedCausalLinks
 
-    // compute new ordering constraints ... either update the old ones incrementally, or ,if some were removed, compute them anew
+    // compute new ordering constraints ... either update the old ones incrementally, or, if some were removed, compute them anew
     val newOrderingConstraints = if (modification.removedOrderingConstraints.size == 0)
-      orderingConstraints.addPlanSteps(modification.addedPlanSteps).addOrderings(modification.addedOrderingConstraints)
+      orderingConstraints.removePlanSteps(modification.removedPlanSteps).addPlanSteps(modification.addedPlanSteps).addOrderings(modification.addedOrderingConstraints)
     else {
       val newOrderingConstraints = (orderingConstraints.originalOrderingConstraints diff modification.removedOrderingConstraints) union modification.addedOrderingConstraints
       SymbolicTaskOrdering(newOrderingConstraints, newPlanSteps)

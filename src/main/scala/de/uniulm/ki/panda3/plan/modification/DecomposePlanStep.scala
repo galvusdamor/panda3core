@@ -45,10 +45,6 @@ Modification {
 
   // remove all causal links related to the plan step to be decomposed
   override def removedCausalLinks: Seq[CausalLink] = plan.causalLinks filter { case CausalLink(p, c, _) => p == decomposedPS || c == decomposedPS }
-
-  override def removedOrderingConstraints: Seq[OrderingConstraint] = plan.orderingConstraints.originalOrderingConstraints filter { case OrderingConstraint(p, c) => p == decomposedPS || c ==
-    decomposedPS
-  }
 }
 
 object DecomposePlanStep {
