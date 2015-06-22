@@ -50,8 +50,18 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
   /** a decomposition method without causal links */
   val decompositionMethod3      : DecompositionMethod = DecompositionMethod(abstractTask2, planOfDecompositionMethod3)
 
+  /** an empty decomposition method */
+  val decompositionMethodEpsilon: DecompositionMethod =
+    DecompositionMethod(abstractTask2, SymbolicPlan(initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil, Nil,
+                                                    SymbolicTaskOrdering(OrderingConstraint.allBetween(initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3),
+                                                                         initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil),
+                                                    SymbolicCSP(Set(variableSort1(7)), Nil), initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3))
+
   val init4: Task = Task("init", isPrimitive = true, variableSort1(3) :: Nil, Nil, preconditions = Nil, effects = Literal(predicate1, isPositive = true, variableSort1(3) :: Nil) ::
     Literal(predicate2, isPositive = true, variableSort1(3) :: Nil) :: Nil)
   val goal4: Task = Task("goal", isPrimitive = true, Nil, Nil, preconditions = Nil, effects = Nil)
 
+
+  val domain4 = Domain(sort1 :: Nil, predicate1 :: predicate2 :: Nil, task1 :: task2 :: task3 :: task4 :: task5 :: task6 :: abstractTask2 :: Nil, decompositionMethod3 ::
+    decompositionMethodEpsilon :: Nil, Nil)
 }

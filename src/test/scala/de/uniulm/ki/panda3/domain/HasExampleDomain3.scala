@@ -49,8 +49,8 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
 
   // decomposition method 2 -- the one with causal links
   val causalLinksOfDecompositionMethod2: Seq[CausalLink] = CausalLink(initOfPlanOfDecompositionMethod1, actualPlanStepOfPlanOfDecompositionMethod1,
-                                                                      initOfPlanOfDecompositionMethod1.substitutedEffects(0)) ::
-    CausalLink(actualPlanStepOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1.substitutedPreconditions(0)) :: Nil
+                                                                      initOfPlanOfDecompositionMethod1.substitutedEffects.head) ::
+    CausalLink(actualPlanStepOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1.substitutedPreconditions.head) :: Nil
 
   val planOfDecompositionMethod2: Plan = SymbolicPlan(planStepsOfPlanOfDecompositionMethod1, causalLinksOfDecompositionMethod2, taskOrderingOfPlanOfDecompositionMethod1,
                                                       cspOfPlanOfDecompositionMethod1, initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1)
