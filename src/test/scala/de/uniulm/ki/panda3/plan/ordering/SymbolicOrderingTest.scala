@@ -172,14 +172,32 @@ class SymbolicOrderingTest extends FlatSpec {
     assert(minimalOrdering contains getOrdering(6, 2))
   }
 
-  "Removing Tasks" must "be corrent" in {
+  "Removing Tasks" must "be correct" in {
     val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4), getPlanStepList(5))
 
     val order2Removed: TaskOrdering = order.removePlanStep(getPlanStep(2))
 
     assert(order2Removed.tasks.size == 4)
     assert(!order2Removed.tasks.contains(getPlanStep(2)))
+    assert(order2Removed.lt(getPlanStep(0), getPlanStep(3)))
     assert(order2Removed.lt(getPlanStep(0), getPlanStep(4)))
+    assert(order2Removed.lt(getPlanStep(1), getPlanStep(3)))
+    assert(order2Removed.lt(getPlanStep(1), getPlanStep(4)))
+  }
 
+  it must "also be correct of the transitive hull was already computed" in {
+    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 2) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(2, 4), getPlanStepList(5))
+
+    // run the initialization
+    order.initialiseExplicitly()
+
+    val order2Removed: TaskOrdering = order.removePlanStep(getPlanStep(2))
+
+    assert(order2Removed.tasks.size == 4)
+    assert(!order2Removed.tasks.contains(getPlanStep(2)))
+    assert(order2Removed.lt(getPlanStep(0), getPlanStep(3)))
+    assert(order2Removed.lt(getPlanStep(0), getPlanStep(4)))
+    assert(order2Removed.lt(getPlanStep(1), getPlanStep(3)))
+    assert(order2Removed.lt(getPlanStep(1), getPlanStep(4)))
   }
 }

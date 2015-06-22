@@ -15,9 +15,9 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   private lazy val arrangemetnIndexToPlanStep: Map[Int, PlanStep] = tasks.zipWithIndex.map(_.swap).toMap
   private      val numberOfTasks                                  = tasks.length
   private      val innerArrangement          : Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
-  private      val planStepToArrangemetnIndex: Map[PlanStep, Int] = tasks.zipWithIndex.toMap
-  private var isTransitiveHullComputed: Boolean = false
-  private var computedInconsistent              = false
+  private val planStepToArrangementIndex: Map[PlanStep, Int] = tasks.zipWithIndex.toMap
+  private var isTransitiveHullComputed  : Boolean            = false
+  private var computedInconsistent                           = false
 
   override def isConsistent: Boolean = {
     ensureTransitiveHull()
@@ -26,7 +26,7 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   }
 
   override def tryCompare(x: PlanStep, y: PlanStep): Option[Int] = {
-    arrangement()(planStepToArrangemetnIndex(x))(planStepToArrangemetnIndex(y)) match {
+    arrangement()(planStepToArrangementIndex(x))(planStepToArrangementIndex(y)) match {
       case DONTKNOW => None
       case i => Some(i)
     }
@@ -44,15 +44,24 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     if (!(tasks contains ps)) this
     else {
       val keptOrderingConstraints = originalOrderingConstraints filterNot {_ contains ps}
-      val newContraintsForTransitivity =
+      val newConstraintsForTransitivity =
         for (before <- originalOrderingConstraints collect { case OrderingConstraint(b, `ps`) => b }; after <- originalOrderingConstraints collect { case OrderingConstraint(`ps`, a) => a
         }) yield OrderingConstraint(before, after)
 
+      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(keptOrderingConstraints ++ newConstraintsForTransitivity, tasks filterNot {_ == ps})
 
-      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(keptOrderingConstraints ++ newContraintsForTransitivity, tasks filterNot {_ == ps})
 
-      // don't initialise
-      // TODO: use old arrangement to initialize  ....
+      if (isTransitiveHullComputed) {
+        // remove the plan step from the arrangement
+        val newArrangement = innerArrangement.zipWithIndex filterNot {_._2 == planStepToArrangementIndex(ps)} map {_._1} map { a => a.zipWithIndex filterNot {
+          _._2 == planStepToArrangementIndex(ps)
+        } map {_._1}
+        }
+        // run the init, it won't do anything
+        newOrdering.initialiseExplicitly(0, 0, newArrangement)
+      }
+
+
       newOrdering
     }
 
@@ -107,8 +116,8 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     // update the arrangement
     Range(originalOrderingConstraints.length - lastKOrderingsAreNew, originalOrderingConstraints.length).foreach(i => {
 
-      val beforeID = planStepToArrangemetnIndex(originalOrderingConstraints(i).before)
-      val afterID = planStepToArrangemetnIndex(originalOrderingConstraints(i).after)
+      val beforeID = planStepToArrangementIndex(originalOrderingConstraints(i).before)
+      val afterID = planStepToArrangementIndex(originalOrderingConstraints(i).after)
 
       if (innerArrangement(beforeID)(afterID) == AFTER) computedInconsistent = true
       if (innerArrangement(beforeID)(afterID) == SAME) computedInconsistent = true
@@ -122,8 +131,8 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
 
       // run bellman-ford for new edges
       for (newEdge <- originalOrderingConstraints.length - lastKOrderingsAreNew until originalOrderingConstraints.length; from <- 0 until innerArrangement.length) {
-        val beforeID = planStepToArrangemetnIndex(originalOrderingConstraints(newEdge).before)
-        val afterID = planStepToArrangemetnIndex(originalOrderingConstraints(newEdge).after)
+        val beforeID = planStepToArrangementIndex(originalOrderingConstraints(newEdge).before)
+        val afterID = planStepToArrangementIndex(originalOrderingConstraints(newEdge).after)
 
         val edgeTypeFromNew = innerArrangement(from)(beforeID)
         if (edgeTypeFromNew != DONTKNOW)

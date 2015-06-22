@@ -11,5 +11,6 @@ case class OrderingConstraint(before: PlanStep, after: PlanStep) {
 
 object OrderingConstraint {
 
-  def allBetween(first: PlanStep, last: PlanStep, steps: PlanStep*): Seq[OrderingConstraint] = steps flatMap { ps => OrderingConstraint(first, ps) :: OrderingConstraint(ps, last) :: Nil }
+  def allBetween(first: PlanStep, last: PlanStep, steps: PlanStep*): Seq[OrderingConstraint] =
+    (steps flatMap { ps => OrderingConstraint(first, ps) :: OrderingConstraint(ps, last) :: Nil }) :+ OrderingConstraint(first, last)
 }
