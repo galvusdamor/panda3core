@@ -18,6 +18,8 @@ sealed trait VariableConstraint {
     }
   }
 
+  val getVariables: Seq[Variable]
+
   def substitute(sub: Substitution): VariableConstraint
 }
 
@@ -34,6 +36,8 @@ case class Equal(left: Variable, right: Value) extends VariableConstraint {
       case Equal(thatLeft, thatRight) => (thatLeft == this.left && thatRight == this.right) || (this.left == thatRight && this.right == thatLeft)
       case _ => false
     }
+
+  override val getVariables = if (right.isInstanceOf[Variable]) right.asInstanceOf[Variable] :: left :: Nil else left :: Nil
 
   override def substitute(sub: Substitution): VariableConstraint = {
     val newLeft = sub(left)
@@ -57,6 +61,8 @@ case class NotEqual(left: Variable, right: Value) extends VariableConstraint {
       case _ => false
     }
 
+  override val getVariables = if (right.isInstanceOf[Variable]) right.asInstanceOf[Variable] :: left :: Nil else left :: Nil
+
   override def substitute(sub: Substitution): VariableConstraint = {
     val newLeft = sub(left)
     right match {
@@ -71,14 +77,17 @@ case class NotEqual(left: Variable, right: Value) extends VariableConstraint {
  * Represents the constraint v_1 element-of S, for some sort S
  */
 case class OfSort(left: Variable, right: Sort) extends VariableConstraint {
-  override def substitute(sub: Substitution): VariableConstraint = OfSort(sub(left), right)
+  override val getVariables = left :: Nil
 
+  override def substitute(sub: Substitution): VariableConstraint = OfSort(sub(left), right)
 }
 
 /**
  * Represents the constraint v_1 not-element-of S, for some sort S
  */
 case class NotOfSort(left: Variable, right: Sort) extends VariableConstraint {
+  override val getVariables = left :: Nil
+
   override def substitute(sub: Substitution): VariableConstraint = NotOfSort(sub(left), right)
 
 }

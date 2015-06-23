@@ -15,7 +15,7 @@ import scala.collection.mutable
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class SymbolicCSP(variables: Set[Variable], constraints: List[VariableConstraint]) extends CSP {
+case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends CSP {
 
   // holds equivalent variables
   private val unionFind: SymbolicUnionFind                            = new SymbolicUnionFind

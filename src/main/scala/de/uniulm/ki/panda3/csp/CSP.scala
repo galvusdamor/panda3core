@@ -17,7 +17,7 @@ trait CSP {
   def variables: Set[Variable]
 
   /** returns a list of all constraints from which this CSP was build. This list does not contain inferred constraints */
-  def constraints: List[VariableConstraint]
+  def constraints: Seq[VariableConstraint]
 
   /** returns all (potentially) possible values of v in this CSP, this does not imply that for every such constant c, there is a solution in which v = c */
   def reducedDomainOf(v: Variable): Seq[Constant]

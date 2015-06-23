@@ -84,5 +84,17 @@ class XMLParserTest extends FlatSpec {
     assert(task2.effects exists { case Literal(predicate, isPositive, parameter) => predicate.name == "inMode_Contacts.Details" && isPositive && parameter.size == 0 })
     assert(task2.effects exists { case Literal(predicate, isPositive, parameter) => predicate.name == "selected" && isPositive && parameter.size == 1 && parameter.head == variable1 })
 
+
+    // test the methods
+    assert(dom.decompositionMethods.size == 95)
+
+    val testTaskSchema = (dom.tasks find {_.name == "enterMode_Tasks"}).get
+    val methodsForTestTaskSchema = dom.decompositionMethods.filter {_.abstractTask == testTaskSchema}
+    assert(methodsForTestTaskSchema.size == 2)
+
+    assert(methodsForTestTaskSchema exists { m => m.subPlan.planSteps.size == 4 && m.subPlan.causalLinks.size == 1 && m.subPlan.orderingConstraints.originalOrderingConstraints.size == 6 })
+    // including init and goal
+    assert(methodsForTestTaskSchema exists { m => m.subPlan.planSteps.size == 5 && m.subPlan.causalLinks.size == 2 && m.subPlan.orderingConstraints.originalOrderingConstraints.size == 9 })
+    // including init and goal
   }
 }
