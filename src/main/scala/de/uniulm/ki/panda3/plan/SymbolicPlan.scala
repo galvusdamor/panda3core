@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.{CSP, Substitution, SymbolicCSP}
+import de.uniulm.ki.panda3.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.logic.{Literal, Variable}
 import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{AbstractPlanStep, CausalThreat, OpenPrecondition, UnboundVariable}
@@ -70,7 +71,7 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
   }
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.domain.DecompositionMethod]]s. */
-  override def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution): (Plan, Substitution) = {
+  override def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution[Variable]): (Plan, Substitution[Variable]) = {
     val oldPlanVariables = variableConstraints.variables.toSeq
 
     val newVariables = oldPlanVariables zip (firstFreeVariableID until firstFreeVariableID + oldPlanVariables.size) map { case (v, id) =>
@@ -101,4 +102,8 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
 
     (SymbolicPlan(newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, newInit, newGoal), sub)
   }
+
+  override def update(domainUpdate: DomainUpdate): SymbolicPlan = SymbolicPlan(planSteps map {_.update(domainUpdate)}, causalLinks map {_.update(domainUpdate)},
+                                                                               orderingConstraints.update(domainUpdate), variableConstraints.update(domainUpdate), init.update(domainUpdate),
+                                                                               goal.update(domainUpdate))
 }

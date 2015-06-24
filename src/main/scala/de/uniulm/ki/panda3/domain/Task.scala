@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.domain
 
 import de.uniulm.ki.panda3.csp._
+import de.uniulm.ki.panda3.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.logic.{Literal, Variable}
 
 /**
@@ -12,10 +13,14 @@ import de.uniulm.ki.panda3.logic.{Literal, Variable}
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 // TODO: check, whether the parameter constraints of a task schema are always observed correctly
-case class Task(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], preconditions: Seq[Literal], effects: Seq[Literal]) {
+case class Task(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], preconditions: Seq[Literal], effects: Seq[Literal]) extends
+DomainUpdatable {
 
   def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = {
     val sub = Substitution(parameters, newParameter)
     Literal(literal.predicate, literal.isPositive, literal.parameterVariables map sub)
   }
+
+  override def update(domainUpdate: DomainUpdate): Task = Task(name, isPrimitive, parameters map {_.update(domainUpdate)}, parameterConstraints map {_.update(domainUpdate)}, preconditions
+    map {_.update(domainUpdate)}, effects map {_.update(domainUpdate)})
 }

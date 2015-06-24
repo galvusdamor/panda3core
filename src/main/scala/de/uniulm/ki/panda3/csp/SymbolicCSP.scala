@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.csp
 
+import de.uniulm.ki.panda3.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.logic.{Constant, Sort, Value, Variable}
 
 import scala.collection.immutable.HashSet
@@ -248,6 +249,8 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
       }
     }
   }
+
+  override def update(domainUpdate: DomainUpdate): SymbolicCSP = SymbolicCSP(variables map {_.update(domainUpdate)}, constraints map {_.update(domainUpdate)})
 }
 
 

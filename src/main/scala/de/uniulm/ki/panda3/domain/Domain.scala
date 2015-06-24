@@ -1,7 +1,9 @@
 package de.uniulm.ki.panda3.domain
 
 import de.uniulm.ki.panda3.domain.datastructures.TaskSchemaTransitionGraph
+import de.uniulm.ki.panda3.domain.updates.{DomainUpdate, ExchangeSorts}
 import de.uniulm.ki.panda3.logic.{Constant, DecompositionAxiom, Predicate, Sort}
+import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraphGraph}
 
 /**
  * Planning domains contain the overall description of a planning problem.
@@ -23,10 +25,25 @@ import de.uniulm.ki.panda3.logic.{Constant, DecompositionAxiom, Predicate, Sort}
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
-                  decompositionAxioms: Seq[DecompositionAxiom]) {
+                  decompositionAxioms: Seq[DecompositionAxiom]) extends DomainUpdatable {
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
+  lazy val constants: Seq[Constant]       = (sorts flatMap {_.elements}).distinct
+  lazy val sortGraph: DirectedGraph[Sort] = SimpleDirectedGraphGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
 
-  lazy val constants: Seq[Constant] = (sorts flatMap {_.elements}).distinct
+
+  def addConstantsToDomain(constants: Seq[(Sort, Constant)]): Domain = {
+    val sortTranslationMap = sortGraph.topologicalOrdering.get.foldRight[Map[Sort, Sort]](Map[Sort, Sort]())({ case (oldSort, translationMap) =>
+      val newSort = Sort(oldSort.name, oldSort.elements ++ (constants collect { case (s, c) if s == oldSort => c }), oldSort.subSorts map translationMap)
+      translationMap + (oldSort -> newSort)
+                                                                                                             })
+
+    val domainUpdate = ExchangeSorts(sortTranslationMap)
+
+    update(domainUpdate)
+  }
+
+  override def update(domainUpdate: DomainUpdate): Domain = Domain(sorts map {_.update(domainUpdate)}, predicates map {_.update(domainUpdate)}, tasks map {_.update(domainUpdate)},
+                                                                   decompositionMethods map {_.update(domainUpdate)}, decompositionAxioms)
 
 }

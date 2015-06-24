@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.csp
 
+import de.uniulm.ki.panda3.domain.DomainUpdatable
+import de.uniulm.ki.panda3.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.logic.{Constant, Sort, Value, Variable}
 
 /**
@@ -8,7 +10,7 @@ import de.uniulm.ki.panda3.logic.{Constant, Sort, Value, Variable}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-sealed trait VariableConstraint {
+sealed trait VariableConstraint extends DomainUpdatable {
 
   /** Returns an equivalent set of constraints, which does not contains [[NotOfSort]] constraints. These will be compiled into [[NotEqual]] constraints. */
   def compileNotOfSort: Set[VariableConstraint] = {
@@ -20,7 +22,9 @@ sealed trait VariableConstraint {
 
   val getVariables: Seq[Variable]
 
-  def substitute(sub: Substitution): VariableConstraint
+  def substitute(sub: Substitution[Variable]): VariableConstraint
+
+  override def update(domainUpdate: DomainUpdate): VariableConstraint
 }
 
 
@@ -37,15 +41,20 @@ case class Equal(left: Variable, right: Value) extends VariableConstraint {
       case _ => false
     }
 
-  override val getVariables = if (right.isInstanceOf[Variable]) right.asInstanceOf[Variable] :: left :: Nil else left :: Nil
+  override val getVariables = right match {
+    case variable: Variable => variable :: left :: Nil
+    case _                  => left :: Nil
+  }
 
-  override def substitute(sub: Substitution): VariableConstraint = {
+  override def substitute(sub: Substitution[Variable]): VariableConstraint = {
     val newLeft = sub(left)
     right match {
       case v: Variable => Equal(newLeft, sub(v))
       case c: Constant => Equal(newLeft, c)
     }
   }
+
+  override def update(domainUpdate: DomainUpdate): Equal = Equal(left.update(domainUpdate), right.update(domainUpdate))
 }
 
 
@@ -61,15 +70,20 @@ case class NotEqual(left: Variable, right: Value) extends VariableConstraint {
       case _ => false
     }
 
-  override val getVariables = if (right.isInstanceOf[Variable]) right.asInstanceOf[Variable] :: left :: Nil else left :: Nil
+  override val getVariables = right match {
+    case variable: Variable => variable :: left :: Nil
+    case _                  => left :: Nil
+  }
 
-  override def substitute(sub: Substitution): VariableConstraint = {
+  override def substitute(sub: Substitution[Variable]): VariableConstraint = {
     val newLeft = sub(left)
     right match {
       case v: Variable => NotEqual(newLeft, sub(v))
       case c: Constant => NotEqual(newLeft, c)
     }
   }
+
+  override def update(domainUpdate: DomainUpdate): NotEqual = NotEqual(left.update(domainUpdate), right.update(domainUpdate))
 }
 
 
@@ -79,7 +93,9 @@ case class NotEqual(left: Variable, right: Value) extends VariableConstraint {
 case class OfSort(left: Variable, right: Sort) extends VariableConstraint {
   override val getVariables = left :: Nil
 
-  override def substitute(sub: Substitution): VariableConstraint = OfSort(sub(left), right)
+  override def substitute(sub: Substitution[Variable]): VariableConstraint = OfSort(sub(left), right)
+
+  override def update(domainUpdate: DomainUpdate): OfSort = OfSort(left.update(domainUpdate), right.update(domainUpdate))
 }
 
 /**
@@ -88,6 +104,7 @@ case class OfSort(left: Variable, right: Sort) extends VariableConstraint {
 case class NotOfSort(left: Variable, right: Sort) extends VariableConstraint {
   override val getVariables = left :: Nil
 
-  override def substitute(sub: Substitution): VariableConstraint = NotOfSort(sub(left), right)
+  override def substitute(sub: Substitution[Variable]): VariableConstraint = NotOfSort(sub(left), right)
 
+  override def update(domainUpdate: DomainUpdate): NotOfSort = NotOfSort(left.update(domainUpdate), right.update(domainUpdate))
 }

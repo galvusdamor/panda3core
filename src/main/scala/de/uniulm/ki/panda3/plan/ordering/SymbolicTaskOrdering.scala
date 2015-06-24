@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.plan.ordering
 
+import de.uniulm.ki.panda3.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
 
 /**
@@ -193,4 +194,6 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     (0 until arrangement.length flatMap { case x => (x + 1) until arrangement.length map ((x, _)) }) collect { case (x, y) if arrangement(x)(y) == BEFORE => OrderingConstraint(
       arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
     }
+
+  override def update(domainUpdate: DomainUpdate): SymbolicTaskOrdering = SymbolicTaskOrdering(originalOrderingConstraints map {_.update(domainUpdate)}, tasks map {_.update(domainUpdate)})
 }

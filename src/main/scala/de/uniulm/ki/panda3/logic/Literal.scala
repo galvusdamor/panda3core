@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.logic
 
 import de.uniulm.ki.panda3.csp._
+import de.uniulm.ki.panda3.domain.updates.DomainUpdate
 
 /**
  * A simple literal in First Order Logic
@@ -45,4 +46,6 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
    */
   def !?!(that: Literal)(csp: CSP): Seq[NotEqual] = if (this.predicate != that.predicate || this.isPositive != that.isPositive) Nil
   else (this.parameterVariables zip that.parameterVariables) collect { case (v1, v2) if csp.getRepresentative(v1) != csp.getRepresentative(v2) => NotEqual(v1, v2)}
+
+  override def update(domainUpdate: DomainUpdate): Literal = Literal(predicate.update(domainUpdate), isPositive, parameterVariables map {_.update(domainUpdate)})
 }

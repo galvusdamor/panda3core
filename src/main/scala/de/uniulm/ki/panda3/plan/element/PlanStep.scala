@@ -1,7 +1,8 @@
 package de.uniulm.ki.panda3.plan.element
 
 import de.uniulm.ki.panda3.csp.CSP
-import de.uniulm.ki.panda3.domain.Task
+import de.uniulm.ki.panda3.domain.updates.DomainUpdate
+import de.uniulm.ki.panda3.domain.{DomainUpdatable, Task}
 import de.uniulm.ki.panda3.logic.{Literal, Variable}
 
 /**
@@ -9,7 +10,7 @@ import de.uniulm.ki.panda3.logic.{Literal, Variable}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) {
+case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends DomainUpdatable {
 
   /** returns a version of the preconditions */
   lazy val substitutedPreconditions: Seq[Literal] = schema.preconditions map substitute
@@ -27,4 +28,6 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) {
   def indexOfEffect(l: Literal, csp: CSP): Int = indexOf(l, substitutedEffects, csp)
 
   private def substitute(literal: Literal): Literal = schema.substitute(literal, arguments)
+
+  override def update(domainUpdate: DomainUpdate): PlanStep = PlanStep(id, schema.update(domainUpdate), arguments map {_.update(domainUpdate)})
 }

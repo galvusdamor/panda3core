@@ -1,6 +1,8 @@
 package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.{CSP, Substitution}
+import de.uniulm.ki.panda3.domain.DomainUpdatable
+import de.uniulm.ki.panda3.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.logic.Variable
 import de.uniulm.ki.panda3.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw._
@@ -12,7 +14,7 @@ import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait Plan {
+trait Plan extends DomainUpdatable {
 
   lazy val flaws: Seq[Flaw] = {
     val hardFlaws = causalThreats ++ openPreconditions ++ abstractPlanSteps
@@ -54,6 +56,7 @@ trait Plan {
   def modify(modification: Modification): Plan
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.domain.DecompositionMethod]]s. */
-  def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution = Substitution(Nil, Nil)): (Plan, Substitution)
+  def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution[Variable] = Substitution[Variable](Nil, Nil)): (Plan, Substitution[Variable])
 
+  override def update(domainUpdate: DomainUpdate): Plan
 }

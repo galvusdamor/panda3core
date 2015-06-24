@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.plan.ordering
 
+import de.uniulm.ki.panda3.domain.DomainUpdatable
+import de.uniulm.ki.panda3.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
 
 /**
@@ -7,7 +9,7 @@ import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait TaskOrdering extends PartialOrdering[PlanStep] {
+trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable {
 
   def tasks: Seq[PlanStep]
 
@@ -52,6 +54,8 @@ trait TaskOrdering extends PartialOrdering[PlanStep] {
 
   /** computes a minimal set of ordering constraints, s.t. their transitive hull is this task ordering */
   def minimalOrderingConstraints(): Seq[OrderingConstraint]
+
+  override def update(domainUpdate: DomainUpdate): TaskOrdering
 }
 
 object TaskOrdering {

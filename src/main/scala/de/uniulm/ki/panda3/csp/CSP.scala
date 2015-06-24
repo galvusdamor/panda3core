@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.csp
 
+import de.uniulm.ki.panda3.domain.DomainUpdatable
+import de.uniulm.ki.panda3.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.logic.{Constant, Value, Variable}
 
 /**
@@ -11,7 +13,7 @@ import de.uniulm.ki.panda3.logic.{Constant, Value, Variable}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait CSP {
+trait CSP extends DomainUpdatable {
 
   /** returns a list of all variables of the CSP */
   def variables: Set[Variable]
@@ -74,4 +76,6 @@ trait CSP {
 
   /** determines whether two variables or constants must be equal in this CSP */
   def equal(v1: Value, v2: Value): Boolean = getRepresentative(v1) == getRepresentative(v2)
+
+  override def update(domainUpdate: DomainUpdate): CSP
 }
