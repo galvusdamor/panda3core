@@ -118,6 +118,50 @@ trait DirectedGraph[T] {
   }
 
   lazy val transitiveClosure = SimpleDirectedGraphGraph(vertices, reachable)
+
+
+  /**
+   * Compute a topological ordering of the graph.
+   * If the graph contains a cycle this function returns None.
+   */
+  lazy val topologicalOrdering: Option[Seq[T]] = {
+    val color: mutable.Map[T, Int] = mutable.Map(vertices map {(_, 0)}: _*)
+
+    // dfs
+    def dfs(v: T): Option[Seq[T]] = if (color(v) == 1) None
+    else if (color(v) == 2) Some(Nil)
+    else {
+      // set own color to grey
+      color.put(v, 1)
+      val order: Option[Seq[T]] = edges(v).foldLeft[Option[Seq[T]]](Some(Nil))({
+                                                                                 case (None, _)           => None
+                                                                                 case (Some(topOrder), n) => val nTopOrder = dfs(n)
+                                                                                   nTopOrder match {
+                                                                                     case None         => None
+                                                                                     case Some(nOrder) =>
+                                                                                       Some(nOrder ++ topOrder)
+                                                                                   }
+                                                                               })
+
+      // set own color to black
+      color.put(v, 2)
+
+      order match {
+        case None    => None
+        case Some(o) => Some(Seq(v) ++ o)
+      }
+    }
+
+
+    // run dfs on every vertex
+    vertices.foldLeft[Option[Seq[T]]](Some(Nil))({
+                                                   case (None, _)        => None
+                                                   case (Some(order), v) => dfs(v) match {
+                                                     case None            => None
+                                                     case Some(nextOrder) => Some(order ++ nextOrder)
+                                                   }
+                                                 })
+  }
 }
 
 

@@ -13,6 +13,7 @@ class GraphTest extends FlatSpec {
   val g  = SimpleDirectedGraphGraph(0 until 6, edges)
   val g2 = SimpleDirectedGraphGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) :: edges)
   val g3 = SimpleDirectedGraphGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) ::(3, 7) :: edges)
+  val g4 = SimpleDirectedGraphGraph(0 until 8, (0, 1) ::(1, 2) ::(2, 4) ::(4, 5) ::(5, 6) ::(5, 7) ::(1, 3) ::(3, 4) :: Nil)
 
   "Graphs" must "have the correct SCCs" in {
     val sccs = g.stronglyConnectedComponents
@@ -91,5 +92,23 @@ class GraphTest extends FlatSpec {
     assert((0 until 6) :+ 7 :+ 8 forall {reachabilityMap(6).contains(_)})
 
     for (v <- 0 until 9) assert(reachabilityMap(v).size == reachabilityMap(v).toSet.size)
+  }
+
+  "topological orderings" must "not be computable for graphs with circles" in {
+    val gOrdering = g.topologicalOrdering
+    val g2Ordering = g2.topologicalOrdering
+    val g3Ordering = g3.topologicalOrdering
+
+    assert(gOrdering == None)
+    assert(g2Ordering == None)
+    assert(g3Ordering == None)
+  }
+
+  it must "be correct if one exists" in {
+    val g4OrderingOpt = g4.topologicalOrdering
+    assert(g4OrderingOpt.isDefined)
+    val g4Ordering = g4OrderingOpt.get
+
+    for ((v1, v2) <- g4.edgeList) assert(g4Ordering.indexOf(v1) < g4Ordering.indexOf(v2))
   }
 }
