@@ -53,7 +53,7 @@ public class ValueRestriction {
     @XmlAttribute(name = "type", required = true)
     @XmlJavaTypeAdapter(CollapsedStringAdapter.class)
     protected String type;
-    @XmlAttribute(name = "variableN", required = true)
+    @XmlAttribute(name = "variable", required = true)
     @XmlIDREF
     @XmlSchemaType(name = "IDREF")
     protected Object variableN;

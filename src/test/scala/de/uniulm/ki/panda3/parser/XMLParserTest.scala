@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.parser
 
 import de.uniulm.ki.panda3.domain.Domain
 import de.uniulm.ki.panda3.logic.Literal
+import de.uniulm.ki.panda3.plan.Plan
 import org.scalatest.FlatSpec
 
 /**
@@ -11,7 +12,7 @@ class XMLParserTest extends FlatSpec {
 
 
   "Parsing hon-hierarchical Files " must "be possible without error" in {
-    val dom: Domain = XMLParser.parseFromFile("src/test/resources/de/uniulm/ki/panda3/parser/AssemblyTask_domain.xml")
+    val dom: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/parser/AssemblyTask_domain.xml")
 
     assert(dom.constants.size == 0)
     assert(dom.sorts.size == 34)
@@ -29,7 +30,7 @@ class XMLParserTest extends FlatSpec {
   }
 
   "Parsing hierarchical Files " must "be possible without error" in {
-    val dom: Domain = XMLParser.parseFromFile("src/test/resources/de/uniulm/ki/panda3/parser/SmartPhone-HierarchicalNoAxioms.xml")
+    val dom: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/parser/SmartPhone-HierarchicalNoAxioms.xml")
 
     assert(dom.constants.size == 0)
     assert(dom.sorts.size == 40)
@@ -96,5 +97,23 @@ class XMLParserTest extends FlatSpec {
     // including init and goal
     assert(methodsForTestTaskSchema exists { m => m.subPlan.planSteps.size == 5 && m.subPlan.causalLinks.size == 2 && m.subPlan.orderingConstraints.originalOrderingConstraints.size == 9 })
     // including init and goal
+  }
+
+
+  it must "be possible without error (2)" in {
+    val dom: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/parser/fitnessDomain.xml")
+
+  }
+
+
+  "Parsing Problem files" must "be possible for flat domains" in {
+    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/parser/AssemblyTask_domain.xml")
+    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem("src/test/resources/de/uniulm/ki/panda3/parser/AssemblyTask_problem.xml", domAlone)
+  }
+
+
+  "Parsing Problem files" must "be possible for hierarchical domains" in {
+    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/parser/SmartPhone-HierarchicalNoAxioms.xml")
+    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem("src/test/resources/de/uniulm/ki/panda3/parser/OrganizeMeeting_VerySmall.xml", domAlone)
   }
 }

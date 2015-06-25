@@ -158,7 +158,7 @@ trait DirectedGraph[T] {
                                                    case (None, _)        => None
                                                    case (Some(order), v) => dfs(v) match {
                                                      case None            => None
-                                                     case Some(nextOrder) => Some(order ++ nextOrder)
+                                                     case Some(nextOrder) => Some(nextOrder ++ order)
                                                    }
                                                  })
   }

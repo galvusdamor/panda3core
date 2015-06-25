@@ -28,7 +28,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                   decompositionAxioms: Seq[DecompositionAxiom]) extends DomainUpdatable {
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
-  lazy val constants: Seq[Constant]       = (sorts flatMap {_.elements}).distinct
+  lazy val constants: Seq[Constant] = (sorts flatMap {_.elements}).distinct
   lazy val sortGraph: DirectedGraph[Sort] = SimpleDirectedGraphGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
 
 

@@ -1,0 +1,1261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE problem SYSTEM "problem-2.0.dtd">
+<problem domain="AssemblyTask_domain" name="AssemblyTask_problem" type="non-hierarchical">
+    <documentation>Version 1.0 by Pascal Bercher (pascal.bercher@uni-ulm.de, http://www.uni-ulm.de/en/in/ki/bercher)
+
+        The problem instance defines the available devices and cables (cf. PDFs for a visualization). Note that the actual problem instance is not only reflected in the problem file, but in
+        part also in the domain, because conditional effects have been compiled away (manually) that use the problem instance. Confer to the domain documentation for further details.
+    </documentation>
+    <!-- Connect-Problem constants -->
+    <constantDeclaration name="a_HDMI_DVI_1" sort="Adapter"/>
+    <constantDeclaration name="a_HDMI_DVI_2" sort="Adapter"/>
+    <constantDeclaration name="c_Headphone_CinchStereo_1" sort="Cable_Headphone_CinchStereo"/>
+    <constantDeclaration name="c_CinchStereo_1" sort="Cable_CinchStereo"/>
+    <constantDeclaration name="c_CinchStereo_2" sort="Cable_CinchStereo"/>
+    <constantDeclaration name="c_HDMI_1" sort="Cable_HDMI"/>
+    <constantDeclaration name="c_HDMI_2" sort="Cable_HDMI"/>
+    <constantDeclaration name="c_DVI_1" sort="Cable_DVI"/>
+    <constantDeclaration name="c_CinchVideo_1" sort="Cable_CinchVideo"/>
+    <constantDeclaration name="c_CinchVideo_2" sort="Cable_CinchVideo"/>
+    <constantDeclaration name="c_SPDIFoptical_1" sort="Cable_SPDIFoptical"/>
+    <constantDeclaration name="c_HDMI_DVI_1" sort="Cable_HDMI_DVI"/>
+    <constantDeclaration name="e_BlurayPlayer" sort="BlurayPlayer"/>
+    <constantDeclaration name="e_Amplifier" sort="Amplifier"/>
+    <constantDeclaration name="e_TV" sort="TV"/>
+    <constantDeclaration name="e_SatReceiver" sort="Receiver"/>
+    <constantDeclaration name="p_HDMI_1" sort="Port_HDMI"/>
+    <constantDeclaration name="p_HDMI_2" sort="Port_HDMI"/>
+    <constantDeclaration name="p_HDMI_3" sort="Port_HDMI"/>
+    <constantDeclaration name="p_Headphone_1" sort="Port_Headphone"/>
+    <constantDeclaration name="p_SPDIFoptical_1" sort="Port_SPDIFoptical"/>
+    <constantDeclaration name="p_SPDIFoptical_2" sort="Port_SPDIFoptical"/>
+    <constantDeclaration name="p_CinchVideo_1" sort="Port_CinchVideo"/>
+    <constantDeclaration name="p_CinchVideo_2" sort="Port_CinchVideo"/>
+    <constantDeclaration name="p_CinchVideo_3" sort="Port_CinchVideo"/>
+    <constantDeclaration name="p_CinchStereo_1" sort="Port_CinchStereo"/>
+    <constantDeclaration name="p_CinchStereo_2" sort="Port_CinchStereo"/>
+    <constantDeclaration name="p_CinchStereo_3" sort="Port_CinchStereo"/>
+    <constantDeclaration name="p_DVI_1" sort="Port_DVI"/>
+    <constantDeclaration name="p_DVI_2" sort="Port_DVI"/>
+    <constantDeclaration name="p_Scart_1" sort="Port_Scart"/>
+    <constantDeclaration name="p_VGA_1" sort="Port_VGA"/>
+    <constantDeclaration name="p_SPDIFcoaxial_1" sort="Port_SPDIFcoaxial"/>
+    <constantDeclaration name="c_Scart_CinchVideo_CinchStereo_1" sort="Cable_Scart_CinchVideo_CinchStereo"/>
+    <initialState>
+        <!-- DEFINITION OF THE ACTUAL INITIAL STATE -->
+        <!-- -->
+        <!-- Prevent dialog-based setup -->
+        <!-- -->
+        <!-- Prevent fake -->
+        <!-- -->
+        <!-- INITIAL STATE of Party-Problem -->
+        <fact relation="hasAudioSignal">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="e_BlurayPlayer"/>
+        </fact>
+        <fact relation="hasVideoSignal">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="e_BlurayPlayer"/>
+        </fact>
+        <fact relation="hasAudioSignal">
+            <constant name="e_SatReceiver"/>
+            <constant name="e_SatReceiver"/>
+        </fact>
+        <fact relation="hasVideoSignal">
+            <constant name="e_SatReceiver"/>
+            <constant name="e_SatReceiver"/>
+        </fact>
+        <!-- -->
+        <!-- DEFINITION OF THE HARDWARE -->
+        <!-- -->
+        <!-- Cable: HDMI 01 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_HDMI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_HDMI_1"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_HDMI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_HDMI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_HDMI_1"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_HDMI_1"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="c_HDMI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_HDMI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="c_HDMI_1"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_HDMI_1"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <!-- -->
+        <!-- Cable: HDMI 02 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_HDMI_2"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_HDMI_2"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_HDMI_2"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_HDMI_2"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_HDMI_2"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_HDMI_2"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="c_HDMI_2"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_HDMI_2"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="c_HDMI_2"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_HDMI_2"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <!-- -->
+        <!-- Cable: Scart_CinchVideo_CinchStereo -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_Scart_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_Scart_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_Scart_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_Scart_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_Scart_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="c_Scart_CinchVideo_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <!-- -->
+        <!-- Cable: Headphone_CinchStereo 01 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_Headphone_CinchStereo_1"/>
+            <constant name="p_Headphone_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_Headphone_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_Headphone_CinchStereo_1"/>
+            <constant name="p_Headphone_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_Headphone_CinchStereo_1"/>
+            <constant name="p_Headphone_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_Headphone_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_Headphone_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="c_Headphone_CinchStereo_1"/>
+            <constant name="p_Headphone_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="c_Headphone_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <!-- -->
+        <!-- Cable: SPDIFoptical 01 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_SPDIFoptical_1"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_SPDIFoptical_1"/>
+            <constant name="p_SPDIFoptical_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_SPDIFoptical_1"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_SPDIFoptical_1"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_SPDIFoptical_1"/>
+            <constant name="p_SPDIFoptical_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_SPDIFoptical_1"/>
+            <constant name="p_SPDIFoptical_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="c_SPDIFoptical_1"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="c_SPDIFoptical_1"/>
+            <constant name="p_SPDIFoptical_2"/>
+        </fact>
+        <!-- -->
+        <!-- Cable: CinchStereo 01 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_CinchStereo_1"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_CinchStereo_1"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_CinchStereo_1"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="c_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="c_CinchStereo_1"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <!-- -->
+        <!-- Cable: CinchStereo 02 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_CinchStereo_2"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_CinchStereo_2"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_CinchStereo_2"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_CinchStereo_2"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_CinchStereo_2"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_CinchStereo_2"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="c_CinchStereo_2"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="c_CinchStereo_2"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <!-- -->
+        <!-- Cable: DVI 01 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_DVI_1"/>
+            <constant name="p_DVI_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_DVI_1"/>
+            <constant name="p_DVI_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_DVI_1"/>
+            <constant name="p_DVI_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsVideo">
+            <constant name="c_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_DVI_1"/>
+            <constant name="p_DVI_2"/>
+        </fact>
+        <!-- -->
+        <!-- Cable: HDMI-DVI 01 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_HDMI_DVI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_HDMI_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_HDMI_DVI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_HDMI_DVI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_HDMI_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_HDMI_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsVideo">
+            <constant name="c_HDMI_DVI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_HDMI_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <!-- -->
+        <!-- Cable: CinchVideo 01 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_CinchVideo_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_CinchVideo_1"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_CinchVideo_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_CinchVideo_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_CinchVideo_1"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_CinchVideo_1"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="c_CinchVideo_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_CinchVideo_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="c_CinchVideo_1"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_CinchVideo_1"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <!-- -->
+        <!-- Cable: CinchVideo 02 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="c_CinchVideo_2"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsMale">
+            <constant name="c_CinchVideo_2"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="c_CinchVideo_2"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_CinchVideo_2"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="c_CinchVideo_2"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="c_CinchVideo_2"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="c_CinchVideo_2"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_CinchVideo_2"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="c_CinchVideo_2"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="c_CinchVideo_2"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <!-- -->
+        <!-- Adapter: HDMI-DVI 01 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="a_HDMI_DVI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="a_HDMI_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="a_HDMI_DVI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="a_HDMI_DVI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="a_HDMI_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="a_HDMI_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsVideo">
+            <constant name="a_HDMI_DVI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="a_HDMI_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <!-- -->
+        <!-- Adapter: HDMI-DVI 02 -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsMale">
+            <constant name="a_HDMI_DVI_2"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="a_HDMI_DVI_2"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="a_HDMI_DVI_2"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="a_HDMI_DVI_2"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="a_HDMI_DVI_2"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="a_HDMI_DVI_2"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsVideo">
+            <constant name="a_HDMI_DVI_2"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="a_HDMI_DVI_2"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <!-- -->
+        <!-- HomeEntertainment System: Amplifier -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_3"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchVideo_3"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_SPDIFcoaxial_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchStereo_3"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_3"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchVideo_3"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="e_Amplifier"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="e_Amplifier"/>
+            <constant name="p_SPDIFcoaxial_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchStereo_3"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_3"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_Amplifier"/>
+            <constant name="p_HDMI_3"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchVideo_3"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_Amplifier"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_Amplifier"/>
+            <constant name="p_SPDIFcoaxial_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_Amplifier"/>
+            <constant name="p_CinchStereo_3"/>
+        </fact>
+        <!-- -->
+        <!-- HomeEntertainment System: SatReceiver -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsFemale">
+            <constant name="e_SatReceiver"/>
+            <constant name="p_Scart_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_SatReceiver"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_SatReceiver"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalOut">
+            <constant name="e_SatReceiver"/>
+            <constant name="p_Scart_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="e_SatReceiver"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="e_SatReceiver"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="e_SatReceiver"/>
+            <constant name="p_Scart_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_SatReceiver"/>
+            <constant name="p_Scart_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_SatReceiver"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_SatReceiver"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <!-- -->
+        <!-- HomeEntertainment System: BlurayPlayer -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsFemale">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_SPDIFcoaxial_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalOut">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_SPDIFcoaxial_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_SPDIFcoaxial_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_BlurayPlayer"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <!-- -->
+        <!-- HomeEntertainment System: TV -->
+        <!-- -->
+        <!-- male/female configuration -->
+        <!-- -->
+        <fact relation="PortIsFemale">
+            <constant name="e_TV"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_TV"/>
+            <constant name="p_VGA_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_TV"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_TV"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_TV"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortIsFemale">
+            <constant name="e_TV"/>
+            <constant name="p_Headphone_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal in/out configuration -->
+        <!-- -->
+        <fact relation="PortIsSignalIn">
+            <constant name="e_TV"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="e_TV"/>
+            <constant name="p_VGA_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="e_TV"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsSignalIn">
+            <constant name="e_TV"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="e_TV"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortIsSignalOut">
+            <constant name="e_TV"/>
+            <constant name="p_Headphone_1"/>
+        </fact>
+        <!-- -->
+        <!-- signal audio/video configuration -->
+        <!-- -->
+        <fact relation="PortIsAudio">
+            <constant name="e_TV"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_TV"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_TV"/>
+            <constant name="p_VGA_1"/>
+        </fact>
+        <fact relation="PortIsVideo">
+            <constant name="e_TV"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_TV"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_TV"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortIsAudio">
+            <constant name="e_TV"/>
+            <constant name="p_Headphone_1"/>
+        </fact>
+        <!-- -->
+        <!-- port compatibility definitions (every port is compatible to every port of the same sort) -->
+        <!-- -->
+        <!-- HDMI -->
+        <!-- -->
+        <fact relation="PortsAreCompatible">
+            <constant name="p_HDMI_1"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_HDMI_2"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_HDMI_3"/>
+            <constant name="p_HDMI_3"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_HDMI_1"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_HDMI_2"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_HDMI_1"/>
+            <constant name="p_HDMI_3"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_HDMI_3"/>
+            <constant name="p_HDMI_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_HDMI_2"/>
+            <constant name="p_HDMI_3"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_HDMI_3"/>
+            <constant name="p_HDMI_2"/>
+        </fact>
+        <!-- -->
+        <!-- Headphone -->
+        <!-- -->
+        <fact relation="PortsAreCompatible">
+            <constant name="p_Headphone_1"/>
+            <constant name="p_Headphone_1"/>
+        </fact>
+        <!-- -->
+        <!-- SPDIFoptical -->
+        <!-- -->
+        <fact relation="PortsAreCompatible">
+            <constant name="p_SPDIFoptical_1"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_SPDIFoptical_2"/>
+            <constant name="p_SPDIFoptical_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_SPDIFoptical_1"/>
+            <constant name="p_SPDIFoptical_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_SPDIFoptical_2"/>
+            <constant name="p_SPDIFoptical_1"/>
+        </fact>
+        <!-- -->
+        <!-- SPDIFcoaxial -->
+        <!-- -->
+        <fact relation="PortsAreCompatible">
+            <constant name="p_SPDIFcoaxial_1"/>
+            <constant name="p_SPDIFcoaxial_1"/>
+        </fact>
+        <!-- -->
+        <!-- CinchVideo -->
+        <!-- -->
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_2"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_3"/>
+            <constant name="p_CinchVideo_3"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_1"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_2"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_1"/>
+            <constant name="p_CinchVideo_3"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_3"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_2"/>
+            <constant name="p_CinchVideo_3"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_3"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <!-- -->
+        <!-- SPDIFcoaxial compatible to CinchVideo -->
+        <!-- -->
+        <fact relation="PortsAreCompatible">
+            <constant name="p_SPDIFcoaxial_1"/>
+            <constant name="p_CinchVideo_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_SPDIFcoaxial_1"/>
+            <constant name="p_CinchVideo_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_SPDIFcoaxial_1"/>
+            <constant name="p_CinchVideo_3"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_1"/>
+            <constant name="p_SPDIFcoaxial_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_2"/>
+            <constant name="p_SPDIFcoaxial_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchVideo_3"/>
+            <constant name="p_SPDIFcoaxial_1"/>
+        </fact>
+        <!-- -->
+        <!-- CinchStereo -->
+        <!-- -->
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchStereo_1"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchStereo_2"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchStereo_3"/>
+            <constant name="p_CinchStereo_3"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchStereo_1"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchStereo_2"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchStereo_1"/>
+            <constant name="p_CinchStereo_3"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchStereo_3"/>
+            <constant name="p_CinchStereo_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchStereo_2"/>
+            <constant name="p_CinchStereo_3"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_CinchStereo_3"/>
+            <constant name="p_CinchStereo_2"/>
+        </fact>
+        <!-- -->
+        <!-- DVI -->
+        <!-- -->
+        <fact relation="PortsAreCompatible">
+            <constant name="p_DVI_1"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_DVI_2"/>
+            <constant name="p_DVI_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_DVI_1"/>
+            <constant name="p_DVI_2"/>
+        </fact>
+        <fact relation="PortsAreCompatible">
+            <constant name="p_DVI_2"/>
+            <constant name="p_DVI_1"/>
+        </fact>
+        <!-- -->
+        <!-- Scart -->
+        <!-- -->
+        <fact relation="PortsAreCompatible">
+            <constant name="p_Scart_1"/>
+            <constant name="p_Scart_1"/>
+        </fact>
+    </initialState>
+    <goals>
+        <fact relation="hasAudioSignal">
+            <constant name="e_Amplifier"/>
+            <constant name="e_BlurayPlayer"/>
+        </fact>
+        <fact relation="hasAudioSignal">
+            <constant name="e_Amplifier"/>
+            <constant name="e_SatReceiver"/>
+        </fact>
+        <fact relation="hasVideoSignal">
+            <constant name="e_TV"/>
+            <constant name="e_BlurayPlayer"/>
+        </fact>
+        <fact relation="hasVideoSignal">
+            <constant name="e_TV"/>
+            <constant name="e_SatReceiver"/>
+        </fact>
+    </goals>
+</problem>

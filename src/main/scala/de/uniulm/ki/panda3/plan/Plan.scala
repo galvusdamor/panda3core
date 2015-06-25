@@ -35,8 +35,10 @@ trait Plan extends DomainUpdatable {
 
   /** all variables which are not bound to a constant, yet */
   val unboundVariables: Seq[UnboundVariable]
-  val getFirstFreePlanStepID: Int = 1 + (planSteps foldLeft 0) { case (m, ps: PlanStep) => math.max(m, ps.id)}
-  val getFirstFreeVariableID: Int = 1 + (variableConstraints.variables foldLeft 0) { case (m, v: Variable) => math.max(m, v.id)}
+
+  /* convenience methods to determine usable IDs */
+  lazy val getFirstFreePlanStepID: Int = 1 + (planSteps foldLeft 0) { case (m, ps: PlanStep) => math.max(m, ps.id) }
+  lazy val getFirstFreeVariableID: Int = 1 + (variableConstraints.variables foldLeft 0) { case (m, v: Variable) => math.max(m, v.id) }
 
   def planSteps: Seq[PlanStep]
 
