@@ -1,3 +1,4 @@
+import sbtassembly.Plugin.AssemblyKeys._
 import scoverage.ScoverageSbtPlugin
 
 ///////////////// start SBT plugins for code style and coverage
@@ -5,6 +6,10 @@ org.scalastyle.sbt.ScalastylePlugin.Settings
 
 // activate HMTL highlighting
 ScoverageSbtPlugin.ScoverageKeys.coverageHighlighting := false
+
+//
+assemblySettings
+
 
 //// actual project
 
@@ -25,3 +30,5 @@ startYear := Some(2014)
 //licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
 scalaVersion := "2.11.5"
+
+mainClass in assembly := Some("de.uniulm.ki.panda3.search.DFS")
