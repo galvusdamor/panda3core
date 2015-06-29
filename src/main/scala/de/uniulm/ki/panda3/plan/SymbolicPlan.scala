@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.plan
 
 import de.uniulm.ki.panda3.csp.{CSP, Substitution, SymbolicCSP}
-import de.uniulm.ki.panda3.domain.updates.DomainUpdate
+import de.uniulm.ki.panda3.domain.updates.{AddVariableConstraints, AddVariables, DomainUpdate, ExchangePlanStep}
 import de.uniulm.ki.panda3.logic.{Literal, Variable}
 import de.uniulm.ki.panda3.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.plan.flaw.{AbstractPlanStep, CausalThreat, OpenPrecondition, UnboundVariable}
@@ -24,7 +24,7 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
 
 
   override lazy val openPreconditions: Seq[OpenPrecondition] = allPreconditions filterNot { case (ps, literal) => causalLinks exists { case CausalLink(_, consumer,
-                                                                                                                                                       condition) => (consumer =?= ps)(
+  condition) => (consumer =?= ps)(
     variableConstraints) && (condition =?= literal)(variableConstraints)
   }
   } map { case (ps, literal) => OpenPrecondition(this, ps, literal) }
@@ -87,15 +87,15 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
     val newInit = substitutePlanStep(init)
     val newGoal = substitutePlanStep(goal)
 
-    val newOrderingConstraints = SymbolicTaskOrdering(
-      orderingConstraints.originalOrderingConstraints map { case OrderingConstraint(b, a) => OrderingConstraint(substitutePlanStep(b), substitutePlanStep(a))
-      }, newPlanSteps)
+    val newOrderingConstraints = SymbolicTaskOrdering(orderingConstraints.originalOrderingConstraints map { case OrderingConstraint(b, a) => OrderingConstraint(substitutePlanStep(b),
+      substitutePlanStep(a))
+    }, newPlanSteps)
     // transfer the computed arrangement, this has a side effect!!!!
     newOrderingConstraints.initialiseExplicitly(0, 0, orderingConstraints.arrangement())
 
     // includes only "internal causal links"
     val newCausalLinks = causalLinks map { case CausalLink(p, c, l) => CausalLink(substitutePlanStep(p), substitutePlanStep(c),
-                                                                                  Literal(l.predicate, l.isPositive, l.parameterVariables map sub))
+      Literal(l.predicate, l.isPositive, l.parameterVariables map sub))
     }
 
     val newVariableConstraints = SymbolicCSP(newVariables.toSet, variableConstraints.constraints map {_.substitute(sub)})
@@ -103,7 +103,14 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
     (SymbolicPlan(newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, newInit, newGoal), sub)
   }
 
-  override def update(domainUpdate: DomainUpdate): SymbolicPlan = SymbolicPlan(planSteps map {_.update(domainUpdate)}, causalLinks map {_.update(domainUpdate)},
-                                                                               orderingConstraints.update(domainUpdate), variableConstraints.update(domainUpdate), init.update(domainUpdate),
-                                                                               goal.update(domainUpdate))
+  override def update(domainUpdate: DomainUpdate): SymbolicPlan = domainUpdate match {
+    case AddVariables(newVariables)                     => SymbolicPlan(planSteps, causalLinks, orderingConstraints, variableConstraints.addVariables(newVariables), init, goal)
+    case AddVariableConstraints(newVariableConstraints) => SymbolicPlan(planSteps, causalLinks, orderingConstraints, variableConstraints.addConstraints(newVariableConstraints), init, goal)
+    case ExchangePlanStep(oldPS, newPS)                 => SymbolicPlan(planSteps map { ps => if (ps == oldPS) newPS else ps }, causalLinks map {_.update(domainUpdate)},
+      orderingConstraints.update(domainUpdate), variableConstraints, if (oldPS == init) newPS else init, if (oldPS == goal) newPS else goal)
+
+    case _ => SymbolicPlan(planSteps map {_.update(domainUpdate)}, causalLinks map {_.update(domainUpdate)}, orderingConstraints.update(domainUpdate), variableConstraints.update
+      (domainUpdate), init.update(domainUpdate), goal.update(domainUpdate))
+  }
+
 }

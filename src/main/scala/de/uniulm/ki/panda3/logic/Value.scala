@@ -10,4 +10,6 @@ import de.uniulm.ki.panda3.domain.updates.DomainUpdate
  */
 trait Value extends DomainUpdatable {
   override def update(domainUpdate: DomainUpdate): Value
+
+  val isConstant: Boolean
 }

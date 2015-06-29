@@ -296,7 +296,7 @@ object XMLParser extends Parser {
 
 
     // build init
-    val initTask: Task = Task("init", isPrimitive = true, variablesForConstants, Nil, Nil, JavaConversions.asScalaBuffer(problem.getInitialState.getFact)
+    val initTask: Task = Task("init", isPrimitive = true, variablesForConstants, variableConstraintsForConstants, Nil, JavaConversions.asScalaBuffer(problem.getInitialState.getFact)
       map {factToLiteral(_, domain, nameToVariablesForConstants, isPositive = true)})
 
     val init: PlanStep = PlanStep(0, initTask, variablesForConstants)
@@ -307,7 +307,7 @@ object XMLParser extends Parser {
     val goalLiterals = JavaConversions.asScalaBuffer(problem.getGoals.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExistsOrPreference) flatMap { goalLiteral =>
       extractProblemLiterals(goalLiteral, domain, nameToVariablesForConstants, Map())
     }
-    val goalTask: Task = Task("init", isPrimitive = true, variablesForConstants, Nil, goalLiterals, Nil)
+    val goalTask: Task = Task("goal", isPrimitive = true, variablesForConstants, variableConstraintsForConstants, goalLiterals, Nil)
     val goal: PlanStep = PlanStep(1, goalTask, variablesForConstants)
 
     // variables declared in the plan steps

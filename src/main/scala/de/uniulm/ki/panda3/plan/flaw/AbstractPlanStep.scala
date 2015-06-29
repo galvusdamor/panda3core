@@ -13,4 +13,8 @@ import de.uniulm.ki.panda3.plan.modification.{DecomposePlanStep, Modification}
 case class AbstractPlanStep(plan: Plan, ps: PlanStep) extends Flaw {
 
   override def resolvents(domain: Domain): Seq[Modification] = DecomposePlanStep(plan, ps, domain)
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "AbstractPlanStep: " + ps.shortInfo
+
 }

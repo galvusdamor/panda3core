@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.plan
 
+import de.uniulm.ki.panda3.PrettyPrintable
 import de.uniulm.ki.panda3.csp.{CSP, Substitution}
 import de.uniulm.ki.panda3.domain.DomainUpdatable
 import de.uniulm.ki.panda3.domain.updates.DomainUpdate
@@ -14,7 +15,7 @@ import de.uniulm.ki.panda3.plan.ordering.TaskOrdering
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait Plan extends DomainUpdatable {
+trait Plan extends DomainUpdatable with PrettyPrintable {
 
   lazy val flaws: Seq[Flaw] = {
     val hardFlaws = causalThreats ++ openPreconditions ++ abstractPlanSteps
@@ -22,7 +23,7 @@ trait Plan extends DomainUpdatable {
       unboundVariables
     else hardFlaws
   }
-  lazy val planStepWithoutInitGoal: Seq[PlanStep] = planSteps filter {ps => ps != init && ps != goal}
+  lazy val planStepWithoutInitGoal: Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
 
   /** all abstract plan steps */
   val abstractPlanSteps: Seq[AbstractPlanStep]
@@ -61,4 +62,13 @@ trait Plan extends DomainUpdatable {
   def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution[Variable] = Substitution[Variable](Nil, Nil)): (Plan, Substitution[Variable])
 
   override def update(domainUpdate: DomainUpdate): Plan
+
+  /** returns a short information about the object */
+  override def shortInfo: String = (planSteps map {"PS " + _.mediumInfo}).mkString("\n") + "\n" + orderingConstraints.shortInfo + "\n" + (causalLinks map {_.longInfo}).mkString("\n")
+
+  /** returns a string that can be utilized to define the object */
+  override def mediumInfo: String = shortInfo
+
+  /** returns a more detailed information about the object */
+  override def longInfo: String = shortInfo
 }

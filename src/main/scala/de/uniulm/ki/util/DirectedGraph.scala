@@ -17,7 +17,8 @@ trait DirectedGraph[T] {
   /** adjacency list of the graph */
   def edges: Map[T, Seq[T]]
 
-  require(edges.size == vertices.size)
+  // TODO: add this as a delayed intializerr
+  //require(edges.size == vertices.size)
 
   /** list of all edges as a list of pairs */
   final lazy val edgeList: Seq[(T, T)] = edges.toSeq flatMap { case (node1, neighbours) => neighbours map {(node1, _)} }

@@ -43,7 +43,17 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     update(domainUpdate)
   }
 
+  def expandSortHierarchy(): DomainUpdate = {
+    val sortTranslationMap = sortGraph.topologicalOrdering.get.foldRight[Map[Sort, Sort]](Map[Sort, Sort]())({ case (oldSort, translationMap) =>
+      val newSubsorts = oldSort.subSorts map translationMap
+      val allConstants = oldSort.elements ++ (newSubsorts flatMap {_.elements})
+      val newSort = Sort(oldSort.name, allConstants.toSet.toSeq, newSubsorts)
+      translationMap + (oldSort -> newSort)
+    })
+
+    ExchangeSorts(sortTranslationMap)
+  }
+
   override def update(domainUpdate: DomainUpdate): Domain = Domain(sorts map {_.update(domainUpdate)}, predicates map {_.update(domainUpdate)}, tasks map {_.update(domainUpdate)},
                                                                    decompositionMethods map {_.update(domainUpdate)}, decompositionAxioms)
-
 }

@@ -28,4 +28,6 @@ case class OpenPrecondition(plan: Plan, planStep: PlanStep, precondition: Litera
     possibleDecompositions flatMap { case (ps, method) => DecomposePlanStep(plan, ps, method) }
   }
 
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "OpenPrecondition: " + precondition.shortInfo + " of " + planStep.shortInfo
 }

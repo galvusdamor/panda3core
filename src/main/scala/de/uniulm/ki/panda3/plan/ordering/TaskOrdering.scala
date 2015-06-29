@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.plan.ordering
 
+import de.uniulm.ki.panda3.PrettyPrintable
 import de.uniulm.ki.panda3.domain.DomainUpdatable
 import de.uniulm.ki.panda3.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
@@ -9,7 +10,7 @@ import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable {
+trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable with PrettyPrintable {
 
   def tasks: Seq[PlanStep]
 
@@ -56,6 +57,15 @@ trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable {
   def minimalOrderingConstraints(): Seq[OrderingConstraint]
 
   override def update(domainUpdate: DomainUpdate): TaskOrdering
+
+  /** returns a short information about the object */
+  override def shortInfo: String = "OrderingConstraints:\n" + (minimalOrderingConstraints() map { oc => "\t" + oc.before.shortInfo + " -> " + oc.after.shortInfo }).mkString("\n")
+
+  /** returns a string that can be utilized to define the object */
+  override def mediumInfo: String = shortInfo
+
+  /** returns a more detailed information about the object */
+  override def longInfo: String = "OrderingConstraints:\n" + ((tasks zip tasks) collect { case (t1, t2) if lt(t1, t2) => "\t" + t1.shortInfo + " -> " + t2.shortInfo })
 }
 
 object TaskOrdering {

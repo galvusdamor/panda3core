@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.plan.ordering
 
-import de.uniulm.ki.panda3.domain.updates.DomainUpdate
+import de.uniulm.ki.panda3.domain.updates.{DomainUpdate, ExchangePlanStep}
 import de.uniulm.ki.panda3.plan.element.{OrderingConstraint, PlanStep}
 
 /**
@@ -66,7 +66,7 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
       newOrdering
     }
 
-  def replacePlanStep(psOld: PlanStep, psNew: PlanStep): TaskOrdering =
+  def replacePlanStep(psOld: PlanStep, psNew: PlanStep): SymbolicTaskOrdering =
     if (!(tasks contains psOld)) this
     else {
       val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints, tasks map { case ps => if (ps == psOld) psNew
@@ -195,5 +195,8 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
       arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
     }
 
-  override def update(domainUpdate: DomainUpdate): SymbolicTaskOrdering = SymbolicTaskOrdering(originalOrderingConstraints map {_.update(domainUpdate)}, tasks map {_.update(domainUpdate)})
+  override def update(domainUpdate: DomainUpdate): SymbolicTaskOrdering = domainUpdate match {
+    case ExchangePlanStep(oldPS, newPS) => replacePlanStep(oldPS, newPS)
+    case _                              => SymbolicTaskOrdering(originalOrderingConstraints map {_.update(domainUpdate)}, tasks map {_.update(domainUpdate)})
+  }
 }
