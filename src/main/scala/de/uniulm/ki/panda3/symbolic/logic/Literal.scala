@@ -3,13 +3,14 @@ package de.uniulm.ki.panda3.symbolic.logic
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
+import de.uniulm.ki.util.HashMemo
 
 /**
  * A simple literal in First Order Logic
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables: Seq[Variable]) extends Formula with PrettyPrintable {
+case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables: Seq[Variable]) extends Formula with PrettyPrintable with HashMemo {
 
   /** negated version of the literal */
   lazy val negate: Literal = copy(isPositive = !isPositive)

@@ -3,13 +3,14 @@ package de.uniulm.ki.panda3.symbolic.logic
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, DomainUpdatable}
+import de.uniulm.ki.util.HashMemo
 
 /**
  * Predicate of First Order Logic
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class Predicate(name: String, argumentSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable {
+case class Predicate(name: String, argumentSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo {
 
   def instantiate(domain: Domain, variablesForConstants: Map[Constant, Variable]): Seq[Literal] = {
     val allParameterCombinations = argumentSorts.foldLeft[Seq[Seq[Variable]]](Nil :: Nil)({ case (args, sort) => sort.elements flatMap { c => args map {_ :+ variablesForConstants(c)} } })

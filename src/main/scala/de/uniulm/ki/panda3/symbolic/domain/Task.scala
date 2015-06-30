@@ -4,6 +4,7 @@ import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
+import de.uniulm.ki.util.HashMemo
 
 /**
  * Tasks are blue-prints for actions, actually contained in plans, i.e. they describe which variables a [[de.uniulm.ki.panda3.plan.element.PlanStep]] of their type must have and which
@@ -15,7 +16,7 @@ import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
  */
 // TODO: check, whether the parameter constraints of a task schema are always observed correctly
 case class Task(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], preconditions: Seq[Literal], effects: Seq[Literal]) extends
-DomainUpdatable with PrettyPrintable {
+DomainUpdatable with PrettyPrintable with HashMemo {
 
   def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = {
     val sub = Substitution(parameters, newParameter)
