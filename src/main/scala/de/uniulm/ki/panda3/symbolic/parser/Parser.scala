@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 
 /**
- *
+ * The general trait representing parsers for domain and problem files
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */

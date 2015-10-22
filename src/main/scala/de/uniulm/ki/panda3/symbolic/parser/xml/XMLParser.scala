@@ -1,5 +1,4 @@
-package de.uniulm.ki.panda3.symbolic.parser
-
+package de.uniulm.ki.panda3.symbolic.parser.xml
 
 import java.io.FileInputStream
 import javax.xml.bind.{JAXBContext, JAXBElement, Unmarshaller}
@@ -9,12 +8,12 @@ import javax.xml.transform.sax.SAXSource
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic
-import de.uniulm.ki.panda3.symbolic.logic.{Constant, Variable, _}
-import de.uniulm.ki.panda3.symbolic.parser.xml._
+import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate, Sort}
+import de.uniulm.ki.panda3.symbolic.parser.Parser
 import de.uniulm.ki.panda3.symbolic.parser.xml.problem.Problem
-import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
-import de.uniulm.ki.panda3.symbolic.plan.{Plan, SymbolicPlan}
+import de.uniulm.ki.panda3.symbolic.plan.{Plan, SymbolicPlan, element}
 import org.xml.sax.XMLReader
 
 import scala.collection._
@@ -58,10 +57,10 @@ object XMLParser extends Parser {
       } else {
         constantMap += (sort -> Seq(logic.Constant(const.getName)))
       }
-      Constant(const.getName)
+      logic.Constant(const.getName)
     }
     val constantSeq = createConstantSeq(JavaConversions.asScalaBuffer(dom.getConstantDeclaration))
-    val xmlConstantToScalaConstant: Map[ConstantDeclaration, Constant] = (JavaConversions.asScalaBuffer(dom.getConstantDeclaration) zip constantSeq).toMap
+    val xmlConstantToScalaConstant: Map[ConstantDeclaration, logic.Constant] = (JavaConversions.asScalaBuffer(dom.getConstantDeclaration) zip constantSeq).toMap
     val stringToXMLConstant: Map[String, ConstantDeclaration] = (JavaConversions.asScalaBuffer(dom.getConstantDeclaration) map { decl => (decl.getName, decl) }).toMap
     // needed for Domain
     val generatedSorts: mutable.Map[SortDeclaration, Sort] = mutable.HashMap()
@@ -96,7 +95,7 @@ object XMLParser extends Parser {
       val splitContent = JavaConversions.asScalaBuffer(taskSchema.getContent) filter {!_.isInstanceOf[JAXBElement[Any]]} partition {_.isInstanceOf[VariableDeclaration]}
       assert(splitContent._2.size == 2)
       val xmlVariableDeclarations = splitContent._1 map {_.asInstanceOf[VariableDeclaration]}
-      val variables = xmlVariableDeclarations.zipWithIndex map { case (variableDeclaration, idx) => Variable(idx, variableDeclaration.getName,
+      val variables = xmlVariableDeclarations.zipWithIndex map { case (variableDeclaration, idx) => logic.Variable(idx, variableDeclaration.getName,
         xmlSortsToScalaSorts(variableDeclaration.getSort.asInstanceOf[SortDeclaration]))
       }
       val varDeclToVariable: Map[VariableDeclaration, logic.Variable] = (xmlVariableDeclarations zip variables).toMap
@@ -114,7 +113,7 @@ object XMLParser extends Parser {
 
       val abstractTaskSchema: Task = xmlTaskToScalaTask(xmlMethod.getTaskSchema.asInstanceOf[TaskSchemaDeclaration])
 
-      val variables: mutable.Map[VariableDeclaration, Variable] = mutable.Map()
+      val variables: mutable.Map[VariableDeclaration, logic.Variable] = mutable.Map()
       // add variables of the method, aka the variables of the parameter actions
       // XXX: here we COMPLETELY ignore the content of the XML file and presume to know it better
       JavaConversions.asScalaBuffer(xmlMethod.getVariableDeclaration).zipWithIndex foreach { case (vardecl, index) => variables.put(vardecl, abstractTaskSchema.parameters(index)) }
@@ -143,16 +142,17 @@ object XMLParser extends Parser {
   }
 
 
-  private def getAnyFromFormula(not: {def getAnd(): xml.And
-    def getAtomic(): xml.Atomic
-    def getExists(): xml.Exists
-    def getForall(): xml.Forall
-    def getImply(): xml.Imply
-    def getNot(): xml.Not
-    def getOr(): xml.Or}): Any = ((not.getAnd :: not.getAtomic :: not.getExists :: not.getForall :: not.getImply :: not.getNot :: not.getOr :: Nil) find {_ != null}).get
+  private def getAnyFromFormula(not: {
+    def getAnd(): And
+    def getAtomic(): Atomic
+    def getExists(): Exists
+    def getForall(): Forall
+    def getImply(): Imply
+    def getNot(): Not
+    def getOr(): Or}): Any = ((not.getAnd :: not.getAtomic :: not.getExists :: not.getForall :: not.getImply :: not.getNot :: not.getOr :: Nil) find {_ != null}).get
 
 
-  def extractLiteralList(xmlStruct: Any, xmlVariableToScalaVariable: Map[VariableDeclaration, logic.Variable], xmlConstantToScalaConstant: Map[ConstantDeclaration, Constant],
+  def extractLiteralList(xmlStruct: Any, xmlVariableToScalaVariable: Map[VariableDeclaration, logic.Variable], xmlConstantToScalaConstant: Map[ConstantDeclaration, logic.Constant],
                          xmlPredicateToScalaPredicate: Map[RelationDeclaration, Predicate], xmlSortsToScalaSorts: Map[SortDeclaration, Sort]): (Seq[Literal], Seq[VariableConstraint]) = {
 
     // gather the variable constraints
@@ -160,7 +160,7 @@ object XMLParser extends Parser {
 
     def extract(xmlStruct: Any, positive: Boolean): Seq[Literal] = {
       xmlStruct match {
-        case and: xml.And   =>
+        case and: And       =>
           if (positive) {
             JavaConversions.asScalaBuffer(and.getAtomicOrNotOrAnd) flatMap {
               extract(_, positive)
@@ -169,7 +169,7 @@ object XMLParser extends Parser {
             assert(assertion = false) // TODO: we can't handle this case yet
             Nil
           }
-        case or: xml.Or     =>
+        case or: Or         =>
           if (!positive) {
             JavaConversions.asScalaBuffer(or.getAtomicOrNotOrAnd) flatMap {
               extract(_, positive)
@@ -178,13 +178,13 @@ object XMLParser extends Parser {
             assert(assertion = false) // TODO: we can't handle this case yet
             Nil
           }
-        case not: xml.Not   => extract(getAnyFromFormula(not), !positive)
+        case not: Not       => extract(getAnyFromFormula(not), !positive)
         case atomic: Atomic =>
-          val parameterVariables: scala.Seq[Variable] = JavaConversions.asScalaBuffer(atomic.getVariableOrConstant) map { case variable: xml.Variable => xmlVariableToScalaVariable(
+          val parameterVariables: scala.Seq[logic.Variable] = JavaConversions.asScalaBuffer(atomic.getVariableOrConstant) map { case variable: Variable => xmlVariableToScalaVariable(
             variable.getName.asInstanceOf[VariableDeclaration])
-          case constant: xml.Constant                                                                                                                 =>
+          case constant: Constant                                                                                                                       =>
             val constDeclaration: ConstantDeclaration = constant.getName.asInstanceOf[ConstantDeclaration]
-            val newVariable = Variable(xmlVariableToScalaVariable.size + variableConstraints.size, "ConstantVariable" + constant.getName,
+            val newVariable = logic.Variable(xmlVariableToScalaVariable.size + variableConstraints.size, "ConstantVariable" + constant.getName,
               xmlSortsToScalaSorts(constDeclaration.getSort.asInstanceOf[SortDeclaration]))
             variableConstraints = variableConstraints :+ Equal(newVariable, xmlConstantToScalaConstant(constDeclaration))
             newVariable
@@ -202,10 +202,10 @@ object XMLParser extends Parser {
 
 
   def buildPlanFrom(planDef: {def getTaskNode(): java.util.List[TaskNode]
-    def getCausalLink(): java.util.List[xml.CausalLink]
-    def getOrderingConstraint(): java.util.List[xml.OrderingConstraint]
+    def getCausalLink(): java.util.List[CausalLink]
+    def getOrderingConstraint(): java.util.List[OrderingConstraint]
     def getValueRestrictionOrSortRestriction(): java.util.List[java.lang.Object]}, init: PlanStep, goal: PlanStep,
-                    predefinedXmlVariableToScalaVariable: Map[VariableDeclaration, logic.Variable], xmlConstantToScalaConstant: Map[ConstantDeclaration, Constant],
+                    predefinedXmlVariableToScalaVariable: Map[VariableDeclaration, logic.Variable], xmlConstantToScalaConstant: Map[ConstantDeclaration, logic.Constant],
                     xmlPredicateToScalaPredicate: Map[RelationDeclaration, Predicate], xmlSortsToScalaSorts: Map[SortDeclaration, Sort],
                     xmlTaskToScalaTask: Map[TaskSchemaDeclaration, Task]): Plan = {
 
@@ -213,8 +213,8 @@ object XMLParser extends Parser {
 
     val planSteps: Seq[PlanStep] = (JavaConversions.asScalaBuffer(planDef.getTaskNode).zipWithIndex map { case (taskNode, index) =>
       // create variables
-      val arguments: Seq[Variable] = JavaConversions.asScalaBuffer(taskNode.getVariableDeclaration) map { variableDecl =>
-        val variable: Variable = Variable(xmlVariableToScalaVariable.size, variableDecl.getName, xmlSortsToScalaSorts(variableDecl.getSort.asInstanceOf[SortDeclaration]))
+      val arguments: Seq[logic.Variable] = JavaConversions.asScalaBuffer(taskNode.getVariableDeclaration) map { variableDecl =>
+        val variable: logic.Variable = logic.Variable(xmlVariableToScalaVariable.size, variableDecl.getName, xmlSortsToScalaSorts(variableDecl.getSort.asInstanceOf[SortDeclaration]))
         xmlVariableToScalaVariable.put(variableDecl, variable)
         variable
       }
@@ -223,17 +223,17 @@ object XMLParser extends Parser {
     val xmlTaskNodesToScalaPlanSteps: Map[TaskNode, PlanStep] = (JavaConversions.asScalaBuffer(planDef.getTaskNode) zip planSteps).toMap
 
     // generate the causal links contained in the method
-    val causalLinks: Seq[(CausalLink, Seq[VariableConstraint])] = JavaConversions.asScalaBuffer(planDef.getCausalLink) map { xmlLink =>
+    val causalLinks: Seq[(element.CausalLink, Seq[VariableConstraint])] = JavaConversions.asScalaBuffer(planDef.getCausalLink) map { xmlLink =>
       val producer = xmlTaskNodesToScalaPlanSteps(xmlLink.getProducer.asInstanceOf[TaskNode])
       val consumer = xmlTaskNodesToScalaPlanSteps(xmlLink.getConsumer.asInstanceOf[TaskNode])
       val literalAndConstraints = extractLiteralList(getAnyFromFormula(xmlLink), xmlVariableToScalaVariable, xmlConstantToScalaConstant, xmlPredicateToScalaPredicate, xmlSortsToScalaSorts)
       assert(literalAndConstraints._1.size == 1)
       // TODO: might it be necessary to add the equality constraint for the CL here?!
-      (CausalLink(producer, consumer, literalAndConstraints._1.head), literalAndConstraints._2)
+      (element.CausalLink(producer, consumer, literalAndConstraints._1.head), literalAndConstraints._2)
     }
 
 
-    val variablesIntroducedByCausalLinks: Set[Variable] = (causalLinks flatMap {_._2 flatMap {_.getVariables}}).toSet
+    val variablesIntroducedByCausalLinks: Set[logic.Variable] = (causalLinks flatMap {_._2 flatMap {_.getVariables}}).toSet
     val valueRestrictions = JavaConversions.asScalaBuffer(planDef.getValueRestrictionOrSortRestriction()) map {
       case valueRestriction: ValueRestriction =>
         val v1 = xmlVariableToScalaVariable(valueRestriction.getVariableN.asInstanceOf[VariableDeclaration])
@@ -257,10 +257,10 @@ object XMLParser extends Parser {
     val csp: CSP = SymbolicCSP((variablesIntroducedByCausalLinks ++ (xmlVariableToScalaVariable map {_._2})).toSet, (causalLinks flatMap {_._2}) ++ valueRestrictions)
 
     // get the order induced by the causal links and the explicitly mentioned order
-    val orderingConstraints: Seq[OrderingConstraint] = ((causalLinks map { cl => OrderingConstraint(cl._1.producer, cl._1.consumer) }) ++
-      (JavaConversions.asScalaBuffer(planDef.getOrderingConstraint) map { oc => OrderingConstraint(xmlTaskNodesToScalaPlanSteps(oc.getPredecessor.asInstanceOf[TaskNode]),
+    val orderingConstraints: Seq[element.OrderingConstraint] = ((causalLinks map { cl => element.OrderingConstraint(cl._1.producer, cl._1.consumer) }) ++
+      (JavaConversions.asScalaBuffer(planDef.getOrderingConstraint) map { oc => element.OrderingConstraint(xmlTaskNodesToScalaPlanSteps(oc.getPredecessor.asInstanceOf[TaskNode]),
         xmlTaskNodesToScalaPlanSteps(oc.getSuccessor.asInstanceOf[TaskNode]))
-      }) ++ OrderingConstraint.allBetween(init, goal, planSteps filterNot { ps => ps == init || ps == goal }: _*)).toSet.toSeq
+      }) ++ element.OrderingConstraint.allBetween(init, goal, planSteps filterNot { ps => ps == init || ps == goal }: _*)).toSet.toSeq
 
     val taskOrdering: TaskOrdering = SymbolicTaskOrdering(orderingConstraints, planSteps)
 
@@ -282,16 +282,16 @@ object XMLParser extends Parser {
     val problem: Problem = marshaller.unmarshal(source).asInstanceOf[Problem]
 
     // add constants to domain
-    val problemConstants: Seq[(Sort, Constant)] = JavaConversions.asScalaBuffer(problem.getConstantDeclaration) map { constantDeclaration =>
-      (inputDomain.sorts.find {_.name == constantDeclaration.getSort}.get, Constant(constantDeclaration.getName))
+    val problemConstants: Seq[(Sort, logic.Constant)] = JavaConversions.asScalaBuffer(problem.getConstantDeclaration) map { constantDeclaration =>
+      (inputDomain.sorts.find {_.name == constantDeclaration.getSort}.get, logic.Constant(constantDeclaration.getName))
     }
 
     val domain = inputDomain.addConstantsToDomain(problemConstants)
 
 
-    val nameToVariablesForConstants: Map[String, Variable] =
-      (domain.constants.zipWithIndex map { case (c, id) => (c.name, Variable(id, "var_" + c.name, Sort("const_sort", c :: Nil, Nil))) }).toMap
-    val variablesForConstants: Seq[Variable] = nameToVariablesForConstants.values.toSeq
+    val nameToVariablesForConstants: Map[String, logic.Variable] =
+      (domain.constants.zipWithIndex map { case (c, id) => (c.name, logic.Variable(id, "var_" + c.name, Sort("const_sort", c :: Nil, Nil))) }).toMap
+    val variablesForConstants: Seq[logic.Variable] = nameToVariablesForConstants.values.toSeq
     val variableConstraintsForConstants: Seq[VariableConstraint] = domain.constants map { c => Equal(nameToVariablesForConstants(c.name), c) }
 
 
@@ -311,7 +311,7 @@ object XMLParser extends Parser {
     val goal: PlanStep = PlanStep(1, goalTask, variablesForConstants)
 
     // variables declared in the plan steps
-    val variableNameToVariable: mutable.Map[String, Variable] = mutable.Map()
+    val variableNameToVariable: mutable.Map[String, logic.Variable] = mutable.Map()
 
     val initialTN = problem.getInitialTaskNetwork
 
@@ -320,8 +320,8 @@ object XMLParser extends Parser {
     val planSteps: Seq[PlanStep] = if (initialTN == null) Nil
     else JavaConversions.asScalaBuffer(initialTN.getTaskNode).zipWithIndex map { case (node, id) =>
       // build arguments
-      val arguments: Seq[Variable] = JavaConversions.asScalaBuffer(node.getVariableDeclaration) map { vc =>
-        val variable = Variable(nameToVariablesForConstants.size + variableNameToVariable.size, vc.getName, (domain.sorts find {_.name == vc.getSort}).get)
+      val arguments: Seq[logic.Variable] = JavaConversions.asScalaBuffer(node.getVariableDeclaration) map { vc =>
+        val variable = logic.Variable(nameToVariablesForConstants.size + variableNameToVariable.size, vc.getName, (domain.sorts find {_.name == vc.getSort}).get)
         variableNameToVariable.put(vc.getName, variable)
         variable
       }
@@ -331,34 +331,34 @@ object XMLParser extends Parser {
     }
 
     // generate the causal links contained in the method
-    val causalLinks: Seq[CausalLink] = if (initialTN == null) Nil
+    val causalLinks: Seq[element.CausalLink] = if (initialTN == null) Nil
     else JavaConversions.asScalaBuffer(initialTN.getCausalLink) map { xmlLink =>
-      val producer = xmlPlanStepToScalaPlanStep(xmlLink.getProducer.asInstanceOf[xml.problem.TaskNode].getName)
-      val consumer = xmlPlanStepToScalaPlanStep(xmlLink.getConsumer.asInstanceOf[xml.problem.TaskNode].getName)
+      val producer = xmlPlanStepToScalaPlanStep(xmlLink.getProducer.asInstanceOf[de.uniulm.ki.panda3.symbolic.parser.xml.problem.TaskNode].getName)
+      val consumer = xmlPlanStepToScalaPlanStep(xmlLink.getConsumer.asInstanceOf[de.uniulm.ki.panda3.symbolic.parser.xml.problem.TaskNode].getName)
 
       val linkLiterals = JavaConversions.asScalaBuffer(xmlLink.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExists) flatMap {
         extractProblemLiterals(_, domain, nameToVariablesForConstants, variableNameToVariable)
       }
-      CausalLink(producer, consumer, linkLiterals.head)
+      element.CausalLink(producer, consumer, linkLiterals.head)
     }
 
     // generate ordering constraints
     val orderingConstraint = if (initialTN == null) Nil
     else (JavaConversions.asScalaBuffer(initialTN.getOrderingConstraint) map { oc =>
-      OrderingConstraint(
-        xmlPlanStepToScalaPlanStep(oc.getPredecessor.asInstanceOf[xml.problem.TaskNode].getName),
-        xmlPlanStepToScalaPlanStep(oc.getSuccessor.asInstanceOf[xml.problem.TaskNode].getName))
-    }) ++ (causalLinks map { cl => OrderingConstraint(cl.producer, cl.consumer) }) ++ OrderingConstraint.allBetween(init, goal, planSteps: _*)
+      element.OrderingConstraint(
+        xmlPlanStepToScalaPlanStep(oc.getPredecessor.asInstanceOf[de.uniulm.ki.panda3.symbolic.parser.xml.problem.TaskNode].getName),
+        xmlPlanStepToScalaPlanStep(oc.getSuccessor.asInstanceOf[de.uniulm.ki.panda3.symbolic.parser.xml.problem.TaskNode].getName))
+    }) ++ (causalLinks map { cl => element.OrderingConstraint(cl.producer, cl.consumer) }) ++ element.OrderingConstraint.allBetween(init, goal, planSteps: _*)
 
     // generate the CSP
     val additionalVariableConstraints: Seq[VariableConstraint] = if (initialTN == null) Nil
     else JavaConversions.asScalaBuffer(initialTN.getValueRestrictionOrSortRestriction) map {
-      case valueRestriction: xml.problem.ValueRestriction =>
-        val v1 = variableNameToVariable(valueRestriction.getVariable.asInstanceOf[xml.problem.VariableDeclaration].getName)
+      case valueRestriction: de.uniulm.ki.panda3.symbolic.parser.xml.problem.ValueRestriction =>
+        val v1 = variableNameToVariable(valueRestriction.getVariable.asInstanceOf[de.uniulm.ki.panda3.symbolic.parser.xml.problem.VariableDeclaration].getName)
         assert(valueRestriction.getVariableOrConstant.size() == 1)
         val voc = valueRestriction.getVariableOrConstant.get(0) match {
-          case v2: xml.problem.VariableDeclaration => variableNameToVariable(v2.getName)
-          case c: xml.problem.Constant             => nameToVariablesForConstants(c.getName)
+          case v2: de.uniulm.ki.panda3.symbolic.parser.xml.problem.VariableDeclaration => variableNameToVariable(v2.getName)
+          case c: de.uniulm.ki.panda3.symbolic.parser.xml.problem.Constant             => nameToVariablesForConstants(c.getName)
         }
         // build the returned restriction
         valueRestriction.getType match {
@@ -366,8 +366,8 @@ object XMLParser extends Parser {
           case "neq" => NotEqual(v1, voc)
         }
 
-      case sortRestriction: xml.problem.SortRestriction =>
-        val v = variableNameToVariable(sortRestriction.getVariable.asInstanceOf[xml.problem.VariableDeclaration].getName)
+      case sortRestriction: de.uniulm.ki.panda3.symbolic.parser.xml.problem.SortRestriction =>
+        val v = variableNameToVariable(sortRestriction.getVariable.asInstanceOf[de.uniulm.ki.panda3.symbolic.parser.xml.problem.VariableDeclaration].getName)
         val sort = (domain.sorts find {_.name == sortRestriction.getSort}).get
 
         sortRestriction.getType match {
@@ -383,41 +383,41 @@ object XMLParser extends Parser {
     (domain, SymbolicPlan(planStepsWithInitAndGoal, causalLinks, SymbolicTaskOrdering(orderingConstraint, planStepsWithInitAndGoal), csp, init, goal))
   }
 
-  def factToLiteral(fact: xml.problem.Fact, dom: Domain, nameToVariablesForConstants: Map[String, Variable], isPositive: Boolean): Literal = {
+  def factToLiteral(fact: problem.Fact, dom: Domain, nameToVariablesForConstants: Map[String, logic.Variable], isPositive: Boolean): Literal = {
     val predicate = (dom.predicates find {_.name == fact.getRelation}).get
     val variables = JavaConversions.asScalaBuffer(fact.getConstant) map { c => nameToVariablesForConstants(c.getName) }
     Literal(predicate, isPositive, variables)
   }
 
 
-  def extractProblemLiterals(element: Any, dom: Domain, nameToVariablesForConstants: Map[String, Variable], variablesNamesToVariables: Map[String, Variable]): Seq[Literal] = {
+  def extractProblemLiterals(element: Any, dom: Domain, nameToVariablesForConstants: Map[String, logic.Variable], variablesNamesToVariables: Map[String, logic.Variable]): Seq[Literal] = {
 
     def extract(v: Any, positive: Boolean): Seq[Literal] = {
       v match {
-        case v: xml.problem.And    =>
+        case v: problem.And    =>
           if (positive) {
             JavaConversions.asScalaBuffer(v.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExists) flatMap {extract(_, positive)}
           } else {
             assert(assertion = false) // TODO: we can't handle this case yet
             Nil
           }
-        case v: xml.problem.Or     =>
+        case v: problem.Or     =>
           if (!positive) {
             JavaConversions.asScalaBuffer(v.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExists) flatMap {extract(_, positive)}
           } else {
             assert(assertion = false) // TODO: we can't handle this case yet
             Nil
           }
-        case v: xml.problem.Not    => extract(v.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExists, !positive)
-        case v: xml.problem.Atomic =>
+        case v: problem.Not    => extract(v.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExists, !positive)
+        case v: problem.Atomic =>
           val predicate = (dom.predicates find {_.name == v.getRelation}).get
           val arguments = JavaConversions.asScalaBuffer(v.getVariableOrConstant) map {
-            case c: xml.problem.Constant => nameToVariablesForConstants(c.getName)
-            case v: xml.problem.Variable => variablesNamesToVariables(v.getName.asInstanceOf[VariableDeclaration].getName)
+            case c: problem.Constant => nameToVariablesForConstants(c.getName)
+            case v: problem.Variable => variablesNamesToVariables(v.getName.asInstanceOf[VariableDeclaration].getName)
           }
 
           Literal(predicate, positive, arguments) :: Nil
-        case v: xml.problem.Fact   => factToLiteral(v, dom, nameToVariablesForConstants, positive) :: Nil
+        case v: problem.Fact   => factToLiteral(v, dom, nameToVariablesForConstants, positive) :: Nil
         case _                     => Nil // TODO: we just ignore everything else
       }
     }

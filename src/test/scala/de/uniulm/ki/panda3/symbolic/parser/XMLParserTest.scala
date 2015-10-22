@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.symbolic.parser
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.logic.Literal
+import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import org.scalatest.FlatSpec
 

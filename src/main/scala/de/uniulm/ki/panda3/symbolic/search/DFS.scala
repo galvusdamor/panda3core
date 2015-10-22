@@ -4,7 +4,7 @@ import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.symbolic.compiler.ClosedWorldAssumption
 import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.parser.XMLParser
+import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 
