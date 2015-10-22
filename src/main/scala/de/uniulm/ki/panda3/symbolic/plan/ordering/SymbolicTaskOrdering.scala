@@ -14,11 +14,11 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
 
 
   private lazy val arrangemetnIndexToPlanStep: Map[Int, PlanStep] = tasks.zipWithIndex.map(_.swap).toMap
-  private      val numberOfTasks                                  = tasks.length
-  private      val innerArrangement          : Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
+  private val numberOfTasks = tasks.length
+  private val innerArrangement: Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
   private val planStepToArrangementIndex: Map[PlanStep, Int] = tasks.zipWithIndex.toMap
-  private var isTransitiveHullComputed  : Boolean            = false
-  private var computedInconsistent                           = false
+  private var isTransitiveHullComputed: Boolean = false
+  private var computedInconsistent = false
 
   override def isConsistent: Boolean = {
     ensureTransitiveHull()
@@ -69,9 +69,8 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   def replacePlanStep(psOld: PlanStep, psNew: PlanStep): SymbolicTaskOrdering =
     if (!(tasks contains psOld)) this
     else {
-      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints, tasks map { case ps => if (ps == psOld) psNew
-      else ps
-      })
+      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints map {_.update(ExchangePlanStep(psOld, psNew))},
+        tasks map { case ps => if (ps == psOld) psNew else ps })
 
       // if this ordering was already initialised let the new one know what we did so far
       if (isTransitiveHullComputed)

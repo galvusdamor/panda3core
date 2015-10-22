@@ -258,7 +258,7 @@ object UnsolvableCSP extends SymbolicCSP(Set(), Nil) {
 
   override def reducedDomainOf(v: Variable): Seq[Constant] = Nil
 
-  /** If true is returned it is guaranteed, that a solution exists is v1 and v2 are set equal. Likewise, if false is returned such a CSP is unsolvable. */
+  /** If true is returned it is guaranteed, that a solution exists if v1 and v2 are set equal. Likewise, if false is returned such a CSP is unsolvable. */
   override def areCompatible(v1: Variable, v2: Variable): Option[Boolean] = Some(false)
 
   /** computes the solution of this CSP, might be computationally expensive */

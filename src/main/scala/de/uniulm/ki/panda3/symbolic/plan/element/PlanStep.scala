@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.plan.element
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp.CSP
-import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
+import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
 import de.uniulm.ki.panda3.symbolic.domain.{DomainUpdatable, Task}
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
 
@@ -30,7 +30,10 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends Dom
 
   private def substitute(literal: Literal): Literal = schema.substitute(literal, arguments)
 
-  override def update(domainUpdate: DomainUpdate): PlanStep = PlanStep(id, schema.update(domainUpdate), arguments map {_.update(domainUpdate)})
+  override def update(domainUpdate: DomainUpdate): PlanStep = domainUpdate match {
+    case ExchangePlanStep(oldps, newps) => if (oldps == this) newps else this
+    case _                              => PlanStep(id, schema.update(domainUpdate), arguments map {_.update(domainUpdate)})
+  }
 
   /** returns a short information about the object */
   override def shortInfo: String = id + ":" + schema.shortInfo
