@@ -7,6 +7,9 @@ grammar hddl;
 //   - basic version with typing, propositions, conditional effects, hierarchy
 //   - pure PDDL rules are taken from Fox and Long's PDDL 2.1 definition
 //
+// MISSING FEATURES:
+//   - causal links
+//   - decomposition axioms
 
 hddl_file : domain | problem;
 
@@ -18,7 +21,7 @@ domain : '(' 'define' '(' 'domain' domain_symbol ')'
              type_def?
              const_def?
              predicates_def?
-             task_def*
+             comp_task_def*
              method_def*
              action_def* ')';
 
@@ -56,8 +59,10 @@ atomic_formula_skeleton : '(' predicate typed_var_list ')';
 //
 // TODO: define EBNF for TR
 //
-task_def :
-   '(' ':task' task_symbol
+comp_task_def :
+   '(' ':task' task_def;
+
+task_def : task_symbol
       ':parameters' '(' typed_var_list ')'
       (':precondition' gd)?
       (':effect' effect_body)? ')';
@@ -68,7 +73,7 @@ task_symbol : NAME;
 // method definition
 //
 // - not present in PDDL
-// - please be aware that many subtasks and especially prec and effects are optional
+// - please be aware that subtasks and especially prec and effects are optional
 //
 // TODO: define EBNF for TR
 //
@@ -77,7 +82,10 @@ method_def :
       ':parameters' '(' typed_var_list ')'
       ':task' '(' task_symbol var_or_const* ')'
       (':precondition' gd)?
-      (':subtasks' subtask_defs)?
+      tasknetwork_def;
+
+tasknetwork_def :
+      ((':subtasks' | ':tasks' | ':ordered-subtasks'| ':ordered-tasks') subtask_defs)?
       (':ordering' ordering_defs)?
       (':constraints' constraint_defs)? ')';
 
@@ -92,7 +100,7 @@ method_symbol : NAME;
 // TODO: define EBNF for TR
 //
 subtask_defs : subtask_def | '(' 'and' subtask_def+ ')';
-subtask_def : '(' subtask_id '(' task_symbol var_or_const+ ')' ')';
+subtask_def : ('(' task_symbol var_or_const+ ')' | '(' subtask_id '(' task_symbol var_or_const+ ')' ')');
 subtask_id : NAME;
 
 //
@@ -124,12 +132,7 @@ constraint_def : '(' ')' | '(' 'not' '(' '=' var_or_const var_or_const')' ')' | 
 // action definition
 //
 action_def :
-   '(' ':action' action_symbol
-      ':parameters' '(' typed_var_list ')'
-      (':precondition' gd)?
-      (':effect' effect_body)? ')';
-
-action_symbol : NAME;
+   '(' ':action' task_def;
 
 //
 // goal description
@@ -187,6 +190,7 @@ VAR_NAME : '?'NAME;
 
 // basic name definition
 NAME : [a-zA-Z][a-zA-Z0-9\-_]* ;
+COMMENT : (';' ~[\r\n]* ('\r'|'\n') ('\r'|'\n')? ) -> skip ;
 WS : [ \t\r\n]+ -> skip ;
 
 //
@@ -211,6 +215,7 @@ p_init : '(' ':init' literal* ')';
 p_goal : '(' ':goal' gd ')';
 
 p_htn : '(' (':htn'|':htnti')
-      (':tasks' subtask_defs)?
-      (':ordering' ordering_defs)?
-      (':constraints' constraint_defs)? ')';
+        tasknetwork_def;
+//      (':tasks' subtask_defs)?
+//      (':ordering' ordering_defs)?
+//      (':constraints' constraint_defs)? ')';

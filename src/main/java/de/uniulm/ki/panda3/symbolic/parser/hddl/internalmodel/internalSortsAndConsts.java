@@ -1,11 +1,15 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 
+<<<<<<< Updated upstream:src/main/java/de/uniulm/ki/panda3/symbolic/parser/hddl/internalmodel/internalSortsAndConsts.java
 import de.uniulm.ki.panda3.symbolic.logic.Constant;
+=======
+import de.uniulm.ki.panda3.logic.Constant;
+import de.uniulm.ki.panda3.logic.Sort;
+>>>>>>> Stashed changes:src/main/java/de/uniulm/ki/panda3/parser/hddl/internalmodel/internalSortsAndConsts.java
 import scala.collection.immutable.Seq;
 import scala.collection.immutable.VectorBuilder;
 
-import java.util.HashMap;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by dhoeller on 15.04.15.
@@ -20,6 +24,8 @@ public class internalSortsAndConsts {
 
     public void addParent(String child, String parent) {
         parentof.put(child, parent);
+        if (parentof.get(parent) == null)
+            parentof.put(parent, null);
     }
 
     public void addConst(String type, String constName) {
@@ -31,7 +37,39 @@ public class internalSortsAndConsts {
         constList.$plus$eq(new Constant(constName));
     }
 
-    public Set<String> allTypeNames = parentof.keySet();
+    /*
+     * The following method returns all types in suvh an order that the parents of a type are necessarily ordered
+     * after all its types (hope that is possible in any case ;-) )
+     */
+    public List<String> allTypeNamesInRightOrder() {
+        List<String> alltypes = new ArrayList<>();
+        for (String type : parentof.keySet()) {
+            alltypes.add(type);
+        }
+        List<String> res = new LinkedList<>();
+
+        while (!alltypes.isEmpty()) {
+            for (String type : alltypes) {
+                boolean hasNewChild = false;
+                for (String other : parentof.keySet()) {
+                    String parentOfOther = parentof.get(other);
+                    if (parentOfOther == null) {// root of type hierarchy
+                        break;
+                    }
+                    if (parentOfOther.equals(type) && !res.contains(other)) {
+                        hasNewChild = true;
+                        break;
+                    }
+                }
+                if (!hasNewChild) {
+                    res.add(type);
+                    alltypes.remove(type);
+                    break;
+                }
+            }
+        }
+        return res;
+    }
 
     public Seq<Constant> getConsts(String type) {
         VectorBuilder<Constant> res = constsOfType.get(type);
@@ -54,5 +92,16 @@ public class internalSortsAndConsts {
         // todo: check if const-names are unique
         // todo: check if any type has no consts and prune (better later)
         return result;
+    }
+
+    public List<String> getSubSorts(String type) {
+        List<String> res = new LinkedList<>();
+        for (String subtype : parentof.keySet()) {
+            String parent = parentof.get(subtype);
+            if ((parent != null) && (parent.equals(type))) {
+                res.add(subtype);
+            }
+        }
+        return res;
     }
 }

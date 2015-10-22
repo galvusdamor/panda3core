@@ -27,17 +27,18 @@
         (at ?v ?l1)
         (road ?l1 ?l2))
     :subtasks (and
-      (t1 (tname ?v1 ?v2))
-      (t2 (tname ?w1 ?w2))
-      (t3 (tname ?x1 ?x2)))
+      (t1 (tname ?v ?l2))
+      (t2 (tname ?v ?l1))
+      (t3 (tname ?v ?l2)))
     :ordering (and
       (t1 < t2)
       (t1 < t3))
     :constraints (and
-      (not (= ?v1 ?v2)))
+      (not (= ?l1 ?l2))
+      (= ?v ?l2))
   )
 
-  (:action drive
+  (:action drive ; This is a comment!
     :parameters (?v - vehicle ?l1 ?l2 - location)
     :precondition (and
         (at ?v ?l1)
@@ -58,7 +59,6 @@
         (capacity ?v ?s2)
       )
     :effect (and
-        (when (at ?v ?l) (and (in ?p ?v)))
         (not (at ?p ?l))
         (in ?p ?v)
         (capacity ?v ?s1)
