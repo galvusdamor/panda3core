@@ -1,6 +1,8 @@
-package de.uniulm.ki.panda3.parser.hddl;
+package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 
-import de.uniulm.ki.panda3.domain.Domain;
+import de.uniulm.ki.panda3.symbolic.domain.Domain;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlLexer;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 
@@ -23,7 +25,7 @@ public class TestHddlVisitorParser {
             hddlParser pDomain = new hddlParser(new CommonTokenStream(lDomain));
             hddlParser pProblem = new hddlParser(new CommonTokenStream(lProblem));
 
-            Domain d = new hddlPanda3Visitor().visitInstance(pDomain.domain(), pProblem.problem());
+            Domain d = new hddlPanda3Visitor().visitInstance(pDomain.domain(), pProblem.problem())._1();
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -1,7 +1,7 @@
-package de.uniulm.ki.panda3.parser.hddl.internalmodel;
+package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 
-import de.uniulm.ki.panda3.domain.Task;
-import de.uniulm.ki.panda3.logic.Variable;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
+import de.uniulm.ki.panda3.symbolic.logic.Variable;
 import scala.collection.Seq;
 
 /**

@@ -1,20 +1,21 @@
-package de.uniulm.ki.panda3.parser.hddl;
+package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 
-import de.uniulm.ki.panda3.csp.*;
-import de.uniulm.ki.panda3.domain.*;
-import de.uniulm.ki.panda3.logic.*;
-import de.uniulm.ki.panda3.parser.hddl.internalmodel.internalSortsAndConsts;
-import de.uniulm.ki.panda3.parser.hddl.internalmodel.internalTaskNetwork;
-import de.uniulm.ki.panda3.parser.hddl.internalmodel.parserUtil;
-import de.uniulm.ki.panda3.plan.Plan;
-import de.uniulm.ki.panda3.plan.SymbolicPlan;
-import de.uniulm.ki.panda3.plan.element.PlanStep;
+import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
+import de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod;
+import de.uniulm.ki.panda3.symbolic.domain.Domain;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
+import de.uniulm.ki.panda3.symbolic.logic.*;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
+import de.uniulm.ki.panda3.symbolic.plan.Plan;
+import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan;
+import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import scala.Tuple2;
 import scala.collection.Seq;
-import scala.collection.immutable.*;
+import scala.collection.immutable.Vector;
+import scala.collection.immutable.VectorBuilder;
 
 import java.util.LinkedList;
 import java.util.List;

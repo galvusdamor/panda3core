@@ -1,15 +1,13 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 
-<<<<<<< Updated upstream:src/main/java/de/uniulm/ki/panda3/symbolic/parser/hddl/internalmodel/internalSortsAndConsts.java
 import de.uniulm.ki.panda3.symbolic.logic.Constant;
-=======
-import de.uniulm.ki.panda3.logic.Constant;
-import de.uniulm.ki.panda3.logic.Sort;
->>>>>>> Stashed changes:src/main/java/de/uniulm/ki/panda3/parser/hddl/internalmodel/internalSortsAndConsts.java
 import scala.collection.immutable.Seq;
 import scala.collection.immutable.VectorBuilder;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created by dhoeller on 15.04.15.
