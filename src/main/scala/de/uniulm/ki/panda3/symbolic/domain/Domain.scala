@@ -33,6 +33,18 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val producersOf : Map[Predicate, Seq[Task]] = (predicates map {pred => (pred, tasks filter {_.effects exists {_.predicate == pred}})}).toMap
 
 
+  /**
+   * Determines the sort a constant originally belonged to.
+   *
+   * If there are multiple ones none is returned
+   */
+  def getSortOfConstant(c: Constant): Option[Sort] = {
+    val sortsContaining = sorts filter {_.elements contains c}
+    val withoutSubSort = sortsContaining filter { s => sortsContaining forall { subs => !s.subSorts.contains(subs) } }
+    if (withoutSubSort.size == 1) Some(withoutSubSort.head)
+    else None
+  }
+
 
   def addConstantsToDomain(constants: Seq[(Sort, Constant)]): Domain = {
     val sortTranslationMap = sortGraph.topologicalOrdering.get.foldRight[Map[Sort, Sort]](Map[Sort, Sort]())({ case (oldSort, translationMap) =>
