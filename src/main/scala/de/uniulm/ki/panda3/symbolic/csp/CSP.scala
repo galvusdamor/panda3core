@@ -4,6 +4,8 @@ import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, Value, Variable}
 
+import scala.collection.immutable.HashMap
+
 /**
  * Handels Constraint-Satisfaction-Problems. The implementation decides which types of constraints can be handled.
  *
@@ -56,8 +58,8 @@ trait CSP extends DomainUpdatable {
    */
   def areCompatible(v1: Value, v2: Value): Option[Boolean] = (v1, v2) match {
     case (var1: Variable, var2: Variable) => areCompatible(var1, var2)
-    case (c: Constant, v: Variable) => if (getRepresentative(v) == c) Some(true) else if (reducedDomainOf(v) contains c) None else Some(false)
-    case (v: Variable, c: Constant) => if (getRepresentative(v) == c) Some(true) else if (reducedDomainOf(v) contains c) None else Some(false)
+    case (c: Constant, v: Variable)   => if (getRepresentative(v) == c) Some(true) else if (reducedDomainOf(v) contains c) None else Some(false)
+    case (v: Variable, c: Constant)   => if (getRepresentative(v) == c) Some(true) else if (reducedDomainOf(v) contains c) None else Some(false)
     case (c1: Constant, c2: Constant) => Some(c1 == c2)
   }
 
@@ -78,4 +80,27 @@ trait CSP extends DomainUpdatable {
   def equal(v1: Value, v2: Value): Boolean = getRepresentative(v1) == getRepresentative(v2)
 
   override def update(domainUpdate: DomainUpdate): CSP
+}
+
+object NoConstraintsCSP extends CSP {
+
+  override def reducedDomainOf(v: Variable): Seq[Constant] = v.sort.elements
+
+  override def areCompatible(v1: Variable, v2: Variable): Option[Boolean] = None
+
+  override def solution: Option[Map[Variable, Constant]] = Some(new HashMap[Variable, Constant]() {override def default(v: Variable) = v.sort.elements.head})
+
+  override def addConstraint(constraint: VariableConstraint): SymbolicCSP = throw new UnsupportedOperationException()
+
+  override def addVariable(variable: Variable): SymbolicCSP = throw new UnsupportedOperationException()
+
+  override def isSolvable: Option[Boolean] = Some(true)
+
+  override def getRepresentative(v: Variable): Value = v
+
+  override def variables: Set[Variable] = throw new UnsupportedOperationException()
+
+  override def update(domainUpdate: DomainUpdate): CSP = throw new UnsupportedOperationException()
+
+  override def constraints: Seq[VariableConstraint] = throw new UnsupportedOperationException()
 }
