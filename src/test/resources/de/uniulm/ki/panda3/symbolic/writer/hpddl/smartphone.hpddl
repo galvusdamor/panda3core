@@ -1,0 +1,2153 @@
+(define (domain smartphone)
+	(:requirements :strips)
+	(:types Company Call Date Handout SMS Person Audio Video Route Alarm Task EMailAddress Milestone NumberMobile Picture EMailAccount ProjectPlan Appointment Location EMail NumberOffice Contact Protocol Agenda TransferableByPhoneRegular Contactable Selectable TransferableByEmailContactable TransferableByEmailRegular Creatable TransferableByPhoneContactable TransferableBySMSRegular TransferableBySMSContactable RegularInformation TransferableByCall ContactableInformation TransferableBySMS Message TransferableByEmail Information)
+	(:predicates
+		(inMode_Home)
+		(inMode_Clock)
+		(inMode_Clock.Alarm)
+		(active_Alarm ?arg0 - Alarm)
+		(isSet_Appointment.Time ?arg0 - Appointment ?arg1 - Date)
+		(isSet_Appointment.Name ?arg0 - Appointment)
+		(isSet_Appointment.Location ?arg0 - Appointment ?arg1 - Location)
+		(isSet_Appointment.Reminder ?arg0 - Appointment)
+		(inUse ?arg0 - Creatable)
+		(isSet_Alarm.Days ?arg0 - Alarm ?arg1 - Date)
+		(isSet_Alarm.Time ?arg0 - Alarm ?arg1 - Date)
+		(isSet_Alarm.Description ?arg0 - Alarm)
+		(inMode_Calendar)
+		(inMode_Menu)
+		(inMode_Calendar.ConfigureAppointment)
+		(inMode_Tasks)
+		(inMode_Programs)
+		(inMode_Tasks.ConfigureTask)
+		(isSet_Task.Name ?arg0 - Task)
+		(isSet_Task.Time ?arg0 - Task ?arg1 - Date)
+		(isSet_Task.Reminder ?arg0 - Task)
+		(inMode_Contacts)
+		(inMode_Telephone)
+		(inMode_People)
+		(inMode_Contacts.ConfigureContact)
+		(isSet_Contact.Name ?arg0 - Contact)
+		(isSet_Contact.Picture ?arg0 - Contact)
+		(associated_Picture ?arg0 - Contact ?arg1 - Picture)
+		(hasInformation_Regular ?arg0 - Contactable ?arg1 - RegularInformation)
+		(haveInformation_Regular ?arg0 - RegularInformation)
+		(haveInformation_Contactable ?arg0 - Contactable ?arg1 - ContactableInformation)
+		(associated_Contact ?arg0 - Contact ?arg1 - Contactable)
+		(isSet_Contact.EmailAddress ?arg0 - Contact)
+		(isSet_Contact.NumberMobile ?arg0 - Contact)
+		(isSet_Contact.NumberOffice ?arg0 - Contact)
+		(inMode_PictureSelection)
+		(inMode_People.ReadyToAddFavourite)
+		(inMode_People.AddFavourite)
+		(inMode_People.AddFavourite.SelectContact)
+		(selected_Favourite ?arg0 - Contact)
+		(entered_EMail ?arg0 - Contactable)
+		(selected ?arg0 - Selectable)
+		(selected_AddAsFavourite ?arg0 - Contact)
+		(inMode_People.AddFavourite.SelectFavouriteNumber)
+		(selected_FavouriteNumber)
+		(isFavourite ?arg0 - Contact)
+		(inMode_People.AddFavourite.SelectPicture)
+		(entered_NumberMobile ?arg0 - Contactable)
+		(entered_NumberOffice ?arg0 - Contactable)
+		(inMode_Contacts.Details)
+		(inMode_People.FavouriteSelected)
+		(inMode_Messages)
+		(inMode_NewMessage)
+		(inMode_EMail)
+		(inMode_EMail.NewEMail)
+		(inMode_EMail.Inbox)
+		(inMode_AccountSelection)
+		(hasInformation_Contactable ?arg0 - Contactable ?arg1 - Contactable ?arg2 - ContactableInformation)
+		(created ?arg0 - Creatable)
+		(attached ?arg0 - Message ?arg1 - Information)
+		(haveSent ?arg0 - Message)
+		(hasReceived ?arg0 - Contactable ?arg1 - Message)
+		(entered_AnyNumber)
+	)
+	(:tasks
+		(create_NewTask)
+		(configure_Task)
+		(configure_Alarm)
+		(set_Alarm)
+		(create_NewContact)
+		(set_Contact.Picture)
+		(enterMode_Alarm)
+		(enterMode_Telephone)
+		(enterMode_Contacts)
+		(create_Contact)
+		(create_Task)
+		(enterMode_Tasks)
+		(create_Appointment)
+		(enterMode_Messages)
+		(enterMode_Calendar)
+		(create_NewAppointment)
+		(configure_Appointment)
+		(select_EMail.EMailAccount)
+		(press_Home_From_Telephone)
+		(press_Home_From_SMS)
+		(press_Home)
+		(enterMode_Home)
+		(configure_Contact)
+		(enterMode_People)
+		(set_Contact.Connection)
+		(press_NewMessage.Send)
+		(press_Telephone.Call)
+		(enter_Number_ForSMS)
+		(send_EMail)
+		(enterMode_EMail)
+		(enter_Number_ForCall)
+		(transferMessage)
+		(contact)
+		(call)
+		(send_SMS)
+		(press_People.Smallplus)
+		(select_People.AddFavourite.Contact)
+		(enterMode_People.AddFavourite)
+		(add_Favourite)
+		(add_NewFavourite)
+		(select_People.Favourite)
+		(select_People.FavouriteSelected.Number)
+		(select_Contacts.Details.Number)
+		(extractsInformation)
+		(attachInformationToCall)
+		(attachInformationToSMS)
+		(attachInformationToEMail)
+		(attachMultipleInformation)
+		(extractsMultipleInformation)
+		(attachInformation)
+	)
+
+	(:method method0
+		:task (enterMode_Alarm)
+		:tasks (task0 (enterMode_Home))
+		:tasks (task1 (press_Home.Clock))
+		:tasks (task2 (press_Clock.Alarm))
+		:ordering ((task0 task1) (task1 task2))
+	)
+
+	(:method method1
+		:parameters (?configure_Alarm_variable1 - Date ?do_configureAlarm_variable6 - Alarm ?do_configure_Alarm_variable1 - Alarm ?do_configure_Alarm_variable2 - Date ?do_configure_Alarm_variable3 - Alarm ?do_configure_Alarm_variable4 - Date ?do_configureAlarm_variable10 - Alarm)
+		:task (configure_Alarm ?configure_Alarm_variable1)
+		:tasks (task0 (activate_Alarm ?do_configureAlarm_variable6))
+		:tasks (task1 (set_Alarm.Days ?do_configure_Alarm_variable1 ?do_configure_Alarm_variable2))
+		:tasks (task2 (set_Alarm.Time ?do_configure_Alarm_variable3 ?do_configure_Alarm_variable4))
+		:tasks (task3 (set_Alarm.Description ?do_configureAlarm_variable10))
+	)
+
+	(:method method2
+		:parameters (?set_Alarm_variable1 - Date ?do_set_Alarm_variable6 - Date)
+		:task (set_Alarm ?set_Alarm_variable1)
+		:tasks (task0 (enterMode_Alarm))
+		:tasks (task1 (configure_Alarm ?do_set_Alarm_variable6))
+		:ordering ((task0 task1))
+	)
+
+	(:method method3
+		:task (enterMode_Calendar)
+		:tasks (task0 (enterMode_Home))
+		:tasks (task1 (press_Home.Calendar))
+		:ordering ((task0 task1))
+	)
+
+	(:method method4
+		:parameters (?do_configure_Appointment_variable6 - Location ?do_configure_Appointment_variable7 - Appointment ?do_configure_Appointment_variable8 - Date)
+		:task (configure_Appointment ?do_configure_Appointment_variable7 ?do_configure_Appointment_variable8 ?do_configure_Appointment_variable6)
+		:tasks (task0 (set_Appointment.Location ?do_configure_Appointment_variable7 ?do_configure_Appointment_variable6))
+		:tasks (task1 (set_Appointment.Name ?do_configure_Appointment_variable7))
+		:tasks (task2 (set_Appointment.Reminder ?do_configure_Appointment_variable7))
+		:tasks (task3 (set_Appointment.Time ?do_configure_Appointment_variable7 ?do_configure_Appointment_variable8))
+	)
+
+	(:method method5
+		:parameters (?do_create_NewAppointment_variable9 - Location ?do_create_NewAppointment_variable10 - Appointment ?do_create_NewAppointment_variable11 - Date)
+		:task (create_NewAppointment ?do_create_NewAppointment_variable10 ?do_create_NewAppointment_variable11 ?do_create_NewAppointment_variable9)
+		:tasks (task0 (press_Calendar.Menu))
+		:tasks (task1 (press_Calendar.Menu.NewAppointment ?do_create_NewAppointment_variable10))
+		:tasks (task2 (configure_Appointment ?do_create_NewAppointment_variable10 ?do_create_NewAppointment_variable11 ?do_create_NewAppointment_variable9))
+		:tasks (task3 (press_Calendar.NewAppointment.OK ?do_create_NewAppointment_variable10 ?do_create_NewAppointment_variable11))
+		:ordering ((task0 task1) (task1 task2) (task2 task3))
+	)
+
+	(:method method6
+		:parameters (?do_create_Appointment_variable5 - Appointment ?do_create_Appointment_variable6 - Date ?do_create_Appointment_variable7 - Location)
+		:task (create_Appointment ?do_create_Appointment_variable5 ?do_create_Appointment_variable7 ?do_create_Appointment_variable6)
+		:tasks (task0 (enterMode_Calendar))
+		:tasks (task1 (create_NewAppointment ?do_create_Appointment_variable5 ?do_create_Appointment_variable6 ?do_create_Appointment_variable7))
+		:ordering ((task0 task1))
+	)
+
+	(:method method7
+		:task (enterMode_Tasks)
+		:tasks (task0 (enterMode_Home))
+		:tasks (task1 (press_Home.Programs))
+		:tasks (task2 (press_Programs.Tasks))
+		:ordering ((task0 task1) (task1 task2))
+	)
+
+	(:method method8
+		:parameters (?do_configure_Task_variable3 - Date ?do_configure_Task_variable6 - Task)
+		:task (configure_Task ?do_configure_Task_variable6)
+		:tasks (task0 (set_Task.Name ?do_configure_Task_variable6))
+		:tasks (task1 (set_Task.Time ?do_configure_Task_variable6 ?do_configure_Task_variable3))
+		:tasks (task2 (set_Task.Reminder ?do_configure_Task_variable6))
+	)
+
+	(:method method9
+		:parameters (?do_create_NewTask_Normal_variable3 - Task)
+		:task (create_NewTask ?do_create_NewTask_Normal_variable3)
+		:tasks (task0 (press_Tasks.Menu))
+		:tasks (task1 (press_Tasks.Menu.NewTask ?do_create_NewTask_Normal_variable3))
+		:tasks (task2 (configure_Task ?do_create_NewTask_Normal_variable3))
+		:tasks (task3 (press_Tasks.NewTask.OK ?do_create_NewTask_Normal_variable3))
+		:ordering ((task0 task1) (task1 task2) (task2 task3))
+	)
+
+	(:method method10
+		:parameters (?do_create_NewTask_Light_variable3 - Task)
+		:task (create_NewTask ?do_create_NewTask_Light_variable3)
+		:tasks (task0 (set_Task.Name_Light ?do_create_NewTask_Light_variable3))
+	)
+
+	(:method method11
+		:parameters (?do_create_Task_variable2 - Task)
+		:task (create_Task ?do_create_Task_variable2)
+		:tasks (task0 (enterMode_Tasks))
+		:tasks (task1 (create_NewTask ?do_create_Task_variable2))
+		:ordering ((task0 task1))
+	)
+
+	(:method method12
+		:task (enterMode_Telephone)
+		:tasks (task0 (press_Home.Telephone))
+		:tasks (task1 (enterMode_Home))
+		:ordering ((task1 task0))
+	)
+
+	(:method method13
+		:task (enterMode_Contacts)
+		:tasks (task0 (enterMode_Telephone))
+		:tasks (task1 (press_Telephone.Contacts))
+		:ordering ((task0 task1))
+	)
+
+	(:method method14
+		:task (enterMode_Contacts)
+		:tasks (task0 (enterMode_People))
+		:tasks (task1 (press_People.More))
+		:ordering ((task0 task1))
+	)
+
+	(:method method15
+		:task (enterMode_Home)
+		:tasks (task0 (press_Home))
+	)
+
+	(:method method16
+		:task (enterMode_People)
+		:tasks (task0 (enterMode_Home))
+		:tasks (task1 (press_Home.People))
+		:ordering ((task0 task1))
+	)
+
+	(:method method17
+		:parameters (?do_configure_Contact_variable10 - Contact ?do_configure_Contact_variable12 - Contactable)
+		:task (configure_Contact ?do_configure_Contact_variable10 ?do_configure_Contact_variable12)
+		:tasks (task0 (set_Contact.Name ?do_configure_Contact_variable10))
+		:tasks (task1 (set_Contact.Connection ?do_configure_Contact_variable10 ?do_configure_Contact_variable12))
+	)
+
+	(:method method18
+		:parameters (?do_configure_Contact_WithPicture_variable11 - Contactable ?do_configure_Contact_WithPicture_variable8 - Picture ?do_configure_Contact_WithPicture_variable12 - Contact)
+		:task (configure_Contact ?do_configure_Contact_WithPicture_variable12 ?do_configure_Contact_WithPicture_variable11)
+		:tasks (task0 (set_Contact.Connection ?do_configure_Contact_WithPicture_variable12 ?do_configure_Contact_WithPicture_variable11))
+		:tasks (task1 (set_Contact.Picture ?do_configure_Contact_WithPicture_variable12 ?do_configure_Contact_WithPicture_variable8))
+		:tasks (task2 (set_Contact.Name ?do_configure_Contact_WithPicture_variable12))
+	)
+
+	(:method method19
+		:parameters (?do_set_Contact.Connection_Email_variable1 - Contact ?do_set_Contact.Connection_Email_variable2 - Contactable ?do_set_Contact.Connection_Email_variable7 - EMailAddress)
+		:task (set_Contact.Connection ?do_set_Contact.Connection_Email_variable1 ?do_set_Contact.Connection_Email_variable2)
+		:tasks (task0 (set_Contact.Email ?do_set_Contact.Connection_Email_variable1 ?do_set_Contact.Connection_Email_variable2 ?do_set_Contact.Connection_Email_variable7))
+	)
+
+	(:method method20
+		:parameters (?do_set_Contact.Connection_Office_variable1 - Contact ?do_set_Contact.Connection_Office_variable2 - Contactable ?do_set_Contact.Connection_Office_variable3 - NumberOffice)
+		:task (set_Contact.Connection ?do_set_Contact.Connection_Office_variable1 ?do_set_Contact.Connection_Office_variable2)
+		:tasks (task0 (set_Contact.NumberOffice ?do_set_Contact.Connection_Office_variable1 ?do_set_Contact.Connection_Office_variable2 ?do_set_Contact.Connection_Office_variable3))
+	)
+
+	(:method method21
+		:parameters (?do_set_Contact.Connection_Mobile_variable1 - Contact ?do_set_Contact.Connection_Mobile_variable2 - Contactable ?do_set_Contact.Connection_Mobile_variable3 - NumberMobile)
+		:task (set_Contact.Connection ?do_set_Contact.Connection_Mobile_variable1 ?do_set_Contact.Connection_Mobile_variable2)
+		:tasks (task0 (set_Contact.NumberMobile ?do_set_Contact.Connection_Mobile_variable1 ?do_set_Contact.Connection_Mobile_variable2 ?do_set_Contact.Connection_Mobile_variable3))
+	)
+
+	(:method method22
+		:parameters (?do_set_Contact.Picture_ViaContacts_variable1 - Contact ?do_set_Contact.Picture_ViaContacts_variable7 - Picture)
+		:task (set_Contact.Picture ?do_set_Contact.Picture_ViaContacts_variable1 ?do_set_Contact.Picture_ViaContacts_variable7)
+		:tasks (task0 (press_Contacts.NewContact.SelectPicture ?do_set_Contact.Picture_ViaContacts_variable1))
+		:tasks (task1 (select_PictureSelection.PictureForNewContact ?do_set_Contact.Picture_ViaContacts_variable7 ?do_set_Contact.Picture_ViaContacts_variable1))
+		:ordering ((task0 task1))
+	)
+
+	(:method method23
+		:parameters (?do_create_NewContact_variable17 - Contactable ?do_create_NewContact_variable1 - Contact)
+		:task (create_NewContact ?do_create_NewContact_variable1 ?do_create_NewContact_variable17)
+		:tasks (task0 (press_Contacts.New ?do_create_NewContact_variable1 ?do_create_NewContact_variable17))
+		:tasks (task1 (configure_Contact ?do_create_NewContact_variable1 ?do_create_NewContact_variable17))
+		:tasks (task2 (press_Contacts.NewContact.OK ?do_create_NewContact_variable1))
+		:ordering ((task0 task1) (task1 task2))
+	)
+
+	(:method method24
+		:parameters (?do_create_Contact_variable4 - Contact ?do_create_Contact_variable5 - Contactable)
+		:task (create_Contact ?do_create_Contact_variable4 ?do_create_Contact_variable5)
+		:tasks (task0 (enterMode_Contacts))
+		:tasks (task1 (create_NewContact ?do_create_Contact_variable4 ?do_create_Contact_variable5))
+		:ordering ((task0 task1))
+	)
+
+	(:method method25
+		:task (enterMode_People.AddFavourite)
+		:tasks (task0 (press_People.Smallplus))
+		:tasks (task1 (press_People.LargePlus))
+		:ordering ((task0 task1))
+	)
+
+	(:method method26
+		:parameters (?do_add_NewFavourite_WithoutPicture_variable7 - Contact ?do_add_NewFavourite_WithoutPicture_variable8 - Picture)
+		:task (add_NewFavourite ?do_add_NewFavourite_WithoutPicture_variable7)
+		:tasks (task0 (enterMode_People.AddFavourite))
+		:tasks (task1 (select_People.AddFavourite.Contact ?do_add_NewFavourite_WithoutPicture_variable7))
+		:tasks (task2 (select_People.AddFavourite.FavouriteNumber_WithoutPicture ?do_add_NewFavourite_WithoutPicture_variable7))
+		:tasks (task3 (select_People.AddFavourite.Picture ?do_add_NewFavourite_WithoutPicture_variable7 ?do_add_NewFavourite_WithoutPicture_variable8))
+		:ordering ((task0 task1) (task1 task2) (task2 task3))
+	)
+
+	(:method method27
+		:task (enterMode_People.AddFavourite)
+		:tasks (task0 (press_People.Menu))
+		:tasks (task1 (press_People.Menu.AddFavourite))
+		:ordering ((task0 task1))
+	)
+
+	(:method method28
+		:parameters (?do_add_Favourite_variable2 - Contact)
+		:task (add_Favourite ?do_add_Favourite_variable2)
+		:tasks (task0 (enterMode_People))
+		:tasks (task1 (add_NewFavourite ?do_add_Favourite_variable2))
+		:ordering ((task0 task1))
+	)
+
+	(:method method29
+		:task (press_Home)
+		:tasks (task0 (press_Home_Default))
+	)
+
+	(:method method30
+		:parameters (?do_press_Home_From_Add_Favourite_variable2 - Contact)
+		:task (press_Home)
+		:tasks (task0 (press_Home_From_Add_Favourite ?do_press_Home_From_Add_Favourite_variable2))
+	)
+
+	(:method method31
+		:parameters (?do_select_People.AddFavourite.SelectContact_WithEmail_variable2 - Contact)
+		:task (select_People.AddFavourite.Contact ?do_select_People.AddFavourite.SelectContact_WithEmail_variable2)
+		:tasks (task0 (select_People.AddFavourite.Contact_withEmail ?do_select_People.AddFavourite.SelectContact_WithEmail_variable2))
+	)
+
+	(:method method32
+		:parameters (?do_select_People.AddFavourite.SelectContact_WithMobile_variable2 - Contact)
+		:task (select_People.AddFavourite.Contact ?do_select_People.AddFavourite.SelectContact_WithMobile_variable2)
+		:tasks (task0 (select_People.AddFavourite.Contact_withMobile ?do_select_People.AddFavourite.SelectContact_WithMobile_variable2))
+	)
+
+	(:method method33
+		:parameters (?do_select_People.AddFavourite.SelectContact_WithOffice_variable2 - Contact)
+		:task (select_People.AddFavourite.Contact ?do_select_People.AddFavourite.SelectContact_WithOffice_variable2)
+		:tasks (task0 (select_People.AddFavourite.Contact_withOffice ?do_select_People.AddFavourite.SelectContact_WithOffice_variable2))
+	)
+
+	(:method method34
+		:parameters (?do_add_NewFavourite_WithPicture_variable5 - Contact ?do_add_NewFavourite_WithPicture_variable6 - Picture)
+		:task (add_NewFavourite ?do_add_NewFavourite_WithPicture_variable5)
+		:tasks (task0 (enterMode_People.AddFavourite))
+		:tasks (task1 (select_People.AddFavourite.Contact ?do_add_NewFavourite_WithPicture_variable5))
+		:tasks (task2 (select_People.AddFavourite.FavouriteNumber_WithPicture ?do_add_NewFavourite_WithPicture_variable5 ?do_add_NewFavourite_WithPicture_variable6))
+		:ordering ((task0 task1) (task1 task2))
+	)
+
+	(:method method35
+		:parameters (?do_enter_Number_ForCall_Mobile_variable3 - Contactable ?do_enter_Number_ForCall_Mobile_variable4 - NumberMobile)
+		:task (enter_Number_ForCall)
+		:tasks (task0 (enter_Number_ForCall_Mobile ?do_enter_Number_ForCall_Mobile_variable3 ?do_enter_Number_ForCall_Mobile_variable4))
+	)
+
+	(:method method36
+		:parameters (?do_enter_Number_ForCall_Office_variable1 - Contactable ?do_enter_Number_ForCall_Office_variable2 - NumberOffice)
+		:task (enter_Number_ForCall)
+		:tasks (task0 (enter_Number_ForCall_Office ?do_enter_Number_ForCall_Office_variable1 ?do_enter_Number_ForCall_Office_variable2))
+	)
+
+	(:method method37
+		:parameters (?do_Press_Call_Mobile_variable4 - Contactable ?do_Press_Call_Mobile_variable5 - Call)
+		:task (press_Telephone.Call ?do_Press_Call_Mobile_variable4 ?do_Press_Call_Mobile_variable5)
+		:tasks (task0 (press_Telephone.Call_Mobile ?do_Press_Call_Mobile_variable4 ?do_Press_Call_Mobile_variable5))
+	)
+
+	(:method method38
+		:parameters (?do_Press_Call_Office_variable10 - Contactable ?do_Press_Call_Office_variable11 - Call)
+		:task (press_Telephone.Call ?do_Press_Call_Office_variable10 ?do_Press_Call_Office_variable11)
+		:tasks (task0 (press_Telephone.Call_Office ?do_Press_Call_Office_variable10 ?do_Press_Call_Office_variable11))
+	)
+
+	(:method method39
+		:parameters (?do_Call_EnterNumber_variable1 - Contactable ?do_Call_EnterNumber_variable3 - Call)
+		:task (call ?do_Call_EnterNumber_variable1 ?do_Call_EnterNumber_variable3)
+		:tasks (task0 (enterMode_Telephone))
+		:tasks (task1 (enter_Number_ForCall))
+		:tasks (task2 (press_Telephone.Call ?do_Call_EnterNumber_variable1 ?do_Call_EnterNumber_variable3))
+		:ordering ((task0 task1) (task1 task2))
+	)
+
+	(:method method40
+		:parameters (?do_select_Contacts.Details.Mobile_variable5 - Contact ?do_select_Contacts.Details.Mobile_variable6 - Call ?do_select_Contacts.Details.Mobile_variable7 - Contactable)
+		:task (select_Contacts.Details.Number ?do_select_Contacts.Details.Mobile_variable5 ?do_select_Contacts.Details.Mobile_variable6 ?do_select_Contacts.Details.Mobile_variable7)
+		:tasks (task0 (select_Contacts.Details.Mobile ?do_select_Contacts.Details.Mobile_variable5 ?do_select_Contacts.Details.Mobile_variable6 ?do_select_Contacts.Details.Mobile_variable7))
+	)
+
+	(:method method41
+		:parameters (?do_select_Contacts.Details.Office_variable5 - Contact ?do_select_Contacts.Details.Office_variable6 - Call ?do_select_Contacts.Details.Office_variable7 - Contactable)
+		:task (select_Contacts.Details.Number ?do_select_Contacts.Details.Office_variable5 ?do_select_Contacts.Details.Office_variable6 ?do_select_Contacts.Details.Office_variable7)
+		:tasks (task0 (select_Contacts.Details.Office ?do_select_Contacts.Details.Office_variable5 ?do_select_Contacts.Details.Office_variable6 ?do_select_Contacts.Details.Office_variable7))
+	)
+
+	(:method method42
+		:parameters (?do_Call_SelectContact_variable5 - Contact ?do_Call_SelectContact_variable7 - Call ?do_Call_SelectContact_variable8 - Contactable)
+		:task (call ?do_Call_SelectContact_variable8 ?do_Call_SelectContact_variable7)
+		:tasks (task0 (enterMode_Contacts))
+		:tasks (task1 (select_Contacts.ContactForContactable ?do_Call_SelectContact_variable5 ?do_Call_SelectContact_variable8))
+		:tasks (task2 (select_Contacts.Details.Number ?do_Call_SelectContact_variable5 ?do_Call_SelectContact_variable7 ?do_Call_SelectContact_variable8))
+		:ordering ((task0 task1) (task1 task2))
+	)
+
+	(:method method43
+		:parameters (?do_Call_Favourite_variable3 - Contact ?do_Call_Favourite_variable4 - Contactable ?do_Call_Favourite_variable9 - Call)
+		:task (call ?do_Call_Favourite_variable4 ?do_Call_Favourite_variable9)
+		:tasks (task0 (enterMode_People))
+		:tasks (task1 (select_People.Favourite ?do_Call_Favourite_variable3 ?do_Call_Favourite_variable4))
+		:tasks (task2 (select_People.FavouriteSelected.Number ?do_Call_Favourite_variable3 ?do_Call_Favourite_variable9 ?do_Call_Favourite_variable4))
+		:ordering ((task0 task1) (task1 task2))
+	)
+
+	(:method method44
+		:parameters (?do_select_People.FavouriteSelected.Mobile_variable5 - Contact ?do_select_People.FavouriteSelected.Mobile_variable6 - Call ?do_select_People.FavouriteSelected.Mobile_variable7 - Contactable)
+		:task (select_People.FavouriteSelected.Number ?do_select_People.FavouriteSelected.Mobile_variable5 ?do_select_People.FavouriteSelected.Mobile_variable6 ?do_select_People.FavouriteSelected.Mobile_variable7)
+		:tasks (task0 (select_People.FavouriteSelected.Mobile ?do_select_People.FavouriteSelected.Mobile_variable5 ?do_select_People.FavouriteSelected.Mobile_variable6 ?do_select_People.FavouriteSelected.Mobile_variable7))
+	)
+
+	(:method method45
+		:parameters (?do_select_People.FavouriteSelected.Office_variable5 - Contact ?do_select_People.FavouriteSelected.Office_variable6 - Call ?do_select_People.FavouriteSelected.Office_variable7 - Contactable)
+		:task (select_People.FavouriteSelected.Number ?do_select_People.FavouriteSelected.Office_variable5 ?do_select_People.FavouriteSelected.Office_variable6 ?do_select_People.FavouriteSelected.Office_variable7)
+		:tasks (task0 (select_People.FavouriteSelected.Office ?do_select_People.FavouriteSelected.Office_variable5 ?do_select_People.FavouriteSelected.Office_variable6 ?do_select_People.FavouriteSelected.Office_variable7))
+	)
+
+	(:method method46
+		:parameters (?do_press_People.Smallplus_FavouriteSelected_variable2 - Contact)
+		:task (press_People.Smallplus)
+		:tasks (task0 (press_People.Smallplus_FavouriteSelected ?do_press_People.Smallplus_FavouriteSelected_variable2))
+	)
+
+	(:method method47
+		:task (press_People.Smallplus)
+		:tasks (task0 (press_People.Smallplus_AlreadyPressed))
+	)
+
+	(:method method48
+		:task (enterMode_Messages)
+		:tasks (task0 (press_Home))
+		:tasks (task1 (press_Home.Messages))
+		:ordering ((task0 task1))
+	)
+
+	(:method method49
+		:parameters (?do_enter_Number_ForSMS_Mobile_variable8 - Contactable ?do_enter_Number_ForSMS_Mobile_variable9 - NumberMobile)
+		:task (enter_Number_ForSMS)
+		:tasks (task0 (enter_Number_ForSMS_Mobile ?do_enter_Number_ForSMS_Mobile_variable8 ?do_enter_Number_ForSMS_Mobile_variable9))
+	)
+
+	(:method method50
+		:parameters (?do_enter_Number_ForSMS_Office_variable1 - Contactable ?do_enter_Number_ForSMS_Office_variable3 - NumberOffice)
+		:task (enter_Number_ForSMS)
+		:tasks (task0 (enter_Number_ForSMS_Office ?do_enter_Number_ForSMS_Office_variable1 ?do_enter_Number_ForSMS_Office_variable3))
+	)
+
+	(:method method51
+		:parameters (?do_press_NewMessage.Send_Mobile_variable3 - Contactable ?do_press_NewMessage.Send_Mobile_variable4 - SMS)
+		:task (press_NewMessage.Send ?do_press_NewMessage.Send_Mobile_variable3 ?do_press_NewMessage.Send_Mobile_variable4)
+		:tasks (task0 (press_NewMessage.Send_Mobile ?do_press_NewMessage.Send_Mobile_variable3 ?do_press_NewMessage.Send_Mobile_variable4))
+	)
+
+	(:method method52
+		:parameters (?do_press_NewMessage.Send_Office_variable5 - Contactable ?do_press_NewMessage.Send_Office_variable6 - SMS)
+		:task (press_NewMessage.Send ?do_press_NewMessage.Send_Office_variable5 ?do_press_NewMessage.Send_Office_variable6)
+		:tasks (task0 (press_NewMessage.Send_Office ?do_press_NewMessage.Send_Office_variable5 ?do_press_NewMessage.Send_Office_variable6))
+	)
+
+	(:method method53
+		:parameters (?do_send_SMS_ViaMessages_variable3 - Contactable ?do_send_SMS_ViaMessages_variable4 - SMS)
+		:task (send_SMS ?do_send_SMS_ViaMessages_variable3 ?do_send_SMS_ViaMessages_variable4)
+		:tasks (task0 (enterMode_Messages))
+		:tasks (task1 (press_Messages.NewMessage))
+		:tasks (task2 (enter_Number_ForSMS))
+		:tasks (task3 (press_NewMessage.Send ?do_send_SMS_ViaMessages_variable3 ?do_send_SMS_ViaMessages_variable4))
+		:ordering ((task0 task1) (task1 task2) (task2 task3))
+	)
+
+	(:method method54
+		:parameters (?do_send_SMS_ViaFavourites_variable3 - Contact ?do_send_SMS_ViaFavourites_variable4 - Contactable ?do_send_SMS_ViaFavourites_variable9 - SMS)
+		:task (send_SMS ?do_send_SMS_ViaFavourites_variable4 ?do_send_SMS_ViaFavourites_variable9)
+		:tasks (task0 (enterMode_People))
+		:tasks (task1 (select_People.Favourite ?do_send_SMS_ViaFavourites_variable3 ?do_send_SMS_ViaFavourites_variable4))
+		:tasks (task2 (select_People.FavouriteSelected.SMS ?do_send_SMS_ViaFavourites_variable3 ?do_send_SMS_ViaFavourites_variable4))
+		:tasks (task3 (press_NewMessage.Send_Mobile ?do_send_SMS_ViaFavourites_variable4 ?do_send_SMS_ViaFavourites_variable9))
+		:ordering ((task0 task1) (task1 task2) (task2 task3))
+	)
+
+	(:method method55
+		:task (enterMode_EMail)
+		:tasks (task0 (press_Home.EMail))
+		:tasks (task1 (press_Home))
+		:ordering ((task1 task0))
+	)
+
+	(:method method56
+		:parameters (?do_send_EMail_ViaEMail_WithSelection_variable6 - EMailAccount ?do_send_EMail_ViaEMail_variable2 - EMailAddress ?do_send_EMail_ViaEMail_variable5 - Contactable ?do_send_EMail_ViaEMail_variable6 - EMail)
+		:task (send_EMail ?do_send_EMail_ViaEMail_variable5 ?do_send_EMail_ViaEMail_variable6)
+		:tasks (task3 (press_EMail.NewEMail.Send ?do_send_EMail_ViaEMail_variable5 ?do_send_EMail_ViaEMail_variable6))
+		:tasks (task0 (enterMode_EMail))
+		:tasks (task1 (select_EMail.EMailAccount ?do_send_EMail_ViaEMail_WithSelection_variable6))
+		:tasks (task4 (press_EMail.NewEMail ?do_send_EMail_ViaEMail_WithSelection_variable6))
+		:tasks (task2 (enter_EMailAddress ?do_send_EMail_ViaEMail_variable5 ?do_send_EMail_ViaEMail_variable2))
+		:ordering ((task0 task1) (task1 task4) (task2 task3) (task4 task2))
+	)
+
+	(:method method57
+		:parameters (?do_select_People.Favourite_WithPreviousSelection_variable4 - Contact ?do_select_People.Favourite_WithPreviousSelection_variable5 - Contact ?do_select_People.Favourite_WithPreviousSelection_variable6 - Contactable)
+		:task (select_People.Favourite ?do_select_People.Favourite_WithPreviousSelection_variable5 ?do_select_People.Favourite_WithPreviousSelection_variable6)
+		:tasks (task0 (select_People.Favourite_WithPreviousSelection ?do_select_People.Favourite_WithPreviousSelection_variable4 ?do_select_People.Favourite_WithPreviousSelection_variable5 ?do_select_People.Favourite_WithPreviousSelection_variable6))
+	)
+
+	(:method method58
+		:parameters (?do_select_People.Favourite_FromReadyToAddFavourite_variable3 - Contact ?do_select_People.Favourite_FromReadyToAddFavourite_variable4 - Contactable)
+		:task (select_People.Favourite ?do_select_People.Favourite_FromReadyToAddFavourite_variable3 ?do_select_People.Favourite_FromReadyToAddFavourite_variable4)
+		:tasks (task0 (select_People.Favourite_FromReadyToAddFavourite ?do_select_People.Favourite_FromReadyToAddFavourite_variable3 ?do_select_People.Favourite_FromReadyToAddFavourite_variable4))
+	)
+
+	(:method method59
+		:parameters (?do_select_People.Favourite_NoOp_variable3 - Contact ?do_select_People.Favourite_NoOp_variable4 - Contactable)
+		:task (select_People.Favourite ?do_select_People.Favourite_NoOp_variable3 ?do_select_People.Favourite_NoOp_variable4)
+		:tasks (task0 (select_People.Favourite_NoOp ?do_select_People.Favourite_NoOp_variable3 ?do_select_People.Favourite_NoOp_variable4))
+	)
+
+	(:method method60
+		:parameters (?do_send_EMail_ViaFavourites_variable3 - Contact ?do_send_EMail_ViaFavourites_variable4 - Contactable ?do_send_EMail_ViaFavourites_variable2 - EMailAccount ?do_send_EMail_ViaFavourites_variable10 - EMail)
+		:task (send_EMail ?do_send_EMail_ViaFavourites_variable4 ?do_send_EMail_ViaFavourites_variable10)
+		:tasks (task2 (select_People.FavouriteSelected.EMail ?do_send_EMail_ViaFavourites_variable3 ?do_send_EMail_ViaFavourites_variable4))
+		:tasks (task4 (press_EMail.NewEMail.Send ?do_send_EMail_ViaFavourites_variable4 ?do_send_EMail_ViaFavourites_variable10))
+		:tasks (task0 (enterMode_People))
+		:tasks (task3 (select_AccountSelection.Account ?do_send_EMail_ViaFavourites_variable2))
+		:tasks (task1 (select_People.Favourite ?do_send_EMail_ViaFavourites_variable3 ?do_send_EMail_ViaFavourites_variable4))
+		:ordering ((task0 task1) (task1 task2) (task2 task3) (task3 task4))
+	)
+
+	(:method method61
+		:parameters (?do_select_EMail.EMailAccount_NoOp_variable2 - EMailAccount)
+		:task (select_EMail.EMailAccount ?do_select_EMail.EMailAccount_NoOp_variable2)
+		:tasks (task0 (select_EMail.EMailAccount_NoOp ?do_select_EMail.EMailAccount_NoOp_variable2))
+	)
+
+	(:method method62
+		:parameters (?do_select_EMail.EMailAccount_WithPreviousSelection_variable3 - EMailAccount ?do_select_EMail.EMailAccount_WithPreviousSelection_variable4 - EMailAccount)
+		:task (select_EMail.EMailAccount ?do_select_EMail.EMailAccount_WithPreviousSelection_variable4)
+		:tasks (task0 (select_EMail.EMailAccount_WithPreviousSelection ?do_select_EMail.EMailAccount_WithPreviousSelection_variable3 ?do_select_EMail.EMailAccount_WithPreviousSelection_variable4))
+	)
+
+	(:method method63
+		:parameters (?do_attachInformationToCall_Regular_variable3 - Call ?do_attachInformationToCall_Regular_variable4 - TransferableByPhoneRegular)
+		:task (attachInformationToCall ?do_attachInformationToCall_Regular_variable3 ?do_attachInformationToCall_Regular_variable4)
+		:tasks (task0 (attachRegularInformationToCall ?do_attachInformationToCall_Regular_variable3 ?do_attachInformationToCall_Regular_variable4))
+	)
+
+	(:method method64
+		:parameters (?do_attachInformationToCall_Contactable_variable4 - Call ?do_attachInformationToCall_Contactable_variable5 - TransferableByPhoneContactable ?do_attachInformationToCall_Contactable_variable6 - Contactable)
+		:task (attachInformationToCall ?do_attachInformationToCall_Contactable_variable4 ?do_attachInformationToCall_Contactable_variable5)
+		:tasks (task0 (attachContactableInformationToCall ?do_attachInformationToCall_Contactable_variable4 ?do_attachInformationToCall_Contactable_variable5 ?do_attachInformationToCall_Contactable_variable6))
+	)
+
+	(:method method65
+		:parameters (?do_attachInformationToEMail_Regular_variable3 - EMail ?do_attachInformationToEMail_Regular_variable4 - TransferableByEmailRegular)
+		:task (attachInformationToEMail ?do_attachInformationToEMail_Regular_variable3 ?do_attachInformationToEMail_Regular_variable4)
+		:tasks (task0 (attachRegularInformationToEMail ?do_attachInformationToEMail_Regular_variable3 ?do_attachInformationToEMail_Regular_variable4))
+	)
+
+	(:method method66
+		:parameters (?do_attachInformationToEMail_Contactable_variable4 - EMail ?do_attachInformationToEMail_Contactable_variable5 - TransferableByEmailContactable ?do_attachInformationToEMail_Contactable_variable6 - Contactable)
+		:task (attachInformationToEMail ?do_attachInformationToEMail_Contactable_variable4 ?do_attachInformationToEMail_Contactable_variable5)
+		:tasks (task0 (attachContactableInformationToEMail ?do_attachInformationToEMail_Contactable_variable4 ?do_attachInformationToEMail_Contactable_variable5 ?do_attachInformationToEMail_Contactable_variable6))
+	)
+
+	(:method method67
+		:parameters (?do_attachInformationToSMS_Regular_variable3 - SMS ?do_attachInformationToSMS_Regular_variable4 - TransferableBySMSRegular)
+		:task (attachInformationToSMS ?do_attachInformationToSMS_Regular_variable3 ?do_attachInformationToSMS_Regular_variable4)
+		:tasks (task0 (attachRegularInformationToSMS ?do_attachInformationToSMS_Regular_variable3 ?do_attachInformationToSMS_Regular_variable4))
+	)
+
+	(:method method68
+		:parameters (?do_attachInformationToSMS_Contactable_variable4 - SMS ?do_attachInformationToSMS_Contactable_variable5 - TransferableBySMSContactable ?do_attachInformationToSMS_Contactable_variable6 - Contactable)
+		:task (attachInformationToSMS ?do_attachInformationToSMS_Contactable_variable4 ?do_attachInformationToSMS_Contactable_variable5)
+		:tasks (task0 (attachContactableInformationToSMS ?do_attachInformationToSMS_Contactable_variable4 ?do_attachInformationToSMS_Contactable_variable5 ?do_attachInformationToSMS_Contactable_variable6))
+	)
+
+	(:method method69
+		:parameters (?do_attachInformation_ToCall_variable3 - Call ?do_attachInformation_ToCall_variable4 - TransferableByCall)
+		:task (attachInformation ?do_attachInformation_ToCall_variable3 ?do_attachInformation_ToCall_variable4)
+		:tasks (task0 (attachInformationToCall ?do_attachInformation_ToCall_variable3 ?do_attachInformation_ToCall_variable4))
+	)
+
+	(:method method70
+		:parameters (?do_attachInformation_ToEMail_variable3 - EMail ?do_attachInformation_ToEMail_variable4 - TransferableByEmail)
+		:task (attachInformation ?do_attachInformation_ToEMail_variable3 ?do_attachInformation_ToEMail_variable4)
+		:tasks (task0 (attachInformationToEMail ?do_attachInformation_ToEMail_variable3 ?do_attachInformation_ToEMail_variable4))
+	)
+
+	(:method method71
+		:parameters (?do_attachInformation_ToSMS_variable3 - SMS ?do_attachInformation_ToSMS_variable4 - TransferableBySMS)
+		:task (attachInformation ?do_attachInformation_ToSMS_variable3 ?do_attachInformation_ToSMS_variable4)
+		:tasks (task0 (attachInformationToSMS ?do_attachInformation_ToSMS_variable3 ?do_attachInformation_ToSMS_variable4))
+	)
+
+	(:method method72
+		:parameters (?do_extractsInformation_Regular_variable4 - Contactable ?do_extractsInformation_Regular_variable5 - Message ?do_extractsInformation_Regular_variable6 - RegularInformation)
+		:task (extractsInformation ?do_extractsInformation_Regular_variable4 ?do_extractsInformation_Regular_variable5 ?do_extractsInformation_Regular_variable6)
+		:tasks (task0 (extractsInformation_Regular ?do_extractsInformation_Regular_variable4 ?do_extractsInformation_Regular_variable5 ?do_extractsInformation_Regular_variable6))
+	)
+
+	(:method method73
+		:parameters (?do_extractsInformation_Contactable_variable5 - Contactable ?do_extractsInformation_Contactable_variable6 - Message ?do_extractsInformation_Contactable_variable7 - ContactableInformation ?do_extractsInformation_Contactable_variable8 - Contactable)
+		:task (extractsInformation ?do_extractsInformation_Contactable_variable5 ?do_extractsInformation_Contactable_variable6 ?do_extractsInformation_Contactable_variable7)
+		:tasks (task0 (extractsInformation_Contactable ?do_extractsInformation_Contactable_variable5 ?do_extractsInformation_Contactable_variable6 ?do_extractsInformation_Contactable_variable7 ?do_extractsInformation_Contactable_variable8))
+	)
+
+	(:method method74
+		:parameters (?do_attachMultipleInformation_Single_variable3 - Message ?do_attachMultipleInformation_Single_variable4 - Information)
+		:task (attachMultipleInformation ?do_attachMultipleInformation_Single_variable3)
+		:tasks (task0 (attachInformation ?do_attachMultipleInformation_Single_variable3 ?do_attachMultipleInformation_Single_variable4))
+	)
+
+	(:method method75
+		:parameters (?do_attachMultipleInformation_Multiple_variable2 - Message ?do_attachMultipleInformation_Multiple_variable6 - Information)
+		:task (attachMultipleInformation ?do_attachMultipleInformation_Multiple_variable2)
+		:tasks (task0 (attachMultipleInformation ?do_attachMultipleInformation_Multiple_variable2))
+		:tasks (task1 (attachInformation ?do_attachMultipleInformation_Multiple_variable2 ?do_attachMultipleInformation_Multiple_variable6))
+	)
+
+	(:method method76
+		:parameters (?do_extractsMultipleInformation_Single_variable4 - Contactable ?do_extractsMultipleInformation_Single_variable5 - Message ?do_extractsMultipleInformation_Single_variable6 - Information)
+		:task (extractsMultipleInformation ?do_extractsMultipleInformation_Single_variable4 ?do_extractsMultipleInformation_Single_variable5)
+		:tasks (task0 (extractsInformation ?do_extractsMultipleInformation_Single_variable4 ?do_extractsMultipleInformation_Single_variable5 ?do_extractsMultipleInformation_Single_variable6))
+	)
+
+	(:method method77
+		:parameters (?do_extractsMultipleInformation_Multiple_variable3 - Contactable ?do_extractsMultipleInformation_Multiple_variable4 - Message ?do_extractsMultipleInformation_Multiple_variable10 - Information)
+		:task (extractsMultipleInformation ?do_extractsMultipleInformation_Multiple_variable3 ?do_extractsMultipleInformation_Multiple_variable4)
+		:tasks (task0 (extractsMultipleInformation ?do_extractsMultipleInformation_Multiple_variable3 ?do_extractsMultipleInformation_Multiple_variable4))
+		:tasks (task1 (extractsInformation ?do_extractsMultipleInformation_Multiple_variable3 ?do_extractsMultipleInformation_Multiple_variable4 ?do_extractsMultipleInformation_Multiple_variable10))
+	)
+
+	(:method method78
+		:parameters (?do_call_variable3 - Contactable ?do_call_variable4 - Call)
+		:task (contact ?do_call_variable3 ?do_call_variable4)
+		:tasks (task0 (call ?do_call_variable3 ?do_call_variable4))
+	)
+
+	(:method method79
+		:parameters (?do_mail_variable3 - Contactable ?do_mail_variable4 - EMail)
+		:task (contact ?do_mail_variable3 ?do_mail_variable4)
+		:tasks (task0 (send_EMail ?do_mail_variable3 ?do_mail_variable4))
+	)
+
+	(:method method80
+		:parameters (?do_sms_variable3 - Contactable ?do_sms_variable4 - SMS)
+		:task (contact ?do_sms_variable3 ?do_sms_variable4)
+		:tasks (task0 (send_SMS ?do_sms_variable3 ?do_sms_variable4))
+	)
+
+	(:method method81
+		:parameters (?do_transferMessage_variable9 - Contactable ?do_transferMessage_variable10 - Message)
+		:task (transferMessage ?do_transferMessage_variable9 ?do_transferMessage_variable10)
+		:tasks (task0 (attachMultipleInformation ?do_transferMessage_variable10))
+		:tasks (task1 (contact ?do_transferMessage_variable9 ?do_transferMessage_variable10))
+		:tasks (task2 (extractsMultipleInformation ?do_transferMessage_variable9 ?do_transferMessage_variable10))
+		:ordering ((task0 task1) (task1 task2))
+	)
+
+	(:method method82
+		:task (enterMode_Calendar)
+		:tasks (task0 (press_Home.Calendar))
+	)
+
+	(:method method83
+		:task (enterMode_EMail)
+		:tasks (task0 (press_Home.EMail))
+	)
+
+	(:method method84
+		:task (enterMode_Messages)
+		:tasks (task0 (press_Home.Messages))
+	)
+
+	(:method method85
+		:task (enterMode_People)
+		:tasks (task0 (press_Home.People))
+	)
+
+	(:method method86
+		:task (enterMode_Tasks)
+		:tasks (task0 (press_Programs.Tasks))
+		:tasks (task1 (press_Home.Programs))
+		:ordering ((task1 task0))
+	)
+
+	(:method method87
+		:task (enterMode_Telephone)
+		:tasks (task0 (press_Home.Telephone))
+	)
+
+	(:method method88
+		:parameters (?do_press_Home_From_SMS_Mobile_variable3 - Contactable)
+		:task (press_Home_From_SMS)
+		:tasks (task0 (press_Home_From_SMS_Mobile ?do_press_Home_From_SMS_Mobile_variable3))
+	)
+
+	(:method method89
+		:parameters (?do_press_Home_From_SMS_Office_variable2 - Contactable)
+		:task (press_Home_From_SMS)
+		:tasks (task0 (press_Home_From_SMS_Office ?do_press_Home_From_SMS_Office_variable2))
+	)
+
+	(:method method90
+		:parameters (?do_press_Home_From_Telephone_Mobile_variable2 - Contactable)
+		:task (press_Home_From_Telephone)
+		:tasks (task0 (press_Home_From_Telephone_Mobile ?do_press_Home_From_Telephone_Mobile_variable2))
+	)
+
+	(:method method91
+		:parameters (?do_press_Home_From_Telephone_Office_variable2 - Contactable)
+		:task (press_Home_From_Telephone)
+		:tasks (task0 (press_Home_From_Telephone_Office ?do_press_Home_From_Telephone_Office_variable2))
+	)
+
+	(:method method92
+		:task (press_Home)
+		:tasks (task0 (press_Home_From_SMS))
+	)
+
+	(:method method93
+		:task (press_Home)
+		:tasks (task0 (press_Home_From_Telephone))
+	)
+
+	(:method method94
+		:parameters (?do_press_Home_From_Contacts.Details_variable2 - Contact)
+		:task (press_Home)
+		:tasks (task0 (press_Home_From_Contacts.Details ?do_press_Home_From_Contacts.Details_variable2))
+	)
+
+	(:action set_Task.Name
+		:parameters (?newObj_variable19 - Task)
+		:task (set_Task.Name ?newObj_variable19)
+		:precondition (and
+			(inMode_Tasks)
+			(not (inMode_Menu))
+			(selected ?newObj_variable19)
+		)
+		:effect (and
+			(isSet_Task.Name ?newObj_variable19)
+		)
+	)
+
+	(:action set_Task.Name_Light
+		:parameters (?newObj_variable47 - Task)
+		:task (set_Task.Name_Light ?newObj_variable47)
+		:precondition (and
+			(inMode_Tasks)
+			(not (inMode_Menu))
+			(not (inUse ?newObj_variable47))
+			(selected ?newObj_variable47)
+		)
+		:effect (and
+			(isSet_Task.Name ?newObj_variable47)
+			(inUse ?newObj_variable47)
+			(created ?newObj_variable47)
+		)
+	)
+
+	(:action press_Tasks.Menu.NewTask
+		:parameters (?press_Tasks.Menu.NewTask_variable2 - Task)
+		:task (press_Tasks.Menu.NewTask ?press_Tasks.Menu.NewTask_variable2)
+		:precondition (and
+			(inMode_Tasks)
+			(inMode_Menu)
+			(not (inUse ?press_Tasks.Menu.NewTask_variable2))
+		)
+		:effect (and
+			(inMode_Tasks.ConfigureTask)
+			(not (inMode_Menu))
+			(inUse ?press_Tasks.Menu.NewTask_variable2)
+			(selected ?press_Tasks.Menu.NewTask_variable2)
+		)
+	)
+
+	(:action press_Tasks.Menu
+		:task (press_Tasks.Menu)
+		:precondition (and
+			(inMode_Tasks)
+			(not (inMode_Tasks.ConfigureTask))
+			(not (inMode_Menu))
+		)
+		:effect (and
+			(inMode_Menu)
+		)
+	)
+
+	(:action select_AccountSelection.Account
+		:parameters (?newObj_variable140 - EMailAccount)
+		:task (select_AccountSelection.Account ?newObj_variable140)
+		:precondition (and
+			(inMode_AccountSelection)
+		)
+		:effect (and
+			(selected ?newObj_variable140)
+			(inMode_EMail.NewEMail)
+			(inMode_EMail)
+			(not (inMode_AccountSelection))
+		)
+	)
+
+	(:action press_Calendar.Menu
+		:task (press_Calendar.Menu)
+		:precondition (and
+			(inMode_Calendar)
+			(not (inMode_Calendar.ConfigureAppointment))
+			(not (inMode_Menu))
+		)
+		:effect (and
+			(inMode_Menu)
+		)
+	)
+
+	(:action set_Appointment.Time
+		:parameters (?newObj_variable2 - Appointment ?set_Appointment.Time_variable1 - Date)
+		:task (set_Appointment.Time ?newObj_variable2 ?set_Appointment.Time_variable1)
+		:precondition (and
+			(inMode_Calendar)
+			(inMode_Calendar.ConfigureAppointment)
+			(selected ?newObj_variable2)
+			(haveInformation_Regular ?set_Appointment.Time_variable1)
+		)
+		:effect (and
+			(isSet_Appointment.Time ?newObj_variable2 ?set_Appointment.Time_variable1)
+		)
+	)
+
+	(:action set_Appointment.Name
+		:parameters (?newObj_variable8 - Appointment)
+		:task (set_Appointment.Name ?newObj_variable8)
+		:precondition (and
+			(inMode_Calendar)
+			(inMode_Calendar.ConfigureAppointment)
+			(selected ?newObj_variable8)
+		)
+		:effect (and
+			(isSet_Appointment.Name ?newObj_variable8)
+		)
+	)
+
+	(:action set_Appointment.Reminder
+		:parameters (?newObj_variable10 - Appointment)
+		:task (set_Appointment.Reminder ?newObj_variable10)
+		:precondition (and
+			(inMode_Calendar)
+			(inMode_Calendar.ConfigureAppointment)
+			(selected ?newObj_variable10)
+		)
+		:effect (and
+			(isSet_Appointment.Reminder ?newObj_variable10)
+		)
+	)
+
+	(:action set_Appointment.Location
+		:parameters (?newObj_variable9 - Appointment ?set_Appointment.Location_variable1 - Location)
+		:task (set_Appointment.Location ?newObj_variable9 ?set_Appointment.Location_variable1)
+		:precondition (and
+			(inMode_Calendar)
+			(inMode_Calendar.ConfigureAppointment)
+			(selected ?newObj_variable9)
+			(haveInformation_Regular ?set_Appointment.Location_variable1)
+		)
+		:effect (and
+			(isSet_Appointment.Location ?newObj_variable9 ?set_Appointment.Location_variable1)
+		)
+	)
+
+	(:action set_Alarm.Time
+		:parameters (?setAlarm_Time_variable1 - Alarm ?set_Alarm.Time_variable1 - Date)
+		:task (set_Alarm.Time ?setAlarm_Time_variable1 ?set_Alarm.Time_variable1)
+		:precondition (and
+			(inMode_Clock)
+			(inMode_Clock.Alarm)
+			(haveInformation_Regular ?set_Alarm.Time_variable1)
+		)
+		:effect (and
+			(isSet_Alarm.Time ?setAlarm_Time_variable1 ?set_Alarm.Time_variable1)
+		)
+	)
+
+	(:action set_Alarm.Description
+		:parameters (?newObj_variable6 - Alarm)
+		:task (set_Alarm.Description ?newObj_variable6)
+		:precondition (and
+			(inMode_Clock)
+			(inMode_Clock.Alarm)
+		)
+		:effect (and
+			(isSet_Alarm.Description ?newObj_variable6)
+		)
+	)
+
+	(:action activate_Alarm
+		:parameters (?selectAlarm_variable1 - Alarm)
+		:task (activate_Alarm ?selectAlarm_variable1)
+		:precondition (and
+			(inMode_Clock)
+			(inMode_Clock.Alarm)
+		)
+		:effect (and
+			(active_Alarm ?selectAlarm_variable1)
+		)
+	)
+
+	(:action set_Alarm.Days
+		:parameters (?setAlarm_Days_variable1 - Alarm ?set_Alarm.Days_variable1 - Date)
+		:task (set_Alarm.Days ?setAlarm_Days_variable1 ?set_Alarm.Days_variable1)
+		:precondition (and
+			(inMode_Clock)
+			(inMode_Clock.Alarm)
+			(haveInformation_Regular ?set_Alarm.Days_variable1)
+		)
+		:effect (and
+			(isSet_Alarm.Days ?setAlarm_Days_variable1 ?set_Alarm.Days_variable1)
+		)
+	)
+
+	(:action press_Home.Clock
+		:task (press_Home.Clock)
+		:precondition (and
+			(inMode_Home)
+		)
+		:effect (and
+			(inMode_Clock)
+			(not (inMode_Home))
+		)
+	)
+
+	(:action press_Clock.Alarm
+		:task (press_Clock.Alarm)
+		:precondition (and
+			(inMode_Clock)
+		)
+		:effect (and
+			(inMode_Clock.Alarm)
+		)
+	)
+
+	(:action set_Contact.NumberMobile
+		:parameters (?newObj_variable37 - Contact ?set_Contact.Mobile_variable1 - Contactable ?set_Contact.Mobile_variable2 - NumberMobile)
+		:task (set_Contact.NumberMobile ?newObj_variable37 ?set_Contact.Mobile_variable1 ?set_Contact.Mobile_variable2)
+		:precondition (and
+			(inMode_Contacts.ConfigureContact)
+			(inMode_Contacts)
+			(not (inMode_PictureSelection))
+			(haveInformation_Contactable ?set_Contact.Mobile_variable1 ?set_Contact.Mobile_variable2)
+			(associated_Contact ?newObj_variable37 ?set_Contact.Mobile_variable1)
+			(selected ?newObj_variable37)
+		)
+		:effect (and
+			(isSet_Contact.NumberMobile ?newObj_variable37)
+		)
+	)
+
+	(:action set_Contact.NumberOffice
+		:parameters (?newObj_variable38 - Contact ?set_Contact.Office_variable1 - Contactable ?set_Contact.Office_variable2 - NumberOffice)
+		:task (set_Contact.NumberOffice ?newObj_variable38 ?set_Contact.Office_variable1 ?set_Contact.Office_variable2)
+		:precondition (and
+			(inMode_Contacts.ConfigureContact)
+			(inMode_Contacts)
+			(not (inMode_PictureSelection))
+			(associated_Contact ?newObj_variable38 ?set_Contact.Office_variable1)
+			(haveInformation_Contactable ?set_Contact.Office_variable1 ?set_Contact.Office_variable2)
+			(selected ?newObj_variable38)
+		)
+		:effect (and
+			(isSet_Contact.NumberOffice ?newObj_variable38)
+		)
+	)
+
+	(:action set_Contact.Email
+		:parameters (?newObj_variable39 - Contact ?set_Contact.Email_variable1 - Contactable ?set_Contact.Email_variable2 - EMailAddress)
+		:task (set_Contact.Email ?newObj_variable39 ?set_Contact.Email_variable1 ?set_Contact.Email_variable2)
+		:precondition (and
+			(inMode_Contacts.ConfigureContact)
+			(inMode_Contacts)
+			(not (inMode_PictureSelection))
+			(haveInformation_Contactable ?set_Contact.Email_variable1 ?set_Contact.Email_variable2)
+			(associated_Contact ?newObj_variable39 ?set_Contact.Email_variable1)
+			(selected ?newObj_variable39)
+		)
+		:effect (and
+			(isSet_Contact.EmailAddress ?newObj_variable39)
+		)
+	)
+
+	(:action press_Home.Calendar
+		:task (press_Home.Calendar)
+		:precondition (and
+			(inMode_Home)
+		)
+		:effect (and
+			(inMode_Calendar)
+			(not (inMode_Home))
+		)
+	)
+
+	(:action press_Home.Telephone
+		:task (press_Home.Telephone)
+		:precondition (and
+			(inMode_Home)
+		)
+		:effect (and
+			(inMode_Telephone)
+			(not (inMode_Home))
+		)
+	)
+
+	(:action press_Telephone.Contacts
+		:task (press_Telephone.Contacts)
+		:precondition (and
+			(inMode_Telephone)
+		)
+		:effect (and
+			(inMode_Contacts)
+			(not (inMode_Telephone))
+		)
+	)
+
+	(:action press_Programs.Tasks
+		:task (press_Programs.Tasks)
+		:precondition (and
+			(inMode_Programs)
+		)
+		:effect (and
+			(not (inMode_Programs))
+			(inMode_Tasks)
+		)
+	)
+
+	(:action press_Home.Programs
+		:task (press_Home.Programs)
+		:precondition (and
+			(inMode_Home)
+		)
+		:effect (and
+			(inMode_Programs)
+			(not (inMode_Home))
+		)
+	)
+
+	(:action press_Calendar.Menu.NewAppointment
+		:parameters (?press_Calendar.Menu.NewAppointment_variable1 - Appointment)
+		:task (press_Calendar.Menu.NewAppointment ?press_Calendar.Menu.NewAppointment_variable1)
+		:precondition (and
+			(inMode_Calendar)
+			(inMode_Menu)
+			(not (inUse ?press_Calendar.Menu.NewAppointment_variable1))
+		)
+		:effect (and
+			(inMode_Calendar.ConfigureAppointment)
+			(not (inMode_Menu))
+			(inUse ?press_Calendar.Menu.NewAppointment_variable1)
+			(selected ?press_Calendar.Menu.NewAppointment_variable1)
+		)
+	)
+
+	(:action press_Home_Default
+		:task (press_Home_Default)
+		:precondition (and
+			(not (inMode_People.AddFavourite))
+			(not (entered_AnyNumber))
+			(not (inMode_Contacts.Details))
+		)
+		:effect (and
+			(inMode_Home)
+			(not (inMode_Calendar))
+			(not (inMode_Clock))
+			(not (inMode_Menu))
+			(not (inMode_Programs))
+			(not (inMode_Tasks))
+			(not (inMode_Telephone))
+			(not (inMode_Contacts))
+			(not (inMode_People.ReadyToAddFavourite))
+			(not (inMode_Messages))
+			(not (inMode_NewMessage))
+			(not (inMode_EMail))
+			(not (inMode_EMail.NewEMail))
+			(not (inMode_EMail.Inbox))
+			(not (inMode_People))
+			(not (inMode_Contacts.Details))
+		)
+	)
+
+	(:action press_Home_From_Add_Favourite
+		:parameters (?newObj_variable69 - Contact)
+		:task (press_Home_From_Add_Favourite ?newObj_variable69)
+		:precondition (and
+			(inMode_People.AddFavourite)
+		)
+		:effect (and
+			(inMode_Home)
+			(not (inMode_Calendar))
+			(not (inMode_Clock))
+			(not (inMode_Menu))
+			(not (inMode_Programs))
+			(not (inMode_Tasks))
+			(not (inMode_Telephone))
+			(not (inMode_Contacts))
+			(not (inMode_People.ReadyToAddFavourite))
+			(not (inMode_People.AddFavourite))
+			(not (selected_AddAsFavourite ?newObj_variable69))
+			(not (selected_FavouriteNumber))
+			(not (inMode_Messages))
+			(not (inMode_NewMessage))
+			(not (inMode_EMail))
+			(not (inMode_EMail.Inbox))
+			(not (inMode_EMail.NewEMail))
+			(not (inMode_People))
+			(not (inMode_Contacts.Details))
+		)
+	)
+
+	(:action press_EMail.NewEMail
+		:parameters (?press_EMail.NewEMail_variable1 - EMailAccount)
+		:task (press_EMail.NewEMail ?press_EMail.NewEMail_variable1)
+		:precondition (and
+			(inMode_EMail)
+			(not (inMode_EMail.NewEMail))
+			(not (inMode_EMail.Inbox))
+			(selected ?press_EMail.NewEMail_variable1)
+		)
+		:effect (and
+			(inMode_EMail.NewEMail)
+		)
+	)
+
+	(:action select_EMail.EMailAccount_NoOp
+		:parameters (?newObj_variable137 - EMailAccount)
+		:task (select_EMail.EMailAccount_NoOp ?newObj_variable137)
+		:precondition (and
+			(inMode_EMail)
+			(not (inMode_EMail.NewEMail))
+			(not (inMode_EMail.Inbox))
+			(selected ?newObj_variable137)
+		)
+		:effect (and
+			(selected ?newObj_variable137)
+		)
+	)
+
+	(:action select_EMail.EMailAccount_WithPreviousSelection
+		:parameters (?newObj_variable114 - EMailAccount ?select_EMail.EMailAccount_variable1 - EMailAccount)
+		:task (select_EMail.EMailAccount_WithPreviousSelection ?newObj_variable114 ?select_EMail.EMailAccount_variable1)
+		:precondition (and
+			(inMode_EMail)
+			(selected ?newObj_variable114)
+			(not (inMode_EMail.NewEMail))
+			(not (inMode_EMail.Inbox))
+			(not (selected ?select_EMail.EMailAccount_variable1))
+		)
+		:effect (and
+			(selected ?select_EMail.EMailAccount_variable1)
+			(not (selected ?newObj_variable114))
+		)
+	)
+
+	(:action press_Home_From_SMS_Mobile
+		:parameters (?newObj_variable15 - Contactable)
+		:task (press_Home_From_SMS_Mobile ?newObj_variable15)
+		:precondition (and
+			(inMode_NewMessage)
+			(entered_NumberMobile ?newObj_variable15)
+			(entered_AnyNumber)
+		)
+		:effect (and
+			(inMode_Home)
+			(not (inMode_Calendar))
+			(not (inMode_Clock))
+			(not (inMode_Menu))
+			(not (inMode_Programs))
+			(not (inMode_Tasks))
+			(not (inMode_Telephone))
+			(not (inMode_Contacts))
+			(not (inMode_People.ReadyToAddFavourite))
+			(not (inMode_Messages))
+			(not (inMode_NewMessage))
+			(not (inMode_EMail))
+			(not (inMode_EMail.Inbox))
+			(not (inMode_EMail.NewEMail))
+			(not (entered_NumberMobile ?newObj_variable15))
+			(not (entered_AnyNumber))
+			(not (inMode_People))
+			(not (inMode_Contacts.Details))
+		)
+	)
+
+	(:action press_Home_From_Telephone_Office
+		:parameters (?newObj_variable98 - Contactable)
+		:task (press_Home_From_Telephone_Office ?newObj_variable98)
+		:precondition (and
+			(inMode_Telephone)
+			(entered_NumberOffice ?newObj_variable98)
+			(entered_AnyNumber)
+		)
+		:effect (and
+			(inMode_Home)
+			(not (inMode_Calendar))
+			(not (inMode_Clock))
+			(not (inMode_Menu))
+			(not (inMode_Programs))
+			(not (inMode_Tasks))
+			(not (inMode_Telephone))
+			(not (inMode_Contacts))
+			(not (inMode_People.ReadyToAddFavourite))
+			(not (inMode_Messages))
+			(not (inMode_NewMessage))
+			(not (entered_NumberOffice ?newObj_variable98))
+			(not (inMode_EMail))
+			(not (inMode_EMail.Inbox))
+			(not (inMode_EMail.NewEMail))
+			(not (entered_AnyNumber))
+			(not (inMode_People))
+			(not (inMode_Contacts.Details))
+		)
+	)
+
+	(:action press_Home_From_SMS_Office
+		:parameters (?newObj_variable105 - Contactable)
+		:task (press_Home_From_SMS_Office ?newObj_variable105)
+		:precondition (and
+			(inMode_NewMessage)
+			(entered_NumberOffice ?newObj_variable105)
+			(entered_AnyNumber)
+		)
+		:effect (and
+			(inMode_Home)
+			(not (inMode_Calendar))
+			(not (inMode_Clock))
+			(not (inMode_Menu))
+			(not (inMode_Programs))
+			(not (inMode_Tasks))
+			(not (inMode_Telephone))
+			(not (inMode_Contacts))
+			(not (inMode_People.ReadyToAddFavourite))
+			(not (inMode_Messages))
+			(not (inMode_NewMessage))
+			(not (entered_NumberOffice ?newObj_variable105))
+			(not (inMode_EMail))
+			(not (inMode_EMail.Inbox))
+			(not (inMode_EMail.NewEMail))
+			(not (entered_AnyNumber))
+			(not (inMode_People))
+			(not (inMode_Contacts.Details))
+		)
+	)
+
+	(:action press_Home_From_Telephone_Mobile
+		:parameters (?newObj_variable97 - Contactable)
+		:task (press_Home_From_Telephone_Mobile ?newObj_variable97)
+		:precondition (and
+			(inMode_Telephone)
+			(entered_NumberMobile ?newObj_variable97)
+			(entered_AnyNumber)
+		)
+		:effect (and
+			(inMode_Home)
+			(not (inMode_Calendar))
+			(not (inMode_Clock))
+			(not (inMode_Menu))
+			(not (inMode_Programs))
+			(not (inMode_Tasks))
+			(not (inMode_Telephone))
+			(not (inMode_Contacts))
+			(not (inMode_People.ReadyToAddFavourite))
+			(not (inMode_Messages))
+			(not (inMode_NewMessage))
+			(not (inMode_EMail))
+			(not (inMode_EMail.Inbox))
+			(not (inMode_EMail.NewEMail))
+			(not (entered_NumberMobile ?newObj_variable97))
+			(not (entered_AnyNumber))
+			(not (inMode_People))
+			(not (inMode_Contacts.Details))
+		)
+	)
+
+	(:action press_Home_From_Contacts.Details
+		:parameters (?newObj_variable12 - Contact)
+		:task (press_Home_From_Contacts.Details ?newObj_variable12)
+		:precondition (and
+			(inMode_Contacts.Details)
+			(selected ?newObj_variable12)
+		)
+		:effect (and
+			(inMode_Home)
+			(not (inMode_Calendar))
+			(not (inMode_Clock))
+			(not (inMode_Menu))
+			(not (inMode_Programs))
+			(not (inMode_Tasks))
+			(not (inMode_Telephone))
+			(not (inMode_Contacts))
+			(not (inMode_People.ReadyToAddFavourite))
+			(not (inMode_Messages))
+			(not (inMode_NewMessage))
+			(not (inMode_EMail))
+			(not (inMode_EMail.NewEMail))
+			(not (inMode_EMail.Inbox))
+			(not (inMode_People))
+			(not (inMode_Contacts.Details))
+			(not (selected ?newObj_variable12))
+		)
+	)
+
+	(:action press_Calendar.NewAppointment.OK
+		:parameters (?press_Calendar.NewAppointment.OK_variable1 - Appointment ?press_Calendar.NewAppointment.OK_variable2 - Date)
+		:task (press_Calendar.NewAppointment.OK ?press_Calendar.NewAppointment.OK_variable1 ?press_Calendar.NewAppointment.OK_variable2)
+		:precondition (and
+			(inMode_Calendar)
+			(inMode_Calendar.ConfigureAppointment)
+			(selected ?press_Calendar.NewAppointment.OK_variable1)
+			(isSet_Appointment.Name ?press_Calendar.NewAppointment.OK_variable1)
+			(isSet_Appointment.Time ?press_Calendar.NewAppointment.OK_variable1 ?press_Calendar.NewAppointment.OK_variable2)
+		)
+		:effect (and
+			(not (inMode_Calendar.ConfigureAppointment))
+			(not (selected ?press_Calendar.NewAppointment.OK_variable1))
+			(created ?press_Calendar.NewAppointment.OK_variable1)
+		)
+	)
+
+	(:action set_Task.Time
+		:parameters (?newObj_variable25 - Task ?set_Task.Time_variable1 - Date)
+		:task (set_Task.Time ?newObj_variable25 ?set_Task.Time_variable1)
+		:precondition (and
+			(inMode_Tasks)
+			(inMode_Tasks.ConfigureTask)
+			(selected ?newObj_variable25)
+			(haveInformation_Regular ?set_Task.Time_variable1)
+		)
+		:effect (and
+			(isSet_Task.Time ?newObj_variable25 ?set_Task.Time_variable1)
+		)
+	)
+
+	(:action set_Task.Reminder
+		:parameters (?newObj_variable26 - Task)
+		:task (set_Task.Reminder ?newObj_variable26)
+		:precondition (and
+			(inMode_Tasks)
+			(inMode_Tasks.ConfigureTask)
+			(selected ?newObj_variable26)
+		)
+		:effect (and
+			(isSet_Task.Reminder ?newObj_variable26)
+		)
+	)
+
+	(:action press_Tasks.NewTask.OK
+		:parameters (?press_Tasks.NewTask.OK_variable1 - Task)
+		:task (press_Tasks.NewTask.OK ?press_Tasks.NewTask.OK_variable1)
+		:precondition (and
+			(inMode_Tasks)
+			(inMode_Tasks.ConfigureTask)
+			(isSet_Task.Name ?press_Tasks.NewTask.OK_variable1)
+			(selected ?press_Tasks.NewTask.OK_variable1)
+		)
+		:effect (and
+			(not (inMode_Tasks.ConfigureTask))
+			(not (selected ?press_Tasks.NewTask.OK_variable1))
+			(created ?press_Tasks.NewTask.OK_variable1)
+		)
+	)
+
+	(:action press_Contacts.New
+		:parameters (?press_Contacts.New_variable1 - Contact ?press_Contacts.New_variable2 - Contactable)
+		:task (press_Contacts.New ?press_Contacts.New_variable1 ?press_Contacts.New_variable2)
+		:precondition (and
+			(inMode_Contacts)
+			(not (inMode_Contacts.ConfigureContact))
+			(not (inUse ?press_Contacts.New_variable1))
+			(not (inMode_Contacts.Details))
+		)
+		:effect (and
+			(inMode_Contacts.ConfigureContact)
+			(associated_Contact ?press_Contacts.New_variable1 ?press_Contacts.New_variable2)
+			(inUse ?press_Contacts.New_variable1)
+			(selected ?press_Contacts.New_variable1)
+		)
+	)
+
+	(:action press_People.More
+		:task (press_People.More)
+		:precondition (and
+			(inMode_People)
+		)
+		:effect (and
+			(inMode_Contacts)
+			(not (inMode_People))
+		)
+	)
+
+	(:action press_Home.People
+		:task (press_Home.People)
+		:precondition (and
+			(inMode_Home)
+		)
+		:effect (and
+			(not (inMode_Home))
+			(inMode_People)
+		)
+	)
+
+	(:action set_Contact.Name
+		:parameters (?newObj_variable44 - Contact)
+		:task (set_Contact.Name ?newObj_variable44)
+		:precondition (and
+			(inMode_Contacts.ConfigureContact)
+			(inMode_Contacts)
+			(not (inMode_PictureSelection))
+			(selected ?newObj_variable44)
+		)
+		:effect (and
+			(isSet_Contact.Name ?newObj_variable44)
+		)
+	)
+
+	(:action press_Contacts.NewContact.SelectPicture
+		:parameters (?press_Contacts.NewContact.SelectPicture_variable1 - Contact)
+		:task (press_Contacts.NewContact.SelectPicture ?press_Contacts.NewContact.SelectPicture_variable1)
+		:precondition (and
+			(inMode_Contacts)
+			(inMode_Contacts.ConfigureContact)
+			(selected ?press_Contacts.NewContact.SelectPicture_variable1)
+		)
+		:effect (and
+			(inMode_PictureSelection)
+		)
+	)
+
+	(:action press_NewMessage.Send_Office
+		:parameters (?newObj_variable108 - Contactable ?press_NewMessage.Send_Office_variable1 - SMS)
+		:task (press_NewMessage.Send_Office ?newObj_variable108 ?press_NewMessage.Send_Office_variable1)
+		:precondition (and
+			(inMode_NewMessage)
+			(entered_NumberOffice ?newObj_variable108)
+			(not (haveSent ?press_NewMessage.Send_Office_variable1))
+		)
+		:effect (and
+			(not (inMode_NewMessage))
+			(not (entered_NumberMobile ?newObj_variable108))
+			(not (entered_NumberOffice ?newObj_variable108))
+			(hasReceived ?newObj_variable108 ?press_NewMessage.Send_Office_variable1)
+			(haveSent ?press_NewMessage.Send_Office_variable1)
+			(not (entered_AnyNumber))
+		)
+	)
+
+	(:action press_NewMessage.Send_Mobile
+		:parameters (?newObj_variable107 - Contactable ?press_NewMessage.Send_Mobile_variable2 - SMS)
+		:task (press_NewMessage.Send_Mobile ?newObj_variable107 ?press_NewMessage.Send_Mobile_variable2)
+		:precondition (and
+			(entered_NumberMobile ?newObj_variable107)
+			(inMode_NewMessage)
+			(not (haveSent ?press_NewMessage.Send_Mobile_variable2))
+		)
+		:effect (and
+			(not (inMode_NewMessage))
+			(not (entered_NumberMobile ?newObj_variable107))
+			(not (entered_NumberOffice ?newObj_variable107))
+			(haveSent ?press_NewMessage.Send_Mobile_variable2)
+			(hasReceived ?newObj_variable107 ?press_NewMessage.Send_Mobile_variable2)
+			(not (entered_AnyNumber))
+		)
+	)
+
+	(:action press_Telephone.Call_Mobile
+		:parameters (?newObj_variable73 - Contactable ?press_Call_Mobile_variable1 - Call)
+		:task (press_Telephone.Call_Mobile ?newObj_variable73 ?press_Call_Mobile_variable1)
+		:precondition (and
+			(inMode_Telephone)
+			(entered_NumberMobile ?newObj_variable73)
+			(not (haveSent ?press_Call_Mobile_variable1))
+		)
+		:effect (and
+			(not (entered_NumberMobile ?newObj_variable73))
+			(not (entered_NumberOffice ?newObj_variable73))
+			(haveSent ?press_Call_Mobile_variable1)
+			(hasReceived ?newObj_variable73 ?press_Call_Mobile_variable1)
+			(not (entered_AnyNumber))
+		)
+	)
+
+	(:action press_Telephone.Call_Office
+		:parameters (?newObj_variable74 - Contactable ?press_Call_Office_variable1 - Call)
+		:task (press_Telephone.Call_Office ?newObj_variable74 ?press_Call_Office_variable1)
+		:precondition (and
+			(inMode_Telephone)
+			(entered_NumberOffice ?newObj_variable74)
+			(not (haveSent ?press_Call_Office_variable1))
+		)
+		:effect (and
+			(not (entered_NumberOffice ?newObj_variable74))
+			(not (entered_NumberMobile ?newObj_variable74))
+			(hasReceived ?newObj_variable74 ?press_Call_Office_variable1)
+			(haveSent ?press_Call_Office_variable1)
+			(not (entered_AnyNumber))
+		)
+	)
+
+	(:action enter_Number_ForCall_Mobile
+		:parameters (?newObj_variable60 - Contactable ?enter_Number_ForCall_Mobile_variable1 - NumberMobile)
+		:task (enter_Number_ForCall_Mobile ?newObj_variable60 ?enter_Number_ForCall_Mobile_variable1)
+		:precondition (and
+			(inMode_Telephone)
+			(haveInformation_Contactable ?newObj_variable60 ?enter_Number_ForCall_Mobile_variable1)
+		)
+		:effect (and
+			(entered_NumberMobile ?newObj_variable60)
+			(entered_AnyNumber)
+		)
+	)
+
+	(:action enter_Number_ForCall_Office
+		:parameters (?newObj_variable61 - Contactable ?enter_Number_ForCall_Office_variable1 - NumberOffice)
+		:task (enter_Number_ForCall_Office ?newObj_variable61 ?enter_Number_ForCall_Office_variable1)
+		:precondition (and
+			(inMode_Telephone)
+			(haveInformation_Contactable ?newObj_variable61 ?enter_Number_ForCall_Office_variable1)
+		)
+		:effect (and
+			(entered_NumberOffice ?newObj_variable61)
+			(entered_AnyNumber)
+		)
+	)
+
+	(:action enter_Number_ForSMS_Mobile
+		:parameters (?newObj_variable100 - Contactable ?enter_Number_ForSMS_Mobile_variable1 - NumberMobile)
+		:task (enter_Number_ForSMS_Mobile ?newObj_variable100 ?enter_Number_ForSMS_Mobile_variable1)
+		:precondition (and
+			(inMode_NewMessage)
+			(haveInformation_Contactable ?newObj_variable100 ?enter_Number_ForSMS_Mobile_variable1)
+		)
+		:effect (and
+			(entered_NumberMobile ?newObj_variable100)
+			(entered_AnyNumber)
+		)
+	)
+
+	(:action enter_Number_ForSMS_Office
+		:parameters (?newObj_variable101 - Contactable ?enter_Number_ForSMS_Office_variable1 - NumberOffice)
+		:task (enter_Number_ForSMS_Office ?newObj_variable101 ?enter_Number_ForSMS_Office_variable1)
+		:precondition (and
+			(haveInformation_Contactable ?newObj_variable101 ?enter_Number_ForSMS_Office_variable1)
+			(inMode_NewMessage)
+		)
+		:effect (and
+			(entered_NumberOffice ?newObj_variable101)
+			(entered_AnyNumber)
+		)
+	)
+
+	(:action press_EMail.NewEMail.Send
+		:parameters (?newObj_variable116 - Contactable ?press_EMail.NewEMail.Send_variable1 - EMail)
+		:task (press_EMail.NewEMail.Send ?newObj_variable116 ?press_EMail.NewEMail.Send_variable1)
+		:precondition (and
+			(inMode_EMail)
+			(inMode_EMail.NewEMail)
+			(entered_EMail ?newObj_variable116)
+			(not (haveSent ?press_EMail.NewEMail.Send_variable1))
+		)
+		:effect (and
+			(not (inMode_EMail.NewEMail))
+			(inMode_EMail.Inbox)
+			(not (entered_EMail ?newObj_variable116))
+			(haveSent ?press_EMail.NewEMail.Send_variable1)
+			(hasReceived ?newObj_variable116 ?press_EMail.NewEMail.Send_variable1)
+		)
+	)
+
+	(:action enter_EMailAddress
+		:parameters (?newObj_variable115 - Contactable ?enter_EMailAddress_variable1 - EMailAddress)
+		:task (enter_EMailAddress ?newObj_variable115 ?enter_EMailAddress_variable1)
+		:precondition (and
+			(haveInformation_Contactable ?newObj_variable115 ?enter_EMailAddress_variable1)
+			(inMode_EMail.NewEMail)
+		)
+		:effect (and
+			(entered_EMail ?newObj_variable115)
+		)
+	)
+
+	(:action press_Messages.NewMessage
+		:task (press_Messages.NewMessage)
+		:precondition (and
+			(inMode_Messages)
+			(not (inMode_NewMessage))
+		)
+		:effect (and
+			(inMode_NewMessage)
+		)
+	)
+
+	(:action press_Home.Messages
+		:task (press_Home.Messages)
+		:precondition (and
+			(inMode_Home)
+		)
+		:effect (and
+			(not (inMode_Home))
+			(inMode_Messages)
+		)
+	)
+
+	(:action press_Contacts.NewContact.OK
+		:parameters (?press_Contacts.NewContact.OK_variable1 - Contact)
+		:task (press_Contacts.NewContact.OK ?press_Contacts.NewContact.OK_variable1)
+		:precondition (and
+			(inMode_Contacts)
+			(inMode_Contacts.ConfigureContact)
+			(not (inMode_PictureSelection))
+			(isSet_Contact.Name ?press_Contacts.NewContact.OK_variable1)
+		)
+		:effect (and
+			(not (inMode_Contacts.ConfigureContact))
+			(not (selected ?press_Contacts.NewContact.OK_variable1))
+			(created ?press_Contacts.NewContact.OK_variable1)
+		)
+	)
+
+	(:action press_People.Smallplus_AlreadyPressed
+		:task (press_People.Smallplus_AlreadyPressed)
+		:precondition (and
+			(inMode_People)
+			(not (inMode_Menu))
+			(inMode_People.ReadyToAddFavourite)
+		)
+		:effect (and
+			(not (inMode_People.FavouriteSelected))
+			(inMode_People.ReadyToAddFavourite)
+		)
+	)
+
+	(:action press_People.Smallplus_FavouriteSelected
+		:parameters (?newObj_variable94 - Contact)
+		:task (press_People.Smallplus_FavouriteSelected ?newObj_variable94)
+		:precondition (and
+			(inMode_People)
+			(not (inMode_Menu))
+			(inMode_People.FavouriteSelected)
+			(selected_Favourite ?newObj_variable94)
+		)
+		:effect (and
+			(not (selected_Favourite ?newObj_variable94))
+			(not (inMode_People.FavouriteSelected))
+			(inMode_People.ReadyToAddFavourite)
+		)
+	)
+
+	(:action select_People.AddFavourite.Contact_withOffice
+		:parameters (?newObj_variable58 - Contact)
+		:task (select_People.AddFavourite.Contact_withOffice ?newObj_variable58)
+		:precondition (and
+			(inMode_People)
+			(inMode_People.AddFavourite)
+			(inMode_People.AddFavourite.SelectContact)
+			(isSet_Contact.NumberOffice ?newObj_variable58)
+			(not (isFavourite ?newObj_variable58))
+			(created ?newObj_variable58)
+		)
+		:effect (and
+			(not (inMode_People.AddFavourite.SelectContact))
+			(inMode_People.AddFavourite.SelectFavouriteNumber)
+			(selected_AddAsFavourite ?newObj_variable58)
+		)
+	)
+
+	(:action select_People.AddFavourite.Contact_withEmail
+		:parameters (?newObj_variable57 - Contact)
+		:task (select_People.AddFavourite.Contact_withEmail ?newObj_variable57)
+		:precondition (and
+			(inMode_People)
+			(inMode_People.AddFavourite)
+			(inMode_People.AddFavourite.SelectContact)
+			(isSet_Contact.EmailAddress ?newObj_variable57)
+			(not (isFavourite ?newObj_variable57))
+			(created ?newObj_variable57)
+		)
+		:effect (and
+			(not (inMode_People.AddFavourite.SelectContact))
+			(inMode_People.AddFavourite.SelectFavouriteNumber)
+			(selected_AddAsFavourite ?newObj_variable57)
+		)
+	)
+
+	(:action select_People.AddFavourite.Contact_withMobile
+		:parameters (?newObj_variable53 - Contact)
+		:task (select_People.AddFavourite.Contact_withMobile ?newObj_variable53)
+		:precondition (and
+			(inMode_People)
+			(inMode_People.AddFavourite)
+			(inMode_People.AddFavourite.SelectContact)
+			(isSet_Contact.NumberMobile ?newObj_variable53)
+			(not (isFavourite ?newObj_variable53))
+			(created ?newObj_variable53)
+		)
+		:effect (and
+			(not (inMode_People.AddFavourite.SelectContact))
+			(inMode_People.AddFavourite.SelectFavouriteNumber)
+			(selected_AddAsFavourite ?newObj_variable53)
+		)
+	)
+
+	(:action press_People.Menu.AddFavourite
+		:task (press_People.Menu.AddFavourite)
+		:precondition (and
+			(inMode_People)
+			(inMode_Menu)
+		)
+		:effect (and
+			(inMode_People.AddFavourite)
+			(inMode_People.AddFavourite.SelectContact)
+		)
+	)
+
+	(:action press_People.Menu
+		:task (press_People.Menu)
+		:precondition (and
+			(inMode_People)
+			(not (inMode_People.AddFavourite))
+			(not (inMode_Menu))
+		)
+		:effect (and
+			(inMode_Menu)
+		)
+	)
+
+	(:action select_Contacts.Details.Office
+		:parameters (?newObj_variable84 - Contact ?select_Contacts.Details.Office_variable1 - Call ?select_Contacts.Details.Office_variable2 - Contactable)
+		:task (select_Contacts.Details.Office ?newObj_variable84 ?select_Contacts.Details.Office_variable1 ?select_Contacts.Details.Office_variable2)
+		:precondition (and
+			(inMode_Contacts)
+			(inMode_Contacts.Details)
+			(selected ?newObj_variable84)
+			(isSet_Contact.NumberOffice ?newObj_variable84)
+			(associated_Contact ?newObj_variable84 ?select_Contacts.Details.Office_variable2)
+			(not (haveSent ?select_Contacts.Details.Office_variable1))
+		)
+		:effect (and
+			(not (inMode_Contacts))
+			(not (inMode_Contacts.Details))
+			(not (selected ?newObj_variable84))
+			(inMode_Telephone)
+			(hasReceived ?select_Contacts.Details.Office_variable2 ?select_Contacts.Details.Office_variable1)
+			(haveSent ?select_Contacts.Details.Office_variable1)
+		)
+	)
+
+	(:action select_Contacts.Details.Mobile
+		:parameters (?newObj_variable83 - Contact ?select_Contacts.Details.Mobile_variable1 - Call ?select_Contacts.Details.Mobile_variable2 - Contactable)
+		:task (select_Contacts.Details.Mobile ?newObj_variable83 ?select_Contacts.Details.Mobile_variable1 ?select_Contacts.Details.Mobile_variable2)
+		:precondition (and
+			(inMode_Contacts)
+			(inMode_Contacts.Details)
+			(isSet_Contact.NumberMobile ?newObj_variable83)
+			(selected ?newObj_variable83)
+			(not (haveSent ?select_Contacts.Details.Mobile_variable1))
+			(associated_Contact ?newObj_variable83 ?select_Contacts.Details.Mobile_variable2)
+		)
+		:effect (and
+			(not (inMode_Contacts))
+			(not (inMode_Contacts.Details))
+			(not (selected ?newObj_variable83))
+			(inMode_Telephone)
+			(hasReceived ?select_Contacts.Details.Mobile_variable2 ?select_Contacts.Details.Mobile_variable1)
+			(haveSent ?select_Contacts.Details.Mobile_variable1)
+		)
+	)
+
+	(:action select_People.Favourite_FromReadyToAddFavourite
+		:parameters (?newObj_variable123 - Contact ?newObj_variable124 - Contactable)
+		:task (select_People.Favourite_FromReadyToAddFavourite ?newObj_variable123 ?newObj_variable124)
+		:precondition (and
+			(inMode_People.ReadyToAddFavourite)
+			(inMode_People)
+			(associated_Contact ?newObj_variable123 ?newObj_variable124)
+			(isFavourite ?newObj_variable123)
+			(not (inMode_People.AddFavourite))
+			(not (inMode_Menu))
+		)
+		:effect (and
+			(not (inMode_People.ReadyToAddFavourite))
+			(selected_Favourite ?newObj_variable123)
+			(inMode_People.FavouriteSelected)
+		)
+	)
+
+	(:action select_People.Favourite_NoOp
+		:parameters (?newObj_variable130 - Contact ?newObj_variable131 - Contactable)
+		:task (select_People.Favourite_NoOp ?newObj_variable130 ?newObj_variable131)
+		:precondition (and
+			(selected_Favourite ?newObj_variable130)
+			(associated_Contact ?newObj_variable130 ?newObj_variable131)
+			(inMode_People.FavouriteSelected)
+			(not (inMode_Menu))
+			(inMode_People)
+			(not (inMode_People.AddFavourite))
+			(isFavourite ?newObj_variable130)
+		)
+		:effect (and
+			(selected_Favourite ?newObj_variable130)
+			(inMode_People.FavouriteSelected)
+		)
+	)
+
+	(:action select_People.Favourite_WithPreviousSelection
+		:parameters (?newObj_variable120 - Contact ?newObj_variable121 - Contact ?newObj_variable122 - Contactable)
+		:task (select_People.Favourite_WithPreviousSelection ?newObj_variable120 ?newObj_variable121 ?newObj_variable122)
+		:precondition (and
+			(inMode_People)
+			(not (inMode_People.AddFavourite))
+			(associated_Contact ?newObj_variable121 ?newObj_variable122)
+			(isFavourite ?newObj_variable121)
+			(selected_Favourite ?newObj_variable120)
+			(not (selected_Favourite ?newObj_variable121))
+			(not (inMode_Menu))
+		)
+		:effect (and
+			(selected_Favourite ?newObj_variable121)
+			(not (selected_Favourite ?newObj_variable120))
+			(inMode_People.FavouriteSelected)
+		)
+	)
+
+	(:action select_People.FavouriteSelected.SMS
+		:parameters (?newObj_variable112 - Contact ?newObj_variable113 - Contactable)
+		:task (select_People.FavouriteSelected.SMS ?newObj_variable112 ?newObj_variable113)
+		:precondition (and
+			(inMode_People)
+			(inMode_People.FavouriteSelected)
+			(selected_Favourite ?newObj_variable112)
+			(not (inMode_Menu))
+			(associated_Contact ?newObj_variable112 ?newObj_variable113)
+			(isSet_Contact.NumberMobile ?newObj_variable112)
+			(not (inMode_People.AddFavourite))
+		)
+		:effect (and
+			(inMode_NewMessage)
+			(entered_NumberMobile ?newObj_variable113)
+			(not (inMode_People))
+			(entered_AnyNumber)
+		)
+	)
+
+	(:action select_People.FavouriteSelected.Mobile
+		:parameters (?newObj_variable88 - Contact ?select_People.FavouriteSelected.Mobile_variable1 - Call ?select_People.FavouriteSelected.Mobile_variable2 - Contactable)
+		:task (select_People.FavouriteSelected.Mobile ?newObj_variable88 ?select_People.FavouriteSelected.Mobile_variable1 ?select_People.FavouriteSelected.Mobile_variable2)
+		:precondition (and
+			(inMode_People)
+			(inMode_People.FavouriteSelected)
+			(selected_Favourite ?newObj_variable88)
+			(not (inMode_Menu))
+			(isSet_Contact.NumberMobile ?newObj_variable88)
+			(not (inMode_People.AddFavourite))
+			(not (haveSent ?select_People.FavouriteSelected.Mobile_variable1))
+			(associated_Contact ?newObj_variable88 ?select_People.FavouriteSelected.Mobile_variable2)
+		)
+		:effect (and
+			(not (inMode_People))
+			(inMode_Telephone)
+			(haveSent ?select_People.FavouriteSelected.Mobile_variable1)
+			(hasReceived ?select_People.FavouriteSelected.Mobile_variable2 ?select_People.FavouriteSelected.Mobile_variable1)
+		)
+	)
+
+	(:action select_People.FavouriteSelected.Office
+		:parameters (?newObj_variable89 - Contact ?select_People.FavouriteSelected.Office_variable1 - Call ?select_People.FavouriteSelected.Office_variable2 - Contactable)
+		:task (select_People.FavouriteSelected.Office ?newObj_variable89 ?select_People.FavouriteSelected.Office_variable1 ?select_People.FavouriteSelected.Office_variable2)
+		:precondition (and
+			(inMode_People)
+			(inMode_People.FavouriteSelected)
+			(isSet_Contact.NumberOffice ?newObj_variable89)
+			(not (inMode_Menu))
+			(selected_Favourite ?newObj_variable89)
+			(not (inMode_People.AddFavourite))
+			(not (haveSent ?select_People.FavouriteSelected.Office_variable1))
+			(associated_Contact ?newObj_variable89 ?select_People.FavouriteSelected.Office_variable2)
+		)
+		:effect (and
+			(not (inMode_People))
+			(inMode_Telephone)
+			(haveSent ?select_People.FavouriteSelected.Office_variable1)
+			(hasReceived ?select_People.FavouriteSelected.Office_variable2 ?select_People.FavouriteSelected.Office_variable1)
+		)
+	)
+
+	(:action select_Contacts.ContactForContactable
+		:parameters (?newObj_variable78 - Contact ?newObj_variable79 - Contactable)
+		:task (select_Contacts.ContactForContactable ?newObj_variable78 ?newObj_variable79)
+		:precondition (and
+			(associated_Contact ?newObj_variable78 ?newObj_variable79)
+			(inMode_Contacts)
+			(not (inMode_Contacts.ConfigureContact))
+			(not (inMode_Contacts.Details))
+		)
+		:effect (and
+			(selected ?newObj_variable78)
+			(inMode_Contacts.Details)
+		)
+	)
+
+	(:action select_People.AddFavourite.Picture
+		:parameters (?newObj_variable62 - Contact ?newObj_variable63 - Picture)
+		:task (select_People.AddFavourite.Picture ?newObj_variable62 ?newObj_variable63)
+		:precondition (and
+			(inMode_People)
+			(inMode_People.AddFavourite)
+			(inMode_People.AddFavourite.SelectPicture)
+			(selected_AddAsFavourite ?newObj_variable62)
+			(selected_FavouriteNumber)
+			(haveInformation_Regular ?newObj_variable63)
+		)
+		:effect (and
+			(isSet_Contact.Picture ?newObj_variable62)
+			(associated_Picture ?newObj_variable62 ?newObj_variable63)
+			(not (selected_AddAsFavourite ?newObj_variable62))
+			(not (inMode_People.AddFavourite.SelectPicture))
+			(not (selected_FavouriteNumber))
+			(not (inMode_People.AddFavourite))
+			(isFavourite ?newObj_variable62)
+		)
+	)
+
+	(:action select_People.AddFavourite.FavouriteNumber_WithoutPicture
+		:parameters (?newObj_variable33 - Contact)
+		:task (select_People.AddFavourite.FavouriteNumber_WithoutPicture ?newObj_variable33)
+		:precondition (and
+			(not (isSet_Contact.Picture ?newObj_variable33))
+			(inMode_People.AddFavourite.SelectFavouriteNumber)
+			(inMode_People.AddFavourite)
+			(inMode_People)
+			(selected_AddAsFavourite ?newObj_variable33)
+		)
+		:effect (and
+			(selected_FavouriteNumber)
+			(not (inMode_People.AddFavourite.SelectFavouriteNumber))
+			(inMode_People.AddFavourite.SelectPicture)
+		)
+	)
+
+	(:action select_People.AddFavourite.FavouriteNumber_WithPicture
+		:parameters (?newObj_variable20 - Contact ?newObj_variable22 - Picture)
+		:task (select_People.AddFavourite.FavouriteNumber_WithPicture ?newObj_variable20 ?newObj_variable22)
+		:precondition (and
+			(inMode_People.AddFavourite.SelectFavouriteNumber)
+			(inMode_People.AddFavourite)
+			(associated_Picture ?newObj_variable20 ?newObj_variable22)
+			(inMode_People)
+			(selected_AddAsFavourite ?newObj_variable20)
+		)
+		:effect (and
+			(not (inMode_People.AddFavourite.SelectFavouriteNumber))
+			(not (inMode_People.AddFavourite))
+			(isFavourite ?newObj_variable20)
+			(not (selected_AddAsFavourite ?newObj_variable20))
+		)
+	)
+
+	(:action press_People.LargePlus
+		:task (press_People.LargePlus)
+		:precondition (and
+			(inMode_People.ReadyToAddFavourite)
+			(not (inMode_Menu))
+		)
+		:effect (and
+			(inMode_People.AddFavourite)
+			(inMode_People.AddFavourite.SelectContact)
+			(not (inMode_People.ReadyToAddFavourite))
+		)
+	)
+
+	(:action select_PictureSelection.PictureForNewContact
+		:parameters (?newObj_variable52 - Picture ?select_PictureSelection.PictureForNewContact_variable2 - Contact)
+		:task (select_PictureSelection.PictureForNewContact ?newObj_variable52 ?select_PictureSelection.PictureForNewContact_variable2)
+		:precondition (and
+			(inMode_PictureSelection)
+			(inMode_Contacts.ConfigureContact)
+			(inMode_Contacts)
+			(selected ?select_PictureSelection.PictureForNewContact_variable2)
+			(haveInformation_Regular ?newObj_variable52)
+		)
+		:effect (and
+			(not (inMode_PictureSelection))
+			(associated_Picture ?select_PictureSelection.PictureForNewContact_variable2 ?newObj_variable52)
+			(isSet_Contact.Picture ?select_PictureSelection.PictureForNewContact_variable2)
+		)
+	)
+
+	(:action press_Home.EMail
+		:task (press_Home.EMail)
+		:precondition (and
+			(inMode_Home)
+		)
+		:effect (and
+			(not (inMode_Home))
+			(inMode_EMail)
+		)
+	)
+
+	(:action select_People.FavouriteSelected.EMail
+		:parameters (?newObj_variable135 - Contact ?select_People.FavouriteSelected.EMail_variable1 - Contactable)
+		:task (select_People.FavouriteSelected.EMail ?newObj_variable135 ?select_People.FavouriteSelected.EMail_variable1)
+		:precondition (and
+			(inMode_People)
+			(inMode_People.FavouriteSelected)
+			(selected_Favourite ?newObj_variable135)
+			(isSet_Contact.EmailAddress ?newObj_variable135)
+			(not (inMode_Menu))
+			(not (inMode_People.AddFavourite))
+			(associated_Contact ?newObj_variable135 ?select_People.FavouriteSelected.EMail_variable1)
+		)
+		:effect (and
+			(not (inMode_People))
+			(inMode_AccountSelection)
+			(entered_EMail ?select_People.FavouriteSelected.EMail_variable1)
+		)
+	)
+
+	(:action extractsInformation_Contactable
+		:parameters (?newObj_variable182 - Contactable ?newObj_variable183 - Message ?newObj_variable184 - ContactableInformation ?newObj_variable185 - Contactable)
+		:task (extractsInformation_Contactable ?newObj_variable182 ?newObj_variable183 ?newObj_variable184 ?newObj_variable185)
+		:precondition (and
+			(hasReceived ?newObj_variable182 ?newObj_variable183)
+			(attached ?newObj_variable183 ?newObj_variable184)
+		)
+		:effect (and
+			(hasInformation_Contactable ?newObj_variable182 ?newObj_variable185 ?newObj_variable184)
+		)
+	)
+
+	(:action extractsInformation_Regular
+		:parameters (?newObj_variable186 - Contactable ?newObj_variable187 - Message ?newObj_variable188 - RegularInformation)
+		:task (extractsInformation_Regular ?newObj_variable186 ?newObj_variable187 ?newObj_variable188)
+		:precondition (and
+			(hasReceived ?newObj_variable186 ?newObj_variable187)
+			(attached ?newObj_variable187 ?newObj_variable188)
+		)
+		:effect (and
+			(hasInformation_Regular ?newObj_variable186 ?newObj_variable188)
+		)
+	)
+
+	(:action attachContactableInformationToEMail
+		:parameters (?newObj_variable153 - EMail ?newObj_variable154 - TransferableByEmailContactable ?newObj_variable155 - Contactable)
+		:task (attachContactableInformationToEMail ?newObj_variable153 ?newObj_variable154 ?newObj_variable155)
+		:precondition (and
+			(haveInformation_Contactable ?newObj_variable155 ?newObj_variable154)
+			(not (haveSent ?newObj_variable153))
+		)
+		:effect (and
+			(attached ?newObj_variable153 ?newObj_variable154)
+		)
+	)
+
+	(:action attachContactableInformationToSMS
+		:parameters (?newObj_variable156 - SMS ?newObj_variable157 - TransferableBySMSContactable ?newObj_variable158 - Contactable)
+		:task (attachContactableInformationToSMS ?newObj_variable156 ?newObj_variable157 ?newObj_variable158)
+		:precondition (and
+			(haveInformation_Contactable ?newObj_variable158 ?newObj_variable157)
+			(not (haveSent ?newObj_variable156))
+		)
+		:effect (and
+			(attached ?newObj_variable156 ?newObj_variable157)
+		)
+	)
+
+	(:action attachRegularInformationToEMail
+		:parameters (?newObj_variable159 - EMail ?newObj_variable160 - TransferableByEmailRegular)
+		:task (attachRegularInformationToEMail ?newObj_variable159 ?newObj_variable160)
+		:precondition (and
+			(haveInformation_Regular ?newObj_variable160)
+			(not (haveSent ?newObj_variable159))
+		)
+		:effect (and
+			(attached ?newObj_variable159 ?newObj_variable160)
+		)
+	)
+
+	(:action attachRegularInformationToSMS
+		:parameters (?newObj_variable161 - SMS ?newObj_variable162 - TransferableBySMSRegular)
+		:task (attachRegularInformationToSMS ?newObj_variable161 ?newObj_variable162)
+		:precondition (and
+			(haveInformation_Regular ?newObj_variable162)
+			(not (haveSent ?newObj_variable161))
+		)
+		:effect (and
+			(attached ?newObj_variable161 ?newObj_variable162)
+		)
+	)
+
+	(:action attachContactableInformationToCall
+		:parameters (?newObj_variable150 - Call ?newObj_variable151 - TransferableByPhoneContactable ?newObj_variable152 - Contactable)
+		:task (attachContactableInformationToCall ?newObj_variable150 ?newObj_variable151 ?newObj_variable152)
+		:precondition (and
+			(haveInformation_Contactable ?newObj_variable152 ?newObj_variable151)
+			(not (haveSent ?newObj_variable150))
+		)
+		:effect (and
+			(attached ?newObj_variable150 ?newObj_variable151)
+		)
+	)
+
+	(:action attachRegularInformationToCall
+		:parameters (?newObj_variable148 - Call ?newObj_variable149 - TransferableByPhoneRegular)
+		:task (attachRegularInformationToCall ?newObj_variable148 ?newObj_variable149)
+		:precondition (and
+			(haveInformation_Regular ?newObj_variable149)
+			(not (haveSent ?newObj_variable148))
+		)
+		:effect (and
+			(attached ?newObj_variable148 ?newObj_variable149)
+		)
+	)
+)

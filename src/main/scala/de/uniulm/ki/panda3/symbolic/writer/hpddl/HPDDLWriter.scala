@@ -1,10 +1,8 @@
 package de.uniulm.ki.panda3.symbolic.writer.hpddl
 
-import de.uniulm.ki.panda3.symbolic.compiler.ClosedWorldAssumption
 import de.uniulm.ki.panda3.symbolic.csp.{CSP, NoConstraintsCSP}
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, Literal, Variable}
-import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.writer.Writer
@@ -21,7 +19,7 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
 
   def writeParameters(vars: Seq[Variable], csp: CSP): String = {
     val builder: StringBuilder = new StringBuilder()
-    val writeVars = (vars map {csp.getRepresentative(_)}) collect { case v: Variable => v }
+    val writeVars = ((vars map {csp.getRepresentative(_)}) collect { case v: Variable => v }).toSet.toSeq.sortWith({_.id < _.id})
     writeVars foreach { v =>
       if (v != writeVars.head) builder.append(" ")
       builder.append(toHPDDLVariableName(v.name + " - " + v.sort.name))
@@ -214,26 +212,5 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
 
     builder.append(")")
     builder.toString()
-  }
-}
-
-object HPDDLWriter {
-  def main(args: Array[String]) {
-    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/SmartPhone-HierarchicalNoAxioms.xml")
-    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/OrganizeMeeting_VerySmall.xml", domAlone)
-    val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
-
-    val parsedDom = domAndInitialPlan._1.update(sortExpansion)
-    val parsedProblem = domAndInitialPlan._2.update(sortExpansion)
-
-    // apply the CWA
-    val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
-
-
-    val dom = HPDDLWriter("smartphone", "smartphone_verysmall").writeDomain(cwaApplied._1)
-    val prob = HPDDLWriter("smartphone", "smartphone_verysmall").writeProblem(cwaApplied._1, cwaApplied._2)
-
-    print(dom)
-    print(prob)
   }
 }
