@@ -3,13 +3,13 @@ package de.uniulm.ki.panda3.symbolic.domain
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.TaskSchemaTransitionGraph
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangeSorts}
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, DecompositionAxiom, Predicate, Sort}
-import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraphGraph}
+import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraph}
 
 /**
  * Planning domains contain the overall description of a planning problem.
  * They are composed of several list of things that exist in the planning domain.
  *
- * This, however does not include an initial nor goal state nor an initial task network. These are part of the [[de.uniulm.ki.panda3.problem.Problem]] description.
+ * This, however does not include an initial nor goal state nor an initial task network.
  *
  *
  * A planning domain contains:
@@ -29,7 +29,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
   lazy val constants: Seq[Constant] = (sorts flatMap {_.elements}).distinct
-  lazy val sortGraph: DirectedGraph[Sort] = SimpleDirectedGraphGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
+  lazy val sortGraph: DirectedGraph[Sort] = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
   lazy val producersOf : Map[Predicate, Seq[Task]] = (predicates map {pred => (pred, tasks filter {_.effects exists {_.predicate == pred}})}).toMap
 
 

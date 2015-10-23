@@ -89,7 +89,7 @@ trait DirectedGraph[T] {
 
 
   lazy val condensation: DirectedGraph[Seq[T]] =
-    SimpleDirectedGraphGraph(stronglyConnectedComponents,
+    SimpleDirectedGraph(stronglyConnectedComponents,
                              (edgeList map { case (from, to) => (getComponentOf(from).get, getComponentOf(to).get) }) collect { case e@(from, to) if from != to => e })
 
   lazy val sources: Seq[T] = (degrees collect { case (node, (in, _)) if in == 0 => node }).toSeq
@@ -118,7 +118,7 @@ trait DirectedGraph[T] {
     reachabilityMap.toMap
   }
 
-  lazy val transitiveClosure = SimpleDirectedGraphGraph(vertices, reachable)
+  lazy val transitiveClosure = SimpleDirectedGraph(vertices, reachable)
 
 
   /**
@@ -166,8 +166,8 @@ trait DirectedGraph[T] {
 }
 
 
-case class SimpleDirectedGraphGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraph[T] {}
+case class SimpleDirectedGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraph[T] {}
 
-object SimpleDirectedGraphGraph {
-  def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): SimpleDirectedGraphGraph[T] = SimpleDirectedGraphGraph(nodes, (nodes zip (nodes map { n => edges.filter({_._1 == n}).map({_._2}) })).toMap)
+object SimpleDirectedGraph {
+  def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): SimpleDirectedGraph[T] = SimpleDirectedGraph(nodes, (nodes zip (nodes map { n => edges.filter({_._1 == n}).map({_._2}) })).toMap)
 }

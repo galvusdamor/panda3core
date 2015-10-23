@@ -10,10 +10,10 @@ import org.scalatest.FlatSpec
 class GraphTest extends FlatSpec {
 
   val edges = (0, 1) ::(1, 2) ::(2, 0) ::(2, 3) ::(3, 4) ::(4, 5) ::(5, 3) :: Nil
-  val g  = SimpleDirectedGraphGraph(0 until 6, edges)
-  val g2 = SimpleDirectedGraphGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) :: edges)
-  val g3 = SimpleDirectedGraphGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) ::(3, 7) :: edges)
-  val g4 = SimpleDirectedGraphGraph(0 until 8, (0, 1) ::(1, 2) ::(2, 4) ::(4, 5) ::(5, 6) ::(5, 7) ::(1, 3) ::(3, 4) :: Nil)
+  val g = SimpleDirectedGraph(0 until 6, edges)
+  val g2 = SimpleDirectedGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) :: edges)
+  val g3 = SimpleDirectedGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) ::(3, 7) :: edges)
+  val g4 = SimpleDirectedGraph(0 until 8, (0, 1) ::(1, 2) ::(2, 4) ::(4, 5) ::(5, 6) ::(5, 7) ::(1, 3) ::(3, 4) :: Nil)
 
   "Graphs" must "have the correct SCCs" in {
     val sccs = g.stronglyConnectedComponents
