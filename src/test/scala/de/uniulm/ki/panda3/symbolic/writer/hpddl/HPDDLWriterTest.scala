@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.writer.hpddl
 
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
 
 import de.uniulm.ki.panda3.symbolic.compiler.ClosedWorldAssumption
 import de.uniulm.ki.panda3.symbolic.domain.Domain
@@ -16,6 +16,10 @@ import scala.io.Source
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 class HPDDLWriterTest extends FlatSpec {
+
+  def writeStringToFile(s: String, file: File): Unit = {
+    Some(new PrintWriter(file)).foreach { p => p.write(s); p.close() }
+  }
 
   "Writing the parsed smartphone domain" must "yield a specific result" in {
     val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/SmartPhone-HierarchicalNoAxioms.xml")
@@ -35,9 +39,8 @@ class HPDDLWriterTest extends FlatSpec {
     val correctDomain: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/hpddl/smartphone.hpddl").mkString
     val correctProblem: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/hpddl/smartphone_verysmall.hpddl").mkString
 
-    if (correctProblem != prob) {
-      Some(new PrintWriter("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/hpddl/smartphone_diff.hpddl")).foreach { p => p.write(prob); p.close() }
-    }
+    if (correctDomain != dom) writeStringToFile(dom, new File("/home/gregor/dom"))
+    if (correctProblem != prob) writeStringToFile(prob, new File("/home/gregor/prob"))
 
     assert(correctDomain == dom)
     assert(correctProblem == prob)

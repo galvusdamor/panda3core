@@ -118,7 +118,7 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
 
   /** returns best known unique representative for a given variable */
   override def getRepresentative(v: Variable): Value = {
-    if (!isReductionComputed) if (!isReductionComputed) initialiseExplicitly()
+    if (!isReductionComputed) initialiseExplicitly()
     unionFind.getRepresentative(v)
   }
 

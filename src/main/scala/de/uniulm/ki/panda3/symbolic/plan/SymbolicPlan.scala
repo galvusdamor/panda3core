@@ -12,7 +12,14 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrd
  * Simple implementation of a plan, based on symbols
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering, variableConstraints: CSP, init: PlanStep, goal: PlanStep) extends Plan {
+case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering, parameterVariableConstraints: CSP, init: PlanStep, goal: PlanStep)
+  extends Plan {
+  assert(planSteps forall { ps => ps.arguments.size == ps.schema.parameters.size })
+
+  // TODO: this is extremely inefficient
+  // add all constraints inherited from tasks to the CSP
+  val variableConstraints = planSteps.foldLeft(parameterVariableConstraints)({ case (csp, ps) => ps.schema.parameterConstraints.foldLeft(csp)({ case (csp2, c) => csp2.addConstraint(c
+    .substitute(ps.schemaParameterSubstitution)) }) })
 
   override lazy val causalThreats: Seq[CausalThreat] =
     for {causalLink@CausalLink(producer, consumer, literal) <- causalLinks
@@ -70,7 +77,7 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
     SymbolicPlan(newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, init, goal)
   }
 
-  /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.domain.DecompositionMethod]]s. */
+  /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod]]s. */
   override def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution[Variable]): (Plan, Substitution[Variable]) = {
     val oldPlanVariables = variableConstraints.variables.toSeq
 

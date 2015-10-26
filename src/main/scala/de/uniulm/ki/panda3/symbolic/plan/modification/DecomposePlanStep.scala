@@ -11,7 +11,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class DecomposePlanStep(decomposedPS: PlanStep, newSubPlan: Plan, causalLinkEqualityConstraints: Seq[VariableConstraint], inheritedCausalLinks: Seq[CausalLink], plan: Plan) extends
+case class DecomposePlanStep(decomposedPS: PlanStep, newSubPlan: Plan, newVariableConstraints: Seq[VariableConstraint], inheritedCausalLinks: Seq[CausalLink], plan: Plan) extends
 Modification {
 
   // internal variables for convenience
@@ -26,13 +26,13 @@ Modification {
   override def addedVariables: Seq[Variable] = (newSubPlan.variableConstraints.variables -- decomposedPS.arguments).toSeq
 
   // variable constraints from the plan, and those forcing parameters of the decomposed task in the plan and in the method to be equal
-  override def addedVariableConstraints: Seq[VariableConstraint] = newSubPlan.variableConstraints.constraints ++ causalLinkEqualityConstraints
+  override def addedVariableConstraints: Seq[VariableConstraint] = newSubPlan.variableConstraints.constraints ++ newVariableConstraints
 
   override def nonInducedAddedOrderingConstraints: Seq[OrderingConstraint] = (newSubPlan.orderingConstraints.originalOrderingConstraints filter { case OrderingConstraint(b, a) =>
     b != init && b != goal && a != init && a != goal
   }) ++ (plan.orderingConstraints.originalOrderingConstraints flatMap { case OrderingConstraint(p, `decomposedPS`) => addedPlanSteps map {OrderingConstraint(p, _)}
   case OrderingConstraint(`decomposedPS`, p) => addedPlanSteps map {OrderingConstraint(_, p)}
-  case _ => Nil
+  case _                                     => Nil
   })
 
   // remove init and goal task of the subplan
@@ -63,7 +63,6 @@ object DecomposePlanStep {
       val copyResult = method.subPlan.newInstance(firstFreePlanStepID, firstFreeVariableID, decomposedAbstractTasksParameterSubstitution)
       val copiedPlan = copyResult._1
 
-
       // compute the first version of the CSP of the new plan
       val joinedCSP: CSP = currentPlan.variableConstraints.addVariables(copiedPlan.variableConstraints.variables.toSeq).addConstraints(copiedPlan.variableConstraints.constraints)
 
@@ -86,7 +85,7 @@ object DecomposePlanStep {
       }
       // compute the new links created by direct inheritance
       val directlyInheritedLinksIngoing: Seq[CausalLink] = ingoingLinksWithMatchingInner collect { case (ingoingCL, Some(innerCL)) => CausalLink(ingoingCL.producer, innerCL.consumer,
-                                                                                                                                                 ingoingCL.condition)
+        ingoingCL.condition)
       }
       // and separate those remaining
       val remainingLinksIngoing = ingoingLinksWithMatchingInner collect { case (cl, None) => cl }
@@ -99,7 +98,7 @@ object DecomposePlanStep {
         (cl, methodSpecifiedCausalLinks._2 find { case CausalLink(_, _, precondition) => (preconditionLiteralOfSubPlanGoal =?= precondition)(copiedPlan.variableConstraints) })
       }
       val directlyInheritedLinksOutgoing: Seq[CausalLink] = outgoingLinksWithMatchingInner collect { case (outgoingCL, Some(innerCL)) => CausalLink(innerCL.producer, outgoingCL.consumer,
-                                                                                                                                                    outgoingCL.condition)
+        outgoingCL.condition)
       }
       // and separate those remaining
       val remainingLinksOutgoing = outgoingLinksWithMatchingInner collect { case (cl, None) => cl }

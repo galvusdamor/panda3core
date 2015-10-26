@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.plan.element
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
-import de.uniulm.ki.panda3.symbolic.csp.CSP
+import de.uniulm.ki.panda3.symbolic.csp.{CSP, Substitution}
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
 import de.uniulm.ki.panda3.symbolic.domain.{DomainUpdatable, Task}
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
@@ -17,6 +17,8 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends Dom
   lazy val substitutedPreconditions: Seq[Literal] = schema.preconditions map substitute
   /** returns a version of the effects */
   lazy val substitutedEffects: Seq[Literal] = schema.effects map substitute
+
+  lazy val schemaParameterSubstitution = Substitution(schema.parameters, arguments)
 
   /** check whether two literals are identical given a CSP */
   def =?=(that: PlanStep)(csp: CSP) = this.schema == that.schema &&

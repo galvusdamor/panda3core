@@ -7,7 +7,8 @@ import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
 import de.uniulm.ki.util.HashMemo
 
 /**
- * Tasks are blue-prints for actions, actually contained in plans, i.e. they describe which variables a [[de.uniulm.ki.panda3.plan.element.PlanStep]] of their type must have and which
+ * Tasks are blue-prints for actions, actually contained in plans, i.e. they describe which variables a [[de.uniulm.ki.panda3.symbolic.plan.element.PlanStep]] of their type must have and
+ * which
  * preconditions and effects it has.
  *
  * Additionally Tasks can either be primitive or abstract. The first kind can be executed directly, while the latter must be decomposed further during the planning process.
@@ -23,6 +24,8 @@ DomainUpdatable with PrettyPrintable with HashMemo {
     Literal(literal.predicate, literal.isPositive, literal.parameterVariables map sub)
   }
 
+  lazy val taskCSP: CSP = SymbolicCSP(parameters.toSet, parameterConstraints)
+
   override def update(domainUpdate: DomainUpdate): Task = Task(name, isPrimitive, parameters map {_.update(domainUpdate)}, parameterConstraints map {_.update(domainUpdate)}, preconditions
     map {_.update(domainUpdate)}, effects map {_.update(domainUpdate)})
 
@@ -35,5 +38,6 @@ DomainUpdatable with PrettyPrintable with HashMemo {
   /** returns a more detailed information about the object */
   override def longInfo: String = mediumInfo + "\npreconditions:\n" + (preconditions map {"\t" + _.shortInfo}).mkString("\n") +
     "\neffects:\n" + (effects map {"\t" + _.shortInfo}).mkString("\n")
+
 
 }

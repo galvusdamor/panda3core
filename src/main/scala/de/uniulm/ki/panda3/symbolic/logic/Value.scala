@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.logic
 
+import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
 
@@ -8,7 +9,7 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait Value extends DomainUpdatable {
+trait Value extends DomainUpdatable with PrettyPrintable {
   override def update(domainUpdate: DomainUpdate): Value
 
   val isConstant: Boolean
