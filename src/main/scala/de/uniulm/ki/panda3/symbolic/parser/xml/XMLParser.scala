@@ -59,7 +59,9 @@ object XMLParser extends Parser {
       }
       logic.Constant(const.getName)
     }
+
     val constantSeq = createConstantSeq(JavaConversions.asScalaBuffer(dom.getConstantDeclaration))
+
     val xmlConstantToScalaConstant: Map[ConstantDeclaration, logic.Constant] = (JavaConversions.asScalaBuffer(dom.getConstantDeclaration) zip constantSeq).toMap
     val stringToXMLConstant: Map[String, ConstantDeclaration] = (JavaConversions.asScalaBuffer(dom.getConstantDeclaration) map { decl => (decl.getName, decl) }).toMap
     // needed for Domain
@@ -275,6 +277,7 @@ object XMLParser extends Parser {
       inheritedVariableConstraints)
 
     // get the order induced by the causal links and the explicitly mentioned order
+    // TODO: adding ordering constraints based on causal links is in general not correct. It is only if both tasks are primitive
     val orderingConstraints: Seq[element.OrderingConstraint] = ((causalLinks map { cl => element.OrderingConstraint(cl._1.producer, cl._1.consumer) }) ++
       (JavaConversions.asScalaBuffer(planDef.getOrderingConstraint) map { oc => element.OrderingConstraint(xmlTaskNodesToScalaPlanSteps(oc.getPredecessor.asInstanceOf[TaskNode]),
         xmlTaskNodesToScalaPlanSteps(oc.getSuccessor.asInstanceOf[TaskNode]))
