@@ -1,7 +1,8 @@
 package de.uniulm.ki.panda3.symbolic.plan
 
 import de.uniulm.ki.panda3.symbolic.csp.{CSP, Substitution, SymbolicCSP}
-import de.uniulm.ki.panda3.symbolic.domain.updates.{AddVariableConstraints, AddVariables, DomainUpdate, ExchangePlanStep}
+import de.uniulm.ki.panda3.symbolic.domain.Task
+import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw.{AbstractPlanStep, CausalThreat, OpenPrecondition, UnboundVariable}
@@ -19,7 +20,9 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
   // TODO: this is extremely inefficient
   // add all constraints inherited from tasks to the CSP
   val variableConstraints = planSteps.foldLeft(parameterVariableConstraints)({ case (csp, ps) => ps.schema.parameterConstraints.foldLeft(csp)({ case (csp2, c) => csp2.addConstraint(c
-    .substitute(ps.schemaParameterSubstitution)) }) })
+    .substitute(ps.schemaParameterSubstitution))
+  })
+  })
 
   override lazy val causalThreats: Seq[CausalThreat] =
     for {causalLink@CausalLink(producer, consumer, literal) <- causalLinks
@@ -113,8 +116,13 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
   override def update(domainUpdate: DomainUpdate): SymbolicPlan = domainUpdate match {
     case AddVariables(newVariables)                     => SymbolicPlan(planSteps, causalLinks, orderingConstraints, variableConstraints.addVariables(newVariables), init, goal)
     case AddVariableConstraints(newVariableConstraints) => SymbolicPlan(planSteps, causalLinks, orderingConstraints, variableConstraints.addConstraints(newVariableConstraints), init, goal)
-    case ExchangePlanStep(oldPS, newPS)                 => SymbolicPlan(planSteps map { ps => if (ps == oldPS) newPS else ps }, causalLinks map {_.update(domainUpdate)},
-      orderingConstraints.update(domainUpdate), variableConstraints, if (oldPS == init) newPS else init, if (oldPS == goal) newPS else goal)
+    case AddLiteralsToInit(literals, constraints)       =>
+      // TODO: currently we only support this operation if all literals are 0-ary
+      assert(literals forall {_.parameterVariables.size == 0})
+      // build a new schema for init
+      val initTask = Task(init.schema.name, isPrimitive = true, init.schema.parameters, init.schema.parameterConstraints ++ constraints, Nil, init.schema.effects ++ literals)
+      val newInit = PlanStep(init.id, initTask, init.arguments)
+      SymbolicPlan(planSteps map {_ update ExchangePlanStep(init, newInit)}, causalLinks, orderingConstraints, variableConstraints, newInit, goal)
 
     case _ => SymbolicPlan(planSteps map {_.update(domainUpdate)}, causalLinks map {_.update(domainUpdate)}, orderingConstraints.update(domainUpdate), variableConstraints.update
       (domainUpdate), init.update(domainUpdate), goal.update(domainUpdate))

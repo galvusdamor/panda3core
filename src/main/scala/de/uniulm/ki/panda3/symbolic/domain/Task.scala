@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.domain
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
+import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangeTask}
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
 import de.uniulm.ki.util.HashMemo
 
@@ -26,8 +26,11 @@ DomainUpdatable with PrettyPrintable with HashMemo {
 
   lazy val taskCSP: CSP = SymbolicCSP(parameters.toSet, parameterConstraints)
 
-  override def update(domainUpdate: DomainUpdate): Task = Task(name, isPrimitive, parameters map {_.update(domainUpdate)}, parameterConstraints map {_.update(domainUpdate)}, preconditions
-    map {_.update(domainUpdate)}, effects map {_.update(domainUpdate)})
+  override def update(domainUpdate: DomainUpdate): Task = domainUpdate match {
+    case ExchangeTask(map) => if (map.contains(this)) map(this) else this
+    case _ => Task(name, isPrimitive, parameters map {_.update(domainUpdate)}, parameterConstraints map {_.update(domainUpdate)}, preconditions
+      map {_.update(domainUpdate)}, effects map {_.update(domainUpdate)})
+  }
 
   /** returns a short information about the object */
   override def shortInfo: String = name

@@ -24,9 +24,9 @@ trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable with P
 
   def lteq(x: PlanStep, y: PlanStep): Boolean = {
     tryCompare(x, y) match {
-      case None => false
+      case None                      => false
       case Some(TaskOrdering.BEFORE) => true
-      case _ => false
+      case _                         => false
     }
   }
 
@@ -66,11 +66,30 @@ trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable with P
 
   /** returns a more detailed information about the object */
   override def longInfo: String = "OrderingConstraints:\n" + ((tasks zip tasks) collect { case (t1, t2) if lt(t1, t2) => "\t" + t1.shortInfo + " -> " + t2.shortInfo })
+
+  /** checks whether this order is total */
+  def isTotalOrder(): Boolean = {
+
+    def find(remaining : Seq[PlanStep]) : Boolean = if (remaining.size == 1) true else {
+      // try all
+      remaining exists {t =>
+        // before all
+        (remaining forall {ot => ot == t || lt(t,ot)}) && find(remaining.filterNot({_ == t}))
+
+      }
+    }
+
+    find(tasks)
+    /*val mini = minimalOrderingConstraints()
+    if (mini.size != tasks.size - 1) false
+    else if (tasks.size == 1) true
+    else tasks forall { t1 => tasks forall { t2 => t1 == t2 || (tryCompare(t1, t2) != None) } }*/
+  }
 }
 
 object TaskOrdering {
-  val AFTER : Byte = 1
+  val AFTER: Byte = 1
   val BEFORE: Byte = -1
-  val SAME  : Byte = 0
+  val SAME: Byte = 0
   val DONTKNOW: Byte = 2
 }
