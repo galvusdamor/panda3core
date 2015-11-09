@@ -15,7 +15,7 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
   /** negated version of the literal */
   lazy val negate: Literal = copy(isPositive = !isPositive)
 
-  val isNegative: Boolean = !isPositive
+  def isNegative: Boolean = !isPositive
 
   /** check whether two literals are identical given a CSP */
   def =?=(that: Literal)(csp: CSP): Boolean = this.predicate == that.predicate && this.isPositive == that.isPositive &&
