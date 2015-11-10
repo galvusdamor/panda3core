@@ -14,7 +14,11 @@ import de.uniulm.ki.panda3.symbolic.writer.Writer
  */
 case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
 
-  def toPDDLIdentifier(id: String) = id map { c => if (c == '?') c else if (c >= 'a' && c <= 'z') c else if (c >= 'A' && c <= 'Z') c else if (c >= '0' && c <= '1') c else '_' }
+  def toPDDLIdentifier(id: String) = {
+    val removedSigns = id map { c => if (c == '?') c else if (c >= 'a' && c <= 'z') c else if (c >= 'A' && c <= 'Z') c else if (c >= '0' && c <= '9') c else '_' }
+    if (removedSigns.charAt(0) >= '0' && removedSigns.charAt(0) <= '9') "p" + removedSigns
+    else removedSigns
+  }
 
   def toHPDDLVariableName(name: String): String = toPDDLIdentifier(if (name.startsWith("?")) name else "?" + name)
 
@@ -138,13 +142,17 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
     // ATTENTION: we cannot use any CSP in here, since the domain may lack constants, i.e., probably any CSP will be unsolvable causing problems
     val builder: StringBuilder = new StringBuilder()
 
-    builder.append("(define (domain " + domainName + ")\n\t(:requirements :strips)\n")
+    builder.append("(define (domain " + toPDDLIdentifier(domainName) + ")\n\t(:requirements :strips)\n")
 
     // add all sorts
     if (dom.sorts.size != 0) {
-      builder.append("\t(:types")
-      dom.sorts foreach { s => builder.append(" " + toPDDLIdentifier(s.name)) }
-      builder.append(")\n")
+      builder.append("\t(:types\n")
+      dom.sorts foreach { s => builder.append("\t\t" + toPDDLIdentifier(s.name))
+        val parentSort = dom.sortGraph.edgeList find {_._2 == s}
+        if (parentSort.isDefined) builder.append(" - " + toPDDLIdentifier(parentSort.get._1.name))
+        builder.append("\n")
+      }
+      builder.append("\t)\n")
     }
 
     // add all predicates
@@ -238,8 +246,8 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
   override def writeProblem(dom: Domain, plan: Plan): String = {
     val builder: StringBuilder = new StringBuilder()
     builder.append("(define\n")
-    builder.append("\t(problem " + problemName + ")\n")
-    builder.append("\t(:domain  " + domainName + ")\n")
+    builder.append("\t(problem " + toPDDLIdentifier(problemName) + ")\n")
+    builder.append("\t(:domain  " + toPDDLIdentifier(domainName) + ")\n")
 
 
     if (dom.constants.size != 0) {
