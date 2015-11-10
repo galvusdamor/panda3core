@@ -10,3 +10,4 @@
 /doc/*.toc
 /doc/*.aux
 /doc/*.log
+*.class
