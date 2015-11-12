@@ -17,6 +17,7 @@ class SymbolicUnionFind {
 
   /** returns best known unique representative for a given variable */
   def getRepresentative(v: Variable): Value = {
+    assert(!unionFind.contains(v))
     unionFind(v) match {
       case c: Constant => c
       case parent: Variable =>

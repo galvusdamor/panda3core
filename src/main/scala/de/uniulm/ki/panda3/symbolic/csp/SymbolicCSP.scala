@@ -62,11 +62,11 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
   override def addConstraint(constraint: VariableConstraint): SymbolicCSP = {
     val newVariables = (constraint match {
       case Equal(v1, v2: Variable) => Set(v1, v2)
-      case Equal(v, _: Constant) => Set(v)
+      case Equal(v, _: Constant)   => Set(v)
       case NotEqual(v1, v2: Variable) => Set(v1, v2)
       case NotEqual(v, _: Constant) => Set(v)
-      case OfSort(v, _) => Set(v)
-      case NotOfSort(v, _) => Set(v)
+      case OfSort(v, _)             => Set(v)
+      case NotOfSort(v, _)          => Set(v)
     }) -- variables
 
     val newCSP = SymbolicCSP(variables ++ newVariables, constraints :+ constraint)
@@ -243,14 +243,14 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
         case (const: Constant, rv: Variable) => OfSort(rv, Sort("temp", Vector() :+ const, Nil))
         case _ => equalConstr
       }
-      case x => x
+      case x                         => x
     }
 
     // all actually different cases
     equalsConstEliminated match {
       case NotEqual(v1, v2) =>
         (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-          case (rv1: Variable, rv2: Variable) => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {case (x, y) => unequal(x) += y;}
+          case (rv1: Variable, rv2: Variable)  => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {case (x, y) => unequal(x) += y;}
           case (rv: Variable, const: Constant) => remainingDomain(rv).remove(const)
           case (const: Constant, rv: Variable) => remainingDomain(rv).remove(const)
           case (const1: Constant, const2: Constant) => if (const1 == const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
@@ -284,10 +284,10 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
       // sort of and var = const constraints
       case OfSort(v, sort) =>
         getRepresentativeUnsafe(v) match {
-        case constant: Constant => if (!sort.elements.contains(constant)) isPotentiallySolvable = false
-        case rv: Variable =>
-          remainingDomain(rv) = remainingDomain(rv) filter { x => sort.elements.contains(x) }
-      }
+          case constant: Constant => if (!sort.elements.contains(constant)) isPotentiallySolvable = false
+          case rv: Variable       =>
+            remainingDomain(rv) = remainingDomain(rv) filter { x => sort.elements.contains(x) }
+        }
     }
   }
 

@@ -16,6 +16,9 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrd
 case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering, parameterVariableConstraints: CSP, init: PlanStep, goal: PlanStep)
   extends Plan {
   assert(planSteps forall { ps => ps.arguments.size == ps.schema.parameters.size })
+  assert(planSteps forall { ps => ps.arguments forall { v => parameterVariableConstraints.variables.contains(v) } })
+
+
 
   // TODO: this is extremely inefficient
   // add all constraints inherited from tasks to the CSP
