@@ -155,8 +155,13 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
     if (dom.sorts.size != 0) {
       builder.append("\t(:types\n")
       dom.sorts foreach { s => builder.append("\t\t" + toPDDLIdentifier(s.name))
-        val parentSort = dom.sortGraph.edgeList find {_._2 == s}
-        if (parentSort.isDefined) builder.append(" - " + toPDDLIdentifier(parentSort.get._1.name))
+        val parentSorts = dom.sortGraph.edgeList filter {_._2 == s}
+        if (parentSorts.size == 1) builder.append(" - " + toPDDLIdentifier(parentSorts.head._1.name))
+        if (parentSorts.size > 1) {
+          builder.append(" - (either")
+          parentSorts foreach { ps => builder.append(" " + toPDDLIdentifier(ps._1.name)) }
+          builder.append(")")
+        }
         builder.append("\n")
       }
       builder.append("\t)\n")

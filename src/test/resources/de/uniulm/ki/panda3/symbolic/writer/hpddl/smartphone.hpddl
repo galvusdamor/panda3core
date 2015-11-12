@@ -3,37 +3,37 @@
 	(:types
 		Company - Contactable
 		Call - Message
-		Date - TransferableByEmailRegular
+		Date - (either TransferableByEmailRegular TransferableByPhoneRegular TransferableBySMSRegular)
 		Handout - TransferableByEmailRegular
 		SMS - Message
 		Person - Contactable
 		Audio - TransferableByEmailRegular
 		Video - TransferableByEmailRegular
-		Route - TransferableByEmailRegular
+		Route - (either TransferableByEmailRegular TransferableByPhoneRegular TransferableBySMSRegular)
 		Alarm
-		Task - Selectable
-		EMailAddress - TransferableBySMSContactable
+		Task - (either Selectable Creatable)
+		EMailAddress - (either TransferableBySMSContactable TransferableByEmailContactable TransferableByPhoneContactable)
 		Milestone - TransferableByEmailRegular
-		NumberMobile - TransferableBySMSContactable
+		NumberMobile - (either TransferableBySMSContactable TransferableByEmailContactable TransferableByPhoneContactable)
 		Picture - TransferableByEmailRegular
 		EMailAccount - Selectable
 		ProjectPlan - TransferableByEmailRegular
-		Appointment - Selectable
-		Location - TransferableByEmailRegular
+		Appointment - (either Selectable Creatable)
+		Location - (either TransferableByEmailRegular TransferableByPhoneRegular TransferableBySMSRegular)
 		EMail - Message
-		NumberOffice - TransferableBySMSContactable
-		Contact - Selectable
+		NumberOffice - (either TransferableBySMSContactable TransferableByEmailContactable TransferableByPhoneContactable)
+		Contact - (either Selectable Creatable)
 		Protocol - TransferableByEmailRegular
 		Agenda - TransferableByEmailRegular
-		TransferableByPhoneRegular - RegularInformation
+		TransferableByPhoneRegular - (either RegularInformation TransferableByCall)
 		Contactable
 		Selectable
-		TransferableByEmailContactable - TransferableByEmail
-		TransferableByEmailRegular - TransferableByEmail
+		TransferableByEmailContactable - (either TransferableByEmail ContactableInformation)
+		TransferableByEmailRegular - (either TransferableByEmail RegularInformation)
 		Creatable
-		TransferableByPhoneContactable - ContactableInformation
-		TransferableBySMSRegular - TransferableBySMS
-		TransferableBySMSContactable - TransferableBySMS
+		TransferableByPhoneContactable - (either ContactableInformation TransferableByCall)
+		TransferableBySMSRegular - (either TransferableBySMS RegularInformation)
+		TransferableBySMSContactable - (either TransferableBySMS ContactableInformation)
 		RegularInformation - Information
 		TransferableByCall - Information
 		ContactableInformation - Information
