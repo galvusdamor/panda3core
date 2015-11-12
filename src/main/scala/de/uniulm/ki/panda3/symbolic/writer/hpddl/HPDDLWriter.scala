@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.writer.hpddl
 
-import de.uniulm.ki.panda3.symbolic.csp.{CSP, Equal, NoConstraintsCSP, SymbolicUnionFind}
+import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, Literal, Value, Variable}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -137,6 +137,13 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
     unionFind
   }
 
+  def getRepresentative(v: Value, uf: SymbolicUnionFind): String = v match {
+    case Constant(c)            => toPDDLIdentifier(c)
+    case vari@Variable(_, _, _) => uf.getRepresentative(vari) match {
+      case Constant(c)          => toPDDLIdentifier(c)
+      case Variable(_, name, _) => toHPDDLVariableName(name)
+    }
+  }
 
   override def writeDomain(dom: Domain): String = {
     // ATTENTION: we cannot use any CSP in here, since the domain may lack constants, i.e., probably any CSP will be unsolvable causing problems
@@ -187,13 +194,26 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
     dom.decompositionMethods.zipWithIndex foreach { case (m, idx) =>
       builder.append("\n")
       builder.append("\t(:method method" + idx + "\n")
+      val planUF = constructUnionFind(m.subPlan)
       if (m.subPlan.variableConstraints.variables.size != 0) {
         builder.append("\t\t:parameters (")
-        val planUF = constructUnionFind(m.subPlan)
         val methodParameters = (m.subPlan.variableConstraints.variables.toSeq filter {planUF.getRepresentative(_).isInstanceOf[Variable]}).sortWith({_.name < _.name})
         builder.append(writeParameters(methodParameters))
         builder.append(")\n")
       }
+      // write down the constraints
+      val constraintConditions = m.subPlan.variableConstraints.constraints collect {
+        case NotEqual(v1, v2) => "(not (= " + getRepresentative(v1, planUF) + " " + getRepresentative(v2, planUF) + "))"
+        case OfSort(v, s)     => "(nunlift_mem_of_" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, planUF) + ")"
+        case NotOfSort(v, s)  => "(not (nunlift_mem_of_" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, planUF) + "))"
+      }
+
+      if (constraintConditions.size != 0) {
+        builder.append("\t\t:precondition (and\n")
+        constraintConditions foreach { s => builder.append("\t\t\t" + s + "\n") }
+        builder.append("\t\t)\n")
+      }
+
       builder.append("\t\t:task (" + toPDDLIdentifier(m.abstractTask.name))
       val taskUF = constructUnionFind(m.abstractTask)
       val parameters = m.abstractTask.parameters filter {taskUF.getRepresentative(_).isInstanceOf[Variable]}

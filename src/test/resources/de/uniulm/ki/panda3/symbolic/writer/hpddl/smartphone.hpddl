@@ -577,6 +577,9 @@
 
 	(:method method57
 		:parameters (?do_select_People_Favourite_WithPreviousSelection_variable4 - Contact ?do_select_People_Favourite_WithPreviousSelection_variable5 - Contact ?do_select_People_Favourite_WithPreviousSelection_variable6 - Contactable ?newObj_variable48 - Contact ?newObj_variable71 - Contactable)
+		:precondition (and
+			(not (= ?do_select_People_Favourite_WithPreviousSelection_variable5 ?do_select_People_Favourite_WithPreviousSelection_variable4))
+		)
 		:task (select_People_Favourite ?newObj_variable48 ?newObj_variable71)
 		:tasks (task0 (select_People_Favourite_WithPreviousSelection ?do_select_People_Favourite_WithPreviousSelection_variable4 ?do_select_People_Favourite_WithPreviousSelection_variable5 ?do_select_People_Favourite_WithPreviousSelection_variable6))
 	)
@@ -612,6 +615,9 @@
 
 	(:method method62
 		:parameters (?do_select_EMail_EMailAccount_WithPreviousSelection_variable3 - EMailAccount ?do_select_EMail_EMailAccount_WithPreviousSelection_variable4 - EMailAccount ?newObj_variable136 - EMailAccount)
+		:precondition (and
+			(not (= ?do_select_EMail_EMailAccount_WithPreviousSelection_variable4 ?do_select_EMail_EMailAccount_WithPreviousSelection_variable3))
+		)
 		:task (select_EMail_EMailAccount ?newObj_variable136)
 		:tasks (task0 (select_EMail_EMailAccount_WithPreviousSelection ?do_select_EMail_EMailAccount_WithPreviousSelection_variable3 ?do_select_EMail_EMailAccount_WithPreviousSelection_variable4))
 	)
