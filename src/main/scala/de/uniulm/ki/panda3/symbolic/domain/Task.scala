@@ -19,6 +19,8 @@ import de.uniulm.ki.util.HashMemo
 case class Task(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], preconditions: Seq[Literal], effects: Seq[Literal]) extends
 DomainUpdatable with PrettyPrintable with HashMemo {
 
+  assert((preconditions ++ effects) forall {l => l.parameterVariables forall parameters.contains})
+
   def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = {
     val sub = Substitution(parameters, newParameter)
     Literal(literal.predicate, literal.isPositive, literal.parameterVariables map sub)
