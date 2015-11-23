@@ -14,6 +14,7 @@ case class DecompositionMethod(abstractTask: Task, subPlan: Plan) extends Domain
   assert(abstractTask.effects.size == subPlan.goal.substitutedPreconditions.size)
   assert((abstractTask.preconditions zip subPlan.init.substitutedEffects) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
   assert((abstractTask.effects zip subPlan.init.substitutedPreconditions) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
+  assert(abstractTask.parameters forall subPlan.variableConstraints.variables.contains)
 
   lazy val canGenerate: Seq[Predicate] = subPlan.planStepWithoutInitGoal flatMap {_.schema.effects map {_.predicate}}
 
