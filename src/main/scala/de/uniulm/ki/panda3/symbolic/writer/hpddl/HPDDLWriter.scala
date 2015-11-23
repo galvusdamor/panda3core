@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.symbolic.writer.hpddl
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, Literal, Value, Variable}
+import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.writer.Writer
@@ -202,15 +203,17 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
       val planUF = constructUnionFind(m.subPlan)
       if (m.subPlan.variableConstraints.variables.size != 0) {
         builder.append("\t\t:parameters (")
-        val methodParameters = (m.subPlan.variableConstraints.variables.toSeq filter {planUF.getRepresentative(_).isInstanceOf[Variable]}).sortWith({_.name < _.name})
+        val methodParameters: Seq[Variable] = {
+          (m.subPlan.variableConstraints.variables.toSeq map planUF.getRepresentative collect { case v@Variable(_, _, _) => v }).toSet.toSeq.sortWith({_.name < _.name})
+        }
         builder.append(writeParameters(methodParameters))
         builder.append(")\n")
       }
       // write down the constraints
       val constraintConditions = m.subPlan.variableConstraints.constraints collect {
         case NotEqual(v1, v2) => "(not (= " + getRepresentative(v1, planUF) + " " + getRepresentative(v2, planUF) + "))"
-        case OfSort(v, s)     => "(nunlift_mem_of_" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, planUF) + ")"
-        case NotOfSort(v, s)  => "(not (nunlift_mem_of_" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, planUF) + "))"
+        case OfSort(v, s)    => "(" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, planUF) + ")"
+        case NotOfSort(v, s) => "(not (" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, planUF) + "))"
       }
 
       if (constraintConditions.size != 0) {
@@ -220,8 +223,7 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
       }
 
       builder.append("\t\t:task (" + toPDDLIdentifier(m.abstractTask.name))
-      val taskUF = constructUnionFind(m.abstractTask)
-      val parameters = m.abstractTask.parameters filter {taskUF.getRepresentative(_).isInstanceOf[Variable]}
+      val parameters = m.abstractTask.parameters filter {planUF.getRepresentative(_).isInstanceOf[Variable]} map planUF.getRepresentative
       builder.append(writeVariableList(parameters, NoConstraintsCSP))
       builder.append(")\n")
 
@@ -307,5 +309,14 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
 
     builder.append(")")
     builder.toString()
+  }
+
+}
+
+object HPDDLWriter {
+  def main(args: Array[String]) {
+    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/hpddl/UMTranslog.xml")
+
+    val dom = HPDDLWriter("smartphone", "smartphone_verysmall").writeDomain(domAlone)
   }
 }
