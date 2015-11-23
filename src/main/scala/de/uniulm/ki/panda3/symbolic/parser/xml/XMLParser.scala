@@ -277,8 +277,9 @@ object XMLParser extends Parser {
       inheritedVariableConstraints)
 
     // get the order induced by the causal links and the explicitly mentioned order
-    // TODO: adding ordering constraints based on causal links is in general not correct. It is only if both tasks are primitive
-    val orderingConstraints: Seq[element.OrderingConstraint] = ((causalLinks map { cl => element.OrderingConstraint(cl._1.producer, cl._1.consumer) }) ++
+    val orderingConstraintsImpliedByCausalLinks: Seq[element.OrderingConstraint] = (causalLinks filter { case (cl, _) => cl.producer.schema.isPrimitive && cl.consumer.schema.isPrimitive }
+      map { cl => element.OrderingConstraint(cl._1.producer, cl._1.consumer) })
+    val orderingConstraints: Seq[element.OrderingConstraint] = (orderingConstraintsImpliedByCausalLinks ++
       (JavaConversions.asScalaBuffer(planDef.getOrderingConstraint) map { oc => element.OrderingConstraint(xmlTaskNodesToScalaPlanSteps(oc.getPredecessor.asInstanceOf[TaskNode]),
         xmlTaskNodesToScalaPlanSteps(oc.getSuccessor.asInstanceOf[TaskNode]))
       }) ++ element.OrderingConstraint.allBetween(init, goal, planSteps filterNot { ps => ps == init || ps == goal }: _*)).toSet.toSeq
@@ -389,7 +390,7 @@ object XMLParser extends Parser {
         assert(valueRestriction.getVariableOrConstant.size() == 1)
         val voc = valueRestriction.getVariableOrConstant.get(0) match {
           case v2: de.uniulm.ki.panda3.symbolic.parser.xml.problem.VariableDeclaration => variableNameToVariable(v2.getName)
-          case v2: de.uniulm.ki.panda3.symbolic.parser.xml.problem.Variable => variableNameToVariable(v2.getName.asInstanceOf[de.uniulm.ki.panda3.symbolic.parser.xml.problem
+          case v2: de.uniulm.ki.panda3.symbolic.parser.xml.problem.Variable            => variableNameToVariable(v2.getName.asInstanceOf[de.uniulm.ki.panda3.symbolic.parser.xml.problem
           .VariableDeclaration].getName)
           case c: de.uniulm.ki.panda3.symbolic.parser.xml.problem.Constant             => nameToVariablesForConstants(c.getName)
         }
