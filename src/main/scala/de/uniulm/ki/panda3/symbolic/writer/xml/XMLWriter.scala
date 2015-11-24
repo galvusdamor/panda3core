@@ -192,31 +192,31 @@ class XMLWriter extends Writer {
         case Equal(var1, value)        =>
           val valueRestriction = new ValueRestriction
           valueRestriction.setType("eq")
-          valueRestriction.setVariable(toVariable(allVariablesToXMLVariable(var1)))
+          valueRestriction.setVariableN(allVariablesToXMLVariable(var1)) // wrapping this in a variable will crash
           value match {
-            case v@logic.Variable(_, _, _) => valueRestriction.setVariableN(allVariablesToXMLVariable(v))
+            case v@logic.Variable(_, _, _) => valueRestriction.setVariable(toVariable(allVariablesToXMLVariable(v)))
             case c@logic.Constant(_)       => valueRestriction.setConstant(toConstant(constantsToConstDecl(c)))
           }
           valueRestriction
         case NotEqual(var1, value)     =>
           val valueRestriction = new ValueRestriction
           valueRestriction.setType("neq")
-          valueRestriction.setVariable(toVariable(allVariablesToXMLVariable(var1)))
+          valueRestriction.setVariableN(allVariablesToXMLVariable(var1)) // wrapping this in a variable will crash
           value match {
-            case v@logic.Variable(_, _, _) => valueRestriction.setVariableN(allVariablesToXMLVariable(v))
+            case v@logic.Variable(_, _, _) => valueRestriction.setVariable(toVariable(allVariablesToXMLVariable(v)))
             case c@logic.Constant(_)       => valueRestriction.setConstant(toConstant(constantsToConstDecl(c)))
           }
           valueRestriction
         case OfSort(variable, sort)    =>
           val sortRestriction = new SortRestriction
           sortRestriction.setType("eq")
-          sortRestriction.setVariable(toVariable(allVariablesToXMLVariable(variable)))
+          sortRestriction.setVariable(allVariablesToXMLVariable(variable)) // wrapping this in a variable will crash
           sortRestriction.setSort(sortToSortDecl(sort))
           sortRestriction
         case NotOfSort(variable, sort) =>
           val sortRestriction = new SortRestriction
           sortRestriction.setType("neq")
-          sortRestriction.setVariable(toVariable(allVariablesToXMLVariable(variable)))
+          sortRestriction.setVariable(allVariablesToXMLVariable(variable)) // wrapping this in a variable will crash
           sortRestriction.setSort(sortToSortDecl(sort))
           sortRestriction
       } foreach methodDecl.getValueRestrictionOrSortRestriction.add

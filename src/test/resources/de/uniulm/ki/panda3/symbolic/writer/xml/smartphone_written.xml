@@ -3564,23 +3564,23 @@
             <variableDeclaration name="set_Appointment.Time_instance_5_argument_4" sort="Appointment"/>
             <variableDeclaration name="set_Appointment.Time_instance_5_argument_5" sort="Date"/>
         </taskNode>
-        <valueRestriction type="eq" variable="set_Appointment.Location_instance_2_argument_0">
-            <variable name="newObj_variable1"/>
+        <valueRestriction type="eq" variable="newObj_variable1">
+            <variable name="set_Appointment.Location_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Appointment.Name_instance_3_argument_2">
-            <variable name="newObj_variable1"/>
+        <valueRestriction type="eq" variable="newObj_variable1">
+            <variable name="set_Appointment.Name_instance_3_argument_2"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Appointment.Reminder_instance_4_argument_3">
-            <variable name="newObj_variable1"/>
+        <valueRestriction type="eq" variable="newObj_variable1">
+            <variable name="set_Appointment.Reminder_instance_4_argument_3"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Appointment.Time_instance_5_argument_4">
-            <variable name="newObj_variable1"/>
+        <valueRestriction type="eq" variable="newObj_variable1">
+            <variable name="set_Appointment.Time_instance_5_argument_4"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Appointment.Time_instance_5_argument_5">
-            <variable name="configure_Appointment_variable1"/>
+        <valueRestriction type="eq" variable="configure_Appointment_variable1">
+            <variable name="set_Appointment.Time_instance_5_argument_5"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Appointment.Location_instance_2_argument_1">
-            <variable name="configure_Appointment_variable2"/>
+        <valueRestriction type="eq" variable="configure_Appointment_variable2">
+            <variable name="set_Appointment.Location_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method5" taskSchema="create_NewAppointment">
@@ -3604,23 +3604,23 @@
         <orderingConstraint predecessor="method5_subtask_3" successor="method5_subtask_5"/>
         <orderingConstraint predecessor="method5_subtask_3" successor="method5_subtask_4"/>
         <orderingConstraint predecessor="method5_subtask_4" successor="method5_subtask_5"/>
-        <valueRestriction type="eq" variable="configure_Appointment_instance_4_argument_1">
-            <variable name="newObj_variable14"/>
+        <valueRestriction type="eq" variable="newObj_variable14">
+            <variable name="configure_Appointment_instance_4_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Calendar.Menu.NewAppointment_instance_3_argument_0">
-            <variable name="newObj_variable14"/>
+        <valueRestriction type="eq" variable="newObj_variable14">
+            <variable name="press_Calendar.Menu.NewAppointment_instance_3_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Calendar.NewAppointment.OK_instance_5_argument_4">
-            <variable name="newObj_variable14"/>
+        <valueRestriction type="eq" variable="newObj_variable14">
+            <variable name="press_Calendar.NewAppointment.OK_instance_5_argument_4"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="configure_Appointment_instance_4_argument_2">
-            <variable name="create_NewAppointment_variable1"/>
+        <valueRestriction type="eq" variable="create_NewAppointment_variable1">
+            <variable name="configure_Appointment_instance_4_argument_2"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Calendar.NewAppointment.OK_instance_5_argument_5">
-            <variable name="create_NewAppointment_variable1"/>
+        <valueRestriction type="eq" variable="create_NewAppointment_variable1">
+            <variable name="press_Calendar.NewAppointment.OK_instance_5_argument_5"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="configure_Appointment_instance_4_argument_3">
-            <variable name="create_NewAppointment_variable2"/>
+        <valueRestriction type="eq" variable="create_NewAppointment_variable2">
+            <variable name="configure_Appointment_instance_4_argument_3"/>
         </valueRestriction>
         <causalLink producer="method5_subtask_2" consumer="method5_subtask_3">
             <atomic relation="inMode_Menu"/>
@@ -3648,14 +3648,14 @@
             <variableDeclaration name="create_NewAppointment_instance_3_argument_2" sort="Location"/>
         </taskNode>
         <orderingConstraint predecessor="method6_subtask_2" successor="method6_subtask_3"/>
-        <valueRestriction type="eq" variable="create_NewAppointment_instance_3_argument_0">
-            <variable name="newObj_variable16"/>
+        <valueRestriction type="eq" variable="newObj_variable16">
+            <variable name="create_NewAppointment_instance_3_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="create_NewAppointment_instance_3_argument_1">
-            <variable name="create_Appointment_variable2"/>
+        <valueRestriction type="eq" variable="create_Appointment_variable2">
+            <variable name="create_NewAppointment_instance_3_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="create_NewAppointment_instance_3_argument_2">
-            <variable name="create_Appointment_variable1"/>
+        <valueRestriction type="eq" variable="create_Appointment_variable1">
+            <variable name="create_NewAppointment_instance_3_argument_2"/>
         </valueRestriction>
         <causalLink producer="method6_subtask_2" consumer="method6_subtask_3">
             <atomic relation="inMode_Calendar"/>
@@ -3686,14 +3686,14 @@
         <taskNode name="method8_subtask_4" taskSchema="set_Task.Reminder">
             <variableDeclaration name="set_Task.Reminder_instance_4_argument_3" sort="Task"/>
         </taskNode>
-        <valueRestriction type="eq" variable="set_Task.Name_instance_2_argument_0">
-            <variable name="newObj_variable13"/>
+        <valueRestriction type="eq" variable="newObj_variable13">
+            <variable name="set_Task.Name_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Task.Time_instance_3_argument_1">
-            <variable name="newObj_variable13"/>
+        <valueRestriction type="eq" variable="newObj_variable13">
+            <variable name="set_Task.Time_instance_3_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Task.Reminder_instance_4_argument_3">
-            <variable name="newObj_variable13"/>
+        <valueRestriction type="eq" variable="newObj_variable13">
+            <variable name="set_Task.Reminder_instance_4_argument_3"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method9" taskSchema="create_NewTask">
@@ -3712,14 +3712,14 @@
         <orderingConstraint predecessor="method9_subtask_3" successor="method9_subtask_5"/>
         <orderingConstraint predecessor="method9_subtask_3" successor="method9_subtask_4"/>
         <orderingConstraint predecessor="method9_subtask_2" successor="method9_subtask_3"/>
-        <valueRestriction type="eq" variable="configure_Task_instance_4_argument_1">
-            <variable name="newObj_variable27"/>
+        <valueRestriction type="eq" variable="newObj_variable27">
+            <variable name="configure_Task_instance_4_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Tasks.NewTask.OK_instance_5_argument_2">
-            <variable name="newObj_variable27"/>
+        <valueRestriction type="eq" variable="newObj_variable27">
+            <variable name="press_Tasks.NewTask.OK_instance_5_argument_2"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Tasks.Menu.NewTask_instance_3_argument_0">
-            <variable name="newObj_variable27"/>
+        <valueRestriction type="eq" variable="newObj_variable27">
+            <variable name="press_Tasks.Menu.NewTask_instance_3_argument_0"/>
         </valueRestriction>
         <causalLink producer="method9_subtask_2" consumer="method9_subtask_3">
             <atomic relation="inMode_Menu"/>
@@ -3746,8 +3746,8 @@
         <taskNode name="method10_subtask_2" taskSchema="set_Task.Name_Light">
             <variableDeclaration name="set_Task.Name_Light_instance_2_argument_0" sort="Task"/>
         </taskNode>
-        <valueRestriction type="eq" variable="set_Task.Name_Light_instance_2_argument_0">
-            <variable name="newObj_variable27"/>
+        <valueRestriction type="eq" variable="newObj_variable27">
+            <variable name="set_Task.Name_Light_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method11" taskSchema="create_Task">
@@ -3757,8 +3757,8 @@
             <variableDeclaration name="create_NewTask_instance_3_argument_0" sort="Task"/>
         </taskNode>
         <orderingConstraint predecessor="method11_subtask_2" successor="method11_subtask_3"/>
-        <valueRestriction type="eq" variable="create_NewTask_instance_3_argument_0">
-            <variable name="newObj_variable18"/>
+        <valueRestriction type="eq" variable="newObj_variable18">
+            <variable name="create_NewTask_instance_3_argument_0"/>
         </valueRestriction>
         <causalLink producer="method11_subtask_2" consumer="method11_subtask_3">
             <atomic relation="inMode_Tasks"/>
@@ -3809,14 +3809,14 @@
             <variableDeclaration name="set_Contact.Connection_instance_3_argument_1" sort="Contact"/>
             <variableDeclaration name="set_Contact.Connection_instance_3_argument_2" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="set_Contact.Connection_instance_3_argument_1">
-            <variable name="newObj_variable34"/>
+        <valueRestriction type="eq" variable="newObj_variable34">
+            <variable name="set_Contact.Connection_instance_3_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Contact.Name_instance_2_argument_0">
-            <variable name="newObj_variable34"/>
+        <valueRestriction type="eq" variable="newObj_variable34">
+            <variable name="set_Contact.Name_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Contact.Connection_instance_3_argument_2">
-            <variable name="configure_Contact_variable1"/>
+        <valueRestriction type="eq" variable="configure_Contact_variable1">
+            <variable name="set_Contact.Connection_instance_3_argument_2"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method18" taskSchema="configure_Contact">
@@ -3833,17 +3833,17 @@
         <taskNode name="method18_subtask_4" taskSchema="set_Contact.Name">
             <variableDeclaration name="set_Contact.Name_instance_4_argument_4" sort="Contact"/>
         </taskNode>
-        <valueRestriction type="eq" variable="set_Contact.Connection_instance_2_argument_0">
-            <variable name="newObj_variable34"/>
+        <valueRestriction type="eq" variable="newObj_variable34">
+            <variable name="set_Contact.Connection_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Contact.Picture_instance_3_argument_2">
-            <variable name="newObj_variable34"/>
+        <valueRestriction type="eq" variable="newObj_variable34">
+            <variable name="set_Contact.Picture_instance_3_argument_2"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Contact.Name_instance_4_argument_4">
-            <variable name="newObj_variable34"/>
+        <valueRestriction type="eq" variable="newObj_variable34">
+            <variable name="set_Contact.Name_instance_4_argument_4"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Contact.Connection_instance_2_argument_1">
-            <variable name="configure_Contact_variable1"/>
+        <valueRestriction type="eq" variable="configure_Contact_variable1">
+            <variable name="set_Contact.Connection_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method19" taskSchema="set_Contact.Connection">
@@ -3854,11 +3854,11 @@
             <variableDeclaration name="set_Contact.Email_instance_2_argument_1" sort="Contactable"/>
             <variableDeclaration name="set_Contact.Email_instance_2_argument_2" sort="EMailAddress"/>
         </taskNode>
-        <valueRestriction type="eq" variable="set_Contact.Email_instance_2_argument_0">
-            <variable name="newObj_variable45"/>
+        <valueRestriction type="eq" variable="newObj_variable45">
+            <variable name="set_Contact.Email_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Contact.Email_instance_2_argument_1">
-            <variable name="set_Contact.Connection_variable1"/>
+        <valueRestriction type="eq" variable="set_Contact.Connection_variable1">
+            <variable name="set_Contact.Email_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method20" taskSchema="set_Contact.Connection">
@@ -3869,11 +3869,11 @@
             <variableDeclaration name="set_Contact.NumberOffice_instance_2_argument_1" sort="Contactable"/>
             <variableDeclaration name="set_Contact.NumberOffice_instance_2_argument_2" sort="NumberOffice"/>
         </taskNode>
-        <valueRestriction type="eq" variable="set_Contact.NumberOffice_instance_2_argument_0">
-            <variable name="newObj_variable45"/>
+        <valueRestriction type="eq" variable="newObj_variable45">
+            <variable name="set_Contact.NumberOffice_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Contact.NumberOffice_instance_2_argument_1">
-            <variable name="set_Contact.Connection_variable1"/>
+        <valueRestriction type="eq" variable="set_Contact.Connection_variable1">
+            <variable name="set_Contact.NumberOffice_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method21" taskSchema="set_Contact.Connection">
@@ -3884,11 +3884,11 @@
             <variableDeclaration name="set_Contact.NumberMobile_instance_2_argument_1" sort="Contactable"/>
             <variableDeclaration name="set_Contact.NumberMobile_instance_2_argument_2" sort="NumberMobile"/>
         </taskNode>
-        <valueRestriction type="eq" variable="set_Contact.NumberMobile_instance_2_argument_0">
-            <variable name="newObj_variable45"/>
+        <valueRestriction type="eq" variable="newObj_variable45">
+            <variable name="set_Contact.NumberMobile_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="set_Contact.NumberMobile_instance_2_argument_1">
-            <variable name="set_Contact.Connection_variable1"/>
+        <valueRestriction type="eq" variable="set_Contact.Connection_variable1">
+            <variable name="set_Contact.NumberMobile_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method22" taskSchema="set_Contact.Picture">
@@ -3902,14 +3902,14 @@
             <variableDeclaration name="select_PictureSelection.PictureForNewContact_instance_3_argument_2" sort="Contact"/>
         </taskNode>
         <orderingConstraint predecessor="method22_subtask_2" successor="method22_subtask_3"/>
-        <valueRestriction type="eq" variable="select_PictureSelection.PictureForNewContact_instance_3_argument_2">
-            <variable name="newObj_variable41"/>
+        <valueRestriction type="eq" variable="newObj_variable41">
+            <variable name="select_PictureSelection.PictureForNewContact_instance_3_argument_2"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_PictureSelection.PictureForNewContact_instance_3_argument_1">
-            <variable name="newObj_variable42"/>
+        <valueRestriction type="eq" variable="newObj_variable42">
+            <variable name="select_PictureSelection.PictureForNewContact_instance_3_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Contacts.NewContact.SelectPicture_instance_2_argument_0">
-            <variable name="newObj_variable41"/>
+        <valueRestriction type="eq" variable="newObj_variable41">
+            <variable name="press_Contacts.NewContact.SelectPicture_instance_2_argument_0"/>
         </valueRestriction>
         <causalLink producer="method22_subtask_2" consumer="method22_subtask_3">
             <atomic relation="inMode_PictureSelection"/>
@@ -3932,20 +3932,20 @@
         <orderingConstraint predecessor="method23_subtask_3" successor="method23_subtask_4"/>
         <orderingConstraint predecessor="method23_subtask_2" successor="method23_subtask_3"/>
         <orderingConstraint predecessor="method23_subtask_2" successor="method23_subtask_4"/>
-        <valueRestriction type="eq" variable="configure_Contact_instance_3_argument_2">
-            <variable name="newObj_variable54"/>
+        <valueRestriction type="eq" variable="newObj_variable54">
+            <variable name="configure_Contact_instance_3_argument_2"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="configure_Contact_instance_3_argument_3">
-            <variable name="create_NewContact_variable1"/>
+        <valueRestriction type="eq" variable="create_NewContact_variable1">
+            <variable name="configure_Contact_instance_3_argument_3"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Contacts.New_instance_2_argument_0">
-            <variable name="newObj_variable54"/>
+        <valueRestriction type="eq" variable="newObj_variable54">
+            <variable name="press_Contacts.New_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Contacts.New_instance_2_argument_1">
-            <variable name="create_NewContact_variable1"/>
+        <valueRestriction type="eq" variable="create_NewContact_variable1">
+            <variable name="press_Contacts.New_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Contacts.NewContact.OK_instance_4_argument_4">
-            <variable name="newObj_variable54"/>
+        <valueRestriction type="eq" variable="newObj_variable54">
+            <variable name="press_Contacts.NewContact.OK_instance_4_argument_4"/>
         </valueRestriction>
         <causalLink producer="method23_subtask_2" consumer="method23_subtask_3">
             <atomic relation="inMode_Contacts.ConfigureContact"/>
@@ -3974,11 +3974,11 @@
             <variableDeclaration name="create_NewContact_instance_3_argument_1" sort="Contactable"/>
         </taskNode>
         <orderingConstraint predecessor="method24_subtask_2" successor="method24_subtask_3"/>
-        <valueRestriction type="eq" variable="create_NewContact_instance_3_argument_0">
-            <variable name="newObj_variable32"/>
+        <valueRestriction type="eq" variable="newObj_variable32">
+            <variable name="create_NewContact_instance_3_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="create_NewContact_instance_3_argument_1">
-            <variable name="create_Contact_variable2"/>
+        <valueRestriction type="eq" variable="create_Contact_variable2">
+            <variable name="create_NewContact_instance_3_argument_1"/>
         </valueRestriction>
         <causalLink producer="method24_subtask_2" consumer="method24_subtask_3">
             <atomic relation="inMode_Contacts"/>
@@ -4008,14 +4008,14 @@
         <orderingConstraint predecessor="method26_subtask_4" successor="method26_subtask_5"/>
         <orderingConstraint predecessor="method26_subtask_2" successor="method26_subtask_3"/>
         <orderingConstraint predecessor="method26_subtask_3" successor="method26_subtask_4"/>
-        <valueRestriction type="eq" variable="select_People.AddFavourite.Contact_instance_3_argument_0">
-            <variable name="newObj_variable64"/>
+        <valueRestriction type="eq" variable="newObj_variable64">
+            <variable name="select_People.AddFavourite.Contact_instance_3_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.AddFavourite.FavouriteNumber_WithoutPicture_instance_4_argument_1">
-            <variable name="newObj_variable64"/>
+        <valueRestriction type="eq" variable="newObj_variable64">
+            <variable name="select_People.AddFavourite.FavouriteNumber_WithoutPicture_instance_4_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.AddFavourite.Picture_instance_5_argument_2">
-            <variable name="newObj_variable64"/>
+        <valueRestriction type="eq" variable="newObj_variable64">
+            <variable name="select_People.AddFavourite.Picture_instance_5_argument_2"/>
         </valueRestriction>
         <causalLink producer="method26_subtask_2" consumer="method26_subtask_3">
             <atomic relation="inMode_People.AddFavourite.SelectContact"/>
@@ -4064,8 +4064,8 @@
             <variableDeclaration name="add_NewFavourite_instance_3_argument_0" sort="Contact"/>
         </taskNode>
         <orderingConstraint predecessor="method28_subtask_2" successor="method28_subtask_3"/>
-        <valueRestriction type="eq" variable="add_NewFavourite_instance_3_argument_0">
-            <variable name="newObj_variable67"/>
+        <valueRestriction type="eq" variable="newObj_variable67">
+            <variable name="add_NewFavourite_instance_3_argument_0"/>
         </valueRestriction>
         <causalLink producer="method28_subtask_2" consumer="method28_subtask_3">
             <atomic relation="inMode_People"/>
@@ -4084,8 +4084,8 @@
         <taskNode name="method31_subtask_2" taskSchema="select_People.AddFavourite.Contact_withEmail">
             <variableDeclaration name="select_People.AddFavourite.Contact_withEmail_instance_2_argument_0" sort="Contact"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_People.AddFavourite.Contact_withEmail_instance_2_argument_0">
-            <variable name="newObj_variable40"/>
+        <valueRestriction type="eq" variable="newObj_variable40">
+            <variable name="select_People.AddFavourite.Contact_withEmail_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method32" taskSchema="select_People.AddFavourite.Contact">
@@ -4093,8 +4093,8 @@
         <taskNode name="method32_subtask_2" taskSchema="select_People.AddFavourite.Contact_withMobile">
             <variableDeclaration name="select_People.AddFavourite.Contact_withMobile_instance_2_argument_0" sort="Contact"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_People.AddFavourite.Contact_withMobile_instance_2_argument_0">
-            <variable name="newObj_variable40"/>
+        <valueRestriction type="eq" variable="newObj_variable40">
+            <variable name="select_People.AddFavourite.Contact_withMobile_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method33" taskSchema="select_People.AddFavourite.Contact">
@@ -4102,8 +4102,8 @@
         <taskNode name="method33_subtask_2" taskSchema="select_People.AddFavourite.Contact_withOffice">
             <variableDeclaration name="select_People.AddFavourite.Contact_withOffice_instance_2_argument_0" sort="Contact"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_People.AddFavourite.Contact_withOffice_instance_2_argument_0">
-            <variable name="newObj_variable40"/>
+        <valueRestriction type="eq" variable="newObj_variable40">
+            <variable name="select_People.AddFavourite.Contact_withOffice_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method34" taskSchema="add_NewFavourite">
@@ -4118,11 +4118,11 @@
         </taskNode>
         <orderingConstraint predecessor="method34_subtask_2" successor="method34_subtask_3"/>
         <orderingConstraint predecessor="method34_subtask_3" successor="method34_subtask_4"/>
-        <valueRestriction type="eq" variable="select_People.AddFavourite.Contact_instance_3_argument_0">
-            <variable name="newObj_variable64"/>
+        <valueRestriction type="eq" variable="newObj_variable64">
+            <variable name="select_People.AddFavourite.Contact_instance_3_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.AddFavourite.FavouriteNumber_WithPicture_instance_4_argument_1">
-            <variable name="newObj_variable64"/>
+        <valueRestriction type="eq" variable="newObj_variable64">
+            <variable name="select_People.AddFavourite.FavouriteNumber_WithPicture_instance_4_argument_1"/>
         </valueRestriction>
         <causalLink producer="method34_subtask_2" consumer="method34_subtask_3">
             <atomic relation="inMode_People.AddFavourite"/>
@@ -4161,11 +4161,11 @@
             <variableDeclaration name="press_Telephone.Call_Mobile_instance_2_argument_0" sort="Contactable"/>
             <variableDeclaration name="press_Telephone.Call_Mobile_instance_2_argument_1" sort="Call"/>
         </taskNode>
-        <valueRestriction type="eq" variable="press_Telephone.Call_Mobile_instance_2_argument_1">
-            <variable name="press_Call_variable1"/>
+        <valueRestriction type="eq" variable="press_Call_variable1">
+            <variable name="press_Telephone.Call_Mobile_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Telephone.Call_Mobile_instance_2_argument_0">
-            <variable name="newObj_variable72"/>
+        <valueRestriction type="eq" variable="newObj_variable72">
+            <variable name="press_Telephone.Call_Mobile_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method38" taskSchema="press_Telephone.Call">
@@ -4175,11 +4175,11 @@
             <variableDeclaration name="press_Telephone.Call_Office_instance_2_argument_0" sort="Contactable"/>
             <variableDeclaration name="press_Telephone.Call_Office_instance_2_argument_1" sort="Call"/>
         </taskNode>
-        <valueRestriction type="eq" variable="press_Telephone.Call_Office_instance_2_argument_1">
-            <variable name="press_Call_variable1"/>
+        <valueRestriction type="eq" variable="press_Call_variable1">
+            <variable name="press_Telephone.Call_Office_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Telephone.Call_Office_instance_2_argument_0">
-            <variable name="newObj_variable72"/>
+        <valueRestriction type="eq" variable="newObj_variable72">
+            <variable name="press_Telephone.Call_Office_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method39" taskSchema="call">
@@ -4193,11 +4193,11 @@
         </taskNode>
         <orderingConstraint predecessor="method39_subtask_3" successor="method39_subtask_4"/>
         <orderingConstraint predecessor="method39_subtask_2" successor="method39_subtask_3"/>
-        <valueRestriction type="eq" variable="press_Telephone.Call_instance_4_argument_1">
-            <variable name="call_variable1"/>
+        <valueRestriction type="eq" variable="call_variable1">
+            <variable name="press_Telephone.Call_instance_4_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_Telephone.Call_instance_4_argument_0">
-            <variable name="newObj_variable49"/>
+        <valueRestriction type="eq" variable="newObj_variable49">
+            <variable name="press_Telephone.Call_instance_4_argument_0"/>
         </valueRestriction>
         <causalLink producer="method39_subtask_2" consumer="method39_subtask_3">
             <atomic relation="inMode_Telephone"/>
@@ -4215,14 +4215,14 @@
             <variableDeclaration name="select_Contacts.Details.Mobile_instance_2_argument_1" sort="Call"/>
             <variableDeclaration name="select_Contacts.Details.Mobile_instance_2_argument_2" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_Contacts.Details.Mobile_instance_2_argument_1">
-            <variable name="select_Contacts.Details.Number_variable1"/>
+        <valueRestriction type="eq" variable="select_Contacts.Details.Number_variable1">
+            <variable name="select_Contacts.Details.Mobile_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_Contacts.Details.Mobile_instance_2_argument_0">
-            <variable name="newObj_variable80"/>
+        <valueRestriction type="eq" variable="newObj_variable80">
+            <variable name="select_Contacts.Details.Mobile_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_Contacts.Details.Mobile_instance_2_argument_2">
-            <variable name="select_Contacts.Details.Number_variable2"/>
+        <valueRestriction type="eq" variable="select_Contacts.Details.Number_variable2">
+            <variable name="select_Contacts.Details.Mobile_instance_2_argument_2"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method41" taskSchema="select_Contacts.Details.Number">
@@ -4234,14 +4234,14 @@
             <variableDeclaration name="select_Contacts.Details.Office_instance_2_argument_1" sort="Call"/>
             <variableDeclaration name="select_Contacts.Details.Office_instance_2_argument_2" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_Contacts.Details.Office_instance_2_argument_1">
-            <variable name="select_Contacts.Details.Number_variable1"/>
+        <valueRestriction type="eq" variable="select_Contacts.Details.Number_variable1">
+            <variable name="select_Contacts.Details.Office_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_Contacts.Details.Office_instance_2_argument_0">
-            <variable name="newObj_variable80"/>
+        <valueRestriction type="eq" variable="newObj_variable80">
+            <variable name="select_Contacts.Details.Office_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_Contacts.Details.Office_instance_2_argument_2">
-            <variable name="select_Contacts.Details.Number_variable2"/>
+        <valueRestriction type="eq" variable="select_Contacts.Details.Number_variable2">
+            <variable name="select_Contacts.Details.Office_instance_2_argument_2"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method42" taskSchema="call">
@@ -4259,17 +4259,17 @@
         </taskNode>
         <orderingConstraint predecessor="method42_subtask_2" successor="method42_subtask_3"/>
         <orderingConstraint predecessor="method42_subtask_3" successor="method42_subtask_4"/>
-        <valueRestriction type="eq" variable="select_Contacts.Details.Number_instance_4_argument_3">
-            <variable name="call_variable1"/>
+        <valueRestriction type="eq" variable="call_variable1">
+            <variable name="select_Contacts.Details.Number_instance_4_argument_3"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_Contacts.ContactForContactable_instance_3_argument_1">
-            <variable name="newObj_variable49"/>
+        <valueRestriction type="eq" variable="newObj_variable49">
+            <variable name="select_Contacts.ContactForContactable_instance_3_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_Contacts.Details.Number_instance_4_argument_4">
-            <variable name="newObj_variable49"/>
+        <valueRestriction type="eq" variable="newObj_variable49">
+            <variable name="select_Contacts.Details.Number_instance_4_argument_4"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_Contacts.Details.Number_instance_4_argument_2">
-            <variable name="select_Contacts.ContactForContactable_instance_3_argument_0"/>
+        <valueRestriction type="eq" variable="select_Contacts.ContactForContactable_instance_3_argument_0">
+            <variable name="select_Contacts.Details.Number_instance_4_argument_2"/>
         </valueRestriction>
         <causalLink producer="method42_subtask_2" consumer="method42_subtask_3">
             <atomic relation="inMode_Contacts"/>
@@ -4301,17 +4301,17 @@
         </taskNode>
         <orderingConstraint predecessor="method43_subtask_3" successor="method43_subtask_4"/>
         <orderingConstraint predecessor="method43_subtask_2" successor="method43_subtask_3"/>
-        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Number_instance_4_argument_3">
-            <variable name="call_variable1"/>
+        <valueRestriction type="eq" variable="call_variable1">
+            <variable name="select_People.FavouriteSelected.Number_instance_4_argument_3"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Number_instance_4_argument_4">
-            <variable name="newObj_variable49"/>
+        <valueRestriction type="eq" variable="newObj_variable49">
+            <variable name="select_People.FavouriteSelected.Number_instance_4_argument_4"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.Favourite_instance_3_argument_1">
-            <variable name="newObj_variable49"/>
+        <valueRestriction type="eq" variable="newObj_variable49">
+            <variable name="select_People.Favourite_instance_3_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.Favourite_instance_3_argument_0">
-            <variable name="select_People.FavouriteSelected.Number_instance_4_argument_2"/>
+        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Number_instance_4_argument_2">
+            <variable name="select_People.Favourite_instance_3_argument_0"/>
         </valueRestriction>
         <causalLink producer="method43_subtask_2" consumer="method43_subtask_3">
             <atomic relation="inMode_People"/>
@@ -4337,14 +4337,14 @@
             <variableDeclaration name="select_People.FavouriteSelected.Mobile_instance_2_argument_1" sort="Call"/>
             <variableDeclaration name="select_People.FavouriteSelected.Mobile_instance_2_argument_2" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Mobile_instance_2_argument_1">
-            <variable name="select_People.FavouriteSelected.Number_variable1"/>
+        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Number_variable1">
+            <variable name="select_People.FavouriteSelected.Mobile_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Mobile_instance_2_argument_0">
-            <variable name="newObj_variable82"/>
+        <valueRestriction type="eq" variable="newObj_variable82">
+            <variable name="select_People.FavouriteSelected.Mobile_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Mobile_instance_2_argument_2">
-            <variable name="select_People.FavouriteSelected.Number_variable2"/>
+        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Number_variable2">
+            <variable name="select_People.FavouriteSelected.Mobile_instance_2_argument_2"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method45" taskSchema="select_People.FavouriteSelected.Number">
@@ -4356,14 +4356,14 @@
             <variableDeclaration name="select_People.FavouriteSelected.Office_instance_2_argument_1" sort="Call"/>
             <variableDeclaration name="select_People.FavouriteSelected.Office_instance_2_argument_2" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Office_instance_2_argument_1">
-            <variable name="select_People.FavouriteSelected.Number_variable1"/>
+        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Number_variable1">
+            <variable name="select_People.FavouriteSelected.Office_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Office_instance_2_argument_0">
-            <variable name="newObj_variable82"/>
+        <valueRestriction type="eq" variable="newObj_variable82">
+            <variable name="select_People.FavouriteSelected.Office_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Office_instance_2_argument_2">
-            <variable name="select_People.FavouriteSelected.Number_variable2"/>
+        <valueRestriction type="eq" variable="select_People.FavouriteSelected.Number_variable2">
+            <variable name="select_People.FavouriteSelected.Office_instance_2_argument_2"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method46" taskSchema="press_People.Smallplus">
@@ -4401,11 +4401,11 @@
             <variableDeclaration name="press_NewMessage.Send_Mobile_instance_2_argument_0" sort="Contactable"/>
             <variableDeclaration name="press_NewMessage.Send_Mobile_instance_2_argument_1" sort="SMS"/>
         </taskNode>
-        <valueRestriction type="eq" variable="press_NewMessage.Send_Mobile_instance_2_argument_0">
-            <variable name="newObj_variable106"/>
+        <valueRestriction type="eq" variable="newObj_variable106">
+            <variable name="press_NewMessage.Send_Mobile_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_NewMessage.Send_Mobile_instance_2_argument_1">
-            <variable name="press_NewMessage.Send_variable1"/>
+        <valueRestriction type="eq" variable="press_NewMessage.Send_variable1">
+            <variable name="press_NewMessage.Send_Mobile_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method52" taskSchema="press_NewMessage.Send">
@@ -4415,11 +4415,11 @@
             <variableDeclaration name="press_NewMessage.Send_Office_instance_2_argument_0" sort="Contactable"/>
             <variableDeclaration name="press_NewMessage.Send_Office_instance_2_argument_1" sort="SMS"/>
         </taskNode>
-        <valueRestriction type="eq" variable="press_NewMessage.Send_Office_instance_2_argument_0">
-            <variable name="newObj_variable106"/>
+        <valueRestriction type="eq" variable="newObj_variable106">
+            <variable name="press_NewMessage.Send_Office_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_NewMessage.Send_Office_instance_2_argument_1">
-            <variable name="press_NewMessage.Send_variable1"/>
+        <valueRestriction type="eq" variable="press_NewMessage.Send_variable1">
+            <variable name="press_NewMessage.Send_Office_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method53" taskSchema="send_SMS">
@@ -4435,11 +4435,11 @@
         <orderingConstraint predecessor="method53_subtask_2" successor="method53_subtask_3"/>
         <orderingConstraint predecessor="method53_subtask_4" successor="method53_subtask_5"/>
         <orderingConstraint predecessor="method53_subtask_3" successor="method53_subtask_4"/>
-        <valueRestriction type="eq" variable="press_NewMessage.Send_instance_5_argument_0">
-            <variable name="newObj_variable95"/>
+        <valueRestriction type="eq" variable="newObj_variable95">
+            <variable name="press_NewMessage.Send_instance_5_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_NewMessage.Send_instance_5_argument_1">
-            <variable name="send_SMS_variable1"/>
+        <valueRestriction type="eq" variable="send_SMS_variable1">
+            <variable name="press_NewMessage.Send_instance_5_argument_1"/>
         </valueRestriction>
         <causalLink producer="method53_subtask_2" consumer="method53_subtask_3">
             <atomic relation="inMode_Messages"/>
@@ -4470,20 +4470,20 @@
         <orderingConstraint predecessor="method54_subtask_3" successor="method54_subtask_4"/>
         <orderingConstraint predecessor="method54_subtask_2" successor="method54_subtask_3"/>
         <orderingConstraint predecessor="method54_subtask_4" successor="method54_subtask_5"/>
-        <valueRestriction type="eq" variable="press_NewMessage.Send_Mobile_instance_5_argument_4">
-            <variable name="newObj_variable95"/>
+        <valueRestriction type="eq" variable="newObj_variable95">
+            <variable name="press_NewMessage.Send_Mobile_instance_5_argument_4"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.FavouriteSelected.SMS_instance_4_argument_3">
-            <variable name="newObj_variable95"/>
+        <valueRestriction type="eq" variable="newObj_variable95">
+            <variable name="select_People.FavouriteSelected.SMS_instance_4_argument_3"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.Favourite_instance_3_argument_1">
-            <variable name="newObj_variable95"/>
+        <valueRestriction type="eq" variable="newObj_variable95">
+            <variable name="select_People.Favourite_instance_3_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_NewMessage.Send_Mobile_instance_5_argument_5">
-            <variable name="send_SMS_variable1"/>
+        <valueRestriction type="eq" variable="send_SMS_variable1">
+            <variable name="press_NewMessage.Send_Mobile_instance_5_argument_5"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.Favourite_instance_3_argument_0">
-            <variable name="select_People.FavouriteSelected.SMS_instance_4_argument_2"/>
+        <valueRestriction type="eq" variable="select_People.FavouriteSelected.SMS_instance_4_argument_2">
+            <variable name="select_People.Favourite_instance_3_argument_0"/>
         </valueRestriction>
         <causalLink producer="method54_subtask_2" consumer="method54_subtask_3">
             <atomic relation="inMode_People"/>
@@ -4534,17 +4534,17 @@
         <orderingConstraint predecessor="method56_subtask_4" successor="method56_subtask_5"/>
         <orderingConstraint predecessor="method56_subtask_6" successor="method56_subtask_5"/>
         <orderingConstraint predecessor="method56_subtask_3" successor="method56_subtask_6"/>
-        <valueRestriction type="eq" variable="enter_EMailAddress_instance_4_argument_1">
-            <variable name="newObj_variable117"/>
+        <valueRestriction type="eq" variable="newObj_variable117">
+            <variable name="enter_EMailAddress_instance_4_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_EMail.NewEMail.Send_instance_5_argument_3">
-            <variable name="newObj_variable117"/>
+        <valueRestriction type="eq" variable="newObj_variable117">
+            <variable name="press_EMail.NewEMail.Send_instance_5_argument_3"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_EMail.NewEMail.Send_instance_5_argument_4">
-            <variable name="send_EMail_variable1"/>
+        <valueRestriction type="eq" variable="send_EMail_variable1">
+            <variable name="press_EMail.NewEMail.Send_instance_5_argument_4"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_EMail.EMailAccount_instance_3_argument_0">
-            <variable name="press_EMail.NewEMail_instance_6_argument_5"/>
+        <valueRestriction type="eq" variable="press_EMail.NewEMail_instance_6_argument_5">
+            <variable name="select_EMail.EMailAccount_instance_3_argument_0"/>
         </valueRestriction>
         <causalLink producer="method56_subtask_2" consumer="method56_subtask_3">
             <atomic relation="inMode_EMail"/>
@@ -4577,14 +4577,14 @@
             <variableDeclaration name="select_People.Favourite_WithPreviousSelection_instance_2_argument_1" sort="Contact"/>
             <variableDeclaration name="select_People.Favourite_WithPreviousSelection_instance_2_argument_2" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_People.Favourite_WithPreviousSelection_instance_2_argument_1">
-            <variable name="newObj_variable48"/>
-        </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.Favourite_WithPreviousSelection_instance_2_argument_2">
-            <variable name="newObj_variable71"/>
-        </valueRestriction>
-        <valueRestriction type="neq" variable="select_People.Favourite_WithPreviousSelection_instance_2_argument_0">
+        <valueRestriction type="eq" variable="newObj_variable48">
             <variable name="select_People.Favourite_WithPreviousSelection_instance_2_argument_1"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="newObj_variable71">
+            <variable name="select_People.Favourite_WithPreviousSelection_instance_2_argument_2"/>
+        </valueRestriction>
+        <valueRestriction type="neq" variable="select_People.Favourite_WithPreviousSelection_instance_2_argument_1">
+            <variable name="select_People.Favourite_WithPreviousSelection_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method58" taskSchema="select_People.Favourite">
@@ -4594,11 +4594,11 @@
             <variableDeclaration name="select_People.Favourite_FromReadyToAddFavourite_instance_2_argument_0" sort="Contact"/>
             <variableDeclaration name="select_People.Favourite_FromReadyToAddFavourite_instance_2_argument_1" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_People.Favourite_FromReadyToAddFavourite_instance_2_argument_0">
-            <variable name="newObj_variable48"/>
+        <valueRestriction type="eq" variable="newObj_variable48">
+            <variable name="select_People.Favourite_FromReadyToAddFavourite_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.Favourite_FromReadyToAddFavourite_instance_2_argument_1">
-            <variable name="newObj_variable71"/>
+        <valueRestriction type="eq" variable="newObj_variable71">
+            <variable name="select_People.Favourite_FromReadyToAddFavourite_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method59" taskSchema="select_People.Favourite">
@@ -4608,11 +4608,11 @@
             <variableDeclaration name="select_People.Favourite_NoOp_instance_2_argument_0" sort="Contact"/>
             <variableDeclaration name="select_People.Favourite_NoOp_instance_2_argument_1" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_People.Favourite_NoOp_instance_2_argument_0">
-            <variable name="newObj_variable48"/>
+        <valueRestriction type="eq" variable="newObj_variable48">
+            <variable name="select_People.Favourite_NoOp_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.Favourite_NoOp_instance_2_argument_1">
-            <variable name="newObj_variable71"/>
+        <valueRestriction type="eq" variable="newObj_variable71">
+            <variable name="select_People.Favourite_NoOp_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method60" taskSchema="send_EMail">
@@ -4639,20 +4639,20 @@
         <orderingConstraint predecessor="method60_subtask_4" successor="method60_subtask_6"/>
         <orderingConstraint predecessor="method60_subtask_2" successor="method60_subtask_3"/>
         <orderingConstraint predecessor="method60_subtask_3" successor="method60_subtask_4"/>
-        <valueRestriction type="eq" variable="press_EMail.NewEMail.Send_instance_6_argument_5">
-            <variable name="newObj_variable117"/>
+        <valueRestriction type="eq" variable="newObj_variable117">
+            <variable name="press_EMail.NewEMail.Send_instance_6_argument_5"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.FavouriteSelected.EMail_instance_4_argument_3">
-            <variable name="newObj_variable117"/>
+        <valueRestriction type="eq" variable="newObj_variable117">
+            <variable name="select_People.FavouriteSelected.EMail_instance_4_argument_3"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.Favourite_instance_3_argument_1">
-            <variable name="newObj_variable117"/>
+        <valueRestriction type="eq" variable="newObj_variable117">
+            <variable name="select_People.Favourite_instance_3_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="press_EMail.NewEMail.Send_instance_6_argument_6">
-            <variable name="send_EMail_variable1"/>
+        <valueRestriction type="eq" variable="send_EMail_variable1">
+            <variable name="press_EMail.NewEMail.Send_instance_6_argument_6"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="select_People.Favourite_instance_3_argument_0">
-            <variable name="select_People.FavouriteSelected.EMail_instance_4_argument_2"/>
+        <valueRestriction type="eq" variable="select_People.FavouriteSelected.EMail_instance_4_argument_2">
+            <variable name="select_People.Favourite_instance_3_argument_0"/>
         </valueRestriction>
         <causalLink producer="method60_subtask_2" consumer="method60_subtask_3">
             <atomic relation="inMode_People"/>
@@ -4688,8 +4688,8 @@
         <taskNode name="method61_subtask_2" taskSchema="select_EMail.EMailAccount_NoOp">
             <variableDeclaration name="select_EMail.EMailAccount_NoOp_instance_2_argument_0" sort="EMailAccount"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_EMail.EMailAccount_NoOp_instance_2_argument_0">
-            <variable name="newObj_variable136"/>
+        <valueRestriction type="eq" variable="newObj_variable136">
+            <variable name="select_EMail.EMailAccount_NoOp_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method62" taskSchema="select_EMail.EMailAccount">
@@ -4698,11 +4698,11 @@
             <variableDeclaration name="select_EMail.EMailAccount_WithPreviousSelection_instance_2_argument_0" sort="EMailAccount"/>
             <variableDeclaration name="select_EMail.EMailAccount_WithPreviousSelection_instance_2_argument_1" sort="EMailAccount"/>
         </taskNode>
-        <valueRestriction type="eq" variable="select_EMail.EMailAccount_WithPreviousSelection_instance_2_argument_1">
-            <variable name="newObj_variable136"/>
-        </valueRestriction>
-        <valueRestriction type="neq" variable="select_EMail.EMailAccount_WithPreviousSelection_instance_2_argument_0">
+        <valueRestriction type="eq" variable="newObj_variable136">
             <variable name="select_EMail.EMailAccount_WithPreviousSelection_instance_2_argument_1"/>
+        </valueRestriction>
+        <valueRestriction type="neq" variable="select_EMail.EMailAccount_WithPreviousSelection_instance_2_argument_1">
+            <variable name="select_EMail.EMailAccount_WithPreviousSelection_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method63" taskSchema="attachInformationToCall">
@@ -4712,11 +4712,11 @@
             <variableDeclaration name="attachRegularInformationToCall_instance_2_argument_0" sort="Call"/>
             <variableDeclaration name="attachRegularInformationToCall_instance_2_argument_1" sort="TransferableByPhoneRegular"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachRegularInformationToCall_instance_2_argument_0">
-            <variable name="newObj_variable146"/>
+        <valueRestriction type="eq" variable="newObj_variable146">
+            <variable name="attachRegularInformationToCall_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachRegularInformationToCall_instance_2_argument_1">
-            <variable name="newObj_variable147"/>
+        <valueRestriction type="eq" variable="newObj_variable147">
+            <variable name="attachRegularInformationToCall_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method64" taskSchema="attachInformationToCall">
@@ -4727,11 +4727,11 @@
             <variableDeclaration name="attachContactableInformationToCall_instance_2_argument_1" sort="TransferableByPhoneContactable"/>
             <variableDeclaration name="attachContactableInformationToCall_instance_2_argument_2" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachContactableInformationToCall_instance_2_argument_0">
-            <variable name="newObj_variable146"/>
+        <valueRestriction type="eq" variable="newObj_variable146">
+            <variable name="attachContactableInformationToCall_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachContactableInformationToCall_instance_2_argument_1">
-            <variable name="newObj_variable147"/>
+        <valueRestriction type="eq" variable="newObj_variable147">
+            <variable name="attachContactableInformationToCall_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method65" taskSchema="attachInformationToEMail">
@@ -4741,11 +4741,11 @@
             <variableDeclaration name="attachRegularInformationToEMail_instance_2_argument_0" sort="EMail"/>
             <variableDeclaration name="attachRegularInformationToEMail_instance_2_argument_1" sort="TransferableByEmailRegular"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachRegularInformationToEMail_instance_2_argument_0">
-            <variable name="newObj_variable142"/>
+        <valueRestriction type="eq" variable="newObj_variable142">
+            <variable name="attachRegularInformationToEMail_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachRegularInformationToEMail_instance_2_argument_1">
-            <variable name="newObj_variable143"/>
+        <valueRestriction type="eq" variable="newObj_variable143">
+            <variable name="attachRegularInformationToEMail_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method66" taskSchema="attachInformationToEMail">
@@ -4756,11 +4756,11 @@
             <variableDeclaration name="attachContactableInformationToEMail_instance_2_argument_1" sort="TransferableByEmailContactable"/>
             <variableDeclaration name="attachContactableInformationToEMail_instance_2_argument_2" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachContactableInformationToEMail_instance_2_argument_0">
-            <variable name="newObj_variable142"/>
+        <valueRestriction type="eq" variable="newObj_variable142">
+            <variable name="attachContactableInformationToEMail_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachContactableInformationToEMail_instance_2_argument_1">
-            <variable name="newObj_variable143"/>
+        <valueRestriction type="eq" variable="newObj_variable143">
+            <variable name="attachContactableInformationToEMail_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method67" taskSchema="attachInformationToSMS">
@@ -4770,11 +4770,11 @@
             <variableDeclaration name="attachRegularInformationToSMS_instance_2_argument_0" sort="SMS"/>
             <variableDeclaration name="attachRegularInformationToSMS_instance_2_argument_1" sort="TransferableBySMSRegular"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachRegularInformationToSMS_instance_2_argument_0">
-            <variable name="newObj_variable144"/>
+        <valueRestriction type="eq" variable="newObj_variable144">
+            <variable name="attachRegularInformationToSMS_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachRegularInformationToSMS_instance_2_argument_1">
-            <variable name="newObj_variable145"/>
+        <valueRestriction type="eq" variable="newObj_variable145">
+            <variable name="attachRegularInformationToSMS_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method68" taskSchema="attachInformationToSMS">
@@ -4785,11 +4785,11 @@
             <variableDeclaration name="attachContactableInformationToSMS_instance_2_argument_1" sort="TransferableBySMSContactable"/>
             <variableDeclaration name="attachContactableInformationToSMS_instance_2_argument_2" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachContactableInformationToSMS_instance_2_argument_0">
-            <variable name="newObj_variable144"/>
+        <valueRestriction type="eq" variable="newObj_variable144">
+            <variable name="attachContactableInformationToSMS_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachContactableInformationToSMS_instance_2_argument_1">
-            <variable name="newObj_variable145"/>
+        <valueRestriction type="eq" variable="newObj_variable145">
+            <variable name="attachContactableInformationToSMS_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method69" taskSchema="attachInformation">
@@ -4799,11 +4799,11 @@
             <variableDeclaration name="attachInformationToCall_instance_2_argument_0" sort="Call"/>
             <variableDeclaration name="attachInformationToCall_instance_2_argument_1" sort="TransferableByCall"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachInformationToCall_instance_2_argument_1">
-            <variable name="newObj_variable7"/>
+        <valueRestriction type="eq" variable="newObj_variable7">
+            <variable name="attachInformationToCall_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachInformationToCall_instance_2_argument_0">
-            <variable name="newObj_variable4"/>
+        <valueRestriction type="eq" variable="newObj_variable4">
+            <variable name="attachInformationToCall_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method70" taskSchema="attachInformation">
@@ -4813,11 +4813,11 @@
             <variableDeclaration name="attachInformationToEMail_instance_2_argument_0" sort="EMail"/>
             <variableDeclaration name="attachInformationToEMail_instance_2_argument_1" sort="TransferableByEmail"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachInformationToEMail_instance_2_argument_1">
-            <variable name="newObj_variable7"/>
+        <valueRestriction type="eq" variable="newObj_variable7">
+            <variable name="attachInformationToEMail_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachInformationToEMail_instance_2_argument_0">
-            <variable name="newObj_variable4"/>
+        <valueRestriction type="eq" variable="newObj_variable4">
+            <variable name="attachInformationToEMail_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method71" taskSchema="attachInformation">
@@ -4827,11 +4827,11 @@
             <variableDeclaration name="attachInformationToSMS_instance_2_argument_0" sort="SMS"/>
             <variableDeclaration name="attachInformationToSMS_instance_2_argument_1" sort="TransferableBySMS"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachInformationToSMS_instance_2_argument_1">
-            <variable name="newObj_variable7"/>
+        <valueRestriction type="eq" variable="newObj_variable7">
+            <variable name="attachInformationToSMS_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachInformationToSMS_instance_2_argument_0">
-            <variable name="newObj_variable4"/>
+        <valueRestriction type="eq" variable="newObj_variable4">
+            <variable name="attachInformationToSMS_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method72" taskSchema="extractsInformation">
@@ -4843,14 +4843,14 @@
             <variableDeclaration name="extractsInformation_Regular_instance_2_argument_1" sort="Message"/>
             <variableDeclaration name="extractsInformation_Regular_instance_2_argument_2" sort="RegularInformation"/>
         </taskNode>
-        <valueRestriction type="eq" variable="extractsInformation_Regular_instance_2_argument_2">
-            <variable name="extractsInformation_variable3"/>
+        <valueRestriction type="eq" variable="extractsInformation_variable3">
+            <variable name="extractsInformation_Regular_instance_2_argument_2"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="extractsInformation_Regular_instance_2_argument_1">
-            <variable name="extractsInformation_variable2"/>
+        <valueRestriction type="eq" variable="extractsInformation_variable2">
+            <variable name="extractsInformation_Regular_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="extractsInformation_Regular_instance_2_argument_0">
-            <variable name="extractsInformation_variable1"/>
+        <valueRestriction type="eq" variable="extractsInformation_variable1">
+            <variable name="extractsInformation_Regular_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method73" taskSchema="extractsInformation">
@@ -4863,14 +4863,14 @@
             <variableDeclaration name="extractsInformation_Contactable_instance_2_argument_2" sort="ContactableInformation"/>
             <variableDeclaration name="extractsInformation_Contactable_instance_2_argument_3" sort="Contactable"/>
         </taskNode>
-        <valueRestriction type="eq" variable="extractsInformation_Contactable_instance_2_argument_2">
-            <variable name="extractsInformation_variable3"/>
+        <valueRestriction type="eq" variable="extractsInformation_variable3">
+            <variable name="extractsInformation_Contactable_instance_2_argument_2"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="extractsInformation_Contactable_instance_2_argument_1">
-            <variable name="extractsInformation_variable2"/>
+        <valueRestriction type="eq" variable="extractsInformation_variable2">
+            <variable name="extractsInformation_Contactable_instance_2_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="extractsInformation_Contactable_instance_2_argument_0">
-            <variable name="extractsInformation_variable1"/>
+        <valueRestriction type="eq" variable="extractsInformation_variable1">
+            <variable name="extractsInformation_Contactable_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method74" taskSchema="attachMultipleInformation">
@@ -4879,8 +4879,8 @@
             <variableDeclaration name="attachInformation_instance_2_argument_0" sort="Message"/>
             <variableDeclaration name="attachInformation_instance_2_argument_1" sort="Information"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachInformation_instance_2_argument_0">
-            <variable name="newObj_variable195"/>
+        <valueRestriction type="eq" variable="newObj_variable195">
+            <variable name="attachInformation_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method75" taskSchema="attachMultipleInformation">
@@ -4892,11 +4892,11 @@
             <variableDeclaration name="attachInformation_instance_3_argument_1" sort="Message"/>
             <variableDeclaration name="attachInformation_instance_3_argument_2" sort="Information"/>
         </taskNode>
-        <valueRestriction type="eq" variable="attachInformation_instance_3_argument_1">
-            <variable name="newObj_variable195"/>
+        <valueRestriction type="eq" variable="newObj_variable195">
+            <variable name="attachInformation_instance_3_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachMultipleInformation_instance_2_argument_0">
-            <variable name="newObj_variable195"/>
+        <valueRestriction type="eq" variable="newObj_variable195">
+            <variable name="attachMultipleInformation_instance_2_argument_0"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method76" taskSchema="extractsMultipleInformation">
@@ -4907,11 +4907,11 @@
             <variableDeclaration name="extractsInformation_instance_2_argument_1" sort="Message"/>
             <variableDeclaration name="extractsInformation_instance_2_argument_2" sort="Information"/>
         </taskNode>
-        <valueRestriction type="eq" variable="extractsInformation_instance_2_argument_0">
-            <variable name="newObj_variable198"/>
+        <valueRestriction type="eq" variable="newObj_variable198">
+            <variable name="extractsInformation_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="extractsInformation_instance_2_argument_1">
-            <variable name="newObj_variable199"/>
+        <valueRestriction type="eq" variable="newObj_variable199">
+            <variable name="extractsInformation_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method77" taskSchema="extractsMultipleInformation">
@@ -4926,17 +4926,17 @@
             <variableDeclaration name="extractsInformation_instance_3_argument_3" sort="Message"/>
             <variableDeclaration name="extractsInformation_instance_3_argument_4" sort="Information"/>
         </taskNode>
-        <valueRestriction type="eq" variable="extractsInformation_instance_3_argument_2">
-            <variable name="newObj_variable198"/>
+        <valueRestriction type="eq" variable="newObj_variable198">
+            <variable name="extractsInformation_instance_3_argument_2"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="extractsMultipleInformation_instance_2_argument_0">
-            <variable name="newObj_variable198"/>
+        <valueRestriction type="eq" variable="newObj_variable198">
+            <variable name="extractsMultipleInformation_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="extractsInformation_instance_3_argument_3">
-            <variable name="newObj_variable199"/>
+        <valueRestriction type="eq" variable="newObj_variable199">
+            <variable name="extractsInformation_instance_3_argument_3"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="extractsMultipleInformation_instance_2_argument_1">
-            <variable name="newObj_variable199"/>
+        <valueRestriction type="eq" variable="newObj_variable199">
+            <variable name="extractsMultipleInformation_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method78" taskSchema="contact">
@@ -4946,11 +4946,11 @@
             <variableDeclaration name="call_instance_2_argument_0" sort="Contactable"/>
             <variableDeclaration name="call_instance_2_argument_1" sort="Call"/>
         </taskNode>
-        <valueRestriction type="eq" variable="call_instance_2_argument_0">
-            <variable name="newObj_variable204"/>
+        <valueRestriction type="eq" variable="newObj_variable204">
+            <variable name="call_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="call_instance_2_argument_1">
-            <variable name="newObj_variable205"/>
+        <valueRestriction type="eq" variable="newObj_variable205">
+            <variable name="call_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method79" taskSchema="contact">
@@ -4960,11 +4960,11 @@
             <variableDeclaration name="send_EMail_instance_2_argument_0" sort="Contactable"/>
             <variableDeclaration name="send_EMail_instance_2_argument_1" sort="EMail"/>
         </taskNode>
-        <valueRestriction type="eq" variable="send_EMail_instance_2_argument_0">
-            <variable name="newObj_variable204"/>
+        <valueRestriction type="eq" variable="newObj_variable204">
+            <variable name="send_EMail_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="send_EMail_instance_2_argument_1">
-            <variable name="newObj_variable205"/>
+        <valueRestriction type="eq" variable="newObj_variable205">
+            <variable name="send_EMail_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method80" taskSchema="contact">
@@ -4974,11 +4974,11 @@
             <variableDeclaration name="send_SMS_instance_2_argument_0" sort="Contactable"/>
             <variableDeclaration name="send_SMS_instance_2_argument_1" sort="SMS"/>
         </taskNode>
-        <valueRestriction type="eq" variable="send_SMS_instance_2_argument_0">
-            <variable name="newObj_variable204"/>
+        <valueRestriction type="eq" variable="newObj_variable204">
+            <variable name="send_SMS_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="send_SMS_instance_2_argument_1">
-            <variable name="newObj_variable205"/>
+        <valueRestriction type="eq" variable="newObj_variable205">
+            <variable name="send_SMS_instance_2_argument_1"/>
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method81" taskSchema="transferMessage">
@@ -4997,20 +4997,20 @@
         </taskNode>
         <orderingConstraint predecessor="method81_subtask_3" successor="method81_subtask_4"/>
         <orderingConstraint predecessor="method81_subtask_2" successor="method81_subtask_3"/>
-        <valueRestriction type="eq" variable="contact_instance_3_argument_1">
-            <variable name="newObj_variable219"/>
+        <valueRestriction type="eq" variable="newObj_variable219">
+            <variable name="contact_instance_3_argument_1"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="extractsMultipleInformation_instance_4_argument_3">
-            <variable name="newObj_variable219"/>
+        <valueRestriction type="eq" variable="newObj_variable219">
+            <variable name="extractsMultipleInformation_instance_4_argument_3"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="attachMultipleInformation_instance_2_argument_0">
-            <variable name="newObj_variable220"/>
+        <valueRestriction type="eq" variable="newObj_variable220">
+            <variable name="attachMultipleInformation_instance_2_argument_0"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="contact_instance_3_argument_2">
-            <variable name="newObj_variable220"/>
+        <valueRestriction type="eq" variable="newObj_variable220">
+            <variable name="contact_instance_3_argument_2"/>
         </valueRestriction>
-        <valueRestriction type="eq" variable="extractsMultipleInformation_instance_4_argument_4">
-            <variable name="newObj_variable220"/>
+        <valueRestriction type="eq" variable="newObj_variable220">
+            <variable name="extractsMultipleInformation_instance_4_argument_4"/>
         </valueRestriction>
         <causalLink producer="method81_subtask_3" consumer="method81_subtask_4">
             <atomic relation="hasReceived">
