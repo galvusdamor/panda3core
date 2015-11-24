@@ -3,7 +3,6 @@ package de.uniulm.ki.panda3.symbolic.writer.hpddl
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, Literal, Value, Variable}
-import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.writer.Writer
@@ -311,12 +310,4 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
     builder.toString()
   }
 
-}
-
-object HPDDLWriter {
-  def main(args: Array[String]) {
-    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/hpddl/UMTranslog.xml")
-
-    val dom = HPDDLWriter("smartphone", "smartphone_verysmall").writeDomain(domAlone)
-  }
 }
