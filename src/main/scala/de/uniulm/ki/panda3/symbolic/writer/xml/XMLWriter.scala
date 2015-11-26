@@ -20,7 +20,7 @@ import scala.collection.mutable
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-class XMLWriter extends Writer {
+case class XMLWriter(domainName: String, problemName: String) extends Writer {
 
   private def toVariable(variableDeclaration: VariableDeclaration): Variable = {
     val variable = new Variable
@@ -55,6 +55,8 @@ class XMLWriter extends Writer {
    */
   override def writeDomain(dom: Domain): String = {
     val xmldomain: XMLDomain = new ObjectFactory().createDomain()
+    xmldomain.setType("pure-hierarchical")
+    xmldomain.setName(domainName)
 
     // 1. Step build the sorts (if the sort graph contains a circle we cannot translate)
     val sortToSortDecl: Map[Sort, SortDeclaration] = dom.sortGraph.topologicalOrdering.get.reverse.foldLeft(Map[Sort, SortDeclaration]())({ case (map, s) =>
@@ -136,10 +138,9 @@ class XMLWriter extends Writer {
         val varDecl = new VariableDeclaration
         varDecl.setName(v.name)
         varDecl.setSort(sortToSortDecl(v.sort))
+        methodDecl.getVariableDeclaration.add(varDecl)
         (v, varDecl)
       }).toMap
-      // add them
-      abstractParametersToVariables foreach { case (_, varDecl) => methodDecl.getVariableDeclaration.add(varDecl) }
 
       var newVariablesCounter = 0
       val taskParametersToVariables: mutable.Map[logic.Variable, VariableDeclaration] = new mutable.HashMap[logic.Variable, VariableDeclaration]()

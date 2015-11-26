@@ -31,7 +31,7 @@ class XMLWriterTest extends FlatSpec {
     //val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
 
 
-    val dom = new XMLWriter().writeDomain(domAlone)
+    val dom = new XMLWriter("Smartphone", "Smartphone_Prob").writeDomain(domAlone)
     //val prob = HPDDLWriter("smartphone", "smartphone_verysmall").writeProblem(cwaApplied._1, cwaApplied._2)
 
     val correctDomain: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/xml/smartphone_written.xml").mkString
@@ -56,7 +56,7 @@ class XMLWriterTest extends FlatSpec {
     //val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
 
 
-    val dom = new XMLWriter().writeDomain(domAlone)
+    val dom = new XMLWriter("umtranslog", "umtranslog_prob").writeDomain(domAlone)
     //val prob = HPDDLWriter("smartphone", "smartphone_verysmall").writeProblem(cwaApplied._1, cwaApplied._2)
 
     val correctDomain: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/xml/umtranslog_written.xml").mkString

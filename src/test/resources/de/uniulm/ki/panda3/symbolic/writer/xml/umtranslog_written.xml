@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<domain>
+<domain name="umtranslog" type="pure-hierarchical">
     <sortDeclaration name="Armored" type="concrete">
         <subSort sort="Armored_Vehicle"/>
     </sortDeclaration>
@@ -2510,11 +2510,11 @@
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method9" taskSchema="helper_carry_tt">
-        <variableDeclaration name="hctt_cd" sort="City"/>
+        <variableDeclaration name="hctt_p" sort="Package"/>
         <variableDeclaration name="hctt_o" sort="TCenter"/>
         <variableDeclaration name="hctt_co" sort="City"/>
-        <variableDeclaration name="hctt_p" sort="Package"/>
         <variableDeclaration name="hctt_d" sort="TCenter"/>
+        <variableDeclaration name="hctt_cd" sort="City"/>
         <taskNode name="method9_subtask_2" taskSchema="carry_via_hub">
             <variableDeclaration name="carry_via_hub_instance_2_argument_0" sort="Package"/>
             <variableDeclaration name="carry_via_hub_instance_2_argument_1" sort="TCenter"/>
@@ -2585,12 +2585,12 @@
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method11" taskSchema="helper_carry_ott">
-        <variableDeclaration name="hcott_cd" sort="City"/>
-        <variableDeclaration name="hcott_d" sort="TCenter"/>
-        <variableDeclaration name="hcott_t1" sort="TCenter"/>
+        <variableDeclaration name="hcott_p" sort="Package"/>
         <variableDeclaration name="hcott_o" sort="City_Location"/>
         <variableDeclaration name="hcott_co" sort="City"/>
-        <variableDeclaration name="hcott_p" sort="Package"/>
+        <variableDeclaration name="hcott_t1" sort="TCenter"/>
+        <variableDeclaration name="hcott_d" sort="TCenter"/>
+        <variableDeclaration name="hcott_cd" sort="City"/>
         <taskNode name="method11_subtask_2" taskSchema="carry_direct">
             <variableDeclaration name="carry_direct_instance_2_argument_0" sort="Package"/>
             <variableDeclaration name="carry_direct_instance_2_argument_1" sort="Location"/>
@@ -2685,12 +2685,12 @@
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method13" taskSchema="helper_carry_otd">
-        <variableDeclaration name="hcotd_co" sort="City"/>
-        <variableDeclaration name="hcotd_cd" sort="City"/>
-        <variableDeclaration name="hcotd_o" sort="TCenter"/>
-        <variableDeclaration name="hcotd_d" sort="Not_TCenter"/>
         <variableDeclaration name="hcotd_p" sort="Package"/>
+        <variableDeclaration name="hcotd_o" sort="TCenter"/>
+        <variableDeclaration name="hcotd_co" sort="City"/>
         <variableDeclaration name="hcotd_t1" sort="TCenter"/>
+        <variableDeclaration name="hcotd_d" sort="Not_TCenter"/>
+        <variableDeclaration name="hcotd_cd" sort="City"/>
         <taskNode name="method13_subtask_2" taskSchema="carry_between_tcenters">
             <variableDeclaration name="carry_between_tcenters_instance_2_argument_0" sort="Package"/>
             <variableDeclaration name="carry_between_tcenters_instance_2_argument_1" sort="TCenter"/>
@@ -2795,13 +2795,13 @@
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method15" taskSchema="helper_carry_ottd">
-        <variableDeclaration name="hcottd_o" sort="Not_TCenter"/>
-        <variableDeclaration name="hcottd_t1" sort="TCenter"/>
-        <variableDeclaration name="hcottd_cd" sort="City"/>
-        <variableDeclaration name="hcottd_d" sort="Not_TCenter"/>
-        <variableDeclaration name="hcottd_t2" sort="TCenter"/>
-        <variableDeclaration name="hcottd_co" sort="City"/>
         <variableDeclaration name="hcottd_p" sort="Package"/>
+        <variableDeclaration name="hcottd_o" sort="Not_TCenter"/>
+        <variableDeclaration name="hcottd_co" sort="City"/>
+        <variableDeclaration name="hcottd_t1" sort="TCenter"/>
+        <variableDeclaration name="hcottd_t2" sort="TCenter"/>
+        <variableDeclaration name="hcottd_d" sort="Not_TCenter"/>
+        <variableDeclaration name="hcottd_cd" sort="City"/>
         <taskNode name="method15_subtask_2" taskSchema="carry_direct">
             <variableDeclaration name="carry_direct_instance_2_argument_0" sort="Package"/>
             <variableDeclaration name="carry_direct_instance_2_argument_1" sort="Location"/>
@@ -2921,11 +2921,11 @@
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method17" taskSchema="helper_carry_cc">
-        <variableDeclaration name="hccc_co" sort="City"/>
         <variableDeclaration name="hccc_p" sort="Package"/>
+        <variableDeclaration name="hccc_o" sort="Not_TCenter"/>
+        <variableDeclaration name="hccc_co" sort="City"/>
         <variableDeclaration name="hccc_t" sort="TCenter"/>
         <variableDeclaration name="hccc_d" sort="Not_TCenter"/>
-        <variableDeclaration name="hccc_o" sort="Not_TCenter"/>
         <variableDeclaration name="hccc_cd" sort="City"/>
         <taskNode name="method17_subtask_2" taskSchema="carry_direct">
             <variableDeclaration name="carry_direct_instance_2_argument_0" sort="Package"/>
@@ -3083,14 +3083,14 @@
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method21" taskSchema="helper_carry_via_hub_not_hazardous">
-        <variableDeclaration name="hcvhn_rctco" sort="Region"/>
-        <variableDeclaration name="hcvhn_rctcd" sort="Region"/>
+        <variableDeclaration name="hcvhn_p" sort="Package"/>
+        <variableDeclaration name="hcvhn_tco" sort="TCenter"/>
         <variableDeclaration name="hcvhn_ctco" sort="City"/>
-        <variableDeclaration name="hcvhn_ctcd" sort="City"/>
+        <variableDeclaration name="hcvhn_rctco" sort="Region"/>
         <variableDeclaration name="hcvhn_h" sort="Hub"/>
         <variableDeclaration name="hcvhn_tcd" sort="TCenter"/>
-        <variableDeclaration name="hcvhn_tco" sort="TCenter"/>
-        <variableDeclaration name="hcvhn_p" sort="Package"/>
+        <variableDeclaration name="hcvhn_ctcd" sort="City"/>
+        <variableDeclaration name="hcvhn_rctcd" sort="Region"/>
         <taskNode name="method21_subtask_2" taskSchema="carry_direct">
             <variableDeclaration name="carry_direct_instance_2_argument_0" sort="Package"/>
             <variableDeclaration name="carry_direct_instance_2_argument_1" sort="Location"/>
@@ -3209,15 +3209,15 @@
         </valueRestriction>
     </methodDeclaration>
     <methodDeclaration name="method23" taskSchema="helper_carry_via_hub_hazardous">
+        <variableDeclaration name="hcvhh_p" sort="Package"/>
         <variableDeclaration name="hcvhh_tco" sort="TCenter"/>
         <variableDeclaration name="hcvhh_ctco" sort="City"/>
         <variableDeclaration name="hcvhh_rctco" sort="Region"/>
-        <variableDeclaration name="hcvhh_p" sort="Package"/>
-        <variableDeclaration name="hcvhh_tcd" sort="TCenter"/>
-        <variableDeclaration name="hcvhh_rctcd" sort="Region"/>
-        <variableDeclaration name="hcvhh_ch" sort="City"/>
-        <variableDeclaration name="hcvhh_ctcd" sort="City"/>
         <variableDeclaration name="hcvhh_h" sort="Hub"/>
+        <variableDeclaration name="hcvhh_ch" sort="City"/>
+        <variableDeclaration name="hcvhh_tcd" sort="TCenter"/>
+        <variableDeclaration name="hcvhh_ctcd" sort="City"/>
+        <variableDeclaration name="hcvhh_rctcd" sort="Region"/>
         <taskNode name="method23_subtask_2" taskSchema="carry_direct">
             <variableDeclaration name="carry_direct_instance_2_argument_0" sort="Package"/>
             <variableDeclaration name="carry_direct_instance_2_argument_1" sort="Location"/>

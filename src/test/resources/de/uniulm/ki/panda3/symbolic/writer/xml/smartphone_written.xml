@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<domain>
+<domain name="Smartphone" type="pure-hierarchical">
     <sortDeclaration name="Contactable" type="concrete">
         <subSort sort="Company"/>
         <subSort sort="Person"/>
