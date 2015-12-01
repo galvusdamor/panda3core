@@ -26,7 +26,7 @@ object DFS {
     // apply the CWA
     val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
 
-    val x = startSearch(cwaApplied._1, cwaApplied._2)
+    val x = startSearch(cwaApplied._1, cwaApplied._2, None)
 
     x._2.acquire()
     println("100 Nodes generated")
@@ -38,7 +38,7 @@ object DFS {
    *
    * The semaphore will not be released for every search node, but after a couple 100 ones.
    */
-  def startSearch(domain: Domain, initialPlan: Plan): (SearchNode, Semaphore) = {
+  def startSearch(domain: Domain, initialPlan: Plan, nodeLimit : Option[Int]): (SearchNode, Semaphore) = {
     val semaphore: Semaphore = new Semaphore(0)
     val node: SearchNode = new SearchNode(initialPlan, null, -1)
 
@@ -49,6 +49,7 @@ object DFS {
     var crap: Int = 0 // and how many dead ends we have encountered
 
     def search(domain: Domain, node: SearchNode): Option[Plan] = if (node.plan.flaws.size == 0) Some(node.plan)
+    else if (nodeLimit.isDefined && nodes > nodeLimit.get) None
     else {
       nodes = nodes + 1
       d = d + 1
