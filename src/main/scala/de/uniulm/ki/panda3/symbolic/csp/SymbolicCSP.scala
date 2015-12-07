@@ -19,16 +19,24 @@ import scala.collection.mutable
 case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends CSP {
 
   // holds equivalent variables
-  private val unionFind: SymbolicUnionFind                            = new SymbolicUnionFind
-  // contains information about unqeual variables
-  private var unequal  : mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]]()
+  private val unionFind: SymbolicUnionFind = new SymbolicUnionFind
+  // contains information about unequal variables
+  private val unequal: mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]]()
   // this is only kept for the top elements of the union-find
-  private var remainingDomain: mutable.Map[Variable, mutable.Set[Constant]] = new mutable.HashMap[Variable, mutable.Set[Constant]]()
-  // marker for the compuatation of the reduction
+  private val remainingDomain: mutable.Map[Variable, mutable.Set[Constant]] = new mutable.HashMap[Variable, mutable.Set[Constant]]()
+  // marker for the computation of the reduction
   private var isReductionComputed = false
 
   // if this flag is false, i.e. we know this CSP is unsolvable, the internal data might become inconsistent ... it is simply not necessary to have it still intact
   private var isPotentiallySolvable = true
+
+
+  private def checkIntegrity() = {
+    assert(unequal forall {_._2 forall {remainingDomain.contains}})
+    assert(unequal forall {_._2 forall {variables.contains}})
+    assert(unequal forall { case (v1, vals) => vals forall { case v2 => unequal(v2).contains(v1) } })
+  }
+
 
   override def reducedDomainOf(v: Variable): Seq[Constant] = {
     if (!isReductionComputed) initialiseExplicitly()
@@ -70,6 +78,8 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
   }
 
   override def addVariable(variable: Variable): SymbolicCSP = {
+    assert(!variables.contains(variable))
+
     val newCSP = SymbolicCSP(variables + variable, constraints)
 
     if (isReductionComputed)
@@ -99,11 +109,11 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
           case (None, const) => // try assigning _1 == const
             searchSolution(domainsWithout_1.map({ case (other, values) => if (unequal(resolutionVariable._1).contains(other)) other -> (values - const)
             else other -> values
-                                                })) match {
+            })) match {
               case Some(partialSolution) => Some(partialSolution + (resolutionVariable._1 -> const))
               case _ => None
             }
-                                                                                })
+          })
         }
       }
     }
@@ -132,9 +142,24 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
                                    previousUnionFind: SymbolicUnionFind = new SymbolicUnionFind, lastKConstraintsAreNew: Int = constraints.size,
                                    newVariables: Set[Variable] = variables): Unit = {
     // get really new copies of the previous data structures
-    unequal = previousUnequal.clone()
-    remainingDomain = previousRemainingDomain.clone()
+    unequal.clear()
+    previousUnequal foreach { case (key, value) =>
+      val newSet = new mutable.HashSet[Variable]()
+      value foreach newSet.add
+      unequal.put(key, newSet)
+    }
+
+    remainingDomain.clear()
+    previousRemainingDomain foreach { case (key, value) =>
+      val newSet = new mutable.HashSet[Constant]()
+      value foreach newSet.add
+      remainingDomain.put(key, newSet)
+    }
+
     unionFind cloneFrom previousUnionFind
+
+    // check integrity
+    assert(newVariables forall { case v => !unequal.contains(v) })
 
     // add completely new variables
     for (variable <- newVariables) {
@@ -154,6 +179,7 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
     if (isPotentiallySolvable)
       unitPropagation()
 
+    checkIntegrity()
     isReductionComputed = true
   }
 
@@ -166,7 +192,7 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
   /** function to detect all unit propagations */
   private def detectUnitPropagation(): Iterable[Variable] = remainingDomain filter { case (variable, values) => values.size == 1 } map { case (variable, values) => variable }
 
-  /** simple test for unsolvability: a CSP is unsolvable if a variable exsists whose domain is empty */
+  /** simple test for unsolvability: a CSP is unsolvable if a variable exists whose domain is empty */
   private def detectUnsolvability() = remainingDomain exists { case (variable, values) => values.size == 0 }
 
   /** executes uni propagation on a set of given variables */
@@ -182,18 +208,22 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
         remainingDomain.remove(variable)
 
         // propagate
-        unequal(variable) foreach { other =>
+        val propagatedUnequalTo = unequal(variable)
+        propagatedUnequalTo foreach { other =>
           remainingDomain(other).remove(constant)
           if (remainingDomain(other).size == 0)
             isPotentiallySolvable = false
-          unequal(other) -= variable
+          unequal(other).remove(variable)
         }
 
         // find new propagations
-        val newPropagation = unequal(variable) collect { case other if remainingDomain(other).size == 1 => other }
+        val newPropagation = propagatedUnequalTo collect { case other if remainingDomain(other).size == 1 => other }
 
         // removed from the datastructure
-        unequal -= variable
+        unequal.remove(variable)
+        propagatedUnequalTo foreach {unequal(_) remove variable}
+
+        checkIntegrity()
 
         newPropagation
       }
@@ -201,10 +231,12 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
 
     if (isPotentiallySolvable)
       unitPropagation(x)
+    checkIntegrity()
   }
 
   /** adds a single constraint to the CSP, but does not perform unit propagation */
   private def addSingleConstraint(constraint: VariableConstraint): Unit = {
+    checkIntegrity()
     val equalsConstEliminated = constraint match {
       case equalConstr@Equal(v1, v2) => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
         case (rv: Variable, const: Constant) => OfSort(rv, Sort("temp", Vector() :+ const, Nil))
@@ -218,14 +250,12 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
     equalsConstEliminated match {
       case NotEqual(v1, v2) =>
         (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-          case (rv1: Variable, rv2: Variable) => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {
-            case (x, y) => unequal(x) += y
-          }
+          case (rv1: Variable, rv2: Variable) => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {case (x, y) => unequal(x) += y;}
           case (rv: Variable, const: Constant) => remainingDomain(rv).remove(const)
           case (const: Constant, rv: Variable) => remainingDomain(rv).remove(const)
           case (const1: Constant, const2: Constant) => if (const1 == const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
         }
-      case Equal(v1, v2) => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
+      case Equal(v1, v2)    => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
         case (rv1: Variable, rv2: Variable) => if (rv1 != rv2) {
           // intersect domains
           val intersectionDomain = remainingDomain(rv1) intersect remainingDomain(rv2)
@@ -235,14 +265,25 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
           // find out which representative the union-find uses and remove the other from the real CSP
           (if (getRepresentativeUnsafe(rv1) == rv1) (rv2, rv1) else (rv1, rv2)) match {
             case (remove, rep) =>
+              // update remaining domains
               remainingDomain.remove(remove)
               remainingDomain(rep) = intersectionDomain
+              // update the unequal map
+              val removeTo = unequal(remove)
+              if (removeTo contains rep) {isPotentiallySolvable = false; unequal(rep).remove(remove)} // force equality on two variables that also have an unequals constraint
+              unequal.remove(remove)
+              (removeTo - rep) foreach { to =>
+                unequal(rep).add(to)
+                unequal(to).remove(remove)
+                unequal(to).add(rep)
+              }
           }
         }
         case (const1: Constant, const2: Constant) => if (const1 != const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
       }
       // sort of and var = const constraints
-      case OfSort(v, sort) => getRepresentativeUnsafe(v) match {
+      case OfSort(v, sort) =>
+        getRepresentativeUnsafe(v) match {
         case constant: Constant => if (!sort.elements.contains(constant)) isPotentiallySolvable = false
         case rv: Variable =>
           remainingDomain(rv) = remainingDomain(rv) filter { x => sort.elements.contains(x) }

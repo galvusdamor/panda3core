@@ -58,7 +58,7 @@ trait Plan extends DomainUpdatable with PrettyPrintable {
 
   def modify(modification: Modification): Plan
 
-  /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.domain.DecompositionMethod]]s. */
+  /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod]]s. */
   def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution[Variable] = Substitution[Variable](Nil, Nil)): (Plan, Substitution[Variable])
 
   override def update(domainUpdate: DomainUpdate): Plan

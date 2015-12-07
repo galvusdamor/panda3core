@@ -64,7 +64,8 @@ object DecomposePlanStep {
       val copiedPlan = copyResult._1
 
       // compute the first version of the CSP of the new plan
-      val joinedCSP: CSP = currentPlan.variableConstraints.addVariables(copiedPlan.variableConstraints.variables.toSeq).addConstraints(copiedPlan.variableConstraints.constraints)
+      val joinedCSP: CSP = currentPlan.variableConstraints.addVariables((copiedPlan.variableConstraints.variables -- decomposedPS.arguments).toSeq).addConstraints(copiedPlan
+        .variableConstraints.constraints)
 
 
       // causal links handling -> in pairs (ingoing, outgoing) links

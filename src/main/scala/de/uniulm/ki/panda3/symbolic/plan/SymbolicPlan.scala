@@ -122,7 +122,8 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
       // build a new schema for init
       val initTask = Task(init.schema.name, isPrimitive = true, init.schema.parameters, init.schema.parameterConstraints ++ constraints, Nil, init.schema.effects ++ literals)
       val newInit = PlanStep(init.id, initTask, init.arguments)
-      SymbolicPlan(planSteps map {_ update ExchangePlanStep(init, newInit)}, causalLinks, orderingConstraints, variableConstraints, newInit, goal)
+      val exchange = ExchangePlanStep(init, newInit)
+      SymbolicPlan(planSteps map {_ update exchange}, causalLinks map {_ update exchange}, orderingConstraints update exchange, variableConstraints, newInit, goal)
 
     case _ => SymbolicPlan(planSteps map {_.update(domainUpdate)}, causalLinks map {_.update(domainUpdate)}, orderingConstraints.update(domainUpdate), variableConstraints.update
       (domainUpdate), init.update(domainUpdate), goal.update(domainUpdate))
