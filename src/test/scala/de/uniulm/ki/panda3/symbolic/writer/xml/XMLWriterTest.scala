@@ -20,7 +20,7 @@ class XMLWriterTest extends FlatSpec {
   }
 
   "Writing the parsed smartphone domain" must "yield a specific result" in {
-    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/SmartPhone-HierarchicalNoAxioms.xml")
+    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml")
     //val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/OrganizeMeeting_VerySmall.xml", domAlone)
     //val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
 
