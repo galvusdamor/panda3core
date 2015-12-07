@@ -19,13 +19,13 @@ import scala.collection.mutable
 case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends CSP {
 
   // holds equivalent variables
-  private val unionFind: SymbolicUnionFind = new SymbolicUnionFind
+  private val unionFind      : SymbolicUnionFind                            = new SymbolicUnionFind
   // contains information about unequal variables
-  private val unequal: mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]]()
+  private val unequal        : mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]]()
   // this is only kept for the top elements of the union-find
   private val remainingDomain: mutable.Map[Variable, mutable.Set[Constant]] = new mutable.HashMap[Variable, mutable.Set[Constant]]()
   // marker for the computation of the reduction
-  private var isReductionComputed = false
+  private var isReductionComputed                                           = false
 
   // if this flag is false, i.e. we know this CSP is unsolvable, the internal data might become inconsistent ... it is simply not necessary to have it still intact
   private var isPotentiallySolvable = true
@@ -54,19 +54,19 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
       (getRepresentative(v1), getRepresentative(v2)) match {
         case (rc1: Constant, rc2: Constant) => if (rc1 == rc2) Some(true) else Some(false)
         case (rv1: Variable, rv2: Variable) => if (rv1 == rv2) Some(true) else if (unequal(rv1).contains(rv2)) Some(false) else None
-        case _ => None // possibly, but we are not sure
+        case _                              => None // possibly, but we are not sure
       } else
       Option(false)
   }
 
   override def addConstraint(constraint: VariableConstraint): SymbolicCSP = {
     val newVariables = (constraint match {
-      case Equal(v1, v2: Variable) => Set(v1, v2)
-      case Equal(v, _: Constant)   => Set(v)
+      case Equal(v1, v2: Variable)    => Set(v1, v2)
+      case Equal(v, _: Constant)      => Set(v)
       case NotEqual(v1, v2: Variable) => Set(v1, v2)
-      case NotEqual(v, _: Constant) => Set(v)
-      case OfSort(v, _)             => Set(v)
-      case NotOfSort(v, _)          => Set(v)
+      case NotEqual(v, _: Constant)   => Set(v)
+      case OfSort(v, _)               => Set(v)
+      case NotOfSort(v, _)            => Set(v)
     }) -- variables
 
     val newCSP = SymbolicCSP(variables ++ newVariables, constraints :+ constraint)
@@ -106,14 +106,14 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
         if (resolutionVariable._2.isEmpty) None
         else {
           resolutionVariable._2.foldLeft[Option[Map[Variable, Constant]]](None)({ case (ret@Some(_), _) => ret;
-          case (None, const) => // try assigning _1 == const
+          case (None, const)                                                                            => // try assigning _1 == const
             searchSolution(domainsWithout_1.map({ case (other, values) => if (unequal(resolutionVariable._1).contains(other)) other -> (values - const)
             else other -> values
-            })) match {
+                                                })) match {
               case Some(partialSolution) => Some(partialSolution + (resolutionVariable._1 -> const))
-              case _ => None
+              case _                     => None
             }
-          })
+                                                                                })
         }
       }
     }
@@ -241,7 +241,7 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
       case equalConstr@Equal(v1, v2) => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
         case (rv: Variable, const: Constant) => OfSort(rv, Sort("temp", Vector() :+ const, Nil))
         case (const: Constant, rv: Variable) => OfSort(rv, Sort("temp", Vector() :+ const, Nil))
-        case _ => equalConstr
+        case _                               => equalConstr
       }
       case x                         => x
     }
@@ -250,13 +250,13 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
     equalsConstEliminated match {
       case NotEqual(v1, v2) =>
         (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-          case (rv1: Variable, rv2: Variable)  => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {case (x, y) => unequal(x) += y;}
-          case (rv: Variable, const: Constant) => remainingDomain(rv).remove(const)
-          case (const: Constant, rv: Variable) => remainingDomain(rv).remove(const)
+          case (rv1: Variable, rv2: Variable)       => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {case (x, y) => unequal(x) += y;}
+          case (rv: Variable, const: Constant)      => remainingDomain(rv).remove(const)
+          case (const: Constant, rv: Variable)      => remainingDomain(rv).remove(const)
           case (const1: Constant, const2: Constant) => if (const1 == const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
         }
       case Equal(v1, v2)    => (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-        case (rv1: Variable, rv2: Variable) => if (rv1 != rv2) {
+        case (rv1: Variable, rv2: Variable)       => if (rv1 != rv2) {
           // intersect domains
           val intersectionDomain = remainingDomain(rv1) intersect remainingDomain(rv2)
           unionFind.assertEqual(rv1, rv2)
