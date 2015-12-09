@@ -21,17 +21,16 @@ potentiallyConsistent: Boolean) {
   assert(remainingDomains.length == unequal.length)
   assert(unequal.length == unionFind.length)
 
-  def isRepresentativeAVariable(variable: Int): Boolean = unionFind(variable) >= 0
+  def isRepresentativeAVariable(variable: Int): Boolean = getUnionFindRepresentative(variable) >= 0
 
-  def getRepresentativeVariable(variable: Int): Int = if (unionFind(variable) >= 0) unionFind(variable)
+  def getRepresentativeVariable(variable: Int): Int = if (getUnionFindRepresentative(variable) >= 0) getUnionFindRepresentative(variable)
   else throw new IllegalArgumentException("The variable " + variable + " is not bound to a variable")
 
-  def getRepresentativeConstant(variable: Int): Int = if (unionFind(variable) < 0) switchConstant(unionFind(variable))
+  def getRepresentativeConstant(variable: Int): Int = if (unionFind(variable) < 0) switchConstant(getUnionFindRepresentative(variable))
   else throw new IllegalArgumentException("The variable " + variable + " is not bound to a constant")
 
   def getRemainingDomain(variable: Int): mutable.Set[Int] = remainingDomains(variable)
 
-  // TODO: propagate size-1 domains on creation
   /**
    * Deep clone this CSP. The given arguments will be translated into new Variables of the sorts given as parameters
    */
@@ -46,7 +45,13 @@ potentiallyConsistent: Boolean) {
         clonedUnequal(i) = unequal(i).clone()
         clonedUnionFind(i) = unionFind(i)
       } else {
-        clonedDomains(i) = mutable.HashSet[Int](domain.constantsOfSort(sortsOfNewVariables(i - remainingDomains.length)): _*)
+        clonedDomains(i) = mutable.HashSet[Int]()
+        val constants: Array[Int] = domain.constantsOfSort(sortsOfNewVariables(i - remainingDomains.length))
+        var j  = 0
+        while (j < constants.length){
+          clonedDomains(i).add(switchConstant(constants(j)))
+          j = j+1
+        }
         clonedUnequal(i) = mutable.HashSet[Int]()
         clonedUnionFind(i) = i // init with itself
       }
@@ -56,9 +61,9 @@ potentiallyConsistent: Boolean) {
 
     i = remainingDomains.length
     while (i < clonedDomains.length) {
-      if (csp.remainingDomains(i).size == 0) csp.potentiallyConsistent = false
-      if (csp.remainingDomains(i).size == 1) csp.propagate(i)
-      i = i+1
+      if (clonedDomains(i).size == 0) csp.potentiallyConsistent = false
+      if (clonedDomains(i).size == 1) csp.propagate(i)
+      i = i + 1
     }
 
     csp
@@ -74,7 +79,7 @@ potentiallyConsistent: Boolean) {
   else {
     if (unionFind(v) == v) v
     else {
-      val representative = getUnionFindRepresentative(v)
+      val representative = getUnionFindRepresentative(unionFind(v))
       unionFind(v) = representative
       representative
     }
@@ -91,12 +96,12 @@ potentiallyConsistent: Boolean) {
       var newRemoved: Int = -1
       if (r1 >= 0) {
         unionFind(r1) = r2
-        newRepresentative = r1
-        newRemoved = r2
-      } else {
-        unionFind(r2) = r1
         newRepresentative = r2
         newRemoved = r1
+      } else {
+        unionFind(r2) = r1
+        newRepresentative = r1
+        newRemoved = r2
       }
 
       // if both were variables, we also have to update the unequals table
@@ -115,7 +120,7 @@ potentiallyConsistent: Boolean) {
           remainingDomains(newRepresentative) = remainingDomains(newRepresentative) & remainingDomains(newRemoved)
           if (remainingDomains(newRepresentative).size >= 1) true else false
         }
-      } else if (remainingDomains(newRepresentative).contains(newRemoved)) true else false
+      } else if (remainingDomains(newRemoved).contains(newRepresentative)) true else false
     } else false // different constants cannot be set equal
   }
 
@@ -153,7 +158,7 @@ potentiallyConsistent: Boolean) {
       }
       i = i + 1
     }
-    if (potentiallyConsistent) propagate(newPropagations.toArray)
+    if (potentiallyConsistent && newPropagations.size != 0) propagate(newPropagations.toArray)
   }
 
   def addConstraint(constraint: VariableConstraint): Unit =
