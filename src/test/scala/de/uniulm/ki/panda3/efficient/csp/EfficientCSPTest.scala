@@ -10,7 +10,7 @@ import org.scalatest.FlatSpec
  */
 class EfficientCSPTest extends FlatSpec {
 
-  val domain = EfficientDomain(Array(Array(), Array(), Array()), sortsOfConstant = Array(Array(0), Array(0), Array(0, 1), Array(1)), Array())
+  val domain = EfficientDomain(Array(Array(), Array(), Array(),Array()), sortsOfConstant = Array(Array(0,2), Array(0,2), Array(0, 1), Array(1,3)), Array())
 
 
   def assignSingleVariableToValue(): EfficientCSP = {
@@ -145,5 +145,61 @@ class EfficientCSPTest extends FlatSpec {
     assert(csp.getRemainingDomain(2).contains(0))
     assert(csp.getRemainingDomain(2).contains(1))
     assert(!csp.getRemainingDomain(2).contains(2))
+  }
+
+  "OfSort Constraints" must "be handled correctly" in {
+    val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
+    csp.addConstraint(VariableConstraint(VariableConstraint.OFSORT, 0, 2))
+    assert(csp.isCSPInternallyConsistent())
+    assert(csp.potentiallyConsistent)
+    assert(csp.isRepresentativeAVariable(0))
+    assert(csp.getRepresentativeVariable(0) == 0)
+    assert(csp.getRemainingDomain(0).size == 2)
+    assert(csp.getRemainingDomain(0).contains(0))
+    assert(csp.getRemainingDomain(0).contains(1))
+  }
+
+  it must "lead to a variable be set to a constant if appropriate" in {
+    val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
+    csp.addConstraint(VariableConstraint(VariableConstraint.OFSORT, 0, 1))
+    assert(csp.isCSPInternallyConsistent())
+    assert(csp.potentiallyConsistent)
+    assert(!csp.isRepresentativeAVariable(0))
+    assert(csp.getRepresentativeConstant(0) == 2)
+  }
+
+  it must "lead to an non-solvable CSP" in {
+    val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
+    csp.addConstraint(VariableConstraint(VariableConstraint.OFSORT, 0, 3))
+    assert(csp.isCSPInternallyConsistent())
+    assert(!csp.potentiallyConsistent)
+  }
+
+  "NotOfSort Constraints" must "be handled correctly" in {
+    val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
+    csp.addConstraint(VariableConstraint(VariableConstraint.NOTOFSORT, 0, 1))
+    assert(csp.isCSPInternallyConsistent())
+    assert(csp.potentiallyConsistent)
+    assert(csp.isRepresentativeAVariable(0))
+    assert(csp.getRepresentativeVariable(0) == 0)
+    assert(csp.getRemainingDomain(0).size == 2)
+    assert(csp.getRemainingDomain(0).contains(0))
+    assert(csp.getRemainingDomain(0).contains(1))
+  }
+
+  it must "lead to a variable be set to a constant if appropriate" in {
+    val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
+    csp.addConstraint(VariableConstraint(VariableConstraint.NOTOFSORT, 0, 2))
+    assert(csp.isCSPInternallyConsistent())
+    assert(csp.potentiallyConsistent)
+    assert(!csp.isRepresentativeAVariable(0))
+    assert(csp.getRepresentativeConstant(0) == 2)
+  }
+
+  it must "lead to an non-solvable CSP" in {
+    val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
+    csp.addConstraint(VariableConstraint(VariableConstraint.NOTOFSORT, 0, 0))
+    assert(csp.isCSPInternallyConsistent())
+    assert(!csp.potentiallyConsistent)
   }
 }

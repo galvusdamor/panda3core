@@ -53,14 +53,7 @@ potentiallyConsistent: Boolean) {
   def getRepresentativeConstant(variable: Int): Int = if (unionFind(variable) < 0) switchConstant(getUnionFindRepresentative(variable))
   else throw new IllegalArgumentException("The variable " + variable + " is not bound to a constant")
 
-  def getRemainingDomain(variable: Int): mutable.Set[Int] = {
-    val externalSet: mutable.Set[Int] = new mutable.HashSet[Int]()
-    val i = remainingDomains(variable).iterator
-    while (i.hasNext) {
-      externalSet.add(switchConstant(i.next()))
-    }
-    externalSet
-  }
+  def getRemainingDomain(variable: Int): mutable.Set[Int] = switchSetOfConstants(remainingDomains(variable))
 
   def getVariableUnequalTo(variable: Int): mutable.Set[Int] = if (getUnionFindRepresentative(variable) < 0) new mutable.HashSet[Int]()
   else unequal(getUnionFindRepresentative(variable)).clone()
@@ -111,6 +104,14 @@ potentiallyConsistent: Boolean) {
   }
 
   private def switchConstant(c: Int): Int = (-c) - 1
+  private def switchSetOfConstants(constants : mutable.Set[Int]) : mutable.Set[Int] = {
+    val externalSet: mutable.Set[Int] = new mutable.HashSet[Int]()
+    val i = constants.iterator
+    while (i.hasNext) {
+      externalSet.add(switchConstant(i.next()))
+    }
+    externalSet
+  }
 
   /**
    * Returns the canonical representative inside the union find.
@@ -262,7 +263,7 @@ potentiallyConsistent: Boolean) {
       if (variableRepresentative < 0) {
         if (!domain.constantsOfSort(constraint.other).contains(switchConstant(variableRepresentative))) potentiallyConsistent = false
       } else {
-        remainingDomains(variableRepresentative) = remainingDomains(variableRepresentative) & domain.constantsOfSort(constraint.other).toSet
+        remainingDomains(variableRepresentative) = remainingDomains(variableRepresentative) & switchSetOfConstants(mutable.Set[Int](domain.constantsOfSort(constraint.other):_*))
         if (remainingDomains(variableRepresentative).size == 0) potentiallyConsistent = false
         if (remainingDomains(variableRepresentative).size == 1) propagate(variableRepresentative)
       }
@@ -275,7 +276,7 @@ potentiallyConsistent: Boolean) {
         var i = 0
         val constantsInSort = domain.constantsOfSort(constraint.other)
         while (i < constantsInSort.length) {
-          remainingDomains(variableRepresentative).remove(constantsInSort(i))
+          remainingDomains(variableRepresentative).remove(switchConstant(constantsInSort(i)))
           i = i + 1
         }
         if (remainingDomains(variableRepresentative).size == 0) potentiallyConsistent = false
