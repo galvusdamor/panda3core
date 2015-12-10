@@ -53,15 +53,27 @@ potentiallyConsistent: Boolean) {
   def getRepresentativeConstant(variable: Int): Int = if (unionFind(variable) < 0) switchConstant(getUnionFindRepresentative(variable))
   else throw new IllegalArgumentException("The variable " + variable + " is not bound to a constant")
 
-  def getRemainingDomain(variable: Int): mutable.Set[Int] = switchSetOfConstants(remainingDomains(variable))
+  def getRemainingDomain(variable: Int): mutable.Set[Int] = if (getUnionFindRepresentative(variable) < 0) {
+    val returnSet = new mutable.HashSet[Int]()
+    returnSet.add(switchConstant(getUnionFindRepresentative(variable)))
+    returnSet
+  } else {
+    switchSetOfConstants(remainingDomains(getUnionFindRepresentative(variable)))
+  }
 
   def getVariableUnequalTo(variable: Int): mutable.Set[Int] = if (getUnionFindRepresentative(variable) < 0) new mutable.HashSet[Int]()
   else unequal(getUnionFindRepresentative(variable)).clone()
 
+
+  /**
+   * Deep clone this CSP.
+   */
+  def copy(): EfficientCSP = addVariables(Array())
+
   /**
    * Deep clone this CSP. The given arguments will be translated into new Variables of the sorts given as parameters
    */
-  def addVariables(sortsOfNewVariables: Array[Int] = Array()): EfficientCSP = {
+  def addVariables(sortsOfNewVariables: Array[Int]): EfficientCSP = {
     val copies = copyAndAddNewVariables(sortsOfNewVariables)
     val csp = new EfficientCSP(domain, copies._1, copies._2, copies._3, potentiallyConsistent)
     csp.propagateNewVariablesIfSingleton(sortsOfNewVariables.length)
@@ -104,7 +116,8 @@ potentiallyConsistent: Boolean) {
   }
 
   private def switchConstant(c: Int): Int = (-c) - 1
-  private def switchSetOfConstants(constants : mutable.Set[Int]) : mutable.Set[Int] = {
+
+  private def switchSetOfConstants(constants: mutable.Set[Int]): mutable.Set[Int] = {
     val externalSet: mutable.Set[Int] = new mutable.HashSet[Int]()
     val i = constants.iterator
     while (i.hasNext) {
@@ -169,7 +182,10 @@ potentiallyConsistent: Boolean) {
           remainingDomains(newRemoved).add(newRepresentative)
           // remove newRemoved from all unequal constraints
           val i = unequal(newRemoved).iterator
-          while (i.hasNext) unequal(i.next()).remove(newRemoved)
+          while (i.hasNext) {
+            val removeFrom = i.next()
+            unequal(removeFrom).remove(newRemoved)
+          }
           true
         } else false
       }
@@ -185,28 +201,29 @@ potentiallyConsistent: Boolean) {
     val newPropagations: mutable.Set[Int] = new mutable.HashSet[Int]()
 
     var i = 0
-    while (i < toPropagate.length) {
+    while (i < toPropagate.length && potentiallyConsistent) {
       // maybe this one is already bad
       assert(remainingDomains(toPropagate(i)).size <= 1)
-      if (remainingDomains(toPropagate(i)).size == 0) potentiallyConsistent = false
+      if (remainingDomains(toPropagate(i)).size == 0) potentiallyConsistent = false else {
 
-      // the value to which the variable has been set
-      val unitValue = remainingDomains(toPropagate(i)).head
+        // the value to which the variable has been set
+        val unitValue = remainingDomains(toPropagate(i)).head
 
-      // set the variable to the constant (just to be sure)
-      val equalSuccessful = assertEqual(toPropagate(i), unitValue)
-      assert(equalSuccessful)
+        // set the variable to the constant (just to be sure)
+        val equalSuccessful = assertEqual(toPropagate(i), unitValue)
+        assert(equalSuccessful)
 
-      // go through all variables this one has to be unequal to
-      val unequalToPropagate = unequal(toPropagate(i)).iterator
-      while (unequalToPropagate.hasNext) {
-        val propagateTo = unequalToPropagate.next()
-        // remove the unit from the domain
-        remainingDomains(propagateTo).remove(unitValue)
-        if (remainingDomains(propagateTo).size == 1) newPropagations.add(propagateTo)
-        if (remainingDomains(propagateTo).size == 0) potentiallyConsistent = false
+        // go through all variables this one has to be unequal to
+        val unequalToPropagate = unequal(toPropagate(i)).iterator
+        while (unequalToPropagate.hasNext) {
+          val propagateTo = unequalToPropagate.next()
+          // remove the unit from the domain
+          remainingDomains(propagateTo).remove(unitValue)
+          if (remainingDomains(propagateTo).size == 1) newPropagations.add(propagateTo)
+          if (remainingDomains(propagateTo).size == 0) potentiallyConsistent = false
+        }
+        i = i + 1
       }
-      i = i + 1
     }
     if (potentiallyConsistent && newPropagations.size != 0) propagate(newPropagations.toArray)
   }
@@ -243,7 +260,8 @@ potentiallyConsistent: Boolean) {
       val variableRepresentative = getUnionFindRepresentative(constraint.variable)
       val otherRepresentative = if (constraint.constraintType == VariableConstraint.UNEQUALCONSTANT) switchConstant(constraint.other) else getUnionFindRepresentative(constraint.other)
 
-      if (variableRepresentative >= 0 && otherRepresentative >= 0) {
+      if (variableRepresentative == otherRepresentative) potentiallyConsistent = false
+      else if (variableRepresentative >= 0 && otherRepresentative >= 0) {
         // both are variables
         unequal(variableRepresentative).add(otherRepresentative)
         unequal(otherRepresentative).add(variableRepresentative)
@@ -263,7 +281,7 @@ potentiallyConsistent: Boolean) {
       if (variableRepresentative < 0) {
         if (!domain.constantsOfSort(constraint.other).contains(switchConstant(variableRepresentative))) potentiallyConsistent = false
       } else {
-        remainingDomains(variableRepresentative) = remainingDomains(variableRepresentative) & switchSetOfConstants(mutable.Set[Int](domain.constantsOfSort(constraint.other):_*))
+        remainingDomains(variableRepresentative) = remainingDomains(variableRepresentative) & switchSetOfConstants(mutable.Set[Int](domain.constantsOfSort(constraint.other): _*))
         if (remainingDomains(variableRepresentative).size == 0) potentiallyConsistent = false
         if (remainingDomains(variableRepresentative).size == 1) propagate(variableRepresentative)
       }
