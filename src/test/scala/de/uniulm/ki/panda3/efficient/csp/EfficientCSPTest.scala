@@ -326,7 +326,7 @@ class EfficientCSPTest extends FlatSpec {
       }
       val cspOutput: String = sb.toString()
       // get the correct string
-      val correctString: String = Source.fromFile(file.getAbsolutePath.replaceAll("in", "ans")).mkString
+      val correctString: String = Source.fromFile(file.getAbsolutePath.replaceAll(".in", ".ans")).mkString
       assert(correctString == cspOutput)
     }
   }
