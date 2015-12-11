@@ -51,7 +51,7 @@ class SymbolicOrderingTest extends FlatSpec {
 
 
 
-  "Orderings update" must "allow incremntal calculations" in {
+  "Orderings update" must "allow incremental calculations" in {
     // a dummy plan
     val order1 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), getPlanStepList(3))
 

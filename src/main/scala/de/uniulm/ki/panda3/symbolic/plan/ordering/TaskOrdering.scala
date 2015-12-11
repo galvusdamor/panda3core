@@ -26,6 +26,7 @@ trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable with P
     tryCompare(x, y) match {
       case None                      => false
       case Some(TaskOrdering.BEFORE) => true
+      case Some(TaskOrdering.SAME)   => true
       case _                         => false
     }
   }
@@ -70,11 +71,12 @@ trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable with P
   /** checks whether this order is total */
   def isTotalOrder(): Boolean = {
 
-    def find(remaining : Seq[PlanStep]) : Boolean = if (remaining.size == 1) true else {
+    def find(remaining: Seq[PlanStep]): Boolean = if (remaining.size == 1) true
+    else {
       // try all
-      remaining exists {t =>
+      remaining exists { t =>
         // before all
-        (remaining forall {ot => ot == t || lt(t,ot)}) && find(remaining.filterNot({_ == t}))
+        (remaining forall { ot => ot == t || lt(t, ot) }) && find(remaining.filterNot({_ == t}))
 
       }
     }
@@ -88,8 +90,8 @@ trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable with P
 }
 
 object TaskOrdering {
-  val AFTER: Byte = 1
-  val BEFORE: Byte = -1
-  val SAME: Byte = 0
+  val AFTER   : Byte = 1
+  val BEFORE  : Byte = -1
+  val SAME    : Byte = 0
   val DONTKNOW: Byte = 2
 }
