@@ -50,6 +50,7 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
     }
   }
 
+  // Functions needed to be a partial ordering
   override def tryCompare(x: Int, y: Int): Option[Int] =
     if (x >= orderingConstraints.length || y >= orderingConstraints.length) None
     else if (orderingConstraints(x)(y) == DONTKNOW) None else Some(orderingConstraints(x)(y))
@@ -57,10 +58,21 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
   override def lteq(x: Int, y: Int): Boolean = if (x >= orderingConstraints.length || y >= orderingConstraints.length) false else orderingConstraints(x)(y) <= SAME
 
 
+  /**
+   * deep-clone this CSP
+   */
   def copy(): EfficientOrdering = addPlanSteps(0)
 
+  /**
+   * add the given amount of plan steps without any connection to the rest of the plan steps
+   *
+   * the new plan steps will be numbered sz(orderingConstraints) .. sz(orderingConstraints) + newPlanSteps - 1
+   */
   def addPlanSteps(newPlanSteps: Int): EfficientOrdering = addPlanStepsWithMaybeFromBase(fromBase = false, -1, null, -1, newPlanSteps)
 
+  /**
+   * adds the ordering constraint before < after to the ordering. This will automatically re-compute the transitive hull of the ordering relation
+   */
   def addOrderingConstraint(before: Int, after: Int): Unit =
     if (orderingConstraints(before)(after) == SAME || orderingConstraints(before)(after) == AFTER) isConsistent = false
     else {
@@ -69,6 +81,12 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
       propagate(Array(before, after), Array(after, before))
     }
 
+  /**
+   * removes a plan step entirely from the ordering, while preserving all ordering constraints that went through it.
+   * All plan steps with an index greater than ps will be renumbered s.t. the numbers are again contiguous, i.e. 1 will be substracted from them
+   *
+   * E.g. if 1 is removed from {0<1<2,3}, the result will be {0<1,2}, not {0,1,2}
+   */
   def removePlanStep(ps: Int): EfficientOrdering = {
     val newOrdering = new Array[Array[Byte]](orderingConstraints.length - 1)
     var i = 0
@@ -92,6 +110,9 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
     addPlanStepsWithMaybeFromBase(fromBase = true, oldPlanStep, ordering.orderingConstraints, indexBaseInNew, -1)
 
 
+  /**
+   * internal function that actually performs the copying-around needed to copy, add, delete and replace plan steps.
+   */
   private def addPlanStepsWithMaybeFromBase(fromBase: Boolean, base: Int, internalOrdering: Array[Array[Byte]], indexBaseInNew: Int, newPlanSteps: Int): EfficientOrdering = {
     val originalSize = orderingConstraints.length
     val newOrdering = new Array[Array[Byte]](originalSize + (if (fromBase) internalOrdering.length - 1 else newPlanSteps))
