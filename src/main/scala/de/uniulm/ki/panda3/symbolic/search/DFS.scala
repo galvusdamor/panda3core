@@ -16,8 +16,8 @@ import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 object DFS {
 
   def main(args: Array[String]) {
-    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/AssemblyTask_domain.xml")
-    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/AssemblyTask_problem.xml", domAlone)
+    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml")
+    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml", domAlone)
     val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
 
     val parsedDom = domAndInitialPlan._1.update(sortExpansion)
