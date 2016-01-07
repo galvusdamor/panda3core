@@ -4,10 +4,10 @@ import de.uniulm.ki.panda3.symbolic.logic.{Constant, Sort, Variable}
 import org.scalatest.FlatSpec
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 class SymbolicUnionFindTest extends FlatSpec {
 
   val union: SymbolicUnionFind = new SymbolicUnionFind
