@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.search
 
+//import scala.pickling.Defaults._, scala.pickling.json._
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.symbolic.compiler.ClosedWorldAssumption
@@ -30,7 +31,10 @@ object DFS {
 
     x._2.acquire()
     println("100 Nodes generated")
+    //val json = x._1.pickle
+    //println(json.toString)
   }
+
 
   /**
    * This functions starts the (asynchronious) search for a solution to a given planning problem.
@@ -38,7 +42,7 @@ object DFS {
    *
    * The semaphore will not be released for every search node, but after a couple 100 ones.
    */
-  def startSearch(domain: Domain, initialPlan: Plan, nodeLimit : Option[Int]): (SearchNode, Semaphore) = {
+  def startSearch(domain: Domain, initialPlan: Plan, nodeLimit : Option[Int]): (SearchNode, Semaphore, Unit => Unit) = {
     val semaphore: Semaphore = new Semaphore(0)
     val node: SearchNode = new SearchNode(initialPlan, null, -1)
 
@@ -48,8 +52,10 @@ object DFS {
     var d: Int = 0 // the depth
     var crap: Int = 0 // and how many dead ends we have encountered
 
+    var abort = false
+
     def search(domain: Domain, node: SearchNode): Option[Plan] = if (node.plan.flaws.size == 0) Some(node.plan)
-    else if (nodeLimit.isDefined && nodes > nodeLimit.get) None
+    else if ((nodeLimit.isDefined && nodes > nodeLimit.get) || abort) None
     else {
       nodes = nodes + 1
       d = d + 1
@@ -85,6 +91,6 @@ object DFS {
       override def run(): Unit = search(domain, node)
     }).start()
 
-    (node, semaphore)
+    (node, semaphore, {_ => abort = true})
   }
 }
