@@ -23,11 +23,13 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-pickling" % "0.10.1"
 
-//homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/thomas-geier.html"))
+org.scalastyle.sbt.PluginKeys.config := baseDirectory.value / "project" / "scalastyle-config.xml"
+
+homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/gregor-behnke.html"))
 
 startYear := Some(2014)
 
-//description := "Tools for probabilistic inference in discrete-valued factor graphs with dense factors."
+description := "A planning system for partial-order causal-link, hierarchical and hybrid planning."
 
 //licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
