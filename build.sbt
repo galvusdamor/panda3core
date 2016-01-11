@@ -36,3 +36,6 @@ description := "A planning system for partial-order causal-link, hierarchical an
 scalaVersion := "2.11.6"
 
 mainClass in assembly := Some("de.uniulm.ki.panda3.search.DFS")
+
+compileOrder in Compile := CompileOrder.Mixed
+compileOrder in Test := CompileOrder.Mixed
