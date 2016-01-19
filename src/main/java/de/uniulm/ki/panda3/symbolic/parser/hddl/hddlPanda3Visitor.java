@@ -159,7 +159,7 @@ public class hddlPanda3Visitor {
 
             DecompositionMethod method;
             if (hasPrecondition) {
-                method = new SHOPDecompositionMethod(abstractTask, subPlan, preconditions.result());
+                method = new SHOPDecompositionMethod(abstractTask, subPlan, new And<Literal>(preconditions.result()));
             } else {
                 method = new SimpleDecompositionMethod(abstractTask, subPlan);
             }

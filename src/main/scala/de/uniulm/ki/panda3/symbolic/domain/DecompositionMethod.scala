@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
-import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate}
+import de.uniulm.ki.panda3.symbolic.logic.{Formula, Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 
 import de.uniulm.ki.panda3.symbolic._
@@ -17,13 +17,13 @@ trait DecompositionMethod extends DomainUpdatable {
   val subPlan     : Plan
 
   assert(!abstractTask.isPrimitive)
-  (abstractTask,subPlan.init.schema) match {
-    case (reducedAbstractTask: ReducedTask,_:ReducedTask) =>
+  (abstractTask, subPlan.init.schema) match {
+    case (reducedAbstractTask: ReducedTask, _: ReducedTask) =>
       assert(reducedAbstractTask.precondition.conjuncts.size == subPlan.init.substitutedEffects.size)
       assert(reducedAbstractTask.effect.conjuncts.size == subPlan.goal.substitutedPreconditions.size)
       assert((reducedAbstractTask.precondition.conjuncts zip subPlan.init.substitutedEffects) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
       assert((reducedAbstractTask.effect.conjuncts zip subPlan.init.substitutedPreconditions) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
-    case _                                => () // I cannot check anything
+    case _                                                  => () // I cannot check anything
   }
   assert(abstractTask.parameters forall subPlan.variableConstraints.variables.contains)
 
@@ -48,7 +48,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends 
   * In addition to a plan, SHOPs (and SHOP2s) decomposition methods also may have preconditions. For the semantics of these preconditions see the SHOP/SHOP2 papers
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPreconditions: Seq[Literal]) extends DecompositionMethod {
+case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula) extends DecompositionMethod {
   override def update(domainUpdate: DomainUpdate): SHOPDecompositionMethod = SHOPDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate),
-                                                                                                     methodPreconditions map { _ update domainUpdate })
+                                                                                                     methodPrecondition update domainUpdate)
 }

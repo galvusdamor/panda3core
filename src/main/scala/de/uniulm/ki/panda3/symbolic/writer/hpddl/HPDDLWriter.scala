@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.writer.hpddl
 
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{SHOPDecompositionMethod, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
@@ -240,9 +240,15 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
         case NotOfSort(v, s)  => "(not (" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, planUF) + "))"
       }
 
-      if (constraintConditions.nonEmpty) {
+      val methodPrecondition = m match {
+        case SHOPDecompositionMethod(_,_,f ) => f
+        case _ => And[Formula](Nil)
+      }
+
+      if (constraintConditions.nonEmpty || !methodPrecondition.isEmpty) {
         builder.append("\t\t:precondition (and\n")
-        constraintConditions foreach { s => builder.append("\t\t\t" + s + "\n") }
+        if (constraintConditions.nonEmpty) constraintConditions foreach { s => builder.append("\t\t\t" + s + "\n") }
+        if (!methodPrecondition.isEmpty) writeFormula(builder,methodPrecondition,"\t\t\t",planUF)
         builder.append("\t\t)\n")
       }
 
