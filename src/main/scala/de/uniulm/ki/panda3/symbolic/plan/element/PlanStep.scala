@@ -14,7 +14,8 @@ import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends DomainUpdatable with PrettyPrintable {
 
   assert(arguments.size == schema.parameters.size)
-  assert((arguments zip schema.parameters) forall {case (a,b) => a.sort == b.sort})
+  // TODO: test whether it is a subsort relation instead
+  //assert((arguments zip schema.parameters) forall {case (a,b) => a.sort == b.sort})
 
 
   /** returns a version of the preconditions */
