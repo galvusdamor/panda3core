@@ -73,6 +73,10 @@ public class internalTaskNetwork {
         this.csp = this.csp.addVariables(vars);
     }
 
+    public void addCspVariable(Variable variable) {
+        this.csp = this.csp.addVariable(variable);
+    }
+
     public void addCspConstraint(VariableConstraint vc) {
         this.csp = this.csp.addConstraint(vc);
     }

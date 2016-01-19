@@ -128,11 +128,28 @@ public class hddlPanda3Visitor {
 
             // Read method preconditions
             VectorBuilder<Literal> preconditions = new VectorBuilder<>();
+            Formula f2 = null;
             boolean hasPrecondition;
             if (m.gd() != null) {
-                VectorBuilder<VariableConstraint> constraints = new VectorBuilder<>();
-                visitGoalConditions(preconditions, predicates, methodParams, sorts, constraints, m.gd());
-                subNetwork.addCspConstraints(constraints.result());
+                if (m.gd().getText().contains("(forall")) {
+                    // todo: HACK
+                    VectorBuilder<VariableConstraint> constraints = new VectorBuilder<>();
+                    VectorBuilder<Literal> preconditions2 = new VectorBuilder<>();
+                    visitGoalConditions(preconditions2, predicates, methodParams, sorts, constraints, m.gd().gd_conjuction().gd(1));
+                    subNetwork.addCspConstraints(constraints.result());
+
+                    hddlParser.Gd_univeralContext eq = m.gd().gd_conjuction().gd(0).gd_univeral();
+                    Tuple2<Formula, Variable> f = visitUniveral(methodParams, predicates, sorts, constraints, true, eq);
+                    subNetwork.addCspVariable(f._2());
+                    VectorBuilder<Object> form = new VectorBuilder<>();
+                    form.$plus$eq(preconditions2.result().apply(0));
+                    form.$plus$eq(f._1());
+                    f2 = new And(form.result());
+                } else {
+                    VectorBuilder<VariableConstraint> constraints = new VectorBuilder<>();
+                    visitGoalConditions(preconditions, predicates, methodParams, sorts, constraints, m.gd());
+                    subNetwork.addCspConstraints(constraints.result());
+                }
                 hasPrecondition = true;
             } else hasPrecondition = false;
 
@@ -158,7 +175,9 @@ public class hddlPanda3Visitor {
             Plan subPlan = subNetwork.readTaskNetwork(m.tasknetwork_def(), methodParams, abstractTask, tasks, sorts);
 
             DecompositionMethod method;
-            if (hasPrecondition) {
+            if (f2 != null) {
+                method = new SHOPDecompositionMethod(abstractTask, subPlan, f2);
+            } else if (hasPrecondition) {
                 method = new SHOPDecompositionMethod(abstractTask, subPlan, new And<Literal>(preconditions.result()));
             } else {
                 method = new SimpleDecompositionMethod(abstractTask, subPlan);
@@ -260,16 +279,51 @@ public class hddlPanda3Visitor {
 
     private void visitLiteralConj(VectorBuilder<Literal> outLiterals, Seq<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, VectorBuilder<VariableConstraint> constraints, hddlParser.Gd_conjuctionContext ctx) {
         for (hddlParser.GdContext gd : ctx.gd()) {
-            if ((gd.atomic_formula() == null) && (gd.gd_negation() == null)) {
+            if (gd.atomic_formula() != null) {
+                visitAtomFormula(outLiterals, parameters, predicates, sorts, constraints, true, gd.atomic_formula());
+            } else if (gd.gd_negation() != null) {
+                visitNegAtomFormula(outLiterals, parameters, predicates, sorts, constraints, gd.gd_negation());
+            } else if (gd.gd_univeral() != null) {
                 System.out.println("ERROR: not yet implemented - an element of a conjunction of preconditions or effects seems to be no literal.");
+                //visitUniveral(outLiterals, parameters, predicates, sorts, constraints, true, gd.gd_univeral());
             } else {
-                if (gd.atomic_formula() != null) {
-                    visitAtomFormula(outLiterals, parameters, predicates, sorts, constraints, true, gd.atomic_formula());
-                } else if (gd.gd_negation() != null) {
-                    visitNegAtomFormula(outLiterals, parameters, predicates, sorts, constraints, gd.gd_negation());
-                }
+                System.out.println("ERROR: not yet implemented - an element of a conjunction of preconditions or effects seems to be no literal.");
             }
         }
+    }
+
+    private Tuple2<Formula, Variable> visitUniveral(Seq<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, VectorBuilder<VariableConstraint> constraints, boolean b, hddlParser.Gd_univeralContext gd_univeralContext) {
+        int curIndex = parameters.size();
+        VectorBuilder<Variable> parameters2 = new VectorBuilder<>();
+        for (int i = 0; i < parameters.size(); i++) {
+            parameters2.$plus$eq(parameters.apply(i));
+        }
+
+        List<hddlParser.Typed_varsContext> y = gd_univeralContext.typed_var_list().typed_vars();
+        if (y.size() != 1) {
+            System.out.println("ERROR: Not implemented: conditional effects");
+        }
+        String type = y.get(0).children.get(2).getText();
+        String obj = y.get(0).children.get(0).getText();
+
+        Sort s = null;
+        for (int i = 0; i < sorts.size(); i++) {
+            Sort s1 = sorts.apply(i);
+            if (s1.name().equals(type)) {
+                s = s1;
+                break;
+            }
+        }
+
+        Variable v = new Variable(curIndex++, obj, s);
+        parameters2.$plus$eq(v);
+
+        VectorBuilder<Literal> innerListerals = new VectorBuilder<>();
+        visitGoalConditions(innerListerals, predicates, parameters2.result(), sorts, constraints, gd_univeralContext.gd());
+
+        And a = new And(innerListerals.result());
+        Formula f = new Forall(v, a);
+        return new Tuple2<>(f, v);
     }
 
     private void visitNegAtomFormula(VectorBuilder<Literal> outLiterals, Seq<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, VectorBuilder<VariableConstraint> constraints, hddlParser.Gd_negationContext ctx) {
