@@ -210,7 +210,7 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
     if (dom.tasks exists { !_.isPrimitive }) {
       builder.append("\t(:tasks\n")
 
-      dom.tasks filter { !_.isPrimitive } foreach { at =>
+      dom.tasks foreach { at =>
         builder.append("\t\t(" + toPDDLIdentifier(at.name) + " ")
         val taskUF = constructUnionFind(at)
         val parameters = at.parameters filter { taskUF.getRepresentative(_).isInstanceOf[Variable] }
