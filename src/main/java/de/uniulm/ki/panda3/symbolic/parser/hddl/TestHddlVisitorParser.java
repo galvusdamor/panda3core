@@ -1,7 +1,8 @@
-package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
+package de.uniulm.ki.panda3.symbolic.parser.hddl;
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlLexer;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.writer.hpddl.HPDDLWriter;

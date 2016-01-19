@@ -1,13 +1,13 @@
-package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
+package de.uniulm.ki.panda3.symbolic.parser.hddl;
 
 import de.uniulm.ki.panda3.symbolic.csp.Equal;
 import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
-import de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod;
-import de.uniulm.ki.panda3.symbolic.domain.Domain;
-import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
-import de.uniulm.ki.panda3.symbolic.domain.Task;
+import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalSortsAndConsts;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalTaskNetwork;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.parserUtil;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
@@ -127,8 +127,8 @@ public class hddlPanda3Visitor {
             subNetwork.addCspVariables(methodParams);
 
             // Read method preconditions
+            VectorBuilder<Literal> preconditions = new VectorBuilder<>();
             if (m.gd() != null) {
-                VectorBuilder<Literal> preconditions = new VectorBuilder<>();
                 visitGoalConditions(preconditions, predicates, methodParams, m.gd());
                 // todo: method preconditions
                 //Task prec = new Task("method-prec", true, methodParams, new Vector<VariableConstraint>(0, 0, 0), preconditions.result(), new Vector<Literal>(0, 0, 0));
@@ -155,6 +155,7 @@ public class hddlPanda3Visitor {
             // Create subplan, method and add it to method list
             Plan subPlan = subNetwork.readTaskNetwork(m.tasknetwork_def(), methodParams, abstractTask, tasks, sorts);
             DecompositionMethod method = new SimpleDecompositionMethod(abstractTask, subPlan);
+            //DecompositionMethod method = new SHOPDecompositionMethod(abstractTask, subPlan);
             methods.$plus$eq(method);
         }
         return methods.result();
