@@ -34,3 +34,7 @@ case class ExchangeTask(exchange: Map[Task, Task]) extends DomainUpdate {}
 
 case class ExchangeTaskSchemaInMethods(exchange: Map[Task, Task]) extends DomainUpdate {}
 
+case class ReduceFormula() extends DomainUpdate {}
+
+case class ReduceTasks() extends DomainUpdate {}
+

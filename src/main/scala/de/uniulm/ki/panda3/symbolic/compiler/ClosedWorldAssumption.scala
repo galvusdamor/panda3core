@@ -2,17 +2,17 @@ package de.uniulm.ki.panda3.symbolic.compiler
 
 import de.uniulm.ki.panda3.symbolic.csp.Equal
 import de.uniulm.ki.panda3.symbolic.domain.updates.{AddVariableConstraints, AddVariables, ExchangePlanStep}
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
-import de.uniulm.ki.panda3.symbolic.logic.{Constant, Literal, Sort, Variable}
+import de.uniulm.ki.panda3.symbolic.domain.{GeneralTask, Domain, Task}
+import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 
 
 /**
- * applies the CWA to the initial state
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * applies the CWA to the initial state
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 object ClosedWorldAssumption extends DomainTransformer[Unit] {
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
@@ -20,8 +20,8 @@ object ClosedWorldAssumption extends DomainTransformer[Unit] {
     val oldInit = plan.init
 
     // determine whether there are all variables for constants we possibly need
-    val existstingVariablesForConstants: Map[Constant, Variable] = (oldInit.arguments collect {
-      case v if plan.variableConstraints.getRepresentative(v).isConstant => plan.variableConstraints.getRepresentative(v).asInstanceOf[Constant] -> v
+    val existstingVariablesForConstants: Map[Constant, Variable] = (oldInit.arguments collect { case v if plan.variableConstraints.getRepresentative(v).isConstant => plan.variableConstraints
+      .getRepresentative(v).asInstanceOf[Constant] -> v
     }).toMap
 
     // generate all needed variables for constants
@@ -42,12 +42,13 @@ object ClosedWorldAssumption extends DomainTransformer[Unit] {
 
     // remove all literals that already occur in the initial state
     val newCSP = plan.variableConstraints.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints))
-    val notPredentLiterals = allLiterals filterNot { groundedLiteral => oldInit.substitutedEffects exists { initEffect => (groundedLiteral =?= initEffect)(newCSP) } }
+    val notPredentLiterals = allLiterals filterNot { groundedLiteral => oldInit.substitutedEffects exists { initEffect => (groundedLiteral =?= initEffect) (newCSP) } }
     val newEffects = notPredentLiterals map {_.negate}
 
 
-    val newInitSchema: Task = Task(oldInit.schema.name, isPrimitive = true, oldInit.schema.parameters ++ newVariables, oldInit.schema.parameterConstraints ++ newVariableConstraints,
-      oldInit.schema.preconditions, oldInit.schema.effects ++ newEffects)
+    val newInitSchema: GeneralTask = GeneralTask(oldInit.schema.name, isPrimitive = true, oldInit.schema.parameters ++ newVariables,
+                                                 oldInit.schema.parameterConstraints ++ newVariableConstraints, oldInit.schema.precondition,
+                                                 And[Formula](newEffects :+ oldInit.schema.effect))
     val newInit: PlanStep = PlanStep(oldInit.id, newInitSchema, oldInit.arguments ++ newVariables)
 
     (domain, plan.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints)).update(ExchangePlanStep(oldInit, newInit)))

@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.writer.hpddl
 
 import java.io.{File, PrintWriter}
 
-import de.uniulm.ki.panda3.symbolic.compiler.ClosedWorldAssumption
+import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, ClosedWorldAssumption}
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -11,10 +11,10 @@ import org.scalatest.FlatSpec
 import scala.io.Source
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 class HPDDLWriterTest extends FlatSpec {
 
   def writeStringToFile(s: String, file: File): Unit = {
@@ -31,10 +31,11 @@ class HPDDLWriterTest extends FlatSpec {
 
     // apply the CWA
     val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
+    val allReduced = ToPlainFormulaRepresentation.transform(cwaApplied._1, cwaApplied._2, ())
 
 
     val dom = HPDDLWriter("smartphone", "smartphone_verysmall").writeDomain(domAlone)
-    val prob = HPDDLWriter("smartphone", "smartphone_verysmall").writeProblem(cwaApplied._1, cwaApplied._2)
+    val prob = HPDDLWriter("smartphone", "smartphone_verysmall").writeProblem(allReduced._1, allReduced._2)
 
     val correctDomain: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/hpddl/smartphone.hpddl").mkString
     val correctProblem: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/hpddl/smartphone_verysmall.hpddl").mkString

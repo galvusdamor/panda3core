@@ -4,6 +4,8 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 
+import de.uniulm.ki.panda3.symbolic._
+
 /**
   * The general view onto a decomposition method: it takes an abstract task and maps it to a plan, by which this task can be replaced
   *
@@ -15,13 +17,20 @@ trait DecompositionMethod extends DomainUpdatable {
   val subPlan     : Plan
 
   assert(!abstractTask.isPrimitive)
-  assert(abstractTask.preconditions.size == subPlan.init.substitutedEffects.size)
-  assert(abstractTask.effects.size == subPlan.goal.substitutedPreconditions.size)
-  assert((abstractTask.preconditions zip subPlan.init.substitutedEffects) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
-  assert((abstractTask.effects zip subPlan.init.substitutedPreconditions) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
+  (abstractTask,subPlan.init.schema) match {
+    case (reducedAbstractTask: ReducedTask,_:ReducedTask) =>
+      assert(reducedAbstractTask.precondition.conjuncts.size == subPlan.init.substitutedEffects.size)
+      assert(reducedAbstractTask.effect.conjuncts.size == subPlan.goal.substitutedPreconditions.size)
+      assert((reducedAbstractTask.precondition.conjuncts zip subPlan.init.substitutedEffects) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
+      assert((reducedAbstractTask.effect.conjuncts zip subPlan.init.substitutedPreconditions) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
+    case _                                => () // I cannot check anything
+  }
   assert(abstractTask.parameters forall subPlan.variableConstraints.variables.contains)
 
-  lazy val canGenerate: Seq[Predicate] = subPlan.planStepWithoutInitGoal flatMap {_.schema.effects map {_.predicate}}
+  lazy val canGenerate: Seq[Predicate] = subPlan.planStepWithoutInitGoal map { _.schema } map {
+    case reduced: ReducedTask => reduced
+    case _                    => noSupport(FORUMLASNOTSUPPORTED)
+  } flatMap { _.effect.conjuncts map { _.predicate } }
 
   override def update(domainUpdate: DomainUpdate): DecompositionMethod
 }
@@ -41,5 +50,5 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends 
   */
 case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPreconditions: Seq[Literal]) extends DecompositionMethod {
   override def update(domainUpdate: DomainUpdate): SHOPDecompositionMethod = SHOPDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate),
-                                                                                                     methodPreconditions map {_ update domainUpdate})
+                                                                                                     methodPreconditions map { _ update domainUpdate })
 }

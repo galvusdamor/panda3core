@@ -82,7 +82,7 @@ public class hddlPanda3Visitor {
         if (ctx != null) {
             visitGoalConditions(goalCondition, predicates, taskParameters, null, ctx.gd()); // it is not possible to have equality/inequality constraints in the goal state ->null
         }
-        return new Task("goal", true, taskParameters, parameterConstraints.result(), goalCondition.result(), new Vector<Literal>(0, 0, 0));
+        return new ReducedTask("goal", true, taskParameters, parameterConstraints.result(), new And<Literal>(goalCondition.result()), new And<Literal>(new Vector<Literal>(0, 0, 0)));
     }
 
     private Task visitInitialState(Seq<Sort> sorts, Seq<Predicate> predicates, hddlParser.P_initContext ctx) {
@@ -97,7 +97,7 @@ public class hddlPanda3Visitor {
                 visitAtomFormula(initEffects, taskParameter, predicates, null, false, lc.atomic_formula());
             }
         }
-        return new Task("init", true, taskParameter, varConstraints.result(), new Vector<Literal>(0, 0, 0), initEffects.result());
+        return new ReducedTask("init", true, taskParameter, varConstraints.result(), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(initEffects.result()));
     }
 
     private Seq<Variable> getVariableForEveryConst(Seq<Sort> sorts, VectorBuilder<VariableConstraint> varConstraints) {
@@ -203,7 +203,7 @@ public class hddlPanda3Visitor {
         } else if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().eff_conjuntion() != null)) {
             visitConEffConj(effects, parameters, predicates, ctxTask.effect_body().eff_conjuntion());
         }
-        return new Task(taskName, isPrimitive, parameters, constraints.result(), preconditions.result(), effects.result());
+        return new ReducedTask(taskName, isPrimitive, parameters, constraints.result(), new And<Literal>(preconditions.result()), new And<Literal>(effects.result()));
     }
 
     private Seq<Variable> typedParamsToVars(Seq<Sort> sorts, List<hddlParser.Typed_varsContext> vars) {

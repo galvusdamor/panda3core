@@ -3,35 +3,40 @@ package de.uniulm.ki.panda3.symbolic.plan.element
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp.{CSP, Substitution}
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
-import de.uniulm.ki.panda3.symbolic.domain.{DomainUpdatable, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, DomainUpdatable, Task}
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
+import de.uniulm.ki.panda3.symbolic._
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends DomainUpdatable with PrettyPrintable {
 
   assert(arguments.size == schema.parameters.size)
   // TODO: test whether it is a subsort relation instead
   //assert((arguments zip schema.parameters) forall {case (a,b) => a.sort == b.sort})
-
-
   /** returns a version of the preconditions */
-  lazy val substitutedPreconditions: Seq[Literal] = schema.preconditions map substitute
+  lazy val substitutedPreconditions: Seq[Literal] = schema match {
+    case reduced: ReducedTask => reduced.precondition.conjuncts map substitute
+    case _ => noSupport(FORUMLASNOTSUPPORTED)
+  }
   /** returns a version of the effects */
-  lazy val substitutedEffects: Seq[Literal] = schema.effects map substitute
+  lazy val substitutedEffects      : Seq[Literal] = schema match {
+    case reduced: ReducedTask => reduced.effect.conjuncts map substitute
+    case _ => noSupport(FORUMLASNOTSUPPORTED)
+  }
 
   lazy val schemaParameterSubstitution = Substitution(schema.parameters, arguments)
 
   /** check whether two literals are identical given a CSP */
-  def =?=(that: PlanStep)(csp: CSP) : Boolean = this.schema == that.schema &&
+  def =?=(that: PlanStep)(csp: CSP): Boolean = this.schema == that.schema &&
     ((this.arguments zip that.arguments) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2) })
 
   def indexOfPrecondition(l: Literal, csp: CSP): Int = indexOf(l, substitutedPreconditions, csp)
 
-  private def indexOf(l: Literal, ls: Seq[Literal], csp: CSP): Int = (ls.zipWithIndex foldLeft -1) { case (i, (nl, j)) => if ((l =?= nl)(csp)) j else i }
+  private def indexOf(l: Literal, ls: Seq[Literal], csp: CSP): Int = (ls.zipWithIndex foldLeft -1) { case (i, (nl, j)) => if ((l =?= nl) (csp)) j else i }
 
   def indexOfEffect(l: Literal, csp: CSP): Int = indexOf(l, substitutedEffects, csp)
 
@@ -39,7 +44,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends Dom
 
   override def update(domainUpdate: DomainUpdate): PlanStep = domainUpdate match {
     case ExchangePlanStep(oldps, newps) => if (oldps == this) newps else this
-    case _                              => PlanStep(id, schema.update(domainUpdate), arguments map {_.update(domainUpdate)})
+    case _ => PlanStep(id, schema.update(domainUpdate), arguments map {_.update(domainUpdate)})
   }
 
   /** returns a short information about the object */

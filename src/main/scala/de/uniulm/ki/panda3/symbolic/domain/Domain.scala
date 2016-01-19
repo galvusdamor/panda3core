@@ -27,10 +27,13 @@ import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraph}
 case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
                   decompositionAxioms: Seq[DecompositionAxiom]) extends DomainUpdatable {
 
-  lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
-  lazy val constants                : Seq[Constant]             = (sorts flatMap {_.elements}).distinct
-  lazy val sortGraph                : DirectedGraph[Sort]       = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
-  lazy val producersOf              : Map[Predicate, Seq[Task]] = (predicates map { pred => (pred, tasks filter {_.effects exists {_.predicate == pred}}) }).toMap
+  lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph        = TaskSchemaTransitionGraph(this)
+  lazy val constants                : Seq[Constant]                    = (sorts flatMap {_.elements}).distinct
+  lazy val sortGraph                : DirectedGraph[Sort]              = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
+  lazy val producersOf              : Map[Predicate, Seq[ReducedTask]] = (predicates map { pred => (pred, tasks collect { case t: ReducedTask => t } filter {
+    _.effect.conjuncts exists {_.predicate == pred}
+  })
+  }).toMap
 
 
   /**

@@ -1,11 +1,9 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 
 import de.uniulm.ki.panda3.symbolic.csp.*;
+import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
-import de.uniulm.ki.panda3.symbolic.logic.Constant;
-import de.uniulm.ki.panda3.symbolic.logic.Literal;
-import de.uniulm.ki.panda3.symbolic.logic.Sort;
-import de.uniulm.ki.panda3.symbolic.logic.Variable;
+import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan;
@@ -144,8 +142,9 @@ public class internalTaskNetwork {
                 this.csp = this.csp.addConstraint(vc);
             }
         }
-        Task initSchema = new Task("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new Vector<Literal>(0, 0, 0), new Vector<Literal>(0, 0, 0));
-        Task goalSchema = new Task("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new Vector<Literal>(0, 0, 0), new Vector<Literal>(0, 0, 0));
+        ReducedTask initSchema = new ReducedTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(new Vector<Literal>(0, 0, 0)));
+        ReducedTask goalSchema = new ReducedTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new
+                And<Literal>(new Vector<Literal>(0, 0, 0)));
 
         PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters());
         PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters());

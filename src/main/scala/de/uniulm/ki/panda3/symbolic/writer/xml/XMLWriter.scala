@@ -6,7 +6,7 @@ import javax.xml.bind.{JAXBContext, Marshaller}
 
 import de.uniulm.ki.panda3.symbolic.csp.{Equal, NotEqual, NotOfSort, OfSort}
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
-import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate, Sort}
+import de.uniulm.ki.panda3.symbolic.logic.{Formula, Literal, Predicate, Sort}
 import de.uniulm.ki.panda3.symbolic.parser.xml._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
@@ -16,10 +16,10 @@ import de.uniulm.ki.panda3.symbolic.{logic, plan}
 import scala.collection.mutable
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 case class XMLWriter(domainName: String, problemName: String) extends Writer {
 
   private def toVariable(variableDeclaration: VariableDeclaration): Variable = {
@@ -34,25 +34,81 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
     constant
   }
 
-  // TODO: this does not take the CSP inside the task into account, i.e., constants in preconditions and effects might not show
-  def literalToAny(l: Literal, predicatesToXMLPredicates: Map[Predicate, RelationDeclaration], varToVarDecl: Map[logic.Variable, VariableDeclaration]): AnyRef = if (l.isNegative) {
-    // handle negation
-    val not = new Not
-    not.setAtomic(literalToAny(l.negate, predicatesToXMLPredicates, varToVarDecl).asInstanceOf[Atomic]) // this is necessary due to the crappy definition of the old XML format
-    not
-  } else {
-    val atom = new Atomic
-    atom.setRelation(predicatesToXMLPredicates(l.predicate))
-    l.parameterVariables foreach { v =>
-      atom.getVariableOrConstant.add(toVariable(varToVarDecl(v)))
-    }
-    atom
+
+  private def setInnerValue(expression: {def setAnd(v: And)
+    def setAtomic(v: Atomic)
+    def setExists(v: Exists)
+    def setForall(v: Forall)
+    def setImply(v: Imply)
+    def setNot(v: Not)
+    def setOr(v: Or)}, value: Any): Unit = value match {
+    case a: And    => expression.setAnd(a)
+    case a: Atomic => expression.setAtomic(a)
+    case a: Exists => expression.setExists(a)
+    case a: Forall => expression.setForall(a)
+    case a: Imply  => expression.setImply(a)
+    case a: Not    => expression.setNot(a)
+    case a: Or     => expression.setOr(a)
   }
 
+  // TODO: this does not take the CSP inside the task into account, i.e., constants in preconditions and effects might not show
+  private def formulaToAny(formula: Formula, predicatesToXMLPredicates: Map[Predicate, RelationDeclaration], varToVarDecl: Map[logic.Variable, VariableDeclaration],
+                           sortToSortDecl: Map[Sort, SortDeclaration]): AnyRef =
+    formula match {
+      case l: Literal =>
+        if (l.isNegative) {
+          // handle negation
+          val not = new Not
+          not.setAtomic(formulaToAny(l.negate, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl)
+                          .asInstanceOf[Atomic]) // this is necessary due to the crappy definition of the old XML format
+          not
+        } else {
+          val atom = new Atomic
+          atom.setRelation(predicatesToXMLPredicates(l.predicate))
+          l.parameterVariables foreach { v =>
+            atom.getVariableOrConstant.add(toVariable(varToVarDecl(v)))
+          }
+          atom
+        }
+
+      case logic.Not(inner) => val not = new Not
+        setInnerValue(not, formulaToAny(inner, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl))
+        not
+      case logic.And(conj)  => val and = new And
+        conj foreach { conjunct => and.getAtomicOrNotOrAnd.add(formulaToAny(conjunct, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl)) }
+        and
+      case logic.Or(disj)   => val or = new Or
+        disj foreach { conjunct => or.getAtomicOrNotOrAnd.add(formulaToAny(conjunct, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl)) }
+        or
+      // TODO: I don't know whether this correct at all
+      case logic.Implies(left, right)     => val imply = new Imply
+        imply.getContent.add(formulaToAny(left, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl))
+        imply.getContent.add(formulaToAny(right, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl))
+        imply
+      case logic.Equivalence(left, right) => formulaToAny(logic.And(logic.Implies(left, right) :: logic.Implies(right, left) :: Nil), predicatesToXMLPredicates, varToVarDecl, sortToSortDecl)
+
+      case logic.Exists(v, form) => val exists = new Exists
+        val varDecl = new VariableDeclaration
+        varDecl.setName(v.name)
+        varDecl.setSort(sortToSortDecl(v.sort))
+        exists.setVariableDeclaration(varDecl)
+        setInnerValue(exists,formulaToAny(form, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl))
+        exists
+      case logic.Forall(v, form) => val forall = new Forall
+        val varDecl = new VariableDeclaration
+        varDecl.setName(v.name)
+        varDecl.setSort(sortToSortDecl(v.sort))
+        forall.setVariableDeclaration(varDecl)
+        setInnerValue(forall,formulaToAny(form, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl))
+        forall
+
+    }
+
+
   /**
-   * Takes a domain and writes and produces a string representation thereof.
-   * This will not write any constant into the domain string
-   */
+    * Takes a domain and writes and produces a string representation thereof.
+    * This will not write any constant into the domain string
+    */
   override def writeDomain(dom: Domain): String = {
     val xmldomain: XMLDomain = new ObjectFactory().createDomain()
     xmldomain.setType("pure-hierarchical")
@@ -70,8 +126,8 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
       }
 
       map.+((s, ns))
-    })
-    sortToSortDecl.values foreach {xmldomain.getSortDeclaration.add}
+                                                                                                                                          })
+    sortToSortDecl.values foreach { xmldomain.getSortDeclaration.add }
 
 
     // 2. Step add the constants
@@ -82,7 +138,7 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
       cd.setSort(sortToSortDecl(sort))
       (c, cd)
     }).toMap
-    constantsToConstDecl.values foreach {xmldomain.getConstantDeclaration.add}
+    constantsToConstDecl.values foreach { xmldomain.getConstantDeclaration.add }
 
     //3. step add the predicates
     val predicatesToXMLPredicates: Map[Predicate, RelationDeclaration] = (dom.predicates map { pred =>
@@ -95,7 +151,7 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
       }
       (pred, relDecl)
     }).toMap
-    predicatesToXMLPredicates.values foreach {xmldomain.getRelationDeclaration.add}
+    predicatesToXMLPredicates.values foreach { xmldomain.getRelationDeclaration.add }
 
     // 4. step add tasks
     val tasksToTaskDeclarations: Map[Task, TaskSchemaDeclaration] = (dom.tasks map { t =>
@@ -114,17 +170,15 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
 
 
       // add precondition and effect
-      val precond: And = new And
-      t.preconditions foreach { l => precond.getAtomicOrNotOrAnd.add(literalToAny(l, predicatesToXMLPredicates, varToVarDecl)) }
-      val effect: And = new And
-      t.effects foreach { l => effect.getAtomicOrNotOrAnd.add(literalToAny(l, predicatesToXMLPredicates, varToVarDecl)) }
+      val precond = formulaToAny(t.precondition, predicatesToXMLPredicates, varToVarDecl,sortToSortDecl)
+      val effect = formulaToAny(t.effect, predicatesToXMLPredicates, varToVarDecl,sortToSortDecl)
       // actually adding it
       tsd.getContent.add(precond)
       tsd.getContent.add(effect)
 
       (t, tsd)
     }).toMap
-    tasksToTaskDeclarations.values foreach {xmldomain.getTaskSchemaDeclaration.add}
+    tasksToTaskDeclarations.values foreach { xmldomain.getTaskSchemaDeclaration.add }
 
 
     // 5. step add the decomposition methods
@@ -174,16 +228,16 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
         }
 
         // add the newly created variable declarations to the task
-        arguments map {_._1._1} foreach tasknode.getVariableDeclaration.add
+        arguments map { _._1._1 } foreach tasknode.getVariableDeclaration.add
 
 
-        ((ps, tasknode), arguments map {_._2} collect { case Some(x) => x })
+        ((ps, tasknode), arguments map { _._2 } collect { case Some(x) => x })
       }
 
       // add all plan steps
-      val planStepsToTaskNodes: Map[PlanStep, TaskNode] = (temp map {_._1}).toMap
-      val necessaryEqualities: Seq[ValueRestriction] = temp flatMap {_._2}
-      planStepsToTaskNodes map {_._2} foreach methodDecl.getTaskNode.add
+      val planStepsToTaskNodes: Map[PlanStep, TaskNode] = (temp map { _._1 }).toMap
+      val necessaryEqualities: Seq[ValueRestriction] = temp flatMap { _._2 }
+      planStepsToTaskNodes.values foreach methodDecl.getTaskNode.add
       necessaryEqualities foreach methodDecl.getValueRestrictionOrSortRestriction.add
 
       val allVariablesToXMLVariable = abstractParametersToVariables ++ taskParametersToVariables
@@ -223,7 +277,7 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
       } foreach methodDecl.getValueRestrictionOrSortRestriction.add
 
       // ordering constraints
-      method.subPlan.orderingConstraints.originalOrderingConstraints filterNot {_.containsAny(method.subPlan.init, method.subPlan.goal)} map {
+      method.subPlan.orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(method.subPlan.init, method.subPlan.goal) } map {
         case plan.element.OrderingConstraint(before, after) =>
           val ordering = new OrderingConstraint
           ordering.setPredecessor(planStepsToTaskNodes(before))
@@ -236,17 +290,14 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
         val link = new CausalLink
         link.setProducer(planStepsToTaskNodes(producer))
         link.setConsumer(planStepsToTaskNodes(consumer))
-        literalToAny(condition, predicatesToXMLPredicates, allVariablesToXMLVariable) match {
-          case not: Not     => link.setNot(not)
-          case atom: Atomic => link.setAtomic(atom)
-        }
+        setInnerValue(link,formulaToAny(condition, predicatesToXMLPredicates, allVariablesToXMLVariable,sortToSortDecl))
         link
       } foreach methodDecl.getCausalLink.add
 
       xmldomain.getMethodDeclaration.add(methodDecl)
     }
 
-    // 6. Decompotition axioms
+    // 6. Decomposition axioms
     assert(dom.decompositionAxioms.size == 0)
 
     // 7. step generate the String
@@ -261,8 +312,8 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
   }
 
   /**
-   * Takes a domain and an initial plan and generates a file representation of the planning problem.
-   * The domain is necessary as all constants are by default written into the problem instance
-   */
+    * Takes a domain and an initial plan and generates a file representation of the planning problem.
+    * The domain is necessary as all constants are by default written into the problem instance
+    */
   override def writeProblem(dom: Domain, plan: Plan): String = ???
 }

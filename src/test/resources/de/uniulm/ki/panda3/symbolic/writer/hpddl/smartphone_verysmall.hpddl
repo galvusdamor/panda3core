@@ -30,4 +30,11 @@
 	(:tasks (task1 (send_EMail headOfDepartment email1)))
 	(:tasks (task2 (extractsMultipleInformation headOfDepartment email1)))
 	(:ordering ((task0 task1) (task1 task2)))
+	(:goal
+		(and
+		(hasInformation_Regular headOfDepartment dateForMeeting)
+		(hasInformation_Regular headOfDepartment room101)
+		(hasInformation_Regular headOfDepartment agenda)
+		)
+	)
 )

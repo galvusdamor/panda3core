@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.plan.ordering
 
-import de.uniulm.ki.panda3.symbolic.domain.Task
+import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Task}
+import de.uniulm.ki.panda3.symbolic.logic.{Literal, And}
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import org.scalatest.FlatSpec
 
@@ -14,7 +15,7 @@ class SymbolicOrderingTest extends FlatSpec {
 
   def getOrdering(i: Int, j: Int): OrderingConstraint = OrderingConstraint(getPlanStep(i), getPlanStep(j))
 
-  def getPlanStep(i: Int): PlanStep = PlanStep(i, Task("", isPrimitive = false, Nil, Vector(), Vector(), Vector()), Vector())
+  def getPlanStep(i: Int): PlanStep = PlanStep(i, ReducedTask("", isPrimitive = false, Nil, Vector(), And[Literal](Vector()), And[Literal](Vector())), Vector())
 
   /** get a list of plansetps ranging von 0 to i-1 */
   def getPlanStepList(i: Int): Seq[PlanStep] = if (i == 0) Nil else getPlanStepList(i - 1) :+ getPlanStep(i - 1)
