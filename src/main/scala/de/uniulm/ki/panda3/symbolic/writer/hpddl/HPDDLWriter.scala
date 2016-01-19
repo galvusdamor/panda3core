@@ -161,11 +161,9 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
       builder.append(indent + ")\n")
     case Equivalence(left, right) => writeFormula(builder, And(Implies(left, right) :: Implies(right, left) :: Nil), indent + "\t", taskUF)
     case Exists(v, form)          => builder.append(indent + "(exists (" + writeVariable(v, NoConstraintsCSP) + " - " + toPDDLIdentifier(v.sort.name) + ")\n")
-      builder.append(indent + "(\n")
       writeFormula(builder, form, indent + "\t", taskUF)
       builder.append(indent + ")\n")
     case Forall(v, form)          => builder.append(indent + "(forall (" + writeVariable(v, NoConstraintsCSP) + " - " + toPDDLIdentifier(v.sort.name) + ")\n")
-      builder.append(indent + "(\n")
       writeFormula(builder, form, indent + "\t", taskUF)
       builder.append(indent + ")\n")
   }
