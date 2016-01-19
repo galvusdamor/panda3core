@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
 import de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
+import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
@@ -128,7 +129,7 @@ public class hddlPanda3Visitor {
 
             // Create subplan, method and add it to method list
             Plan subPlan = subNetwork.readTaskNetwork(m.tasknetwork_def(), methodParams, abstractTask, tasks);
-            DecompositionMethod method = new DecompositionMethod(abstractTask, subPlan);
+            DecompositionMethod method = new SimpleDecompositionMethod(abstractTask, subPlan);
             methods.$plus$eq(method);
         }
         return methods.result();

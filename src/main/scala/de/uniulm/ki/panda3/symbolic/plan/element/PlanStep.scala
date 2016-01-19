@@ -13,6 +13,10 @@ import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
  */
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends DomainUpdatable with PrettyPrintable {
 
+  assert(arguments.size == schema.parameters.size)
+  assert((arguments zip schema.parameters) forall {case (a,b) => a.sort == b.sort})
+
+
   /** returns a version of the preconditions */
   lazy val substitutedPreconditions: Seq[Literal] = schema.preconditions map substitute
   /** returns a version of the effects */

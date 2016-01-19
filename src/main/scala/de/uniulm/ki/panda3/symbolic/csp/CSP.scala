@@ -7,7 +7,7 @@ import de.uniulm.ki.panda3.symbolic.logic.{Constant, Value, Variable}
 import scala.collection.immutable.HashMap
 
 /**
- * Handels Constraint-Satisfaction-Problems. The implementation decides which types of constraints can be handled.
+ * Handles Constraint-Satisfaction-Problems. The implementation decides which types of constraints can be handled.
  *
  * A CSP support several operations, most importantly it can be solved, i.e. an assignment of all variables to constants can be calculated.
  * Without solving the CSP, one can determine for each variable (and constant) a canonical representative, i.e. another variable or constant.

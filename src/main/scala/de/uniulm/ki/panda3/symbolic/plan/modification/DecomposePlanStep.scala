@@ -1,16 +1,16 @@
 package de.uniulm.ki.panda3.symbolic.plan.modification
 
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain}
+import de.uniulm.ki.panda3.symbolic.domain.{SimpleDecompositionMethod, DecompositionMethod, Domain}
 import de.uniulm.ki.panda3.symbolic.logic.Variable
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 
 /**
- * A modification which decomposes a given plan step using a decomposition method
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * A modification which decomposes a given plan step using a decomposition method
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 case class DecomposePlanStep(decomposedPS: PlanStep, newSubPlan: Plan, newVariableConstraints: Seq[VariableConstraint], inheritedCausalLinks: Seq[CausalLink], plan: Plan) extends
 Modification {
 
@@ -32,7 +32,7 @@ Modification {
     b != init && b != goal && a != init && a != goal
   }) ++ (plan.orderingConstraints.originalOrderingConstraints flatMap { case OrderingConstraint(p, `decomposedPS`) => addedPlanSteps map {OrderingConstraint(p, _)}
   case OrderingConstraint(`decomposedPS`, p) => addedPlanSteps map {OrderingConstraint(_, p)}
-  case _                                     => Nil
+  case _ => Nil
   })
 
   // remove init and goal task of the subplan
@@ -49,9 +49,12 @@ Modification {
 
 object DecomposePlanStep {
 
-  def apply(plan: Plan, decomposedPS: PlanStep, domain: Domain): Seq[DecomposePlanStep] = domain.decompositionMethods flatMap {apply(plan, decomposedPS, _)}
+  def apply(plan: Plan, decomposedPS: PlanStep, domain: Domain): Seq[DecomposePlanStep] = domain.decompositionMethods flatMap { method => assert(
+    method.isInstanceOf[SimpleDecompositionMethod], "The planner cannot yet handle non-simple decomposition methods");
+    apply(plan, decomposedPS, method.asInstanceOf[SimpleDecompositionMethod])
+  }
 
-  def apply(currentPlan: Plan, decomposedPS: PlanStep, method: DecompositionMethod): Seq[DecomposePlanStep] =
+  def apply(currentPlan: Plan, decomposedPS: PlanStep, method: SimpleDecompositionMethod): Seq[DecomposePlanStep] =
     if (decomposedPS.schema != method.abstractTask) Nil
     else {
       val firstFreePlanStepID = currentPlan.getFirstFreePlanStepID
@@ -64,8 +67,8 @@ object DecomposePlanStep {
       val copiedPlan = copyResult._1
 
       // compute the first version of the CSP of the new plan
-      val joinedCSP: CSP = currentPlan.variableConstraints.addVariables((copiedPlan.variableConstraints.variables -- decomposedPS.arguments).toSeq).addConstraints(copiedPlan
-        .variableConstraints.constraints)
+      val joinedCSP: CSP = currentPlan.variableConstraints.addVariables((copiedPlan.variableConstraints.variables -- decomposedPS.arguments).toSeq)
+        .addConstraints(copiedPlan.variableConstraints.constraints)
 
 
       // causal links handling -> in pairs (ingoing, outgoing) links
@@ -82,11 +85,11 @@ object DecomposePlanStep {
       val ingoingLinksWithMatchingInner = causalLinksWithDecomposedPlanStep._1 map { case cl@CausalLink(_, _, precondition) =>
         val effectLiteralOfSubPlanInit = copiedPlan.init.substitutedEffects(decomposedPS.indexOfPrecondition(precondition, currentPlan.variableConstraints))
 
-        (cl, methodSpecifiedCausalLinks._1 find { case CausalLink(_, _, effect) => (effectLiteralOfSubPlanInit =?= effect)(copiedPlan.variableConstraints) })
+        (cl, methodSpecifiedCausalLinks._1 find { case CausalLink(_, _, effect) => (effectLiteralOfSubPlanInit =?= effect) (copiedPlan.variableConstraints) })
       }
       // compute the new links created by direct inheritance
       val directlyInheritedLinksIngoing: Seq[CausalLink] = ingoingLinksWithMatchingInner collect { case (ingoingCL, Some(innerCL)) => CausalLink(ingoingCL.producer, innerCL.consumer,
-        ingoingCL.condition)
+                                                                                                                                                 ingoingCL.condition)
       }
       // and separate those remaining
       val remainingLinksIngoing = ingoingLinksWithMatchingInner collect { case (cl, None) => cl }
@@ -96,10 +99,10 @@ object DecomposePlanStep {
       val outgoingLinksWithMatchingInner = causalLinksWithDecomposedPlanStep._2 map { case cl@CausalLink(_, _, effect) =>
         val preconditionLiteralOfSubPlanGoal = copiedPlan.goal.substitutedPreconditions(decomposedPS.indexOfEffect(effect, currentPlan.variableConstraints))
 
-        (cl, methodSpecifiedCausalLinks._2 find { case CausalLink(_, _, precondition) => (preconditionLiteralOfSubPlanGoal =?= precondition)(copiedPlan.variableConstraints) })
+        (cl, methodSpecifiedCausalLinks._2 find { case CausalLink(_, _, precondition) => (preconditionLiteralOfSubPlanGoal =?= precondition) (copiedPlan.variableConstraints) })
       }
       val directlyInheritedLinksOutgoing: Seq[CausalLink] = outgoingLinksWithMatchingInner collect { case (outgoingCL, Some(innerCL)) => CausalLink(innerCL.producer, outgoingCL.consumer,
-        outgoingCL.condition)
+                                                                                                                                                    outgoingCL.condition)
       }
       // and separate those remaining
       val remainingLinksOutgoing = outgoingLinksWithMatchingInner collect { case (cl, None) => cl }
@@ -126,7 +129,7 @@ object DecomposePlanStep {
               .planStepWithoutInitGoal flatMap {
               // if ingoing != Nil, then such a link was chosen, i.e. it needs to be connected to a precondition of some task in the sub-plan
               ps => (if (ingoingLinks != Nil) ps.substitutedPreconditions else ps.substitutedEffects) map { literal =>
-                (cl.condition #?# literal)(csp) match {
+                (cl.condition #?# literal) (csp) match {
                   case None => (links, ps, UnsolvableCSP, Nil)
                   case Some(mgu) => (links, ps, csp.addConstraints(mgu), constraints ++ mgu)
                 }

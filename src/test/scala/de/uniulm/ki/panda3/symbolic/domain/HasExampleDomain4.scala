@@ -48,11 +48,11 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
   val planOfDecompositionMethod3: Plan                = SymbolicPlan(planStepsOfPlanOfDecompositionMethod3, Nil, taskOrderingOfPlanOfDecompositionMethod3, cspOfPlanOfDecompositionMethod3,
                                                                      initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3)
   /** a decomposition method without causal links */
-  val decompositionMethod3      : DecompositionMethod = DecompositionMethod(abstractTask2, planOfDecompositionMethod3)
+  val decompositionMethod3      : SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask2, planOfDecompositionMethod3)
 
   /** an empty decomposition method */
-  val decompositionMethodEpsilon: DecompositionMethod =
-    DecompositionMethod(abstractTask2, SymbolicPlan(initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil, Nil,
+  val decompositionMethodEpsilon: SimpleDecompositionMethod =
+    SimpleDecompositionMethod(abstractTask2, SymbolicPlan(initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil, Nil,
                                                     SymbolicTaskOrdering(OrderingConstraint.allBetween(initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3),
                                                                          initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil),
                                                     SymbolicCSP(Set(variableSort1(7)), Nil), initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3))

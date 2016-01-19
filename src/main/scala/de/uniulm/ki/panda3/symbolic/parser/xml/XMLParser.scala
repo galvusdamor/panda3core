@@ -6,7 +6,7 @@ import javax.xml.parsers.SAXParserFactory
 import javax.xml.transform.sax.SAXSource
 
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{SimpleDecompositionMethod, DecompositionMethod, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate, Sort}
 import de.uniulm.ki.panda3.symbolic.parser.Parser
@@ -133,7 +133,7 @@ object XMLParser extends Parser {
       val goal: PlanStep = PlanStep(1, Task("method_goal", isPrimitive = true, abstractTaskSchema.parameters, Nil, abstractTaskSchema.effects, Nil), abstractTaskParameterVariables)
 
 
-      DecompositionMethod(abstractTaskSchema,
+      SimpleDecompositionMethod(abstractTaskSchema,
         buildPlanFrom(xmlMethod, init, goal, variables, xmlConstantToScalaConstant, xmlPredicateToScalaPredicate, xmlSortsToScalaSorts, xmlTaskToScalaTask, abstractTaskSchema
           .parameterConstraints))
     }

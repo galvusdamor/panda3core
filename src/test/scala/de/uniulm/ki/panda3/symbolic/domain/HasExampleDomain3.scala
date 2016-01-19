@@ -44,7 +44,7 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
   val planOfDecompositionMethod1: Plan = SymbolicPlan(planStepsOfPlanOfDecompositionMethod1, Nil, taskOrderingOfPlanOfDecompositionMethod1, cspOfPlanOfDecompositionMethod1,
                                                       initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1)
   /** a decomposition method without causal links */
-  val decompositionMethod1: DecompositionMethod = DecompositionMethod(abstractTask1, planOfDecompositionMethod1)
+  val decompositionMethod1: SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask1, planOfDecompositionMethod1)
 
 
   // decomposition method 2 -- the one with causal links
@@ -56,7 +56,7 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
                                                       cspOfPlanOfDecompositionMethod1, initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1)
 
   /** a decomposition method with causal links */
-  val decompositionMethod2: DecompositionMethod = DecompositionMethod(abstractTask1, planOfDecompositionMethod2)
+  val decompositionMethod2: SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask1, planOfDecompositionMethod2)
 
 
   val domain3: Domain = Domain(sort1 :: Nil, predicate1 :: Nil, abstractTask1 :: task1 :: init :: goal1 :: Nil, decompositionMethod1 :: decompositionMethod2 :: Nil, Nil)
