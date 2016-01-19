@@ -86,7 +86,7 @@ method_def :
 
 tasknetwork_def :
       ((':subtasks' | ':tasks' | ':ordered-subtasks'| ':ordered-tasks') subtask_defs)?
-      (':ordering' ordering_defs)?
+      ((':ordering' | ':order') ordering_defs)?
       (':constraints' constraint_defs)? ')';
 
 method_symbol : NAME;
@@ -99,8 +99,8 @@ method_symbol : NAME;
 //
 // TODO: define EBNF for TR
 //
-subtask_defs : subtask_def | '(' 'and' subtask_def+ ')';
-subtask_def : ('(' task_symbol var_or_const+ ')' | '(' subtask_id '(' task_symbol var_or_const+ ')' ')');
+subtask_defs : '(' ')' | subtask_def | '(' 'and' subtask_def+ ')';
+subtask_def : ('(' task_symbol var_or_const* ')' | '(' subtask_id '(' task_symbol var_or_const* ')' ')');
 subtask_id : NAME;
 
 //
@@ -138,13 +138,15 @@ action_def :
 // goal description
 // - gd ^= goal description and is used in goals and preconditions
 //
-gd : gd_empty | atomic_formula | gd_negation | gd_conjuction | gd_disjuction;
+gd : gd_empty | atomic_formula | gd_negation | gd_conjuction | gd_disjuction | gd_existential | gd_univeral | gd_equality_constraint;
 
 gd_empty : '(' ')';
 gd_conjuction : '(' 'and' gd+ ')';
 gd_disjuction : '(' 'or' gd+ ')';
 gd_negation : '(' 'not' gd ')';
-
+gd_existential : '(exists' '(' typed_var_list ')' gd ')';
+gd_univeral : '(forall' '(' typed_var_list ')' gd ')';
+gd_equality_constraint : '(=' var_or_const var_or_const ')';
 //
 // effects
 //
@@ -207,7 +209,7 @@ problem : '(' 'define' '(' 'problem' NAME ')'
               p_object_declaration?
               p_htn
               p_init
-              p_goal
+              p_goal?
               ')';
 
 p_object_declaration : '(' ':objects' typed_obj_list')';
