@@ -128,11 +128,11 @@ public class hddlPanda3Visitor {
 
             // Read method preconditions
             VectorBuilder<Literal> preconditions = new VectorBuilder<>();
+            boolean hasPrecondition;
             if (m.gd() != null) {
                 visitGoalConditions(preconditions, predicates, methodParams, m.gd());
-                // todo: method preconditions
-                //Task prec = new Task("method-prec", true, methodParams, new Vector<VariableConstraint>(0, 0, 0), preconditions.result(), new Vector<Literal>(0, 0, 0));
-            }
+                hasPrecondition = true;
+            } else hasPrecondition = false;
 
             // Read abstract task
             String taskname = m.task_symbol().NAME().toString();
@@ -154,8 +154,13 @@ public class hddlPanda3Visitor {
 
             // Create subplan, method and add it to method list
             Plan subPlan = subNetwork.readTaskNetwork(m.tasknetwork_def(), methodParams, abstractTask, tasks, sorts);
-            DecompositionMethod method = new SimpleDecompositionMethod(abstractTask, subPlan);
-            //DecompositionMethod method = new SHOPDecompositionMethod(abstractTask, subPlan);
+
+            DecompositionMethod method;
+            if (hasPrecondition) {
+                method = new SHOPDecompositionMethod(abstractTask, subPlan, preconditions.result());
+            } else {
+                method = new SimpleDecompositionMethod(abstractTask, subPlan);
+            }
             methods.$plus$eq(method);
         }
         return methods.result();
