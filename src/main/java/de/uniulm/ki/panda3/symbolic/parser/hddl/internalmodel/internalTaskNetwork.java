@@ -160,7 +160,7 @@ public class internalTaskNetwork {
             for (int i = 1; i < ps.size() - twoTechnicalSteps; i++) {
                 this.taskOderings = this.taskOderings.addOrdering(ps.apply(i - 1), ps.apply(i));
             }
-        } else { // :tasks or :subtasks
+        } else { // i.e. :tasks or :subtasks
             if ((tnCtx.ordering_defs() != null) && (tnCtx.ordering_defs().ordering_def() != null)) {
                 for (hddlParser.Ordering_defContext o : tnCtx.ordering_defs().ordering_def()) {
                     String idLeft = o.subtask_id(0).NAME().toString();

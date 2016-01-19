@@ -1,10 +1,10 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl;
 
 import de.uniulm.ki.panda3.symbolic.csp.Equal;
+import de.uniulm.ki.panda3.symbolic.csp.NotEqual;
 import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
 import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.logic.*;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalSortsAndConsts;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalTaskNetwork;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.parserUtil;
@@ -80,7 +80,7 @@ public class hddlPanda3Visitor {
         Seq<Variable> taskParameters = getVariableForEveryConst(sorts, parameterConstraints);
         VectorBuilder<Literal> goalCondition = new VectorBuilder<>();
         if (ctx != null) {
-            visitGoalConditions(goalCondition, predicates, taskParameters, ctx.gd());
+            visitGoalConditions(goalCondition, predicates, taskParameters, null, ctx.gd()); // it is not possible to have equality/inequality constraints in the goal state ->null
         }
         return new Task("goal", true, taskParameters, parameterConstraints.result(), goalCondition.result(), new Vector<Literal>(0, 0, 0));
     }
@@ -92,9 +92,9 @@ public class hddlPanda3Visitor {
         VectorBuilder<Literal> initEffects = new VectorBuilder<>();
         for (hddlParser.LiteralContext lc : ctx.literal()) {
             if (lc.atomic_formula() != null) {
-                visitAtomFormula(initEffects, taskParameter, predicates, true, lc.atomic_formula());
+                visitAtomFormula(initEffects, taskParameter, predicates, null, true, lc.atomic_formula());
             } else if (lc.neg_atomic_formula() != null) {
-                visitAtomFormula(initEffects, taskParameter, predicates, false, lc.atomic_formula());
+                visitAtomFormula(initEffects, taskParameter, predicates, null, false, lc.atomic_formula());
             }
         }
         return new Task("init", true, taskParameter, varConstraints.result(), new Vector<Literal>(0, 0, 0), initEffects.result());
@@ -130,7 +130,9 @@ public class hddlPanda3Visitor {
             VectorBuilder<Literal> preconditions = new VectorBuilder<>();
             boolean hasPrecondition;
             if (m.gd() != null) {
-                visitGoalConditions(preconditions, predicates, methodParams, m.gd());
+                VectorBuilder<VariableConstraint> constraints = new VectorBuilder<>();
+                visitGoalConditions(preconditions, predicates, methodParams, constraints, m.gd());
+                subNetwork.addCspConstraints(constraints.result());
                 hasPrecondition = true;
             } else hasPrecondition = false;
 
@@ -182,13 +184,14 @@ public class hddlPanda3Visitor {
     private Task visitTaskDef(Seq<Sort> sorts, Seq<Predicate> predicates, hddlParser.Task_defContext ctxTask, boolean isPrimitive) {
         String taskName = ctxTask.task_symbol().NAME().toString();
         Seq<Variable> parameters = typedParamsToVars(sorts, ctxTask.typed_var_list().typed_vars());
-        Seq<VariableConstraint> parameterConstraints = new Vector<>(0, 0, 0);
+        //Seq<VariableConstraint> parameterConstraints = new Vector<>(0, 0, 0);
+        VectorBuilder<VariableConstraint> constraints = new VectorBuilder<>();
 
         // build preconditions
         // todo: implement fancy precondition stuff
         VectorBuilder<Literal> preconditions = new VectorBuilder<>();
         if (ctxTask.gd() != null) {
-            visitGoalConditions(preconditions, predicates, parameters, ctxTask.gd());
+            visitGoalConditions(preconditions, predicates, parameters, constraints, ctxTask.gd());
         }
 
         // build effects
@@ -200,7 +203,7 @@ public class hddlPanda3Visitor {
         } else if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().eff_conjuntion() != null)) {
             visitConEffConj(effects, parameters, predicates, ctxTask.effect_body().eff_conjuntion());
         }
-        return new Task(taskName, isPrimitive, parameters, parameterConstraints, preconditions.result(), effects.result());
+        return new Task(taskName, isPrimitive, parameters, constraints.result(), preconditions.result(), effects.result());
     }
 
     private Seq<Variable> typedParamsToVars(Seq<Sort> sorts, List<hddlParser.Typed_varsContext> vars) {
@@ -219,13 +222,13 @@ public class hddlPanda3Visitor {
         return bParameters.result();
     }
 
-    private void visitGoalConditions(VectorBuilder<Literal> outGoalDefinitions, Seq<Predicate> predicates, Seq<Variable> parameters, hddlParser.GdContext ctx) {
+    private void visitGoalConditions(VectorBuilder<Literal> outGoalDefinitions, Seq<Predicate> predicates, Seq<Variable> parameters, VectorBuilder<VariableConstraint> constraints, hddlParser.GdContext ctx) {
         if (ctx.atomic_formula() != null) { // a single precondition
-            visitAtomFormula(outGoalDefinitions, parameters, predicates, true, ctx.atomic_formula());
+            visitAtomFormula(outGoalDefinitions, parameters, predicates, constraints, true, ctx.atomic_formula());
         } else if (ctx.gd_negation() != null) { // a negated single precondition
-            visitNegAtomFormula(outGoalDefinitions, parameters, predicates, ctx.gd_negation());
+            visitNegAtomFormula(outGoalDefinitions, parameters, predicates, constraints, ctx.gd_negation());
         } else if (ctx.gd_conjuction() != null) { // a conduction of preconditions
-            visitLiteralConj(outGoalDefinitions, parameters, predicates, ctx.gd_conjuction());
+            visitLiteralConj(outGoalDefinitions, parameters, predicates, constraints, ctx.gd_conjuction());
         } else if (ctx.gd_univeral() != null) {
             // todo: universal quantifier
         } else if (ctx.gd_disjuction() != null) { // well ...
@@ -242,9 +245,9 @@ public class hddlPanda3Visitor {
     private void visitConEff(VectorBuilder<Literal> outEffects, Seq<Variable> parameters, Seq<Predicate> predicates, hddlParser.C_effectContext ctx) {
         if (ctx.literal() != null) {
             if (ctx.literal().atomic_formula() != null) {
-                visitAtomFormula(outEffects, parameters, predicates, true, ctx.literal().atomic_formula());
+                visitAtomFormula(outEffects, parameters, predicates, null, true, ctx.literal().atomic_formula());
             } else if (ctx.literal().neg_atomic_formula() != null) {
-                visitAtomFormula(outEffects, parameters, predicates, false, ctx.literal().neg_atomic_formula().atomic_formula());
+                visitAtomFormula(outEffects, parameters, predicates, null, false, ctx.literal().neg_atomic_formula().atomic_formula());
             }
         } else if (ctx.forall_effect() != null) {
             System.out.println("ERROR: not yet implemented - forall effects.");
@@ -255,33 +258,50 @@ public class hddlPanda3Visitor {
         }
     }
 
-    private void visitLiteralConj(VectorBuilder<Literal> outLiterals, Seq<Variable> parameters, Seq<Predicate> predicates, hddlParser.Gd_conjuctionContext ctx) {
+    private void visitLiteralConj(VectorBuilder<Literal> outLiterals, Seq<Variable> parameters, Seq<Predicate> predicates, VectorBuilder<VariableConstraint> constraints, hddlParser.Gd_conjuctionContext ctx) {
         for (hddlParser.GdContext gd : ctx.gd()) {
             if ((gd.atomic_formula() == null) && (gd.gd_negation() == null)) {
                 System.out.println("ERROR: not yet implemented - an element of a conjunction of preconditions or effects seems to be no literal.");
             } else {
                 if (gd.atomic_formula() != null) {
-                    visitAtomFormula(outLiterals, parameters, predicates, true, gd.atomic_formula());
+                    visitAtomFormula(outLiterals, parameters, predicates, constraints, true, gd.atomic_formula());
                 } else if (gd.gd_negation() != null) {
-                    visitNegAtomFormula(outLiterals, parameters, predicates, gd.gd_negation());
+                    visitNegAtomFormula(outLiterals, parameters, predicates, constraints, gd.gd_negation());
                 }
             }
         }
     }
 
-    private void visitNegAtomFormula(VectorBuilder<Literal> outLiterals, Seq<Variable> parameters, Seq<Predicate> predicates, hddlParser.Gd_negationContext ctx) {
+    private void visitNegAtomFormula(VectorBuilder<Literal> outLiterals, Seq<Variable> parameters, Seq<Predicate> predicates, VectorBuilder<VariableConstraint> constraints, hddlParser.Gd_negationContext ctx) {
         if (ctx.gd().atomic_formula() != null) {
-            visitAtomFormula(outLiterals, parameters, predicates, false, ctx.gd().atomic_formula());
+            visitAtomFormula(outLiterals, parameters, predicates, constraints, false, ctx.gd().atomic_formula());
         } else if (ctx.gd().gd_equality_constraint() != null) {
-            // todo: add equality constraint
-            hddlParser.Var_or_constContext v1 = ctx.gd().gd_equality_constraint().var_or_const(0);
-            hddlParser.Var_or_constContext v2 = ctx.gd().gd_equality_constraint().var_or_const(1);
+            String v1 = ctx.gd().gd_equality_constraint().var_or_const(0).getText();
+            Variable var1 = null;
+            for (int i = 0; i < parameters.size(); i++) {
+                Variable v = parameters.apply(i);
+                if (v.name().equals(v1)) {
+                    var1 = v;
+                    break;
+                }
+            }
+            String v2 = ctx.gd().gd_equality_constraint().var_or_const(1).getText();
+            Variable var2 = null;
+            for (int i = 0; i < parameters.size(); i++) {
+                Variable v = parameters.apply(i);
+                if (v.name().equals(v2)) {
+                    var2 = v;
+                    break;
+                }
+            }
+            NotEqual ne = new NotEqual(var1, var2);
+            constraints.$plus$eq(ne);
         } else {
             System.out.println("ERROR: not yet implemented - a negated literal seems to be no atomic formula.");
         }
     }
 
-    private void visitAtomFormula(VectorBuilder<Literal> outLiterals, Seq<Variable> taskParameters, Seq<Predicate> predicates, boolean isPositive, hddlParser.Atomic_formulaContext ctx) {
+    private void visitAtomFormula(VectorBuilder<Literal> outLiterals, Seq<Variable> taskParameters, Seq<Predicate> predicates, VectorBuilder<VariableConstraint> constraints, boolean isPositive, hddlParser.Atomic_formulaContext ctx) {
         // get predicate definition
         String predName = ctx.predicate().NAME().toString();
         Predicate predicate = null;
