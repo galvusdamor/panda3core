@@ -36,7 +36,7 @@ public class internalSortsAndConsts {
     }
 
     /*
-     * The following method returns all types in suvh an order that the parents of a type are necessarily ordered
+     * The following method returns all types in such an order that the parents of a type are necessarily ordered
      * after all its types (hope that is possible in any case ;-) )
      */
     public List<String> allTypeNamesInRightOrder() {
@@ -52,7 +52,7 @@ public class internalSortsAndConsts {
                 for (String other : parentof.keySet()) {
                     String parentOfOther = parentof.get(other);
                     if (parentOfOther == null) {// root of type hierarchy
-                        break;
+                        continue;
                     }
                     if (parentOfOther.equals(type) && !res.contains(other)) {
                         hasNewChild = true;
