@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.search
 
 //import scala.pickling.Defaults._, scala.pickling.json._
+import java.io.FileInputStream
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.symbolic.compiler.ClosedWorldAssumption
@@ -17,8 +18,8 @@ import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 object DFS {
 
   def main(args: Array[String]) {
-    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml")
-    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml", domAlone)
+    val domAlone: Domain = XMLParser.parseDomain(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"))
+    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"), domAlone)
     val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
 
     val parsedDom = domAndInitialPlan._1.update(sortExpansion)

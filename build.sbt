@@ -17,9 +17,11 @@ name := "panda3-core"
 
 organization := "de.uni-ulm.ki"
 
-version := "0.1.2"
+version := "0.1.3"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
+
+libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.5"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-pickling" % "0.10.1"
 

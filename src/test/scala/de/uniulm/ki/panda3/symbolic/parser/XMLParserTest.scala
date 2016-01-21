@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.parser
 
+import java.io.FileInputStream
+
 import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Domain}
 import de.uniulm.ki.panda3.symbolic.logic.Literal
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
@@ -13,7 +15,7 @@ class XMLParserTest extends FlatSpec {
 
 
   "Parsing hon-hierarchical Files " must "be possible without error" in {
-    val dom: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml")
+    val dom: Domain = XMLParser.parseDomain(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"))
 
     assert(dom.constants.isEmpty)
     assert(dom.sorts.size == 34)
@@ -31,7 +33,7 @@ class XMLParserTest extends FlatSpec {
   }
 
   "Parsing hierarchical Files " must "be possible without error" in {
-    val dom: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml")
+    val dom: Domain = XMLParser.parseDomain(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"))
 
     assert(dom.constants.isEmpty)
     assert(dom.sorts.size == 40)
@@ -107,19 +109,19 @@ class XMLParserTest extends FlatSpec {
 
 
   it must "be possible without error (2)" in {
-    val dom: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/fitnessDomain.xml")
+    val dom: Domain = XMLParser.parseDomain(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/fitnessDomain.xml"))
 
   }
 
 
   "Parsing Problem files" must "be possible for flat domains" in {
-    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml")
-    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml", domAlone)
+    val domAlone: Domain = XMLParser.parseDomain(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"))
+    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"), domAlone)
   }
 
 
   it must "be possible for hierarchical domains" in {
-    val domAlone: Domain = XMLParser.parseDomain("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml")
-    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml", domAlone)
+    val domAlone: Domain = XMLParser.parseDomain(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"))
+    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"), domAlone)
   }
 }

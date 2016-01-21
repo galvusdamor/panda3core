@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.parser.xml
 
-import java.io.FileInputStream
+import java.io.{InputStream, FileInputStream}
 import javax.xml.bind.{JAXBContext, JAXBElement, Unmarshaller}
 import javax.xml.parsers.SAXParserFactory
 import javax.xml.transform.sax.SAXSource
@@ -9,7 +9,7 @@ import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate, Sort}
-import de.uniulm.ki.panda3.symbolic.parser.Parser
+import de.uniulm.ki.panda3.symbolic.parser.{StepwiseParser, Parser}
 import de.uniulm.ki.panda3.symbolic.parser.xml.problem.Problem
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
@@ -25,9 +25,9 @@ import scala.xml.InputSource
   * @author Kadir Dede (kadir.dede@uni-ulm.de)
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object XMLParser extends Parser {
+object XMLParser extends StepwiseParser {
 
-  override def parseDomain(filename: String): Domain = {
+  override def parseDomain(domainStream: InputStream): Domain = {
 
     val context: JAXBContext = JAXBContext.newInstance(classOf[XMLDomain])
     val marshaller: Unmarshaller = context.createUnmarshaller()
@@ -37,7 +37,7 @@ object XMLParser extends Parser {
     spf.setValidating(true)
     // Not required for JAXB/XInclude
     val xr: XMLReader = spf.newSAXParser().getXMLReader
-    val source: SAXSource = new SAXSource(xr, new InputSource(new FileInputStream(filename)))
+    val source: SAXSource = new SAXSource(xr, new InputSource(domainStream))
     val dom: XMLDomain = marshaller.unmarshal(source).asInstanceOf[XMLDomain]
 
 
@@ -289,7 +289,7 @@ object XMLParser extends Parser {
     SymbolicPlan(planSteps, causalLinks map {_._1}, taskOrdering, csp, init, goal)
   }
 
-  def parseProblem(filename: String, inputDomain: Domain): (Domain, Plan) = {
+  def parseProblem(problemStream: InputStream, inputDomain: Domain): (Domain, Plan) = {
 
     val context: JAXBContext = JAXBContext.newInstance(classOf[Problem])
     val marshaller: Unmarshaller = context.createUnmarshaller()
@@ -299,7 +299,7 @@ object XMLParser extends Parser {
     spf.setValidating(true)
     // Not required for JAXB/XInclude
     val xr: XMLReader = spf.newSAXParser().getXMLReader
-    val source: SAXSource = new SAXSource(xr, new InputSource(new FileInputStream(filename)))
+    val source: SAXSource = new SAXSource(xr, new InputSource(problemStream))
     val problem: Problem = marshaller.unmarshal(source).asInstanceOf[Problem]
 
     // add constants to domain
