@@ -4,7 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
 import javax.xml.bind.{JAXBContext, Marshaller}
 
-import de.uniulm.ki.panda3.symbolic.csp.{Equal, NotEqual, NotOfSort, OfSort}
+import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.{Formula, Literal, Predicate, Sort}
 import de.uniulm.ki.panda3.symbolic.parser.xml._
@@ -92,14 +92,14 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
         varDecl.setName(v.name)
         varDecl.setSort(sortToSortDecl(v.sort))
         exists.setVariableDeclaration(varDecl)
-        setInnerValue(exists,formulaToAny(form, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl))
+        setInnerValue(exists, formulaToAny(form, predicatesToXMLPredicates, varToVarDecl + (v -> varDecl), sortToSortDecl))
         exists
       case logic.Forall(v, form) => val forall = new Forall
         val varDecl = new VariableDeclaration
         varDecl.setName(v.name)
         varDecl.setSort(sortToSortDecl(v.sort))
         forall.setVariableDeclaration(varDecl)
-        setInnerValue(forall,formulaToAny(form, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl))
+        setInnerValue(forall, formulaToAny(form, predicatesToXMLPredicates, varToVarDecl + (v -> varDecl), sortToSortDecl))
         forall
 
     }
@@ -170,8 +170,8 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
 
 
       // add precondition and effect
-      val precond = formulaToAny(t.precondition, predicatesToXMLPredicates, varToVarDecl,sortToSortDecl)
-      val effect = formulaToAny(t.effect, predicatesToXMLPredicates, varToVarDecl,sortToSortDecl)
+      val precond = formulaToAny(t.precondition, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl)
+      val effect = formulaToAny(t.effect, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl)
       // actually adding it
       tsd.getContent.add(precond)
       tsd.getContent.add(effect)
@@ -217,7 +217,7 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
             val valueRestriction = new ValueRestriction
             valueRestriction.setType("eq")
             valueRestriction.setVariable(toVariable(varDecl))
-            valueRestriction.setVariableN(toVariable(taskParametersToVariables(argument)))
+            valueRestriction.setVariableN(taskParametersToVariables(argument))
             Some(valueRestriction)
           } else {
             taskParametersToVariables.put(argument, varDecl)
@@ -233,6 +233,23 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
 
         ((ps, tasknode), arguments map { _._2 } collect { case Some(x) => x })
       }
+
+
+      // check all other variables that occur in the method -> they might be neither a parameter of the abstract task not a parameter of a task in the subnet
+      // most notably Daniel's HDDL parser generates such methods ... dammit
+      val planUF = SymbolicUnionFind.constructVariableUnionFind(method.subPlan)
+      val allRepresentedVariables: Seq[logic.Variable] = (taskParametersToVariables.keys ++ abstractParametersToVariables.keys).toSeq
+      method.subPlan.variableConstraints.variables filterNot allRepresentedVariables.contains foreach { v =>
+        // try to find a variable that is a parameter and identical to this one.
+        val possibleRepresentative = allRepresentedVariables find { planUF.getRepresentative(v) == planUF.getRepresentative(_) }
+        if (possibleRepresentative.isDefined) {
+          val representativeMap = if (taskParametersToVariables.contains(possibleRepresentative.get)) taskParametersToVariables else abstractParametersToVariables
+          taskParametersToVariables(v) = representativeMap(possibleRepresentative.get)
+        } else assert(false, "The XML-Writer does not support methods with independent variables. This one contains " + v)
+      }
+
+
+
 
       // add all plan steps
       val planStepsToTaskNodes: Map[PlanStep, TaskNode] = (temp map { _._1 }).toMap
@@ -290,7 +307,7 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
         val link = new CausalLink
         link.setProducer(planStepsToTaskNodes(producer))
         link.setConsumer(planStepsToTaskNodes(consumer))
-        setInnerValue(link,formulaToAny(condition, predicatesToXMLPredicates, allVariablesToXMLVariable,sortToSortDecl))
+        setInnerValue(link, formulaToAny(condition, predicatesToXMLPredicates, allVariablesToXMLVariable, sortToSortDecl))
         link
       } foreach methodDecl.getCausalLink.add
 
@@ -298,7 +315,7 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
     }
 
     // 6. Decomposition axioms
-    assert(dom.decompositionAxioms.size == 0)
+    assert(dom.decompositionAxioms.isEmpty)
 
     // 7. step generate the String
     val context: JAXBContext = JAXBContext.newInstance(classOf[XMLDomain])

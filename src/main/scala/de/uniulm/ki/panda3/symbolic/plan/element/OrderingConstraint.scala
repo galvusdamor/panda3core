@@ -4,10 +4,10 @@ import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 case class OrderingConstraint(before: PlanStep, after: PlanStep) extends DomainUpdatable {
   def contains(ps: PlanStep): Boolean = before == ps || after == ps
 
@@ -20,4 +20,6 @@ object OrderingConstraint {
 
   def allBetween(first: PlanStep, last: PlanStep, steps: PlanStep*): Seq[OrderingConstraint] =
     (steps flatMap { ps => OrderingConstraint(first, ps) :: OrderingConstraint(ps, last) :: Nil }) :+ OrderingConstraint(first, last)
+
+  def allAfter(first: PlanStep, steps: PlanStep*): Seq[OrderingConstraint] = steps map { OrderingConstraint(first, _) }
 }

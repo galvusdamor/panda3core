@@ -1,6 +1,9 @@
 package de.uniulm.ki.panda3.symbolic.csp
 
+import de.uniulm.ki.panda3.symbolic.domain.Task
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, Value, Variable}
+import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 
 /**
  * Contains a mutable union-find, containing variables and constants
@@ -57,5 +60,39 @@ class SymbolicUnionFind {
 
   def cloneFrom(from: SymbolicUnionFind) = {
     unionFind = from.unionFind
+  }
+}
+
+
+object SymbolicUnionFind {
+  def constructVariableUnionFind(task: Task): SymbolicUnionFind = {
+    val uf = new SymbolicUnionFind
+    task.parameters foreach uf.addVariable
+    task.parameterConstraints foreach {
+      case Equal(left, right) => uf.assertEqual(left, right)
+      case _                  => ()
+    }
+    uf
+  }
+
+  def constructVariableUnionFind(plan: Plan): SymbolicUnionFind = {
+    val unionFind = new SymbolicUnionFind
+    plan.variableConstraints.variables foreach unionFind.addVariable
+    plan.variableConstraints.constraints foreach {
+      case Equal(left, right) => unionFind.assertEqual(left, right)
+      case _                  => ()
+    }
+    unionFind
+  }
+
+
+  def constructVariableUnionFind(planStep: PlanStep): SymbolicUnionFind = {
+    val unionFind = new SymbolicUnionFind
+    planStep.arguments foreach unionFind.addVariable
+    planStep.schema.parameterConstraints map { _.substitute(planStep.schemaParameterSubstitution) } foreach {
+      case Equal(left, right) => unionFind.assertEqual(left, right)
+      case _                  => ()
+    }
+    unionFind
   }
 }

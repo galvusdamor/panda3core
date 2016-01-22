@@ -32,27 +32,23 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
          potentialThreater <- planSteps
          if potentialThreater != producer && potentialThreater != consumer && !orderingConstraints.lt(potentialThreater, producer) && !orderingConstraints.gt(potentialThreater, consumer)
          effect <- potentialThreater.substitutedEffects
-         if (effect #?# literal.negate) (variableConstraints) != None} yield
+         if (effect #?# literal.negate) (variableConstraints).isDefined} yield
       CausalThreat(this, causalLink, potentialThreater, effect)
 
 
-  override lazy val openPreconditions: Seq[OpenPrecondition] = allPreconditions filterNot { case (ps, literal) => causalLinks exists { case CausalLink(_, consumer,
-                                                                                                                                                       condition) => (consumer =?= ps) (
-    variableConstraints) && (condition =?= literal) (variableConstraints)
+  override lazy val openPreconditions: Seq[OpenPrecondition] = allPreconditions filterNot { case (ps, literal) => causalLinks exists { case CausalLink(_, consumer, condition) =>
+    (consumer =?= ps) (variableConstraints) && (condition =?= literal) (variableConstraints)
   }
   } map { case (ps, literal) => OpenPrecondition(this, ps, literal) }
 
 
-  override lazy val abstractPlanSteps: Seq[AbstractPlanStep] = planSteps filter {!_.schema.isPrimitive} map {AbstractPlanStep(this, _)}
+  override lazy val abstractPlanSteps: Seq[AbstractPlanStep] = planSteps filter { !_.schema.isPrimitive } map { AbstractPlanStep(this, _) }
 
 
   override lazy val unboundVariables: Seq[UnboundVariable] =
     ((variableConstraints.variables map variableConstraints.getRepresentative) collect { case v: Variable => UnboundVariable(this, v) }).toSeq
 
-  override def isSolvable: Option[Boolean] = if (!orderingConstraints.isConsistent || variableConstraints.isSolvable == Some(false)) Some(false)
-  else if (flaws.size == 0) Some(true)
-  else
-    None
+  override def isSolvable: Option[Boolean] = if (!orderingConstraints.isConsistent || variableConstraints.isSolvable.contains(false)) Some(false) else if (flaws.isEmpty) Some(true) else None
 
   // =================== Local Helper ==================== //
   /** list containing all preconditions in this plan */
@@ -63,7 +59,7 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
     val newCausalLinks = (causalLinks diff modification.removedCausalLinks) union modification.addedCausalLinks
 
     // compute new ordering constraints ... either update the old ones incrementally, or, if some were removed, compute them anew
-    val newOrderingConstraints = if (modification.removedOrderingConstraints.size == 0)
+    val newOrderingConstraints = if (modification.removedOrderingConstraints.isEmpty)
       orderingConstraints.removePlanSteps(modification.removedPlanSteps).addPlanSteps(modification.addedPlanSteps).addOrderings(modification.addedOrderingConstraints)
     else {
       val newOrderingConstraints = (orderingConstraints.originalOrderingConstraints diff modification.removedOrderingConstraints) union modification.addedOrderingConstraints
@@ -71,7 +67,7 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
     }
 
 
-    val newVariableConstraints = if (modification.removedVariableConstraints.size == 0 && modification.removedVariables.size == 0)
+    val newVariableConstraints = if (modification.removedVariableConstraints.isEmpty && modification.removedVariables.isEmpty)
       variableConstraints.addVariables(modification.addedVariables).addConstraints(modification.addedVariableConstraints)
     else {
       val newVariableSet = (variableConstraints.variables diff modification.removedVariables.toSet) union modification.addedVariables.toSet
@@ -101,8 +97,9 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
     val newGoal = substitutePlanStep(goal)
 
     val newOrderingConstraints = SymbolicTaskOrdering(
-      orderingConstraints.originalOrderingConstraints map { case OrderingConstraint(b, a) => OrderingConstraint(substitutePlanStep(b), substitutePlanStep(a))
-      }, newPlanSteps)
+                                                       orderingConstraints.originalOrderingConstraints map { case OrderingConstraint(b, a) => OrderingConstraint(substitutePlanStep(b),
+                                                                                                                                                                 substitutePlanStep(a))
+                                                       }, newPlanSteps)
     // transfer the computed arrangement, this has a side effect!!!!
     newOrderingConstraints.initialiseExplicitly(0, 0, orderingConstraints.arrangement())
 
@@ -111,17 +108,17 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
                                                                                   Literal(l.predicate, l.isPositive, l.parameterVariables map sub))
     }
 
-    val newVariableConstraints = SymbolicCSP(newVariables.toSet, variableConstraints.constraints map {_.substitute(sub)})
+    val newVariableConstraints = SymbolicCSP(newVariables.toSet, variableConstraints.constraints map { _.substitute(sub) })
 
     (SymbolicPlan(newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, newInit, newGoal), sub)
   }
 
   override def update(domainUpdate: DomainUpdate): SymbolicPlan = domainUpdate match {
-    case AddVariables(newVariables) => SymbolicPlan(planSteps, causalLinks, orderingConstraints, variableConstraints.addVariables(newVariables), init, goal)
+    case AddVariables(newVariables)                     => SymbolicPlan(planSteps, causalLinks, orderingConstraints, variableConstraints.addVariables(newVariables), init, goal)
     case AddVariableConstraints(newVariableConstraints) => SymbolicPlan(planSteps, causalLinks, orderingConstraints, variableConstraints.addConstraints(newVariableConstraints), init, goal)
-    case AddLiteralsToInit(literals, constraints) =>
+    case AddLiteralsToInit(literals, constraints)       =>
       // TODO: currently we only support this operation if all literals are 0-ary
-      assert(literals forall {_.parameterVariables.isEmpty})
+      assert(literals forall { _.parameterVariables.isEmpty })
       // build a new schema for init
       val initTask = init.schema match {
         case reduced: ReducedTask => ReducedTask(reduced.name, isPrimitive = true, reduced.parameters, reduced.parameterConstraints ++ constraints, reduced.precondition,
@@ -131,9 +128,10 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
       }
       val newInit = PlanStep(init.id, initTask, init.arguments)
       val exchange = ExchangePlanStep(init, newInit)
-      SymbolicPlan(planSteps map {_ update exchange}, causalLinks map {_ update exchange}, orderingConstraints update exchange, variableConstraints, newInit, goal)
-    case _ => SymbolicPlan(planSteps map {_.update(domainUpdate)}, causalLinks map {_.update(domainUpdate)}, orderingConstraints.update(domainUpdate),
-                           variableConstraints.update(domainUpdate), init.update(domainUpdate), goal.update(domainUpdate))
+      SymbolicPlan(planSteps map { _ update exchange }, causalLinks map { _ update exchange }, orderingConstraints update exchange, variableConstraints, newInit, goal)
+    case _                                              => SymbolicPlan(planSteps map { _.update(domainUpdate) }, causalLinks map { _.update(domainUpdate) },
+                                                                        orderingConstraints.update(domainUpdate),
+                                                                        variableConstraints.update(domainUpdate), init.update(domainUpdate), goal.update(domainUpdate))
   }
 
 }

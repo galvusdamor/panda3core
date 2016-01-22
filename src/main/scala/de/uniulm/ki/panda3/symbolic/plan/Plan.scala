@@ -11,17 +11,15 @@ import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 trait Plan extends DomainUpdatable with PrettyPrintable {
 
-  lazy val flaws: Seq[Flaw] = {
+  lazy val flaws                  : Seq[Flaw]     = {
     val hardFlaws = causalThreats ++ openPreconditions ++ abstractPlanSteps
-    if (hardFlaws.size == 0)
-      unboundVariables
-    else hardFlaws
+    if (hardFlaws.isEmpty) unboundVariables else hardFlaws
   }
   lazy val planStepWithoutInitGoal: Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
 
@@ -66,7 +64,7 @@ trait Plan extends DomainUpdatable with PrettyPrintable {
   override def update(domainUpdate: DomainUpdate): Plan
 
   /** returns a short information about the object */
-  override def shortInfo: String = (planSteps map {"PS " + _.mediumInfo}).mkString("\n") + "\n" + orderingConstraints.shortInfo + "\n" + (causalLinks map {_.longInfo}).mkString("\n")
+  override def shortInfo: String = (planSteps map { "PS " + _.mediumInfo }).mkString("\n") + "\n" + orderingConstraints.shortInfo + "\n" + (causalLinks map { _.longInfo }).mkString("\n")
 
   /** returns a string that can be utilized to define the object */
   override def mediumInfo: String = shortInfo

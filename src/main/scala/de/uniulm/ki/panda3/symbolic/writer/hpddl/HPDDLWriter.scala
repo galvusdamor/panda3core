@@ -76,14 +76,14 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
 
   def writePlan(plan: Plan, indentation: Boolean, problemMode: Boolean): String = {
     val builder: StringBuilder = new StringBuilder()
-    val unionFind = constructUnionFind(plan)
+    val unionFind = SymbolicUnionFind.constructVariableUnionFind(plan)
 
 
     // sub tasks
     val planStepToID: Map[PlanStep, Int] = plan.planStepWithoutInitGoal.zipWithIndex.toMap
     planStepToID foreach { case (ps, tIdx) =>
       builder.append("\t" + (if (indentation) "\t" else "") + (if (problemMode) "(" else "") + ":tasks (task" + tIdx + " (" + toPDDLIdentifier(ps.schema.name))
-      val taskUF = constructUnionFind(ps)
+      val taskUF = SymbolicUnionFind.constructVariableUnionFind(ps)
       val arguments = ps.arguments filter { taskUF.getRepresentative(_).isInstanceOf[Variable] } map unionFind.getRepresentative
       builder.append(writeVariableList(arguments, NoConstraintsCSP))
       builder.append("))" + (if (problemMode) ")" else "") + "\n")
@@ -101,37 +101,6 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
     }
 
     builder.toString()
-  }
-
-  def constructUnionFind(task: Task): SymbolicUnionFind = {
-    val uf = new SymbolicUnionFind
-    task.parameters foreach uf.addVariable
-    task.parameterConstraints foreach {
-      case Equal(left, right) => uf.assertEqual(left, right)
-      case _                  => ()
-    }
-    uf
-  }
-
-  def constructUnionFind(plan: Plan): SymbolicUnionFind = {
-    val unionFind = new SymbolicUnionFind
-    plan.variableConstraints.variables foreach unionFind.addVariable
-    plan.variableConstraints.constraints foreach {
-      case Equal(left, right) => unionFind.assertEqual(left, right)
-      case _                  => ()
-    }
-    unionFind
-  }
-
-
-  def constructUnionFind(planStep: PlanStep): SymbolicUnionFind = {
-    val unionFind = new SymbolicUnionFind
-    planStep.arguments foreach unionFind.addVariable
-    planStep.schema.parameterConstraints map { _.substitute(planStep.schemaParameterSubstitution) } foreach {
-      case Equal(left, right) => unionFind.assertEqual(left, right)
-      case _                  => ()
-    }
-    unionFind
   }
 
   def getRepresentative(v: Value, uf: SymbolicUnionFind): String = v match {
@@ -210,7 +179,7 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
 
       dom.tasks foreach { at =>
         builder.append("\t\t(" + toPDDLIdentifier(at.name) + " ")
-        val taskUF = constructUnionFind(at)
+        val taskUF = SymbolicUnionFind.constructVariableUnionFind(at)
         val parameters = at.parameters filter { taskUF.getRepresentative(_).isInstanceOf[Variable] }
         builder.append(writeParameters(parameters))
         builder.append(")\n")
@@ -222,7 +191,7 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
     dom.decompositionMethods.zipWithIndex foreach { case (m, idx) =>
       builder.append("\n")
       builder.append("\t(:method method" + idx + "\n")
-      val planUF = constructUnionFind(m.subPlan)
+      val planUF = SymbolicUnionFind.constructVariableUnionFind(m.subPlan)
       if (m.subPlan.variableConstraints.variables.nonEmpty) {
         builder.append("\t\t:parameters (")
         val methodParameters: Seq[Variable] = {
@@ -263,7 +232,7 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
     // add the actual primitive actions
     dom.tasks filter { _.isPrimitive } foreach { p =>
 
-      val taskUF = constructUnionFind(p)
+      val taskUF = SymbolicUnionFind.constructVariableUnionFind(p)
       val parameters = p.parameters filter { taskUF.getRepresentative(_).isInstanceOf[Variable] }
 
       builder.append("\n\t(:action " + toPDDLIdentifier(p.name) + "\n")

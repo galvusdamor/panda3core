@@ -112,7 +112,7 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   def initialiseExplicitly(lastKOrderingsAreNew: Int = originalOrderingConstraints.length, lastKTasksAreNew: Int = numberOfTasks,
                            prevArrangement: Array[Array[Byte]] = Array.ofDim(0, 0)): Unit = {
     // init the current arrangement with the old one
-    Range(0, prevArrangement.length).foreach(i => prevArrangement(i).copyToArray(innerArrangement(i)))
+    prevArrangement.indices.foreach(i => prevArrangement(i).copyToArray(innerArrangement(i)))
     // update the arrangement
     Range(originalOrderingConstraints.length - lastKOrderingsAreNew, originalOrderingConstraints.length).foreach(i => {
 
@@ -130,13 +130,13 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
       Range(numberOfTasks - lastKTasksAreNew, numberOfTasks).foreach(i => innerArrangement(i)(i) = SAME)
 
       // run bellman-ford for new edges
-      for (newEdge <- originalOrderingConstraints.length - lastKOrderingsAreNew until originalOrderingConstraints.length; from <- 0 until innerArrangement.length) {
+      for (newEdge <- originalOrderingConstraints.length - lastKOrderingsAreNew until originalOrderingConstraints.length; from <- innerArrangement.indices) {
         val beforeID = planStepToArrangementIndex(originalOrderingConstraints(newEdge).before)
         val afterID = planStepToArrangementIndex(originalOrderingConstraints(newEdge).after)
 
         val edgeTypeFromNew = innerArrangement(from)(beforeID)
         if (edgeTypeFromNew != DONTKNOW)
-          for (to <- 0 until innerArrangement.length) {
+          for (to <- innerArrangement.indices) {
             val edgeTypeNewTo = innerArrangement(afterID)(to)
             (edgeTypeFromNew, edgeTypeNewTo) match {
               case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) =>
@@ -148,8 +148,8 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
       }
 
       // run floyd-warshall for new tasks
-      for (middle <- numberOfTasks - lastKTasksAreNew until numberOfTasks; from <- 0 until innerArrangement.length)
-        if (innerArrangement(from)(middle) != DONTKNOW) for (to <- 0 until innerArrangement.length)
+      for (middle <- numberOfTasks - lastKTasksAreNew until numberOfTasks; from <- innerArrangement.indices)
+        if (innerArrangement(from)(middle) != DONTKNOW) for (to <- innerArrangement.indices)
           (innerArrangement(from)(middle), innerArrangement(middle)(to)) match {
             case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME) => innerArrangement(from)(to) = AFTER
             case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) => innerArrangement(from)(to) = BEFORE
@@ -170,9 +170,9 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
       val ord = innerArrangement.map(_.clone())
 
       // run floyd-warshall backwards
-      for (from <- 0 until ord.length; middle <- 0 until ord.length)
+      for (from <- ord.indices; middle <- ord.indices)
         if (ord(from)(middle) != DONTKNOW)
-          for (to <- 0 until ord.length)
+          for (to <- ord.indices)
             if (from != middle && to != middle && from != to)
               (ord(from)(middle), ord(middle)(to)) match {
                 case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME) => ord(from)(to) = DONTKNOW
@@ -180,7 +180,7 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
                 case (_, _) => ()
               }
 
-      val allPairs = for (from <- 0 until ord.length; to <- from + 1 until ord.length) yield (from, to)
+      val allPairs = for (from <- ord.indices; to <- from + 1 until ord.length) yield (from, to)
 
 
       allPairs collect { case (x, y) if ord(x)(y) == AFTER => OrderingConstraint(arrangemetnIndexToPlanStep(y), arrangemetnIndexToPlanStep(x))
@@ -190,7 +190,7 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   }
 
   private def readOrderingConstraintsFromArrangement(arrangement: Array[Array[Byte]]): Seq[OrderingConstraint] =
-    (0 until arrangement.length flatMap { case x => (x + 1) until arrangement.length map ((x, _)) }) collect { case (x, y) if arrangement(x)(y) == BEFORE => OrderingConstraint(
+    (arrangement.indices flatMap { case x => (x + 1) until arrangement.length map ((x, _)) }) collect { case (x, y) if arrangement(x)(y) == BEFORE => OrderingConstraint(
       arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
     }
 
