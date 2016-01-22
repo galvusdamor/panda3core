@@ -7,15 +7,15 @@ import scala.collection.immutable.HashSet
 import scala.collection.mutable
 
 /**
- * CSP implemented using an object oriented structure.
- *
- * This CSP can handle four kinds of variable constraints: [[Equal]], [[NotEqual]], [[OfSort]], [[NotOfSort]].
- * It uses the AC3 algorithm to reduce the possible domains for every variable and maintains equivalence classes of equal variables.
- *
- * A solution can be generated via backtracking.
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * CSP implemented using an object oriented structure.
+  *
+  * This CSP can handle four kinds of variable constraints: [[Equal]], [[NotEqual]], [[OfSort]], [[NotOfSort]].
+  * It uses the AC3 algorithm to reduce the possible domains for every variable and maintains equivalence classes of equal variables.
+  *
+  * A solution can be generated via backtracking.
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends CSP {
 
   // holds equivalent variables
@@ -32,8 +32,8 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
 
 
   private def checkIntegrity() = {
-    assert(unequal forall {_._2 forall {remainingDomain.contains}})
-    assert(unequal forall {_._2 forall {variables.contains}})
+    assert(unequal forall { _._2 forall { remainingDomain.contains } })
+    assert(unequal forall { _._2 forall { variables.contains } })
     assert(unequal forall { case (v1, vals) => vals forall { case v2 => unequal(v2).contains(v1) } })
   }
 
@@ -133,10 +133,10 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
   }
 
   /**
-   * Runs AC3.
-   * Process all unprocessed constrains of the CSP and reduce maximally.
-   * This function must not be called from an other class.
-   */
+    * Runs AC3.
+    * Process all unprocessed constrains of the CSP and reduce maximally.
+    * This function must not be called from an other class.
+    */
   private def initialiseExplicitly(previousUnequal: mutable.Map[Variable, mutable.Set[Variable]] = new mutable.HashMap[Variable, mutable.Set[Variable]](),
                                    previousRemainingDomain: mutable.Map[Variable, mutable.Set[Constant]] = new mutable.HashMap[Variable, mutable.Set[Constant]](),
                                    previousUnionFind: SymbolicUnionFind = new SymbolicUnionFind, lastKConstraintsAreNew: Int = constraints.size,
@@ -193,14 +193,13 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
   private def detectUnitPropagation(): Iterable[Variable] = remainingDomain filter { case (variable, values) => values.size == 1 } map { case (variable, values) => variable }
 
   /** simple test for unsolvability: a CSP is unsolvable if a variable exists whose domain is empty */
-  private def detectUnsolvability() = remainingDomain exists { case (variable, values) => values.size == 0 }
+  private def detectUnsolvability() = remainingDomain exists { case (variable, values) => values.isEmpty }
 
   /** executes uni propagation on a set of given variables */
-  private def unitPropagation(toPropagate: Iterable[Variable] = detectUnitPropagation()): Unit = if (toPropagate.size == 0) ()
+  private def unitPropagation(toPropagate: Iterable[Variable] = detectUnitPropagation()): Unit = if (toPropagate.isEmpty) {() }
   else {
-    val x: Iterable[Variable] = (toPropagate map { variable =>
-      if (!isPotentiallySolvable)
-        Vector()
+    val x: Iterable[Variable] = (toPropagate flatMap { variable =>
+      if (!isPotentiallySolvable) {Vector() }
       else {
         val constant = remainingDomain(variable).last // this one exists and is the only element
         // remove this variable add assert
@@ -211,8 +210,7 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
         val propagatedUnequalTo = unequal(variable)
         propagatedUnequalTo foreach { other =>
           remainingDomain(other).remove(constant)
-          if (remainingDomain(other).size == 0)
-            isPotentiallySolvable = false
+          if (remainingDomain(other).isEmpty) isPotentiallySolvable = false
           unequal(other).remove(variable)
         }
 
@@ -221,16 +219,15 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
 
         // removed from the datastructure
         unequal.remove(variable)
-        propagatedUnequalTo foreach {unequal(_) remove variable}
+        propagatedUnequalTo foreach { unequal(_) remove variable }
 
         checkIntegrity()
 
         newPropagation
       }
-    }).flatten.toSet // eliminate duplicates
+    }).toSet // eliminate duplicates
 
-    if (isPotentiallySolvable)
-      unitPropagation(x)
+    if (isPotentiallySolvable) unitPropagation(x)
     checkIntegrity()
   }
 
@@ -270,7 +267,7 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
               remainingDomain(rep) = intersectionDomain
               // update the unequal map
               val removeTo = unequal(remove)
-              if (removeTo contains rep) {isPotentiallySolvable = false; unequal(rep).remove(remove)} // force equality on two variables that also have an unequals constraint
+              if (removeTo contains rep) {isPotentiallySolvable = false; unequal(rep).remove(remove) } // force equality on two variables that also have an unequals constraint
               unequal.remove(remove)
               (removeTo - rep) foreach { to =>
                 unequal(rep).add(to)
@@ -291,7 +288,7 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
     }
   }
 
-  override def update(domainUpdate: DomainUpdate): SymbolicCSP = SymbolicCSP(variables map {_.update(domainUpdate)}, constraints map {_.update(domainUpdate)})
+  override def update(domainUpdate: DomainUpdate): SymbolicCSP = SymbolicCSP(variables map { _.update(domainUpdate) }, constraints map { _.update(domainUpdate) })
 }
 
 
