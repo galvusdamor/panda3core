@@ -26,6 +26,8 @@ case class Not(formula: Formula) extends LogicalConnector with DefaultLongInfo {
       case f        => Not(f)
     }
 
+  lazy val containedVariables: Set[Variable] = formula.containedVariables
+
   override def longInfo: String = "!" + formula.longInfo
 
   override val isEmpty: Boolean = formula.isEmpty
@@ -41,6 +43,7 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
     And[Formula](flattenedSubs)
   }
 
+  lazy val containedVariables: Set[Variable] = conjuncts.flatMap(_.containedVariables).toSet
 
   override def longInfo: String = (conjuncts map { _.longInfo }).mkString("\n")
 
@@ -50,6 +53,8 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
 case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends LogicalConnector with DefaultLongInfo {
   override def update(domainUpdate: DomainUpdate): Or[Formula] = Or[Formula](disjuncts map { _ update domainUpdate })
 
+  lazy val containedVariables: Set[Variable] = disjuncts.flatMap(_.containedVariables).toSet
+
   override def longInfo: String = (disjuncts map { _.longInfo }).mkString("\n")
 
   override val isEmpty: Boolean = disjuncts forall { _.isEmpty }
@@ -57,6 +62,8 @@ case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends Logic
 
 case class Implies(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo {
   override def update(domainUpdate: DomainUpdate): Implies = Implies(left.update(domainUpdate), right.update(domainUpdate))
+
+  lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
 
   override def longInfo: String = left.longInfo + " => " + right.longInfo
 
@@ -66,6 +73,8 @@ case class Implies(left: Formula, right: Formula) extends LogicalConnector with 
 case class Equivalence(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo {
   override def update(domainUpdate: DomainUpdate): Equivalence = Equivalence(left.update(domainUpdate), right.update(domainUpdate))
 
+  lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
+
   override def longInfo: String = left.longInfo + " == " + right.longInfo
 
   override val isEmpty: Boolean = left.isEmpty && right.isEmpty
@@ -74,6 +83,8 @@ case class Equivalence(left: Formula, right: Formula) extends LogicalConnector w
 case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo {
   override def update(domainUpdate: DomainUpdate): Exists = Exists(v.update(domainUpdate), formula.update(domainUpdate))
 
+  lazy val containedVariables: Set[Variable] = formula.containedVariables - v
+
   override def longInfo: String = "exists " + v.shortInfo + " in (" + formula.longInfo + ")"
 
   override val isEmpty: Boolean = formula.isEmpty
@@ -81,6 +92,8 @@ case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLon
 
 case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo {
   override def update(domainUpdate: DomainUpdate): Forall = Forall(v.update(domainUpdate), formula.update(domainUpdate))
+
+  lazy val containedVariables: Set[Variable] = formula.containedVariables - v
 
   override def longInfo: String = "forall " + v.shortInfo + " in (" + formula.longInfo + ")"
 

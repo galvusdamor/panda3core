@@ -17,6 +17,8 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 
   def isNegative: Boolean = !isPositive
 
+  lazy val containedVariables : Set[Variable] = parameterVariables.toSet
+
   /** check whether two literals are identical given a CSP */
   def =?=(that: Literal)(csp: CSP): Boolean = this.predicate == that.predicate && this.isPositive == that.isPositive &&
     ((this.parameterVariables zip that.parameterVariables) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2) })

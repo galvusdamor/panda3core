@@ -13,4 +13,6 @@ trait Formula extends DomainUpdatable with PrettyPrintable{
   val isEmpty : Boolean
 
   override def update(domainUpdate: DomainUpdate): Formula
+
+  val containedVariables : Set[Variable]
 }
