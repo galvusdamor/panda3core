@@ -38,7 +38,7 @@ public class hddlPanda3Visitor {
         Seq<Task> tasks = visitTaskDefs(sorts, predicates, ctxDomain);
 
         Seq<DecompositionMethod> decompositionMethods = visitMethodDef(ctxDomain.method_def(), sorts, predicates, tasks);
-        Seq<DecompositionAxiom> decompositionAxioms = null;
+        Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0,0,0);
 
         Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms);
 
@@ -140,7 +140,8 @@ public class hddlPanda3Visitor {
 
                     hddlParser.Gd_univeralContext eq = m.gd().gd_conjuction().gd(0).gd_univeral();
                     Tuple2<Formula, Variable> f = visitUniveral(methodParams, predicates, sorts, constraints, true, eq);
-                    subNetwork.addCspVariable(f._2());
+                    // don't add the variable as it is only locally valid
+                    //subNetwork.addCspVariable(f._2());
                     VectorBuilder<Object> form = new VectorBuilder<>();
                     form.$plus$eq(preconditions2.result().apply(0));
                     form.$plus$eq(f._1());
