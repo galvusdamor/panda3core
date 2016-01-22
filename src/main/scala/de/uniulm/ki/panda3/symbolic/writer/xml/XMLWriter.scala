@@ -1,19 +1,23 @@
 package de.uniulm.ki.panda3.symbolic.writer.xml
 
-import java.io.ByteArrayOutputStream
+import java.io.{FileInputStream, ByteArrayOutputStream}
 import java.nio.charset.Charset
 import javax.xml.bind.{JAXBContext, Marshaller}
 
-import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
-import de.uniulm.ki.panda3.symbolic.logic.{Formula, Literal, Predicate, Sort}
-import de.uniulm.ki.panda3.symbolic.parser.xml._
+import de.uniulm.ki.panda3.symbolic.compiler.ExpandSortHierarchy
+import de.uniulm.ki.panda3.symbolic.csp.{NotEqual, Equal}
+import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.writer.Writer
+import de.uniulm.ki.panda3.symbolic.csp._
+import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Domain, Task}
+import de.uniulm.ki.panda3.symbolic.logic.{Formula, Literal, Predicate, Sort}
+import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.{logic, plan}
+import de.uniulm.ki.panda3.symbolic
 
 import scala.collection.mutable
+
 
 /**
   *
@@ -21,6 +25,24 @@ import scala.collection.mutable
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class XMLWriter(domainName: String, problemName: String) extends Writer {
+  /**
+    * Takes a domain and writes and produces a string representation thereof.
+    * This will not write any constant into the domain string
+    */
+  override def writeDomain(dom: Domain): String = XMLWriterDomain.writeDomain(dom, domainName)
+
+  /**
+    * Takes a domain and an initial plan and generates a file representation of the planning problem.
+    * The domain is necessary as all constants are by default written into the problem instance
+    */
+  override def writeProblem(dom: Domain, plan: Plan): String = XMLWriterProblem.writeProblem(dom, plan, domainName, problemName)
+}
+
+// herein the actual functionality is contained. This was done to keep the namespaces of domain and problem apart
+
+private object XMLWriterDomain {
+
+  import de.uniulm.ki.panda3.symbolic.parser.xml._
 
   private def toVariable(variableDeclaration: VariableDeclaration): Variable = {
     val variable = new Variable
@@ -105,11 +127,7 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
     }
 
 
-  /**
-    * Takes a domain and writes and produces a string representation thereof.
-    * This will not write any constant into the domain string
-    */
-  override def writeDomain(dom: Domain): String = {
+  def writeDomain(dom: Domain, domainName: String): String = {
     val xmldomain: XMLDomain = new ObjectFactory().createDomain()
     xmldomain.setType("pure-hierarchical")
     xmldomain.setName(domainName)
@@ -130,15 +148,25 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
     sortToSortDecl.values foreach { xmldomain.getSortDeclaration.add }
 
 
-    // 2. Step add the constants
-    val constantsToConstDecl: Map[logic.Constant, ConstantDeclaration] = (dom.constants map { c =>
-      val sort = dom.getSortOfConstant(c).get // unsafe, but if not possible, writing will not be possible
-    val cd: ConstantDeclaration = new ConstantDeclaration
-      cd.setName(c.name)
-      cd.setSort(sortToSortDecl(sort))
-      (c, cd)
-    }).toMap
-    constantsToConstDecl.values foreach { xmldomain.getConstantDeclaration.add }
+    // 2. create a function that adds constants if necessary
+    val constantsToConstDecl: logic.Constant => ConstantDeclaration = {
+      val innerConstantsToConstDecl: mutable.Map[logic.Constant, ConstantDeclaration] = new mutable.HashMap[logic.Constant, ConstantDeclaration]()
+
+      { constant =>
+        if (innerConstantsToConstDecl.contains(constant)) {innerConstantsToConstDecl(constant) }
+        else {
+          // construct
+          val sort = dom.getSortOfConstant(constant).get // unsafe, but if not possible, writing will not be possible
+          val cd: ConstantDeclaration = new ConstantDeclaration
+          cd.setName(constant.name)
+          cd.setSort(sortToSortDecl(sort))
+
+          innerConstantsToConstDecl(constant) = cd
+          xmldomain.getConstantDeclaration.add(cd)
+          cd
+        }
+      }
+    }
 
     //3. step add the predicates
     val predicatesToXMLPredicates: Map[Predicate, RelationDeclaration] = (dom.predicates map { pred =>
@@ -327,10 +355,207 @@ case class XMLWriter(domainName: String, problemName: String) extends Writer {
     marshaller.marshal(xmldomain, primaryOut)
     new String(primaryOut.toByteArray, Charset.defaultCharset())
   }
+}
+
+
+private object XMLWriterProblem {
+
+  import de.uniulm.ki.panda3.symbolic.parser.xml.problem._
+
+  private def toConstant(constant: logic.Constant): Constant = {
+    val xmlconstant = new Constant
+    xmlconstant.setName(constant.name)
+    xmlconstant
+  }
+
+  private def toVariable(variableDeclaration: VariableDeclaration): Variable = {
+    val variable = new Variable
+    variable.setName(variableDeclaration)
+    variable
+  }
+
 
   /**
     * Takes a domain and an initial plan and generates a file representation of the planning problem.
     * The domain is necessary as all constants are by default written into the problem instance
     */
-  override def writeProblem(dom: Domain, plan: Plan): String = ???
+  def writeProblem(dom: Domain, plan: Plan, domainName: String, problemName: String): String = {
+    val xmlproblem: Problem = new ObjectFactory().createProblem()
+
+    xmlproblem.setDomain(domainName)
+    xmlproblem.setName(problemName)
+    xmlproblem.setType("pure-hierarchical")
+
+
+    // 1. step generate all constants
+    //determine which constants would have ended up in the domain
+    val domainConstants: Seq[logic.Constant] = dom.decompositionMethods flatMap { method => method.subPlan.variableConstraints.constraints collect {
+      case Equal(_, c: logic.Constant)    => c
+      case NotEqual(_, c: logic.Constant) => c
+    }
+    }
+    val problemConstants = dom.constants filterNot domainConstants.contains
+
+    problemConstants map { c =>
+      val constantDeclaration = new ConstantDeclaration
+      constantDeclaration.setName(c.name)
+      val sortOfConstant = dom.getSortOfConstant(c).get // this might cause an exception, but if so writing is not possible at all
+      constantDeclaration.setSort(sortOfConstant.name)
+
+      constantDeclaration
+    } map xmlproblem.getConstantDeclaration.add
+
+    // 2. generate the initial state
+    val initAndGoalCSP = plan.variableConstraints
+    assert(plan.init.schema.isInstanceOf[ReducedTask])
+    val initLiterals = plan.init.substitutedEffects filter { _.isPositive } // only positive effects are necessary in the problem file
+    val initialState = new InitialState
+    initLiterals map { literal =>
+      val fact = new Fact
+      fact.setRelation(literal.predicate.name)
+      literal.parameterVariables foreach { v =>
+        initAndGoalCSP.getRepresentative(v) match {
+          case constant: logic.Constant => fact.getConstant.add(toConstant(constant))
+          case variable: logic.Variable => assert(false, "The initial state must be ground, but I got " + variable)
+        }
+      }
+      fact
+    } foreach initialState.getFact.add
+    xmlproblem.setInitialState(initialState)
+
+
+    // 3. generate the initial state
+    assert(plan.goal.schema.isInstanceOf[ReducedTask])
+    val goalLiterals = plan.goal.substitutedPreconditions filter { _.isPositive } // only positive effects are necessary in the problem file
+    val goalState = new Goals
+    goalLiterals map { literal =>
+      val fact = new Fact
+      fact.setRelation(literal.predicate.name)
+      literal.parameterVariables foreach { v =>
+        initAndGoalCSP.getRepresentative(v) match {
+          case c: logic.Constant => fact.getConstant.add(toConstant(c))
+          case v: logic.Variable => assert(false, "The initial state must be ground")
+        }
+      }
+      fact
+    } foreach goalState.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExistsOrPreference.add
+    xmlproblem.setGoals(goalState)
+
+    // 4. generate the initial task network
+    val initialTaskNetwork = new InitialTaskNetwork
+    // 4.1 plan steps
+    val variableToXMLVariableDeclaration: mutable.Map[logic.Variable, VariableDeclaration] = new mutable.HashMap[logic.Variable, VariableDeclaration]()
+    val planStepsToXMLPlanSteps: mutable.Map[PlanStep, TaskNode] = new mutable.HashMap[PlanStep, TaskNode]()
+    plan.planStepWithoutInitGoal map { ps =>
+      val taskNode = new TaskNode
+      taskNode.setName("task_" + ps.id + "_" + ps.schema.name)
+      taskNode.setTaskSchema(ps.schema.name)
+
+      ps.arguments map { argument =>
+        if (variableToXMLVariableDeclaration.contains(argument)) variableToXMLVariableDeclaration(argument)
+        else {
+          val varDecl = new VariableDeclaration
+          varDecl.setName(argument.name)
+          varDecl.setSort(argument.sort.name)
+          variableToXMLVariableDeclaration(argument) = varDecl
+          varDecl
+        }
+      } foreach taskNode.getVariableDeclaration.add
+      planStepsToXMLPlanSteps(ps) = taskNode
+      taskNode
+    } foreach initialTaskNetwork.getTaskNode.add
+    // 4.1.2 add other variables
+    val remainingVariables = plan.variableConstraints.variables filterNot variableToXMLVariableDeclaration.contains
+    remainingVariables foreach { variable =>
+      val possibleRepresentative = variableToXMLVariableDeclaration.keySet find { plan.variableConstraints.getRepresentative(_) == plan.variableConstraints.getRepresentative(variable) }
+      if (possibleRepresentative.isDefined) variableToXMLVariableDeclaration(variable) = variableToXMLVariableDeclaration(possibleRepresentative.get)
+    }
+    // 4.2 variable constraints
+    plan.variableConstraints.constraints.distinct map {
+      case e@Equal(variable, value)  => (e, "eq")
+      case NotEqual(variable, value) => (Equal(variable, value), "neq")
+      case os@OfSort(variable, sort) => (os, "eq")
+      case NotOfSort(variable, sort) => (OfSort(variable, sort), "neq")
+    } map {
+      case (Equal(variable, value), modus) =>
+        if (variableToXMLVariableDeclaration.contains(variable)) {
+          val valueRestriction = new ValueRestriction
+          valueRestriction.setType(modus)
+          valueRestriction.setVariable(variableToXMLVariableDeclaration(variable))
+          valueRestriction.getVariableOrConstant.add(value match {
+                                                       case constant: logic.Constant => toConstant(constant)
+                                                       case variable: logic.Variable => toVariable(variableToXMLVariableDeclaration(variable))
+                                                     })
+          Some(valueRestriction)
+        } else None
+      case (OfSort(variable, sort), modus) =>
+        if (variableToXMLVariableDeclaration.contains(variable)) {
+          val sortRestriction = new SortRestriction
+          sortRestriction.setType(modus)
+          sortRestriction.setVariable(variableToXMLVariableDeclaration(variable))
+          sortRestriction.setSort(sort.name)
+          Some(sortRestriction)
+        } else None
+    } collect { case Some(x) => x } foreach initialTaskNetwork.getValueRestrictionOrSortRestriction.add
+    // 4.3 ordering constraints
+    plan.orderingConstraints.minimalOrderingConstraints() filterNot { _.containsAny(plan.init, plan.goal) } map {
+      case symbolic.plan.element.OrderingConstraint(before, after) =>
+        val ordering = new OrderingConstraint
+        ordering.setPredecessor(planStepsToXMLPlanSteps(before))
+        ordering.setSuccessor(planStepsToXMLPlanSteps(after))
+        ordering
+    } foreach initialTaskNetwork.getOrderingConstraint.add
+    // 4.4 causal links
+    plan.causalLinks map { case symbolic.plan.element.CausalLink(producer, consumer, condition) =>
+      val causalLink = new CausalLink
+      causalLink.setProducer(planStepsToXMLPlanSteps(producer))
+      causalLink.setConsumer(planStepsToXMLPlanSteps(consumer))
+      val linkAtomic = new Atomic
+      linkAtomic.setRelation(condition.predicate.name)
+      condition.parameterVariables map {parameter => plan.variableConstraints.getRepresentative(parameter)} map {
+        case vari : logic.Variable => toVariable(variableToXMLVariableDeclaration(vari))
+        case const : logic.Constant => toConstant(const)
+      } foreach linkAtomic.getVariableOrConstant.add
+
+
+      val linkLiteral = if (condition.isPositive) linkAtomic else {
+        val not = new Not
+        not.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExists.add(linkAtomic)
+        not
+      }
+      causalLink.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExists.add(linkLiteral)
+
+      causalLink
+    } foreach initialTaskNetwork.getCausalLink.add
+
+
+
+    xmlproblem.setInitialTaskNetwork(initialTaskNetwork)
+
+
+    // 5. step generate the String
+    val context: JAXBContext = JAXBContext.newInstance(classOf[Problem])
+    val marshaller: Marshaller = context.createMarshaller()
+    marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true)
+
+    // write the domain description into a "string"
+    val primaryOut: ByteArrayOutputStream = new ByteArrayOutputStream()
+    marshaller.marshal(xmlproblem, primaryOut)
+    new String(primaryOut.toByteArray, Charset.defaultCharset())
+  }
+}
+
+object Foo {
+  def main(args: Array[String]) {
+    val domainFile = if (args.length >= 1) args(0) else "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    val problemFile = if (args.length >= 2) args(1) else "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+
+    val readDomain = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
+    val expanded = ExpandSortHierarchy.transform(readDomain._1, readDomain._2, ())
+
+    val xmlWriter = new XMLWriter("monroe", "monroe-1")
+
+    println(xmlWriter.writeProblem(expanded._1, expanded._2))
+
+  }
 }
