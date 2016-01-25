@@ -30,9 +30,9 @@ Modification {
 
   override def nonInducedAddedOrderingConstraints: Seq[OrderingConstraint] = (newSubPlan.orderingConstraints.originalOrderingConstraints filter { case OrderingConstraint(b, a) =>
     b != init && b != goal && a != init && a != goal
-  }) ++ (plan.orderingConstraints.originalOrderingConstraints flatMap { case OrderingConstraint(p, `decomposedPS`) => addedPlanSteps map {OrderingConstraint(p, _)}
-  case OrderingConstraint(`decomposedPS`, p) => addedPlanSteps map {OrderingConstraint(_, p)}
-  case _ => Nil
+  }) ++ (plan.orderingConstraints.originalOrderingConstraints flatMap { case OrderingConstraint(p, `decomposedPS`) => addedPlanSteps map { OrderingConstraint(p, _) }
+  case OrderingConstraint(`decomposedPS`, p)                                                                       => addedPlanSteps map { OrderingConstraint(_, p) }
+  case _                                                                                                           => Nil
   })
 
   // remove init and goal task of the subplan
@@ -50,7 +50,10 @@ Modification {
 object DecomposePlanStep {
 
   def apply(plan: Plan, decomposedPS: PlanStep, domain: Domain): Seq[DecomposePlanStep] = domain.decompositionMethods flatMap { method => assert(
-    method.isInstanceOf[SimpleDecompositionMethod], "The planner cannot yet handle non-simple decomposition methods");
+                                                                                                                                                  method
+                                                                                                                                                    .isInstanceOf[SimpleDecompositionMethod],
+                                                                                                                                                  "The planner cannot yet handle non-simple" +
+                                                                                                                                                    " decomposition methods");
     apply(plan, decomposedPS, method.asInstanceOf[SimpleDecompositionMethod])
   }
 
@@ -73,9 +76,9 @@ object DecomposePlanStep {
 
       // causal links handling -> in pairs (ingoing, outgoing) links
       // causal links from and to init and goal of the methods subplan (i.e. those that _must_ be respected)
-      val methodSpecifiedCausalLinks = copiedPlan.causalLinks filter { cl => cl.containsOne(copiedPlan.init, copiedPlan.goal) } partition {_.producer == copiedPlan.init}
+      val methodSpecifiedCausalLinks = copiedPlan.causalLinks filter { cl => cl.containsOne(copiedPlan.init, copiedPlan.goal) } partition { _.producer == copiedPlan.init }
       // pre-exisiting causal links involving the task to be decomposed
-      val causalLinksWithDecomposedPlanStep = currentPlan.causalLinks filter {_.contains(decomposedPS)} partition {_.consumer == decomposedPS}
+      val causalLinksWithDecomposedPlanStep = currentPlan.causalLinks filter { _.contains(decomposedPS) } partition { _.consumer == decomposedPS }
 
 
 
@@ -130,7 +133,7 @@ object DecomposePlanStep {
               // if ingoing != Nil, then such a link was chosen, i.e. it needs to be connected to a precondition of some task in the sub-plan
               ps => (if (ingoingLinks != Nil) ps.substitutedPreconditions else ps.substitutedEffects) map { literal =>
                 (cl.condition #?# literal) (csp) match {
-                  case None => (links, ps, UnsolvableCSP, Nil)
+                  case None      => (links, ps, UnsolvableCSP, Nil)
                   case Some(mgu) => (links, ps, csp.addConstraints(mgu), constraints ++ mgu)
                 }
               }
