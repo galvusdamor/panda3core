@@ -9,6 +9,7 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 import org.scalatest.FlatSpec
 
 import scala.io.Source
+import de.uniulm.ki.util._
 
 /**
   *
@@ -16,10 +17,6 @@ import scala.io.Source
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 class HPDDLWriterTest extends FlatSpec {
-
-  def writeStringToFile(s: String, file: File): Unit = {
-    Some(new PrintWriter(file)).foreach { p => p.write(s); p.close() }
-  }
 
   "Writing the parsed smartphone domain" must "yield a specific result" in {
     val domAlone: Domain = XMLParser.parseDomain(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"))

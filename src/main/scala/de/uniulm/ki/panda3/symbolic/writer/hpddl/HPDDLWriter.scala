@@ -249,13 +249,11 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
       if (!p.precondition.isEmpty) {
         builder.append("\t\t:precondition \n")
         writeFormula(builder, p.precondition, "\t\t\t", taskUF)
-        builder.append("\t\t)\n")
       }
       // effects
       if (!p.effect.isEmpty) {
         builder.append("\t\t:effect\n")
         writeFormula(builder, p.effect, "\t\t\t", taskUF)
-        builder.append("\t\t)\n")
       }
 
       builder.append("\t)\n")
