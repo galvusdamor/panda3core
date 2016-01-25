@@ -910,12 +910,10 @@
 				(not (inMode_Menu))
 				(selected ?newObj_variable19)
 			)
-		)
 		:effect
 			(and
 				(isSet_Task_Name ?newObj_variable19)
 			)
-		)
 	)
 
 	(:action set_Task_Name_Light
@@ -928,14 +926,12 @@
 				(not (inUse ?newObj_variable47))
 				(selected ?newObj_variable47)
 			)
-		)
 		:effect
 			(and
 				(isSet_Task_Name ?newObj_variable47)
 				(inUse ?newObj_variable47)
 				(created ?newObj_variable47)
 			)
-		)
 	)
 
 	(:action press_Tasks_Menu_NewTask
@@ -947,7 +943,6 @@
 				(inMode_Menu)
 				(not (inUse ?press_Tasks_Menu_NewTask_variable2))
 			)
-		)
 		:effect
 			(and
 				(inMode_Tasks_ConfigureTask)
@@ -955,7 +950,6 @@
 				(inUse ?press_Tasks_Menu_NewTask_variable2)
 				(selected ?press_Tasks_Menu_NewTask_variable2)
 			)
-		)
 	)
 
 	(:action press_Tasks_Menu
@@ -966,12 +960,10 @@
 				(not (inMode_Tasks_ConfigureTask))
 				(not (inMode_Menu))
 			)
-		)
 		:effect
 			(and
 				(inMode_Menu)
 			)
-		)
 	)
 
 	(:action select_AccountSelection_Account
@@ -981,7 +973,6 @@
 			(and
 				(inMode_AccountSelection)
 			)
-		)
 		:effect
 			(and
 				(selected ?newObj_variable140)
@@ -989,7 +980,6 @@
 				(inMode_EMail)
 				(not (inMode_AccountSelection))
 			)
-		)
 	)
 
 	(:action press_Calendar_Menu
@@ -1000,12 +990,10 @@
 				(not (inMode_Calendar_ConfigureAppointment))
 				(not (inMode_Menu))
 			)
-		)
 		:effect
 			(and
 				(inMode_Menu)
 			)
-		)
 	)
 
 	(:action set_Appointment_Time
@@ -1018,12 +1006,10 @@
 				(selected ?newObj_variable2)
 				(haveInformation_Regular ?set_Appointment_Time_variable1)
 			)
-		)
 		:effect
 			(and
 				(isSet_Appointment_Time ?newObj_variable2 ?set_Appointment_Time_variable1)
 			)
-		)
 	)
 
 	(:action set_Appointment_Name
@@ -1035,12 +1021,10 @@
 				(inMode_Calendar_ConfigureAppointment)
 				(selected ?newObj_variable8)
 			)
-		)
 		:effect
 			(and
 				(isSet_Appointment_Name ?newObj_variable8)
 			)
-		)
 	)
 
 	(:action set_Appointment_Reminder
@@ -1052,12 +1036,10 @@
 				(inMode_Calendar_ConfigureAppointment)
 				(selected ?newObj_variable10)
 			)
-		)
 		:effect
 			(and
 				(isSet_Appointment_Reminder ?newObj_variable10)
 			)
-		)
 	)
 
 	(:action set_Appointment_Location
@@ -1070,12 +1052,10 @@
 				(selected ?newObj_variable9)
 				(haveInformation_Regular ?set_Appointment_Location_variable1)
 			)
-		)
 		:effect
 			(and
 				(isSet_Appointment_Location ?newObj_variable9 ?set_Appointment_Location_variable1)
 			)
-		)
 	)
 
 	(:action set_Alarm_Time
@@ -1087,12 +1067,10 @@
 				(inMode_Clock_Alarm)
 				(haveInformation_Regular ?set_Alarm_Time_variable1)
 			)
-		)
 		:effect
 			(and
 				(isSet_Alarm_Time ?setAlarm_Time_variable1 ?set_Alarm_Time_variable1)
 			)
-		)
 	)
 
 	(:action set_Alarm_Description
@@ -1103,12 +1081,10 @@
 				(inMode_Clock)
 				(inMode_Clock_Alarm)
 			)
-		)
 		:effect
 			(and
 				(isSet_Alarm_Description ?newObj_variable6)
 			)
-		)
 	)
 
 	(:action activate_Alarm
@@ -1119,12 +1095,10 @@
 				(inMode_Clock)
 				(inMode_Clock_Alarm)
 			)
-		)
 		:effect
 			(and
 				(active_Alarm ?selectAlarm_variable1)
 			)
-		)
 	)
 
 	(:action set_Alarm_Days
@@ -1136,12 +1110,10 @@
 				(inMode_Clock_Alarm)
 				(haveInformation_Regular ?set_Alarm_Days_variable1)
 			)
-		)
 		:effect
 			(and
 				(isSet_Alarm_Days ?setAlarm_Days_variable1 ?set_Alarm_Days_variable1)
 			)
-		)
 	)
 
 	(:action press_Home_Clock
@@ -1150,13 +1122,11 @@
 			(and
 				(inMode_Home)
 			)
-		)
 		:effect
 			(and
 				(inMode_Clock)
 				(not (inMode_Home))
 			)
-		)
 	)
 
 	(:action press_Clock_Alarm
@@ -1165,12 +1135,10 @@
 			(and
 				(inMode_Clock)
 			)
-		)
 		:effect
 			(and
 				(inMode_Clock_Alarm)
 			)
-		)
 	)
 
 	(:action set_Contact_NumberMobile
@@ -1185,12 +1153,10 @@
 				(associated_Contact ?newObj_variable37 ?set_Contact_Mobile_variable1)
 				(selected ?newObj_variable37)
 			)
-		)
 		:effect
 			(and
 				(isSet_Contact_NumberMobile ?newObj_variable37)
 			)
-		)
 	)
 
 	(:action set_Contact_NumberOffice
@@ -1205,12 +1171,10 @@
 				(haveInformation_Contactable ?set_Contact_Office_variable1 ?set_Contact_Office_variable2)
 				(selected ?newObj_variable38)
 			)
-		)
 		:effect
 			(and
 				(isSet_Contact_NumberOffice ?newObj_variable38)
 			)
-		)
 	)
 
 	(:action set_Contact_Email
@@ -1225,12 +1189,10 @@
 				(associated_Contact ?newObj_variable39 ?set_Contact_Email_variable1)
 				(selected ?newObj_variable39)
 			)
-		)
 		:effect
 			(and
 				(isSet_Contact_EmailAddress ?newObj_variable39)
 			)
-		)
 	)
 
 	(:action press_Home_Calendar
@@ -1239,13 +1201,11 @@
 			(and
 				(inMode_Home)
 			)
-		)
 		:effect
 			(and
 				(inMode_Calendar)
 				(not (inMode_Home))
 			)
-		)
 	)
 
 	(:action press_Home_Telephone
@@ -1254,13 +1214,11 @@
 			(and
 				(inMode_Home)
 			)
-		)
 		:effect
 			(and
 				(inMode_Telephone)
 				(not (inMode_Home))
 			)
-		)
 	)
 
 	(:action press_Telephone_Contacts
@@ -1269,13 +1227,11 @@
 			(and
 				(inMode_Telephone)
 			)
-		)
 		:effect
 			(and
 				(inMode_Contacts)
 				(not (inMode_Telephone))
 			)
-		)
 	)
 
 	(:action press_Programs_Tasks
@@ -1284,13 +1240,11 @@
 			(and
 				(inMode_Programs)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_Programs))
 				(inMode_Tasks)
 			)
-		)
 	)
 
 	(:action press_Home_Programs
@@ -1299,13 +1253,11 @@
 			(and
 				(inMode_Home)
 			)
-		)
 		:effect
 			(and
 				(inMode_Programs)
 				(not (inMode_Home))
 			)
-		)
 	)
 
 	(:action press_Calendar_Menu_NewAppointment
@@ -1317,7 +1269,6 @@
 				(inMode_Menu)
 				(not (inUse ?press_Calendar_Menu_NewAppointment_variable1))
 			)
-		)
 		:effect
 			(and
 				(inMode_Calendar_ConfigureAppointment)
@@ -1325,7 +1276,6 @@
 				(inUse ?press_Calendar_Menu_NewAppointment_variable1)
 				(selected ?press_Calendar_Menu_NewAppointment_variable1)
 			)
-		)
 	)
 
 	(:action press_Home_Default
@@ -1336,7 +1286,6 @@
 				(not (entered_AnyNumber))
 				(not (inMode_Contacts_Details))
 			)
-		)
 		:effect
 			(and
 				(inMode_Home)
@@ -1356,7 +1305,6 @@
 				(not (inMode_People))
 				(not (inMode_Contacts_Details))
 			)
-		)
 	)
 
 	(:action press_Home_From_Add_Favourite
@@ -1366,7 +1314,6 @@
 			(and
 				(inMode_People_AddFavourite)
 			)
-		)
 		:effect
 			(and
 				(inMode_Home)
@@ -1389,7 +1336,6 @@
 				(not (inMode_People))
 				(not (inMode_Contacts_Details))
 			)
-		)
 	)
 
 	(:action press_EMail_NewEMail
@@ -1402,12 +1348,10 @@
 				(not (inMode_EMail_Inbox))
 				(selected ?press_EMail_NewEMail_variable1)
 			)
-		)
 		:effect
 			(and
 				(inMode_EMail_NewEMail)
 			)
-		)
 	)
 
 	(:action select_EMail_EMailAccount_NoOp
@@ -1420,12 +1364,10 @@
 				(not (inMode_EMail_Inbox))
 				(selected ?newObj_variable137)
 			)
-		)
 		:effect
 			(and
 				(selected ?newObj_variable137)
 			)
-		)
 	)
 
 	(:action select_EMail_EMailAccount_WithPreviousSelection
@@ -1439,13 +1381,11 @@
 				(not (inMode_EMail_Inbox))
 				(not (selected ?select_EMail_EMailAccount_variable1))
 			)
-		)
 		:effect
 			(and
 				(selected ?select_EMail_EMailAccount_variable1)
 				(not (selected ?newObj_variable114))
 			)
-		)
 	)
 
 	(:action press_Home_From_SMS_Mobile
@@ -1457,7 +1397,6 @@
 				(entered_NumberMobile ?newObj_variable15)
 				(entered_AnyNumber)
 			)
-		)
 		:effect
 			(and
 				(inMode_Home)
@@ -1479,7 +1418,6 @@
 				(not (inMode_People))
 				(not (inMode_Contacts_Details))
 			)
-		)
 	)
 
 	(:action press_Home_From_Telephone_Office
@@ -1491,7 +1429,6 @@
 				(entered_NumberOffice ?newObj_variable98)
 				(entered_AnyNumber)
 			)
-		)
 		:effect
 			(and
 				(inMode_Home)
@@ -1513,7 +1450,6 @@
 				(not (inMode_People))
 				(not (inMode_Contacts_Details))
 			)
-		)
 	)
 
 	(:action press_Home_From_SMS_Office
@@ -1525,7 +1461,6 @@
 				(entered_NumberOffice ?newObj_variable105)
 				(entered_AnyNumber)
 			)
-		)
 		:effect
 			(and
 				(inMode_Home)
@@ -1547,7 +1482,6 @@
 				(not (inMode_People))
 				(not (inMode_Contacts_Details))
 			)
-		)
 	)
 
 	(:action press_Home_From_Telephone_Mobile
@@ -1559,7 +1493,6 @@
 				(entered_NumberMobile ?newObj_variable97)
 				(entered_AnyNumber)
 			)
-		)
 		:effect
 			(and
 				(inMode_Home)
@@ -1581,7 +1514,6 @@
 				(not (inMode_People))
 				(not (inMode_Contacts_Details))
 			)
-		)
 	)
 
 	(:action press_Home_From_Contacts_Details
@@ -1592,7 +1524,6 @@
 				(inMode_Contacts_Details)
 				(selected ?newObj_variable12)
 			)
-		)
 		:effect
 			(and
 				(inMode_Home)
@@ -1613,7 +1544,6 @@
 				(not (inMode_Contacts_Details))
 				(not (selected ?newObj_variable12))
 			)
-		)
 	)
 
 	(:action press_Calendar_NewAppointment_OK
@@ -1627,14 +1557,12 @@
 				(isSet_Appointment_Name ?press_Calendar_NewAppointment_OK_variable1)
 				(isSet_Appointment_Time ?press_Calendar_NewAppointment_OK_variable1 ?press_Calendar_NewAppointment_OK_variable2)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_Calendar_ConfigureAppointment))
 				(not (selected ?press_Calendar_NewAppointment_OK_variable1))
 				(created ?press_Calendar_NewAppointment_OK_variable1)
 			)
-		)
 	)
 
 	(:action set_Task_Time
@@ -1647,12 +1575,10 @@
 				(selected ?newObj_variable25)
 				(haveInformation_Regular ?set_Task_Time_variable1)
 			)
-		)
 		:effect
 			(and
 				(isSet_Task_Time ?newObj_variable25 ?set_Task_Time_variable1)
 			)
-		)
 	)
 
 	(:action set_Task_Reminder
@@ -1664,12 +1590,10 @@
 				(inMode_Tasks_ConfigureTask)
 				(selected ?newObj_variable26)
 			)
-		)
 		:effect
 			(and
 				(isSet_Task_Reminder ?newObj_variable26)
 			)
-		)
 	)
 
 	(:action press_Tasks_NewTask_OK
@@ -1682,14 +1606,12 @@
 				(isSet_Task_Name ?press_Tasks_NewTask_OK_variable1)
 				(selected ?press_Tasks_NewTask_OK_variable1)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_Tasks_ConfigureTask))
 				(not (selected ?press_Tasks_NewTask_OK_variable1))
 				(created ?press_Tasks_NewTask_OK_variable1)
 			)
-		)
 	)
 
 	(:action press_Contacts_New
@@ -1702,7 +1624,6 @@
 				(not (inUse ?press_Contacts_New_variable1))
 				(not (inMode_Contacts_Details))
 			)
-		)
 		:effect
 			(and
 				(inMode_Contacts_ConfigureContact)
@@ -1710,7 +1631,6 @@
 				(inUse ?press_Contacts_New_variable1)
 				(selected ?press_Contacts_New_variable1)
 			)
-		)
 	)
 
 	(:action press_People_More
@@ -1719,13 +1639,11 @@
 			(and
 				(inMode_People)
 			)
-		)
 		:effect
 			(and
 				(inMode_Contacts)
 				(not (inMode_People))
 			)
-		)
 	)
 
 	(:action press_Home_People
@@ -1734,13 +1652,11 @@
 			(and
 				(inMode_Home)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_Home))
 				(inMode_People)
 			)
-		)
 	)
 
 	(:action set_Contact_Name
@@ -1753,12 +1669,10 @@
 				(not (inMode_PictureSelection))
 				(selected ?newObj_variable44)
 			)
-		)
 		:effect
 			(and
 				(isSet_Contact_Name ?newObj_variable44)
 			)
-		)
 	)
 
 	(:action press_Contacts_NewContact_SelectPicture
@@ -1770,12 +1684,10 @@
 				(inMode_Contacts_ConfigureContact)
 				(selected ?press_Contacts_NewContact_SelectPicture_variable1)
 			)
-		)
 		:effect
 			(and
 				(inMode_PictureSelection)
 			)
-		)
 	)
 
 	(:action press_NewMessage_Send_Office
@@ -1787,7 +1699,6 @@
 				(entered_NumberOffice ?newObj_variable108)
 				(not (haveSent ?press_NewMessage_Send_Office_variable1))
 			)
-		)
 		:effect
 			(and
 				(not (inMode_NewMessage))
@@ -1797,7 +1708,6 @@
 				(haveSent ?press_NewMessage_Send_Office_variable1)
 				(not (entered_AnyNumber))
 			)
-		)
 	)
 
 	(:action press_NewMessage_Send_Mobile
@@ -1809,7 +1719,6 @@
 				(inMode_NewMessage)
 				(not (haveSent ?press_NewMessage_Send_Mobile_variable2))
 			)
-		)
 		:effect
 			(and
 				(not (inMode_NewMessage))
@@ -1819,7 +1728,6 @@
 				(hasReceived ?newObj_variable107 ?press_NewMessage_Send_Mobile_variable2)
 				(not (entered_AnyNumber))
 			)
-		)
 	)
 
 	(:action press_Telephone_Call_Mobile
@@ -1831,7 +1739,6 @@
 				(entered_NumberMobile ?newObj_variable73)
 				(not (haveSent ?press_Call_Mobile_variable1))
 			)
-		)
 		:effect
 			(and
 				(not (entered_NumberMobile ?newObj_variable73))
@@ -1840,7 +1747,6 @@
 				(hasReceived ?newObj_variable73 ?press_Call_Mobile_variable1)
 				(not (entered_AnyNumber))
 			)
-		)
 	)
 
 	(:action press_Telephone_Call_Office
@@ -1852,7 +1758,6 @@
 				(entered_NumberOffice ?newObj_variable74)
 				(not (haveSent ?press_Call_Office_variable1))
 			)
-		)
 		:effect
 			(and
 				(not (entered_NumberOffice ?newObj_variable74))
@@ -1861,7 +1766,6 @@
 				(haveSent ?press_Call_Office_variable1)
 				(not (entered_AnyNumber))
 			)
-		)
 	)
 
 	(:action enter_Number_ForCall_Mobile
@@ -1872,13 +1776,11 @@
 				(inMode_Telephone)
 				(haveInformation_Contactable ?newObj_variable60 ?enter_Number_ForCall_Mobile_variable1)
 			)
-		)
 		:effect
 			(and
 				(entered_NumberMobile ?newObj_variable60)
 				(entered_AnyNumber)
 			)
-		)
 	)
 
 	(:action enter_Number_ForCall_Office
@@ -1889,13 +1791,11 @@
 				(inMode_Telephone)
 				(haveInformation_Contactable ?newObj_variable61 ?enter_Number_ForCall_Office_variable1)
 			)
-		)
 		:effect
 			(and
 				(entered_NumberOffice ?newObj_variable61)
 				(entered_AnyNumber)
 			)
-		)
 	)
 
 	(:action enter_Number_ForSMS_Mobile
@@ -1906,13 +1806,11 @@
 				(inMode_NewMessage)
 				(haveInformation_Contactable ?newObj_variable100 ?enter_Number_ForSMS_Mobile_variable1)
 			)
-		)
 		:effect
 			(and
 				(entered_NumberMobile ?newObj_variable100)
 				(entered_AnyNumber)
 			)
-		)
 	)
 
 	(:action enter_Number_ForSMS_Office
@@ -1923,13 +1821,11 @@
 				(haveInformation_Contactable ?newObj_variable101 ?enter_Number_ForSMS_Office_variable1)
 				(inMode_NewMessage)
 			)
-		)
 		:effect
 			(and
 				(entered_NumberOffice ?newObj_variable101)
 				(entered_AnyNumber)
 			)
-		)
 	)
 
 	(:action press_EMail_NewEMail_Send
@@ -1942,7 +1838,6 @@
 				(entered_EMail ?newObj_variable116)
 				(not (haveSent ?press_EMail_NewEMail_Send_variable1))
 			)
-		)
 		:effect
 			(and
 				(not (inMode_EMail_NewEMail))
@@ -1951,7 +1846,6 @@
 				(haveSent ?press_EMail_NewEMail_Send_variable1)
 				(hasReceived ?newObj_variable116 ?press_EMail_NewEMail_Send_variable1)
 			)
-		)
 	)
 
 	(:action enter_EMailAddress
@@ -1962,12 +1856,10 @@
 				(haveInformation_Contactable ?newObj_variable115 ?enter_EMailAddress_variable1)
 				(inMode_EMail_NewEMail)
 			)
-		)
 		:effect
 			(and
 				(entered_EMail ?newObj_variable115)
 			)
-		)
 	)
 
 	(:action press_Messages_NewMessage
@@ -1977,12 +1869,10 @@
 				(inMode_Messages)
 				(not (inMode_NewMessage))
 			)
-		)
 		:effect
 			(and
 				(inMode_NewMessage)
 			)
-		)
 	)
 
 	(:action press_Home_Messages
@@ -1991,13 +1881,11 @@
 			(and
 				(inMode_Home)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_Home))
 				(inMode_Messages)
 			)
-		)
 	)
 
 	(:action press_Contacts_NewContact_OK
@@ -2010,14 +1898,12 @@
 				(not (inMode_PictureSelection))
 				(isSet_Contact_Name ?press_Contacts_NewContact_OK_variable1)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_Contacts_ConfigureContact))
 				(not (selected ?press_Contacts_NewContact_OK_variable1))
 				(created ?press_Contacts_NewContact_OK_variable1)
 			)
-		)
 	)
 
 	(:action press_People_Smallplus_AlreadyPressed
@@ -2028,13 +1914,11 @@
 				(not (inMode_Menu))
 				(inMode_People_ReadyToAddFavourite)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_People_FavouriteSelected))
 				(inMode_People_ReadyToAddFavourite)
 			)
-		)
 	)
 
 	(:action press_People_Smallplus_FavouriteSelected
@@ -2047,14 +1931,12 @@
 				(inMode_People_FavouriteSelected)
 				(selected_Favourite ?newObj_variable94)
 			)
-		)
 		:effect
 			(and
 				(not (selected_Favourite ?newObj_variable94))
 				(not (inMode_People_FavouriteSelected))
 				(inMode_People_ReadyToAddFavourite)
 			)
-		)
 	)
 
 	(:action select_People_AddFavourite_Contact_withOffice
@@ -2069,14 +1951,12 @@
 				(not (isFavourite ?newObj_variable58))
 				(created ?newObj_variable58)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_People_AddFavourite_SelectContact))
 				(inMode_People_AddFavourite_SelectFavouriteNumber)
 				(selected_AddAsFavourite ?newObj_variable58)
 			)
-		)
 	)
 
 	(:action select_People_AddFavourite_Contact_withEmail
@@ -2091,14 +1971,12 @@
 				(not (isFavourite ?newObj_variable57))
 				(created ?newObj_variable57)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_People_AddFavourite_SelectContact))
 				(inMode_People_AddFavourite_SelectFavouriteNumber)
 				(selected_AddAsFavourite ?newObj_variable57)
 			)
-		)
 	)
 
 	(:action select_People_AddFavourite_Contact_withMobile
@@ -2113,14 +1991,12 @@
 				(not (isFavourite ?newObj_variable53))
 				(created ?newObj_variable53)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_People_AddFavourite_SelectContact))
 				(inMode_People_AddFavourite_SelectFavouriteNumber)
 				(selected_AddAsFavourite ?newObj_variable53)
 			)
-		)
 	)
 
 	(:action press_People_Menu_AddFavourite
@@ -2130,13 +2006,11 @@
 				(inMode_People)
 				(inMode_Menu)
 			)
-		)
 		:effect
 			(and
 				(inMode_People_AddFavourite)
 				(inMode_People_AddFavourite_SelectContact)
 			)
-		)
 	)
 
 	(:action press_People_Menu
@@ -2147,12 +2021,10 @@
 				(not (inMode_People_AddFavourite))
 				(not (inMode_Menu))
 			)
-		)
 		:effect
 			(and
 				(inMode_Menu)
 			)
-		)
 	)
 
 	(:action select_Contacts_Details_Office
@@ -2167,7 +2039,6 @@
 				(associated_Contact ?newObj_variable84 ?select_Contacts_Details_Office_variable2)
 				(not (haveSent ?select_Contacts_Details_Office_variable1))
 			)
-		)
 		:effect
 			(and
 				(not (inMode_Contacts))
@@ -2177,7 +2048,6 @@
 				(hasReceived ?select_Contacts_Details_Office_variable2 ?select_Contacts_Details_Office_variable1)
 				(haveSent ?select_Contacts_Details_Office_variable1)
 			)
-		)
 	)
 
 	(:action select_Contacts_Details_Mobile
@@ -2192,7 +2062,6 @@
 				(not (haveSent ?select_Contacts_Details_Mobile_variable1))
 				(associated_Contact ?newObj_variable83 ?select_Contacts_Details_Mobile_variable2)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_Contacts))
@@ -2202,7 +2071,6 @@
 				(hasReceived ?select_Contacts_Details_Mobile_variable2 ?select_Contacts_Details_Mobile_variable1)
 				(haveSent ?select_Contacts_Details_Mobile_variable1)
 			)
-		)
 	)
 
 	(:action select_People_Favourite_FromReadyToAddFavourite
@@ -2217,14 +2085,12 @@
 				(not (inMode_People_AddFavourite))
 				(not (inMode_Menu))
 			)
-		)
 		:effect
 			(and
 				(not (inMode_People_ReadyToAddFavourite))
 				(selected_Favourite ?newObj_variable123)
 				(inMode_People_FavouriteSelected)
 			)
-		)
 	)
 
 	(:action select_People_Favourite_NoOp
@@ -2240,13 +2106,11 @@
 				(not (inMode_People_AddFavourite))
 				(isFavourite ?newObj_variable130)
 			)
-		)
 		:effect
 			(and
 				(selected_Favourite ?newObj_variable130)
 				(inMode_People_FavouriteSelected)
 			)
-		)
 	)
 
 	(:action select_People_Favourite_WithPreviousSelection
@@ -2262,14 +2126,12 @@
 				(not (selected_Favourite ?newObj_variable121))
 				(not (inMode_Menu))
 			)
-		)
 		:effect
 			(and
 				(selected_Favourite ?newObj_variable121)
 				(not (selected_Favourite ?newObj_variable120))
 				(inMode_People_FavouriteSelected)
 			)
-		)
 	)
 
 	(:action select_People_FavouriteSelected_SMS
@@ -2285,7 +2147,6 @@
 				(isSet_Contact_NumberMobile ?newObj_variable112)
 				(not (inMode_People_AddFavourite))
 			)
-		)
 		:effect
 			(and
 				(inMode_NewMessage)
@@ -2293,7 +2154,6 @@
 				(not (inMode_People))
 				(entered_AnyNumber)
 			)
-		)
 	)
 
 	(:action select_People_FavouriteSelected_Mobile
@@ -2310,7 +2170,6 @@
 				(not (haveSent ?select_People_FavouriteSelected_Mobile_variable1))
 				(associated_Contact ?newObj_variable88 ?select_People_FavouriteSelected_Mobile_variable2)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_People))
@@ -2318,7 +2177,6 @@
 				(haveSent ?select_People_FavouriteSelected_Mobile_variable1)
 				(hasReceived ?select_People_FavouriteSelected_Mobile_variable2 ?select_People_FavouriteSelected_Mobile_variable1)
 			)
-		)
 	)
 
 	(:action select_People_FavouriteSelected_Office
@@ -2335,7 +2193,6 @@
 				(not (haveSent ?select_People_FavouriteSelected_Office_variable1))
 				(associated_Contact ?newObj_variable89 ?select_People_FavouriteSelected_Office_variable2)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_People))
@@ -2343,7 +2200,6 @@
 				(haveSent ?select_People_FavouriteSelected_Office_variable1)
 				(hasReceived ?select_People_FavouriteSelected_Office_variable2 ?select_People_FavouriteSelected_Office_variable1)
 			)
-		)
 	)
 
 	(:action select_Contacts_ContactForContactable
@@ -2356,13 +2212,11 @@
 				(not (inMode_Contacts_ConfigureContact))
 				(not (inMode_Contacts_Details))
 			)
-		)
 		:effect
 			(and
 				(selected ?newObj_variable78)
 				(inMode_Contacts_Details)
 			)
-		)
 	)
 
 	(:action select_People_AddFavourite_Picture
@@ -2377,7 +2231,6 @@
 				(selected_FavouriteNumber)
 				(haveInformation_Regular ?newObj_variable63)
 			)
-		)
 		:effect
 			(and
 				(isSet_Contact_Picture ?newObj_variable62)
@@ -2388,7 +2241,6 @@
 				(not (inMode_People_AddFavourite))
 				(isFavourite ?newObj_variable62)
 			)
-		)
 	)
 
 	(:action select_People_AddFavourite_FavouriteNumber_WithoutPicture
@@ -2402,14 +2254,12 @@
 				(inMode_People)
 				(selected_AddAsFavourite ?newObj_variable33)
 			)
-		)
 		:effect
 			(and
 				(selected_FavouriteNumber)
 				(not (inMode_People_AddFavourite_SelectFavouriteNumber))
 				(inMode_People_AddFavourite_SelectPicture)
 			)
-		)
 	)
 
 	(:action select_People_AddFavourite_FavouriteNumber_WithPicture
@@ -2423,7 +2273,6 @@
 				(inMode_People)
 				(selected_AddAsFavourite ?newObj_variable20)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_People_AddFavourite_SelectFavouriteNumber))
@@ -2431,7 +2280,6 @@
 				(isFavourite ?newObj_variable20)
 				(not (selected_AddAsFavourite ?newObj_variable20))
 			)
-		)
 	)
 
 	(:action press_People_LargePlus
@@ -2441,14 +2289,12 @@
 				(inMode_People_ReadyToAddFavourite)
 				(not (inMode_Menu))
 			)
-		)
 		:effect
 			(and
 				(inMode_People_AddFavourite)
 				(inMode_People_AddFavourite_SelectContact)
 				(not (inMode_People_ReadyToAddFavourite))
 			)
-		)
 	)
 
 	(:action select_PictureSelection_PictureForNewContact
@@ -2462,14 +2308,12 @@
 				(selected ?select_PictureSelection_PictureForNewContact_variable2)
 				(haveInformation_Regular ?newObj_variable52)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_PictureSelection))
 				(associated_Picture ?select_PictureSelection_PictureForNewContact_variable2 ?newObj_variable52)
 				(isSet_Contact_Picture ?select_PictureSelection_PictureForNewContact_variable2)
 			)
-		)
 	)
 
 	(:action press_Home_EMail
@@ -2478,13 +2322,11 @@
 			(and
 				(inMode_Home)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_Home))
 				(inMode_EMail)
 			)
-		)
 	)
 
 	(:action select_People_FavouriteSelected_EMail
@@ -2500,14 +2342,12 @@
 				(not (inMode_People_AddFavourite))
 				(associated_Contact ?newObj_variable135 ?select_People_FavouriteSelected_EMail_variable1)
 			)
-		)
 		:effect
 			(and
 				(not (inMode_People))
 				(inMode_AccountSelection)
 				(entered_EMail ?select_People_FavouriteSelected_EMail_variable1)
 			)
-		)
 	)
 
 	(:action extractsInformation_Contactable
@@ -2518,12 +2358,10 @@
 				(hasReceived ?newObj_variable182 ?newObj_variable183)
 				(attached ?newObj_variable183 ?newObj_variable184)
 			)
-		)
 		:effect
 			(and
 				(hasInformation_Contactable ?newObj_variable182 ?newObj_variable185 ?newObj_variable184)
 			)
-		)
 	)
 
 	(:action extractsInformation_Regular
@@ -2534,12 +2372,10 @@
 				(hasReceived ?newObj_variable186 ?newObj_variable187)
 				(attached ?newObj_variable187 ?newObj_variable188)
 			)
-		)
 		:effect
 			(and
 				(hasInformation_Regular ?newObj_variable186 ?newObj_variable188)
 			)
-		)
 	)
 
 	(:action attachContactableInformationToEMail
@@ -2550,12 +2386,10 @@
 				(haveInformation_Contactable ?newObj_variable155 ?newObj_variable154)
 				(not (haveSent ?newObj_variable153))
 			)
-		)
 		:effect
 			(and
 				(attached ?newObj_variable153 ?newObj_variable154)
 			)
-		)
 	)
 
 	(:action attachContactableInformationToSMS
@@ -2566,12 +2400,10 @@
 				(haveInformation_Contactable ?newObj_variable158 ?newObj_variable157)
 				(not (haveSent ?newObj_variable156))
 			)
-		)
 		:effect
 			(and
 				(attached ?newObj_variable156 ?newObj_variable157)
 			)
-		)
 	)
 
 	(:action attachRegularInformationToEMail
@@ -2582,12 +2414,10 @@
 				(haveInformation_Regular ?newObj_variable160)
 				(not (haveSent ?newObj_variable159))
 			)
-		)
 		:effect
 			(and
 				(attached ?newObj_variable159 ?newObj_variable160)
 			)
-		)
 	)
 
 	(:action attachRegularInformationToSMS
@@ -2598,12 +2428,10 @@
 				(haveInformation_Regular ?newObj_variable162)
 				(not (haveSent ?newObj_variable161))
 			)
-		)
 		:effect
 			(and
 				(attached ?newObj_variable161 ?newObj_variable162)
 			)
-		)
 	)
 
 	(:action attachContactableInformationToCall
@@ -2614,12 +2442,10 @@
 				(haveInformation_Contactable ?newObj_variable152 ?newObj_variable151)
 				(not (haveSent ?newObj_variable150))
 			)
-		)
 		:effect
 			(and
 				(attached ?newObj_variable150 ?newObj_variable151)
 			)
-		)
 	)
 
 	(:action attachRegularInformationToCall
@@ -2630,11 +2456,9 @@
 				(haveInformation_Regular ?newObj_variable149)
 				(not (haveSent ?newObj_variable148))
 			)
-		)
 		:effect
 			(and
 				(attached ?newObj_variable148 ?newObj_variable149)
 			)
-		)
 	)
 )
