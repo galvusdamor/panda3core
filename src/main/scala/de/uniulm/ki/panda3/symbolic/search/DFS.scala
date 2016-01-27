@@ -55,7 +55,7 @@ object DFS {
 
     var abort = false
 
-    def search(domain: Domain, node: SearchNode): Option[Plan] = if (node.plan.flaws.size == 0) Some(node.plan)
+    def search(domain: Domain, node: SearchNode): Option[Plan] = if (node.plan.flaws.isEmpty) Some(node.plan)
     else if ((nodeLimit.isDefined && nodes > nodeLimit.get) || abort) None
     else {
       nodes = nodes + 1
@@ -67,9 +67,9 @@ object DFS {
       node.modifications = flaws map {_.resolvents(domain)}
 
       // check whether we are at a dead end in the search space
-      if (node.modifications exists {_.size == 0}) {d = d - 1; crap = crap + 1; node.dirty = false; None}
+      if (node.modifications exists {_.isEmpty}) {d = d - 1; crap = crap + 1; node.dirty = false; None}
       else {
-        val selectedResolvers: Seq[Modification] = (node.modifications filterNot {_.size == 0}).head
+        val selectedResolvers: Seq[Modification] = (node.modifications sortBy {_.size}).head
         // set the selected flaw
         node.selectedFlaw = node.modifications indexOf selectedResolvers
 
