@@ -4,7 +4,7 @@ package de.uniulm.ki.panda3.symbolic.search
 import java.io.FileInputStream
 import java.util.concurrent.Semaphore
 
-import de.uniulm.ki.panda3.symbolic.compiler.ClosedWorldAssumption
+import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, ClosedWorldAssumption}
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -27,8 +27,9 @@ object DFS {
 
     // apply the CWA
     val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
+    val flattened  = ToPlainFormulaRepresentation.transform(cwaApplied._1,cwaApplied._2,())
 
-    val x = startSearch(cwaApplied._1, cwaApplied._2, None)
+    val x = startSearch(flattened._1, flattened._2, None)
 
     x._2.acquire()
     println("100 Nodes generated")
