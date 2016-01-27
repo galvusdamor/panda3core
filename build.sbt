@@ -42,3 +42,5 @@ mainClass in assembly := Some("de.uniulm.ki.panda3.search.DFS")
 compileOrder in Compile := CompileOrder.Mixed
 
 compileOrder in Test := CompileOrder.Mixed
+
+//scalacOptions ++= Seq("-Xelide-below","OFF")

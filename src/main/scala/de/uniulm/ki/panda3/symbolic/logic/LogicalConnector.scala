@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.symbolic.logic
 
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
+import de.uniulm.ki.util.HashMemo
 
 /**
   *
@@ -19,7 +20,7 @@ trait Quantor extends Formula {
 // TODO: include more and better reductions
 
 // TODO: implement better info strings
-case class Not(formula: Formula) extends LogicalConnector with DefaultLongInfo {
+case class Not(formula: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo{
   override def update(domainUpdate: DomainUpdate): Formula =
     formula.update(domainUpdate) match {
       case Not(sub) => sub
@@ -33,7 +34,7 @@ case class Not(formula: Formula) extends LogicalConnector with DefaultLongInfo {
   override val isEmpty: Boolean = formula.isEmpty
 }
 
-case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends LogicalConnector with DefaultLongInfo {
+case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends LogicalConnector with DefaultLongInfo with HashMemo{
   override def update(domainUpdate: DomainUpdate): And[Formula] = {
     val subreduced = conjuncts map { _ update domainUpdate }
     val flattenedSubs = subreduced flatMap {
@@ -50,7 +51,7 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
   override val isEmpty: Boolean = conjuncts forall { _.isEmpty }
 }
 
-case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends LogicalConnector with DefaultLongInfo {
+case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends LogicalConnector with DefaultLongInfo with HashMemo{
   override def update(domainUpdate: DomainUpdate): Or[Formula] = Or[Formula](disjuncts map { _ update domainUpdate })
 
   lazy val containedVariables: Set[Variable] = disjuncts.flatMap(_.containedVariables).toSet
@@ -60,7 +61,7 @@ case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends Logic
   override val isEmpty: Boolean = disjuncts forall { _.isEmpty }
 }
 
-case class Implies(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo {
+case class Implies(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo{
   override def update(domainUpdate: DomainUpdate): Implies = Implies(left.update(domainUpdate), right.update(domainUpdate))
 
   lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
@@ -70,7 +71,7 @@ case class Implies(left: Formula, right: Formula) extends LogicalConnector with 
   override val isEmpty: Boolean = left.isEmpty && right.isEmpty
 }
 
-case class Equivalence(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo {
+case class Equivalence(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo{
   override def update(domainUpdate: DomainUpdate): Equivalence = Equivalence(left.update(domainUpdate), right.update(domainUpdate))
 
   lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
@@ -80,7 +81,7 @@ case class Equivalence(left: Formula, right: Formula) extends LogicalConnector w
   override val isEmpty: Boolean = left.isEmpty && right.isEmpty
 }
 
-case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo {
+case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo with HashMemo{
   override def update(domainUpdate: DomainUpdate): Exists = Exists(v.update(domainUpdate), formula.update(domainUpdate))
 
   lazy val containedVariables: Set[Variable] = formula.containedVariables - v
@@ -90,7 +91,7 @@ case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLon
   override val isEmpty: Boolean = formula.isEmpty
 }
 
-case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo {
+case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo with HashMemo{
   override def update(domainUpdate: DomainUpdate): Forall = Forall(v.update(domainUpdate), formula.update(domainUpdate))
 
   lazy val containedVariables: Set[Variable] = formula.containedVariables - v

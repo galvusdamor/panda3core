@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanSt
 import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, DomainUpdatable, Task}
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
 import de.uniulm.ki.panda3.symbolic._
+import de.uniulm.ki.util.HashMemo
 
 /**
   *
@@ -14,9 +15,19 @@ import de.uniulm.ki.panda3.symbolic._
   */
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends DomainUpdatable with PrettyPrintable {
 
+
+  override def equals(o: Any): Boolean = o match {
+    case step: PlanStep => id == step.id
+    case _              => false
+  }
+
+  override val hashCode  : Int = id
+
+
   assert(arguments.size == schema.parameters.size)
   // TODO: test whether it is a subsort relation instead
   //assert((arguments zip schema.parameters) forall {case (a,b) => a.sort == b.sort})
+
   /** returns a version of the preconditions */
   lazy val substitutedPreconditions: Seq[Literal] = schema match {
     case reduced: ReducedTask => reduced.precondition.conjuncts map substitute
