@@ -22,6 +22,13 @@ case class OpenPrecondition(plan: Plan, planStep: PlanStep, precondition: Litera
   private def resolverByDecompose(domain: Domain): Seq[Modification] = {
 
     val possibleDecompositions: Seq[(PlanStep, SimpleDecompositionMethod)] =
+      (plan.planStepWithoutInitGoal filter { _ != planStep }) flatMap { ps =>
+        domain.taskSchemaTransitionGraph.canBeDirectlyDecomposedIntoForPredicate((ps.schema, precondition.predicate, precondition.isPositive)) map {
+          case (method: SimpleDecompositionMethod, task)                      => (ps, method.asInstanceOf[SimpleDecompositionMethod])
+          case (method, _) if !method.isInstanceOf[SimpleDecompositionMethod] => noSupport(NONSIMPLEMETHOD)
+        }
+      }
+    /*
       (plan.planStepWithoutInitGoal filter { _ != planStep }) flatMap { ps => domain.taskSchemaTransitionGraph.canBeDirectlyDecomposedIntoVia(ps.schema) map {
         case (method, reduced: ReducedTask) => (method, reduced)
         case _                              => noSupport(FORUMLASNOTSUPPORTED)
@@ -32,7 +39,7 @@ case class OpenPrecondition(plan: Plan, planStep: PlanStep, precondition: Litera
         case (method, _) if !method.isInstanceOf[SimpleDecompositionMethod] => noSupport(NONSIMPLEMETHOD)
       }
       }
-
+    */
     possibleDecompositions flatMap { case (ps, method) => DecomposePlanStep(plan, ps, method) }
   }
 
