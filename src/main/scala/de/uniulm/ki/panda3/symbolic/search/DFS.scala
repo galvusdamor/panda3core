@@ -18,8 +18,12 @@ import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 object DFS {
 
   def main(args: Array[String]) {
-    val domAlone: Domain = XMLParser.parseDomain(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"))
-    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"), domAlone)
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    val domAlone: Domain = XMLParser.parseDomain(new FileInputStream(domFile))
+    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem(new FileInputStream(probFile), domAlone)
     val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
 
     val parsedDom = domAndInitialPlan._1.update(sortExpansion)
@@ -75,11 +79,11 @@ object DFS {
         node.selectedFlaw = node.modifications indexOf selectedResolvers
 
         // create all children
-        node.children = selectedResolvers map { m => new SearchNode(node.plan.modify(m), node, -1) }
+        node.children = selectedResolvers.zipWithIndex map { case (m,i) => (new SearchNode(node.plan.modify(m), node, -1),i) }
         node.dirty = false
 
         // perform the search
-        val ret = node.children.foldLeft[Option[Plan]](None)({
+        val ret = (node.children map {_._1}).foldLeft[Option[Plan]](None)({
           case (Some(p), _) => Some(p)
           case (None, res)  => search(domain, res)
         })

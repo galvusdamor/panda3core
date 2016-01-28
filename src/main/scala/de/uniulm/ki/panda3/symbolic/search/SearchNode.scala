@@ -25,8 +25,8 @@ class SearchNode(nodePlan: Plan, nodeParent: SearchNode, nodeHeuristic: Double) 
   /** the possible modifications for all flaws. The i-th list of modifications will be the list of possible resolvantes for the i-the flaw in the plan's flaw list. If one of the lists is
     * empty this is a dead-end node in the search space. */
   var modifications: Seq[Seq[Modification]] = Nil
-  /** the successors based on the list of modifications */
-  var children     : Seq[SearchNode]        = Nil
+  /** the successors based on the list of modifications. The pair (sn,i) indicates that the child sn was generated based on the modification modifications(selectedFlaw)(i) */
+  var children     : Seq[(SearchNode,Int)]        = Nil
   /** any possible further payload */
   var payload      : Any                    = null
 }
