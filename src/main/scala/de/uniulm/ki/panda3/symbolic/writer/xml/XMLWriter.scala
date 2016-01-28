@@ -133,19 +133,19 @@ private object XMLWriterDomain {
     xmldomain.setName(domainName)
 
     // 1. Step build the sorts (if the sort graph contains a circle we cannot translate)
-    val sortToSortDecl: Map[Sort, SortDeclaration] = dom.sortGraph.topologicalOrdering.get.reverse.foldLeft(Map[Sort, SortDeclaration]())({ case (map, s) =>
-      val ns = new SortDeclaration
-      ns.setName(s.name)
-      ns.setType("concrete")
+    val sortToSortDecl: Map[Sort, SortDeclaration] = dom.sortGraph.topologicalOrdering.get.reverse.foldLeft(Map[Sort, SortDeclaration]())(
+      { case (map, s) =>
+        val ns = new SortDeclaration
+        ns.setName(s.name)
+        ns.setType("concrete")
 
-      s.subSorts map map map { subs => val ssDecl = new SubSort
-        ssDecl.setSort(subs)
-        ns.getSubSort.add(ssDecl)
-      }
-
-      map.+((s, ns))
-                                                                                                                                          })
-    sortToSortDecl.values foreach { xmldomain.getSortDeclaration.add }
+        s.subSorts map map map { subs => val ssDecl = new SubSort
+          ssDecl.setSort(subs)
+          ns.getSubSort.add(ssDecl)
+        }
+        map.+((s, ns))
+      })
+    sortToSortDecl.toSeq sortBy {_._1.name} map {_._2} foreach { xmldomain.getSortDeclaration.add }
 
 
     // 2. create a function that adds constants if necessary
@@ -179,7 +179,7 @@ private object XMLWriterDomain {
       }
       (pred, relDecl)
     }).toMap
-    predicatesToXMLPredicates.values foreach { xmldomain.getRelationDeclaration.add }
+    predicatesToXMLPredicates.toSeq sortBy { _._1.name } map { _._2 } foreach { xmldomain.getRelationDeclaration.add }
 
     // 4. step add tasks
     val tasksToTaskDeclarations: Map[Task, TaskSchemaDeclaration] = (dom.tasks map { t =>
@@ -206,7 +206,7 @@ private object XMLWriterDomain {
 
       (t, tsd)
     }).toMap
-    tasksToTaskDeclarations.values foreach { xmldomain.getTaskSchemaDeclaration.add }
+    tasksToTaskDeclarations.toSeq.sortBy { _._1.name } map { _._2 } foreach { xmldomain.getTaskSchemaDeclaration.add }
 
 
     // 5. step add the decomposition methods
@@ -282,7 +282,7 @@ private object XMLWriterDomain {
       // add all plan steps
       val planStepsToTaskNodes: Map[PlanStep, TaskNode] = (temp map { _._1 }).toMap
       val necessaryEqualities: Seq[ValueRestriction] = temp flatMap { _._2 }
-      planStepsToTaskNodes.values foreach methodDecl.getTaskNode.add
+      planStepsToTaskNodes.toSeq sortBy { _._1.id } map { _._2 } foreach methodDecl.getTaskNode.add
       necessaryEqualities foreach methodDecl.getValueRestrictionOrSortRestriction.add
 
       val allVariablesToXMLVariable = abstractParametersToVariables ++ taskParametersToVariables
@@ -512,13 +512,14 @@ private object XMLWriterProblem {
       causalLink.setConsumer(planStepsToXMLPlanSteps(consumer))
       val linkAtomic = new Atomic
       linkAtomic.setRelation(condition.predicate.name)
-      condition.parameterVariables map {parameter => plan.variableConstraints.getRepresentative(parameter)} map {
-        case vari : logic.Variable => toVariable(variableToXMLVariableDeclaration(vari))
-        case const : logic.Constant => toConstant(const)
+      condition.parameterVariables map { parameter => plan.variableConstraints.getRepresentative(parameter) } map {
+        case vari: logic.Variable  => toVariable(variableToXMLVariableDeclaration(vari))
+        case const: logic.Constant => toConstant(const)
       } foreach linkAtomic.getVariableOrConstant.add
 
 
-      val linkLiteral = if (condition.isPositive) linkAtomic else {
+      val linkLiteral = if (condition.isPositive) linkAtomic
+      else {
         val not = new Not
         not.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExists.add(linkAtomic)
         not

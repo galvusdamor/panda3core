@@ -81,7 +81,7 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
 
     // sub tasks
     val planStepToID: Map[PlanStep, Int] = plan.planStepWithoutInitGoal.zipWithIndex.toMap
-    planStepToID foreach { case (ps, tIdx) =>
+    planStepToID.toSeq sortBy { _._1.id } foreach { case (ps, tIdx) =>
       builder.append("\t" + (if (indentation) "\t" else "") + (if (problemMode) "(" else "") + ":tasks (task" + tIdx + " (" + toPDDLIdentifier(ps.schema.name))
       val taskUF = SymbolicUnionFind.constructVariableUnionFind(ps)
       val arguments = ps.arguments filter { taskUF.getRepresentative(_).isInstanceOf[Variable] } map unionFind.getRepresentative
@@ -90,7 +90,7 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
     }
 
     // add the ordering
-    val order = plan.orderingConstraints.minimalOrderingConstraints() filter { !_.containsAny(plan.init, plan.goal) }
+    val order = plan.orderingConstraints.minimalOrderingConstraints() filter { !_.containsAny(plan.init, plan.goal) } sortBy { o => o.before.id + plan.getFirstFreePlanStepID * o.after.id }
     if (order.nonEmpty) {
       builder.append("\t" + (if (indentation) "\t" else "") + (if (problemMode) "(" else "") + ":ordering (")
       order foreach { case oc@OrderingConstraint(before, after) =>
@@ -208,14 +208,14 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
       }
 
       val methodPrecondition = m match {
-        case SHOPDecompositionMethod(_,_,f ) => f
-        case _ => And[Formula](Nil)
+        case SHOPDecompositionMethod(_, _, f) => f
+        case _                                => And[Formula](Nil)
       }
 
       if (constraintConditions.nonEmpty || !methodPrecondition.isEmpty) {
         builder.append("\t\t:precondition (and\n")
         if (constraintConditions.nonEmpty) constraintConditions foreach { s => builder.append("\t\t\t" + s + "\n") }
-        if (!methodPrecondition.isEmpty) writeFormula(builder,methodPrecondition,"\t\t\t",planUF)
+        if (!methodPrecondition.isEmpty) writeFormula(builder, methodPrecondition, "\t\t\t", planUF)
         builder.append("\t\t)\n")
       }
 

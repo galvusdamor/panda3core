@@ -655,12 +655,12 @@
 	(:method method56
 		:parameters (?do_send_EMail_ViaEMail_WithSelection_variable6 - EMailAccount ?do_send_EMail_ViaEMail_variable2 - EMailAddress ?do_send_EMail_ViaEMail_variable5 - Contactable ?do_send_EMail_ViaEMail_variable6 - EMail)
 		:task (send_EMail ?do_send_EMail_ViaEMail_variable5 ?do_send_EMail_ViaEMail_variable6)
-		:tasks (task4 (press_EMail_NewEMail ?do_send_EMail_ViaEMail_WithSelection_variable6))
-		:tasks (task2 (enter_EMailAddress ?do_send_EMail_ViaEMail_variable5 ?do_send_EMail_ViaEMail_variable2))
-		:tasks (task3 (press_EMail_NewEMail_Send ?do_send_EMail_ViaEMail_variable5 ?do_send_EMail_ViaEMail_variable6))
 		:tasks (task0 (enterMode_EMail))
 		:tasks (task1 (select_EMail_EMailAccount ?do_send_EMail_ViaEMail_WithSelection_variable6))
-		:ordering ((task0 task1) (task1 task4) (task2 task3) (task4 task2))
+		:tasks (task2 (enter_EMailAddress ?do_send_EMail_ViaEMail_variable5 ?do_send_EMail_ViaEMail_variable2))
+		:tasks (task3 (press_EMail_NewEMail_Send ?do_send_EMail_ViaEMail_variable5 ?do_send_EMail_ViaEMail_variable6))
+		:tasks (task4 (press_EMail_NewEMail ?do_send_EMail_ViaEMail_WithSelection_variable6))
+		:ordering ((task0 task1) (task4 task2) (task2 task3) (task1 task4))
 	)
 
 	(:method method57
@@ -687,11 +687,11 @@
 	(:method method60
 		:parameters (?do_send_EMail_ViaFavourites_variable10 - EMail ?do_send_EMail_ViaFavourites_variable2 - EMailAccount ?do_send_EMail_ViaFavourites_variable3 - Contact ?do_send_EMail_ViaFavourites_variable4 - Contactable)
 		:task (send_EMail ?do_send_EMail_ViaFavourites_variable4 ?do_send_EMail_ViaFavourites_variable10)
-		:tasks (task2 (select_People_FavouriteSelected_EMail ?do_send_EMail_ViaFavourites_variable3 ?do_send_EMail_ViaFavourites_variable4))
-		:tasks (task4 (press_EMail_NewEMail_Send ?do_send_EMail_ViaFavourites_variable4 ?do_send_EMail_ViaFavourites_variable10))
-		:tasks (task1 (select_People_Favourite ?do_send_EMail_ViaFavourites_variable3 ?do_send_EMail_ViaFavourites_variable4))
 		:tasks (task0 (enterMode_People))
+		:tasks (task1 (select_People_Favourite ?do_send_EMail_ViaFavourites_variable3 ?do_send_EMail_ViaFavourites_variable4))
+		:tasks (task2 (select_People_FavouriteSelected_EMail ?do_send_EMail_ViaFavourites_variable3 ?do_send_EMail_ViaFavourites_variable4))
 		:tasks (task3 (select_AccountSelection_Account ?do_send_EMail_ViaFavourites_variable2))
+		:tasks (task4 (press_EMail_NewEMail_Send ?do_send_EMail_ViaFavourites_variable4 ?do_send_EMail_ViaFavourites_variable10))
 		:ordering ((task0 task1) (task1 task2) (task2 task3) (task3 task4))
 	)
 
