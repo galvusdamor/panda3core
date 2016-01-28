@@ -53,7 +53,7 @@ object DecomposePlanStep {
                                                                                                                                                   method
                                                                                                                                                     .isInstanceOf[SimpleDecompositionMethod],
                                                                                                                                                   "The planner cannot yet handle non-simple" +
-                                                                                                                                                    " decomposition methods");
+                                                                                                                                                    " decomposition methods")
     apply(plan, decomposedPS, method.asInstanceOf[SimpleDecompositionMethod])
   }
 

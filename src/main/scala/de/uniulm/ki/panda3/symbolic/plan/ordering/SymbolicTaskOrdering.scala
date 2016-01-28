@@ -2,13 +2,14 @@ package de.uniulm.ki.panda3.symbolic.plan.ordering
 
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
+import de.uniulm.ki.util.HashMemo
 
 /**
  *
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], tasks: Seq[PlanStep]) extends TaskOrdering {
+case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], tasks: Seq[PlanStep]) extends TaskOrdering with HashMemo{
 
   import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering._
 
