@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.symbolic.csp
 
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, Sort, Value, Variable}
+import de.uniulm.ki.util.HashMemo
 
 import scala.collection.immutable.HashSet
 import scala.collection.mutable
@@ -16,7 +17,7 @@ import scala.collection.mutable
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends CSP {
+case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends CSP with HashMemo{
 
   // holds equivalent variables
   private val unionFind      : SymbolicUnionFind                            = new SymbolicUnionFind

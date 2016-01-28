@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.symbolic.logic
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp.CSP
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
+import de.uniulm.ki.util.HashMemo
 
 /**
  * Represents variables of a [[CSP]].
@@ -10,7 +11,7 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class Variable(id: Int, name: String, sort: Sort) extends Value with PrettyPrintable {
+case class Variable(id: Int, name: String, sort: Sort) extends Value with PrettyPrintable with HashMemo{
   /** the map must contain EVERY sort of the domain, even if does not change */
   override def update(domainUpdate: DomainUpdate): Variable = Variable(id, name, sort.update(domainUpdate))
 
