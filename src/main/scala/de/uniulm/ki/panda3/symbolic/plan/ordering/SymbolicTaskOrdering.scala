@@ -2,24 +2,29 @@ package de.uniulm.ki.panda3.symbolic.plan.ordering
 
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
-import de.uniulm.ki.util.HashMemo
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
-case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], tasks: Seq[PlanStep]) extends TaskOrdering with HashMemo{
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
+case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], tasks: Seq[PlanStep]) extends TaskOrdering {
 
   import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering._
 
 
-  private lazy val arrangemetnIndexToPlanStep: Map[Int, PlanStep] = tasks.zipWithIndex.map(_.swap).toMap
-  private val numberOfTasks = tasks.length
-  private val innerArrangement: Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
-  private val planStepToArrangementIndex: Map[PlanStep, Int] = tasks.zipWithIndex.toMap
+  private lazy val arrangemetnIndexToPlanStep  : Array[PlanStep] = tasks.toArray
+  private      val numberOfTasks                                    = tasks.length
+  private      val innerArrangement            : Array[Array[Byte]] = Array.fill(numberOfTasks, numberOfTasks)(DONTKNOW)
+  private      val planStepIDToArrangementIndex: Array[Int]         = {
+    val array = new Array[Int]((tasks map { _.id }).max + 1)
+    tasks.zipWithIndex foreach { case (ps, i) => array(ps.id) = i }
+    array
+  }
+
+  //private val planStepToArrangementIndex: Map[PlanStep, Int] = tasks.zipWithIndex.toMap
   private var isTransitiveHullComputed: Boolean = false
-  private var computedInconsistent = false
+  private var computedInconsistent              = false
 
   override def isConsistent: Boolean = {
     ensureTransitiveHull()
@@ -28,9 +33,9 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   }
 
   override def tryCompare(x: PlanStep, y: PlanStep): Option[Int] = {
-    arrangement()(planStepToArrangementIndex(x))(planStepToArrangementIndex(y)) match {
+    arrangement()(planStepIDToArrangementIndex(x.id))(planStepIDToArrangementIndex(y.id)) match {
       case DONTKNOW => None
-      case i => Some(i)
+      case i        => Some(i)
     }
   }
 
@@ -45,19 +50,19 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   def removePlanStep(ps: PlanStep): TaskOrdering =
     if (!(tasks contains ps)) this
     else {
-      val keptOrderingConstraints = originalOrderingConstraints filterNot {_ contains ps}
+      val keptOrderingConstraints = originalOrderingConstraints filterNot { _ contains ps }
       val newConstraintsForTransitivity =
         for (before <- originalOrderingConstraints collect { case OrderingConstraint(b, `ps`) => b }; after <- originalOrderingConstraints collect { case OrderingConstraint(`ps`, a) => a
         }) yield OrderingConstraint(before, after)
 
-      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(keptOrderingConstraints ++ newConstraintsForTransitivity, tasks filterNot {_ == ps})
+      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(keptOrderingConstraints ++ newConstraintsForTransitivity, tasks filterNot { _ == ps })
 
 
       if (isTransitiveHullComputed) {
         // remove the plan step from the arrangement
-        val newArrangement = innerArrangement.zipWithIndex filterNot {_._2 == planStepToArrangementIndex(ps)} map {_._1} map { a => a.zipWithIndex filterNot {
-          _._2 == planStepToArrangementIndex(ps)
-        } map {_._1}
+        val newArrangement = innerArrangement.zipWithIndex filterNot { _._2 == planStepIDToArrangementIndex(ps.id) } map { _._1 } map { a => a.zipWithIndex filterNot {
+          _._2 == planStepIDToArrangementIndex(ps.id)
+        } map { _._1 }
         }
         // run the init, it won't do anything
         newOrdering.initialiseExplicitly(0, 0, newArrangement)
@@ -70,8 +75,8 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
   def replacePlanStep(psOld: PlanStep, psNew: PlanStep): SymbolicTaskOrdering =
     if (!(tasks contains psOld)) this
     else {
-      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints map {_.update(ExchangePlanStep(psOld, psNew))},
-        tasks map { case ps => if (ps == psOld) psNew else ps })
+      val newOrdering: SymbolicTaskOrdering = new SymbolicTaskOrdering(originalOrderingConstraints map { _.update(ExchangePlanStep(psOld, psNew)) },
+                                                                       tasks map { case ps => if (ps == psOld) psNew else ps })
 
       // if this ordering was already initialised let the new one know what we did so far
       if (isTransitiveHullComputed)
@@ -107,9 +112,9 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     }
 
   /**
-   * Initialises the task ordering with a given, previously computed arrangement.
-   * Use this function only, if you know exactly what you are doing
-   */
+    * Initialises the task ordering with a given, previously computed arrangement.
+    * Use this function only, if you know exactly what you are doing
+    */
   def initialiseExplicitly(lastKOrderingsAreNew: Int = originalOrderingConstraints.length, lastKTasksAreNew: Int = numberOfTasks,
                            prevArrangement: Array[Array[Byte]] = Array.ofDim(0, 0)): Unit = {
     // init the current arrangement with the old one
@@ -117,8 +122,8 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
     // update the arrangement
     Range(originalOrderingConstraints.length - lastKOrderingsAreNew, originalOrderingConstraints.length).foreach(i => {
 
-      val beforeID = planStepToArrangementIndex(originalOrderingConstraints(i).before)
-      val afterID = planStepToArrangementIndex(originalOrderingConstraints(i).after)
+      val beforeID = planStepIDToArrangementIndex(originalOrderingConstraints(i).before.id)
+      val afterID = planStepIDToArrangementIndex(originalOrderingConstraints(i).after.id)
 
       if (innerArrangement(beforeID)(afterID) == AFTER) computedInconsistent = true
       if (innerArrangement(beforeID)(afterID) == SAME) computedInconsistent = true
@@ -132,8 +137,8 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
 
       // run bellman-ford for new edges
       for (newEdge <- originalOrderingConstraints.length - lastKOrderingsAreNew until originalOrderingConstraints.length; from <- innerArrangement.indices) {
-        val beforeID = planStepToArrangementIndex(originalOrderingConstraints(newEdge).before)
-        val afterID = planStepToArrangementIndex(originalOrderingConstraints(newEdge).after)
+        val beforeID = planStepIDToArrangementIndex(originalOrderingConstraints(newEdge).before.id)
+        val afterID = planStepIDToArrangementIndex(originalOrderingConstraints(newEdge).after.id)
 
         val edgeTypeFromNew = innerArrangement(from)(beforeID)
         if (edgeTypeFromNew != DONTKNOW)
@@ -143,7 +148,7 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
               case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) =>
                 innerArrangement(from)(to) = BEFORE
                 innerArrangement(to)(from) = AFTER
-              case (_, _) => ()
+              case (_, _)                                             => ()
             }
           }
       }
@@ -152,9 +157,9 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
       for (middle <- numberOfTasks - lastKTasksAreNew until numberOfTasks; from <- innerArrangement.indices)
         if (innerArrangement(from)(middle) != DONTKNOW) for (to <- innerArrangement.indices)
           (innerArrangement(from)(middle), innerArrangement(middle)(to)) match {
-            case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME) => innerArrangement(from)(to) = AFTER
+            case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME)     => innerArrangement(from)(to) = AFTER
             case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) => innerArrangement(from)(to) = BEFORE
-            case (_, _) => ()
+            case (_, _)                                             => ()
           }
 
       // check for inconsistency
@@ -176,27 +181,28 @@ case class SymbolicTaskOrdering(originalOrderingConstraints: Seq[OrderingConstra
           for (to <- ord.indices)
             if (from != middle && to != middle && from != to)
               (ord(from)(middle), ord(middle)(to)) match {
-                case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME) => ord(from)(to) = DONTKNOW
+                case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME)     => ord(from)(to) = DONTKNOW
                 case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) => ord(from)(to) = DONTKNOW
-                case (_, _) => ()
+                case (_, _)                                             => ()
               }
 
       val allPairs = for (from <- ord.indices; to <- from + 1 until ord.length) yield (from, to)
 
 
       allPairs collect { case (x, y) if ord(x)(y) == AFTER => OrderingConstraint(arrangemetnIndexToPlanStep(y), arrangemetnIndexToPlanStep(x))
-      case (x, y) if ord(x)(y) == BEFORE => OrderingConstraint(arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
+      case (x, y) if ord(x)(y) == BEFORE                   => OrderingConstraint(arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
       }
     }
   }
 
   private def readOrderingConstraintsFromArrangement(arrangement: Array[Array[Byte]]): Seq[OrderingConstraint] =
     (arrangement.indices flatMap { case x => (x + 1) until arrangement.length map ((x, _)) }) collect { case (x, y) if arrangement(x)(y) == BEFORE => OrderingConstraint(
-      arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
+                                                                                                                                                                          arrangemetnIndexToPlanStep(x),
+                                                                                                                                                                          arrangemetnIndexToPlanStep(y))
     }
 
   override def update(domainUpdate: DomainUpdate): SymbolicTaskOrdering = domainUpdate match {
     case ExchangePlanStep(oldPS, newPS) => replacePlanStep(oldPS, newPS)
-    case _                              => SymbolicTaskOrdering(originalOrderingConstraints map {_.update(domainUpdate)}, tasks map {_.update(domainUpdate)})
+    case _                              => SymbolicTaskOrdering(originalOrderingConstraints map { _.update(domainUpdate) }, tasks map { _.update(domainUpdate) })
   }
 }
