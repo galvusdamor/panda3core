@@ -11,6 +11,7 @@ import org.scalatest.FlatSpec
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
+// scalastyle:off magic.number
 class SymbolicOrderingTest extends FlatSpec {
 
   def getOrdering(i: Int, j: Int): OrderingConstraint = OrderingConstraint(getPlanStep(i), getPlanStep(j))

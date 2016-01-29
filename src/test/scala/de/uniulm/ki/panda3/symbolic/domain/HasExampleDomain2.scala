@@ -5,6 +5,7 @@ import de.uniulm.ki.panda3.symbolic.logic.{And, Literal, Predicate}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+// scalastyle:off magic.number
 trait HasExampleDomain2 extends HasExampleDomain1 {
 
   // predicates

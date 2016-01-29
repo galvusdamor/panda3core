@@ -8,6 +8,7 @@ import org.scalatest.FlatSpec
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
+// scalastyle:off magic.number
 class AbstractPlanStepTest extends FlatSpec with HasExampleProblem3 {
 
   "Finding all decompositions for an abstract plan step" must "be possible" in {

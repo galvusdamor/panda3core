@@ -20,6 +20,7 @@ import de.uniulm.ki.panda3.symbolic.plan.{Plan, SymbolicPlan}
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+// scalastyle:off magic.number
 trait HasExampleDomain3 extends HasExampleDomain2 {
 
   val abstractTask1: ReducedTask = ReducedTask("abstractTask_1", isPrimitive = false, variableSort1(7) :: Nil, Nil,

@@ -13,6 +13,7 @@ import org.scalatest.FlatSpec
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
+// scalastyle:off magic.number
 class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
 
   val planstep0init = PlanStep(0, init, instance_variableSort1(1) :: Nil)
@@ -24,7 +25,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps).addOrdering(planstep0init, planstep1goal),
                                            SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2)), Nil), planstep0init, planstep1goal)
     // it should be possible to solve the plan
-    assert(plan1.isSolvable == None)
+    assert(plan1.isSolvable.isEmpty)
 
 
     val plan1flaws = plan1.flaws

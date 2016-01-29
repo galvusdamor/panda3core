@@ -9,6 +9,7 @@ import org.scalatest.FlatSpec
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
+// scalastyle:off magic.number
 class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExampleProblem4 {
 
 

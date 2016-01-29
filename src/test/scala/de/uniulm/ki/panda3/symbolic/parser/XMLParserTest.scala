@@ -11,6 +11,7 @@ import org.scalatest.FlatSpec
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+// scalastyle:off magic.number
 class XMLParserTest extends FlatSpec {
 
 

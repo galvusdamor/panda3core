@@ -10,6 +10,7 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
+// scalastyle:off magic.number
 trait HasExampleProblem4 extends HasExampleDomain4 {
 
   val psInit2 = PlanStep(0, init4, instance_variableSort1(1) :: Nil)

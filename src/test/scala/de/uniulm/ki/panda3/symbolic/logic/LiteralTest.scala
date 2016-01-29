@@ -10,6 +10,7 @@ import scala.collection.immutable.HashSet
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
+// scalastyle:off magic.number
 class LiteralTest extends FlatSpec {
 
   val sort1: Sort = Sort("sort1", Vector() :+ Constant("a") :+ Constant("b") :+ Constant("c"), Nil)

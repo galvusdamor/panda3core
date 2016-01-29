@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.symbolic.logic._
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+// scalastyle:off magic.number
 trait HasExampleDomain1 {
 
   // sorts

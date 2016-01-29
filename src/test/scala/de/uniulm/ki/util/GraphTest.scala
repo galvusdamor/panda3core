@@ -7,6 +7,7 @@ import org.scalatest.FlatSpec
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
+// scalastyle:off magic.number
 class GraphTest extends FlatSpec {
 
   val edges = (0, 1) ::(1, 2) ::(2, 0) ::(2, 3) ::(3, 4) ::(4, 5) ::(5, 3) :: Nil

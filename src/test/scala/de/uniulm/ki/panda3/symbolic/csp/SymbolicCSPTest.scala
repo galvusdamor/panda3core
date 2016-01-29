@@ -4,10 +4,11 @@ import de.uniulm.ki.panda3.symbolic.logic.{Constant, Sort, Variable}
 import org.scalatest.FlatSpec
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
+// scalastyle:off magic.number
 class SymbolicCSPTest extends FlatSpec {
 
   val ca = Constant("a")
@@ -33,22 +34,22 @@ class SymbolicCSPTest extends FlatSpec {
 
   "CSP" must "support equal constraints on variables" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v1, v2), Equal(v1, v2) :: Nil)
-    assert(csp1.isSolvable != Some(false))
+    assert(!csp1.isSolvable.contains(false))
     assert(csp1.getRepresentative(v1) == csp1.getRepresentative(v2))
   }
 
   it must "support equal constraints on variables and constants and infer transitivity" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v1, v2), Equal(v1, v2) :: Equal(v1, ca) :: Nil)
-    assert(csp1.isSolvable != Some(false))
+    assert(!csp1.isSolvable.contains(false))
     assert(csp1.getRepresentative(v1) == csp1.getRepresentative(v2))
     assert(csp1.getRepresentative(v2) == ca)
-    assert(csp1.areCompatible(v2, ca) == Some(true))
-    assert(csp1.areCompatible(ca, v2) == Some(true))
+    assert(csp1.areCompatible(v2, ca).contains(true))
+    assert(csp1.areCompatible(ca, v2).contains(true))
   }
 
   it must "support absolute inference along unequal constraints" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v1, v2), NotEqual(v1, v2) :: Equal(v1, ca) :: Nil)
-    assert(csp1.isSolvable != Some(false))
+    assert(!csp1.isSolvable.contains(false))
     assert(csp1.getRepresentative(v1) != csp1.getRepresentative(v2))
     assert(csp1.getRepresentative(v1) == ca)
     assert(csp1.getRepresentative(v2) == cb)
@@ -56,7 +57,7 @@ class SymbolicCSPTest extends FlatSpec {
 
   it must "support partial inference along unequal constraints" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v3, v4), NotEqual(v3, v4) :: Equal(v3, cx) :: Nil)
-    assert(csp1.isSolvable != Some(false))
+    assert(!csp1.isSolvable.contains(false))
     assert(csp1.getRepresentative(v3) != csp1.getRepresentative(v4))
     assert(csp1.getRepresentative(v3) == cx)
     assert(csp1.getRepresentative(v4) == v4)
@@ -67,27 +68,27 @@ class SymbolicCSPTest extends FlatSpec {
 
   it must "support detect unsolvable situations" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v3, v4), NotEqual(v3, v4) :: Equal(v3, cx) :: Equal(v4, cx) :: Nil)
-    assert(csp1.areCompatible(v3, v4) == Some(false))
-    assert(csp1.isSolvable == Some(false))
+    assert(csp1.areCompatible(v3, v4).contains(false))
+    assert(csp1.isSolvable.contains(false))
 
     val csp2: SymbolicCSP = SymbolicCSP(Set(v1), Equal(v1, ca) :: OfSort(v1, sort1sub2) :: Nil)
-    assert(csp2.isSolvable == Some(false))
+    assert(csp2.isSolvable.contains(false))
 
     val csp3: SymbolicCSP = SymbolicCSP(Set(v1, v2), Equal(v1, ca) :: Equal(v2, cb) :: Equal(v1, v2) :: Nil)
-    assert(csp3.isSolvable == Some(false))
+    assert(csp3.isSolvable.contains(false))
   }
 
   it must "support detect unsolvable situations in advanced" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v3, v4, v5), Equal(v3, v4) :: Equal(v3, cx) :: Equal(v5, cy) :: Nil)
-    assert(csp1.isSolvable != Some(false))
+    assert(!csp1.isSolvable.contains(false))
     assert(csp1.getRepresentative(v4) == cx)
     assert(csp1.getRepresentative(v5) == cy)
-    assert(csp1.areCompatible(v4, v5) == Some(false))
+    assert(csp1.areCompatible(v4, v5).contains(false))
   }
 
   it must "support OfSort and infer" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v1, v2, v3, v4), OfSort(v1, sort1sub1) :: NotEqual(v2, v1) :: OfSort(v3, sort2sub2) :: Nil)
-    assert(csp1.isSolvable != Some(false))
+    assert(!csp1.isSolvable.contains(false))
     assert(csp1.getRepresentative(v1) == ca)
     assert(csp1.getRepresentative(v2) == cb)
     assert(csp1.reducedDomainOf(v3).forall(x => x == cy || x == cz))
@@ -95,13 +96,13 @@ class SymbolicCSPTest extends FlatSpec {
     assert(csp1.reducedDomainOf(v3) contains cz)
 
     val csp2: SymbolicCSP = SymbolicCSP(Set(v1), Equal(v1, ca) :: OfSort(v1, sort1sub1) :: Nil)
-    assert(csp2.isSolvable != Some(false))
+    assert(!csp2.isSolvable.contains(false))
     assert(csp2.getRepresentative(v1) == ca)
   }
 
   it must "support NotOfSort and infer" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v1, v2, v3, v4), NotOfSort(v1, sort1sub1) :: NotEqual(v2, v1) :: NotOfSort(v3, sort2sub1) :: NotOfSort(v4, sort2sub2) :: Nil)
-    assert(csp1.isSolvable != Some(false))
+    assert(!csp1.isSolvable.contains(false))
     assert(csp1.getRepresentative(v1) == cb)
     assert(csp1.getRepresentative(v2) == ca)
     assert(csp1.reducedDomainOf(v3).forall(x => x == cy || x == cz))
@@ -114,17 +115,17 @@ class SymbolicCSPTest extends FlatSpec {
 
   it must "allow adding constraints while keeping internal data structures" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v1), Nil)
-    assert(csp1.isSolvable != Some(false))
+    assert(!csp1.isSolvable.contains(false))
 
     val csp2: SymbolicCSP = csp1.addConstraint(Equal(v1, v2))
-    assert(csp2.isSolvable != Some(false))
+    assert(!csp2.isSolvable.contains(false))
     assert(csp2.getRepresentative(v1) == csp2.getRepresentative(v2))
     assert(csp2.reducedDomainOf(v1).forall(x => x == ca || x == cb))
     assert(csp2.reducedDomainOf(v1).contains(ca))
     assert(csp2.reducedDomainOf(v1).contains(cb))
 
     val csp3 = csp2.addConstraint(NotEqual(v4, v5))
-    assert(csp3.isSolvable != Some(false))
+    assert(!csp3.isSolvable.contains(false))
     assert(csp3.getRepresentative(v1) == csp3.getRepresentative(v2))
     assert(csp3.reducedDomainOf(v1).forall(x => x == ca || x == cb))
     assert(csp3.reducedDomainOf(v1).contains(ca))
@@ -137,43 +138,43 @@ class SymbolicCSPTest extends FlatSpec {
 
 
     val csp4 = csp3.addConstraint(NotOfSort(v4, Sort("temp", Vector() :+ cx, Nil)))
-    assert(csp4.isSolvable != Some(false))
+    assert(!csp4.isSolvable.contains(false))
     assert(csp4.reducedDomainOf(v4).forall(x => x == cy || x == cz))
     assert(csp4.reducedDomainOf(v4).contains(cy))
     assert(csp4.reducedDomainOf(v4).contains(cz))
 
     val csp5 = csp4.addConstraint(Equal(v5, cy))
-    assert(csp5.isSolvable != Some(false))
+    assert(!csp5.isSolvable.contains(false))
     assert(csp5.getRepresentative(v5) == cy)
     assert(csp5.getRepresentative(v4) == cz)
 
 
     val csp6 = csp5.addConstraint(Equal(v5, v6))
-    assert(csp6.isSolvable != Some(false))
+    assert(!csp6.isSolvable.contains(false))
     assert(csp6.getRepresentative(v5) == csp6.getRepresentative(v6))
 
     val csp7 = csp6.addConstraint(Equal(v1, ca)).addConstraint(NotEqual(v1, v2))
-    assert(csp7.isSolvable == Some(false))
+    assert(csp7.isSolvable.contains(false))
 
     val csp8 = csp6.addConstraint(NotEqual(v5, v1))
-    assert(csp8.isSolvable != Some(false))
+    assert(!csp8.isSolvable.contains(false))
 
     val csp9 = csp8.addConstraint(Equal(v6, v7)).addConstraint(Equal(v5, v7))
-    assert(csp9.isSolvable != Some(false))
+    assert(!csp9.isSolvable.contains(false))
     assert(csp9.getRepresentative(v5) == csp9.getRepresentative(v7))
   }
 
   it must "detect early aborts" in {
     val csp1 = SymbolicCSP(Set(), Nil).addConstraint(Equal(v1, ca)).addConstraint(Equal(v1, cb))
-    assert(csp1.reducedDomainOf(v1).size == 0)
+    assert(csp1.reducedDomainOf(v1).isEmpty)
   }
 
   "Finding solutions" must "work" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(), Nil).addConstraint(NotEqual(v1, v2))
 
-    assert(csp1.isSolvable != Some(false))
+    assert(!csp1.isSolvable.contains(false))
     csp1.solution match {
-      case None => assert(false) // it must have a solution
+      case None                                    => assert(false) // it must have a solution
       case Some(solution: Map[Variable, Constant]) =>
         assert(solution(v1) != solution(v2))
         assert(solution(v1) == ca || solution(v1) == cb)
@@ -183,20 +184,20 @@ class SymbolicCSPTest extends FlatSpec {
 
   "Unsolvable CSP" must "not have a solution" in {
     val csp1: SymbolicCSP = SymbolicCSP(Set(v3, v4), NotEqual(v3, v4) :: Equal(v3, cx) :: Equal(v4, cx) :: Nil)
-    assert(csp1.solution == None)
+    assert(csp1.solution.isEmpty)
   }
 
   "Checking compatibility" must "be possible" in {
     val csp: SymbolicCSP = SymbolicCSP(Set(v3, v4, v5), NotEqual(v4, cx) :: Nil)
 
-    assert(csp.areCompatible(v3, v4) == None)
-    assert(csp.areCompatible(v3, cx) == None)
-    assert(csp.areCompatible(cx, v3) == None)
-    assert(csp.areCompatible(v4, cx) == Some(false))
-    assert(csp.areCompatible(cx, v4) == Some(false))
+    assert(csp.areCompatible(v3, v4).isEmpty)
+    assert(csp.areCompatible(v3, cx).isEmpty)
+    assert(csp.areCompatible(cx, v3).isEmpty)
+    assert(csp.areCompatible(v4, cx).contains(false))
+    assert(csp.areCompatible(cx, v4).contains(false))
 
-    assert(csp.areCompatible(cx, cx) == Some(true))
-    assert(csp.areCompatible(cx, cy) == Some(false))
+    assert(csp.areCompatible(cx, cx).contains(true))
+    assert(csp.areCompatible(cx, cy).contains(false))
   }
 
   "Checking equality" must "be possible" in {
@@ -222,9 +223,9 @@ class SymbolicCSPTest extends FlatSpec {
     val csp = UnsolvableCSP
 
     assert(csp.reducedDomainOf(v1) == Nil)
-    assert(csp.areCompatible(v1, v2) == Some(false))
-    assert(csp.areCompatible(v1, v1) == Some(false))
-    assert(csp.solution == None)
+    assert(csp.areCompatible(v1, v2).contains(false))
+    assert(csp.areCompatible(v1, v1).contains(false))
+    assert(csp.solution.isEmpty)
 
     v1 :: v2 :: v3 :: v4 :: v5 :: Nil foreach { v => assert(csp.getRepresentative(v) == v) }
   }

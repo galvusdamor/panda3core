@@ -12,6 +12,7 @@ import org.scalatest.FlatSpec
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
+// scalastyle:off magic.number
 class MakeLiteralsUnUnifiableTest extends FlatSpec with HasExampleDomain2 {
   val psgoal = PlanStep(1, goal1, instance_variableSort1(2) :: Nil)
 

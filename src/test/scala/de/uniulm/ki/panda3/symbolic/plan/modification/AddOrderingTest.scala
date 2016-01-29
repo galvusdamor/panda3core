@@ -12,6 +12,7 @@ import org.scalatest.FlatSpec
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
+// scalastyle:off magic.number
 class AddOrderingTest extends FlatSpec with HasExampleDomain2 {
 
   val psinit = PlanStep(0, init, instance_variableSort1(1) :: Nil)
