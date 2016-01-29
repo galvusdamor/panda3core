@@ -41,12 +41,12 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
                 else isConsistent = false
               }
             }
-            to = to + 1
+            to += 1
           }
         }
-        from = from + 1
+        from += 1
       }
-      edge = edge + 1
+      edge += 1
     }
   }
 
@@ -95,9 +95,9 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
       var j = 0
       while (j < newOrdering.length) {
         newOrdering(i)(j) = orderingConstraints(i + (if (i >= ps) 1 else 0))(j + (if (j >= ps) 1 else 0))
-        j = j + 1
+        j += 1
       }
-      i = i + 1
+      i += 1
     }
     new EfficientOrdering(newOrdering, isConsistent)
   }
@@ -123,7 +123,7 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
       while (j < originalSize) {
         // copy the original matrix
         newOrdering(i)(j) = orderingConstraints(i)(j)
-        j = j + 1
+        j += 1
       }
       while (j < newOrdering.length) {
         // copy the original matrix
@@ -135,9 +135,9 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
             newOrdering(i)(j) = internalOrdering(indexBaseInNew)(indexOnNewOrdering)
           }
         } else newOrdering(i)(j) = DONTKNOW
-        j = j + 1
+        j += 1
       }
-      i = i + 1
+      i += 1
     }
     while (i < newOrdering.length) {
       newOrdering(i) = new Array[Byte](newOrdering.length)
@@ -160,9 +160,9 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
           // apply
           newOrdering(i)(j) = internalOrdering(iIndexOnNewOrdering)(jIndexOnNewOrdering)
         }
-        j = j + 1
+        j += 1
       }
-      i = i + 1
+      i += 1
     }
     new EfficientOrdering(newOrdering, isConsistent)
   }

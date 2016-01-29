@@ -7,6 +7,6 @@ package de.uniulm.ki.panda3.efficient.logic
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class EfficientLiteral(predicate : Int, isPositive : Boolean , parameterVariables : Array[Int]) {
+case class EfficientLiteral(predicate : Int, isPositive : Boolean , parameterVariables : Array[Int]) {
 
 }

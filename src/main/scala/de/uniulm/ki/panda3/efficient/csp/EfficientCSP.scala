@@ -23,6 +23,8 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
 
   assert(isCSPInternallyConsistent())
 
+  val numberOfVariables = remainingDomains.length
+
   /**
     * Determines whether the datastructures of this csp are consistent. There should be no need to call this function outside of tests
     */
