@@ -21,6 +21,9 @@ import scala.collection.mutable.ArrayBuffer
 class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStepParameters: Array[Array[Int]], variableConstraints: EfficientCSP, ordering: EfficientOrdering,
                     causalLinks: Array[EfficientCausalLink]) {
 
+  planStepTasks.indices foreach { ps => assert(domain.tasks(planStepTasks(ps)).parameterSorts.length == planStepParameters(ps).length) }
+
+
   /**
     * all abstract tasks of this plan
     */
@@ -80,14 +83,19 @@ class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStep
       while (planStepNumber < planStepTasks.length) {
         var effectNumber = 0
         val planStep = domain.tasks(planStepTasks(planStepNumber))
-        while (effectNumber < planStep.effect.length) {
-          val effect = planStep.effect(effectNumber)
-          if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
-            // check whether unification is possible
-            val mgu = variableConstraints.computeMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
-            if (mgu.isDefined) flawBuffer append EfficientCausalThreat(causalLink, planStepNumber, effectNumber, mgu.get)
+
+        // check whether it can be ore
+        if (!ordering.lt(planStepNumber, causalLink.producer) && !ordering.gt(causalLink.consumer, planStepNumber)) {
+
+          while (effectNumber < planStep.effect.length) {
+            val effect = planStep.effect(effectNumber)
+            if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
+              // check whether unification is possible
+              val mgu = variableConstraints.computeMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
+              if (mgu.isDefined) flawBuffer append EfficientCausalThreat(causalLink, planStepNumber, effectNumber, mgu.get)
+            }
+            effectNumber += 1
           }
-          effectNumber += 1
         }
         planStepNumber += 1
       }

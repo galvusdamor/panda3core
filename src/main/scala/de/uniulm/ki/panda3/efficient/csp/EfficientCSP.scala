@@ -19,7 +19,7 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[Int]] = Array(), unequal: Array[mutable.Set[Int]] = Array(),
-                   unionFind: EfficientUnionFind = new EfficientUnionFind(Array()), var potentiallyConsistent: Boolean) {
+                   unionFind: EfficientUnionFind = new EfficientUnionFind(Array()), var potentiallyConsistent: Boolean = true) {
 
   assert(isCSPInternallyConsistent())
 
@@ -313,12 +313,12 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
 
     var i = 0
     while (i < someVariables.length && possible) {
-      val x = otherVariables(i)
-      val y = someVariables(i)
+      val x = unionFind.getRepresentative(otherVariables(i))
+      val y = unionFind.getRepresentative(someVariables(i))
       val compatibility = csp.areCompatible(x, y)
 
       if (compatibility == EfficientCSP.INCOMPATIBLE) possible = false
-      else if (compatibility == EfficientCSP.INCOMPATIBLE) {
+      else if (compatibility == EfficientCSP.COMPATIBLE) {
         val constraint = VariableConstraint(VariableConstraint.EQUALVARIABLE, x, y)
         csp.addConstraint(constraint)
         mgu append constraint
