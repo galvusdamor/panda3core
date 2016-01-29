@@ -5,6 +5,8 @@ import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 import scala.collection.mutable
 import de.uniulm.ki.panda3.efficient._
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
   *
   * Assumptions
@@ -16,8 +18,8 @@ import de.uniulm.ki.panda3.efficient._
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[Int]] = Array(), unequal: Array[mutable.Set[Int]] = Array(), unionFind: Array[Int] = Array(), var
-potentiallyConsistent: Boolean) {
+class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[Int]] = Array(), unequal: Array[mutable.Set[Int]] = Array(),
+                   unionFind: EfficientUnionFind = new EfficientUnionFind(Array()), var potentiallyConsistent: Boolean) {
 
   assert(isCSPInternallyConsistent())
 
@@ -27,43 +29,43 @@ potentiallyConsistent: Boolean) {
   def isCSPInternallyConsistent(): Boolean = {
     var consistent = true
     consistent = consistent && (remainingDomains.length == unequal.length)
-    consistent = consistent && (unequal.length == unionFind.length)
+    consistent = consistent && (unequal.length == unionFind.parent.length)
 
     var i = 0
-    while (i < unionFind.length) {
-      if (unionFind(i) == i) {
+    while (i < unionFind.parent.length) {
+      if (unionFind.parent(i) == i) {
         consistent = consistent && remainingDomains(i).size > 1
         val j = unequal(i).iterator
         while (j.hasNext) {
           val unequalTo = j.next()
           if (unequalTo < 0)
             consistent = false
-          else consistent = consistent && (unionFind(unequalTo) == unequalTo)
+          else consistent = consistent && (unionFind.parent(unequalTo) == unequalTo)
         }
       }
-      i = i + 1
+      i += 1
     }
     consistent || !potentiallyConsistent
   }
 
-  def isRepresentativeAVariable(variable: Int): Boolean = getUnionFindRepresentative(variable) >= 0
+  def isRepresentativeAVariable(variable: Int): Boolean = unionFind.getRepresentative(variable) >= 0
 
-  def getRepresentativeVariable(variable: Int): Int = if (getUnionFindRepresentative(variable) >= 0) getUnionFindRepresentative(variable)
+  def getRepresentativeVariable(variable: Int): Int = if (unionFind.getRepresentative(variable) >= 0) unionFind.getRepresentative(variable)
   else throw new IllegalArgumentException("The variable " + variable + " is not bound to a variable")
 
-  def getRepresentativeConstant(variable: Int): Int = if (unionFind(variable) < 0) switchConstant(getUnionFindRepresentative(variable))
+  def getRepresentativeConstant(variable: Int): Int = if (unionFind.getRepresentative(variable) < 0) switchConstant(unionFind.getRepresentative(variable))
   else throw new IllegalArgumentException("The variable " + variable + " is not bound to a constant")
 
-  def getRemainingDomain(variable: Int): mutable.Set[Int] = if (getUnionFindRepresentative(variable) < 0) {
+  def getRemainingDomain(variable: Int): mutable.Set[Int] = if (unionFind.getRepresentative(variable) < 0) {
     val returnSet = new mutable.HashSet[Int]()
-    returnSet.add(switchConstant(getUnionFindRepresentative(variable)))
+    returnSet.add(switchConstant(unionFind.getRepresentative(variable)))
     returnSet
   } else {
-    switchSetOfConstants(remainingDomains(getUnionFindRepresentative(variable)))
+    switchSetOfConstants(remainingDomains(unionFind.getRepresentative(variable)))
   }
 
-  def getVariableUnequalTo(variable: Int): mutable.Set[Int] = if (getUnionFindRepresentative(variable) < 0) new mutable.HashSet[Int]()
-  else unequal(getUnionFindRepresentative(variable)).clone()
+  def getVariableUnequalTo(variable: Int): mutable.Set[Int] = if (unionFind.getRepresentative(variable) < 0) new mutable.HashSet[Int]()
+  else unequal(unionFind.getRepresentative(variable)).clone()
 
 
   /**
@@ -86,34 +88,31 @@ potentiallyConsistent: Boolean) {
     while (i < remainingDomains.length && potentiallyConsistent) {
       if (remainingDomains(i).isEmpty) potentiallyConsistent = false
       if (remainingDomains(i).size == 1) propagate(i)
-      i = i + 1
+      i += 1
     }
   }
 
-  private def copyAndAddNewVariables(sorts: Array[Int]): (Array[mutable.Set[Int]], Array[mutable.Set[Int]], Array[Int]) = {
+  private def copyAndAddNewVariables(sorts: Array[Int]): (Array[mutable.Set[Int]], Array[mutable.Set[Int]], EfficientUnionFind) = {
     val clonedDomains = new Array[mutable.Set[Int]](remainingDomains.length + sorts.length)
     val clonedUnequal = new Array[mutable.Set[Int]](remainingDomains.length + sorts.length)
-    val clonedUnionFind = new Array[Int](unionFind.length + sorts.length)
     var i = 0
     while (i < clonedDomains.length) {
       if (i < remainingDomains.length) {
         clonedDomains(i) = remainingDomains(i).clone()
         clonedUnequal(i) = unequal(i).clone()
-        clonedUnionFind(i) = unionFind(i)
       } else {
         clonedDomains(i) = mutable.HashSet[Int]()
         val constants: Array[Int] = domain.constantsOfSort(sorts(i - remainingDomains.length))
         var j = 0
         while (j < constants.length) {
           clonedDomains(i).add(switchConstant(constants(j)))
-          j = j + 1
+          j += 1
         }
         clonedUnequal(i) = mutable.HashSet[Int]()
-        clonedUnionFind(i) = i // init with itself
       }
-      i = i + 1
+      i += 1
     }
-    (clonedDomains, clonedUnequal, clonedUnionFind)
+    (clonedDomains, clonedUnequal, unionFind.addVariables(sorts.length))
   }
 
 
@@ -126,38 +125,17 @@ potentiallyConsistent: Boolean) {
     externalSet
   }
 
-  /**
-    * Returns the canonical representative inside the union find.
-    * The result will be negative if this is a constant
-    */
-  private def getUnionFindRepresentative(v: Int): Int = if (v < 0) v
-  else {
-    if (unionFind(v) == v) v
-    else {
-      val representative = getUnionFindRepresentative(unionFind(v))
-      unionFind(v) = representative
-      representative
-    }
-  }
-
   private def assertEqual(v1: Int, v2: Int): Boolean = {
-    val r1 = getUnionFindRepresentative(v1)
-    val r2 = getUnionFindRepresentative(v2)
+    val r1 = unionFind.getRepresentative(v1)
+    val r2 = unionFind.getRepresentative(v2)
 
     if (r1 == r2) true // already equal
     else if (r1 >= 0 || r2 >= 0) {
       // union is possible
-      var newRepresentative: Int = -1
-      var newRemoved: Int = -1
-      if (r1 >= 0) {
-        unionFind(r1) = r2
-        newRepresentative = r2
-        newRemoved = r1
-      } else {
-        unionFind(r2) = r1
-        newRepresentative = r1
-        newRemoved = r2
-      }
+      unionFind.assertEqual(r1, r2)
+
+      val newRepresentative: Int = unionFind.getRepresentative(r1)
+      val newRemoved: Int = if (r1 == newRepresentative) r2 else r1
 
       // if both were variables, we also have to update the unequals table
       if (newRepresentative >= 0 && newRemoved >= 0) {
@@ -223,7 +201,7 @@ potentiallyConsistent: Boolean) {
           if (remainingDomains(propagateTo).size == 1) newPropagations.add(propagateTo)
           if (remainingDomains(propagateTo).isEmpty) potentiallyConsistent = false
         }
-        i = i + 1
+        i += 1
       }
     }
     if (potentiallyConsistent && newPropagations.nonEmpty) propagate(newPropagations.toArray)
@@ -232,11 +210,11 @@ potentiallyConsistent: Boolean) {
   def addConstraint(constraint: VariableConstraint): Unit =
     if (constraint.constraintType == VariableConstraint.EQUALVARIABLE) {
       // variable  =  variable
-      val variableRepresentative = getUnionFindRepresentative(constraint.variable)
-      val otherRepresentative = getUnionFindRepresentative(constraint.other)
+      val variableRepresentative = unionFind.getRepresentative(constraint.variable)
+      val otherRepresentative = unionFind.getRepresentative(constraint.other)
       assertEqual(variableRepresentative, otherRepresentative)
       // check whether this assertion could have lead to a variable with only a unit domain
-      val chosenRepresentative = getUnionFindRepresentative(variableRepresentative)
+      val chosenRepresentative = unionFind.getRepresentative(variableRepresentative)
       if (chosenRepresentative >= 0) {
         if (remainingDomains(chosenRepresentative).size == 1)
           propagate(chosenRepresentative)
@@ -246,7 +224,7 @@ potentiallyConsistent: Boolean) {
       }
     } else if (constraint.constraintType == VariableConstraint.EQUALCONSTANT) {
       // variable  = constant
-      val variableRepresentative = getUnionFindRepresentative(constraint.variable)
+      val variableRepresentative = unionFind.getRepresentative(constraint.variable)
       val internalConstant = switchConstant(constraint.other)
       // if equal, we have already set this constraint
       if (variableRepresentative != internalConstant)
@@ -258,8 +236,8 @@ potentiallyConsistent: Boolean) {
           propagate(variableRepresentative)
         }
     } else if (constraint.constraintType == VariableConstraint.UNEQUALVARIABLE || constraint.constraintType == VariableConstraint.UNEQUALCONSTANT) {
-      val variableRepresentative = getUnionFindRepresentative(constraint.variable)
-      val otherRepresentative = if (constraint.constraintType == VariableConstraint.UNEQUALCONSTANT) switchConstant(constraint.other) else getUnionFindRepresentative(constraint.other)
+      val variableRepresentative = unionFind.getRepresentative(constraint.variable)
+      val otherRepresentative = if (constraint.constraintType == VariableConstraint.UNEQUALCONSTANT) switchConstant(constraint.other) else unionFind.getRepresentative(constraint.other)
 
       if (variableRepresentative == otherRepresentative) potentiallyConsistent = false
       else if (variableRepresentative >= 0 && otherRepresentative >= 0) {
@@ -277,7 +255,7 @@ potentiallyConsistent: Boolean) {
         if (remainingDomains(variable).size == 1) propagate(variable)
       }
     } else if (constraint.constraintType == VariableConstraint.OFSORT) {
-      val variableRepresentative = getUnionFindRepresentative(constraint.variable)
+      val variableRepresentative = unionFind.getRepresentative(constraint.variable)
 
       if (variableRepresentative < 0) {
         if (!domain.constantsOfSort(constraint.other).contains(switchConstant(variableRepresentative))) potentiallyConsistent = false
@@ -287,7 +265,7 @@ potentiallyConsistent: Boolean) {
         if (remainingDomains(variableRepresentative).size == 1) propagate(variableRepresentative)
       }
     } else if (constraint.constraintType == VariableConstraint.NOTOFSORT) {
-      val variableRepresentative = getUnionFindRepresentative(constraint.variable)
+      val variableRepresentative = unionFind.getRepresentative(constraint.variable)
 
       if (variableRepresentative < 0) {
         if (domain.constantsOfSort(constraint.other).contains(switchConstant(variableRepresentative))) potentiallyConsistent = false
@@ -296,10 +274,62 @@ potentiallyConsistent: Boolean) {
         val constantsInSort = domain.constantsOfSort(constraint.other)
         while (i < constantsInSort.length) {
           remainingDomains(variableRepresentative).remove(switchConstant(constantsInSort(i)))
-          i = i + 1
+          i += 1
         }
         if (remainingDomains(variableRepresentative).isEmpty) potentiallyConsistent = false
         if (remainingDomains(variableRepresentative).size == 1) propagate(variableRepresentative)
       }
     }
+
+  /** determines whether two values (variables or constants) could be set equal*/
+  def areCompatible(val1: Int, val2: Int): Int = {
+    val x = unionFind.getRepresentative(val1)
+    val y = unionFind.getRepresentative(val2)
+
+    if (x != y) {
+      if (x < 0 || y < 0) {
+        // at least one constant
+        if (x < 0 && y < 0) EfficientCSP.INCOMPATIBLE // both are _different_ constants
+        else {
+          val constant = if (x < 0) x else y
+          val variable = if (x < 0) y else x
+          if (!remainingDomains(variable).contains(constant)) EfficientCSP.INCOMPATIBLE else EfficientCSP.COMPATIBLE
+        }
+      } else {
+        // both are variables
+        if (unequal(x).contains(y)) EfficientCSP.INCOMPATIBLE else EfficientCSP.COMPATIBLE
+      }
+    } else EfficientCSP.EQUAL
+  }
+
+
+  def computeMGU(someVariables: Array[Int], otherVariables: Array[Int]): Option[Array[VariableConstraint]] = {
+    assert(someVariables.length == otherVariables.length)
+    var possible = true
+    val mgu = new ArrayBuffer[VariableConstraint]()
+    val csp = copy() // this takes memory, but else it would be a real pain
+
+    var i = 0
+    while (i < someVariables.length && possible) {
+      val x = otherVariables(i)
+      val y = someVariables(i)
+      val compatibility = csp.areCompatible(x, y)
+
+      if (compatibility == EfficientCSP.INCOMPATIBLE) possible = false
+      else if (compatibility == EfficientCSP.INCOMPATIBLE) {
+        val constraint = VariableConstraint(VariableConstraint.EQUALVARIABLE, x, y)
+        csp.addConstraint(constraint)
+        mgu append constraint
+      }
+      i += 1
+    }
+
+    if (!possible) None else Some(mgu.toArray)
+  }
+}
+
+object EfficientCSP {
+  val COMPATIBLE   = 0
+  val EQUAL        = 1
+  val INCOMPATIBLE = -1
 }
