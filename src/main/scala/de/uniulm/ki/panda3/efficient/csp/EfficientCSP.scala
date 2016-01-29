@@ -3,26 +3,27 @@ package de.uniulm.ki.panda3.efficient.csp
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 
 import scala.collection.mutable
+import de.uniulm.ki.panda3.efficient._
 
 /**
- *
- * Assumptions
- *
- * - all variables are numbered from 0..sz(remainingDomains)
- * - the union find will contain negative numbers for constants and will add 1 to every constant it encounters.
- * Normally the constants are numbered 0..k-1, here -1..-k
- * - this also holds (for simplicity) for the remaining domains values
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  * Assumptions
+  *
+  * - all variables are numbered from 0..sz(remainingDomains)
+  * - the union find will contain negative numbers for constants and will add 1 to every constant it encounters.
+  * Normally the constants are numbered 0..k-1, here -1..-k
+  * - this also holds (for simplicity) for the remaining domains values
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[Int]] = Array(), unequal: Array[mutable.Set[Int]] = Array(), unionFind: Array[Int] = Array(), var
 potentiallyConsistent: Boolean) {
 
   assert(isCSPInternallyConsistent())
 
   /**
-   * Determines whether the datastructures of this csp are consistent. There should be no need to call this function outside of tests
-   */
+    * Determines whether the datastructures of this csp are consistent. There should be no need to call this function outside of tests
+    */
   def isCSPInternallyConsistent(): Boolean = {
     var consistent = true
     consistent = consistent && (remainingDomains.length == unequal.length)
@@ -66,13 +67,13 @@ potentiallyConsistent: Boolean) {
 
 
   /**
-   * Deep clone this CSP.
-   */
+    * Deep clone this CSP.
+    */
   def copy(): EfficientCSP = addVariables(Array())
 
   /**
-   * Deep clone this CSP. The given arguments will be translated into new Variables of the sorts given as parameters
-   */
+    * Deep clone this CSP. The given arguments will be translated into new Variables of the sorts given as parameters
+    */
   def addVariables(sortsOfNewVariables: Array[Int]): EfficientCSP = {
     val copies = copyAndAddNewVariables(sortsOfNewVariables)
     val csp = new EfficientCSP(domain, copies._1, copies._2, copies._3, potentiallyConsistent)
@@ -83,7 +84,7 @@ potentiallyConsistent: Boolean) {
   private def propagateNewVariablesIfSingleton(lastKVariablesAreNew: Int): Unit = {
     var i = remainingDomains.length - lastKVariablesAreNew
     while (i < remainingDomains.length && potentiallyConsistent) {
-      if (remainingDomains(i).size == 0) potentiallyConsistent = false
+      if (remainingDomains(i).isEmpty) potentiallyConsistent = false
       if (remainingDomains(i).size == 1) propagate(i)
       i = i + 1
     }
@@ -115,7 +116,6 @@ potentiallyConsistent: Boolean) {
     (clonedDomains, clonedUnequal, clonedUnionFind)
   }
 
-  private def switchConstant(c: Int): Int = (-c) - 1
 
   private def switchSetOfConstants(constants: mutable.Set[Int]): mutable.Set[Int] = {
     val externalSet: mutable.Set[Int] = new mutable.HashSet[Int]()
@@ -127,9 +127,9 @@ potentiallyConsistent: Boolean) {
   }
 
   /**
-   * Returns the canonical representative inside the union find.
-   * The result will be negative if this is a constant
-   */
+    * Returns the canonical representative inside the union find.
+    * The result will be negative if this is a constant
+    */
   private def getUnionFindRepresentative(v: Int): Int = if (v < 0) v
   else {
     if (unionFind(v) == v) v
@@ -173,7 +173,7 @@ potentiallyConsistent: Boolean) {
           }
           // changed the remaining domains in the way it should result in them setting them equal
           remainingDomains(newRepresentative) = remainingDomains(newRepresentative) & remainingDomains(newRemoved)
-          if (remainingDomains(newRepresentative).size >= 1) true else false
+          if (remainingDomains(newRepresentative).nonEmpty) true else false
         }
       } else {
         // newRemoved was the variable and newRepresentative a constant
@@ -204,7 +204,8 @@ potentiallyConsistent: Boolean) {
     while (i < toPropagate.length && potentiallyConsistent) {
       // maybe this one is already bad
       assert(remainingDomains(toPropagate(i)).size <= 1)
-      if (remainingDomains(toPropagate(i)).size == 0) potentiallyConsistent = false else {
+      if (remainingDomains(toPropagate(i)).isEmpty) potentiallyConsistent = false
+      else {
 
         // the value to which the variable has been set
         val unitValue = remainingDomains(toPropagate(i)).head
@@ -220,12 +221,12 @@ potentiallyConsistent: Boolean) {
           // remove the unit from the domain
           remainingDomains(propagateTo).remove(unitValue)
           if (remainingDomains(propagateTo).size == 1) newPropagations.add(propagateTo)
-          if (remainingDomains(propagateTo).size == 0) potentiallyConsistent = false
+          if (remainingDomains(propagateTo).isEmpty) potentiallyConsistent = false
         }
         i = i + 1
       }
     }
-    if (potentiallyConsistent && newPropagations.size != 0) propagate(newPropagations.toArray)
+    if (potentiallyConsistent && newPropagations.nonEmpty) propagate(newPropagations.toArray)
   }
 
   def addConstraint(constraint: VariableConstraint): Unit =
@@ -282,7 +283,7 @@ potentiallyConsistent: Boolean) {
         if (!domain.constantsOfSort(constraint.other).contains(switchConstant(variableRepresentative))) potentiallyConsistent = false
       } else {
         remainingDomains(variableRepresentative) = remainingDomains(variableRepresentative) & switchSetOfConstants(mutable.Set[Int](domain.constantsOfSort(constraint.other): _*))
-        if (remainingDomains(variableRepresentative).size == 0) potentiallyConsistent = false
+        if (remainingDomains(variableRepresentative).isEmpty) potentiallyConsistent = false
         if (remainingDomains(variableRepresentative).size == 1) propagate(variableRepresentative)
       }
     } else if (constraint.constraintType == VariableConstraint.NOTOFSORT) {
@@ -297,7 +298,7 @@ potentiallyConsistent: Boolean) {
           remainingDomains(variableRepresentative).remove(switchConstant(constantsInSort(i)))
           i = i + 1
         }
-        if (remainingDomains(variableRepresentative).size == 0) potentiallyConsistent = false
+        if (remainingDomains(variableRepresentative).isEmpty) potentiallyConsistent = false
         if (remainingDomains(variableRepresentative).size == 1) propagate(variableRepresentative)
       }
     }

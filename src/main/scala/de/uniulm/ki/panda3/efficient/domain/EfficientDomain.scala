@@ -4,13 +4,16 @@ package de.uniulm.ki.panda3.efficient.domain
   *
   * Assumptions:
   *
-  * - Sorts are numbered 0..sz(subSortsForSort)
+  * - Sorts are numbered 0..sz(subSortsForSort)-1
   * - Constants are numbered
-  * - Predicates are numbered 0..sz(predicates) and the contents of that array are the predicates parameters
+  * - Predicates are numbered 0..sz(predicates)-1 and the contents of that array are the predicates parameters
+  * - Tasks are numbered 0..sz(tasks)-1
+  * - the list of tasks _must_ include all task schemes for init and goal tasks throughout the domain
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientDomain(subSortsForSort: Array[Array[Int]], sortsOfConstant: Array[Array[Int]], predicates: Array[Array[Int]]) {
+case class EfficientDomain(subSortsForSort: Array[Array[Int]], sortsOfConstant: Array[Array[Int]], predicates: Array[Array[Int]], tasks : Array[EfficientTask], decompositionMethods :
+Array[EfficientDecompositionMethod]) {
 
   val constantsOfSort: Array[Array[Int]] = {
     val ret: Array[Array[Int]] = new Array[Array[Int]](subSortsForSort.length)
@@ -24,4 +27,7 @@ case class EfficientDomain(subSortsForSort: Array[Array[Int]], sortsOfConstant: 
     }
     ret
   }
+
+  // contains for each task an array containing all decomposition methods that can be applied to that task
+  val taskToPossibleMethods : Map[Int,Array[EfficientDecompositionMethod]] = (tasks.indices map { i => i -> (decompositionMethods.toSeq  filter {_.abstractTask == i}).toArray}).toMap
 }

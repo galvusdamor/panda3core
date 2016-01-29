@@ -9,13 +9,14 @@ import org.scalatest.FlatSpec
 import scala.io.Source
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
+// scalastyle:off magic.number
 class EfficientCSPTest extends FlatSpec {
 
-  val domain = EfficientDomain(Array(Array(), Array(), Array(), Array()), sortsOfConstant = Array(Array(0, 2), Array(0, 2), Array(0, 1), Array(1, 3)), Array())
+  val domain = EfficientDomain(Array(Array(), Array(), Array(), Array()), sortsOfConstant = Array(Array(0, 2), Array(0, 2), Array(0, 1), Array(1, 3)), Array(), Array(), Array())
 
 
   def assignSingleVariableToValue(): EfficientCSP = {
@@ -114,7 +115,7 @@ class EfficientCSPTest extends FlatSpec {
     assert(csp.getVariableUnequalTo(0).contains(1))
     assert(csp.getVariableUnequalTo(1).size == 1)
     assert(csp.getVariableUnequalTo(1).contains(0))
-    assert(csp.getVariableUnequalTo(2).size == 0)
+    assert(csp.getVariableUnequalTo(2).isEmpty)
   }
 
   it must "lead to the removal of possible values" in {
@@ -208,9 +209,9 @@ class EfficientCSPTest extends FlatSpec {
     assert(!csp.potentiallyConsistent)
   }
 
-  val sudokuDomain = EfficientDomain(Array(Array()), Array(Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0)), Array())
+  val sudokuDomain = EfficientDomain(Array(Array()), Array(Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0)), Array(), Array(), Array())
 
-  def sudokuFToI(x: Int, y: Int) = 9 * x + y
+  def sudokuFToI(x: Int, y: Int): Int = 9 * x + y
 
   val sudokuCSP: EfficientCSP = {
     var buildCSP = new EfficientCSP(sudokuDomain, potentiallyConsistent = true)
@@ -235,7 +236,7 @@ class EfficientCSPTest extends FlatSpec {
   "Edge Consistency for Sudokus" must "be correct" in {
     val kakoDir = new File("src/test/resources/de/uniulm/ki/panda3/efficient/csp/sudokuEdgeConsistency")
     assert(kakoDir.isDirectory)
-    for (file <- kakoDir.listFiles() filter {_.getName.endsWith("in")}) {
+    for (file <- kakoDir.listFiles() filter { _.getName.endsWith("in") }) {
       val copyCSP = sudokuCSP.copy()
       val sc: Scanner = new Scanner(new FileInputStream(file))
       for (x <- Range(0, 9)) {
@@ -266,7 +267,7 @@ class EfficientCSPTest extends FlatSpec {
       val cspOutput: String = sb.toString()
       // get the correct string
       val inPath = file.getAbsolutePath
-      val correctString: String = Source.fromFile(inPath.substring(0,inPath.length-2) + "ans").mkString
+      val correctString: String = Source.fromFile(inPath.substring(0, inPath.length - 2) + "ans").mkString
       assert(correctString == cspOutput)
     }
   }
@@ -299,7 +300,7 @@ class EfficientCSPTest extends FlatSpec {
   "Sudokus" must "must be solved correctly" in {
     val kakoDir = new File("src/test/resources/de/uniulm/ki/panda3/efficient/csp/sudokuSolution")
     assert(kakoDir.isDirectory)
-    for (file <- kakoDir.listFiles() filter {_.getName.endsWith("in")}) {
+    for (file <- kakoDir.listFiles() filter { _.getName.endsWith("in") }) {
       val copyCSP = sudokuCSP.copy()
       val sc: Scanner = new Scanner(new FileInputStream(file))
       for (x <- Range(0, 9)) {
@@ -320,7 +321,7 @@ class EfficientCSPTest extends FlatSpec {
       for (x <- Range(0, 9)) {
         for (y <- Range(0, 9)) {
           val possibleValues = solution.getRemainingDomain(sudokuFToI(x, y)).toArray
-          assert(possibleValues.size == 1)
+          assert(possibleValues.length == 1)
           sb.append(possibleValues.head + 1)
         }
         sb.append("\n")
@@ -328,7 +329,7 @@ class EfficientCSPTest extends FlatSpec {
       val cspOutput: String = sb.toString()
       // get the correct string
       val inPath = file.getAbsolutePath
-      val correctString: String = Source.fromFile(inPath.substring(0,inPath.length-2) + "ans").mkString
+      val correctString: String = Source.fromFile(inPath.substring(0, inPath.length - 2) + "ans").mkString
       assert(correctString == cspOutput)
     }
   }
