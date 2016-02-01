@@ -44,7 +44,8 @@ class EfficientPlanTest extends FlatSpec {
   ordering.addOrderingConstraint(3, 4)
   ordering.addOrderingConstraint(5, 3)
   val causalLink = EfficientCausalLink(3, 4, 0, 0)
-  val plan       = new EfficientPlan(domain, Array(0, 1, 4, 2, 3, 4, 4), Array(Array(), Array(), Array(0, 2), Array(1), Array(3), Array(4, 4), Array(5, 5)), csp, ordering, Array(causalLink))
+  val plan       = new EfficientPlan(domain, Array(0, 1, 4, 2, 3, 4, 4, 4), Array(Array(), Array(), Array(0, 2), Array(1), Array(3), Array(4, 4), Array(5, 5),Array(5, 5)),
+                                     Array(-1, -1, -1, -1, -1, -1, -1, 1), Array(-1, -1, -1, -1, -1, -1, -1, -1), csp, ordering, Array(causalLink))
 
   "Detecting Open Preconditions" must "yield all of them" in {
     val openPrecondition = plan.openPreconditions

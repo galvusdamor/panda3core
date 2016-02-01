@@ -12,16 +12,23 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * This is the efficient representation of a plan. Its implementation uses the following assumptions:
   * - its plansteps are numbered 0..sz(planStepTasks)-1 and have the type denoted by the entry in that array
+  * - any planstep i for which the value planStepDecomposedByMethod(i) is not -1 is not part of the plan any more
+  * - plansteps without a parent in the plan's decomposition tree (i.e. plansteps of the initial plan) hava their parent set to -1
   * - the ith subarray of planStepParameters contains the parameters of the ith task
   * - similar to the CSP and to literals, constants are stored in their negative representation (see [[de.uniulm.ki.panda3.efficient.switchConstant]])
   * - init and goal are assumed to be the plan steps indexed 0 and 1 respectively
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStepParameters: Array[Array[Int]], variableConstraints: EfficientCSP, ordering: EfficientOrdering,
-                    causalLinks: Array[EfficientCausalLink]) {
+class EfficientPlan(val domain: EfficientDomain, val planStepTasks: Array[Int], val planStepParameters: Array[Array[Int]], val planStepDecomposedByMethod: Array[Int],
+                    val planStepParentInDecompositonTree: Array[Int], val variableConstraints: EfficientCSP, val ordering: EfficientOrdering, val causalLinks: Array[EfficientCausalLink]) {
 
-  planStepTasks.indices foreach { ps => assert(domain.tasks(planStepTasks(ps)).parameterSorts.length == planStepParameters(ps).length) }
+  assert(planStepTasks.length == planStepParameters.length)
+  assert(planStepTasks.length == planStepDecomposedByMethod.length)
+  assert(planStepTasks.length == planStepParentInDecompositonTree.length)
+  planStepTasks.indices foreach {
+    ps => assert(domain.tasks(planStepTasks(ps)).parameterSorts.length == planStepParameters(ps).length)
+  }
 
 
   /**
@@ -31,7 +38,7 @@ class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStep
     var i = 2 // init and goal are never abstract
     val flawBuffer = new ArrayBuffer[EfficientAbstractPlanStep]()
     while (i < planStepTasks.length) {
-      if (!domain.tasks(planStepTasks(i)).isPrimitive) {
+      if (planStepDecomposedByMethod(i) == -1 && !domain.tasks(planStepTasks(i)).isPrimitive) {
         flawBuffer append new EfficientAbstractPlanStep(this, i)
       }
       i += 1
@@ -45,20 +52,22 @@ class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStep
     val flawBuffer = new ArrayBuffer[EfficientOpenPrecondition]()
     var planStep = 1
     while (planStep < planStepTasks.length) {
-      var precondition = 0
-      while (precondition < domain.tasks(planStepTasks(planStep)).precondition.length) {
-        // check for a causal link
-        var causalLink = 0
-        var foundSupporter = false
-        while (causalLink < causalLinks.length) {
-          // checking whether this is the correct causal-link
-          if (causalLinks(causalLink).consumer == planStep && causalLinks(causalLink).conditionIndexOfConsuer == precondition) foundSupporter = true
-          causalLink += 1
+      if (planStepDecomposedByMethod(planStep) == -1) {
+        var precondition = 0
+        while (precondition < domain.tasks(planStepTasks(planStep)).precondition.length) {
+          // check for a causal link
+          var causalLink = 0
+          var foundSupporter = false
+          while (causalLink < causalLinks.length) {
+            // checking whether this is the correct causal-link
+            if (causalLinks(causalLink).consumer == planStep && causalLinks(causalLink).conditionIndexOfConsuer == precondition) foundSupporter = true
+            causalLink += 1
+          }
+
+          if (!foundSupporter) flawBuffer append new EfficientOpenPrecondition(planStep, precondition)
+
+          precondition += 1
         }
-
-        if (!foundSupporter) flawBuffer append new EfficientOpenPrecondition(planStep, precondition)
-
-        precondition += 1
       }
       planStep += 1
     }
@@ -81,20 +90,22 @@ class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStep
 
       var planStepNumber = 2 // init an goal can nether threat a link
       while (planStepNumber < planStepTasks.length) {
-        var effectNumber = 0
-        val planStep = domain.tasks(planStepTasks(planStepNumber))
+        if (planStepDecomposedByMethod(planStepNumber) == -1) {
+          var effectNumber = 0
+          val planStep = domain.tasks(planStepTasks(planStepNumber))
 
-        // check whether it can be ore
-        if (!ordering.lt(planStepNumber, causalLink.producer) && !ordering.gt(causalLink.consumer, planStepNumber)) {
+          // check whether it can be ore
+          if (!ordering.lt(planStepNumber, causalLink.producer) && !ordering.gt(causalLink.consumer, planStepNumber)) {
 
-          while (effectNumber < planStep.effect.length) {
-            val effect = planStep.effect(effectNumber)
-            if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
-              // check whether unification is possible
-              val mgu = variableConstraints.computeMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
-              if (mgu.isDefined) flawBuffer append EfficientCausalThreat(causalLink, planStepNumber, effectNumber, mgu.get)
+            while (effectNumber < planStep.effect.length) {
+              val effect = planStep.effect(effectNumber)
+              if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
+                // check whether unification is possible
+                val mgu = variableConstraints.computeMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
+                if (mgu.isDefined) flawBuffer append EfficientCausalThreat(causalLink, planStepNumber, effectNumber, mgu.get)
+              }
+              effectNumber += 1
             }
-            effectNumber += 1
           }
         }
         planStepNumber += 1
