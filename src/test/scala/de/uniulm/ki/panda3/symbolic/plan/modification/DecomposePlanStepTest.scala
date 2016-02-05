@@ -5,10 +5,10 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import org.scalatest.FlatSpec
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 // scalastyle:off magic.number
 class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExampleProblem4 {
 
@@ -16,25 +16,36 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExa
   // returns the single added plan step
   def checkAbstractTaskDecompositionBasic(decomposition: DecomposePlanStep): PlanStep = {
     // check whether the decomposition looks as expected
-    assert(decomposition.addedPlanSteps.size == 1)
+    assert(decomposition.addedPlanSteps.size == 2)
     val addedPlanStep = decomposition.addedPlanSteps.head
+    val replacedPlanStep = decomposition.addedPlanSteps(1)
+    // the new planstep
     assert(addedPlanStep.schema == task1)
     assert(addedPlanStep.arguments.size == task1.parameters.size) // i.e. 1
+    assert(addedPlanStep.parentInDecompositionTree contains replacedPlanStep)
+
+    // the "dead" instance of the old one
+    assert(replacedPlanStep.schema == abstractTask1)
+    assert(replacedPlanStep.arguments.size == abstractTask1.parameters.size)
+    assert(replacedPlanStep.decomposedByMethod contains decomposition.originalDecompositionMethod)
 
     assert(decomposition.removedPlanSteps.size == 1)
     assert(decomposition.removedPlanSteps.head.schema == abstractTask1)
 
     // check the ordering
-    assert(decomposition.addedOrderingConstraints.size == 2)
+    assert(decomposition.addedOrderingConstraints.size == 4)
     assert(decomposition.addedOrderingConstraints.contains(OrderingConstraint(psInit1, addedPlanStep)))
     assert(decomposition.addedOrderingConstraints.contains(OrderingConstraint(addedPlanStep, psGoal1)))
+    assert(decomposition.addedOrderingConstraints.contains(OrderingConstraint(psInit1, replacedPlanStep)))
+    assert(decomposition.addedOrderingConstraints.contains(OrderingConstraint(replacedPlanStep, psGoal1)))
+
 
     // nothing else should have been touched, except maybe causal links
-    assert(decomposition.addedVariables.size == 0)
-    assert(decomposition.removedVariables.size == 0)
+    assert(decomposition.addedVariables.isEmpty)
+    assert(decomposition.removedVariables.isEmpty)
 
-    assert(decomposition.addedVariableConstraints.size == 0)
-    assert(decomposition.removedVariableConstraints.size == 0)
+    assert(decomposition.addedVariableConstraints.isEmpty)
+    assert(decomposition.removedVariableConstraints.isEmpty)
 
     // return
     addedPlanStep
@@ -50,8 +61,8 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExa
 
     checkAbstractTaskDecompositionBasic(decomposition)
 
-    assert(decomposition.addedCausalLinks.size == 0)
-    assert(decomposition.removedCausalLinks.size == 0)
+    assert(decomposition.addedCausalLinks.isEmpty)
+    assert(decomposition.removedCausalLinks.isEmpty)
 
   }
 
@@ -62,11 +73,11 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExa
     val decomposedPlan = plan1WithoutCausalLinks.modify(decomposition)
 
     assert(decomposedPlan.planSteps.size == 3)
-    val newTaskOption = decomposedPlan.planSteps.find {_.schema == task1}
-    assert(newTaskOption != None)
+    val newTaskOption = decomposedPlan.planSteps.find { _.schema == task1 }
+    assert(newTaskOption.isDefined)
     val newTask = newTaskOption.get
 
-    assert(decomposedPlan.variableConstraints.variables.forall {_.name.contains("instance")})
+    assert(decomposedPlan.variableConstraints.variables.forall { _.name.contains("instance") })
     assert(decomposedPlan.variableConstraints.variables == plan1WithoutCausalLinks.variableConstraints.variables)
     assert(decomposedPlan.orderingConstraints.lt(psInit1, newTask))
     assert(decomposedPlan.orderingConstraints.lt(newTask, psGoal1))
@@ -90,10 +101,10 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExa
 
   it must "prohibit decomposition if not inherited" in {
     val possibleDecompositionsNone: Seq[DecomposePlanStep] = DecomposePlanStep(plan1WithoutCausalLinks, psAbstract1, decompositionMethod2)
-    assert(possibleDecompositionsNone.size == 0)
+    assert(possibleDecompositionsNone.isEmpty)
 
     val possibleDecompositionsOne: Seq[DecomposePlanStep] = DecomposePlanStep(plan1WithOneCausalLinks, psAbstract1, decompositionMethod2)
-    assert(possibleDecompositionsOne.size == 0)
+    assert(possibleDecompositionsOne.isEmpty)
   }
 
   "Not provided causal links" must "be inherited" in {
@@ -122,9 +133,9 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExa
     val possibleDecompositionsNone: Seq[DecomposePlanStep] = DecomposePlanStep(plan2WithOneLink, psAbstract2, decompositionMethod3)
     assert(possibleDecompositionsNone.size == 2)
 
-    assert(possibleDecompositionsNone forall {_.addedCausalLinks.size == 1})
-    assert(possibleDecompositionsNone forall {_.addedVariables.size == 4})
-    assert(possibleDecompositionsNone forall {_.addedPlanSteps.size == 4})
+    assert(possibleDecompositionsNone forall { _.addedCausalLinks.size == 1 })
+    assert(possibleDecompositionsNone forall { _.addedVariables.size == 4 })
+    assert(possibleDecompositionsNone forall { _.addedPlanSteps.size == 5 }) // 4 + the original one
     assert(possibleDecompositionsNone exists { ps => val cl = ps.addedCausalLinks.head; cl.producer == psInit2 && cl.consumer.schema.isPrimitive })
     assert(possibleDecompositionsNone exists { ps => val cl = ps.addedCausalLinks.head; cl.producer == psInit2 && !cl.consumer.schema.isPrimitive })
   }
@@ -134,14 +145,14 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExa
     val possibleDecompositionsNone: Seq[DecomposePlanStep] = DecomposePlanStep(plan2WithTwoLinks, psAbstract2, decompositionMethod3)
     assert(possibleDecompositionsNone.size == 4)
 
-    assert(possibleDecompositionsNone forall {_.addedCausalLinks.size == 2})
-    assert(possibleDecompositionsNone forall {_.addedVariables.size == 4})
-    assert(possibleDecompositionsNone forall {_.addedPlanSteps.size == 4})
-    assert(possibleDecompositionsNone forall { d => val cls = d.addedCausalLinks.partition {_.condition.predicate == predicate1}; cls._1.size == 1 && cls._2.size == 1 })
-    assert(possibleDecompositionsNone forall {_.addedCausalLinks forall {_.producer == psInit2}})
+    assert(possibleDecompositionsNone forall { _.addedCausalLinks.size == 2 })
+    assert(possibleDecompositionsNone forall { _.addedVariables.size == 4 })
+    assert(possibleDecompositionsNone forall { _.addedPlanSteps.size == 5 }) // 4 + the original one
+    assert(possibleDecompositionsNone forall { d => val cls = d.addedCausalLinks.partition { _.condition.predicate == predicate1 }; cls._1.size == 1 && cls._2.size == 1 })
+    assert(possibleDecompositionsNone forall { _.addedCausalLinks forall { _.producer == psInit2 } })
 
     for (p1 <- true :: false :: Nil; p2 <- true :: false :: Nil)
-      assert(possibleDecompositionsNone exists { d => val cls = d.addedCausalLinks.partition {_.condition.predicate == predicate1}
+      assert(possibleDecompositionsNone exists { d => val cls = d.addedCausalLinks.partition { _.condition.predicate == predicate1 }
         cls._1.head.consumer.schema.isPrimitive == p1 && cls._2.head.consumer.schema.isPrimitive == p2
       })
   }
@@ -149,7 +160,7 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExa
   it must "be found if none is possible" in {
     val possibleDecompositions = DecomposePlanStep(plan2WithTwoLinks, psAbstract2, decompositionMethodEpsilon)
 
-    assert(possibleDecompositions.size == 0)
+    assert(possibleDecompositions.isEmpty)
   }
 
   "Epsilon methods" must "be handled correctly" in {
@@ -157,15 +168,20 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExa
 
     assert(possibleDecompositions.size == 1)
 
-    assert(possibleDecompositions forall {_.addedCausalLinks.size == 0})
-    assert(possibleDecompositions forall {_.addedPlanSteps.size == 0})
-    assert(possibleDecompositions forall {_.addedVariables.size == 0})
-    assert(possibleDecompositions forall {_.addedVariableConstraints.size == 0})
-    assert(possibleDecompositions forall {_.addedOrderingConstraints.size == 0})
-    assert(possibleDecompositions forall {_.removedCausalLinks.size == 0})
-    assert(possibleDecompositions forall {_.removedPlanSteps.size == 1})
-    assert(possibleDecompositions forall {_.removedOrderingConstraints.size == 0})
-    assert(possibleDecompositions forall {_.removedVariableConstraints.size == 0})
-    assert(possibleDecompositions forall {_.removedVariables.size == 0})
+    assert(possibleDecompositions forall { _.addedCausalLinks.isEmpty })
+    assert(possibleDecompositions forall { _.addedPlanSteps.size == 1 })
+    assert(possibleDecompositions forall { dec => dec.addedPlanSteps.head == dec.nonPresentDecomposedPS })
+    assert(possibleDecompositions forall { _.addedVariables.isEmpty })
+    assert(possibleDecompositions forall { _.addedVariableConstraints.isEmpty })
+    assert(possibleDecompositions forall { _.addedOrderingConstraints.size == 2 })
+    assert(possibleDecompositions forall { dec => dec.addedOrderingConstraints contains OrderingConstraint(plan2WithoutLink.init, dec.nonPresentDecomposedPS) })
+    assert(possibleDecompositions forall { dec => dec.addedOrderingConstraints contains OrderingConstraint(dec.nonPresentDecomposedPS, plan2WithoutLink.goal) })
+    assert(possibleDecompositions forall { _.removedCausalLinks.isEmpty })
+    assert(possibleDecompositions forall { _.removedPlanSteps.size == 1 })
+    assert(possibleDecompositions forall { _.removedOrderingConstraints.size == 2 })
+    assert(possibleDecompositions forall { dec => dec.removedOrderingConstraints contains OrderingConstraint(plan2WithoutLink.init, dec.decomposedPS) })
+    assert(possibleDecompositions forall { dec => dec.removedOrderingConstraints contains OrderingConstraint(dec.decomposedPS, plan2WithoutLink.goal) })
+    assert(possibleDecompositions forall { _.removedVariableConstraints.isEmpty })
+    assert(possibleDecompositions forall { _.removedVariables.isEmpty })
   }
 }

@@ -41,6 +41,8 @@ trait Plan extends DomainUpdatable with PrettyPrintable {
   lazy val getFirstFreePlanStepID: Int = 1 + (planSteps foldLeft 0) { case (m, ps: PlanStep) => math.max(m, ps.id) }
   lazy val getFirstFreeVariableID: Int = 1 + (variableConstraints.variables foldLeft 0) { case (m, v: Variable) => math.max(m, v.id) }
 
+  def planStepsAndRemovedPlanSteps : Seq[PlanStep]
+
   def planSteps: Seq[PlanStep]
 
   def causalLinks: Seq[CausalLink]
@@ -59,7 +61,8 @@ trait Plan extends DomainUpdatable with PrettyPrintable {
   def modify(modification: Modification): Plan
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod]]s. */
-  def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution[Variable] = Substitution[Variable](Nil, Nil)): (Plan, Substitution[Variable])
+  def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution[Variable] = Substitution[Variable](Nil, Nil), parentPlanStep: PlanStep): (Plan,
+    Substitution[Variable])
 
   override def update(domainUpdate: DomainUpdate): Plan
 

@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.plan.modification
 
+import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.{SimpleDecompositionMethod, DecompositionMethod, Domain}
 import de.uniulm.ki.panda3.symbolic.logic.Variable
@@ -11,8 +12,8 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class DecomposePlanStep(decomposedPS: PlanStep, newSubPlan: Plan, newVariableConstraints: Seq[VariableConstraint], inheritedCausalLinks: Seq[CausalLink],
-                             originalDecompositionMethod: DecompositionMethod, plan: Plan) extends Modification {
+case class DecomposePlanStep(decomposedPS: PlanStep, nonPresentDecomposedPS: PlanStep, newSubPlan: Plan, newVariableConstraints: Seq[VariableConstraint],
+                             inheritedCausalLinks: Seq[CausalLink], originalDecompositionMethod: DecompositionMethod, plan: Plan) extends Modification {
 
   // internal variables for convenience
   private val init = newSubPlan.init
@@ -30,13 +31,14 @@ case class DecomposePlanStep(decomposedPS: PlanStep, newSubPlan: Plan, newVariab
 
   override def nonInducedAddedOrderingConstraints: Seq[OrderingConstraint] = (newSubPlan.orderingConstraints.originalOrderingConstraints filter { case OrderingConstraint(b, a) =>
     b != init && b != goal && a != init && a != goal
-  }) ++ (plan.orderingConstraints.originalOrderingConstraints flatMap { case OrderingConstraint(p, `decomposedPS`) => addedPlanSteps map { OrderingConstraint(p, _) }
-  case OrderingConstraint(`decomposedPS`, p)                                                                       => addedPlanSteps map { OrderingConstraint(_, p) }
-  case _                                                                                                           => Nil
+  }) ++ (plan.orderingConstraints.originalOrderingConstraints flatMap {
+    case OrderingConstraint(p, `decomposedPS`) => addedPlanSteps map { OrderingConstraint(p, _) }
+    case OrderingConstraint(`decomposedPS`, p) => addedPlanSteps map { OrderingConstraint(_, p) }
+    case _                                     => Nil
   })
 
   // remove init and goal task of the subplan
-  override def addedPlanSteps: Seq[PlanStep] = newSubPlan.planSteps filter { p => p != init && p != goal }
+  override def addedPlanSteps: Seq[PlanStep] = (newSubPlan.planSteps filter { p => p != init && p != goal }) :+ nonPresentDecomposedPS
 
   override def addedCausalLinks: Seq[CausalLink] = (newSubPlan.causalLinks filter { case cl => !cl.containsOne(init, goal) }) ++ inheritedCausalLinks
 
@@ -45,28 +47,31 @@ case class DecomposePlanStep(decomposedPS: PlanStep, newSubPlan: Plan, newVariab
 
   // remove all causal links related to the plan step to be decomposed
   override def removedCausalLinks: Seq[CausalLink] = plan.causalLinks filter { case CausalLink(p, c, _) => p == decomposedPS || c == decomposedPS }
+
+  // remove all orderings to the decomposed planstep
+  override def removedOrderingConstraints: Seq[OrderingConstraint] = plan.orderingConstraints.originalOrderingConstraints filter { _.contains(nonPresentDecomposedPS) }
 }
 
 object DecomposePlanStep {
 
-  def apply(plan: Plan, decomposedPS: PlanStep, domain: Domain): Seq[DecomposePlanStep] = domain.decompositionMethods flatMap { method => assert(
-                                                                                                                                                  method
-                                                                                                                                                    .isInstanceOf[SimpleDecompositionMethod],
-                                                                                                                                                  "The planner cannot yet handle non-simple" +
-                                                                                                                                                    " decomposition methods")
+  def apply(plan: Plan, decomposedPS: PlanStep, domain: Domain): Seq[DecomposePlanStep] = domain.decompositionMethods flatMap { method =>
+    if (!method.isInstanceOf[SimpleDecompositionMethod]) noSupport(NONSIMPLEMETHOD)
     apply(plan, decomposedPS, method.asInstanceOf[SimpleDecompositionMethod])
   }
 
   def apply(currentPlan: Plan, decomposedPS: PlanStep, method: SimpleDecompositionMethod): Seq[DecomposePlanStep] =
     if (decomposedPS.schema != method.abstractTask) Nil
     else {
+      // create a new instance of the just decomposed planstep
+      val nonPresentDecomposedPS = PlanStep(decomposedPS.id, decomposedPS.schema, decomposedPS.arguments, Some(method), decomposedPS.parentInDecompositionTree)
+
       val firstFreePlanStepID = currentPlan.getFirstFreePlanStepID
       val firstFreeVariableID = currentPlan.getFirstFreeVariableID
 
       val decomposedAbstractTasksParameterSubstitution = Substitution(method.abstractTask.parameters, decomposedPS.arguments)
 
       // copy the plan to get new variable and plan step ids
-      val copyResult = method.subPlan.newInstance(firstFreePlanStepID, firstFreeVariableID, decomposedAbstractTasksParameterSubstitution)
+      val copyResult = method.subPlan.newInstance(firstFreePlanStepID, firstFreeVariableID, decomposedAbstractTasksParameterSubstitution, nonPresentDecomposedPS)
       val copiedPlan = copyResult._1
 
       // compute the first version of the CSP of the new plan
@@ -149,7 +154,7 @@ object DecomposePlanStep {
 
         generateAllPossibleInheritances(remainingLinksIngoing, remainingLinksOutgoing) map { case (links, _, linkConstraints) =>
           val causalLinks: Seq[CausalLink] = directlyInheritedLinksIngoing ++ directlyInheritedLinksOutgoing ++ links
-          DecomposePlanStep(decomposedPS, copiedPlan, linkConstraints, causalLinks, method, currentPlan)
+          DecomposePlanStep(decomposedPS, nonPresentDecomposedPS, copiedPlan, linkConstraints, causalLinks, method, currentPlan)
         }
       }
     }

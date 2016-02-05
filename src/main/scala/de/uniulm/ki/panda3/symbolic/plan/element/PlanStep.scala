@@ -16,9 +16,6 @@ import de.uniulm.ki.util.HashMemo
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable], decomposedByMethod: Option[DecompositionMethod], parentInDecompositionTree: Option[PlanStep])
   extends DomainUpdatable with PrettyPrintable {
 
-  // must always coincide
-  assert(parentInDecompositionTree.isDefined == decomposedByMethod.isDefined)
-
 
   override def equals(o: Any): Boolean = o match {
     case step: PlanStep => id == step.id
