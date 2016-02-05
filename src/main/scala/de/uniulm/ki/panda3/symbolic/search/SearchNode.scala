@@ -20,13 +20,19 @@ class SearchNode(nodePlan: Plan, nodeParent: SearchNode, nodeHeuristic: Double) 
   var dirty: Boolean = true
 
 
+  /** returns the current state of this search node*/
+  def searchState: SearchState = if (plan.flaws.isEmpty) SearchState.SOLUTION
+  else if (dirty) SearchState.INSEARCH
+  else if (modifications exists { _.isEmpty }) SearchState.DEADEND_UNRESOLVABLEFLAW
+  else SearchState.EXPLORED
+
   /** the flaw selected for refinement */
   var selectedFlaw : Int                    = -1
   /** the possible modifications for all flaws. The i-th list of modifications will be the list of possible resolvantes for the i-the flaw in the plan's flaw list. If one of the lists is
     * empty this is a dead-end node in the search space. */
   var modifications: Seq[Seq[Modification]] = Nil
   /** the successors based on the list of modifications. The pair (sn,i) indicates that the child sn was generated based on the modification modifications(selectedFlaw)(i) */
-  var children     : Seq[(SearchNode,Int)]        = Nil
+  var children     : Seq[(SearchNode, Int)] = Nil
   /** any possible further payload */
   var payload      : Any                    = null
 }
