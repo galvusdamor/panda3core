@@ -12,8 +12,6 @@ case class BiMap[A, B](toMap: Map[A, B], fromMap: Map[B, A]) {
 
 
   def apply(a: A): B = toMap(a)
-
-  def apply(b: B): A = fromMap(b)
 }
 
 object BiMap {
