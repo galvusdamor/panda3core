@@ -10,15 +10,18 @@ import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
+import de.uniulm.ki.panda3.symbolic.plan.{SymbolicPlan, Plan}
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
-import de.uniulm.ki.util.BiMap
+import de.uniulm.ki.util.{SimpleDirectedGraph, BiMap}
 
 /**
   * An explicit transformator between the inefficient symbolic part of panda3 and the efficient part thereof
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+//TODO: the sort of a variable might not exist at all, it might just be some temporary sort
+// -> add all sorts in the domain  (i.e. in tasks) and just "handle" them if they occur in plans
 case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
   private val domainConstants           : BiMap[Constant, Int]            = BiMap(symbolicDomain.constants.zipWithIndex)
@@ -126,7 +129,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
     domain.predicates = (domainPredicates.fromMap.toSeq.sortBy({ _._1 }) map { case (_, p) => (p.argumentSorts map { domainSorts(_) }).toArray }).toArray
 
-    domain.tasks = (domainTasks.fromMap.toSeq.sortBy({_._1}) map {case (_,t) => domainTasksObjects(t)}).toArray
+    domain.tasks = (domainTasks.fromMap.toSeq.sortBy({ _._1 }) map { case (_, t) => domainTasksObjects(t) }).toArray
 
     domain.decompositionMethods = (symbolicDomain.decompositionMethods map {
       case SimpleDecompositionMethod(task, subplan) => EfficientDecompositionMethod(domainTasks(task), computeEfficientPlan(subplan, domain, task.parameters))
@@ -138,15 +141,16 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
   def unwrap(constant: Constant): Int = domainConstants.toMap(constant)
 
-  def wrapConstant(constant: Int): Constant = domainConstants.fromMap(constant)
+  def wrapConstant(constant: Int): Constant = domainConstants.back(constant)
 
   def unwrap(sort: Sort): Int = domainSorts.toMap(sort)
 
-  def wrapSort(sort: Int): Sort = domainSorts.fromMap(sort)
+  def wrapSort(sort: Int): Sort = domainSorts.back(sort)
 
-  //def unwrap(plan: Plan): EfficientPlan = computeEfficientPlan(plan, efficientDomain, Nil)
+  def unwrap(method: DecompositionMethod): Int = domainDecompositionMethods(method)
 
-  //def wrap(plan: EfficientPlan): Plan = ???
+  def wrapDecompositionMethod(method: Int): DecompositionMethod = domainDecompositionMethods.back(method)
+
 
   /**
     * This will not work correctly if the plan is part of a decomposition method!!
@@ -170,4 +174,50 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   def unwrap(variableConstraint: VariableConstraint, plan: Plan): EfficientVariableConstraint = computeEfficientVariableConstraint(variableConstraint, { unwrap(_, plan) })
 
   def unwrap(plan: Plan): EfficientPlan = computeEfficientPlan(plan, efficientDomain, Nil)
+
+  def wrap(plan: EfficientPlan): Plan = {
+    val variables = plan.variableConstraints.variableSorts.zipWithIndex map {
+      case (sortIndex, variableIndex) => Variable(variableIndex, "variable_" + variableIndex, domainSorts.back(sortIndex))
+    }
+
+    val taskCreationGraph = SimpleDirectedGraph(plan.planStepTasks.indices, plan.planStepTasks.indices map { i => (plan.planStepParentInDecompositonTree(i), i) } collect {
+      case (a, b) if a != -1 => (a, b)
+    })
+
+    // plan steps -> has to be done this way (for with a fold) as we have to ensure that a parent was always already been computed
+    val planStepArray: Array[PlanStep] = new Array(plan.planStepTasks.length)
+    taskCreationGraph.topologicalOrdering.get foreach { psIndex =>
+      val arguments = plan.planStepParameters(psIndex) map { variables(_) }
+      val psDecomposedBy = plan.planStepDecomposedByMethod(psIndex)
+      val decomposedBy = if (psDecomposedBy != -1) Some(wrapDecompositionMethod(psDecomposedBy)) else None
+      val psParent = plan.planStepParentInDecompositonTree(psIndex)
+      val parent = if (psParent != -1) Some(planStepArray(psParent)) else None
+
+      planStepArray(psIndex) = PlanStep(psIndex, domainTasks.back(plan.planStepTasks(psIndex)), arguments, decomposedBy, parent)
+    }
+
+    // causal links
+    val causalLinks = plan.causalLinks map { case EfficientCausalLink(producer, consumer, producerEffectIndex, _) =>
+      CausalLink(planStepArray(producer), planStepArray(consumer), planStepArray(producer).substitutedEffects(producerEffectIndex))
+    }
+
+    // ordering constrints
+    val orderingConstraints =
+      plan.planStepTasks.indices flatMap { b => plan.planStepTasks.indices collect { case a if plan.ordering.lt(a, b) => OrderingConstraint(planStepArray(a), planStepArray(b)) } }
+    val ordering = new SymbolicTaskOrdering(orderingConstraints, planStepArray)
+
+    // construct the csp
+    val possibleValuesConstraints = variables.indices map { v =>
+      val possibleConstants = plan.variableConstraints.getRemainingDomain(v) map { domainConstants.back }
+      // this is extremely dirty, but probably the most efficient way to do it (the other option would be to find an enclosing sort and add the necessary amound of unequal constraints)
+      val tempSort = Sort("variable_" + v + "_sort", possibleConstants.toSeq, Nil)
+      OfSort(variables(v), tempSort)
+    }
+    val unequalConstraints = variables.indices flatMap { v => plan.variableConstraints.getVariableUnequalTo(v) map { w => NotEqual(variables(v), variables(w)) } }
+    val csp = new SymbolicCSP(variables.toSet, possibleValuesConstraints ++ unequalConstraints)
+
+
+    // and return the actual plan
+    SymbolicPlan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1))
+  }
 }

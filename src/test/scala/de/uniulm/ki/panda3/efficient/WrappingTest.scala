@@ -22,5 +22,10 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     val initialPlan = wrapper.unwrap(plan2WithTwoLinks)
   }
 
+  "Wrapping a plan" must "not crash" in {
+    val initialPlan = wrapper.unwrap(plan2WithTwoLinks)
+
+    val wrappedInitialPlan = wrapper.wrap(initialPlan)
+  }
 
 }

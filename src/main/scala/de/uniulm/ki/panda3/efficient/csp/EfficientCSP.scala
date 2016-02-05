@@ -19,7 +19,7 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[Int]] = Array(), unequal: Array[mutable.Set[Int]] = Array(),
-                   unionFind: EfficientUnionFind = new EfficientUnionFind(Array()), var potentiallyConsistent: Boolean = true) {
+                   unionFind: EfficientUnionFind = new EfficientUnionFind(Array()), val variableSorts: Array[Int] = Array(), var potentiallyConsistent: Boolean = true) {
 
   assert(isCSPInternallyConsistent())
 
@@ -80,7 +80,15 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
     */
   def addVariables(sortsOfNewVariables: Array[Int]): EfficientCSP = {
     val copies = copyAndAddNewVariables(sortsOfNewVariables)
-    val csp = new EfficientCSP(domain, copies._1, copies._2, copies._3, potentiallyConsistent)
+    val sortsOfVariables: Array[Int] = new Array(numberOfVariables + sortsOfNewVariables.length)
+    var i = 0
+    while (i < sortsOfNewVariables.length) {
+      if (i < numberOfVariables) sortsOfVariables(i) = variableSorts(i)
+      else sortsOfVariables(i) = sortsOfNewVariables(i - numberOfVariables)
+      i += 1
+    }
+
+    val csp = new EfficientCSP(domain, copies._1, copies._2, copies._3, sortsOfVariables, potentiallyConsistent)
     csp.propagateNewVariablesIfSingleton(sortsOfNewVariables.length)
     csp
   }
@@ -239,7 +247,8 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         }
     } else if (constraint.constraintType == EfficientVariableConstraint.UNEQUALVARIABLE || constraint.constraintType == EfficientVariableConstraint.UNEQUALCONSTANT) {
       val variableRepresentative = unionFind.getRepresentative(constraint.variable)
-      val otherRepresentative = if (constraint.constraintType == EfficientVariableConstraint.UNEQUALCONSTANT) switchConstant(constraint.other) else unionFind.getRepresentative(constraint.other)
+      val otherRepresentative = if (constraint.constraintType == EfficientVariableConstraint.UNEQUALCONSTANT) switchConstant(constraint.other)
+      else unionFind.getRepresentative(constraint.other)
 
       if (variableRepresentative == otherRepresentative) potentiallyConsistent = false
       else if (variableRepresentative >= 0 && otherRepresentative >= 0) {
@@ -283,7 +292,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
       }
     }
 
-  /** determines whether two values (variables or constants) could be set equal*/
+  /** determines whether two values (variables or constants) could be set equal */
   def areCompatible(val1: Int, val2: Int): Int = {
     val x = unionFind.getRepresentative(val1)
     val y = unionFind.getRepresentative(val2)
@@ -331,7 +340,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
 }
 
 object EfficientCSP {
-  val COMPATIBLE   = 0
-  val EQUAL        = 1
+  val COMPATIBLE = 0
+  val EQUAL = 1
   val INCOMPATIBLE = -1
 }
