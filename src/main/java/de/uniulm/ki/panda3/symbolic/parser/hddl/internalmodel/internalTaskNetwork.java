@@ -12,6 +12,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering;
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering;
+import scala.Option;
 import scala.collection.Seq;
 import scala.collection.immutable.Set;
 import scala.collection.immutable.Vector;
@@ -121,7 +122,7 @@ public class internalTaskNetwork {
 
                 String psName = psCtx.task_symbol().NAME().toString();
                 Task schema = parserUtil.taskByName(psName, tasks);
-                PlanStep ps = new PlanStep(i, schema, psVars.result());
+                PlanStep ps = new PlanStep(i, schema, psVars.result(), Option.apply(null), Option.apply(null));
                 if (psCtx.subtask_id() != null) {
                     String id = psCtx.subtask_id().NAME().toString();
                     idMap.put(id, ps);
@@ -150,8 +151,8 @@ public class internalTaskNetwork {
         ReducedTask goalSchema = new ReducedTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new
                 And<Literal>(new Vector<Literal>(0, 0, 0)));
 
-        PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters());
-        PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters());
+        PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters(), Option.apply(null), Option.apply(null));
+        PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters(), Option.apply(null), Option.apply(null));
         this.planStepBuilder.$plus$eq(psInit);
         this.planStepBuilder.$plus$eq(psGoal);
         Seq<PlanStep> ps = this.planSteps();

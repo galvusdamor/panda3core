@@ -30,7 +30,7 @@ object ClosedWorldAssumption extends DomainTransformer[Unit] {
       val variable = Variable(baseVarID + idx, "var_for_const_" + c.name, Sort("sort_for_const_" + c.name, c :: Nil, Nil))
       Equal(variable, c)
     }
-    val newVariables = newVariableConstraints map {_.left}
+    val newVariables = newVariableConstraints map { _.left }
 
     // build the const->var map
     val variablesForConstants: Map[Constant, Variable] = existstingVariablesForConstants ++ (newVariableConstraints map { case Equal(v, c) => c.asInstanceOf[Constant] -> v })
@@ -38,18 +38,18 @@ object ClosedWorldAssumption extends DomainTransformer[Unit] {
 
     // create the new initial plan step
     // build a set of all literals
-    val allLiterals: Seq[Literal] = domain.predicates flatMap {_.instantiate(domain, variablesForConstants)}
+    val allLiterals: Seq[Literal] = domain.predicates flatMap { _.instantiate(domain, variablesForConstants) }
 
     // remove all literals that already occur in the initial state
     val newCSP = plan.variableConstraints.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints))
     val notPredentLiterals = allLiterals filterNot { groundedLiteral => oldInit.substitutedEffects exists { initEffect => (groundedLiteral =?= initEffect) (newCSP) } }
-    val newEffects = notPredentLiterals map {_.negate}
+    val newEffects = notPredentLiterals map { _.negate }
 
 
     val newInitSchema: GeneralTask = GeneralTask(oldInit.schema.name, isPrimitive = true, oldInit.schema.parameters ++ newVariables,
                                                  oldInit.schema.parameterConstraints ++ newVariableConstraints, oldInit.schema.precondition,
                                                  And[Formula](newEffects :+ oldInit.schema.effect))
-    val newInit: PlanStep = PlanStep(oldInit.id, newInitSchema, oldInit.arguments ++ newVariables)
+    val newInit: PlanStep = PlanStep(oldInit.id, newInitSchema, oldInit.arguments ++ newVariables, oldInit.decomposedByMethod, oldInit.parentInDecompositionTree)
 
     (domain, plan.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints)).update(ExchangePlanStep(oldInit, newInit)))
   }

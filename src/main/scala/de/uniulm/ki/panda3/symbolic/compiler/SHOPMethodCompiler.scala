@@ -18,7 +18,7 @@ object SHOPMethodCompiler extends DomainTransformer[Unit] {
         // generate a new schema that represents the decomposition method
         val preconditionTaskSchema = GeneralTask("SHOP_method" + idx + "_precondition", isPrimitive = true, precondition.containedVariables.toSeq, Nil, precondition, new And[Formula](Nil))
         // instantiate
-        val preconditionPlanStep = new PlanStep(subPlan.getFirstFreePlanStepID, preconditionTaskSchema, preconditionTaskSchema.parameters)
+        val preconditionPlanStep = new PlanStep(subPlan.getFirstFreePlanStepID, preconditionTaskSchema, preconditionTaskSchema.parameters,None,None)
         // make this plan step the first actual task in the method
         val newOrdering = subPlan.orderingConstraints.addOrderings(OrderingConstraint.allAfter(preconditionPlanStep, subPlan.planStepWithoutInitGoal :+ subPlan.goal: _*))
           .addOrdering(subPlan.init, preconditionPlanStep)

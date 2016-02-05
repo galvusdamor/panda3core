@@ -15,13 +15,13 @@ import org.scalatest.FlatSpec
 // scalastyle:off magic.number
 class AddOrderingTest extends FlatSpec with HasExampleDomain2 {
 
-  val psinit = PlanStep(0, init, instance_variableSort1(1) :: Nil)
-  val psgoal = PlanStep(1, goal1, instance_variableSort1(1) :: Nil)
+  val psinit = PlanStep(0, init, instance_variableSort1(1) :: Nil, None,None)
+  val psgoal = PlanStep(1, goal1, instance_variableSort1(1) :: Nil, None,None)
 
 
   "Generating Ordering Modifications" must "be possible" in {
-    val ps2 = PlanStep(2, task1, instance_variableSort1(3) :: Nil)
-    val ps3 = PlanStep(3, task1, instance_variableSort1(4) :: Nil)
+    val ps2 = PlanStep(2, task1, instance_variableSort1(3) :: Nil, None,None)
+    val ps3 = PlanStep(3, task1, instance_variableSort1(4) :: Nil, None,None)
 
     val singleOrderingModification = AddOrdering(null, ps2, ps3)
 
@@ -38,8 +38,8 @@ class AddOrderingTest extends FlatSpec with HasExampleDomain2 {
       *
       *                   :ps3:-p(z),q(z)         q(y):goal
       */
-    val ps2 = PlanStep(2, task1, instance_variableSort1(2) :: Nil)
-    val ps3 = PlanStep(3, task2, instance_variableSort1(3) :: Nil)
+    val ps2 = PlanStep(2, task1, instance_variableSort1(2) :: Nil, None,None)
+    val ps3 = PlanStep(3, task2, instance_variableSort1(3) :: Nil, None,None)
     val cl = CausalLink(ps2, psgoal, psgoal.substitutedPreconditions.head)
 
 
@@ -63,8 +63,8 @@ class AddOrderingTest extends FlatSpec with HasExampleDomain2 {
      *
      *                   :ps3:-p(z),q(z)         q(y):goal
      */
-    val ps2 = PlanStep(2, task1, instance_variableSort1(2) :: Nil)
-    val ps3 = PlanStep(3, task2, instance_variableSort1(3) :: Nil)
+    val ps2 = PlanStep(2, task1, instance_variableSort1(2) :: Nil, None,None)
+    val ps3 = PlanStep(3, task2, instance_variableSort1(3) :: Nil, None,None)
     val cl = CausalLink(ps2, psgoal, psgoal.substitutedPreconditions.head)
 
 

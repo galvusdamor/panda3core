@@ -41,7 +41,7 @@ class SymbolicPlanTest extends FlatSpec {
                                                             Nil))
 
   "Computing open preconditions" must "be possible" in {
-    val plan1PlanSteps = PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: Nil
+    val plan1PlanSteps = PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil, None,None) :: Nil
     val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps), SymbolicCSP(Set(p_v1, p_v2), Nil), null, null)
 
     assert(plan1.allPreconditions.size == 1)
@@ -49,7 +49,7 @@ class SymbolicPlanTest extends FlatSpec {
   }
 
   "Computing open preconditions" must "not contain protected preconditions" in {
-    val plan1PlanSteps = PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil) :: PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil) :: Nil
+    val plan1PlanSteps = PlanStep(0, schemaCons, p_v1 :: p_v2 :: Nil, None,None) :: PlanStep(1, schemaCons, p_v2 :: p_v1 :: Nil, None,None) :: Nil
     val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, CausalLink(plan1PlanSteps(1), plan1PlanSteps.head, Literal(predicate1, isPositive = true, p_v1
       :: p_v2 :: Nil)) :: Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps), SymbolicCSP(Set(p_v1, p_v2), Nil), null, null)
 
@@ -60,9 +60,9 @@ class SymbolicPlanTest extends FlatSpec {
 
 
   "Computing causal threats" must "be possible" in {
-    val ps0 = PlanStep(0, schemaProd, p_v1 :: p_v2 :: Nil)
-    val ps1 = PlanStep(1, schemaCons, p_v1 :: p_v2 :: Nil)
-    val ps2 = PlanStep(2, schemaDestr, p_v3 :: p_v4 :: Nil)
+    val ps0 = PlanStep(0, schemaProd, p_v1 :: p_v2 :: Nil, None,None)
+    val ps1 = PlanStep(1, schemaCons, p_v1 :: p_v2 :: Nil, None,None)
+    val ps2 = PlanStep(2, schemaDestr, p_v3 :: p_v4 :: Nil, None,None)
     val plan1PlanSteps = ps0 :: ps1 :: ps2 :: Nil
     val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, CausalLink(ps0, ps1, Literal(predicate1, isPositive = true, p_v1 :: p_v2 :: Nil)) :: Nil,
                                            SymbolicTaskOrdering(Nil, plan1PlanSteps), SymbolicCSP(Set(p_v1, p_v2, p_v3, p_v4), Nil), null, null)

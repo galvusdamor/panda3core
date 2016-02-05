@@ -12,11 +12,11 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
  */
 // scalastyle:off magic.number
 trait HasExampleProblem3 extends HasExampleDomain3 {
-  val psInit1 = PlanStep(0, init, instance_variableSort1(1) :: Nil)
-  val psGoal1 = PlanStep(1, goal1, instance_variableSort1(1) :: Nil)
+  val psInit1 = PlanStep(0, init, instance_variableSort1(1) :: Nil, None,None)
+  val psGoal1 = PlanStep(1, goal1, instance_variableSort1(1) :: Nil, None,None)
 
 
-  val psAbstract1    = PlanStep(2, abstractTask1, instance_variableSort1(1) :: Nil)
+  val psAbstract1    = PlanStep(2, abstractTask1, instance_variableSort1(1) :: Nil, None,None)
   val planPlanSteps1 = psInit1 :: psGoal1 :: psAbstract1 :: Nil
 
   val causalLinkInitAbstract = CausalLink(psInit1, psAbstract1, psInit1.substitutedEffects.head)

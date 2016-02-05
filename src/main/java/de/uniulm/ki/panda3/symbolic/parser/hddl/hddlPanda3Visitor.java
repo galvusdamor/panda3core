@@ -14,6 +14,8 @@ import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import scala.None;
+import scala.Option;
 import scala.Tuple2;
 import scala.collection.Seq;
 import scala.collection.immutable.Vector;
@@ -43,10 +45,10 @@ public class hddlPanda3Visitor {
         Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms);
 
         Seq<Variable> initArguments = init.parameters();
-        PlanStep psInit = new PlanStep(0, init, initArguments);
+        PlanStep psInit = new PlanStep(0, init, initArguments, Option.apply(null), Option.apply(null));
 
         Seq<Variable> goalArguments = goal.parameters();
-        PlanStep psGoal = new PlanStep(1, goal, goalArguments);
+        PlanStep psGoal = new PlanStep(1, goal, goalArguments, Option.apply(null), Option.apply(null));
 
         // initial plan
         internalTaskNetwork tn = new internalTaskNetwork();
@@ -65,7 +67,7 @@ public class hddlPanda3Visitor {
             }
         }).get();
 
-        tn.addPlanStep(new PlanStep(2, schema, new Vector<Variable>(0, 0, 0)));
+        tn.addPlanStep(new PlanStep(2, schema, new Vector<Variable>(0, 0, 0), Option.apply(null), Option.apply(null)));
 
 //tn.readTaskNetwork(ctxProblem.p_htn().tasknetwork_def(),)
 

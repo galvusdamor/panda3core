@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.symbolic.plan
 import de.uniulm.ki.panda3.symbolic.csp.{CSP, Substitution, SymbolicCSP}
 import de.uniulm.ki.panda3.symbolic.domain.{GeneralTask, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.domain.updates._
+import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.logic.{Formula, And, Literal, Variable}
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw.{AbstractPlanStep, CausalThreat, OpenPrecondition, UnboundVariable}
@@ -12,6 +13,7 @@ import de.uniulm.ki.util.HashMemo
 
 /**
   * Simple implementation of a plan, based on symbols
+  *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering, parameterVariableConstraints: CSP, init: PlanStep, goal: PlanStep)
@@ -89,7 +91,10 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
     }
     val sub = Substitution(oldPlanVariables, newVariables)
 
-    val newPlanSteps = planSteps zip (firstFreePlanStepID until firstFreePlanStepID + planSteps.size) map { case (ps, id) => PlanStep(id, ps.schema, ps.arguments map sub)
+    val newPlanSteps = planSteps zip (firstFreePlanStepID until firstFreePlanStepID + planSteps.size) map { case (ps, id) =>
+      // TODO: if necessary implement this. We probably need to do topsort to so the instanciation in the correct order
+      if (ps.decomposedByMethod.isDefined) noSupport(REINSTANTIATINGPLANSINOUTSIDEMETHODS)
+      PlanStep(id, ps.schema, ps.arguments map sub, None, None)
     }
 
     def substitutePlanStep(oldPS: PlanStep) = newPlanSteps(planSteps.indexOf(oldPS))
@@ -97,10 +102,10 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
     val newInit = substitutePlanStep(init)
     val newGoal = substitutePlanStep(goal)
 
-    val newOrderingConstraints = SymbolicTaskOrdering(
-                                                       orderingConstraints.originalOrderingConstraints map { case OrderingConstraint(b, a) => OrderingConstraint(substitutePlanStep(b),
-                                                                                                                                                                 substitutePlanStep(a))
-                                                       }, newPlanSteps)
+    val newOrderingConstraints = SymbolicTaskOrdering(orderingConstraints.originalOrderingConstraints map {
+      case OrderingConstraint(b, a) => OrderingConstraint(substitutePlanStep(b), substitutePlanStep(a))
+    }, newPlanSteps)
+
     // transfer the computed arrangement, this has a side effect!!!!
     newOrderingConstraints.initialiseExplicitly(0, 0, orderingConstraints.arrangement())
 
@@ -127,12 +132,11 @@ case class SymbolicPlan(planSteps: Seq[PlanStep], causalLinks: Seq[CausalLink], 
         case general: GeneralTask =>
           GeneralTask(general.name, isPrimitive = true, general.parameters, general.parameterConstraints ++ constraints, general.precondition, And[Formula](literals :+ general.effect))
       }
-      val newInit = PlanStep(init.id, initTask, init.arguments)
+      val newInit = PlanStep(init.id, initTask, init.arguments, init.decomposedByMethod, init.parentInDecompositionTree)
       val exchange = ExchangePlanStep(init, newInit)
       SymbolicPlan(planSteps map { _ update exchange }, causalLinks map { _ update exchange }, orderingConstraints update exchange, variableConstraints, newInit, goal)
     case _                                              => SymbolicPlan(planSteps map { _.update(domainUpdate) }, causalLinks map { _.update(domainUpdate) },
                                                                         orderingConstraints.update(domainUpdate),
                                                                         variableConstraints.update(domainUpdate), init.update(domainUpdate), goal.update(domainUpdate))
   }
-
 }

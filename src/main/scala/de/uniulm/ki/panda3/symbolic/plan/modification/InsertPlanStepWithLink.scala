@@ -7,10 +7,10 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, PlanStep}
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 case class InsertPlanStepWithLink(planStep: PlanStep, causalLink: CausalLink, constraints: Seq[VariableConstraint], plan: Plan) extends Modification {
   override def addedPlanSteps: Seq[PlanStep] = planStep :: Nil
 
@@ -28,17 +28,18 @@ object InsertPlanStepWithLink {
     val firstFreeVariableID = plan.getFirstFreeVariableID
     val parameter = for (newVar <- schema.parameters zip (firstFreeVariableID until firstFreeVariableID + schema.parameters.size)) yield Variable(newVar._2, newVar._1.name, newVar._1.sort)
     val sub = Substitution(schema.parameters, parameter)
-    val newConstraints = schema.parameterConstraints map {c => c.substitute(sub)}
+    val newConstraints = schema.parameterConstraints map { c => c.substitute(sub) }
 
     // new plan step
-    val producer = PlanStep(plan.getFirstFreePlanStepID, schema, parameter)
+    val producer = PlanStep(plan.getFirstFreePlanStepID, schema, parameter, None, None)
     val link = CausalLink(producer, consumer, precondition)
 
     // new csp, for tight checking of possible causal links
     val extendedCSP = plan.variableConstraints.addVariables(parameter).addConstraints(newConstraints)
 
-    producer.substitutedEffects map {l => (l #?# precondition)(extendedCSP)} collect {case Some(mgu) => InsertPlanStepWithLink(producer, link, newConstraints ++ mgu, plan)}
+    producer.substitutedEffects map { l => (l #?# precondition) (extendedCSP) } collect { case Some(mgu) => InsertPlanStepWithLink(producer, link, newConstraints ++ mgu, plan) }
   }
 
-  def apply(plan: Plan, consumer: PlanStep, precondition: Literal, domain: Domain): Seq[InsertPlanStepWithLink] = domain.producersOf(precondition.predicate) flatMap {schema => apply(plan, schema, consumer, precondition)}
+  def apply(plan: Plan, consumer: PlanStep, precondition: Literal, domain: Domain): Seq[InsertPlanStepWithLink] =
+    domain.producersOf(precondition.predicate) flatMap { schema => apply(plan, schema, consumer, precondition) }
 }

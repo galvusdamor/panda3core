@@ -16,8 +16,8 @@ import org.scalatest.FlatSpec
 // scalastyle:off magic.number
 class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
 
-  val planstep0init = PlanStep(0, init, instance_variableSort1(1) :: Nil)
-  val planstep1goal = PlanStep(1, goal1, instance_variableSort1(2) :: Nil)
+  val planstep0init = PlanStep(0, init, instance_variableSort1(1) :: Nil, None,None)
+  val planstep1goal = PlanStep(1, goal1, instance_variableSort1(2) :: Nil, None,None)
 
 
   "Modifications" must "be computed for Open Preconditions" in {

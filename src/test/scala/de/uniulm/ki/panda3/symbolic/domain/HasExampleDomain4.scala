@@ -34,12 +34,12 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
     Literal(predicate1, isPositive = true, variableSort1(8) :: Nil) :: Literal(predicate2, isPositive = true, variableSort1(8) :: Nil) :: Nil))
   val goalTaskOfPlanOfDecompositionMethod3: ReducedTask = ReducedTask("goalM3", isPrimitive = true, Nil, Nil, precondition = And[Literal](Nil), effect = And[Literal](Nil))
 
-  val initOfPlanOfDecompositionMethod3           : PlanStep     = PlanStep(0, initTaskOfPlanOfDecompositionMethod3, variableSort1(7) :: Nil)
-  val goalOfPlanOfDecompositionMethod3           : PlanStep     = PlanStep(5, goalTaskOfPlanOfDecompositionMethod3, Nil)
-  val actualPlanStep1OfPlanOfDecompositionMethod3: PlanStep     = PlanStep(1, task3, variableSort1(8) :: Nil)
-  val actualPlanStep2OfPlanOfDecompositionMethod3: PlanStep     = PlanStep(2, task4, variableSort1(9) :: Nil)
-  val actualPlanStep3OfPlanOfDecompositionMethod3: PlanStep     = PlanStep(3, task5, variableSort1(10) :: Nil)
-  val actualPlanStep4OfPlanOfDecompositionMethod3: PlanStep     = PlanStep(4, task6, variableSort1(11) :: Nil)
+  val initOfPlanOfDecompositionMethod3           : PlanStep     = PlanStep(0, initTaskOfPlanOfDecompositionMethod3, variableSort1(7) :: Nil, None,None)
+  val goalOfPlanOfDecompositionMethod3           : PlanStep     = PlanStep(5, goalTaskOfPlanOfDecompositionMethod3, Nil, None,None)
+  val actualPlanStep1OfPlanOfDecompositionMethod3: PlanStep     = PlanStep(1, task3, variableSort1(8) :: Nil, None,None)
+  val actualPlanStep2OfPlanOfDecompositionMethod3: PlanStep     = PlanStep(2, task4, variableSort1(9) :: Nil, None,None)
+  val actualPlanStep3OfPlanOfDecompositionMethod3: PlanStep     = PlanStep(3, task5, variableSort1(10) :: Nil, None,None)
+  val actualPlanStep4OfPlanOfDecompositionMethod3: PlanStep     = PlanStep(4, task6, variableSort1(11) :: Nil, None,None)
   val planStepsOfPlanOfDecompositionMethod3                     = initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: actualPlanStep1OfPlanOfDecompositionMethod3 ::
     actualPlanStep2OfPlanOfDecompositionMethod3 :: actualPlanStep3OfPlanOfDecompositionMethod3 :: actualPlanStep4OfPlanOfDecompositionMethod3 :: Nil
   val taskOrderingOfPlanOfDecompositionMethod3   : TaskOrdering = SymbolicTaskOrdering(OrderingConstraint.allBetween(initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3,

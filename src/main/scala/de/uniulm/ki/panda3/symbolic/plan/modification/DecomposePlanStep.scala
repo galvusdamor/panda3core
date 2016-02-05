@@ -11,8 +11,8 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class DecomposePlanStep(decomposedPS: PlanStep, newSubPlan: Plan, newVariableConstraints: Seq[VariableConstraint], inheritedCausalLinks: Seq[CausalLink], plan: Plan) extends
-Modification {
+case class DecomposePlanStep(decomposedPS: PlanStep, newSubPlan: Plan, newVariableConstraints: Seq[VariableConstraint], inheritedCausalLinks: Seq[CausalLink],
+                             originalDecompositionMethod: DecompositionMethod, plan: Plan) extends Modification {
 
   // internal variables for convenience
   private val init = newSubPlan.init
@@ -140,7 +140,7 @@ object DecomposePlanStep {
             }
             }
 
-            possibilitiesToAddLink collect { case (links, ps, csp, constraints) if csp.isSolvable != Some(false) =>
+            possibilitiesToAddLink collect { case (links, ps, csp, constraints) if !csp.isSolvable.contains(false) =>
               val newLink = if (ingoingLinks != Nil) CausalLink(cl.producer, ps, cl.condition) else CausalLink(ps, cl.consumer, cl.condition)
               (links :+ newLink, csp, constraints)
             }
@@ -149,7 +149,7 @@ object DecomposePlanStep {
 
         generateAllPossibleInheritances(remainingLinksIngoing, remainingLinksOutgoing) map { case (links, _, linkConstraints) =>
           val causalLinks: Seq[CausalLink] = directlyInheritedLinksIngoing ++ directlyInheritedLinksOutgoing ++ links
-          DecomposePlanStep(decomposedPS, copiedPlan, linkConstraints, causalLinks, currentPlan)
+          DecomposePlanStep(decomposedPS, copiedPlan, linkConstraints, causalLinks, method, currentPlan)
         }
       }
     }

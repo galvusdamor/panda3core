@@ -35,9 +35,9 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
                                                                       precondition = And[Literal](Literal(predicate1, isPositive = true, variableSort1(9) :: Nil) :: Nil),
                                                                       effect = And[Literal](Nil))
 
-  val initOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(0, initTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil)
-  val goalOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(2, goalTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil)
-  val actualPlanStepOfPlanOfDecompositionMethod1: PlanStep     = PlanStep(1, task1, variableSort1(7) :: Nil)
+  val initOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(0, initTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil, None,None)
+  val goalOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(2, goalTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil, None,None)
+  val actualPlanStepOfPlanOfDecompositionMethod1: PlanStep     = PlanStep(1, task1, variableSort1(7) :: Nil, None,None)
   val planStepsOfPlanOfDecompositionMethod1                    = initOfPlanOfDecompositionMethod1 :: goalOfPlanOfDecompositionMethod1 :: actualPlanStepOfPlanOfDecompositionMethod1 :: Nil
   val taskOrderingOfPlanOfDecompositionMethod1  : TaskOrdering = SymbolicTaskOrdering(OrderingConstraint(initOfPlanOfDecompositionMethod1, actualPlanStepOfPlanOfDecompositionMethod1)
                                                                                         :: OrderingConstraint(actualPlanStepOfPlanOfDecompositionMethod1,
