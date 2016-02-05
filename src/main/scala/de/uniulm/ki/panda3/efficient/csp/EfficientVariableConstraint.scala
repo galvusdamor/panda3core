@@ -5,11 +5,11 @@ package de.uniulm.ki.panda3.efficient.csp
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class VariableConstraint(constraintType : Int, variable : Int, other : Int) {
+case class EfficientVariableConstraint(constraintType : Int, variable : Int, other : Int) {
 
 }
 
-object VariableConstraint{
+object EfficientVariableConstraint{
   val EQUALVARIABLE = 0
   val UNEQUALVARIABLE = 1
   val EQUALCONSTANT = 2

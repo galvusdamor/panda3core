@@ -16,7 +16,7 @@ import scala.io.Source
 // scalastyle:off magic.number
 class EfficientCSPTest extends FlatSpec {
 
-  val domain = EfficientDomain(Array(Array(), Array(), Array(), Array()), sortsOfConstant = Array(Array(0, 2), Array(0, 2), Array(0, 1), Array(1, 3)), Array(), Array(), Array())
+  val domain = new EfficientDomain(Array(Array(), Array(), Array(), Array()), sortsOfConstant = Array(Array(0, 2), Array(0, 2), Array(0, 1), Array(1, 3)), Array(), Array(), Array())
 
 
   def assignSingleVariableToValue(): EfficientCSP = {
@@ -24,7 +24,7 @@ class EfficientCSPTest extends FlatSpec {
     assert(csp.potentiallyConsistent)
     assert(csp.isRepresentativeAVariable(0))
     assert(csp.getRepresentativeVariable(0) == 0)
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALCONSTANT, 0, 0))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, 0, 0))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(!csp.isRepresentativeAVariable(0))
@@ -39,13 +39,13 @@ class EfficientCSPTest extends FlatSpec {
   "Assigning Constants to variables" must "be only be possible with one value" in {
     val csp = assignSingleVariableToValue()
     // try assign the same value
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALCONSTANT, 0, 0))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, 0, 0))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(!csp.isRepresentativeAVariable(0))
     assert(csp.getRepresentativeConstant(0) == 0)
     // assign another value
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALCONSTANT, 0, 1))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, 0, 1))
     assert(csp.isCSPInternallyConsistent())
     assert(!csp.potentiallyConsistent)
   }
@@ -54,7 +54,7 @@ class EfficientCSPTest extends FlatSpec {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0, 0, 0))
 
 
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALVARIABLE, 0, 1))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, 1))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(csp.isRepresentativeAVariable(0))
@@ -65,7 +65,7 @@ class EfficientCSPTest extends FlatSpec {
     assert(csp.getRepresentativeVariable(1) != csp.getRepresentativeVariable(2))
 
 
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALVARIABLE, 1, 2))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 1, 2))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(csp.isRepresentativeAVariable(0))
@@ -80,7 +80,7 @@ class EfficientCSPTest extends FlatSpec {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0, 1))
 
 
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALVARIABLE, 0, 1))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, 1))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(!csp.isRepresentativeAVariable(0))
@@ -91,8 +91,8 @@ class EfficientCSPTest extends FlatSpec {
 
   it must "correctly propagate variables that were set to constants" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0, 0))
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALCONSTANT, 0, 2))
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALVARIABLE, 0, 1))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, 0, 2))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, 1))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(!csp.isRepresentativeAVariable(0))
@@ -102,7 +102,7 @@ class EfficientCSPTest extends FlatSpec {
   }
   "Unequality" must "be stored correctly" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0, 0, 0))
-    csp.addConstraint(VariableConstraint(VariableConstraint.UNEQUALVARIABLE, 0, 1))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, 0, 1))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(csp.isRepresentativeAVariable(0))
@@ -121,8 +121,8 @@ class EfficientCSPTest extends FlatSpec {
   it must "lead to the removal of possible values" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0, 0))
 
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALCONSTANT, 0, 1))
-    csp.addConstraint(VariableConstraint(VariableConstraint.UNEQUALVARIABLE, 1, 0))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, 0, 1))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, 1, 0))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(!csp.isRepresentativeAVariable(0))
@@ -137,9 +137,9 @@ class EfficientCSPTest extends FlatSpec {
   it must "be correctly be propagated through equality constants" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0, 0, 0))
 
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALCONSTANT, 0, 2))
-    csp.addConstraint(VariableConstraint(VariableConstraint.UNEQUALVARIABLE, 1, 2))
-    csp.addConstraint(VariableConstraint(VariableConstraint.EQUALVARIABLE, 0, 1))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, 0, 2))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, 1, 2))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, 1))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(!csp.isRepresentativeAVariable(0))
@@ -155,7 +155,7 @@ class EfficientCSPTest extends FlatSpec {
 
   "OfSort Constraints" must "be handled correctly" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
-    csp.addConstraint(VariableConstraint(VariableConstraint.OFSORT, 0, 2))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.OFSORT, 0, 2))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(csp.isRepresentativeAVariable(0))
@@ -167,7 +167,7 @@ class EfficientCSPTest extends FlatSpec {
 
   it must "lead to a variable be set to a constant if appropriate" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
-    csp.addConstraint(VariableConstraint(VariableConstraint.OFSORT, 0, 1))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.OFSORT, 0, 1))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(!csp.isRepresentativeAVariable(0))
@@ -176,14 +176,14 @@ class EfficientCSPTest extends FlatSpec {
 
   it must "lead to an non-solvable CSP" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
-    csp.addConstraint(VariableConstraint(VariableConstraint.OFSORT, 0, 3))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.OFSORT, 0, 3))
     assert(csp.isCSPInternallyConsistent())
     assert(!csp.potentiallyConsistent)
   }
 
   "NotOfSort Constraints" must "be handled correctly" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
-    csp.addConstraint(VariableConstraint(VariableConstraint.NOTOFSORT, 0, 1))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.NOTOFSORT, 0, 1))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(csp.isRepresentativeAVariable(0))
@@ -195,7 +195,7 @@ class EfficientCSPTest extends FlatSpec {
 
   it must "lead to a variable be set to a constant if appropriate" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
-    csp.addConstraint(VariableConstraint(VariableConstraint.NOTOFSORT, 0, 2))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.NOTOFSORT, 0, 2))
     assert(csp.isCSPInternallyConsistent())
     assert(csp.potentiallyConsistent)
     assert(!csp.isRepresentativeAVariable(0))
@@ -204,12 +204,12 @@ class EfficientCSPTest extends FlatSpec {
 
   it must "lead to an non-solvable CSP" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true).addVariables(Array(0))
-    csp.addConstraint(VariableConstraint(VariableConstraint.NOTOFSORT, 0, 0))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.NOTOFSORT, 0, 0))
     assert(csp.isCSPInternallyConsistent())
     assert(!csp.potentiallyConsistent)
   }
 
-  val sudokuDomain = EfficientDomain(Array(Array()), Array(Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0)), Array(), Array(), Array())
+  val sudokuDomain = new EfficientDomain(Array(Array()), Array(Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0), Array(0)), Array(), Array(), Array())
 
   def sudokuFToI(x: Int, y: Int): Int = 9 * x + y
 
@@ -222,12 +222,12 @@ class EfficientCSPTest extends FlatSpec {
     }
     // add the constraints
     for (x <- Range(0, 9); y1 <- Range(0, 9); y2 <- Range(y1 + 1, 9)) {
-      buildCSP.addConstraint(VariableConstraint(VariableConstraint.UNEQUALVARIABLE, sudokuFToI(x, y1), sudokuFToI(x, y2)))
-      buildCSP.addConstraint(VariableConstraint(VariableConstraint.UNEQUALVARIABLE, sudokuFToI(y1, x), sudokuFToI(y2, x)))
+      buildCSP.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, sudokuFToI(x, y1), sudokuFToI(x, y2)))
+      buildCSP.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, sudokuFToI(y1, x), sudokuFToI(y2, x)))
     }
     for (fx <- Range(0, 3); fy <- Range(0, 3); ix1 <- Range(0, 3); ix2 <- Range(0, 3); iy1 <- Range(0, 3); iy2 <- Range(0, 3)) {
       if (ix1 != ix2 || iy1 != iy2)
-        buildCSP.addConstraint(VariableConstraint(VariableConstraint.UNEQUALVARIABLE, sudokuFToI(fx * 3 + ix1, fy * 3 + iy1), sudokuFToI(fx * 3 + ix2, fy * 3 + iy2)))
+        buildCSP.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, sudokuFToI(fx * 3 + ix1, fy * 3 + iy1), sudokuFToI(fx * 3 + ix2, fy * 3 + iy2)))
     }
 
     buildCSP
@@ -243,7 +243,7 @@ class EfficientCSPTest extends FlatSpec {
         val line = sc.next()
         for (y <- Range(0, 9)) {
           if (line.charAt(y) != '0')
-            copyCSP.addConstraint(VariableConstraint(VariableConstraint.EQUALCONSTANT, sudokuFToI(x, y), line.charAt(y) - '1'))
+            copyCSP.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, sudokuFToI(x, y), line.charAt(y) - '1'))
           assert(copyCSP.isCSPInternallyConsistent())
         }
       }
@@ -290,7 +290,7 @@ class EfficientCSPTest extends FlatSpec {
     while (i.hasNext && solution.isEmpty) {
       val value = i.next()
       val newCSP = csp.copy()
-      newCSP.addConstraint(VariableConstraint(VariableConstraint.EQUALCONSTANT, minDeg, value))
+      newCSP.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, minDeg, value))
       solution = solveSudoku(newCSP)
     }
     solution
@@ -307,7 +307,7 @@ class EfficientCSPTest extends FlatSpec {
         val line = sc.next()
         for (y <- Range(0, 9)) {
           if (line.charAt(y) != '0')
-            copyCSP.addConstraint(VariableConstraint(VariableConstraint.EQUALCONSTANT, sudokuFToI(x, y), line.charAt(y) - '1'))
+            copyCSP.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, sudokuFToI(x, y), line.charAt(y) - '1'))
           assert(copyCSP.isCSPInternallyConsistent())
         }
       }

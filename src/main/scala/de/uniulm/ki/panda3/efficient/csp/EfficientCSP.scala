@@ -209,8 +209,8 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
     if (potentiallyConsistent && newPropagations.nonEmpty) propagate(newPropagations.toArray)
   }
 
-  def addConstraint(constraint: VariableConstraint): Unit =
-    if (constraint.constraintType == VariableConstraint.EQUALVARIABLE) {
+  def addConstraint(constraint: EfficientVariableConstraint): Unit =
+    if (constraint.constraintType == EfficientVariableConstraint.EQUALVARIABLE) {
       // variable  =  variable
       val variableRepresentative = unionFind.getRepresentative(constraint.variable)
       val otherRepresentative = unionFind.getRepresentative(constraint.other)
@@ -224,7 +224,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         val nonChosen = if (variableRepresentative >= 0) variableRepresentative else otherRepresentative
         propagate(nonChosen)
       }
-    } else if (constraint.constraintType == VariableConstraint.EQUALCONSTANT) {
+    } else if (constraint.constraintType == EfficientVariableConstraint.EQUALCONSTANT) {
       // variable  = constant
       val variableRepresentative = unionFind.getRepresentative(constraint.variable)
       val internalConstant = switchConstant(constraint.other)
@@ -237,9 +237,9 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
           // we just set it, so propagate
           propagate(variableRepresentative)
         }
-    } else if (constraint.constraintType == VariableConstraint.UNEQUALVARIABLE || constraint.constraintType == VariableConstraint.UNEQUALCONSTANT) {
+    } else if (constraint.constraintType == EfficientVariableConstraint.UNEQUALVARIABLE || constraint.constraintType == EfficientVariableConstraint.UNEQUALCONSTANT) {
       val variableRepresentative = unionFind.getRepresentative(constraint.variable)
-      val otherRepresentative = if (constraint.constraintType == VariableConstraint.UNEQUALCONSTANT) switchConstant(constraint.other) else unionFind.getRepresentative(constraint.other)
+      val otherRepresentative = if (constraint.constraintType == EfficientVariableConstraint.UNEQUALCONSTANT) switchConstant(constraint.other) else unionFind.getRepresentative(constraint.other)
 
       if (variableRepresentative == otherRepresentative) potentiallyConsistent = false
       else if (variableRepresentative >= 0 && otherRepresentative >= 0) {
@@ -256,7 +256,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         remainingDomains(variable).remove(constant)
         if (remainingDomains(variable).size == 1) propagate(variable)
       }
-    } else if (constraint.constraintType == VariableConstraint.OFSORT) {
+    } else if (constraint.constraintType == EfficientVariableConstraint.OFSORT) {
       val variableRepresentative = unionFind.getRepresentative(constraint.variable)
 
       if (variableRepresentative < 0) {
@@ -266,7 +266,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         if (remainingDomains(variableRepresentative).isEmpty) potentiallyConsistent = false
         if (remainingDomains(variableRepresentative).size == 1) propagate(variableRepresentative)
       }
-    } else if (constraint.constraintType == VariableConstraint.NOTOFSORT) {
+    } else if (constraint.constraintType == EfficientVariableConstraint.NOTOFSORT) {
       val variableRepresentative = unionFind.getRepresentative(constraint.variable)
 
       if (variableRepresentative < 0) {
@@ -305,10 +305,10 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
   }
 
 
-  def computeMGU(someVariables: Array[Int], otherVariables: Array[Int]): Option[Array[VariableConstraint]] = {
+  def computeMGU(someVariables: Array[Int], otherVariables: Array[Int]): Option[Array[EfficientVariableConstraint]] = {
     assert(someVariables.length == otherVariables.length)
     var possible = true
-    val mgu = new ArrayBuffer[VariableConstraint]()
+    val mgu = new ArrayBuffer[EfficientVariableConstraint]()
     val csp = copy() // this takes memory, but else it would be a real pain
 
     var i = 0
@@ -319,7 +319,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
 
       if (compatibility == EfficientCSP.INCOMPATIBLE) possible = false
       else if (compatibility == EfficientCSP.COMPATIBLE) {
-        val constraint = VariableConstraint(VariableConstraint.EQUALVARIABLE, x, y)
+        val constraint = EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, x, y)
         csp.addConstraint(constraint)
         mgu append constraint
       }

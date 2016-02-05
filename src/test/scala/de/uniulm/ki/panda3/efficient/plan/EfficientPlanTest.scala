@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.efficient.plan
 
-import de.uniulm.ki.panda3.efficient.csp.{VariableConstraint, EfficientCSP}
+import de.uniulm.ki.panda3.efficient.csp.{EfficientVariableConstraint, EfficientCSP}
 import de.uniulm.ki.panda3.efficient.domain.{EfficientTask, EfficientDomain}
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
@@ -37,8 +37,8 @@ class EfficientPlanTest extends FlatSpec {
 
   // the order of tasks is scrambled to test whether we access the correct one
   val csp = new EfficientCSP(domain).addVariables(Array(0, 0, 0, 0, 0, 0))
-  csp.addConstraint(VariableConstraint(VariableConstraint.EQUALVARIABLE, 1, 3))
-  csp.addConstraint(VariableConstraint(VariableConstraint.UNEQUALVARIABLE, 1, 5))
+  csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 1, 3))
+  csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, 1, 5))
   val ordering = new EfficientOrdering().addPlanSteps(7)
   Range(2, 7) foreach { i => ordering.addOrderingConstraint(0, i); ordering.addOrderingConstraint(i, 1) }
   ordering.addOrderingConstraint(3, 4)
@@ -75,8 +75,8 @@ class EfficientPlanTest extends FlatSpec {
     assert(causalThreats exists { _.threatingPlanStep == 2 })
     assert(causalThreats exists { _.indexOfThreatingEffect == 0 })
     assert(causalThreats exists { _.mgu.length == 1 })
-    assert(causalThreats exists { cl => cl.mgu.head == VariableConstraint(VariableConstraint.EQUALVARIABLE, 0, csp.getRepresentativeVariable(1)) ||
-      cl.mgu.head == VariableConstraint(VariableConstraint.EQUALVARIABLE, csp.getRepresentativeVariable(1), 0)
+    assert(causalThreats exists { cl => cl.mgu.head == EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, csp.getRepresentativeVariable(1)) ||
+      cl.mgu.head == EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, csp.getRepresentativeVariable(1), 0)
     })
   }
 

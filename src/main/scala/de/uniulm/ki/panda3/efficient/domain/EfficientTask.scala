@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.efficient.domain
 
-import de.uniulm.ki.panda3.efficient.csp.VariableConstraint
+import de.uniulm.ki.panda3.efficient.csp.{EfficientVariableConstraint, EfficientVariableConstraint$}
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 
 import scala.collection.mutable.ArrayBuffer
@@ -12,7 +12,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], constraints: Array[VariableConstraint], precondition: Array[EfficientLiteral],
+case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], constraints: Array[EfficientVariableConstraint], precondition: Array[EfficientLiteral],
                          effect: Array[EfficientLiteral]) {
 
   /** given a literal of this task and the actual parameters of this task, it returns the actual argumtens of the literal*/

@@ -5,7 +5,6 @@ import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw._
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
-import de.uniulm.ki.panda3.symbolic.plan.flaw.CausalThreat
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -13,21 +12,27 @@ import scala.collection.mutable.ArrayBuffer
   * This is the efficient representation of a plan. Its implementation uses the following assumptions:
   * - its plansteps are numbered 0..sz(planStepTasks)-1 and have the type denoted by the entry in that array
   * - any planstep i for which the value planStepDecomposedByMethod(i) is not -1 is not part of the plan any more
-  * - plansteps without a parent in the plan's decomposition tree (i.e. plansteps of the initial plan) hava their parent set to -1
+  * - plansteps without a parent in the plan's decomposition tree (i.e. plansteps of the initial plan) have their parent set to -1
   * - the ith subarray of planStepParameters contains the parameters of the ith task
   * - similar to the CSP and to literals, constants are stored in their negative representation (see [[de.uniulm.ki.panda3.efficient.switchConstant]])
   * - init and goal are assumed to be the plan steps indexed 0 and 1 respectively
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class EfficientPlan(val domain: EfficientDomain, val planStepTasks: Array[Int], val planStepParameters: Array[Array[Int]], val planStepDecomposedByMethod: Array[Int],
-                    val planStepParentInDecompositonTree: Array[Int], val variableConstraints: EfficientCSP, val ordering: EfficientOrdering, val causalLinks: Array[EfficientCausalLink]) {
+case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStepParameters: Array[Array[Int]], planStepDecomposedByMethod: Array[Int],
+                         planStepParentInDecompositonTree: Array[Int], variableConstraints: EfficientCSP, ordering: EfficientOrdering, causalLinks: Array[EfficientCausalLink]) {
 
   assert(planStepTasks.length == planStepParameters.length)
   assert(planStepTasks.length == planStepDecomposedByMethod.length)
   assert(planStepTasks.length == planStepParentInDecompositonTree.length)
   planStepTasks.indices foreach {
-    ps => assert(domain.tasks(planStepTasks(ps)).parameterSorts.length == planStepParameters(ps).length)
+    ps =>
+      /*println("PS " + ps)
+      println(planStepTasks(ps))
+      println(domain.tasks.size)
+      println(domain.tasks(planStepTasks(ps)))
+      println(planStepParameters(ps))*/
+      assert(domain.tasks(planStepTasks(ps)).parameterSorts.length == planStepParameters(ps).length)
   }
 
 

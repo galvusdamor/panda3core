@@ -12,22 +12,28 @@ package de.uniulm.ki.panda3.efficient.domain
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientDomain(subSortsForSort: Array[Array[Int]], sortsOfConstant: Array[Array[Int]], predicates: Array[Array[Int]], tasks : Array[EfficientTask], decompositionMethods :
-Array[EfficientDecompositionMethod]) {
+class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
+                      var sortsOfConstant: Array[Array[Int]] = Array(),
+                      var predicates: Array[Array[Int]] = Array(),
+                      var tasks: Array[EfficientTask] = Array(),
+                      var decompositionMethods: Array[EfficientDecompositionMethod] = Array()) {
 
-  val constantsOfSort: Array[Array[Int]] = {
-    val ret: Array[Array[Int]] = new Array[Array[Int]](subSortsForSort.length)
 
+  var constantsOfSort: Array[Array[Int]] = Array()
+  recomputeConstantsOfSort()
+
+
+  def recomputeConstantsOfSort(): Unit = {
+    constantsOfSort = new Array[Array[Int]](subSortsForSort.length)
     val sortsOfConstantZipped = sortsOfConstant.zipWithIndex
 
     var i = 0
-    while (i < ret.length) {
-      ret(i) = (sortsOfConstantZipped filter {_._1.contains(i)}).map({_._2}).array
+    while (i < constantsOfSort.length) {
+      constantsOfSort(i) = (sortsOfConstantZipped filter { _._1.contains(i) }).map({ _._2 }).array
       i = i + 1
     }
-    ret
   }
 
   // contains for each task an array containing all decomposition methods that can be applied to that task
-  val taskToPossibleMethods : Map[Int,Array[EfficientDecompositionMethod]] = (tasks.indices map { i => i -> (decompositionMethods.toSeq  filter {_.abstractTask == i}).toArray}).toMap
+  val taskToPossibleMethods: Map[Int, Array[EfficientDecompositionMethod]] = (tasks.indices map { i => i -> (decompositionMethods.toSeq filter { _.abstractTask == i }).toArray }).toMap
 }
