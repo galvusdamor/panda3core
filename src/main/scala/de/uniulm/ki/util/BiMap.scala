@@ -1,7 +1,5 @@
 package de.uniulm.ki.util
 
-import scala.collection.immutable.HashMap
-
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
@@ -13,7 +11,7 @@ case class BiMap[A, B](toMap: Map[A, B], fromMap: Map[B, A]) {
 
   def apply(a: A): B = toMap(a)
 
-  def back(b : B) : A = fromMap(b)
+  def back(b: B): A = fromMap(b)
 }
 
 object BiMap {

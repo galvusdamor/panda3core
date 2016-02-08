@@ -25,14 +25,14 @@ import de.uniulm.ki.util.{SimpleDirectedGraph, BiMap}
 case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
   private val domainConstants           : BiMap[Constant, Int]            = BiMap(symbolicDomain.constants.zipWithIndex)
-  private val domainSorts               : BiMap[Sort, Int]                = BiMap(symbolicDomain.sorts.zipWithIndex)
+  private val domainSorts               : BiMap[Sort, Int]                = {
+    val allSorts = (symbolicDomain.declaredAndUnDeclaredSorts ++ (initialPlan.initAndGoal flatMap { _.arguments map { _.sort } })).distinct
+    BiMap(allSorts.zipWithIndex)
+  }
   private val domainPredicates          : BiMap[Predicate, Int]           = BiMap(symbolicDomain.predicates.zipWithIndex)
   private val domainTasksObjects        : BiMap[Task, EfficientTask]      = {
-    // get all schemas that are hidden in inits and goals
-    val hiddenTasks = (initialPlan.init.schema :: initialPlan.goal.schema :: Nil) ++
-      (symbolicDomain.decompositionMethods flatMap { method => method.subPlan.init.schema :: method.subPlan.goal.schema :: Nil })
-
-    BiMap((symbolicDomain.tasks ++ hiddenTasks).distinct map { t => (t, computeEfficientTask(t)) })
+    val allTaskSchemes = (symbolicDomain.tasks ++ symbolicDomain.hiddenTasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).distinct
+    BiMap(allTaskSchemes map { t => (t, computeEfficientTask(t)) })
   }
   private val domainTasks               : BiMap[Task, Int]                = BiMap(domainTasksObjects.toMap.keys.toSeq.zipWithIndex)
   private val domainDecompositionMethods: BiMap[DecompositionMethod, Int] = BiMap(symbolicDomain.decompositionMethods.zipWithIndex)
@@ -96,7 +96,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
     // CSP
     val variableSorts = variableOrder map { v => domainSorts(v.sort) }
-    val efficientCSP = new EfficientCSP(domain).addVariables(variableSorts.toArray)
+    val efficientCSP = new EfficientCSP(domain)().addVariables(variableSorts.toArray)
     plan.variableConstraints.constraints foreach { computeEfficientVariableConstraint(_, variablesMap.toMap) }
 
     // ordering
@@ -220,4 +220,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     // and return the actual plan
     SymbolicPlan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1))
   }
+}
+
+object Wrapping {
+  def apply(domAndPlan: (Domain, Plan)): Wrapping = apply(domAndPlan._1, domAndPlan._2)
 }
