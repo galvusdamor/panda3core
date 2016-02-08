@@ -19,8 +19,10 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[Int]] = Array(), unequal: Array[mutable.Set[Int]] = Array(),
-                   unionFind: EfficientUnionFind = new EfficientUnionFind(Array()), val variableSorts: Array[Int] = Array(), var potentiallyConsistent: Boolean = true) {
-
+                   unionFind: EfficientUnionFind = new EfficientUnionFind(Array()), val variableSorts: Array[Int] = Array(), var potentiallyConsistent: Boolean = true)
+                  (lastKVariablesAreNew: Int = variableSorts.length) {
+  // first propagate then check for consistency
+  propagateNewVariablesIfSingleton(lastKVariablesAreNew)
   assert(isCSPInternallyConsistent())
 
   val numberOfVariables = remainingDomains.length
@@ -88,9 +90,8 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
       i += 1
     }
 
-    val csp = new EfficientCSP(domain, copies._1, copies._2, copies._3, sortsOfVariables, potentiallyConsistent)
-    csp.propagateNewVariablesIfSingleton(sortsOfNewVariables.length)
-    csp
+    // the new variables will be propagated in the constructor
+    new EfficientCSP(domain, copies._1, copies._2, copies._3, sortsOfVariables, potentiallyConsistent)(sortsOfNewVariables.length)
   }
 
   private def propagateNewVariablesIfSingleton(lastKVariablesAreNew: Int): Unit = {
@@ -340,7 +341,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
 }
 
 object EfficientCSP {
-  val COMPATIBLE = 0
-  val EQUAL = 1
+  val COMPATIBLE   = 0
+  val EQUAL        = 1
   val INCOMPATIBLE = -1
 }

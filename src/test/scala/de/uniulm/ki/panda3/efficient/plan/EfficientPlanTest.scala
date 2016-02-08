@@ -36,7 +36,7 @@ class EfficientPlanTest extends FlatSpec {
   val domain = new EfficientDomain(Array(Array()), Array(Array(0), Array(0), Array(0)), Array(Array(), Array(0), Array(0, 0)), Array(init, goal, task1, task2, task3), Array())
 
   // the order of tasks is scrambled to test whether we access the correct one
-  val csp = new EfficientCSP(domain).addVariables(Array(0, 0, 0, 0, 0, 0))
+  val csp = new EfficientCSP(domain)().addVariables(Array(0, 0, 0, 0, 0, 0))
   csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 1, 3))
   csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, 1, 5))
   val ordering = new EfficientOrdering().addPlanSteps(7)
