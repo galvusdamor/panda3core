@@ -48,6 +48,13 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     if (withoutSubSort.size == 1) Some(withoutSubSort.head) else None
   }
 
+  /** Returns some sort which contains all the given variables, if multiple exists any one is selected. */
+  def getAnySortContainingConstants(cs: Seq[Constant]): Option[Sort] = {
+    val sortsContaining = sorts filter { s => cs forall s.elements.contains }
+    val withoutSubSort = sortsContaining filter { s => sortsContaining forall { subs => !s.subSorts.contains(subs) } }
+    withoutSubSort.headOption
+  }
+
 
   def addConstantsToDomain(constants: Seq[(Sort, Constant)]): Domain = {
     val sortTranslationMap = sortGraph.topologicalOrdering.get.foldRight[Map[Sort, Sort]](Map[Sort, Sort]())({ case (oldSort, translationMap) =>

@@ -4,9 +4,13 @@ import java.io.FileInputStream
 
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, ClosedWorldAssumption, ExpandSortHierarchy}
+import de.uniulm.ki.panda3.symbolic.csp.SymbolicCSP
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, HasExampleProblem4}
+import de.uniulm.ki.panda3.symbolic.logic.{Variable, Sort}
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
-import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
+import de.uniulm.ki.panda3.symbolic.plan.{SymbolicPlan, Plan}
+import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, CausalLink, PlanStep}
 import org.scalatest.FlatSpec
 
 /**
@@ -51,6 +55,28 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
   "Wrapping a plan" must "not crash" in {
     val wrappedInitialPlanExample4 = wrapperExample4.wrap(efficientInitialPlanExample4)
     val wrappedInitialPlanXML = wrapperXMLDomain.wrap(efficientInitialPlanXMLDomain)
+  }
+
+  var effucientPlanExample4AdHocSort: EfficientPlan = null
+
+  "unwrapping a plan containing an ad hoc sort" must "not crash" in {
+    val adHocSort = Sort("Ad hoc sort", constantSort1(1) :: Nil, Nil)
+
+    val adHocVariable = Variable(1, "instance_variable_" + 1 + "_sort1", adHocSort)
+    val adHocPsAbstract2 = PlanStep(2, abstractTask2, adHocVariable :: Nil, None, None)
+
+    val adHocCausalLinkInit2Abstract2P1 = CausalLink(psInit2, adHocPsAbstract2, psInit2.substitutedEffects.head)
+    val adHocCausalLinkInit2Abstract2P2 = CausalLink(psInit2, adHocPsAbstract2, psInit2.substitutedEffects(1))
+
+    // create a plan  init| -> a1 -> |goal (with one causal link)
+    val adHocPlanSteps = psInit2 :: psGoal2 :: adHocPsAbstract2 :: Nil
+    val adHocPlan2WithTwoLinks = SymbolicPlan(adHocPlanSteps, adHocCausalLinkInit2Abstract2P1 :: adHocCausalLinkInit2Abstract2P2 :: Nil,
+                                         SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, adHocPsAbstract2), adHocPlanSteps),
+                                         SymbolicCSP(Set(instance_variableSort1(1),adHocVariable), Nil), psInit2, psGoal2)
+
+
+    effucientPlanExample4AdHocSort = wrapperExample4.unwrap(adHocPlan2WithTwoLinks)
+
   }
 
 }

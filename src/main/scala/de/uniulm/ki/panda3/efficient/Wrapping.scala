@@ -95,9 +95,25 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     }
 
     // CSP
-    val variableSorts = variableOrder map { v => domainSorts(v.sort) }
-    val efficientCSP = new EfficientCSP(domain)().addVariables(variableSorts.toArray)
-    plan.variableConstraints.constraints foreach { computeEfficientVariableConstraint(_, variablesMap.toMap) }
+    val symbolicVariableSorts = variableOrder map { _.sort }
+    val usableVariableSorts = symbolicVariableSorts map {
+      case s if domainSorts.toMap contains s => s
+      case s                                 =>
+        val possibleSort = symbolicDomain.getAnySortContainingConstants(s.elements)
+        assert(possibleSort.isDefined)
+        possibleSort.get
+    }
+    val necessaryVariableConstraints: Seq[EfficientVariableConstraint] = (symbolicVariableSorts zip usableVariableSorts).zipWithIndex flatMap {
+      case ((a, b), _) if a == b        => Nil
+      case ((givenSort, chosenSort), v) =>
+        val excludedConstants: Set[Constant] = chosenSort.elements.toSet -- givenSort.elements
+        excludedConstants map { c => EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALCONSTANT, v, domainConstants(c)) }
+    }
+
+    //{ v => domainSorts(v.sort) }
+    val efficientCSP = new EfficientCSP(domain)().addVariables((usableVariableSorts map { domainSorts(_) }).toArray)
+    plan.variableConstraints.constraints foreach { efficientCSP addConstraint computeEfficientVariableConstraint(_, variablesMap.toMap) }
+    necessaryVariableConstraints foreach efficientCSP.addConstraint
 
     // ordering
     val ordering = new EfficientOrdering().addPlanSteps(orderedTasks.length)
