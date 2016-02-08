@@ -100,6 +100,22 @@ class EfficientCSPTest extends FlatSpec {
     assert(csp.getRepresentativeConstant(0) == 2)
     assert(csp.getRepresentativeConstant(1) == 2)
   }
+
+  it must "be correct if the variables were previously set to constants" in {
+    val csp = new EfficientCSP(domain, potentiallyConsistent = true)().addVariables(Array(0, 0,0))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, 0, 0))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, 1, 0))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, 1))
+    assert(csp.isCSPInternallyConsistent())
+    assert(csp.potentiallyConsistent)
+    assert(csp.getRepresentativeConstant(0) == csp.getRepresentativeConstant(1))
+
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, 2, 1))
+    csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, 2))
+    assert(csp.isCSPInternallyConsistent())
+    assert(!csp.potentiallyConsistent)
+  }
+
   "Unequality" must "be stored correctly" in {
     val csp = new EfficientCSP(domain, potentiallyConsistent = true)().addVariables(Array(0, 0, 0))
     csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, 0, 1))

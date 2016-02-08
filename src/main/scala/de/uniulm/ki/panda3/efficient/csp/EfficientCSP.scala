@@ -223,15 +223,22 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
       // variable  =  variable
       val variableRepresentative = unionFind.getRepresentative(constraint.variable)
       val otherRepresentative = unionFind.getRepresentative(constraint.other)
-      assertEqual(variableRepresentative, otherRepresentative)
-      // check whether this assertion could have lead to a variable with only a unit domain
-      val chosenRepresentative = unionFind.getRepresentative(variableRepresentative)
-      if (chosenRepresentative >= 0) {
-        if (remainingDomains(chosenRepresentative).size == 1)
-          propagate(chosenRepresentative)
-      } else {
-        val nonChosen = if (variableRepresentative >= 0) variableRepresentative else otherRepresentative
-        propagate(nonChosen)
+      if (!assertEqual(variableRepresentative, otherRepresentative)) potentiallyConsistent = false
+      else {
+        if (variableRepresentative > 0 || otherRepresentative > 0) {
+          // check whether this assertion could have lead to a variable with only a unit domain
+          var representativeToCheck = variableRepresentative
+          if (otherRepresentative > 0) representativeToCheck = otherRepresentative
+          val chosenRepresentative = unionFind.getRepresentative(representativeToCheck)
+
+          if (chosenRepresentative >= 0) {
+            if (remainingDomains(chosenRepresentative).size == 1)
+              propagate(chosenRepresentative)
+          } else {
+            val nonChosen = if (variableRepresentative >= 0) variableRepresentative else otherRepresentative
+            propagate(nonChosen)
+          }
+        }
       }
     } else if (constraint.constraintType == EfficientVariableConstraint.EQUALCONSTANT) {
       // variable  = constant
