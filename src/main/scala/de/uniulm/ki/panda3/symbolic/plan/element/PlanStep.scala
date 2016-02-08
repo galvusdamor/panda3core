@@ -17,8 +17,10 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable], decomposedB
   extends DomainUpdatable with PrettyPrintable {
 
 
+  // TODO: this might cause problems in the wrapper (two decompositon methods might be judges as equal if they really are not), but is necessary to achive at least a decent performance
+  // for the symbolic planner
   override def equals(o: Any): Boolean = o match {
-    case step: PlanStep => id == step.id
+    case step: PlanStep => id == step.id && schema.name == step.schema.name
     case _              => false
   }
 
