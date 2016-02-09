@@ -155,13 +155,21 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     domain
   }
 
-  def unwrap(constant: Constant): Int = domainConstants.toMap(constant)
+  def unwrap(constant: Constant): Int = domainConstants(constant)
 
   def wrapConstant(constant: Int): Constant = domainConstants.back(constant)
 
-  def unwrap(sort: Sort): Int = domainSorts.toMap(sort)
+  def unwrap(sort: Sort): Int = domainSorts(sort)
 
   def wrapSort(sort: Int): Sort = domainSorts.back(sort)
+
+  def unwrap(task: Task): Int = domainTasks(task)
+
+  def wrapTask(task: Int): Task = domainTasks.back(task)
+
+  def unwrap(predicate: Predicate): Int = domainPredicates(predicate)
+
+  def wrapPredicate(predicate: Int): Predicate = domainPredicates.back(predicate)
 
   def unwrap(method: DecompositionMethod): Int = domainDecompositionMethods(method)
 
@@ -182,6 +190,9 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     */
   def wrapVariable(variable: Int, plan: Plan): Variable = plan.variableConstraints.variables.toSeq.sortBy({ _.id }).apply(variable)
 
+  def unwrap(variable: Variable, task: Task): Int = task.parameters.indexOf(variable)
+
+  def wrapVariable(variable: Int, task: Task): Variable = task.parameters(variable)
 
   def unwrap(planStep: PlanStep, plan: Plan): Int = ((plan.init :: plan.goal :: Nil) ++ plan.planStepWithoutInitGoal).indexOf(planStep)
 
