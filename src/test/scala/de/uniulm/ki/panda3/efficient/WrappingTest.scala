@@ -2,10 +2,11 @@ package de.uniulm.ki.panda3.efficient
 
 import java.io.FileInputStream
 
+import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, ClosedWorldAssumption, ExpandSortHierarchy}
 import de.uniulm.ki.panda3.symbolic.csp.SymbolicCSP
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, HasExampleProblem4}
+import de.uniulm.ki.panda3.symbolic.domain.{Task, ReducedTask, Domain, HasExampleProblem4}
 import de.uniulm.ki.panda3.symbolic.logic.{Variable, Sort}
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
@@ -39,10 +40,46 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     wrapperXMLDomain = Wrapping(hierarchicalDomainAndProblem)
   }
 
+  var efficientDomainExample4: EfficientDomain = null
+
   "Computing the efficient Representation of the domain" must "not crash" in {
-    val efficientDomainExample4 = wrapperExample4.efficientDomain
+    efficientDomainExample4 = wrapperExample4.efficientDomain
     val efficientDomainXMLDomain = wrapperXMLDomain.efficientDomain
   }
+
+  it must "produce a reasonable domain" in {
+    assert(efficientDomainExample4.subSortsForSort.length == 1)
+    assert(efficientDomainExample4.subSortsForSort(0).length == 0)
+    assert(efficientDomainExample4.sortsOfConstant.length == 4)
+    efficientDomainExample4.sortsOfConstant foreach { arr => assert(arr.length == 1); assert(arr(0) == 0) }
+    assert(efficientDomainExample4.predicates.length == 2)
+    efficientDomainExample4.predicates foreach { arr => assert(arr.length == 1); assert(arr(0) == 0) }
+
+
+    assert(efficientDomainExample4.tasks.length == 11)
+    val expectedTasks: Seq[Task] = (exampleDomain2.tasks :+ initTaskOfPlanOfDecompositionMethod3 :+ goalTaskOfPlanOfDecompositionMethod3) ++ (plan2WithTwoLinks.initAndGoal map { _.schema })
+    expectedTasks map { t => (t, wrapperExample4.unwrap(t)) } foreach { case (t, i) =>
+      val efficientTask = efficientDomainExample4.tasks(i)
+      val symTask = t.asInstanceOf[ReducedTask]
+
+      assert(t.isPrimitive == efficientTask.isPrimitive)
+      assert(t.parameters.length == efficientTask.parameterSorts.length)
+      efficientTask.parameterSorts foreach { s => assert(s == 0) }
+      assert(symTask.precondition.conjuncts.size == efficientTask.precondition.length)
+      assert(symTask.effect.conjuncts.size == efficientTask.effect.length)
+
+
+      symTask.precondition.conjuncts zip efficientTask.precondition foreach { case (symbolicLiteral, efficientLiteral) =>
+        assert(symbolicLiteral.isPositive == efficientLiteral.isPositive)
+        assert(wrapperExample4.unwrap(symbolicLiteral.predicate) == efficientLiteral.predicate)
+        assert(symbolicLiteral.parameterVariables.length == efficientLiteral.parameterVariables.length)
+        symbolicLiteral.parameterVariables zip efficientLiteral.parameterVariables foreach { case (symbolicVariable, efficientVariable) =>
+            assert(wrapperExample4.unwrap(symbolicVariable,symTask) == efficientVariable)
+        }
+      }
+    }
+  }
+
 
   var efficientInitialPlanExample4 : EfficientPlan = null
   var efficientInitialPlanXMLDomain: EfficientPlan = null
@@ -71,8 +108,8 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     // create a plan  init| -> a1 -> |goal (with one causal link)
     val adHocPlanSteps = psInit2 :: psGoal2 :: adHocPsAbstract2 :: Nil
     val adHocPlan2WithTwoLinks = SymbolicPlan(adHocPlanSteps, adHocCausalLinkInit2Abstract2P1 :: adHocCausalLinkInit2Abstract2P2 :: Nil,
-                                         SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, adHocPsAbstract2), adHocPlanSteps),
-                                         SymbolicCSP(Set(instance_variableSort1(1),adHocVariable), Nil), psInit2, psGoal2)
+                                              SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, adHocPsAbstract2), adHocPlanSteps),
+                                              SymbolicCSP(Set(instance_variableSort1(1), adHocVariable), Nil), psInit2, psGoal2)
 
 
     effucientPlanExample4AdHocSort = wrapperExample4.unwrap(adHocPlan2WithTwoLinks)
