@@ -17,7 +17,7 @@ import scala.collection.mutable
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends CSP with HashMemo{
+case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends CSP with HashMemo {
 
   // holds equivalent variables
   private val unionFind      : SymbolicUnionFind                            = new SymbolicUnionFind
@@ -290,6 +290,12 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
   }
 
   override def update(domainUpdate: DomainUpdate): SymbolicCSP = SymbolicCSP(variables map { _.update(domainUpdate) }, constraints map { _.update(domainUpdate) })
+
+  /** returns a list of all variables that are set to be unequal to this one */
+  override def getUnequalVariables(variable: Variable): Seq[Variable] = getRepresentative(variable) match {
+    case Constant(_)         => Nil
+    case v@Variable(_, _, _) => unequal(v).toSeq
+  }
 }
 
 

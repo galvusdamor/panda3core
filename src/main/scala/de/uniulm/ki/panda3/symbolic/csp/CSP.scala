@@ -79,6 +79,10 @@ trait CSP extends DomainUpdatable {
   /** determines whether two variables or constants must be equal in this CSP */
   def equal(v1: Value, v2: Value): Boolean = getRepresentative(v1) == getRepresentative(v2)
 
+  /** returns a list of all variables that are set to be unequal to this one*/
+  def getUnequalVariables(variable: Variable) : Seq[Variable]
+
+
   override def update(domainUpdate: DomainUpdate): CSP
 }
 
@@ -103,4 +107,6 @@ object NoConstraintsCSP extends CSP {
   override def update(domainUpdate: DomainUpdate): CSP = throw new UnsupportedOperationException()
 
   override def constraints: Seq[VariableConstraint] = throw new UnsupportedOperationException()
+
+  override def getUnequalVariables(variable: Variable): Seq[Variable] = Nil
 }
