@@ -61,22 +61,7 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     expectedTasks map { t => (t, wrapperExample4.unwrap(t)) } foreach { case (t, i) =>
       val efficientTask = efficientDomainExample4.tasks(i)
       val symTask = t.asInstanceOf[ReducedTask]
-
-      assert(t.isPrimitive == efficientTask.isPrimitive)
-      assert(t.parameters.length == efficientTask.parameterSorts.length)
-      efficientTask.parameterSorts foreach { s => assert(s == 0) }
-      assert(symTask.precondition.conjuncts.size == efficientTask.precondition.length)
-      assert(symTask.effect.conjuncts.size == efficientTask.effect.length)
-
-
-      symTask.precondition.conjuncts zip efficientTask.precondition foreach { case (symbolicLiteral, efficientLiteral) =>
-        assert(symbolicLiteral.isPositive == efficientLiteral.isPositive)
-        assert(wrapperExample4.unwrap(symbolicLiteral.predicate) == efficientLiteral.predicate)
-        assert(symbolicLiteral.parameterVariables.length == efficientLiteral.parameterVariables.length)
-        symbolicLiteral.parameterVariables zip efficientLiteral.parameterVariables foreach { case (symbolicVariable, efficientVariable) =>
-            assert(wrapperExample4.unwrap(symbolicVariable,symTask) == efficientVariable)
-        }
-      }
+      WrappingChecker.assertEqual(symTask,efficientTask,wrapperExample4)
     }
   }
 
@@ -84,10 +69,17 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
   var efficientInitialPlanExample4 : EfficientPlan = null
   var efficientInitialPlanXMLDomain: EfficientPlan = null
 
-  "Unwrapping a plan" must "not crash" in {
+  "Unwrapping a plan" must "not crash and " in {
     efficientInitialPlanExample4 = wrapperExample4.unwrap(plan2WithTwoLinks)
     efficientInitialPlanXMLDomain = wrapperXMLDomain.unwrap(hierarchicalDomainAndProblem._2)
   }
+
+  it must "lead to the correct plan" in {
+    WrappingChecker.assertEqual(plan2WithTwoLinks,efficientInitialPlanExample4,  wrapperExample4)
+  }
+
+
+  // TODO add a test after a decomposition method was applied
 
   "Wrapping a plan" must "not crash" in {
     val wrappedInitialPlanExample4 = wrapperExample4.wrap(efficientInitialPlanExample4)
