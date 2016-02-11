@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.efficient.domain
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
   *
   * Assumptions:
@@ -34,6 +36,25 @@ class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
     }
   }
 
-  // contains for each task an array containing all decomposition methods that can be applied to that task
-  val taskToPossibleMethods: Map[Int, Array[EfficientDecompositionMethod]] = (tasks.indices map { i => i -> (decompositionMethods.toSeq filter { _.abstractTask == i }).toArray }).toMap
+
+  /** the ith index of the array contains all possible tasks that produce predicate i. The first list in the pair the positive ones, the second the negative ones.
+    * The inner pairs each contain the index of the task and the index of the possible producer
+    */
+  lazy val possibleProducerTasksOf: Array[(Array[(Int, Int)], Array[(Int, Int)])] = (predicates.indices map { predicate =>
+    val positive: Array[(Int, Int)] = tasks.zipWithIndex flatMap { case (task, taskIndex) =>
+      task.effect.zipWithIndex collect {
+        case (literal, literalIndex) if literal.isPositive && literal.predicate == predicate => (taskIndex, literalIndex)
+      }
+    }
+
+    val negative: Array[(Int, Int)] = tasks.zipWithIndex flatMap { case (task, taskIndex) =>
+      task.effect.zipWithIndex collect {
+        case (literal, literalIndex) if !literal.isPositive && literal.predicate == predicate => (taskIndex, literalIndex)
+      }
+    }
+    (positive, negative)
+  }).toArray
+
+  /** contains for each task an array containing all decomposition methods that can be applied to that task */
+  lazy val taskToPossibleMethods: Map[Int, Array[EfficientDecompositionMethod]] = (tasks.indices map { i => i -> (decompositionMethods.toSeq filter { _.abstractTask == i }).toArray }).toMap
 }

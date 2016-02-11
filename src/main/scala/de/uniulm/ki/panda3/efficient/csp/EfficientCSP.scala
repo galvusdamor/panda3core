@@ -321,6 +321,9 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
     } else EfficientCSP.EQUAL
   }
 
+  /** determines whether two variables are set equal*/
+  def areEqual(var1 : Int, var2 : Int) : Boolean = unionFind.getRepresentative(var1) == unionFind.getRepresentative(var2)
+
 
   def computeMGU(someVariables: Array[Int], otherVariables: Array[Int]): Option[Array[EfficientVariableConstraint]] = {
     assert(someVariables.length == otherVariables.length)
