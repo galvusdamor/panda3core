@@ -20,8 +20,6 @@ import de.uniulm.ki.util.{SimpleDirectedGraph, BiMap}
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-//TODO: the sort of a variable might not exist at all, it might just be some temporary sort
-// -> add all sorts in the domain  (i.e. in tasks) and just "handle" them if they occur in plans
 case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
   private val domainConstants           : BiMap[Constant, Int]            = BiMap(symbolicDomain.constants.zipWithIndex)
