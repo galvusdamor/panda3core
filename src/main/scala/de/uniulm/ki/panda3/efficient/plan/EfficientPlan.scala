@@ -145,6 +145,10 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
   }
 
   def taskOfPlanStep(ps : Int) : EfficientTask = domain.tasks(planStepTasks(ps))
+  def argumentsOfPlanStepsEffect(ps : Int, effectIndex : Int) : Array[Int] = {
+    val task = taskOfPlanStep(ps)
+    task.getArgumentsOfLiteral(planStepParameters(ps),task.effect(effectIndex))
+  }
 
   val firstFreeVariableID : Int = variableConstraints.numberOfVariables
   val firstFreePlanStepID : Int = planStepTasks.length
