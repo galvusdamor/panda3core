@@ -4,6 +4,7 @@ import de.uniulm.ki.panda3.efficient.csp.EfficientCSP
 import de.uniulm.ki.panda3.efficient.domain.{EfficientTask, EfficientDomain}
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw._
+import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
 
 import scala.collection.mutable.ArrayBuffer
@@ -20,11 +21,11 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStepParameters: Array[Array[Int]], planStepDecomposedByMethod: Array[Int],
-                         planStepParentInDecompositonTree: Array[Int], variableConstraints: EfficientCSP, ordering: EfficientOrdering, causalLinks: Array[EfficientCausalLink]) {
+                         planStepParentInDecompositionTree: Array[Int], variableConstraints: EfficientCSP, ordering: EfficientOrdering, causalLinks: Array[EfficientCausalLink]) {
 
   assert(planStepTasks.length == planStepParameters.length)
   assert(planStepTasks.length == planStepDecomposedByMethod.length)
-  assert(planStepTasks.length == planStepParentInDecompositonTree.length)
+  assert(planStepTasks.length == planStepParentInDecompositionTree.length)
   planStepTasks.indices foreach {
     ps =>
       /*println("PS " + ps)
@@ -144,12 +145,65 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     flawBuffer.toArray
   }
 
-  def taskOfPlanStep(ps : Int) : EfficientTask = domain.tasks(planStepTasks(ps))
-  def argumentsOfPlanStepsEffect(ps : Int, effectIndex : Int) : Array[Int] = {
-    val task = taskOfPlanStep(ps)
-    task.getArgumentsOfLiteral(planStepParameters(ps),task.effect(effectIndex))
+  def modify(modification: EfficientModification): EfficientPlan = {
+    val newPlanStepTasks = new ArrayBuffer[Int]()
+    val newPlanStepParameters = new ArrayBuffer[Array[Int]]()
+    val newPlanStepDecomposedByMethod = new ArrayBuffer[Int]()
+    val newPlanStepParentInDecompositionTree = new ArrayBuffer[Int]()
+    val newCausalLinks = new ArrayBuffer[EfficientCausalLink]()
+    val newVariableConstraints: EfficientCSP = variableConstraints.addVariables(modification.addedVariableSorts)
+    val newOrdering: EfficientOrdering = ordering.addPlanSteps(modification.addedPlanSteps.length)
+
+    newPlanStepTasks appendAll planStepTasks
+    newPlanStepParameters appendAll planStepParameters
+    newPlanStepDecomposedByMethod appendAll planStepDecomposedByMethod
+    newPlanStepParentInDecompositionTree appendAll planStepParentInDecompositionTree
+    newCausalLinks appendAll causalLinks
+
+    // apply the modification
+
+    // 1. new plan steps and the init -> ps -> goal orderings
+    var newPS = 0
+    while (newPS < modification.addedPlanSteps.length) {
+      newPlanStepTasks append modification.addedPlanSteps(newPS)._1
+      newPlanStepParameters append modification.addedPlanSteps(newPS)._2
+      newPlanStepDecomposedByMethod append modification.addedPlanSteps(newPS)._3
+      newPlanStepParentInDecompositionTree append modification.addedPlanSteps(newPS)._4
+      // add a new ordering
+      newOrdering.addOrderingConstraint(0, firstFreePlanStepID + newPS) // init < ps
+      newOrdering.addOrderingConstraint(firstFreePlanStepID + newPS, 1) // ps < goal
+      newPS += 1
+    }
+
+    // 2. new causal links
+    newCausalLinks appendAll modification.addedCausalLinks
+
+    // 3. variable constraints
+    var constraint = 0
+    while (constraint < modification.addedVariableConstraints.length) {
+      newVariableConstraints.addConstraint(modification.addedVariableConstraints(constraint))
+      constraint += 1
+    }
+
+    // 4. orderings
+    var ord = 0
+    while (ord < modification.addedOrderings.length) {
+      newOrdering.addOrderingConstraint(modification.addedOrderings(ord)._1, modification.addedOrderings(ord)._2)
+      ord += 1
+    }
+
+
+    EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethod.toArray, newPlanStepParentInDecompositionTree.toArray,
+                  newVariableConstraints, newOrdering, newCausalLinks.toArray)
   }
 
-  val firstFreeVariableID : Int = variableConstraints.numberOfVariables
-  val firstFreePlanStepID : Int = planStepTasks.length
+  def taskOfPlanStep(ps: Int): EfficientTask = domain.tasks(planStepTasks(ps))
+
+  def argumentsOfPlanStepsEffect(ps: Int, effectIndex: Int): Array[Int] = {
+    val task = taskOfPlanStep(ps)
+    task.getArgumentsOfLiteral(planStepParameters(ps), task.effect(effectIndex))
+  }
+
+  val firstFreeVariableID: Int = variableConstraints.numberOfVariables
+  val firstFreePlanStepID: Int = planStepTasks.length
 }

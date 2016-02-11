@@ -12,8 +12,8 @@ import scala.collection.mutable.ArrayBuffer
 case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, newPlanStep: (Int, Array[Int], Int, Int), parameterVariableSorts: Array[Int], causalLink: EfficientCausalLink,
                                            necessaryVariableConstraints: Array[EfficientVariableConstraint]) extends EfficientModification {
   override val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
-  override val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
-  override val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array(newPlanStep)
+  override lazy val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
+  override lazy val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array(newPlanStep)
   override val addedVariableSorts      : Array[Int]                         = parameterVariableSorts
 }
 
@@ -52,11 +52,11 @@ object EfficientInsertPlanStepWithLink {
       val producerParameters = producerTask.getArgumentsOfLiteral(planStepParameterVariables,producerLiteral)
       j = 0
       while (j < producerParameters.length){
-        constraintsBuffer append new EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE,producerParameters(j),consumerParameters(i))
+        constraintsBuffer append new EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE,producerParameters(j),consumerParameters(j))
         j += 1
       }
 
-      val planStep = (plan.firstFreePlanStepID,planStepParameterVariables,-1,-1)
+      val planStep = (possibleProducer(i)._1,planStepParameterVariables,-1,-1)
       val causalLink = EfficientCausalLink(plan.firstFreePlanStepID,consumer,possibleProducer(i)._2,consumerIndex)
       buffer append EfficientInsertPlanStepWithLink(plan,planStep,newVariableSorts,causalLink,constraintsBuffer.toArray)
       i+=1

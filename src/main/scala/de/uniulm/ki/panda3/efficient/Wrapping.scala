@@ -205,7 +205,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       case (sortIndex, variableIndex) => Variable(variableIndex, "variable_" + variableIndex, domainSorts.back(sortIndex))
     }
 
-    val taskCreationGraph = SimpleDirectedGraph(plan.planStepTasks.indices, plan.planStepTasks.indices map { i => (plan.planStepParentInDecompositonTree(i), i) } collect {
+    val taskCreationGraph = SimpleDirectedGraph(plan.planStepTasks.indices, plan.planStepTasks.indices map { i => (plan.planStepParentInDecompositionTree(i), i) } collect {
       case (a, b) if a != -1 => (a, b)
     })
 
@@ -215,7 +215,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val arguments = plan.planStepParameters(psIndex) map { variables(_) }
       val psDecomposedBy = plan.planStepDecomposedByMethod(psIndex)
       val decomposedBy = if (psDecomposedBy != -1) Some(wrapDecompositionMethod(psDecomposedBy)) else None
-      val psParent = plan.planStepParentInDecompositonTree(psIndex)
+      val psParent = plan.planStepParentInDecompositionTree(psIndex)
       val parent = if (psParent != -1) Some(planStepArray(psParent)) else None
 
       planStepArray(psIndex) = PlanStep(psIndex, domainTasks.back(plan.planStepTasks(psIndex)), arguments, decomposedBy, parent)

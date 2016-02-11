@@ -11,10 +11,11 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 trait EfficientModification {
+
   val plan: EfficientPlan
   val addedVariableConstraints: Array[EfficientVariableConstraint] = Array()
-  val addedCausalLinks        : Array[EfficientCausalLink]         = Array()
-  val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array()
+  lazy val addedCausalLinks        : Array[EfficientCausalLink]         = Array()
+  lazy val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array()
   val addedVariableSorts      : Array[Int]                         = Array()
   final val addedOrderings: Array[(Int, Int)] = {
     val buffer = new ArrayBuffer[(Int, Int)]()
@@ -22,13 +23,15 @@ trait EfficientModification {
 
     var i = 0
     while (i < addedCausalLinks.length) {
-      if (plan.taskOfPlanStep(addedCausalLinks(i).producer).isPrimitive && plan.taskOfPlanStep(addedCausalLinks(i).consumer).isPrimitive)
+      if (plan.domain.tasks(taskOfPlanStep(addedCausalLinks(i).producer)).isPrimitive && plan.domain.tasks(taskOfPlanStep(addedCausalLinks(i).consumer)).isPrimitive)
         buffer.append((addedCausalLinks(i).producer, addedCausalLinks(i).consumer))
       i += 1
     }
 
     buffer.toArray
   }
+
+  private def taskOfPlanStep(ps : Int) : Int = if (ps >= plan.firstFreePlanStepID) addedPlanSteps(ps-plan.firstFreePlanStepID)._1 else plan.planStepTasks(ps)
 
 
   // here we compute all other necessary orderings, like the ones inherited from causal links

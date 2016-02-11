@@ -108,8 +108,8 @@ object WrappingChecker {
           val argumentsEqual = checkEqual(symPS.arguments, efficientPlan.planStepParameters(effPS), variableMapping)
           val decompositionMethodEqual = if (symPS.decomposedByMethod.isEmpty) efficientPlan.planStepDecomposedByMethod(effPS) == -1
           else wrapper.wrapDecompositionMethod(efficientPlan.planStepDecomposedByMethod(effPS)) == symPS.decomposedByMethod.get
-          val parentPlanStepEqual = if (symPS.parentInDecompositionTree.isEmpty) efficientPlan.planStepParentInDecompositonTree(effPS) == -1
-          else wrapper.wrapTask(efficientPlan.planStepParentInDecompositonTree(effPS)) == symPS.parentInDecompositionTree.get
+          val parentPlanStepEqual = if (symPS.parentInDecompositionTree.isEmpty) efficientPlan.planStepParentInDecompositionTree(effPS) == -1
+          else wrapper.wrapTask(efficientPlan.planStepParentInDecompositionTree(effPS)) == symPS.parentInDecompositionTree.get
 
           tasksEqual && argumentsEqual && decompositionMethodEqual && parentPlanStepEqual
         }

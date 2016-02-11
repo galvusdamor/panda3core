@@ -11,7 +11,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class EfficientInsertCausalLink(plan: EfficientPlan, causalLink: EfficientCausalLink, necessaryVariableConstraints: Array[EfficientVariableConstraint]) extends EfficientModification {
 
-  override val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
+  override lazy val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
   override val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
 }
 
