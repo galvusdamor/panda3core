@@ -24,8 +24,14 @@ case class SymbolicPlan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinks
   //assert(planSteps forall { ps => ps.arguments forall { v => parameterVariableConstraints.variables.contains(v) } })
   planStepsAndRemovedPlanSteps foreach { ps => ps.arguments foreach { v => assert(parameterVariableConstraints.variables.contains(v), ps.id + " - " + ps.schema.name + ": var " + v) } }
 
-  val planSteps  : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter { _.isPresent }
-  val causalLinks: Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter { cl => cl.producer.isPresent && cl.consumer.isPresent }
+  planStepWithoutInitGoal foreach { ps =>
+    assert(orderingConstraints.lt(init, ps))
+    assert(orderingConstraints.lt(ps, goal))
+  }
+
+
+  lazy val planSteps  : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter { _.isPresent }
+  lazy val causalLinks: Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter { cl => cl.producer.isPresent && cl.consumer.isPresent }
 
 
   // TODO: this is extremely inefficient
