@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.efficient.plan
 
 import de.uniulm.ki.panda3.efficient.csp.EfficientCSP
-import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
+import de.uniulm.ki.panda3.efficient.domain.{EfficientTask, EfficientDomain}
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw._
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
@@ -69,7 +69,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
             causalLink += 1
           }
 
-          if (!foundSupporter) flawBuffer append new EfficientOpenPrecondition(planStep, precondition)
+          if (!foundSupporter) flawBuffer append new EfficientOpenPrecondition(this, planStep, precondition)
 
           precondition += 1
         }
@@ -107,7 +107,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
               if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
                 // check whether unification is possible
                 val mgu = variableConstraints.computeMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
-                if (mgu.isDefined) flawBuffer append EfficientCausalThreat(causalLink, planStepNumber, effectNumber, mgu.get)
+                if (mgu.isDefined) flawBuffer append EfficientCausalThreat(this, causalLink, planStepNumber, effectNumber, mgu.get)
               }
               effectNumber += 1
             }
@@ -123,11 +123,11 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
   val flaws: Array[EfficientFlaw] = {
     val flawBuffer = new ArrayBuffer[EfficientFlaw]()
-    flawBuffer ++ causalThreats
-    flawBuffer ++ openPreconditions
-    flawBuffer ++ abstractPlanSteps
+    flawBuffer appendAll causalThreats
+    flawBuffer appendAll openPreconditions
+    flawBuffer appendAll abstractPlanSteps
 
-    if (flawBuffer.isEmpty) flawBuffer ++ unboundVariables
+    if (flawBuffer.isEmpty) flawBuffer appendAll unboundVariables
     flawBuffer.toArray
   }
 
@@ -137,10 +137,15 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
     var v = 0
     while (v < variableConstraints.numberOfVariables) {
-      if (variableConstraints.isRepresentativeAVariable(v)) flawBuffer append EfficientUnboundVariable(v)
+      if (variableConstraints.isRepresentativeAVariable(v)) flawBuffer append EfficientUnboundVariable(this, v)
       v += 1
     }
 
     flawBuffer.toArray
   }
+
+  def taskOfPlanStep(ps : Int) : EfficientTask = domain.tasks(planStepTasks(ps))
+
+  val firstFreeVariableID : Int = variableConstraints.numberOfVariables
+  val firstFreePlanStepID : Int = planStepTasks.length
 }
