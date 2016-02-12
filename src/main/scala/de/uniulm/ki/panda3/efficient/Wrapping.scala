@@ -120,10 +120,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     plan.orderingConstraints.originalOrderingConstraints foreach { case OrderingConstraint(before, after) => ordering.addOrderingConstraint(unwrap(before, plan), unwrap(after, plan)) }
 
     // causal links
-    val causalLinks = plan.causalLinks map { case CausalLink(producer, consumer, literal) =>
-      EfficientCausalLink(unwrap(producer, plan), unwrap(consumer, plan), producer.indexOfEffect(literal, plan.variableConstraints),
-                          consumer.indexOfPrecondition(literal, plan.variableConstraints))
-    }
+    val causalLinks = plan.causalLinks map { unwrap(_, plan) }
 
     EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, planStepDecomposedBy.toArray, planStepParentInDecompositionTree.toArray, efficientCSP, ordering,
                   causalLinks.toArray)
@@ -199,6 +196,23 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   def wrapPlanStep(planStep: Int, plan: Plan): PlanStep = ((plan.init :: plan.goal :: Nil) ++ plan.planStepWithoutInitGoal).apply(planStep)
 
   def unwrap(variableConstraint: VariableConstraint, plan: Plan): EfficientVariableConstraint = computeEfficientVariableConstraint(variableConstraint, { unwrap(_, plan) })
+
+  def wrap(causalLink: EfficientCausalLink, efficientPlan: EfficientPlan): CausalLink = {
+    val plan = wrap(efficientPlan)
+    val producer = wrapPlanStep(causalLink.producer, plan)
+    val consumer = wrapPlanStep(causalLink.consumer, plan)
+
+    CausalLink(producer, consumer, producer.substitutedEffects(causalLink.conditionIndexOfProducer))
+  }
+
+  def unwrap(causalLink: CausalLink, plan: Plan): EfficientCausalLink = {
+    val producerIDX = unwrap(causalLink.producer, plan)
+    val consumerIDX = unwrap(causalLink.consumer, plan)
+    val producerLiteralIndex = causalLink.producer.indexOfEffect(causalLink.condition, plan.variableConstraints)
+    val consumerLiteralIndex = causalLink.consumer.indexOfEffect(causalLink.condition, plan.variableConstraints)
+    EfficientCausalLink(producerIDX, consumerIDX, producerLiteralIndex, consumerLiteralIndex)
+  }
+
 
   def unwrap(plan: Plan): EfficientPlan = computeEfficientPlan(plan, efficientDomain, Nil)
 
