@@ -17,8 +17,10 @@ class EfficientOpenPreconditionTest extends FlatSpec with HasEfficientExampleDom
     val resolvers = flaw.resolver
     assert(resolvers.length == 4)
 
-    assert(resolvers exists { case EfficientInsertCausalLink(_, _, link, conditions) =>
-      link.producer == 2 && link.consumer == 3 && link.conditionIndexOfProducer == 0 && link.conditionIndexOfConsuer == 0 && conditions.length == 0
+    assert(resolvers exists {
+      case EfficientInsertCausalLink(_, _, link, conditions) =>
+        link.producer == 2 && link.consumer == 3 && link.conditionIndexOfProducer == 0 && link.conditionIndexOfConsuer == 0 && conditions.length == 0
+      case _                                                 => false
     })
 
 

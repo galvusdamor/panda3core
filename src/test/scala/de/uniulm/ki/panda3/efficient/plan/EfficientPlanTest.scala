@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.efficient.domain.{HasEfficientExampleDomain1, Efficie
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw.EfficientOpenPrecondition
-import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientInsertPlanStepWithLink, EfficientModification}
+import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientInsertCausalLink, EfficientInsertPlanStepWithLink, EfficientModification}
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
 import org.scalatest.FlatSpec
 
@@ -62,9 +62,9 @@ class EfficientPlanTest extends FlatSpec with HasEfficientExampleDomain1 {
   "Modifications" must "be applicable" in {
     val flaws = simpleOpenPreconditionPlan.openPreconditions
     assert(flaws.length == 3)
-    assert(simpleOpenPreconditionPlan.openPreconditions exists {f => f.plan == simpleOpenPreconditionPlan && f.planStep == 1 && f.preconditionIndex == 0})
-    assert(simpleOpenPreconditionPlan.openPreconditions exists {f => f.plan == simpleOpenPreconditionPlan && f.planStep == 2 && f.preconditionIndex == 0})
-    assert(simpleOpenPreconditionPlan.openPreconditions exists {f => f.plan == simpleOpenPreconditionPlan && f.planStep == 3 && f.preconditionIndex == 0})
+    assert(simpleOpenPreconditionPlan.openPreconditions exists { f => f.plan == simpleOpenPreconditionPlan && f.planStep == 1 && f.preconditionIndex == 0 })
+    assert(simpleOpenPreconditionPlan.openPreconditions exists { f => f.plan == simpleOpenPreconditionPlan && f.planStep == 2 && f.preconditionIndex == 0 })
+    assert(simpleOpenPreconditionPlan.openPreconditions exists { f => f.plan == simpleOpenPreconditionPlan && f.planStep == 3 && f.preconditionIndex == 0 })
 
     val flaw = (simpleOpenPreconditionPlan.openPreconditions find { _.planStep == 3 }).get
     assert(flaw.resolver.length == 4)
@@ -79,11 +79,55 @@ class EfficientPlanTest extends FlatSpec with HasEfficientExampleDomain1 {
   }
 
   "Open Precondition Flaws" must "be correct if computed incrementally" in {
-    val flaws : Array[EfficientOpenPrecondition]= modifiedPlan.openPreconditions
+    val flaws: Array[EfficientOpenPrecondition] = modifiedPlan.openPreconditions
     assert(flaws.length == 3)
-    assert(flaws exists {flaw => flaw.plan == modifiedPlan && flaw.planStep == 1 && flaw.preconditionIndex == 0})
-    assert(flaws exists {flaw => flaw.plan == modifiedPlan && flaw.planStep == 2 && flaw.preconditionIndex == 0})
-    assert(flaws exists {flaw => flaw.plan == modifiedPlan && flaw.planStep == 4 && flaw.preconditionIndex == 0})
+    assert(flaws exists { flaw => flaw.plan == modifiedPlan && flaw.planStep == 1 && flaw.preconditionIndex == 0 })
+    assert(flaws exists { flaw => flaw.plan == modifiedPlan && flaw.planStep == 2 && flaw.preconditionIndex == 0 })
+    assert(flaws exists { flaw => flaw.plan == modifiedPlan && flaw.planStep == 4 && flaw.preconditionIndex == 0 })
+
+
+    val t3Flaw = (flaws find { case EfficientOpenPrecondition(_, 2, _) => true; case _ => false }).get
+    val t3Modifications = t3Flaw.resolver
+
+    assert(t3Modifications.length == 4)
+    assert(t3Modifications exists {
+      case EfficientInsertCausalLink(_, _, link, conditions) =>
+        link.producer == 4 && link.consumer == 2 && link.conditionIndexOfProducer == 0 && link.conditionIndexOfConsuer == 0 && conditions.length == 0
+      case _                                                 => false
+    })
+    assert(t3Modifications exists {
+      case EfficientInsertPlanStepWithLink(plan, _, newPlanStep, parameterVariableSorts, causalLink, necessaryVariableConstraints) =>
+        val planStepOK = plan == modifiedPlan && newPlanStep._1 == 2 && newPlanStep._2.length == 1 && newPlanStep._2(0) == 2 && newPlanStep._3 == -1 && newPlanStep._4 == -1
+        val parameterOK = parameterVariableSorts sameElements Array(0)
+        val causalLinkOK = causalLink == EfficientCausalLink(5, 2, 0, 0)
+        val constraintOK = (necessaryVariableConstraints sameElements Array(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 2, 0))) ||
+          (necessaryVariableConstraints sameElements Array(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, 2)))
+        planStepOK && parameterOK && causalLinkOK && constraintOK
+      case _                                                                                                                       => false
+    })
+    assert(t3Modifications exists {
+      case EfficientInsertPlanStepWithLink(plan, _, newPlanStep, parameterVariableSorts, causalLink, necessaryVariableConstraints) =>
+        val planStepOK = plan == modifiedPlan && newPlanStep._1 == 5 && newPlanStep._2.length == 2 && newPlanStep._2(0) == 2 && newPlanStep._2(1) == 3 &&
+          newPlanStep._3 == -1 && newPlanStep._4 == -1
+        val parameterOK = parameterVariableSorts sameElements Array(0, 0)
+        val causalLinkOK = causalLink == EfficientCausalLink(5, 2, 0, 0)
+        val constraintOK = (necessaryVariableConstraints sameElements Array(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 2, 0))) ||
+          (necessaryVariableConstraints sameElements Array(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, 2)))
+        planStepOK && parameterOK && causalLinkOK && constraintOK
+      case _                                                                                                                       => false
+    })
+    assert(t3Modifications exists {
+      case EfficientInsertPlanStepWithLink(plan, _, newPlanStep, parameterVariableSorts, causalLink, necessaryVariableConstraints) =>
+        val planStepOK = plan == modifiedPlan && newPlanStep._1 == 5 && newPlanStep._2.length == 2 && newPlanStep._2(0) == 2 && newPlanStep._2(1) == 3 &&
+          newPlanStep._3 == -1 && newPlanStep._4 == -1
+        val parameterOK = parameterVariableSorts sameElements Array(0, 0)
+        val causalLinkOK = causalLink == EfficientCausalLink(5, 2, 1, 0)
+        val constraintOK = (necessaryVariableConstraints sameElements Array(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 3, 0))) ||
+          (necessaryVariableConstraints sameElements Array(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, 3)))
+
+        planStepOK && parameterOK && causalLinkOK && constraintOK
+      case _                                                                                                                       => false
+    })
   }
 
 }
