@@ -118,7 +118,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       // add open precondition flaws for all new tasks
       i = 0
       while (i < appliedModification.addedPlanSteps.length) {
-        computeOpenPreconditions(planStepTasks.length - 1, flawBuffer)
+        computeOpenPreconditions(planStepTasks.length - i - 1, flawBuffer)
         i += 1
       }
 
