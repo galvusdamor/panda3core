@@ -21,7 +21,7 @@ trait HasEfficientExampleDomain1 {
     * tasks:
     * 0: init()     :       :
     * 1: goal()     : +0()  :
-    * 2: task1(0)   :       : +1(0)
+    * 2: task1(0)   : +0()  : +1(0)
     * 3: task2(0)   : +1(0) :
     * 4: task3(0,1) : +1(1) : -1(0)
     * 5: task4(0,1) :       : +1(0),+1(1),+0()
@@ -29,7 +29,7 @@ trait HasEfficientExampleDomain1 {
     */
   val init   = new EfficientTask(true, Array(), Array(), Array(), Array(), true)
   val goal   = new EfficientTask(true, Array(), Array(), Array(new EfficientLiteral(0, true, Array())), Array(), true)
-  val task1  = new EfficientTask(true, Array(0), Array(), Array(), Array(new EfficientLiteral(1, true, Array(0))), true)
+  val task1  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(0, true, Array())), Array(new EfficientLiteral(1, true, Array(0))), true)
   val task2  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(), true)
   val task3  = new EfficientTask(false, Array(0, 0), Array(), Array(new EfficientLiteral(1, true, Array(1))), Array(new EfficientLiteral(1, false, Array(0))), true)
   val task4  = new EfficientTask(false, Array(0, 0), Array(), Array(),

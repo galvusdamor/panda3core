@@ -1,10 +1,11 @@
 package de.uniulm.ki.panda3.efficient.plan
 
 import de.uniulm.ki.panda3.efficient.csp.{EfficientVariableConstraint, EfficientCSP}
-import de.uniulm.ki.panda3.efficient.domain.{EfficientTask, EfficientDomain}
+import de.uniulm.ki.panda3.efficient.domain.{HasEfficientExampleDomain1, EfficientTask, EfficientDomain}
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw.EfficientOpenPrecondition
+import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientInsertPlanStepWithLink, EfficientModification}
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
 import org.scalatest.FlatSpec
 
@@ -12,54 +13,23 @@ import org.scalatest.FlatSpec
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // scalastyle:off magic.number
-class EfficientPlanTest extends FlatSpec {
-
-  /**
-    * sorts: 0
-    * constants: 0,1,2 -> of sort 0
-    * predicates:
-    * 0()
-    * 1(0)
-    *
-    * tasks:
-    * init::
-    * goal  :       : +0()
-    * task1 :       : +1(0)
-    * task2 : +1(0) :
-    * task3 : +1(1) : + 1(0)
-    */
-  val init   = new EfficientTask(true, Array(), Array(), Array(), Array(), true)
-  val goal   = new EfficientTask(true, Array(), Array(), Array(new EfficientLiteral(0, true, Array())), Array(), true)
-  val task1  = new EfficientTask(true, Array(0), Array(), Array(), Array(new EfficientLiteral(1, true, Array(0))), true)
-  val task2  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(), true)
-  val task3  = new EfficientTask(false, Array(0, 0), Array(), Array(new EfficientLiteral(1, true, Array(1))), Array(new EfficientLiteral(1, false, Array(0))), true)
-  val domain = new EfficientDomain(Array(Array()), Array(Array(0), Array(0), Array(0)), Array(Array(), Array(0), Array(0, 0)), Array(init, goal, task1, task2, task3), Array())
-
-  // the order of tasks is scrambled to test whether we access the correct one
-  val csp = new EfficientCSP(domain)().addVariables(Array(0, 0, 0, 0, 0, 0))
-  csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 1, 3))
-  csp.addConstraint(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, 1, 5))
-  val ordering = new EfficientOrdering().addPlanSteps(7)
-  Range(2, 7) foreach { i => ordering.addOrderingConstraint(0, i); ordering.addOrderingConstraint(i, 1) }
-  ordering.addOrderingConstraint(3, 4)
-  ordering.addOrderingConstraint(5, 3)
-  val causalLink = EfficientCausalLink(3, 4, 0, 0)
-  val plan       = new EfficientPlan(domain, Array(0, 1, 4, 2, 3, 4, 4, 4), Array(Array(), Array(), Array(0, 2), Array(1), Array(3), Array(4, 4), Array(5, 5), Array(5, 5)),
-                                     Array(-1, -1, -1, -1, -1, -1, -1, 1), Array(-1, -1, -1, -1, -1, -1, -1, -1), csp, ordering, Array(causalLink))
+// scalastyle:off null
+class EfficientPlanTest extends FlatSpec with HasEfficientExampleDomain1 {
 
   "Detecting Open Preconditions" must "yield all of them" in {
-    val openPrecondition = plan.openPreconditions
+    val openPrecondition = efficientPlanTestPlan.openPreconditions
 
-    assert(openPrecondition.length == 4)
+    assert(openPrecondition.length == 5)
 
     assert(openPrecondition exists { case EfficientOpenPrecondition(_, ps, prec) => ps == 1 && prec == 0 })
     assert(openPrecondition exists { case EfficientOpenPrecondition(_, ps, prec) => ps == 2 && prec == 0 })
+    assert(openPrecondition exists { case EfficientOpenPrecondition(_, ps, prec) => ps == 3 && prec == 0 })
     assert(openPrecondition exists { case EfficientOpenPrecondition(_, ps, prec) => ps == 5 && prec == 0 })
     assert(openPrecondition exists { case EfficientOpenPrecondition(_, ps, prec) => ps == 6 && prec == 0 })
   }
 
   "Detecting Abstract Tasks" must "yield all of them" in {
-    val abstractTasks = plan.abstractPlanSteps
+    val abstractTasks = efficientPlanTestPlan.abstractPlanSteps
 
     assert(abstractTasks.length == 3)
     assert(abstractTasks exists { _.planStep == 2 })
@@ -68,22 +38,52 @@ class EfficientPlanTest extends FlatSpec {
   }
 
   "Detecting Causal Threats" must "yield all of them" in {
-    val causalThreats = plan.causalThreats
+    val causalThreats = efficientPlanTestPlan.causalThreats
 
     assert(causalThreats.length == 1)
-    assert(causalThreats exists { _.causalLink == causalLink })
+    assert(causalThreats exists { _.causalLink == efficientPlanTestPlan.causalLinks.head })
     assert(causalThreats exists { _.threatingPlanStep == 2 })
     assert(causalThreats exists { _.indexOfThreatingEffect == 0 })
     assert(causalThreats exists { _.mgu.length == 1 })
-    assert(causalThreats exists { cl => cl.mgu.head == EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, csp.getRepresentativeVariable(1)) ||
-      cl.mgu.head == EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, csp.getRepresentativeVariable(1), 0)
+    assert(causalThreats exists { cl =>
+      cl.mgu.head == EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, 0, efficientPlanTestPlan.variableConstraints.getRepresentativeVariable(1)) ||
+        cl.mgu.head == EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, efficientPlanTestPlan.variableConstraints.getRepresentativeVariable(1), 0)
     })
   }
 
   "Detecting Unbound Variables" must "yield all of them" in {
-    val unboundVariables = plan.unboundVariables
+    val unboundVariables = efficientPlanTestPlan.unboundVariables
 
     assert(unboundVariables.length == 6)
     assert(unboundVariables.toSet.size == 6)
   }
+
+  var modifiedPlan: EfficientPlan = null
+  "Modifications" must "be applicable" in {
+    val flaws = simpleOpenPreconditionPlan.openPreconditions
+    assert(flaws.length == 3)
+    assert(simpleOpenPreconditionPlan.openPreconditions exists {f => f.plan == simpleOpenPreconditionPlan && f.planStep == 1 && f.preconditionIndex == 0})
+    assert(simpleOpenPreconditionPlan.openPreconditions exists {f => f.plan == simpleOpenPreconditionPlan && f.planStep == 2 && f.preconditionIndex == 0})
+    assert(simpleOpenPreconditionPlan.openPreconditions exists {f => f.plan == simpleOpenPreconditionPlan && f.planStep == 3 && f.preconditionIndex == 0})
+
+    val flaw = (simpleOpenPreconditionPlan.openPreconditions find { _.planStep == 3 }).get
+    assert(flaw.resolver.length == 4)
+
+    val modification = (flaw.resolver find { case EfficientInsertPlanStepWithLink(_, _, (2, _, _, _), _, _, _) => true; case _ => false }).get
+
+    modifiedPlan = simpleOpenPreconditionPlan modify modification
+  }
+
+  it must "lead to the expected plan" in {
+    assert(modifiedPlan.planStepTasks.length == 5)
+  }
+
+  "Open Precondition Flaws" must "be correct if computed incrementally" in {
+    val flaws : Array[EfficientOpenPrecondition]= modifiedPlan.openPreconditions
+    assert(flaws.length == 3)
+    assert(flaws exists {flaw => flaw.plan == modifiedPlan && flaw.planStep == 1 && flaw.preconditionIndex == 0})
+    assert(flaws exists {flaw => flaw.plan == modifiedPlan && flaw.planStep == 2 && flaw.preconditionIndex == 0})
+    assert(flaws exists {flaw => flaw.plan == modifiedPlan && flaw.planStep == 4 && flaw.preconditionIndex == 0})
+  }
+
 }

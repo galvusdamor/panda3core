@@ -10,9 +10,8 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, resolvedFlaw : EfficientFlaw, newPlanStep: (Int, Array[Int], Int, Int), parameterVariableSorts: Array[Int], causalLink:
-EfficientCausalLink,
-                                           necessaryVariableConstraints: Array[EfficientVariableConstraint]) extends EfficientModification {
+case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, newPlanStep: (Int, Array[Int], Int, Int), parameterVariableSorts: Array[Int],
+                                           causalLink: EfficientCausalLink, necessaryVariableConstraints: Array[EfficientVariableConstraint]) extends EfficientModification {
   override      val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
   override lazy val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
   override lazy val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array(newPlanStep)
@@ -22,7 +21,7 @@ EfficientCausalLink,
 
 object EfficientInsertPlanStepWithLink {
 
-  def apply(plan: EfficientPlan, resolvedFlaw : EfficientFlaw, consumer: Int, consumerIndex: Int): Array[EfficientModification] = {
+  def apply(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int): Array[EfficientModification] = {
     val buffer = new ArrayBuffer[EfficientModification]()
 
     val consumerTask = plan.domain.tasks(plan.planStepTasks(consumer))
