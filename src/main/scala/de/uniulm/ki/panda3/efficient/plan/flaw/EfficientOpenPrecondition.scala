@@ -57,11 +57,10 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
         val newLink = asInsertTask.causalLink.addOffsetToPlanStepsIfGreaterThan(newTasks, plan.firstFreePlanStepID)
         newResolvers append EfficientInsertPlanStepWithLink(newPlan, flaw, newPlanStep, asInsertTask.parameterVariableSorts, newLink, newConstraints)
       }
-
-      // add new insert causal link modifications that become possible due to the new tasks
-      newResolvers appendAll EfficientInsertCausalLink(newPlan, flaw, planStep, preconditionIndex, newPlan.planStepTasks.length - newTasks, newPlan.planStepTasks.length)
       i += 1
     }
+    // add new insert causal link modifications that become possible due to the new tasks
+    newResolvers appendAll EfficientInsertCausalLink(newPlan, flaw, planStep, preconditionIndex, newPlan.planStepTasks.length - newTasks, newPlan.planStepTasks.length)
     flaw.precomputedResolver = Some(newResolvers.toArray)
     flaw
   }
