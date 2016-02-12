@@ -18,7 +18,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[Int]] = Array(), unequal: Array[mutable.Set[Int]] = Array(),
+class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.BitSet] = Array(), unequal: Array[mutable.BitSet] = Array(),
                    protected val unionFind: EfficientUnionFind = new EfficientUnionFind(Array()), val variableSorts: Array[Int] = Array(), var potentiallyConsistent: Boolean = true)
                   (lastKVariablesAreNew: Int = variableSorts.length) {
   // first propagate then check for consistency
@@ -65,7 +65,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
     returnSet.add(switchConstant(unionFind.getRepresentative(variable)))
     returnSet
   } else {
-    switchSetOfConstants(remainingDomains(unionFind.getRepresentative(variable)))
+    remainingDomains(unionFind.getRepresentative(variable))
   }
 
   def getVariableUnequalTo(variable: Int): mutable.Set[Int] = if (unionFind.getRepresentative(variable) < 0) new mutable.HashSet[Int]()
@@ -103,23 +103,23 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
     }
   }
 
-  private def copyAndAddNewVariables(sorts: Array[Int]): (Array[mutable.Set[Int]], Array[mutable.Set[Int]], EfficientUnionFind) = {
-    val clonedDomains = new Array[mutable.Set[Int]](remainingDomains.length + sorts.length)
-    val clonedUnequal = new Array[mutable.Set[Int]](remainingDomains.length + sorts.length)
+  private def copyAndAddNewVariables(sorts: Array[Int]): (Array[mutable.BitSet], Array[mutable.BitSet], EfficientUnionFind) = {
+    val clonedDomains = new Array[mutable.BitSet](remainingDomains.length + sorts.length)
+    val clonedUnequal = new Array[mutable.BitSet](remainingDomains.length + sorts.length)
     var i = 0
     while (i < clonedDomains.length) {
       if (i < remainingDomains.length) {
         clonedDomains(i) = remainingDomains(i).clone()
         clonedUnequal(i) = unequal(i).clone()
       } else {
-        clonedDomains(i) = mutable.HashSet[Int]()
+        clonedDomains(i) = mutable.BitSet()
         val constants: Array[Int] = domain.constantsOfSort(sorts(i - remainingDomains.length))
         var j = 0
         while (j < constants.length) {
-          clonedDomains(i).add(switchConstant(constants(j)))
+          clonedDomains(i).add(constants(j))
           j += 1
         }
-        clonedUnequal(i) = mutable.HashSet[Int]()
+        clonedUnequal(i) = mutable.BitSet()
       }
       i += 1
     }
@@ -166,9 +166,9 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         }
       } else {
         // newRemoved was the variable and newRepresentative a constant
-        if (remainingDomains(newRemoved).contains(newRepresentative)) {
+        if (remainingDomains(newRemoved).contains(switchConstant(newRepresentative))) {
           remainingDomains(newRemoved).clear()
-          remainingDomains(newRemoved).add(newRepresentative)
+          remainingDomains(newRemoved).add(switchConstant(newRepresentative))
           // remove newRemoved from all unequal constraints
           val i = unequal(newRemoved).iterator
           while (i.hasNext) {
@@ -197,7 +197,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
       else {
 
         // the value to which the variable has been set
-        val unitValue = remainingDomains(toPropagate(i)).head
+        val unitValue = switchConstant(remainingDomains(toPropagate(i)).head)
 
         // set the variable to the constant (just to be sure)
         val equalSuccessful = assertEqual(toPropagate(i), unitValue)
@@ -208,7 +208,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         while (unequalToPropagate.hasNext) {
           val propagateTo = unequalToPropagate.next()
           // remove the unit from the domain
-          remainingDomains(propagateTo).remove(unitValue)
+          remainingDomains(propagateTo).remove(switchConstant(unitValue))
           if (remainingDomains(propagateTo).size == 1) newPropagations.add(propagateTo)
           if (remainingDomains(propagateTo).isEmpty) potentiallyConsistent = false
         }
@@ -249,7 +249,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         if (variableRepresentative < 0) potentiallyConsistent = false
         else {
           remainingDomains(variableRepresentative).clear()
-          remainingDomains(variableRepresentative).add(internalConstant)
+          remainingDomains(variableRepresentative).add(switchConstant(internalConstant))
           // we just set it, so propagate
           propagate(variableRepresentative)
         }
@@ -270,7 +270,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         val variable = if (variableRepresentative >= 0) variableRepresentative else otherRepresentative
         val constant = if (variableRepresentative >= 0) otherRepresentative else variableRepresentative
 
-        remainingDomains(variable).remove(constant)
+        remainingDomains(variable).remove(switchConstant(constant))
         if (remainingDomains(variable).size == 1) propagate(variable)
       }
     } else if (constraint.constraintType == EfficientVariableConstraint.OFSORT) {
@@ -279,7 +279,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
       if (variableRepresentative < 0) {
         if (!domain.constantsOfSort(constraint.other).contains(switchConstant(variableRepresentative))) potentiallyConsistent = false
       } else {
-        remainingDomains(variableRepresentative) = remainingDomains(variableRepresentative) & switchSetOfConstants(mutable.Set[Int](domain.constantsOfSort(constraint.other): _*))
+        remainingDomains(variableRepresentative) = remainingDomains(variableRepresentative) & mutable.BitSet(domain.constantsOfSort(constraint.other): _*)
         if (remainingDomains(variableRepresentative).isEmpty) potentiallyConsistent = false
         if (remainingDomains(variableRepresentative).size == 1) propagate(variableRepresentative)
       }
@@ -292,7 +292,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         var i = 0
         val constantsInSort = domain.constantsOfSort(constraint.other)
         while (i < constantsInSort.length) {
-          remainingDomains(variableRepresentative).remove(switchConstant(constantsInSort(i)))
+          remainingDomains(variableRepresentative).remove(constantsInSort(i))
           i += 1
         }
         if (remainingDomains(variableRepresentative).isEmpty) potentiallyConsistent = false
@@ -312,7 +312,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         else {
           val constant = if (x < 0) x else y
           val variable = if (x < 0) y else x
-          if (!remainingDomains(variable).contains(constant)) EfficientCSP.INCOMPATIBLE else EfficientCSP.COMPATIBLE
+          if (!remainingDomains(variable).contains(switchConstant(constant))) EfficientCSP.INCOMPATIBLE else EfficientCSP.COMPATIBLE
         }
       } else {
         // both are variables
