@@ -29,8 +29,10 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   }
   private val domainPredicates          : BiMap[Predicate, Int]           = BiMap(symbolicDomain.predicates.zipWithIndex)
   private val domainTasksObjects        : BiMap[Task, EfficientTask]      = {
-    val allTaskSchemes = (symbolicDomain.tasks ++ symbolicDomain.hiddenTasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).distinct
-    BiMap(allTaskSchemes map { t => (t, computeEfficientTask(t)) })
+    val ordinaryTaskSchemes = symbolicDomain.tasks map { (_, false) }
+    val hiddenTaskSchemes = (symbolicDomain.hiddenTasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).distinct map { (_, true) }
+    val allTaskSchemes = ordinaryTaskSchemes ++ hiddenTaskSchemes
+    BiMap(allTaskSchemes map { case (t, isInitOrGoal) => (t, computeEfficientTask(t, isInitOrGoal)) })
   }
   private val domainTasks               : BiMap[Task, Int]                = BiMap(domainTasksObjects.toMap.keys.toSeq.zipWithIndex)
   private val domainDecompositionMethods: BiMap[DecompositionMethod, Int] = BiMap(symbolicDomain.decompositionMethods.zipWithIndex)
@@ -50,7 +52,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   }
 
 
-  private def computeEfficientTask(task: Task): EfficientTask = {
+  private def computeEfficientTask(task: Task, isInitOrGoal: Boolean): EfficientTask = {
     val parameterSorts = task.parameters map { v => domainSorts.toMap(v.sort) }
     val variableMap = task.parameters.zipWithIndex.toMap
     val variableConstraints = task.parameterConstraints map { computeEfficientVariableConstraint(_, variableMap) }
@@ -63,7 +65,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val preconditions = reducedTask.precondition.conjuncts map { computeEfficientLiteral(_, variableMap) }
     val effects = reducedTask.effect.conjuncts map { computeEfficientLiteral(_, variableMap) }
 
-    EfficientTask(isPrimitive = task.isPrimitive, parameterSorts.toArray, variableConstraints.toArray, preconditions.toArray, effects.toArray)
+    EfficientTask(isPrimitive = task.isPrimitive, parameterSorts.toArray, variableConstraints.toArray, preconditions.toArray, effects.toArray, isInitOrGoal)
   }
 
 

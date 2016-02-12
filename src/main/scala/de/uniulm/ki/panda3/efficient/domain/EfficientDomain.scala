@@ -36,21 +36,24 @@ class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
     }
   }
 
+  lazy val insertableTasks: Array[EfficientTask] = tasks filter { _.allowedToInsert }
+
 
   /** the ith index of the array contains all possible tasks that produce predicate i. The first list in the pair the positive ones, the second the negative ones.
     * The inner pairs each contain the index of the task and the index of the possible producer
     */
   lazy val possibleProducerTasksOf: Array[(Array[(Int, Int)], Array[(Int, Int)])] = (predicates.indices map { predicate =>
     val positive: Array[(Int, Int)] = tasks.zipWithIndex flatMap { case (task, taskIndex) =>
-      task.effect.zipWithIndex collect {
+      if (task.allowedToInsert) task.effect.zipWithIndex collect {
         case (literal, literalIndex) if literal.isPositive && literal.predicate == predicate => (taskIndex, literalIndex)
       }
+      else Nil
     }
 
     val negative: Array[(Int, Int)] = tasks.zipWithIndex flatMap { case (task, taskIndex) =>
-      task.effect.zipWithIndex collect {
+      if (task.allowedToInsert) task.effect.zipWithIndex collect {
         case (literal, literalIndex) if !literal.isPositive && literal.predicate == predicate => (taskIndex, literalIndex)
-      }
+      } else Nil
     }
     (positive, negative)
   }).toArray

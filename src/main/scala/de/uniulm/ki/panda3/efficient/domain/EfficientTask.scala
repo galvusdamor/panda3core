@@ -13,7 +13,7 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], constraints: Array[EfficientVariableConstraint], precondition: Array[EfficientLiteral],
-                         effect: Array[EfficientLiteral]) {
+                         effect: Array[EfficientLiteral], allowedToInsert: Boolean) {
 
   /** given a literal of this task and the actual parameters of this task, it returns the actual arguments of the literal */
   def getArgumentsOfLiteral(taskArguments: Array[Int], literal: EfficientLiteral): Array[Int] = {
