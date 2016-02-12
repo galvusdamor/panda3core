@@ -16,6 +16,8 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
   */
 object BFS {
   def main(args: Array[String]) {
+    //val domFile = "AssemblyTask_domain.xml"
+    //val probFile = "AssemblyTask_problem.xml"
     val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
@@ -42,51 +44,58 @@ object BFS {
 
     time = System.currentTimeMillis()
     //dfs(initialPlan, 0)
-    bfs(initialPlan)
+    val ret = bfs(initialPlan)
+
+    println(ret)
+    val symbolicPlan = wrapper.wrap(ret.get)
+    println(symbolicPlan)
+    println(symbolicPlan.longInfo)
   }
 
   var time: Long = 0
 
 
-
-
   def bfs(initialPlan: EfficientPlan): Option[EfficientPlan] = {
     val stack = new util.ArrayDeque[EfficientPlan]()
-    val result = None
+    var result : Option[EfficientPlan] = None
     stack.add(initialPlan)
 
     var i = 0
     while (!stack.isEmpty && result.isEmpty) {
-      if (i % 100 == 0) {
+      if (i % 100 == 0 && i > 0) {
         val nTime = System.currentTimeMillis()
-        val nps = 100.0 / (nTime - time) * 1000
-        time = nTime
+        val nps = i.asInstanceOf[Double] / (nTime - time) * 1000
+        //time = nTime
         println(i + " " + nps)
       }
       i += 1
       val plan = stack.pop()
       val flaws = plan.flaws
-      val modifications = new Array[Array[EfficientModification]](flaws.length)
-      var flawnum = 0
-      var smallFlaw = 0
-      var smallFlawNumMod = 0x3f3f3f3f
-      while (flawnum < flaws.length) {
-        //printTime("ToModcall")
-        modifications(flawnum) = flaws(flawnum).resolver
-        //printTime("Modification")
-        if (modifications(flawnum).length < smallFlawNumMod) {
-          smallFlawNumMod = modifications(flawnum).length
-          smallFlaw = flawnum
+      if (flaws.length == 0) {
+        result = Some(plan)
+      } else {
+        val modifications = new Array[Array[EfficientModification]](flaws.length)
+        var flawnum = 0
+        var smallFlaw = 0
+        var smallFlawNumMod = 0x3f3f3f3f
+        while (flawnum < flaws.length) {
+          //printTime("ToModcall")
+          modifications(flawnum) = flaws(flawnum).resolver
+          //printTime("Modification")
+          if (modifications(flawnum).length < smallFlawNumMod) {
+            smallFlawNumMod = modifications(flawnum).length
+            smallFlaw = flawnum
+          }
+          flawnum += 1
         }
-        flawnum += 1
-      }
 
-      if (smallFlawNumMod != 0) {
-        var modNum = 0
-        while (modNum < smallFlawNumMod && result.isEmpty) {
-          // apply modification
-          stack add plan.modify(modifications(smallFlaw)(modNum))
-          modNum += 1
+        if (smallFlawNumMod != 0) {
+          var modNum = 0
+          while (modNum < smallFlawNumMod && result.isEmpty) {
+            // apply modification
+            stack add plan.modify(modifications(smallFlaw)(modNum))
+            modNum += 1
+          }
         }
       }
     }
