@@ -47,12 +47,7 @@ object BFS {
 
   var time: Long = 0
 
-  def printTime(str: String): Unit = {
-    val nTime = System.currentTimeMillis()
-    println(str + " " + (nTime - time))
 
-    time = nTime
-  }
 
 
   def bfs(initialPlan: EfficientPlan): Option[EfficientPlan] = {
@@ -62,7 +57,12 @@ object BFS {
 
     var i = 0
     while (!stack.isEmpty && result.isEmpty) {
-      if (i % 10 == 0) println(i)
+      if (i % 100 == 0) {
+        val nTime = System.currentTimeMillis()
+        val nps = 100.0 / (nTime - time) * 1000
+        time = nTime
+        println(i + " " + nps)
+      }
       i += 1
       val plan = stack.pop()
       val flaws = plan.flaws

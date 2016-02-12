@@ -107,7 +107,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
               val effect = planStep.effect(effectNumber)
               if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
                 // check whether unification is possible
-                val mgu = variableConstraints.computeMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
+                val mgu = variableConstraints.fastMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
                 if (mgu.isDefined) flawBuffer append EfficientCausalThreat(this, causalLink, planStepNumber, effectNumber, mgu.get)
               }
               effectNumber += 1

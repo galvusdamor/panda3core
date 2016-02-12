@@ -19,7 +19,7 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[Int]] = Array(), unequal: Array[mutable.Set[Int]] = Array(),
-                   unionFind: EfficientUnionFind = new EfficientUnionFind(Array()), val variableSorts: Array[Int] = Array(), var potentiallyConsistent: Boolean = true)
+                   protected val unionFind: EfficientUnionFind = new EfficientUnionFind(Array()), val variableSorts: Array[Int] = Array(), var potentiallyConsistent: Boolean = true)
                   (lastKVariablesAreNew: Int = variableSorts.length) {
   // first propagate then check for consistency
   propagateNewVariablesIfSingleton(lastKVariablesAreNew)
@@ -321,8 +321,8 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
     } else EfficientCSP.EQUAL
   }
 
-  /** determines whether two variables are set equal*/
-  def areEqual(var1 : Int, var2 : Int) : Boolean = unionFind.getRepresentative(var1) == unionFind.getRepresentative(var2)
+  /** determines whether two variables are set equal */
+  def areEqual(var1: Int, var2: Int): Boolean = unionFind.getRepresentative(var1) == unionFind.getRepresentative(var2)
 
 
   def computeMGU(someVariables: Array[Int], otherVariables: Array[Int]): Option[Array[EfficientVariableConstraint]] = {
@@ -333,8 +333,8 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
 
     var i = 0
     while (i < someVariables.length && possible) {
-      val x = unionFind.getRepresentative(otherVariables(i))
-      val y = unionFind.getRepresentative(someVariables(i))
+      val x = csp.unionFind.getRepresentative(otherVariables(i))
+      val y = csp.unionFind.getRepresentative(someVariables(i))
       val compatibility = csp.areCompatible(x, y)
 
       if (compatibility == EfficientCSP.INCOMPATIBLE) possible = false
@@ -342,6 +342,28 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.Set[
         val constraint = EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, x, y)
         csp.addConstraint(constraint)
         mgu append constraint
+      }
+      i += 1
+    }
+
+    if (!possible) None else Some(mgu.toArray)
+  }
+
+  /** a faster routine to compute the mgu, it might return one even if it is illegal */
+  def fastMGU(someVariables: Array[Int], otherVariables: Array[Int]): Option[Array[EfficientVariableConstraint]] = {
+    assert(someVariables.length == otherVariables.length)
+    var possible = true
+    val mgu = new ArrayBuffer[EfficientVariableConstraint]()
+
+    var i = 0
+    while (i < someVariables.length && possible) {
+      val x = unionFind.getRepresentative(otherVariables(i))
+      val y = unionFind.getRepresentative(someVariables(i))
+      val compatibility = areCompatible(x, y)
+
+      if (compatibility == EfficientCSP.INCOMPATIBLE) possible = false
+      else if (compatibility == EfficientCSP.COMPATIBLE) {
+        mgu append EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, x, y)
       }
       i += 1
     }

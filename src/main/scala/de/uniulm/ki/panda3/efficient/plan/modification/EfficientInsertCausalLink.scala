@@ -37,7 +37,7 @@ object EfficientInsertCausalLink {
           if (consumerLiteral.predicate == producerLiteral.predicate && consumerLiteral.isPositive == producerLiteral.isPositive){
             // check whether they can be unified
             val producerParameters = producerTask.getArgumentsOfLiteral(plan.planStepParameters(producer),producerLiteral)
-            val mgu = plan.variableConstraints.computeMGU(consumerParameters,producerParameters)
+            val mgu = plan.variableConstraints.fastMGU(consumerParameters,producerParameters)
             if (mgu.isDefined)
               buffer append EfficientInsertCausalLink(plan,EfficientCausalLink(producer,consumer,producerIndex,consumerIndex),mgu.get)
           }
