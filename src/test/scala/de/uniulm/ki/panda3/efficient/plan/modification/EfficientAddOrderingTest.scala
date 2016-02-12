@@ -2,8 +2,7 @@ package de.uniulm.ki.panda3.efficient.plan.modification
 
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint
-import de.uniulm.ki.panda3.symbolic.plan.modification.{AddOrdering, AddOrderingTestData}
+import de.uniulm.ki.panda3.symbolic.plan.modification.AddOrderingTestData
 import org.scalatest.FlatSpec
 
 /**
