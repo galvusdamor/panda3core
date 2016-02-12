@@ -279,6 +279,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.BitS
       if (variableRepresentative < 0) {
         if (!domain.constantsOfSort(constraint.other).contains(switchConstant(variableRepresentative))) potentiallyConsistent = false
       } else {
+        // TODO make this more efficient by using a loop
         remainingDomains(variableRepresentative) = remainingDomains(variableRepresentative) & mutable.BitSet(domain.constantsOfSort(constraint.other): _*)
         if (remainingDomains(variableRepresentative).isEmpty) potentiallyConsistent = false
         if (remainingDomains(variableRepresentative).size == 1) propagate(variableRepresentative)
