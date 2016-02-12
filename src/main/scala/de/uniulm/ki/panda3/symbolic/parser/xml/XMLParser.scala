@@ -25,6 +25,10 @@ import scala.xml.InputSource
   * @author Kadir Dede (kadir.dede@uni-ulm.de)
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+// we must check whether null occurs in the XML datastructures
+// scalastyle:off null
+// we have to piggy-back onto the structure of the generated XML file
+// scalastyle:off structural.type
 object XMLParser extends StepwiseParser {
 
   override def parseDomain(domainStream: InputStream): Domain = {
@@ -190,16 +194,14 @@ object XMLParser extends StepwiseParser {
           }
         case not: Not       => extract(getAnyFromFormula(not), !positive)
         case atomic: Atomic =>
-          val parameterVariables: scala.Seq[logic.Variable] = JavaConversions.asScalaBuffer(atomic.getVariableOrConstant) map { case variable: Variable => xmlVariableToScalaVariable(
-                                                                                                                                                                                       variable
-                                                                                                                                                                                         .getName
-                                                                                                                                                                                         .asInstanceOf[VariableDeclaration])
-          case constant: Constant                                                                                                                       =>
-            val constDeclaration: ConstantDeclaration = constant.getName.asInstanceOf[ConstantDeclaration]
-            val newVariable = logic.Variable(xmlVariableToScalaVariable.size + variableConstraints.size, "ConstantVariable" + constant.hashCode(),
-                                             xmlSortsToScalaSorts(constDeclaration.getSort.asInstanceOf[SortDeclaration]))
-            variableConstraints = variableConstraints :+ Equal(newVariable, xmlConstantToScalaConstant(constDeclaration))
-            newVariable
+          val parameterVariables: scala.Seq[logic.Variable] = JavaConversions.asScalaBuffer(atomic.getVariableOrConstant) map {
+            case variable: Variable => xmlVariableToScalaVariable(variable.getName.asInstanceOf[VariableDeclaration])
+            case constant: Constant =>
+              val constDeclaration: ConstantDeclaration = constant.getName.asInstanceOf[ConstantDeclaration]
+              val newVariable = logic.Variable(xmlVariableToScalaVariable.size + variableConstraints.size, "ConstantVariable" + constant.hashCode(),
+                                               xmlSortsToScalaSorts(constDeclaration.getSort.asInstanceOf[SortDeclaration]))
+              variableConstraints = variableConstraints :+ Equal(newVariable, xmlConstantToScalaConstant(constDeclaration))
+              newVariable
           }
           Literal(xmlPredicateToScalaPredicate(atomic.getRelation.asInstanceOf[RelationDeclaration]), positive, parameterVariables) :: Nil
         case _              => Nil

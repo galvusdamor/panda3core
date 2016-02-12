@@ -20,6 +20,4 @@ package object util {
       allMappings(remListA, remListB) map { case l => l :+(aElem, bElem) }
     }
   }
-
-
 }

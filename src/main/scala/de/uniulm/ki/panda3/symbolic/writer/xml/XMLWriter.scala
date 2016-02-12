@@ -24,6 +24,8 @@ import scala.collection.mutable
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+// we have to piggy-back onto the structure of the generated XML file
+// scalastyle:off structural.type
 case class XMLWriter(domainName: String, problemName: String) extends Writer {
   /**
     * Takes a domain and writes and produces a string representation thereof.
@@ -145,7 +147,7 @@ private object XMLWriterDomain {
         }
         map.+((s, ns))
       })
-    sortToSortDecl.toSeq sortBy {_._1.name} map {_._2} foreach { xmldomain.getSortDeclaration.add }
+    sortToSortDecl.toSeq sortBy { _._1.name } map { _._2 } foreach { xmldomain.getSortDeclaration.add }
 
 
     // 2. create a function that adds constants if necessary

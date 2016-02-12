@@ -6,10 +6,10 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable with PrettyPrintable {
 
   def tasks: Seq[PlanStep]
@@ -42,13 +42,13 @@ trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable with P
   def addPlanStep(ps: PlanStep): TaskOrdering
 
   /** adds a sequence of plan steps */
-  def addPlanSteps(pss: Seq[PlanStep]) = (pss foldLeft this) { case (ordering, ps) => ordering.addPlanStep(ps) }
+  def addPlanSteps(pss: Seq[PlanStep]): TaskOrdering = (pss foldLeft this) { case (ordering, ps) => ordering.addPlanStep(ps) }
 
   /** removed a plan step from a task ordering --> this may infer new ordering constraints as it will keep the transitive closure identical */
   def removePlanStep(ps: PlanStep): TaskOrdering
 
   /** removes several plan steps */
-  def removePlanSteps(pss: Seq[PlanStep]) = (pss foldLeft this) { case (ordering, ps) => ordering.removePlanStep(ps) }
+  def removePlanSteps(pss: Seq[PlanStep]): TaskOrdering = (pss foldLeft this) { case (ordering, ps) => ordering.removePlanStep(ps) }
 
 
   /** replace an old plan step with a new one, all orderings will be inherited */
@@ -76,7 +76,7 @@ trait TaskOrdering extends PartialOrdering[PlanStep] with DomainUpdatable with P
       // try all
       remaining exists { t =>
         // before all
-        (remaining forall { ot => ot == t || lt(t, ot) }) && find(remaining.filterNot({_ == t}))
+        (remaining forall { ot => ot == t || lt(t, ot) }) && find(remaining.filterNot({ _ == t }))
 
       }
     }

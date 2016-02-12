@@ -68,7 +68,7 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
    *
    * the new plan steps will be numbered sz(orderingConstraints) .. sz(orderingConstraints) + newPlanSteps - 1
    */
-  def addPlanSteps(newPlanSteps: Int): EfficientOrdering = addPlanStepsWithMaybeFromBase(fromBase = false, -1, null, -1, newPlanSteps)
+  def addPlanSteps(newPlanSteps: Int): EfficientOrdering = addPlanStepsWithMaybeFromBase(fromBase = false, -1, None, -1, newPlanSteps)
 
   /**
    * adds the ordering constraint before < after to the ordering. This will automatically re-compute the transitive hull of the ordering relation
@@ -107,15 +107,15 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
    * indexBaseInNew will assume the index of oldPlanStep, while the newly added plan steps will receive the next sz(internalOrdering)-1 numbers
    */
   def replacePlanStep(oldPlanStep: Int, ordering: EfficientOrdering, indexBaseInNew: Int): EfficientOrdering =
-    addPlanStepsWithMaybeFromBase(fromBase = true, oldPlanStep, ordering.orderingConstraints, indexBaseInNew, -1)
+    addPlanStepsWithMaybeFromBase(fromBase = true, oldPlanStep, Some(ordering.orderingConstraints), indexBaseInNew, -1)
 
 
   /**
    * internal function that actually performs the copying-around needed to copy, add, delete and replace plan steps.
    */
-  private def addPlanStepsWithMaybeFromBase(fromBase: Boolean, base: Int, internalOrdering: Array[Array[Byte]], indexBaseInNew: Int, newPlanSteps: Int): EfficientOrdering = {
+  private def addPlanStepsWithMaybeFromBase(fromBase: Boolean, base: Int, internalOrdering: Option[Array[Array[Byte]]], indexBaseInNew: Int, newPlanSteps: Int): EfficientOrdering = {
     val originalSize = orderingConstraints.length
-    val newOrdering = new Array[Array[Byte]](originalSize + (if (fromBase) internalOrdering.length - 1 else newPlanSteps))
+    val newOrdering = new Array[Array[Byte]](originalSize + (if (fromBase) internalOrdering.get.length - 1 else newPlanSteps))
     var i = 0
     while (i < originalSize) {
       newOrdering(i) = new Array[Byte](newOrdering.length)
@@ -132,7 +132,7 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
           else {
             var indexOnNewOrdering = j - originalSize
             if (indexOnNewOrdering >= indexBaseInNew) indexOnNewOrdering = indexOnNewOrdering + 1
-            newOrdering(i)(j) = internalOrdering(indexBaseInNew)(indexOnNewOrdering)
+            newOrdering(i)(j) = internalOrdering.get(indexBaseInNew)(indexOnNewOrdering)
           }
         } else newOrdering(i)(j) = DONTKNOW
         j += 1
@@ -150,7 +150,7 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
           else {
             var indexOnNewOrdering = i - originalSize
             if (indexOnNewOrdering >= indexBaseInNew) indexOnNewOrdering = indexOnNewOrdering + 1
-            newOrdering(i)(j) = internalOrdering(indexOnNewOrdering)(indexBaseInNew)
+            newOrdering(i)(j) = internalOrdering.get(indexOnNewOrdering)(indexBaseInNew)
           }
         } else {
           var iIndexOnNewOrdering = i - originalSize
@@ -158,7 +158,7 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
           var jIndexOnNewOrdering = j - originalSize
           if (jIndexOnNewOrdering >= indexBaseInNew) jIndexOnNewOrdering = jIndexOnNewOrdering + 1
           // apply
-          newOrdering(i)(j) = internalOrdering(iIndexOnNewOrdering)(jIndexOnNewOrdering)
+          newOrdering(i)(j) = internalOrdering.get(iIndexOnNewOrdering)(jIndexOnNewOrdering)
         }
         j += 1
       }

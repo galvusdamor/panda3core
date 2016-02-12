@@ -6,10 +6,10 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 
 /**
- * Contains a mutable union-find, containing variables and constants
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * Contains a mutable union-find, containing variables and constants
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 // TODO: Maybe add the sizes to "increase" efficiency
 class SymbolicUnionFind {
 
@@ -22,7 +22,7 @@ class SymbolicUnionFind {
   def getRepresentative(v: Variable): Value = {
     assert(unionFind.contains(v))
     unionFind(v) match {
-      case c: Constant => c
+      case c: Constant      => c
       case parent: Variable =>
         if (parent == v) v
         else {
@@ -46,8 +46,8 @@ class SymbolicUnionFind {
       true
     else {
       (v1_representative, v2_representative) match {
-        case (const1: Constant, const2: Constant) => false // two unequal constants can't be made equal
-        case (variable: Variable, value: Value) => unionFind = unionFind + (variable -> value); true
+        case (const1: Constant, const2: Constant)     => false // two unequal constants can't be made equal
+        case (variable: Variable, value: Value)       => unionFind = unionFind + (variable -> value); true
         case (constant: Constant, variable: Variable) => unionFind = unionFind + (variable -> constant); true
       }
     }
@@ -58,7 +58,7 @@ class SymbolicUnionFind {
     unionFind = unionFind + (v -> v)
   }
 
-  def cloneFrom(from: SymbolicUnionFind) = {
+  def cloneFrom(from: SymbolicUnionFind): Unit = {
     unionFind = from.unionFind
   }
 }

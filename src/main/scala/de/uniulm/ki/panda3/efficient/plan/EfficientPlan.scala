@@ -39,7 +39,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
   private var precomputedAbstractPlanStepFlaws: Option[Array[EfficientAbstractPlanStep]] = None
   private var precomputedOpenPreconditionFlaws: Option[Array[EfficientOpenPrecondition]] = None
-  private var appliedModification             : EfficientModification                    = null
+  private var appliedModification             : Option[EfficientModification]            = None
   private var precomputedCausalThreatFlaws    : Option[Array[EfficientCausalThreat]]     = None
 
 
@@ -48,7 +48,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     */
   private def setPrecomputedOpenPreconditions(oldOpenPrecondition: Array[EfficientOpenPrecondition], modification: EfficientModification): Unit = {
     precomputedOpenPreconditionFlaws = Some(oldOpenPrecondition)
-    appliedModification = modification
+    appliedModification = Some(modification)
   }
 
 
@@ -110,14 +110,14 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       while (i < precomputed.length) {
         // check whether this flaw has actually been resolved
         val flaw = precomputed(i)
-        if (flaw != appliedModification.resolvedFlaw) flawBuffer append flaw.updateToNewPlan(this, appliedModification.addedPlanSteps.length)
+        if (flaw != appliedModification.get.resolvedFlaw) flawBuffer append flaw.updateToNewPlan(this, appliedModification.get.addedPlanSteps.length)
         i += 1
       }
       //println("Taken " + flawBuffer.length)
 
       // add open precondition flaws for all new tasks
       i = 0
-      while (i < appliedModification.addedPlanSteps.length) {
+      while (i < appliedModification.get.addedPlanSteps.length) {
         computeOpenPreconditions(planStepTasks.length - i - 1, flawBuffer)
         i += 1
       }
