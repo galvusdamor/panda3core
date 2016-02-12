@@ -23,7 +23,7 @@ object EfficientInsertCausalLink {
   private def addModificationFromPlanStep(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int, producer: Int, consumerLiteral: EfficientLiteral,
                                           consumerParameters: Array[Int],
                                           buffer: ArrayBuffer[EfficientModification]): Unit = {
-    if (producer != consumer && plan.planStepDecomposedByMethod(producer) != -1 && !plan.ordering.gt(producer, consumer)) {
+    if (producer != consumer && plan.planStepDecomposedByMethod(producer) == -1 && !plan.ordering.gt(producer, consumer)) {
       val producerTask = plan.domain.tasks(plan.planStepTasks(producer))
       // and loop through all of their effects
       var producerIndex = 0
