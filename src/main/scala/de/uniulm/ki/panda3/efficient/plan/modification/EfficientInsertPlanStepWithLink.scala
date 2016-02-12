@@ -3,13 +3,15 @@ package de.uniulm.ki.panda3.efficient.plan.modification
 import de.uniulm.ki.panda3.efficient.csp.EfficientVariableConstraint
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
+import de.uniulm.ki.panda3.efficient.plan.flaw.EfficientFlaw
 
 import scala.collection.mutable.ArrayBuffer
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, newPlanStep: (Int, Array[Int], Int, Int), parameterVariableSorts: Array[Int], causalLink: EfficientCausalLink,
+case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, resolvedFlaw : EfficientFlaw, newPlanStep: (Int, Array[Int], Int, Int), parameterVariableSorts: Array[Int], causalLink:
+EfficientCausalLink,
                                            necessaryVariableConstraints: Array[EfficientVariableConstraint]) extends EfficientModification {
   override      val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
   override lazy val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
@@ -20,7 +22,7 @@ case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, newPlanStep: (In
 
 object EfficientInsertPlanStepWithLink {
 
-  def apply(plan: EfficientPlan, consumer: Int, consumerIndex: Int): Array[EfficientModification] = {
+  def apply(plan: EfficientPlan, resolvedFlaw : EfficientFlaw, consumer: Int, consumerIndex: Int): Array[EfficientModification] = {
     val buffer = new ArrayBuffer[EfficientModification]()
 
     val consumerTask = plan.domain.tasks(plan.planStepTasks(consumer))
@@ -48,7 +50,7 @@ object EfficientInsertPlanStepWithLink {
       }
 
       // add the constraints we need to set the causal link
-      // TODO: this is really naive .. maybe we add a CSP here
+      // TODO: this is really naive .. maybe we add a CSP here (on the other hand CSPs are really slow if created that often)
       val producerParameters = producerTask.getArgumentsOfLiteral(planStepParameterVariables, producerLiteral)
       j = 0
       while (j < producerParameters.length) {
@@ -58,7 +60,7 @@ object EfficientInsertPlanStepWithLink {
 
       val planStep = (possibleProducer(i)._1, planStepParameterVariables, -1, -1)
       val causalLink = EfficientCausalLink(plan.firstFreePlanStepID, consumer, possibleProducer(i)._2, consumerIndex)
-      buffer append EfficientInsertPlanStepWithLink(plan, planStep, newVariableSorts, causalLink, constraintsBuffer.toArray)
+      buffer append EfficientInsertPlanStepWithLink(plan, resolvedFlaw, planStep, newVariableSorts, causalLink, constraintsBuffer.toArray)
       i += 1
     }
 

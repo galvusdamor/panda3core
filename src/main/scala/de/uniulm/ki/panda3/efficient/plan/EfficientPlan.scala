@@ -37,10 +37,25 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
   }
 
 
+  private var precomputedAbstractPlanStepFlaws: Option[Array[EfficientAbstractPlanStep]] = None
+  private var precomputedOpenPreconditionFlaws: Option[Array[EfficientOpenPrecondition]] = None
+  private var appliedModification             : EfficientModification                    = null
+  private var precomputedCausalThreatFlaws    : Option[Array[EfficientCausalThreat]]     = None
+
+
+  /** the open preconditions flaws of the parent of this plan --- and the number of newly added tasks.
+    * The assumption is that the tasks sz(planstep) - nonHandledTasks .. sz(planstep)-1 are new
+    */
+  private def setPrecomputedOpenPreconditions(oldOpenPrecondition: Array[EfficientOpenPrecondition], modification: EfficientModification): Unit = {
+    precomputedOpenPreconditionFlaws = Some(oldOpenPrecondition)
+    appliedModification = modification
+  }
+
+
   /**
     * all abstract tasks of this plan
     */
-  val abstractPlanSteps: Array[EfficientAbstractPlanStep] = {
+  lazy val abstractPlanSteps: Array[EfficientAbstractPlanStep] = {
     var i = 2 // init and goal are never abstract
     val flawBuffer = new ArrayBuffer[EfficientAbstractPlanStep]()
     while (i < planStepTasks.length) {
@@ -52,36 +67,67 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     flawBuffer.toArray
   }
 
+
+  /** recomputes the open preconditions flaws */
+  private def computeOpenPreconditions(planStep: Int, buffer: ArrayBuffer[EfficientOpenPrecondition]) = {
+    if (planStepDecomposedByMethod(planStep) == -1) {
+      var precondition = 0
+      while (precondition < domain.tasks(planStepTasks(planStep)).precondition.length) {
+        // check for a causal link
+        var causalLink = 0
+        var foundSupporter = false
+        while (causalLink < causalLinks.length) {
+          // checking whether this is the correct causal-link
+          if (causalLinks(causalLink).consumer == planStep && causalLinks(causalLink).conditionIndexOfConsuer == precondition) foundSupporter = true
+          causalLink += 1
+        }
+
+        if (!foundSupporter) buffer append new EfficientOpenPrecondition(this, planStep, precondition)
+
+        precondition += 1
+      }
+    }
+  }
+
+
   /** all open preconditions in this plan */
   // TODO: this is absolutely inefficient (especially the iterating over causal links)
-  val openPreconditions: Array[EfficientOpenPrecondition] = {
+  lazy val openPreconditions: Array[EfficientOpenPrecondition] = {
     val flawBuffer = new ArrayBuffer[EfficientOpenPrecondition]()
-    var planStep = 1
-    while (planStep < planStepTasks.length) {
-      if (planStepDecomposedByMethod(planStep) == -1) {
-        var precondition = 0
-        while (precondition < domain.tasks(planStepTasks(planStep)).precondition.length) {
-          // check for a causal link
-          var causalLink = 0
-          var foundSupporter = false
-          while (causalLink < causalLinks.length) {
-            // checking whether this is the correct causal-link
-            if (causalLinks(causalLink).consumer == planStep && causalLinks(causalLink).conditionIndexOfConsuer == precondition) foundSupporter = true
-            causalLink += 1
-          }
-
-          if (!foundSupporter) flawBuffer append new EfficientOpenPrecondition(this, planStep, precondition)
-
-          precondition += 1
-        }
+    // nothing is given so recompute all
+    if (precomputedOpenPreconditionFlaws.isEmpty) {
+      var planStep = 1
+      while (planStep < planStepTasks.length) {
+        computeOpenPreconditions(planStep, flawBuffer)
+        planStep += 1
       }
-      planStep += 1
+      flawBuffer.toArray
+    } else {
+      val flawBuffer = new ArrayBuffer[EfficientOpenPrecondition]()
+      // 1. take all flaws of my "parent" plan and update them according to the newly added tasks
+      val precomputed = precomputedOpenPreconditionFlaws.get
+      var i = 0
+      while (i < precomputed.length) {
+        // check whether this flaw has actually been resolved
+        val flaw = precomputed(i)
+        if (flaw != appliedModification.resolvedFlaw) flawBuffer append flaw.updateToNewPlan(this, appliedModification.addedPlanSteps.length)
+        i += 1
+      }
+      //println("Taken " + flawBuffer.length)
+
+      // add open precondition flaws for all new tasks
+      i = 0
+      while (i < appliedModification.addedPlanSteps.length) {
+        computeOpenPreconditions(planStepTasks.length - 1, flawBuffer)
+        i += 1
+      }
+
+      flawBuffer.toArray
     }
-    flawBuffer.toArray
   }
 
   /** all causal threads in this plan */
-  val causalThreats: Array[EfficientCausalThreat] = {
+  lazy val causalThreats: Array[EfficientCausalThreat] = {
     val flawBuffer = new ArrayBuffer[EfficientCausalThreat]()
     var causalLinkNumber = 0
     while (causalLinkNumber < causalLinks.length) {
@@ -122,7 +168,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
   }
 
 
-  val flaws: Array[EfficientFlaw] = {
+  lazy val flaws: Array[EfficientFlaw] = {
     val flawBuffer = new ArrayBuffer[EfficientFlaw]()
     flawBuffer appendAll causalThreats
     flawBuffer appendAll openPreconditions
@@ -193,8 +239,12 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     }
 
 
-    EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethod.toArray, newPlanStepParentInDecompositionTree.toArray,
-                  newVariableConstraints, newOrdering, newCausalLinks.toArray)
+    val newPlan = EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethod.toArray, newPlanStepParentInDecompositionTree.toArray,
+                                newVariableConstraints, newOrdering, newCausalLinks.toArray)
+
+    newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)
+
+    newPlan
   }
 
   def taskOfPlanStep(ps: Int): EfficientTask = domain.tasks(planStepTasks(ps))

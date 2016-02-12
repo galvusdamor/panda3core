@@ -15,9 +15,9 @@ case class EfficientCausalThreat(plan: EfficientPlan, causalLink: EfficientCausa
 
   override lazy val resolver: Array[EfficientModification] = {
     val buffer = new ArrayBuffer[EfficientModification]()
-    buffer appendAll EfficientMakeLiteralsUnUnifiable(plan, plan.argumentsOfPlanStepsEffect(threatingPlanStep, indexOfThreatingEffect),
+    buffer appendAll EfficientMakeLiteralsUnUnifiable(plan, this, plan.argumentsOfPlanStepsEffect(threatingPlanStep, indexOfThreatingEffect),
                                                       plan.argumentsOfPlanStepsEffect(causalLink.producer, causalLink.conditionIndexOfProducer))
-    buffer appendAll EfficientAddOrdering(plan, causalLink, threatingPlanStep)
+    buffer appendAll EfficientAddOrdering(plan, this, causalLink, threatingPlanStep)
     buffer.toArray
   }
 }

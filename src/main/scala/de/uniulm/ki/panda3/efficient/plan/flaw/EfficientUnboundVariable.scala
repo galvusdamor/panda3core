@@ -7,5 +7,5 @@ import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientBindVariable, E
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class EfficientUnboundVariable(plan: EfficientPlan, variable: Int) extends EfficientFlaw {
-  override lazy val resolver: Array[EfficientModification] = EfficientBindVariable(plan, variable)
+  override lazy val resolver: Array[EfficientModification] = EfficientBindVariable(plan, this, variable)
 }

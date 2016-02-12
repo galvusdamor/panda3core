@@ -7,4 +7,13 @@ package de.uniulm.ki.panda3.efficient.plan.element
   */
 case class EfficientCausalLink(producer : Int, consumer : Int, conditionIndexOfProducer : Int, conditionIndexOfConsuer : Int) {
 
+
+  def addOffsetToPlanStepsIfGreaterThan(offset : Int, ifGEQ : Int) : EfficientCausalLink = {
+    var newProducer = producer
+    var newConsumer = consumer
+    if (newProducer >= ifGEQ) newProducer += offset
+    if (newConsumer >= ifGEQ) newConsumer += offset
+
+    EfficientCausalLink(newProducer,newConsumer,conditionIndexOfProducer,conditionIndexOfConsuer)
+  }
 }

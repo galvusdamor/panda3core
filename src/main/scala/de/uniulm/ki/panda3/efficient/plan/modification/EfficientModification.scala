@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.efficient.plan.modification
 import de.uniulm.ki.panda3.efficient.csp.EfficientVariableConstraint
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
+import de.uniulm.ki.panda3.efficient.plan.flaw.EfficientFlaw
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -14,9 +15,11 @@ trait EfficientModification {
 
   val plan: EfficientPlan
   val addedVariableConstraints: Array[EfficientVariableConstraint] = Array()
-  lazy val addedCausalLinks        : Array[EfficientCausalLink]         = Array()
-  lazy val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array()
   val addedVariableSorts      : Array[Int]                         = Array()
+  val resolvedFlaw: EfficientFlaw
+  lazy val addedCausalLinks: Array[EfficientCausalLink]         = Array()
+  lazy val addedPlanSteps  : Array[(Int, Array[Int], Int, Int)] = Array()
+
   final val addedOrderings: Array[(Int, Int)] = {
     val buffer = new ArrayBuffer[(Int, Int)]()
     buffer appendAll nonInducedAddedOrderings
@@ -31,7 +34,7 @@ trait EfficientModification {
     buffer.toArray
   }
 
-  private def taskOfPlanStep(ps : Int) : Int = if (ps >= plan.firstFreePlanStepID) addedPlanSteps(ps-plan.firstFreePlanStepID)._1 else plan.planStepTasks(ps)
+  private def taskOfPlanStep(ps: Int): Int = if (ps >= plan.firstFreePlanStepID) addedPlanSteps(ps - plan.firstFreePlanStepID)._1 else plan.planStepTasks(ps)
 
 
   // here we compute all other necessary orderings, like the ones inherited from causal links

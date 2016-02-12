@@ -28,11 +28,11 @@ class EfficientPlanTest extends FlatSpec {
     * task2 : :
     * task3 : :
     */
-  val init   = new EfficientTask(true, Array(), Array(), Array(), Array())
-  val goal   = new EfficientTask(true, Array(), Array(), Array(new EfficientLiteral(0, true, Array())), Array())
-  val task1  = new EfficientTask(true, Array(0), Array(), Array(), Array(new EfficientLiteral(1, true, Array(0))))
-  val task2  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array())
-  val task3  = new EfficientTask(false, Array(0, 0), Array(), Array(new EfficientLiteral(1, true, Array(1))), Array(new EfficientLiteral(1, false, Array(0))))
+  val init   = new EfficientTask(true, Array(), Array(), Array(), Array(), true)
+  val goal   = new EfficientTask(true, Array(), Array(), Array(new EfficientLiteral(0, true, Array())), Array(), true)
+  val task1  = new EfficientTask(true, Array(0), Array(), Array(), Array(new EfficientLiteral(1, true, Array(0))), true)
+  val task2  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(), true)
+  val task3  = new EfficientTask(false, Array(0, 0), Array(), Array(new EfficientLiteral(1, true, Array(1))), Array(new EfficientLiteral(1, false, Array(0))), true)
   val domain = new EfficientDomain(Array(Array()), Array(Array(0), Array(0), Array(0)), Array(Array(), Array(0), Array(0, 0)), Array(init, goal, task1, task2, task3), Array())
 
   // the order of tasks is scrambled to test whether we access the correct one
@@ -44,7 +44,7 @@ class EfficientPlanTest extends FlatSpec {
   ordering.addOrderingConstraint(3, 4)
   ordering.addOrderingConstraint(5, 3)
   val causalLink = EfficientCausalLink(3, 4, 0, 0)
-  val plan       = new EfficientPlan(domain, Array(0, 1, 4, 2, 3, 4, 4, 4), Array(Array(), Array(), Array(0, 2), Array(1), Array(3), Array(4, 4), Array(5, 5),Array(5, 5)),
+  val plan       = new EfficientPlan(domain, Array(0, 1, 4, 2, 3, 4, 4, 4), Array(Array(), Array(), Array(0, 2), Array(1), Array(3), Array(4, 4), Array(5, 5), Array(5, 5)),
                                      Array(-1, -1, -1, -1, -1, -1, -1, 1), Array(-1, -1, -1, -1, -1, -1, -1, -1), csp, ordering, Array(causalLink))
 
   "Detecting Open Preconditions" must "yield all of them" in {
@@ -52,10 +52,10 @@ class EfficientPlanTest extends FlatSpec {
 
     assert(openPrecondition.length == 4)
 
-    assert(openPrecondition exists { case EfficientOpenPrecondition(ps, prec) => ps == 1 && prec == 0 })
-    assert(openPrecondition exists { case EfficientOpenPrecondition(ps, prec) => ps == 2 && prec == 0 })
-    assert(openPrecondition exists { case EfficientOpenPrecondition(ps, prec) => ps == 5 && prec == 0 })
-    assert(openPrecondition exists { case EfficientOpenPrecondition(ps, prec) => ps == 6 && prec == 0 })
+    assert(openPrecondition exists { case EfficientOpenPrecondition(_, ps, prec) => ps == 1 && prec == 0 })
+    assert(openPrecondition exists { case EfficientOpenPrecondition(_, ps, prec) => ps == 2 && prec == 0 })
+    assert(openPrecondition exists { case EfficientOpenPrecondition(_, ps, prec) => ps == 5 && prec == 0 })
+    assert(openPrecondition exists { case EfficientOpenPrecondition(_, ps, prec) => ps == 6 && prec == 0 })
   }
 
   "Detecting Abstract Tasks" must "yield all of them" in {
