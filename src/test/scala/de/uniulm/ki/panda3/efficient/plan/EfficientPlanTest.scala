@@ -23,10 +23,10 @@ class EfficientPlanTest extends FlatSpec {
     *
     * tasks:
     * init::
-    * goal: : +0()
-    * task1 : :
-    * task2 : :
-    * task3 : :
+    * goal  :       : +0()
+    * task1 :       : +1(0)
+    * task2 : +1(0) :
+    * task3 : +1(1) : + 1(0)
     */
   val init   = new EfficientTask(true, Array(), Array(), Array(), Array(), true)
   val goal   = new EfficientTask(true, Array(), Array(), Array(new EfficientLiteral(0, true, Array())), Array(), true)
