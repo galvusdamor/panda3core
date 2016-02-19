@@ -14,6 +14,7 @@ case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPla
     val innerCausalLinks = subPlan.causalLinks filter { cl => cl.consumer != 1 && cl.producer != 0 }
     val ingoingLinks = subPlan.causalLinks filter { _.producer == 0 }
     val outgoingLinks = subPlan.causalLinks filter { _.consumer == 1 }
+    // TODO: remove the ones induced by causal links
     val orderings = subPlan.ordering.minimalOrderingConstraintsWithoutInitAndGoal()
 
     // find best sort for variables
@@ -45,7 +46,6 @@ case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPla
     val allVariableConstraints = isEqualToConstant ++ necessaryEqualConstraints ++ restrictPossibleValues.flatten ++ unequalConstraints
     EfficientExtractedMethodPlan(planSteps, newVariableSorts, allVariableConstraints.toArray, innerCausalLinks, orderings, ingoingLinks, outgoingLinks)
   }
-
 }
 
 
