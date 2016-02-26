@@ -92,7 +92,7 @@ class EfficientPlanTest extends FlatSpec with HasEfficientExampleDomain1 {
     assert(t3Modifications.length == 4)
     assert(t3Modifications exists {
       case EfficientInsertCausalLink(_, _, link, conditions) =>
-        link.producer == 4 && link.consumer == 2 && link.conditionIndexOfProducer == 0 && link.conditionIndexOfConsuer == 0 && conditions.length == 0
+        link.producer == 4 && link.consumer == 2 && link.conditionIndexOfProducer == 0 && link.conditionIndexOfConsumer == 0 && conditions.length == 0
       case _                                                 => false
     })
     assert(t3Modifications exists {

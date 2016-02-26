@@ -78,7 +78,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
         var foundSupporter = false
         while (causalLink < causalLinks.length) {
           // checking whether this is the correct causal-link
-          if (causalLinks(causalLink).consumer == planStep && causalLinks(causalLink).conditionIndexOfConsuer == precondition) foundSupporter = true
+          if (causalLinks(causalLink).consumer == planStep && causalLinks(causalLink).conditionIndexOfConsumer == precondition) foundSupporter = true
           causalLink += 1
         }
 
@@ -239,7 +239,17 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     }
 
 
-    val newPlan = EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethod.toArray, newPlanStepParentInDecompositionTree.toArray,
+    val newPlanStepDecomposedByMethodArray = newPlanStepDecomposedByMethod.toArray
+
+    // 5. mark all decomposed planteps as decomposed
+    var decomposedPS = 0
+    while (decomposedPS < modification.decomposedPlanStepsByMethod.length){
+      val decompositionInformation = modification.decomposedPlanStepsByMethod(decomposedPS)
+      newPlanStepDecomposedByMethodArray(decompositionInformation._1) = decompositionInformation._2
+      decomposedPS += 1
+    }
+
+    val newPlan = EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethodArray, newPlanStepParentInDecompositionTree.toArray,
                                 newVariableConstraints, newOrdering, newCausalLinks.toArray)
 
     newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)

@@ -14,12 +14,14 @@ import scala.collection.mutable.ArrayBuffer
 trait EfficientModification {
 
   val plan: EfficientPlan
-  val addedVariableConstraints: Array[EfficientVariableConstraint] = Array()
-  val addedVariableSorts      : Array[Int]                         = Array()
+  val addedVariableConstraints   : Array[EfficientVariableConstraint] = Array()
+  val addedVariableSorts         : Array[Int]                         = Array()
+  val decomposedPlanStepsByMethod: Array[(Int, Int)]                  = Array()
   val resolvedFlaw: EfficientFlaw
   lazy val addedCausalLinks: Array[EfficientCausalLink]         = Array()
-  /** (type of new, parameters of new planstep, decomposed by method, parent in decomposition tree)*/
+  /** (type of new, parameters of new planstep, decomposed by method, parent in decomposition tree) */
   lazy val addedPlanSteps  : Array[(Int, Array[Int], Int, Int)] = Array()
+
 
   final val addedOrderings: Array[(Int, Int)] = {
     val buffer = new ArrayBuffer[(Int, Int)]()

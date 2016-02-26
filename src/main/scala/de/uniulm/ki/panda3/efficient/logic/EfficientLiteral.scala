@@ -7,6 +7,7 @@ package de.uniulm.ki.panda3.efficient.logic
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientLiteral(predicate : Int, isPositive : Boolean , parameterVariables : Array[Int]) {
+case class EfficientLiteral(predicate: Int, isPositive: Boolean, parameterVariables: Array[Int]) {
 
+  def checkPredicateAndSign(other: EfficientLiteral): Boolean = predicate == other.predicate && isPositive == other.isPositive
 }
