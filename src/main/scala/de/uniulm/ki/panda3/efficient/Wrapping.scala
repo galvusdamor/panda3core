@@ -209,7 +209,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val producerIDX = unwrap(causalLink.producer, plan)
     val consumerIDX = unwrap(causalLink.consumer, plan)
     val producerLiteralIndex = causalLink.producer.indexOfEffect(causalLink.condition, plan.variableConstraints)
-    val consumerLiteralIndex = causalLink.consumer.indexOfEffect(causalLink.condition, plan.variableConstraints)
+    val consumerLiteralIndex = causalLink.consumer.indexOfPrecondition(causalLink.condition, plan.variableConstraints)
     EfficientCausalLink(producerIDX, consumerIDX, producerLiteralIndex, consumerLiteralIndex)
   }
 
