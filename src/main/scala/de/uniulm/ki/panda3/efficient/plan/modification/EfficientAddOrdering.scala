@@ -10,7 +10,7 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class EfficientAddOrdering(plan: EfficientPlan, resolvedFlaw : EfficientFlaw, before: Int, after: Int) extends EfficientModification {
-  override lazy val nonInducedAddedOrderings: Array[(Int, Int)] = Array((before,after))
+  override val nonInducedAddedOrderings: Array[(Int, Int)] = Array((before,after))
 }
 
 object EfficientAddOrdering {

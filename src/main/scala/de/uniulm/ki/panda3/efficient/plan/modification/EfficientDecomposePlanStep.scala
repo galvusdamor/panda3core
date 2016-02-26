@@ -32,7 +32,7 @@ object EfficientDecomposePlanStep {
 
 
   private def applyMethodToPlanWithLinks(buffer: ArrayBuffer[EfficientModification], plan: EfficientPlan, resolvedFlaw: EfficientFlaw, decomposedPS: Int, method:
-  EfficientExtractedMethodPlan, methodIndex: Int, inheritedCausalLinks: Array[EfficientCausalLink], variableConstraintsForInheritedLinks: Array[EfficientVariableConstraint]): () = {
+  EfficientExtractedMethodPlan, methodIndex: Int, inheritedCausalLinks: Array[EfficientCausalLink], variableConstraintsForInheritedLinks: Array[EfficientVariableConstraint]): Unit = {
 
     // create new instances of the plan steps
     val addedPlanSteps: Array[(Int, Array[Int], Int, Int)] = new Array[(Int, Array[Int], Int, Int)](method.addedPlanSteps.length)
@@ -60,11 +60,11 @@ object EfficientDecomposePlanStep {
       val newVariableOfVariable = getNewVariableID(plan, decomposedPS, oldConstraint.variable)
       val newVariableOfOther = getNewVariableID(plan, decomposedPS, oldConstraint.other)
 
-      if (oldConstraint.constraintType == EfficientVariableConstraint.EQUALVARIABLE || oldConstraint.constraintType == EfficientVariableConstraint.UNEQUALVARIABLE)
+      if (oldConstraint.constraintType == EfficientVariableConstraint.EQUALVARIABLE || oldConstraint.constraintType == EfficientVariableConstraint.UNEQUALVARIABLE) {
         addedVariableConstraints(constraint) = EfficientVariableConstraint(oldConstraint.constraintType, newVariableOfVariable, newVariableOfOther)
-      else // other is a constant or a sort so just keep it
+      }else {// other is a constant or a sort so just keep it
         addedVariableConstraints(constraint) = EfficientVariableConstraint(oldConstraint.constraintType, newVariableOfVariable, oldConstraint.other)
-
+      }
       constraint += 1
     }
     // those necessary to inherit the causal links
@@ -106,9 +106,10 @@ object EfficientDecomposePlanStep {
 
 
   // iterate through all possibilities to inherit the causal links
+  // scalastyle:off parameter.number
   private def applyMethodToPlan(buffer: ArrayBuffer[EfficientModification], plan: EfficientPlan, resolvedFlaw: EfficientFlaw, decomposedPS: Int, method:
   EfficientExtractedMethodPlan, methodIndex: Int, currentPrecondition: Int, currentEffect: Int, inheritedLinks: mutable.ArrayStack[EfficientCausalLink],
-                                inheritedLinksVariableConstraints: mutable.ArrayStack[EfficientVariableConstraint]): () =
+                                inheritedLinksVariableConstraints: mutable.ArrayStack[EfficientVariableConstraint]): Unit =
     if (currentPrecondition < plan.domain.tasks(plan.planStepTasks(decomposedPS)).precondition.length || currentEffect < plan.domain.tasks(plan.planStepTasks(decomposedPS)).effect.length) {
       // determine the mode
       val linkIngoing = currentPrecondition < plan.domain.tasks(plan.planStepTasks(decomposedPS)).precondition.length
@@ -157,8 +158,9 @@ object EfficientDecomposePlanStep {
           val newPlanStepArguments = method.addedPlanSteps(newPlanStep)._2
 
           var newPlanStepPrecEff = 0
-          while (newPlanStepPrecEff < newPlanStepSchema.precondition.length) {
-            val literal = if (linkIngoing) newPlanStepSchema.precondition(newPlanStepPrecEff) else newPlanStepSchema.effect(newPlanStepPrecEff)
+          val schemaPrecEff = if (linkIngoing) newPlanStepSchema.precondition else newPlanStepSchema.effect
+          while (newPlanStepPrecEff < schemaPrecEff.length) {
+            val literal = schemaPrecEff(newPlanStepPrecEff)
             if (linkLiteral.checkPredicateAndSign(literal)) {
               // a potential supporter, generate the causal link and decent
               val inheritedCausalLink =

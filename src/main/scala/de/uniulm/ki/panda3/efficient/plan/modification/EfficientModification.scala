@@ -18,18 +18,20 @@ trait EfficientModification {
   val addedVariableSorts         : Array[Int]                         = Array()
   val decomposedPlanStepsByMethod: Array[(Int, Int)]                  = Array()
   val resolvedFlaw: EfficientFlaw
-  lazy val addedCausalLinks: Array[EfficientCausalLink]         = Array()
+  val addedCausalLinks: Array[EfficientCausalLink]         = Array()
   /** (type of new, parameters of new planstep, decomposed by method, parent in decomposition tree) */
-  lazy val addedPlanSteps  : Array[(Int, Array[Int], Int, Int)] = Array()
+  val addedPlanSteps  : Array[(Int, Array[Int], Int, Int)] = Array()
 
 
-  final val addedOrderings: Array[(Int, Int)] = {
+  lazy val addedOrderings: Array[(Int, Int)] = {
     val buffer = new ArrayBuffer[(Int, Int)]()
     buffer appendAll nonInducedAddedOrderings
 
     var i = 0
     while (i < addedCausalLinks.length) {
-      if (plan.domain.tasks(taskOfPlanStep(addedCausalLinks(i).producer)).isPrimitive && plan.domain.tasks(taskOfPlanStep(addedCausalLinks(i).consumer)).isPrimitive)
+      val producerTask = taskOfPlanStep(addedCausalLinks(i).producer)
+      val consumerTask = taskOfPlanStep(addedCausalLinks(i).consumer)
+      if (plan.domain.tasks(producerTask).isPrimitive && plan.domain.tasks(consumerTask).isPrimitive)
         buffer.append((addedCausalLinks(i).producer, addedCausalLinks(i).consumer))
       i += 1
     }
@@ -43,8 +45,17 @@ trait EfficientModification {
   // here we compute all other necessary orderings, like the ones inherited from causal links
   // the orderings to init and goal will be added by the plan itself
   // this _MUST_ be lazy!!
-  protected lazy val nonInducedAddedOrderings: Array[(Int, Int)] = Array()
+  protected val nonInducedAddedOrderings: Array[(Int, Int)] = Array()
 
+  lazy val decomposedPlanSteps: Array[Int] = {
+    val result = new Array[Int](decomposedPlanStepsByMethod.length)
+    var i = 0
+    while (i < result.length) {
+      result(i) = decomposedPlanStepsByMethod(i)._1
+      i += 1
+    }
+    result
+  }
 
   // TODO: handle inserting orderings from causal links
 }

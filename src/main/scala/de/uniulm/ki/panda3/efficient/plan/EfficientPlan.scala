@@ -34,6 +34,10 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       println(domain.tasks(planStepTasks(ps)))
       println(planStepParameters(ps))*/
       assert(domain.tasks(planStepTasks(ps)).parameterSorts.length == planStepParameters(ps).length)
+
+      planStepParameters(ps).indices foreach { arg =>
+        planStepParameters(ps)(arg) < firstFreeVariableID
+      }
   }
 
 
@@ -110,7 +114,8 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       while (i < precomputed.length) {
         // check whether this flaw has actually been resolved
         val flaw = precomputed(i)
-        if (flaw != appliedModification.get.resolvedFlaw) flawBuffer append flaw.updateToNewPlan(this, appliedModification.get.addedPlanSteps.length)
+        if (flaw != appliedModification.get.resolvedFlaw) flawBuffer append
+          flaw.updateToNewPlan(this, appliedModification.get.addedPlanSteps.length, appliedModification.get.decomposedPlanSteps)
         i += 1
       }
       //println("Taken " + flawBuffer.length)
@@ -243,7 +248,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
     // 5. mark all decomposed planteps as decomposed
     var decomposedPS = 0
-    while (decomposedPS < modification.decomposedPlanStepsByMethod.length){
+    while (decomposedPS < modification.decomposedPlanStepsByMethod.length) {
       val decompositionInformation = modification.decomposedPlanStepsByMethod(decomposedPS)
       newPlanStepDecomposedByMethodArray(decompositionInformation._1) = decompositionInformation._2
       decomposedPS += 1

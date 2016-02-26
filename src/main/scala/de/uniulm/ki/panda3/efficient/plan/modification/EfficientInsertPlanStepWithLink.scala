@@ -12,10 +12,10 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, newPlanStep: (Int, Array[Int], Int, Int), parameterVariableSorts: Array[Int],
                                            causalLink: EfficientCausalLink, necessaryVariableConstraints: Array[EfficientVariableConstraint]) extends EfficientModification {
-  override      val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
-  override lazy val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
-  override lazy val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array(newPlanStep)
-  override      val addedVariableSorts      : Array[Int]                         = parameterVariableSorts
+  override val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
+  override val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
+  override val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array(newPlanStep)
+  override val addedVariableSorts      : Array[Int]                         = parameterVariableSorts
 }
 
 
