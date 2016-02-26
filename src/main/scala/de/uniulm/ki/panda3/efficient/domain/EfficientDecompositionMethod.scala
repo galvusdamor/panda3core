@@ -11,14 +11,17 @@ case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPla
 
   val extract: EfficientExtractedMethodPlan = {
     val planSteps: Array[(Int, Array[Int])] = (2 until subPlan.planStepTasks.length map { case ps => (subPlan.planStepTasks(ps), subPlan.planStepParameters(ps)) }).toArray
-    val innerCausalLinks = subPlan.causalLinks filter { cl => cl.consumer != 1 && cl.producer != 0 }
-    val ingoingLinks = subPlan.causalLinks filter { _.producer == 0 }
-    val outgoingLinks = subPlan.causalLinks filter { _.consumer == 1 }
+    val innerCausalLinks = subPlan.causalLinks filter { cl => cl.consumer != 1 && cl.producer != 0 } map {
+      case EfficientCausalLink(p, c, pi, ci) => EfficientCausalLink(p - 2, c - 2, pi, ci)
+    }
+    val ingoingLinks = subPlan.causalLinks filter { _.producer == 0 } map { case EfficientCausalLink(p, c, pi, ci) => EfficientCausalLink(p - 2, c - 2, pi, ci) }
+    val outgoingLinks = subPlan.causalLinks filter { _.consumer == 1 } map { case EfficientCausalLink(p, c, pi, ci) => EfficientCausalLink(p - 2, c - 2, pi, ci) }
     // TODO: remove the ones induced by causal links
-    val orderings = subPlan.ordering.minimalOrderingConstraintsWithoutInitAndGoal()
+    val orderings = subPlan.ordering.minimalOrderingConstraintsWithoutInitAndGoal() map { case (a, b) => (a - 2, b - 2) }
+    val numberOfAbstractTaskParameters = subPlan.domain.tasks(abstractTask).parameterSorts.length
 
     // find best sort for variables
-    val newVariableSorts = (2 until subPlan.firstFreeVariableID map { v =>
+    val newVariableSorts = (numberOfAbstractTaskParameters until subPlan.firstFreeVariableID map { v =>
       val possibleValuesOfVariable = subPlan.variableConstraints.getRemainingDomain(v)
       // select the smallest (judged by the number of its constants) possible sort
       (subPlan.domain.constantsOfSort.zipWithIndex filter { case (constants, _) => possibleValuesOfVariable forall { constants contains _ } } sortBy { _._1.length }).head._2
@@ -33,13 +36,14 @@ case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPla
            if subPlan.variableConstraints.isRepresentativeAVariable(i) && subPlan.variableConstraints.areEqual(i, j))
         yield EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, i, j)
 
-    val restrictPossibleValues = for (i <- 2 until subPlan.firstFreeVariableID if subPlan.variableConstraints.isRepresentativeAVariable(i)
+    val restrictPossibleValues = for (i <- numberOfAbstractTaskParameters until subPlan.firstFreeVariableID if subPlan.variableConstraints.isRepresentativeAVariable(i)
                                       if subPlan.variableConstraints.getRepresentativeVariable(i) == i)
-      yield subPlan.domain.constantsOfSort(newVariableSorts(i - 2)) diff subPlan.variableConstraints.getRemainingDomain(i).toSeq map {
+      yield subPlan.domain.constantsOfSort(newVariableSorts(i - numberOfAbstractTaskParameters)) diff subPlan.variableConstraints.getRemainingDomain(i).toSeq map {
         EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALCONSTANT, i, _)
       }
 
-    val unequalConstraints = for (i <- 0 until subPlan.firstFreeVariableID if subPlan.variableConstraints.getRepresentativeVariable(i) == i;
+    val unequalConstraints = for (i <- 0 until subPlan.firstFreeVariableID if subPlan.variableConstraints.isRepresentativeAVariable(i)
+                                  if subPlan.variableConstraints.getRepresentativeVariable(i) == i;
                                   j <- subPlan.variableConstraints.getVariableUnequalTo(i)) yield EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, i, j)
 
 
