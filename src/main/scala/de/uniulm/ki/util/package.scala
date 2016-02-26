@@ -20,4 +20,15 @@ package object util {
       allMappings(remListA, remListB) map { case l => l :+(aElem, bElem) }
     }
   }
+
+
+  def arrayContains[A](array: Array[A], element: A): Boolean = {
+    var i = 0
+    var found = false
+    while (i < array.length && !found) {
+      if (array(i) == element) found = true
+      i += 1
+    }
+    found
+  }
 }
