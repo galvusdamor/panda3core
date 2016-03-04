@@ -20,8 +20,8 @@ class SearchNode(nodePlan: Plan, nodeParent: SearchNode, nodeHeuristic: Double) 
   var dirty: Boolean = true
 
 
-  /** returns the current state of this search node*/
-  def searchState: SearchState = if (plan.flaws.isEmpty) SearchState.SOLUTION
+  /** returns the current state of this search node */
+  def searchState: SearchState = if (plan.flaws.isEmpty || (!dirty && children.isEmpty)) SearchState.SOLUTION
   else if (dirty) SearchState.INSEARCH
   else if (modifications exists { _.isEmpty }) SearchState.DEADEND_UNRESOLVABLEFLAW
   else SearchState.EXPLORED

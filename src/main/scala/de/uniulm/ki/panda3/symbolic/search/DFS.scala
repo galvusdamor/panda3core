@@ -11,10 +11,10 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 
 /**
- * This is a very simple DFS planner
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * This is a very simple DFS planner
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 object DFS {
 
   def main(args: Array[String]) {
@@ -31,7 +31,7 @@ object DFS {
 
     // apply the CWA
     val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
-    val flattened  = ToPlainFormulaRepresentation.transform(cwaApplied._1,cwaApplied._2,())
+    val flattened = ToPlainFormulaRepresentation.transform(cwaApplied._1, cwaApplied._2, ())
 
     val x = startSearch(flattened._1, flattened._2, None)
 
@@ -43,12 +43,12 @@ object DFS {
 
 
   /**
-   * This functions starts the (asynchronious) search for a solution to a given planning problem.
-   * It returns a pointer to the search space and a semaphore signaling that new search nodes have been inserted into the tree.
-   *
-   * The semaphore will not be released for every search node, but after a couple 100 ones.
-   */
-  def startSearch(domain: Domain, initialPlan: Plan, nodeLimit : Option[Int]): (SearchNode, Semaphore, Unit => Unit) = {
+    * This functions starts the (asynchronious) search for a solution to a given planning problem.
+    * It returns a pointer to the search space and a semaphore signaling that new search nodes have been inserted into the tree.
+    *
+    * The semaphore will not be released for every search node, but after a couple 100 ones.
+    */
+  def startSearch(domain: Domain, initialPlan: Plan, nodeLimit: Option[Int]): (SearchNode, Semaphore, Unit => Unit) = {
     val semaphore: Semaphore = new Semaphore(0)
     val node: SearchNode = new SearchNode(initialPlan, null, -1)
 
@@ -69,24 +69,24 @@ object DFS {
       if (nodes % 100 == 0) semaphore.release()
 
       val flaws = node.plan.flaws
-      node.modifications = flaws map {_.resolvents(domain)}
+      node.modifications = flaws map { _.resolvents(domain) }
 
       // check whether we are at a dead end in the search space
-      if (node.modifications exists {_.isEmpty}) {d = d - 1; crap = crap + 1; node.dirty = false; None}
+      if (node.modifications exists { _.isEmpty }) {d = d - 1; crap = crap + 1; node.dirty = false; None }
       else {
-        val selectedResolvers: Seq[Modification] = (node.modifications sortBy {_.size}).head
+        val selectedResolvers: Seq[Modification] = (node.modifications sortBy { _.size }).head
         // set the selected flaw
         node.selectedFlaw = node.modifications indexOf selectedResolvers
 
         // create all children
-        node.children = selectedResolvers.zipWithIndex map { case (m,i) => (new SearchNode(node.plan.modify(m), node, -1),i) }
+        node.children = selectedResolvers.zipWithIndex map { case (m, i) => (new SearchNode(node.plan.modify(m), node, -1), i) } filterNot { _._1.plan.isSolvable contains false }
         node.dirty = false
 
         // perform the search
-        val ret = (node.children map {_._1}).foldLeft[Option[Plan]](None)({
-          case (Some(p), _) => Some(p)
-          case (None, res)  => search(domain, res)
-        })
+        val ret = (node.children map { _._1 }).foldLeft[Option[Plan]](None)({
+                                                                              case (Some(p), _) => Some(p)
+                                                                              case (None, res)  => search(domain, res)
+                                                                            })
         d = d - 1
 
         ret
@@ -97,6 +97,6 @@ object DFS {
       override def run(): Unit = println(search(domain, node))
     }).start()
 
-    (node, semaphore, {_ => abort = true})
+    (node, semaphore, { _ => abort = true })
   }
 }
