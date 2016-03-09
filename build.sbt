@@ -6,7 +6,7 @@ version := "0.1.4"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.5" % "test"
 
-//libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.5"
+libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.5"
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-pickling" % "0.10.1"
 
@@ -22,7 +22,8 @@ description := "A planning system for partial-order causal-link, hierarchical an
 
 scalaVersion := "2.11.7"
 
-mainClass in assembly := Some("de.uniulm.ki.panda3.efficient.search.BFS")
+//mainClass in assembly := Some("de.uniulm.ki.panda3.efficient.search.BFS")
+mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 
 compileOrder in Compile := CompileOrder.Mixed
 

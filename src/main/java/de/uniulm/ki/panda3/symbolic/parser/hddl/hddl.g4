@@ -179,8 +179,8 @@ typed_obj_list : typed_objs*;
 
 // one or more variable names, followed by a type
 typed_vars : VAR_NAME+ '-' var_type;
-typed_objs : new_consts '-' var_type;
-new_consts : NAME+;
+typed_objs : new_consts+ '-' var_type;
+new_consts : NAME;
 var_type : NAME;
 
 // "require"-statements start with a ":"-symbol

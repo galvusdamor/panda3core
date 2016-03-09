@@ -1,9 +1,11 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 
 import de.uniulm.ki.panda3.symbolic.csp.*;
+import de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.*;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan;
@@ -13,6 +15,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering;
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering;
 import scala.Option;
+import scala.Some;
 import scala.collection.Seq;
 import scala.collection.immutable.Set;
 import scala.collection.immutable.Vector;
@@ -74,6 +77,13 @@ public class internalTaskNetwork {
         this.csp = this.csp.addVariables(vars);
     }
 
+    public void addCspVariables(seqProviderList<Variable> vars) {
+        for (int i = 0; i < vars.size(); i++) {
+            Variable v = vars.get(i);
+            addCspVariable(v);
+        }
+    }
+
     public void addCspVariable(Variable variable) {
         this.csp = this.csp.addVariable(variable);
     }
@@ -112,6 +122,17 @@ public class internalTaskNetwork {
     public Plan readTaskNetwork(hddlParser.Tasknetwork_defContext tnCtx, Seq<Variable> parameters, Task abstractTask, Seq<Task> tasks, Seq<Sort> sorts) {
         HashMap<String, PlanStep> idMap = new HashMap<>(); // used to define ordering constraints
 
+        ReducedTask initSchema = new ReducedTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(new Vector<Literal>(0, 0, 0)));
+        ReducedTask goalSchema = new ReducedTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new
+                And<Literal>(new Vector<Literal>(0, 0, 0)));
+
+        PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters(), hddlPanda3Visitor.noneForMethod, hddlPanda3Visitor.noneForPlanStep);
+        PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters(), hddlPanda3Visitor.noneForMethod, hddlPanda3Visitor.noneForPlanStep);
+        this.planStepBuilder.$plus$eq(psInit);
+        this.planStepBuilder.$plus$eq(psGoal);
+        this.taskOderings = this.taskOderings.addPlanStep(psInit).addPlanStep(psGoal);
+
+
         // read tasks
         if (tnCtx.subtask_defs() != null) {
             for (int i = 0; i < tnCtx.subtask_defs().subtask_def().size(); i++) {
@@ -122,7 +143,20 @@ public class internalTaskNetwork {
 
                 String psName = psCtx.task_symbol().NAME().toString();
                 Task schema = parserUtil.taskByName(psName, tasks);
-                PlanStep ps = new PlanStep(i, schema, psVars.result(), Option.apply(null), Option.apply(null));
+
+                Seq<Variable> psVarsSeq = psVars.result();
+                if (schema == null) {
+                    System.out.println("Task schema undefined: " + psName);
+                    continue;
+                }
+
+                if (schema.parameters().size() != psVarsSeq.size()) {
+                    System.out.println("The task schema " + schema.name() + " is defined with " + schema.parameters().size() + " but used with " + psVarsSeq.size()+".");
+                    continue;
+                }
+
+                PlanStep ps = new PlanStep(i, schema, psVarsSeq, hddlPanda3Visitor.noneForMethod, hddlPanda3Visitor.noneForPlanStep);
+                this.taskOderings = this.taskOderings.addPlanStep(ps).addOrdering(OrderingConstraint.apply(psInit,ps)).addOrdering(OrderingConstraint.apply(ps,psGoal));
                 if (psCtx.subtask_id() != null) {
                     String id = psCtx.subtask_id().NAME().toString();
                     idMap.put(id, ps);
@@ -147,22 +181,13 @@ public class internalTaskNetwork {
                 this.csp = this.csp.addConstraint(vc);
             }
         }
-        ReducedTask initSchema = new ReducedTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(new Vector<Literal>(0, 0, 0)));
-        ReducedTask goalSchema = new ReducedTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new
-                And<Literal>(new Vector<Literal>(0, 0, 0)));
-
-        PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters(), Option.apply(null), Option.apply(null));
-        PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters(), Option.apply(null), Option.apply(null));
-        this.planStepBuilder.$plus$eq(psInit);
-        this.planStepBuilder.$plus$eq(psGoal);
         Seq<PlanStep> ps = this.planSteps();
 
         // read ordering
         String orderingMode = tnCtx.children.get(0).toString();
         if ((orderingMode.equals(":ordered-subtasks")) || (orderingMode.equals(":ordered-tasks"))) {
-            final int twoTechnicalSteps = 2;
-            for (int i = 1; i < ps.size() - twoTechnicalSteps; i++) {
-                this.taskOderings = this.taskOderings.addOrdering(ps.apply(i - 1), ps.apply(i));
+            for (int i = 2; i < ps.size()-1; i++) {
+                this.taskOderings = this.taskOderings.addOrdering(ps.apply(i), ps.apply(i+1));
             }
         } else { // i.e. :tasks or :subtasks
             if ((tnCtx.ordering_defs() != null) && (tnCtx.ordering_defs().ordering_def() != null)) {
@@ -193,12 +218,18 @@ public class internalTaskNetwork {
             if (v.NAME() != null) { // this is a constant ...
                 String constName = v.NAME().toString();
                 final Constant c = new Constant(constName);
-                Sort s = sorts.find(new AbstractFunction1<Sort, Object>() {
-                    @Override
-                    public Object apply(Sort v1) {
-                        return v1.elements().contains(c) ? Boolean.TRUE : Boolean.FALSE;
+
+                Sort s = null;
+                outer:
+                for (int i = 0; i < sorts.size(); i++) {
+                    Sort s1 = sorts.apply(i);
+                    for (int k = 0; k < s1.elements().size(); k++) {
+                        if (s1.elements().apply(k).name().equals(c.name())) {
+                            s = s1;
+                            break outer;
+                        }
                     }
-                }).get();
+                }
                 Variable var = new Variable(nextId++, "varFor" + constName, s);
                 this.csp = this.csp.addVariable(var);
                 this.csp = this.csp.addConstraint(new Equal(var, c));

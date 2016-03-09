@@ -10,9 +10,7 @@ import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import scala.Tuple2;
 
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.*;
 
 /**
  * Created by dhoeller on 14.04.15.
@@ -27,7 +25,7 @@ public class TestHddlVisitorParser {
             //String domainFileName = System.getProperty("user.dir") + "/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/monroe-d.lisp";
             //String problemFileName = System.getProperty("user.dir") + "/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/monroe-p1.lisp";
             String domainFileName = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/hddl-finalize/domain.lisp";
-            String problemFileName = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/hddl-finalize/problem.lisp";
+            String problemFileName = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/hddl-finalize/problem2.lisp";
 
             inDomain = new FileReader(domainFileName);
             inProblem = new FileReader(problemFileName);
@@ -43,12 +41,14 @@ public class TestHddlVisitorParser {
 
             HPDDLWriter writer = HPDDLWriter.apply("monroe", "monroe1");
 
-            String tempOut = "/home/dhoeller/Schreibtisch/PANDAout.lisp";
+            String tempOut = "/home/dhoeller/Schreibtisch/domain.lisp";
+            String tempOut2 = "/home/dhoeller/Schreibtisch/problem.lisp";
             BufferedWriter bw = new BufferedWriter(new FileWriter(tempOut));
+            BufferedWriter bw2 = new BufferedWriter(new FileWriter(tempOut2));
             bw.write(writer.writeDomain(tup._1()));
-            bw.write("\n\n\n---------------------------------------------------------------------\n\n\n");
-            bw.write(writer.writeProblem(tup._1(), tup._2()));
+            bw2.write(writer.writeProblem(tup._1(), tup._2()));
             bw.close();
+            bw2.close();
 
         } catch (Exception e) {
             e.printStackTrace();
