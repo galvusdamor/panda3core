@@ -24,7 +24,8 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
     // TODO decompose only those plan steps that can lead to the necessary effect
     var possibleProducer = 2
     while (possibleProducer < plan.firstFreePlanStepID) {
-      if (!plan.domain.tasks(plan.planStepTasks(possibleProducer)).isPrimitive && possibleProducer != planStep) buffer appendAll EfficientDecomposePlanStep(plan, this, possibleProducer)
+      if (!plan.domain.tasks(plan.planStepTasks(possibleProducer)).isPrimitive && possibleProducer != planStep && plan.planStepDecomposedByMethod(possibleProducer) == -1)
+        buffer appendAll EfficientDecomposePlanStep(plan, this, possibleProducer)
       possibleProducer += 1
     }
     buffer.toArray

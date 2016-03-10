@@ -138,36 +138,42 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     while (causalLinkNumber < causalLinks.length) {
       // extract information from the link
       val causalLink = causalLinks(causalLinkNumber)
-      val producer = domain.tasks(planStepTasks(causalLink.producer))
-      val producerLiteral = producer.effect(causalLink.conditionIndexOfProducer)
-      val linkpredicate = producerLiteral.predicate
-      val linkType = producerLiteral.isPositive
-      val linkArguments = producer.getArgumentsOfLiteral(planStepParameters(causalLink.producer), producerLiteral)
+
+      // check whether the link is still present
+      if (planStepDecomposedByMethod(causalLink.producer) == -1 && planStepDecomposedByMethod(causalLink.consumer) == -1) {
+
+        val producer = domain.tasks(planStepTasks(causalLink.producer))
+        val consumer = domain.tasks(planStepTasks(causalLink.consumer))
+        val producerLiteral = producer.effect(causalLink.conditionIndexOfProducer)
+        val linkpredicate = producerLiteral.predicate
+        val linkType = producerLiteral.isPositive
+        val linkArguments = producer.getArgumentsOfLiteral(planStepParameters(causalLink.producer), producerLiteral)
 
 
-      var planStepNumber = 2 // init an goal can nether threat a link
-      while (planStepNumber < planStepTasks.length) {
-        if (planStepDecomposedByMethod(planStepNumber) == -1) {
-          var effectNumber = 0
-          val planStep = domain.tasks(planStepTasks(planStepNumber))
+        var planStepNumber = 2 // init and goal can nether threat a link
+        while (planStepNumber < planStepTasks.length) {
+          if (planStepDecomposedByMethod(planStepNumber) == -1) {
+            var effectNumber = 0
+            val planStep = domain.tasks(planStepTasks(planStepNumber))
 
-          // check whether it can be ore
-          if (!ordering.lt(planStepNumber, causalLink.producer) && !ordering.gt(causalLink.consumer, planStepNumber)) {
+            // check whether it can before
+            if (!ordering.lteq(planStepNumber, causalLink.producer) && !ordering.gteq(causalLink.consumer, planStepNumber)) {
 
-            while (effectNumber < planStep.effect.length) {
-              val effect = planStep.effect(effectNumber)
-              if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
-                // check whether unification is possible
-                val mgu = variableConstraints.fastMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
-                if (mgu.isDefined) flawBuffer append EfficientCausalThreat(this, causalLink, planStepNumber, effectNumber, mgu.get)
+              while (effectNumber < planStep.effect.length) {
+                val effect = planStep.effect(effectNumber)
+                if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
+                  // check whether unification is possible
+                  val mgu = variableConstraints.fastMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
+                  if (mgu.isDefined) flawBuffer append EfficientCausalThreat(this, causalLink, planStepNumber, effectNumber, mgu.get)
+                }
+                effectNumber += 1
               }
-              effectNumber += 1
             }
           }
+          planStepNumber += 1
         }
-        planStepNumber += 1
+        causalLinkNumber += 1
       }
-      causalLinkNumber += 1
     }
     flawBuffer.toArray
   }
