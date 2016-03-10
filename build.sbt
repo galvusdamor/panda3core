@@ -22,8 +22,8 @@ description := "A planning system for partial-order causal-link, hierarchical an
 
 scalaVersion := "2.11.7"
 
-//mainClass in assembly := Some("de.uniulm.ki.panda3.efficient.search.BFS")
-mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
+mainClass in assembly := Some("de.uniulm.ki.panda3.efficient.search.BFS")
+//mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 
 compileOrder in Compile := CompileOrder.Mixed
 

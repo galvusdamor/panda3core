@@ -5,9 +5,11 @@ import java.util
 
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
-import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
-import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.efficient.plan.flaw.{EfficientCausalThreat, EfficientOpenPrecondition, EfficientAbstractPlanStep}
+import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientInsertPlanStepWithLink, EfficientModification}
+import de.uniulm.ki.panda3.symbolic.compiler.{SHOPMethodCompiler, ToPlainFormulaRepresentation, ClosedWorldAssumption}
 import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 
@@ -16,16 +18,21 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
   */
 object BFS {
   def main(args: Array[String]) {
-    //val domFile = "AssemblyTask_domain.xml"
-    //val probFile = "AssemblyTask_problem.xml"
+    //if (args.length != 2) {
+    //  println("This programm needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
+    //  System.exit(1)
+    //}
+    //val domFile = args(0)
+    //val probFile = args(1)
+    val domFile = "/home/gregor/temp/panda3/domain2.lisp"
+    val probFile = "/home/gregor/temp/panda3/problem2.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
-    val domAlone: Domain = XMLParser.parseDomain(new FileInputStream(domFile))
-    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem(new FileInputStream(probFile), domAlone)
+    print("Parsing domain and problem ...")
+    val domAndInitialPlan: (Domain, Plan) = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    print("done\npreprocessing ...")
     val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
 
     val parsedDom = domAndInitialPlan._1.update(sortExpansion)
@@ -33,33 +40,36 @@ object BFS {
 
     // apply the CWA
     val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
-    val flattened = ToPlainFormulaRepresentation.transform(cwaApplied._1, cwaApplied._2, ())
+    val simpleMethod = SHOPMethodCompiler.transform(cwaApplied, ())
+    val flattened = ToPlainFormulaRepresentation.transform(simpleMethod, ())
+    print("done\ntransform to efficient representation ...")
 
     // wrap everything into the efficient Datastructures
-    val wrapper = Wrapping(flattened._1, flattened._2)
-
+    val wrapper = Wrapping(flattened)
     val initialPlan = wrapper.unwrap(flattened._2)
 
-    println(initialPlan.flaws.length)
+    println("done\nstart planner")
 
-    System.in.read()
-
+    //System.in.read()
     time = System.currentTimeMillis()
     //dfs(initialPlan, 0)
-    val ret = bfs(initialPlan)
+    val ret = bfs(initialPlan,wrapper)
 
-    println(ret)
-    val symbolicPlan = wrapper.wrap(ret.get)
-    println(symbolicPlan)
-    println(symbolicPlan.longInfo)
+
+    println("BFS finished with result: " + (if (ret.isDefined) "solvable" else "unsolvable"))
+    if (ret.isDefined) {
+      val symbolicPlan = wrapper.wrap(ret.get)
+      //println(symbolicPlan)
+      println(symbolicPlan.longInfo)
+    }
   }
 
   var time: Long = 0
 
 
-  def bfs(initialPlan: EfficientPlan): Option[EfficientPlan] = {
+  def bfs(initialPlan: EfficientPlan, wrapping: Wrapping): Option[EfficientPlan] = {
     val stack = new util.ArrayDeque[EfficientPlan]()
-    var result : Option[EfficientPlan] = None
+    var result: Option[EfficientPlan] = None
     stack.add(initialPlan)
 
     var i = 0
@@ -68,11 +78,21 @@ object BFS {
         val nTime = System.currentTimeMillis()
         val nps = i.asInstanceOf[Double] / (nTime - time) * 1000
         //time = nTime
-        println(i + " " + nps)
+        println("Plans Expanded: " + i) //  + " " + nps
       }
       i += 1
       val plan = stack.pop()
       val flaws = plan.flaws
+      /*println("\n\nNEXT PLAN " + plan.hashCode() +  " - with " + flaws.length + " flaws")
+      println(wrapping.wrap(plan).longInfo)
+      println("Flaws:")
+      flaws foreach {
+        case EfficientAbstractPlanStep(_,ps) => println("ABSTRACT PLAN STEP: " + ps)
+        case EfficientOpenPrecondition(_,ps,prec) => println("OPEN PRECONDITION: " + ps + " -> " + prec)
+        case EfficientCausalThreat(_,_,ps,_,_) => println("CAUSAL THREAT: by " + ps)
+        case x => println(x)
+      }*/
+
       if (flaws.length == 0) {
         result = Some(plan)
       } else {
@@ -82,7 +102,7 @@ object BFS {
         var smallFlawNumMod = 0x3f3f3f3f
         while (flawnum < flaws.length) {
           //printTime("ToModcall")
-          modifications(flawnum) = flaws(flawnum).resolver
+          modifications(flawnum) = flaws(flawnum).resolver filterNot { _.isInstanceOf[EfficientInsertPlanStepWithLink] }
           //printTime("Modification")
           if (modifications(flawnum).length < smallFlawNumMod) {
             smallFlawNumMod = modifications(flawnum).length
@@ -95,7 +115,10 @@ object BFS {
           var modNum = 0
           while (modNum < smallFlawNumMod && result.isEmpty) {
             // apply modification
-            stack add plan.modify(modifications(smallFlaw)(modNum))
+            val newPlan: EfficientPlan = plan.modify(modifications(smallFlaw)(modNum))
+            if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
+              stack add newPlan
+            }
             modNum += 1
           }
         }
