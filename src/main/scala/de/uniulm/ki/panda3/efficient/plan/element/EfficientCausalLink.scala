@@ -9,8 +9,8 @@ package de.uniulm.ki.panda3.efficient.plan.element
 case class EfficientCausalLink(producer : Int, consumer : Int, conditionIndexOfProducer : Int, conditionIndexOfConsumer : Int) {
   assert(producer >= 0)
   assert(consumer >= 0) // cannot be init
-  assert(conditionIndexOfConsumer >= 0)
-  assert(conditionIndexOfProducer >= 0)
+  assert(conditionIndexOfConsumer >= 0, "Consumer Condition Index was : " + conditionIndexOfConsumer)
+  assert(conditionIndexOfProducer >= 0, "Producer Condition Index was : " + conditionIndexOfProducer)
 
 
   def consumerOrProducer(isProducer : Boolean) : Int = if (isProducer) producer else consumer
