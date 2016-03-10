@@ -67,7 +67,8 @@ trait Plan extends DomainUpdatable with PrettyPrintable {
   override def update(domainUpdate: DomainUpdate): Plan
 
   /** returns a short information about the object */
-  override def shortInfo: String = (planSteps map { "PS " + _.mediumInfo }).mkString("\n") + "\n" + orderingConstraints.shortInfo + "\n" + (causalLinks map { _.longInfo }).mkString("\n")
+  override def shortInfo: String = (planSteps map { "PS " + _.mediumInfo }).mkString("\n") + "\n" + orderingConstraints.shortInfo + "\n" + (causalLinks map { _.longInfo }).mkString("\n") +
+  "\n" + (variableConstraints.constraints.mkString("\n"))
 
   /** returns a string that can be utilized to define the object */
   override def mediumInfo: String = shortInfo
