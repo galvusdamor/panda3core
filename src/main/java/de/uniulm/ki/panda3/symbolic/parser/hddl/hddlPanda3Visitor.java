@@ -25,7 +25,6 @@ import java.util.*;
 
 /**
  * Created by dhoeller on 14.04.15.
- * - @dh: schau dir mal die variablen und zugehörigen constraints an
  */
 public class hddlPanda3Visitor {
     public static Option<DecompositionMethod> noneForMethod = (Option<DecompositionMethod>) (Object) scala.None$.MODULE$;
@@ -60,7 +59,6 @@ public class hddlPanda3Visitor {
         tn.addCspVariables(init.parameters());
         assert (init.parameters().equals(goal.parameters()));
         tn.addCspConstraints(init.parameterConstraints());
-        //tn.addCspConstraints(goal.parameterConstraints());
 
         visitInitialTN(ctxProblem.p_htn(), tn, tasks, sorts);
 
@@ -255,7 +253,6 @@ public class hddlPanda3Visitor {
 
         // build preconditions
         // todo: implement fancy precondition stuff
-        VectorBuilder<Literal> preconditions = new VectorBuilder<>();
         Formula f = new Identity();
         if (ctxTask.gd() != null) {
             f = visitGoalConditions(predicates, parameters, sorts, constraints, ctxTask.gd());
@@ -295,16 +292,16 @@ public class hddlPanda3Visitor {
         } else if (ctx.gd_negation() != null) { // a negated single precondition
             return visitNegAtomFormula(parameters, predicates, sorts, constraints, ctx.gd_negation());
         } else if (ctx.gd_conjuction() != null) { // a conduction of preconditions
-            return visitLiteralConj(parameters, predicates, sorts, constraints, ctx.gd_conjuction());
+            return visitGdConOrDisjunktion(conOrDis.and, parameters, predicates, sorts, constraints, ctx.gd_conjuction().gd());
         } else if (ctx.gd_univeral() != null) {
-            return visitUniveralQ(parameters, predicates, sorts, constraints, ctx.gd_univeral());
+            return visitUniveralQuantifier(parameters, predicates, sorts, constraints, ctx.gd_univeral());
         } else if (ctx.gd_disjuction() != null) { // well ...
-            System.out.println("ERROR: not yet implemented - disjunction in preconditions.");
+            return visitGdConOrDisjunktion(conOrDis.or, parameters, predicates, sorts, constraints, ctx.gd_disjuction().gd());
         }
         return new Identity();
     }
 
-    private Formula visitUniveralQ(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_univeralContext gd_conjuctionContext) {
+    private Formula visitUniveralQuantifier(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_univeralContext gd_conjuctionContext) {
 
         // read new variables
         int curIndex = methodParams.size();
@@ -354,15 +351,22 @@ public class hddlPanda3Visitor {
         }
     }
 
+    enum conOrDis {
+        or, and
+    }
+
     /**
-     * Parse a conjunction of goal conditions
+     * Parse a conjunction or disjunction of goal conditions
      */
-    private Formula visitLiteralConj(seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_conjuctionContext ctx) {
+    private Formula visitGdConOrDisjunktion(conOrDis what, seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, List<hddlParser.GdContext> ctx) {
         VectorBuilder<Formula> elements = new VectorBuilder<>();
-        for (hddlParser.GdContext gd : ctx.gd()) {
+        for (hddlParser.GdContext gd : ctx) {
             elements.$plus$eq(visitGoalConditions(predicates, parameters, sorts, constraints, gd));
         }
-        return new And(elements.result());
+        if (what == conOrDis.and)
+            return new And(elements.result());
+        else
+            return new Or(elements.result());
     }
 
     /**
