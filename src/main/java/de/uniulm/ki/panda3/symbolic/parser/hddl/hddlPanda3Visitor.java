@@ -30,7 +30,7 @@ import java.util.*;
  */
 public class hddlPanda3Visitor {
     public static Option<DecompositionMethod> noneForMethod = (Option<DecompositionMethod>) (Object) scala.None$.MODULE$;
-    public static Option<PlanStep> noneForPlanStep =(Option<PlanStep>) (Object)  scala.None$.MODULE$;
+    public static Option<PlanStep> noneForPlanStep = (Option<PlanStep>) (Object) scala.None$.MODULE$;
 
 
     public Tuple2<Domain, Plan> visitInstance(@NotNull hddlParser.DomainContext ctxDomain, @NotNull hddlParser.ProblemContext ctxProblem) {
@@ -102,7 +102,7 @@ public class hddlPanda3Visitor {
                 parameters.$plus$eq(v);
             }
 
-            PlanStep psNew = new PlanStep(psID++, schema, parameters.result(), noneForMethod,noneForPlanStep);
+            PlanStep psNew = new PlanStep(psID++, schema, parameters.result(), noneForMethod, noneForPlanStep);
             tn.addPlanStep(psNew);
             for (int i = 0; i < tn.planSteps().size(); i++) {
                 PlanStep ps = tn.planSteps().apply(i);
@@ -194,7 +194,7 @@ public class hddlPanda3Visitor {
             Formula f2 = null;
             boolean hasPrecondition;
             if (m.gd() != null) {
-                if (m.gd().getText().contains("(forall")) {
+/*                if (m.gd().getText().contains("(forall")) {
                     // todo: HACK
                     seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
                     VectorBuilder<Literal> preconditions2 = new VectorBuilder<>();
@@ -209,11 +209,11 @@ public class hddlPanda3Visitor {
                     form.$plus$eq(preconditions2.result().apply(0));
                     form.$plus$eq(f._1());
                     f2 = new And(form.result());
-                } else {
-                    seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
-                    visitGoalConditions(preconditions, predicates, methodParams, sorts, constraints, m.gd());
-                    subNetwork.addCspConstraints(constraints.result());
-                }
+                } else {*/
+                seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
+                visitGoalConditions(preconditions, predicates, methodParams, sorts, constraints, m.gd());
+                subNetwork.addCspConstraints(constraints.result());
+                //}
                 hasPrecondition = true;
             } else {
                 hasPrecondition = false;
@@ -288,18 +288,47 @@ public class hddlPanda3Visitor {
         return bParameters;
     }
 
-    private void visitGoalConditions(VectorBuilder<Literal> outGoalDefinitions, Seq<Predicate> predicates, seqProviderList<Variable> parameters, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.GdContext ctx) {
+    private Formula visitGoalConditions(VectorBuilder<Literal> outGoalDefinitions, Seq<Predicate> predicates, seqProviderList<Variable> parameters, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.GdContext ctx) {
         if (ctx.atomic_formula() != null) { // a single precondition
-            visitAtomFormula(outGoalDefinitions, parameters, predicates, sorts, constraints, true, ctx.atomic_formula());
+            return visitAtomFormula(outGoalDefinitions, parameters, predicates, sorts, constraints, true, ctx.atomic_formula());
         } else if (ctx.gd_negation() != null) { // a negated single precondition
-            visitNegAtomFormula(outGoalDefinitions, parameters, predicates, sorts, constraints, ctx.gd_negation());
+            return visitNegAtomFormula(outGoalDefinitions, parameters, predicates, sorts, constraints, ctx.gd_negation());
         } else if (ctx.gd_conjuction() != null) { // a conduction of preconditions
-            visitLiteralConj(outGoalDefinitions, parameters, predicates, sorts, constraints, ctx.gd_conjuction());
+            return visitLiteralConj(outGoalDefinitions, parameters, predicates, sorts, constraints, ctx.gd_conjuction());
         } else if (ctx.gd_univeral() != null) {
-            // todo: universal quantifier
+            return visitUniveralQ(outGoalDefinitions, parameters, predicates, sorts, constraints, ctx.gd_univeral());
         } else if (ctx.gd_disjuction() != null) { // well ...
             System.out.println("ERROR: not yet implemented - disjunction in preconditions.");
         }
+        return new Identity();
+    }
+
+    private Formula visitUniveralQ(VectorBuilder<Literal> outGoalDefinitions, seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_univeralContext gd_conjuctionContext) {
+
+        // read new variables
+        int curIndex = methodParams.size();
+        seqProviderList<Variable> parameters2 = new seqProviderList<>();
+        for (int i = 0; i < methodParams.size(); i++) {
+            parameters2.add(methodParams.get(i));
+        }
+
+        VectorBuilder<Sort> newSorts = new VectorBuilder<>();
+        VectorBuilder<String> newVarnames = new VectorBuilder<>();
+        visitTypedList(newSorts, newVarnames, sorts, gd_conjuctionContext.typed_var_list().typed_vars());
+
+        Seq<Sort> newS = newSorts.result();
+        Seq<String> newN = newVarnames.result();
+
+        // don't add the variable to original parameters as it is only locally valid
+        // DH: todo: ???
+        for (int i = 0; i < newN.size(); i++) {
+            parameters2.add(new Variable(curIndex + i, newN.apply(i), newS.apply(i)));
+        }
+
+        // read inner formula
+        Formula inner = visitGoalConditions(null, predicates, parameters2, sorts, constraints, gd_conjuctionContext.gd());
+
+        return inner;
     }
 
     private void visitConEffConj(VectorBuilder<Literal> outEffects, seqProviderList<Variable> parameters, Seq<Sort> sorts, Seq<Predicate> predicates, hddlParser.Eff_conjuntionContext ctx) {
@@ -324,69 +353,37 @@ public class hddlPanda3Visitor {
         }
     }
 
-    private void visitLiteralConj(VectorBuilder<Literal> outLiterals, seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_conjuctionContext ctx) {
+    /**
+     * Parse a conjunction of goal conditions
+     */
+    private Formula visitLiteralConj(VectorBuilder<Literal> outLiterals, seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_conjuctionContext ctx) {
+        VectorBuilder<Formula> elements = new VectorBuilder<>();
         for (hddlParser.GdContext gd : ctx.gd()) {
-            if (gd.atomic_formula() != null) {
-                visitAtomFormula(outLiterals, parameters, predicates, sorts, constraints, true, gd.atomic_formula());
-            } else if (gd.gd_negation() != null) {
-                visitNegAtomFormula(outLiterals, parameters, predicates, sorts, constraints, gd.gd_negation());
-            } else if (gd.gd_univeral() != null) {
-                System.out.println("ERROR: not yet implemented - an element of a conjunction of preconditions or effects seems to be no literal.");
-                //visitUniveral(outLiterals, parameters, predicates, sorts, constraints, true, gd.gd_univeral());
-            } else {
-                System.out.println("ERROR: not yet implemented - an element of a conjunction of preconditions or effects seems to be no literal.");
-            }
+            elements.$plus$eq(visitGoalConditions(outLiterals, predicates, parameters, sorts, constraints, gd));
         }
+        return new And(elements.result());
     }
 
-    private Tuple2<Formula, Variable> visitUniveral(Seq<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, boolean b, hddlParser.Gd_univeralContext gd_univeralContext) {
-        int curIndex = parameters.size();
-        seqProviderList<Variable> parameters2 = new seqProviderList<>();
-        for (int i = 0; i < parameters.size(); i++) {
-            parameters2.add(parameters.apply(i));
-        }
-
-        List<hddlParser.Typed_varsContext> y = gd_univeralContext.typed_var_list().typed_vars();
-        if (y.size() != 1) {
-            System.out.println("ERROR: Not implemented: conditional effects");
-        }
-        String type = y.get(0).children.get(2).getText();
-        String obj = y.get(0).children.get(0).getText();
-
-        Sort s = null;
-        for (int i = 0; i < sorts.size(); i++) {
-            Sort s1 = sorts.apply(i);
-            if (s1.name().equals(type)) {
-                s = s1;
-                break;
-            }
-        }
-
-        Variable v = new Variable(curIndex++, obj, s);
-        parameters2.add(v);
-
-        VectorBuilder<Literal> innerListerals = new VectorBuilder<>();
-        visitGoalConditions(innerListerals, predicates, parameters2, sorts, constraints, gd_univeralContext.gd());
-
-        And a = new And(innerListerals.result());
-        Formula f = new Forall(v, a);
-        return new Tuple2<>(f, v);
-    }
-
-    private void visitNegAtomFormula(VectorBuilder<Literal> outLiterals, seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_negationContext ctx) {
-        if (ctx.gd().atomic_formula() != null) {
-            visitAtomFormula(outLiterals, parameters, predicates, sorts, constraints, false, ctx.gd().atomic_formula());
-        } else if (ctx.gd().gd_equality_constraint() != null) {
+    /**
+     * This method has to handle both (1) negation of a normal formula as well as (2) "not equal" variable constraints.
+     *
+     * @return In the first case it returns the negation of the inner formula, in the second case it adds
+     * the constraint and returns the logical identity.
+     */
+    private Formula visitNegAtomFormula(VectorBuilder<Literal> outLiterals, seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_negationContext ctx) {
+        if (ctx.gd().gd_equality_constraint() != null) {
             Variable var1 = getVariable(ctx.gd().gd_equality_constraint().var_or_const(0), parameters, constraints, sorts);
             Variable var2 = getVariable(ctx.gd().gd_equality_constraint().var_or_const(1), parameters, constraints, sorts);
             NotEqual ne = new NotEqual(var1, var2);
             constraints.add(ne);
+            return new Identity();
         } else {
-            System.out.println("ERROR: not yet implemented - a negated literal seems to be no atomic formula.");
+            Formula inner = visitGoalConditions(outLiterals, predicates, parameters, sorts, constraints, ctx.gd());
+            return new Not(inner);
         }
     }
 
-    private void visitAtomFormula(VectorBuilder<Literal> outLiterals, seqProviderList<Variable> taskParameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, boolean isPositive, hddlParser.Atomic_formulaContext ctx) {
+    private Literal visitAtomFormula(VectorBuilder<Literal> outLiterals, seqProviderList<Variable> taskParameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, boolean isPositive, hddlParser.Atomic_formulaContext ctx) {
         //
         // get predicate definition
         //
@@ -414,7 +411,7 @@ public class hddlPanda3Visitor {
             parameterVariables.add(var);
         }
 
-        outLiterals.$plus$eq(new Literal(predicate, isPositive, parameterVariables.result()));
+        return new Literal(predicate, isPositive, parameterVariables.result());
     }
 
     private Variable getVariable(hddlParser.Var_or_constContext param, seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts) {
@@ -489,7 +486,7 @@ public class hddlPanda3Visitor {
     }
 
     /*
-    The following method(s) ready a typed list and fills the first vector with their names and the second one with the types. The vectors equal in length.
+    The following method(s) read a typed list and fills the first vector with their names and the second one with the types. The vectors equal in length.
     Please provide a meaningful description of who is reading as last parameter
      */
     private void visitTypedList(VectorBuilder<Sort> lSorts, VectorBuilder<String> lNames, Seq<Sort> sorts, List<hddlParser.Typed_varsContext> ctx) {
