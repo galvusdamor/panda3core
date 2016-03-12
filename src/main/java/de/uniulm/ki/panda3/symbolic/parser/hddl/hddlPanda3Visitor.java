@@ -286,6 +286,10 @@ public class hddlPanda3Visitor {
         return bParameters;
     }
 
+    /**
+     * Dispatcher for parsing goal descriptions (GD). Please be aware that these descriptions are used at several
+     * places in the grammar, e.g. as precondition of actions, tasks or methods and not just as goal condition.
+     */
     private Formula visitGoalConditions(Seq<Predicate> predicates, seqProviderList<Variable> parameters, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.GdContext ctx) {
         if (ctx.atomic_formula() != null) { // a single precondition
             return visitAtomFormula(parameters, predicates, sorts, constraints, true, ctx.atomic_formula());
