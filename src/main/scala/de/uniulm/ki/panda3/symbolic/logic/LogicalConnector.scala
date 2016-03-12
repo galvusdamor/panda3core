@@ -51,6 +51,16 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
   override val isEmpty: Boolean = conjuncts forall { _.isEmpty }
 }
 
+case class Identity[SubFormulas <: Formula]() extends LogicalConnector with DefaultLongInfo with HashMemo{
+  override def update(domainUpdate: DomainUpdate): Identity[Formula] = new Identity[Formula]()
+
+  lazy val containedVariables: Set[Variable] = Set[Variable]()
+
+  override def longInfo: String = "Identity"
+
+  override val isEmpty: Boolean = true
+}
+
 case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends LogicalConnector with DefaultLongInfo with HashMemo{
   override def update(domainUpdate: DomainUpdate): Or[Formula] = Or[Formula](disjuncts map { _ update domainUpdate })
 

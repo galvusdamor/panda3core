@@ -119,6 +119,7 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
 
 
   def writeFormula(builder: StringBuilder, formula: Formula, indent: String, taskUF: SymbolicUnionFind): Unit = formula match {
+    case Identity() => builder
     case And(conj) => builder.append(indent + "(and\n")
       conj foreach {
         writeFormula(builder, _, indent + "\t", taskUF)
