@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.writer.hpddl.HPDDLWriter;
+import de.uniulm.ki.panda3.symbolic.writer.xml.XMLWriter;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import scala.Tuple2;
@@ -135,10 +136,26 @@ public class PANDAtranslator {
 
             BufferedWriter bwDomain = new BufferedWriter(new FileWriter(toDomainFile));
             BufferedWriter bwProblem = new BufferedWriter(new FileWriter(toProblemFile));
+
             bwDomain.write(writer.writeDomain(planningInstance._1()));
             bwProblem.write(writer.writeProblem(planningInstance._1(), planningInstance._2()));
+
             bwDomain.close();
             bwProblem.close();
+
+            System.out.println("PANDA says: Done.");
+        } else if ((readProblem) && (toLang.equals(ourXmlFormat))) {
+            XMLWriter writer = new XMLWriter("someDomain", "someProblem");
+
+            BufferedWriter bwDomain = new BufferedWriter(new FileWriter(toDomainFile));
+            BufferedWriter bwProblem = new BufferedWriter(new FileWriter(toProblemFile));
+
+            bwDomain.write(writer.writeDomain(planningInstance._1()));
+            bwProblem.write(writer.writeProblem(planningInstance._1(), planningInstance._2()));
+
+            bwDomain.close();
+            bwProblem.close();
+
             System.out.println("PANDA says: Done.");
         } else {
             System.out.println("PANDA says: Output format not yet implemented: \"" + toLang + "\".");
