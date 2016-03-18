@@ -20,6 +20,7 @@ case class EfficientDecomposePlanStep(plan: EfficientPlan, resolvedFlaw: Efficie
                                       override val nonInducedAddedOrderings: Array[(Int, Int)],
                                       override val decomposedPlanStepsByMethod: Array[(Int, Int)]
                                      ) extends EfficientModification {
+  assert(decomposedPlanStepsByMethod.length == 1)
 }
 
 object EfficientDecomposePlanStep {
@@ -62,7 +63,8 @@ object EfficientDecomposePlanStep {
 
       if (oldConstraint.constraintType == EfficientVariableConstraint.EQUALVARIABLE || oldConstraint.constraintType == EfficientVariableConstraint.UNEQUALVARIABLE) {
         addedVariableConstraints(constraint) = EfficientVariableConstraint(oldConstraint.constraintType, newVariableOfVariable, newVariableOfOther)
-      }else {// other is a constant or a sort so just keep it
+      } else {
+        // other is a constant or a sort so just keep it
         addedVariableConstraints(constraint) = EfficientVariableConstraint(oldConstraint.constraintType, newVariableOfVariable, oldConstraint.other)
       }
       constraint += 1
