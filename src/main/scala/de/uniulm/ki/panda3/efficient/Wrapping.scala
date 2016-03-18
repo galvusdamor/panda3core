@@ -212,9 +212,9 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
 
   // PLANSTEP
-  def unwrap(planStep: PlanStep, plan: Plan): Int = ((plan.init :: plan.goal :: Nil) ++ plan.planStepWithoutInitGoal).indexOf(planStep)
+  def unwrap(planStep: PlanStep, plan: Plan): Int = ((plan.init :: plan.goal :: Nil) ++ plan.planStepsAndRemovedPlanStepsWithoutInitGoal).indexOf(planStep)
 
-  def wrapPlanStep(planStep: Int, plan: Plan): PlanStep = ((plan.init :: plan.goal :: Nil) ++ plan.planStepWithoutInitGoal).apply(planStep)
+  def wrapPlanStep(planStep: Int, plan: Plan): PlanStep = ((plan.init :: plan.goal :: Nil) ++ plan.planStepsAndRemovedPlanStepsWithoutInitGoal).apply(planStep)
 
 
   // VARIABLE CONSTRAINT
@@ -264,7 +264,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
   def wrap(plan: EfficientPlan): Plan = {
     val variables = plan.variableConstraints.variableSorts.zipWithIndex map {
-      case (sortIndex, variableIndex) => newVariableFormEfficient(sortIndex, variableIndex)
+      case (sortIndex, variableIndex) => newVariableFormEfficient(variableIndex, sortIndex)
     }
 
     val taskCreationGraph = SimpleDirectedGraph(plan.planStepTasks.indices, plan.planStepTasks.indices map { i => (plan.planStepParentInDecompositionTree(i), i) } collect {
@@ -305,7 +305,12 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
 
     // and return the actual plan
-    SymbolicPlan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1))
+    val symbolicPlan = SymbolicPlan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1))
+    // sanity checks
+    assert(symbolicPlan.variableConstraints.isSolvable.getOrElse(true) == plan.variableConstraints.potentiallyConsistent)
+    assert(symbolicPlan.flaws.size == plan.flaws.length)
+
+    symbolicPlan
   }
 
 
@@ -314,6 +319,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   /**
     * Wraps the <br>whole</br> search space described by this node, i.e. itself and all of its children
     */
+
   def wrap(efficientSearchNode: EfficientSearchNode): SearchNode = {
     // set the essentials
     val wrappedPlan = wrap(efficientSearchNode.plan)
@@ -384,11 +390,11 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
       // inserted subplan
       val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil, None, None)
-      val goal = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil, None, None)
+      val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil, None, None)
       val subPlanPlanSteps = insertedPlanSteps :+ init :+ goal
       val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) }
       val ordering = SymbolicTaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
-      val csp = SymbolicCSP(newVariables.toSet, innerConstraints)
+      val csp = SymbolicCSP((newVariables ++ nonPresentDecomposedPlanStep.arguments).toSet, innerConstraints)
       val subPlan = SymbolicPlan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal)
 
       // construct the modification
