@@ -23,6 +23,8 @@ trait Plan extends DomainUpdatable with PrettyPrintable {
   }
   lazy val planStepWithoutInitGoal: Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
 
+  lazy val planStepsAndRemovedPlanStepsWithoutInitGoal: Seq[PlanStep] = planStepsAndRemovedPlanSteps filter { ps => ps != init && ps != goal }
+
   lazy val initAndGoal = init :: goal :: Nil
 
   /** all abstract plan steps */

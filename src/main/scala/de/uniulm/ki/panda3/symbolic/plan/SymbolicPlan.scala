@@ -22,7 +22,10 @@ case class SymbolicPlan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinks
 
   assert(planStepsAndRemovedPlanSteps forall { ps => ps.arguments.size == ps.schema.parameters.size })
   //assert(planSteps forall { ps => ps.arguments forall { v => parameterVariableConstraints.variables.contains(v) } })
-  planStepsAndRemovedPlanSteps foreach { ps => ps.arguments foreach { v => assert(parameterVariableConstraints.variables.contains(v), ps.id + " - " + ps.schema.name + ": var " + v) } }
+  planStepsAndRemovedPlanSteps foreach { ps => ps.arguments foreach { v =>
+    if (!parameterVariableConstraints.variables.contains(v))
+      println("foo")
+    assert(parameterVariableConstraints.variables.contains(v), ps.id + " - " + ps.schema.name + ": var " + v) } }
 
   planStepWithoutInitGoal foreach { ps =>
     assert(orderingConstraints.lt(init, ps))

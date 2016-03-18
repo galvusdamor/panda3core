@@ -31,7 +31,7 @@ class EfficientSearchNode(nodePlan: EfficientPlan, nodeParent: EfficientSearchNo
     * empty this is a dead-end node in the search space. */
   var modifications: Array[Array[EfficientModification]] = Array()
   /** the successors based on the list of modifications. The pair (sn,i) indicates that the child sn was generated based on the modification modifications(selectedFlaw)(i) */
-  var children     : Seq[(EfficientSearchNode, Int)]     = Nil
+  var children     : Array[(EfficientSearchNode, Int)]   = Array()
   /** any possible further payload */
   var payload      : Any                                 = null
 }

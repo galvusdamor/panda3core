@@ -46,7 +46,7 @@ object EfficientDecomposePlanStep {
         parameters(parameter) = getNewVariableID(plan, decomposedPS, oldParameters(parameter))
         parameter += 1
       }
-      addedPlanSteps(ps) = (method.addedPlanSteps(ps)._1, method.addedPlanSteps(ps)._2, -1, decomposedPS)
+      addedPlanSteps(ps) = (method.addedPlanSteps(ps)._1, parameters, -1, decomposedPS)
       ps += 1
     }
 

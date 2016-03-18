@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.efficient.csp.EfficientCSP
 import de.uniulm.ki.panda3.efficient.domain.{EfficientTask, EfficientDomain}
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw._
-import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
+import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientInsertPlanStepWithLink, EfficientInsertCausalLink, EfficientModification}
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
 
 import scala.collection.mutable.ArrayBuffer
@@ -114,8 +114,11 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       while (i < precomputed.length) {
         // check whether this flaw has actually been resolved
         val flaw = precomputed(i)
-        if (flaw != appliedModification.get.resolvedFlaw) flawBuffer append
-          flaw.updateToNewPlan(this, appliedModification.get.addedPlanSteps.length, appliedModification.get.decomposedPlanSteps)
+        val flawResolved = flaw == appliedModification.get.resolvedFlaw &&
+          (appliedModification.isInstanceOf[EfficientInsertCausalLink] || appliedModification.isInstanceOf[EfficientInsertPlanStepWithLink])
+
+        if (!flawResolved && planStepDecomposedByMethod(flaw.planStep) == -1)
+          flawBuffer append flaw.updateToNewPlan(this, appliedModification.get.addedPlanSteps.length, appliedModification.get.decomposedPlanSteps)
         i += 1
       }
       //println("Taken " + flawBuffer.length)
@@ -226,7 +229,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       newPlanStepParameters append modification.addedPlanSteps(newPS)._2
       newPlanStepDecomposedByMethod append modification.addedPlanSteps(newPS)._3
       newPlanStepParentInDecompositionTree append modification.addedPlanSteps(newPS)._4
-      // add a new ordering
+      // new plan steps are between init and goal
       newOrdering.addOrderingConstraint(0, firstFreePlanStepID + newPS) // init < ps
       newOrdering.addOrderingConstraint(firstFreePlanStepID + newPS, 1) // ps < goal
       newPS += 1
