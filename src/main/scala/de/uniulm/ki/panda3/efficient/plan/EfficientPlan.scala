@@ -172,8 +172,8 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
           }
           planStepNumber += 1
         }
-        causalLinkNumber += 1
       }
+      causalLinkNumber += 1
     }
     flawBuffer.toArray
   }
