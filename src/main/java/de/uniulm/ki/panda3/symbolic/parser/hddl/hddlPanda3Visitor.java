@@ -20,7 +20,6 @@ import scala.collection.Seq;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
 import scala.runtime.AbstractFunction1;
-import scala.tools.nsc.doc.model.Constraint;
 
 import java.util.*;
 
