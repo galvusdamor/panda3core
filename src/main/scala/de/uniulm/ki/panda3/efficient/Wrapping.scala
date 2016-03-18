@@ -5,15 +5,23 @@ import de.uniulm.ki.panda3.efficient.domain.{EfficientDecompositionMethod, Effic
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
+import de.uniulm.ki.panda3.efficient.plan.flaw._
+import de.uniulm.ki.panda3.efficient.plan.modification._
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
+import de.uniulm.ki.panda3.efficient.search.EfficientSearchNode
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
+import de.uniulm.ki.panda3.symbolic.plan.flaw._
+import de.uniulm.ki.panda3.symbolic.plan.modification._
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
 import de.uniulm.ki.panda3.symbolic.plan.{SymbolicPlan, Plan}
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.search.SearchNode
 import de.uniulm.ki.util.{SimpleDirectedGraph, BiMap}
+
+import scala.tools.nsc.interpreter.IMain.Request.Wrapper
 
 /**
   * An explicit transformator between the inefficient symbolic part of panda3 and the efficient part thereof
@@ -126,6 +134,9 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
                   causalLinks.toArray)
   }
 
+  private def newVariableFormEfficient(variableIndex: Int, sortIndex: Int): Variable = Variable(variableIndex, "variable_" + variableIndex, domainSorts.back(sortIndex))
+
+  // DOMAIN
 
   // compute the efficient domain if the wrapper is initialised
   val efficientDomain: EfficientDomain = {
@@ -152,27 +163,33 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     domain
   }
 
+  // CONSTANT
   def unwrap(constant: Constant): Int = domainConstants(constant)
 
   def wrapConstant(constant: Int): Constant = domainConstants.back(constant)
 
+  // SORT
   def unwrap(sort: Sort): Int = domainSorts(sort)
 
   def wrapSort(sort: Int): Sort = domainSorts.back(sort)
 
+  // TASK
   def unwrap(task: Task): Int = domainTasks(task)
 
   def wrapTask(task: Int): Task = domainTasks.back(task)
 
+  // PREDICATE
   def unwrap(predicate: Predicate): Int = domainPredicates(predicate)
 
   def wrapPredicate(predicate: Int): Predicate = domainPredicates.back(predicate)
 
+  // DECOMPOSITIONMETHOD
   def unwrap(method: DecompositionMethod): Int = domainDecompositionMethods(method)
 
   def wrapDecompositionMethod(method: Int): DecompositionMethod = domainDecompositionMethods.back(method)
 
 
+  // VARIABLE
   /**
     * This will not work correctly if the plan is part of a decomposition method!!
     *
@@ -191,16 +208,40 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
   def wrapVariable(variable: Int, task: Task): Variable = task.parameters(variable)
 
+
+  // PLANSTEP
   def unwrap(planStep: PlanStep, plan: Plan): Int = ((plan.init :: plan.goal :: Nil) ++ plan.planStepWithoutInitGoal).indexOf(planStep)
 
   def wrapPlanStep(planStep: Int, plan: Plan): PlanStep = ((plan.init :: plan.goal :: Nil) ++ plan.planStepWithoutInitGoal).apply(planStep)
 
+
+  // VARIABLE CONSTRAINT
   def unwrap(variableConstraint: VariableConstraint, plan: Plan): EfficientVariableConstraint = computeEfficientVariableConstraint(variableConstraint, { unwrap(_, plan) })
 
+  def wrap(efficientVariableConstraint: EfficientVariableConstraint, plan: Plan): VariableConstraint = {
+    val left = wrapVariable(efficientVariableConstraint.variable, plan)
+    val right = efficientVariableConstraint.other
+
+    efficientVariableConstraint.constraintType match {
+      case EfficientVariableConstraint.EQUALVARIABLE   => Equal(left, wrapVariable(right, plan))
+      case EfficientVariableConstraint.EQUALCONSTANT   => Equal(left, wrapConstant(right))
+      case EfficientVariableConstraint.UNEQUALVARIABLE => NotEqual(left, wrapVariable(right, plan))
+      case EfficientVariableConstraint.UNEQUALCONSTANT => NotEqual(left, wrapConstant(right))
+      case EfficientVariableConstraint.OFSORT          => OfSort(left, wrapSort(right))
+      case EfficientVariableConstraint.NOTOFSORT       => NotOfSort(left, wrapSort(right))
+    }
+  }
+
+
+  // CAUSAL LINK
   def wrap(causalLink: EfficientCausalLink, efficientPlan: EfficientPlan): CausalLink = {
     val plan = wrap(efficientPlan)
-    val producer = wrapPlanStep(causalLink.producer, plan)
-    val consumer = wrapPlanStep(causalLink.consumer, plan)
+    wrap(causalLink, plan)
+  }
+
+  def wrap(causalLink: EfficientCausalLink, symbolicPlan: Plan): CausalLink = {
+    val producer = wrapPlanStep(causalLink.producer, symbolicPlan)
+    val consumer = wrapPlanStep(causalLink.consumer, symbolicPlan)
 
     CausalLink(producer, consumer, producer.substitutedEffects(causalLink.conditionIndexOfProducer))
   }
@@ -214,11 +255,12 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   }
 
 
+  // PLAN
   def unwrap(plan: Plan): EfficientPlan = computeEfficientPlan(plan, efficientDomain, Nil)
 
   def wrap(plan: EfficientPlan): Plan = {
     val variables = plan.variableConstraints.variableSorts.zipWithIndex map {
-      case (sortIndex, variableIndex) => Variable(variableIndex, "variable_" + variableIndex, domainSorts.back(sortIndex))
+      case (sortIndex, variableIndex) => newVariableFormEfficient(sortIndex, variableIndex)
     }
 
     val taskCreationGraph = SimpleDirectedGraph(plan.planStepTasks.indices, plan.planStepTasks.indices map { i => (plan.planStepParentInDecompositionTree(i), i) } collect {
@@ -242,7 +284,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       CausalLink(planStepArray(producer), planStepArray(consumer), planStepArray(producer).substitutedEffects(producerEffectIndex))
     }
 
-    // ordering constrints
+    // ordering constraints
     val orderingConstraints =
       plan.planStepTasks.indices flatMap { b => plan.planStepTasks.indices collect { case a if plan.ordering.lt(a, b) => OrderingConstraint(planStepArray(a), planStepArray(b)) } }
     val ordering = new SymbolicTaskOrdering(orderingConstraints, planStepArray)
@@ -261,8 +303,113 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     // and return the actual plan
     SymbolicPlan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1))
   }
+
+
+  // SEARCH NODE
+
+  /**
+    * Wraps the <br>whole</br> search space described by this node, i.e. itself and all of its children
+    */
+  def wrap(efficientSearchNode: EfficientSearchNode): SearchNode = {
+    // set the essentials
+    val wrappedPlan = wrap(efficientSearchNode.plan)
+    // TODO: what about the parent??
+    val searchNode = new SearchNode(wrappedPlan, null, efficientSearchNode.heuristic)
+
+    // set the things that only exist if the node is not dirty any more
+
+
+    searchNode.dirty = efficientSearchNode.dirty
+    if (!searchNode.dirty) {
+      // TODO payload transformator ???
+      searchNode.payload = efficientSearchNode.payload
+
+      // the order of the flaws in both representations might not be identical so we need to do a bit of reordering
+      searchNode.selectedFlaw = searchNode.plan.flaws indexWhere { flaw => FlawEquivalenceChecker(efficientSearchNode.plan.flaws(efficientSearchNode.selectedFlaw), flaw, this) }
+      assert(searchNode.selectedFlaw != -1)
+      assert(searchNode.plan.flaws.size == efficientSearchNode.plan.flaws.length)
+      // reorder modifications
+      searchNode.modifications = searchNode.plan.flaws map { flaw =>
+        val otherFlawIndex = efficientSearchNode.plan.flaws indexWhere { efficientFlaw => FlawEquivalenceChecker(efficientFlaw, flaw, this) }
+        (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
+      }
+      searchNode.children = efficientSearchNode.children map { case (node, i) => (wrap(node), i) }
+    }
+
+    searchNode
+  }
+
+  // MODIFICATION
+
+  def wrap(efficientModification: EfficientModification, wrappedPlan: Plan): Modification = efficientModification match {
+    case EfficientAddOrdering(_, _, before, after)                                          =>
+      AddOrdering(wrappedPlan, OrderingConstraint(wrapPlanStep(before, wrappedPlan), wrapPlanStep(after, wrappedPlan)))
+    case EfficientBindVariable(_, _, variable, constant)                                    =>
+      BindVariableToValue(wrappedPlan, wrapVariable(variable, wrappedPlan), wrapConstant(constant))
+    case EfficientDecomposePlanStep(_, _, _, _, _, _, _, _, _,)                             =>
+      // TODO this one is really bitchy
+      ???
+    case EfficientInsertCausalLink(_, _, link, constraints)                                 =>
+      val symbolicLink = wrap(link, wrappedPlan)
+      val symbolicConstraints = constraints map { wrap(_, wrappedPlan) }
+      InsertCausalLink(wrappedPlan, symbolicLink, symbolicConstraints.toSeq)
+    case EfficientInsertPlanStepWithLink(_, _, planstep, parameterSorts, link, constraints) =>
+      val newPlanStepArguments = parameterSorts zip Range(wrappedPlan.getFirstFreeVariableID, wrappedPlan.getFirstFreeVariableID + parameterSorts.length) map {
+        case (sortIndex, variableIndex) => newVariableFormEfficient(variableIndex, sortIndex)
+      }
+      val newPlanStep = PlanStep(wrappedPlan.getFirstFreePlanStepID, wrapTask(planstep._1), newPlanStepArguments, None, None)
+
+      // we have to build the link ourselves, as one of its plan steps does not yet exist in the plan
+      val linkConsumer = wrapPlanStep(link.consumer, wrappedPlan)
+      val causalLink = CausalLink(newPlanStep, linkConsumer, linkConsumer.substitutedPreconditions(link.conditionIndexOfConsumer))
+
+      val symbolicConstraints = constraints map { wrap(_, wrappedPlan) }
+      InsertPlanStepWithLink(newPlanStep, causalLink, symbolicConstraints, wrappedPlan)
+    case EfficientMakeLiteralsUnUnifiable(_, _, variable1, variable2)                       =>
+      MakeLiteralsUnUnifiable(wrappedPlan, NotEqual(wrapVariable(variable1, wrappedPlan), wrapVariable(variable2, wrappedPlan)))
+  }
 }
 
 object Wrapping {
   def apply(domAndPlan: (Domain, Plan)): Wrapping = apply(domAndPlan._1, domAndPlan._2)
 }
+
+
+private object FlawEquivalenceChecker {
+  /**
+    * Checks whether a given efficient flaw is equivalent to a given symbolic flaw
+    */
+  def apply(efficientFlaw: EfficientFlaw, flaw: Flaw, wrapper: Wrapping): Boolean = (efficientFlaw, flaw) match {
+    // abstract plan step
+    case (efficientAbstractPlanStep: EfficientAbstractPlanStep, abstractPlanStep: AbstractPlanStep) =>
+      efficientAbstractPlanStep.planStep == wrapper.unwrap(abstractPlanStep.ps, abstractPlanStep.plan)
+    // causal threat
+    case (efficientCausalThreat: EfficientCausalThreat, causalThreat: CausalThreat) =>
+      true
+    // open precondition
+    case (efficientOpenPrecondition: EfficientOpenPrecondition, openPrecondition: OpenPrecondition) =>
+      val samePlanStep = efficientOpenPrecondition.planStep == wrapper.unwrap(openPrecondition.planStep, openPrecondition.plan)
+      if (samePlanStep)
+        efficientOpenPrecondition.preconditionIndex == openPrecondition.planStep.indexOfPrecondition(openPrecondition.precondition, openPrecondition.plan.variableConstraints)
+      else false
+
+    // unbound variable
+    case (efficientUnboundVariable: EfficientUnboundVariable, unboundVariable: UnboundVariable) =>
+      efficientUnboundVariable.variable == wrapper.unwrap(unboundVariable.variable, unboundVariable.plan)
+    case _                                                                                      => false
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
