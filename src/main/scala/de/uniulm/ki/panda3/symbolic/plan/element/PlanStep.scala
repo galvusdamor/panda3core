@@ -74,6 +74,8 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable], decomposedB
 
   val isPresent: Boolean = decomposedByMethod.isEmpty
 
+  def asNonPresent(decompositionMethod: DecompositionMethod): PlanStep = PlanStep(id, schema, arguments, Some(decompositionMethod), parentInDecompositionTree)
+
   /** returns a short information about the object */
   override def shortInfo: String = id + ":" + schema.shortInfo
 
