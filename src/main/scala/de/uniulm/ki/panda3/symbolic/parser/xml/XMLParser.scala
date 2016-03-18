@@ -14,10 +14,9 @@ import de.uniulm.ki.panda3.symbolic.parser.xml.problem.Problem
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
 import de.uniulm.ki.panda3.symbolic.plan.{Plan, SymbolicPlan, element}
-import org.xml.sax.XMLReader
+import org.xml.sax.{InputSource, XMLReader}
 
 import scala.collection._
-import scala.xml.InputSource
 
 /**
   * This is a parser for the old XML format of PANDA 1 and 2.
