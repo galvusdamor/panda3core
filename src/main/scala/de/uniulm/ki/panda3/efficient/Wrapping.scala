@@ -386,7 +386,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil, None, None)
       val goal = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil, None, None)
       val subPlanPlanSteps = insertedPlanSteps :+ init :+ goal
-      val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after) }
+      val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) }
       val ordering = SymbolicTaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
       val csp = SymbolicCSP(newVariables.toSet, innerConstraints)
       val subPlan = SymbolicPlan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal)
