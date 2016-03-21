@@ -125,6 +125,7 @@ object EfficientDecomposePlanStep {
       var planLinkIndex = -1
       while (planLinksCounter < plan.causalLinks.length && planLinkIndex == -1) {
         if (plan.causalLinks(planLinksCounter).consumerOrProducer(isProducer = linkOutgoing) == decomposedPS &&
+          plan.planStepDecomposedByMethod(plan.causalLinks(planLinksCounter).consumerOrProducer(isProducer = !linkOutgoing)) == -1 &&
           plan.causalLinks(planLinksCounter).consumerOrProducerIndex(isProducer = linkOutgoing) == preconditionOrEffectIndex)
           planLinkIndex = planLinksCounter
         planLinksCounter += 1
