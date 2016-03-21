@@ -2,7 +2,7 @@ name := "panda3-core"
 
 organization := "de.uni-ulm.ki"
 
-version := "0.1.4"
+version := "0.2.0"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.5" % "test"
 
