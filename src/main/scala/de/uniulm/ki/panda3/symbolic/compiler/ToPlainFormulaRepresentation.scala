@@ -10,6 +10,8 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
   */
 object ToPlainFormulaRepresentation extends DomainTransformer[Unit]  {
 
+  def transform(domainAndPlan : (Domain, Plan)) : (Domain, Plan) = transform(domainAndPlan,())
+
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
     // reduce all formulas
     val domReduced = domain.update(ReduceFormula())

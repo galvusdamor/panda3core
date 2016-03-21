@@ -10,6 +10,8 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
   */
 object SHOPMethodCompiler extends DomainTransformer[Unit] {
 
+  def transform(domainAndPlan : (Domain, Plan)) : (Domain, Plan) = transform(domainAndPlan,())
+
   /** transforms all SHOP2 style methods into ordinary methods */
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
     val compiledMethods: Seq[(SimpleDecompositionMethod, Option[Task])] = domain.decompositionMethods.zipWithIndex map {

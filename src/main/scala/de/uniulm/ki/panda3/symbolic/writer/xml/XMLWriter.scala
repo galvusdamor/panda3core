@@ -15,6 +15,7 @@ import de.uniulm.ki.panda3.symbolic.logic.{Formula, Literal, Predicate, Sort}
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.{logic, plan}
 import de.uniulm.ki.panda3.symbolic
+import de.uniulm.ki.panda3.symbolic._
 
 import scala.collection.mutable
 
@@ -95,6 +96,7 @@ private object XMLWriterDomain {
           atom
         }
 
+      case logic.Identity() => noSupport("identity cannot be written")
       case logic.Not(inner) => val not = new Not
         setInnerValue(not, formulaToAny(inner, predicatesToXMLPredicates, varToVarDecl, sortToSortDecl))
         not

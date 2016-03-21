@@ -7,22 +7,22 @@ import de.uniulm.ki.panda3.symbolic.logic.{And, Formula, Literal, Variable}
 import de.uniulm.ki.util.HashMemo
 
 /**
-  * Tasks are blue-prints for actions, actually contained in plans, i.e. they describe which variables a [[de.uniulm.ki.panda3.symbolic.plan.element.PlanStep]] of their type must have and
-  * which
-  * preconditions and effects it has.
-  *
-  * Additionally Tasks can either be primitive or abstract. The first kind can be executed directly, while the latter must be decomposed further during the planning process.
-  *
-  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
-  */
+ * Tasks are blue-prints for actions, actually contained in plans, i.e. they describe which variables a [[de.uniulm.ki.panda3.symbolic.plan.element.PlanStep]] of their type must have and
+ * which
+ * preconditions and effects it has.
+ *
+ * Additionally Tasks can either be primitive or abstract. The first kind can be executed directly, while the latter must be decomposed further during the planning process.
+ *
+ * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+ */
 // TODO: check, whether the parameter constraints of a task schema are always observed correctly
 trait Task extends DomainUpdatable with PrettyPrintable {
-  val name                : String
-  val isPrimitive         : Boolean
-  val parameters          : Seq[Variable]
+  val name: String
+  val isPrimitive: Boolean
+  val parameters: Seq[Variable]
   val parameterConstraints: Seq[VariableConstraint]
-  val precondition        : Formula
-  val effect              : Formula
+  val precondition: Formula
+  val effect: Formula
 
   lazy val taskCSP: CSP = SymbolicCSP(parameters.toSet, parameterConstraints)
 
@@ -33,24 +33,35 @@ trait Task extends DomainUpdatable with PrettyPrintable {
 
   override def update(domainUpdate: DomainUpdate): Task = domainUpdate match {
     case ExchangeTask(map) => if (map.contains(this)) map(this) else this
-    case ReduceTasks()     =>
+    case ReduceTasks() =>
       (precondition, effect) match {
         // the test for And[Literal] is not possible due to java's type erasure
         case (precAnd: And[Formula], effAnd: And[Formula]) =>
-          if ((precAnd.conjuncts forall { case l: Literal => true case _ => false }) && (effAnd.conjuncts forall { case l: Literal => true case _ => false })) {
+          if ((precAnd.conjuncts forall { case l: Literal => true case _ => false}) && (effAnd.conjuncts forall { case l: Literal => true case _ => false})) {
             ReducedTask(name, isPrimitive = isPrimitive, parameters, parameterConstraints, precAnd.asInstanceOf[And[Literal]], effAnd.asInstanceOf[And[Literal]])
-          } else {this }
-        case _                                             => this
+          } else {
+            this
+          }
+        case _ => this
       }
 
     case _ =>
       val newPrecondition = precondition.update(domainUpdate)
       val newEffect = effect.update(domainUpdate)
       (newPrecondition, newEffect) match {
-        case (pre: And[Literal], eff: And[Literal]) => ReducedTask(name, isPrimitive, parameters map { _.update(domainUpdate) }, parameterConstraints map { _.update(domainUpdate) }, pre,
-                                                                   eff)
-        case _                                      => GeneralTask(name, isPrimitive, parameters map { _.update(domainUpdate) }, parameterConstraints map { _.update(domainUpdate) },
-                                                                   newPrecondition, newEffect)
+          // the type parameter will be erased by the compiler, so we have to check it again
+        case (pre: And[Literal], eff: And[Literal]) if pre.containsOnlyLiterals && eff.containsOnlyLiterals =>
+          ReducedTask(name, isPrimitive, parameters map {
+            _.update(domainUpdate)
+          }, parameterConstraints map {
+            _.update(domainUpdate)
+          }, pre.asInstanceOf[And[Literal]], eff.asInstanceOf[And[Literal]])
+        case _ => GeneralTask(name, isPrimitive, parameters map {
+          _.update(domainUpdate)
+        }, parameterConstraints map {
+          _.update(domainUpdate)
+        },
+          newPrecondition, newEffect)
       }
   }
 
@@ -74,5 +85,15 @@ case class GeneralTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 
 case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], precondition: And[Literal], effect: And[Literal])
   extends Task with HashMemo {
-  assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })
+  /*if (!((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })){
+    (precondition.conjuncts ++ effect.conjuncts) foreach {l => l.parameterVariables foreach { v =>
+      println("VARIABLE " + v)
+      println("CONTAINS " + parameters contains v)
+
+    }
+
+
+    }
+  }*/
+  assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains})
 }
