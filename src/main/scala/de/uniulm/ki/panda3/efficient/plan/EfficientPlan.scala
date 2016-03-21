@@ -115,7 +115,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
         // check whether this flaw has actually been resolved
         val flaw = precomputed(i)
         val flawResolved = flaw == appliedModification.get.resolvedFlaw &&
-          (appliedModification.isInstanceOf[EfficientInsertCausalLink] || appliedModification.isInstanceOf[EfficientInsertPlanStepWithLink])
+          (appliedModification.get.isInstanceOf[EfficientInsertCausalLink] || appliedModification.get.isInstanceOf[EfficientInsertPlanStepWithLink])
 
         if (!flawResolved && planStepDecomposedByMethod(flaw.planStep) == -1)
           flawBuffer append flaw.updateToNewPlan(this, appliedModification.get.addedPlanSteps.length, appliedModification.get.decomposedPlanSteps)
@@ -160,7 +160,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
             val planStep = domain.tasks(planStepTasks(planStepNumber))
 
             // check whether it can before
-            if (!ordering.lteq(planStepNumber, causalLink.producer) && !ordering.gteq(causalLink.consumer, planStepNumber)) {
+            if (!ordering.lteq(planStepNumber, causalLink.producer) && !ordering.lteq(causalLink.consumer, planStepNumber)) {
 
               while (effectNumber < planStep.effect.length) {
                 val effect = planStep.effect(effectNumber)
