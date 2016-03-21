@@ -196,8 +196,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     */
   def unwrap(variable: Variable, plan: Plan): Int = plan.variableConstraints.variables.toSeq.sortBy({ _.id }).indexOf(variable)
 
-
-  private def wrapVariable(variable: Int, allVariables: Seq[Variable]): Variable = allVariables.sortBy({ _.id }).apply(variable)
+  def unwrap(variable: Variable, task: Task): Int = task.parameters.indexOf(variable)
 
   /**
     * This will not work correctly if the plan is part of a decomposition method!!
@@ -206,7 +205,11 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     */
   def wrapVariable(variable: Int, plan: Plan): Variable = wrapVariable(variable, plan.variableConstraints.variables.toSeq)
 
-  def unwrap(variable: Variable, task: Task): Int = task.parameters.indexOf(variable)
+  private def sortVariables(variables: Seq[Variable]): Seq[Variable] = variables.sortBy({ _.id })
+
+  private def wrapVariable(variable: Int, allVariables: Seq[Variable]): Variable = wrapVariableSorted(variable, sortVariables(allVariables))
+
+  private def wrapVariableSorted(variable: Int, allVariables: Seq[Variable]): Variable = allVariables.apply(variable)
 
   def wrapVariable(variable: Int, task: Task): Variable = task.parameters(variable)
 
@@ -214,34 +217,40 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   // PLANSTEP
   def unwrap(planStep: PlanStep, plan: Plan): Int = ((plan.init :: plan.goal :: Nil) ++ plan.planStepsAndRemovedPlanStepsWithoutInitGoal).indexOf(planStep)
 
-  def wrapPlanStep(planStep: Int, plan: Plan): PlanStep = ((plan.init :: plan.goal :: Nil) ++ plan.planStepsAndRemovedPlanStepsWithoutInitGoal).apply(planStep)
+  def wrapPlanStep(planStep: Int, plan: Plan): PlanStep =
+    if (planStep == 0) plan.init
+    else if (planStep == 1) plan.goal
+    else plan.planStepsAndRemovedPlanStepsWithoutInitGoal.apply(planStep - 2)
 
 
   // VARIABLE CONSTRAINT
   def unwrap(variableConstraint: VariableConstraint, plan: Plan): EfficientVariableConstraint = computeEfficientVariableConstraint(variableConstraint, { unwrap(_, plan) })
 
-
-  private def wrap(efficientVariableConstraint: EfficientVariableConstraint, allVariables: Seq[Variable]): VariableConstraint = {
-    val left = wrapVariable(efficientVariableConstraint.variable, allVariables)
+  private def wrapConstraintVariablesSorted(efficientVariableConstraint: EfficientVariableConstraint, allVariables: Seq[Variable]): VariableConstraint = {
+    val left = wrapVariableSorted(efficientVariableConstraint.variable, allVariables)
     val right = efficientVariableConstraint.other
 
     efficientVariableConstraint.constraintType match {
-      case EfficientVariableConstraint.EQUALVARIABLE   => Equal(left, wrapVariable(right, allVariables))
+      case EfficientVariableConstraint.EQUALVARIABLE   => Equal(left, wrapVariableSorted(right, allVariables))
       case EfficientVariableConstraint.EQUALCONSTANT   => Equal(left, wrapConstant(right))
-      case EfficientVariableConstraint.UNEQUALVARIABLE => NotEqual(left, wrapVariable(right, allVariables))
+      case EfficientVariableConstraint.UNEQUALVARIABLE => NotEqual(left, wrapVariableSorted(right, allVariables))
       case EfficientVariableConstraint.UNEQUALCONSTANT => NotEqual(left, wrapConstant(right))
       case EfficientVariableConstraint.OFSORT          => OfSort(left, wrapSort(right))
       case EfficientVariableConstraint.NOTOFSORT       => NotOfSort(left, wrapSort(right))
     }
   }
 
-  def wrap(efficientVariableConstraint: EfficientVariableConstraint, plan: Plan): VariableConstraint = wrap(efficientVariableConstraint, plan.variableConstraints.variables.toSeq)
+  private def wrap(efficientVariableConstraint: EfficientVariableConstraint, allVariables: Seq[Variable]): VariableConstraint = {
+    val sortedVariables = sortVariables(allVariables)
+    wrapConstraintVariablesSorted(efficientVariableConstraint, sortedVariables)
+  }
+
+  def wrap(efficientVariableConstraint: EfficientVariableConstraint, plan: Plan): VariableConstraint = {
+    wrap(efficientVariableConstraint, plan.variableConstraints.variables.toSeq)
+  }
 
   // CAUSAL LINK
-  def wrap(causalLink: EfficientCausalLink, efficientPlan: EfficientPlan): CausalLink = {
-    val plan = wrap(efficientPlan)
-    wrap(causalLink, plan)
-  }
+  def wrap(causalLink: EfficientCausalLink, efficientPlan: EfficientPlan): CausalLink = wrap(causalLink, wrap(efficientPlan))
 
   def wrap(causalLink: EfficientCausalLink, symbolicPlan: Plan): CausalLink = {
     val producer = wrapPlanStep(causalLink.producer, symbolicPlan)
@@ -296,7 +305,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     // construct the csp
     val possibleValuesConstraints = variables.indices map { v =>
       val possibleConstants = plan.variableConstraints.getRemainingDomain(v) map { domainConstants.back }
-      // this is extremely dirty, but probably the most efficient way to do it (the other option would be to find an enclosing sort and add the necessary amound of unequal constraints)
+      // this is extremely dirty, but probably the most efficient way to do it (the other option would be to find an enclosing sort and add the necessary amount of unequal constraints)
       val tempSort = Sort("variable_" + v + "_sort", possibleConstants.toSeq, Nil)
       OfSort(variables(v), tempSort)
     }
@@ -308,6 +317,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val symbolicPlan = SymbolicPlan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1))
     // sanity checks
     assert(symbolicPlan.variableConstraints.isSolvable.getOrElse(true) == plan.variableConstraints.potentiallyConsistent)
+    if (symbolicPlan.flaws.size != plan.flaws.length)
+      println(symbolicPlan.flaws.size + "==" + plan.flaws.length)
     assert(symbolicPlan.flaws.size == plan.flaws.length)
 
     symbolicPlan
@@ -319,34 +330,36 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   /**
     * Wraps the <br>whole</br> search space described by this node, i.e. itself and all of its children
     */
-
   def wrap(efficientSearchNode: EfficientSearchNode): SearchNode = {
-    // set the essentials
-    val wrappedPlan = wrap(efficientSearchNode.plan)
-    // TODO: what about the parent??
-    val searchNode = new SearchNode(wrappedPlan, null, efficientSearchNode.heuristic)
 
-    // set the things that only exist if the node is not dirty any more
+    def wrapWithParent(efficientSearchNode: EfficientSearchNode, parent: SearchNode): SearchNode = {
+      // set the essentials
+      val wrappedPlan = wrap(efficientSearchNode.plan)
+      val searchNode = new SearchNode(wrappedPlan, parent, efficientSearchNode.heuristic)
 
+      // set the things that only exist if the node is not dirty any more
+      searchNode.dirty = efficientSearchNode.dirty
+      if (!searchNode.dirty) {
+        // TODO payload transformator ???
+        searchNode setPayload efficientSearchNode.payload
 
-    searchNode.dirty = efficientSearchNode.dirty
-    if (!searchNode.dirty) {
-      // TODO payload transformator ???
-      searchNode.payload = efficientSearchNode.payload
-
-      // the order of the flaws in both representations might not be identical so we need to do a bit of reordering
-      searchNode.selectedFlaw = searchNode.plan.flaws indexWhere { flaw => FlawEquivalenceChecker(efficientSearchNode.plan.flaws(efficientSearchNode.selectedFlaw), flaw, this) }
-      assert(searchNode.selectedFlaw != -1)
-      assert(searchNode.plan.flaws.size == efficientSearchNode.plan.flaws.length)
-      // reorder modifications
-      searchNode.modifications = searchNode.plan.flaws map { flaw =>
-        val otherFlawIndex = efficientSearchNode.plan.flaws indexWhere { efficientFlaw => FlawEquivalenceChecker(efficientFlaw, flaw, this) }
-        (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
+        // the order of the flaws in both representations might not be identical so we need to do a bit of reordering
+        searchNode setSelectedFlaw (searchNode.plan.flaws indexWhere { flaw => FlawEquivalenceChecker(efficientSearchNode.plan.flaws(efficientSearchNode.selectedFlaw), flaw, this) })
+        assert(searchNode.selectedFlaw != -1)
+        assert(searchNode.plan.flaws.size == efficientSearchNode.plan.flaws.length)
+        // reorder modifications
+        searchNode setModifications { () => searchNode.plan.flaws map { flaw =>
+          val otherFlawIndex = efficientSearchNode.plan.flaws indexWhere { efficientFlaw => FlawEquivalenceChecker(efficientFlaw, flaw, this) }
+          (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
+        }
+        }
+        searchNode setChildren { () => efficientSearchNode.children map { case (node, i) => (wrapWithParent(node, searchNode), i) } }
       }
-      searchNode.children = efficientSearchNode.children map { case (node, i) => (wrap(node), i) }
+
+      searchNode
     }
 
-    searchNode
+    wrapWithParent(efficientSearchNode, null)
   }
 
   // MODIFICATION
@@ -364,15 +377,15 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val nonPresentDecomposedPlanStep = wrapPlanStep(decomposedPS, wrappedPlan).asNonPresent(appliedDecompositionMethod)
 
       // compute all variables
-      val allVariables = (wrappedPlan.variableConstraints.variables ++ newVariables).toSeq
-      val addedVariableConstraints = variableConstraints map { wrap(_, allVariables) }
+      val allVariables: Seq[Variable] = sortVariables((wrappedPlan.variableConstraints.variables ++ newVariables).toSeq)
+      val addedVariableConstraints = variableConstraints map { wrapConstraintVariablesSorted(_, allVariables) }
       val (outerConstraints, innerConstraints) = addedVariableConstraints partition { vc =>
         vc.getVariables exists { v => wrappedPlan.variableConstraints.variables contains v }
       }
 
       // instanciate the new plansteps
       val insertedPlanSteps = addedPlanSteps.zipWithIndex map { case ((schemaID, arguments, _, _), index) =>
-        val symbolicArguments = arguments map { wrapVariable(_, allVariables) }
+        val symbolicArguments = arguments map { wrapVariableSorted(_, allVariables) }
         PlanStep(index + wrappedPlan.getFirstFreePlanStepID, wrapTask(schemaID), symbolicArguments, None, Some(nonPresentDecomposedPlanStep))
       }
 
@@ -401,7 +414,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       DecomposePlanStep(wrapPlanStep(decomposedPS, wrappedPlan), nonPresentDecomposedPlanStep, subPlan, outerConstraints, inheritedLinks, appliedDecompositionMethod, wrappedPlan)
     case EfficientInsertCausalLink(_, _, link, constraints)                                                                                                           =>
       val symbolicLink = wrap(link, wrappedPlan)
-      val symbolicConstraints = constraints map { wrap(_, wrappedPlan) }
+      val sortedVariables = sortVariables(wrappedPlan.variableConstraints.variables.toSeq)
+      val symbolicConstraints = constraints map { wrapConstraintVariablesSorted(_, sortedVariables) }
       InsertCausalLink(wrappedPlan, symbolicLink, symbolicConstraints.toSeq)
     case EfficientInsertPlanStepWithLink(_, _, planstep, parameterSorts, link, constraints)                                                                           =>
       val newPlanStepArguments = parameterSorts zip Range(wrappedPlan.getFirstFreeVariableID, wrappedPlan.getFirstFreeVariableID + parameterSorts.length) map {
@@ -414,8 +428,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val causalLink = CausalLink(newPlanStep, linkConsumer, linkConsumer.substitutedPreconditions(link.conditionIndexOfConsumer))
 
       // compute all variables
-      val allVariables = wrappedPlan.variableConstraints.variables ++ newPlanStepArguments
-      val symbolicConstraints = constraints map { wrap(_, allVariables.toSeq) }
+      val allVariables = sortVariables((wrappedPlan.variableConstraints.variables ++ newPlanStepArguments).toSeq)
+      val symbolicConstraints = constraints map { wrap(_, allVariables) }
 
       // construct the modification
       InsertPlanStepWithLink(newPlanStep, causalLink, symbolicConstraints, wrappedPlan)
