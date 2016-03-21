@@ -110,7 +110,7 @@ object EfficientDecomposePlanStep {
   // iterate through all possibilities to inherit the causal links
   // scalastyle:off parameter.number
   private def applyMethodToPlan(buffer: ArrayBuffer[EfficientModification], plan: EfficientPlan, resolvedFlaw: EfficientFlaw, decomposedPS: Int, method:
-  EfficientExtractedMethodPlan, methodIndex: Int, currentPrecondition: Int, currentEffect: Int, inheritedLinks: mutable.ArrayStack[EfficientCausalLink],
+  EfficientExtractedMethodPlan, methodIndex: Int, currentPrecondition: Int, currentEffect: Int, skipFirstNCausalLinks: Int, inheritedLinks: mutable.ArrayStack[EfficientCausalLink],
                                 inheritedLinksVariableConstraints: mutable.ArrayStack[EfficientVariableConstraint]): Unit =
     if (currentPrecondition < plan.domain.tasks(plan.planStepTasks(decomposedPS)).precondition.length || currentEffect < plan.domain.tasks(plan.planStepTasks(decomposedPS)).effect.length) {
       // determine the mode
@@ -123,15 +123,20 @@ object EfficientDecomposePlanStep {
       // determine whether there actually is an ingoing link to this action
       var planLinksCounter = 0
       var planLinkIndex = -1
+      var linksSkipped = 0
       while (planLinksCounter < plan.causalLinks.length && planLinkIndex == -1) {
         if (plan.causalLinks(planLinksCounter).consumerOrProducer(isProducer = linkOutgoing) == decomposedPS &&
           plan.planStepDecomposedByMethod(plan.causalLinks(planLinksCounter).consumerOrProducer(isProducer = !linkOutgoing)) == -1 &&
-          plan.causalLinks(planLinksCounter).consumerOrProducerIndex(isProducer = linkOutgoing) == preconditionOrEffectIndex)
-          planLinkIndex = planLinksCounter
+          plan.causalLinks(planLinksCounter).consumerOrProducerIndex(isProducer = linkOutgoing) == preconditionOrEffectIndex) {
+
+          if (linksSkipped == skipFirstNCausalLinks)
+            planLinkIndex = planLinksCounter
+          else linksSkipped += 1
+        }
         planLinksCounter += 1
       }
 
-      // determine whether there is a matching ingoing link
+      // determine whether there is a matching internal link
       var linkCounter = 0
       var isLink = false
       val relevantLinks = if (linkIngoing) method.ingoingLinks else method.outgoingLinks
@@ -142,8 +147,10 @@ object EfficientDecomposePlanStep {
 
       // case 1: there is an ingoing link using the precondition
       if (isLink || planLinkIndex == -1) {
-        if ((isLink && planLinkIndex != -1) || planLinkIndex == -1)
-          applyMethodToPlan(buffer, plan, resolvedFlaw, decomposedPS, method, methodIndex, nextPrecondition, nextEffect, inheritedLinks, inheritedLinksVariableConstraints)
+        if (planLinkIndex == -1)
+          applyMethodToPlan(buffer, plan, resolvedFlaw, decomposedPS, method, methodIndex, nextPrecondition, nextEffect, 0, inheritedLinks, inheritedLinksVariableConstraints)
+        else if (isLink && planLinkIndex != -1) assert(false, "Not yet supported")
+        //else assert(false, "Not yet supported")
         // if there is no ingoing link this decomposition is invalid
         // TODO: discuss whether we actually want to dismiss this case
       } else {
@@ -179,7 +186,8 @@ object EfficientDecomposePlanStep {
                 linkParameter += 1
               }
               inheritedLinks.push(inheritedCausalLink)
-              applyMethodToPlan(buffer, plan, resolvedFlaw, decomposedPS, method, methodIndex, nextPrecondition, nextEffect, inheritedLinks, inheritedLinksVariableConstraints)
+              applyMethodToPlan(buffer, plan, resolvedFlaw, decomposedPS, method, methodIndex, currentPrecondition, currentEffect, skipFirstNCausalLinks + 1,
+                                inheritedLinks, inheritedLinksVariableConstraints)
               // pop everything from the stack an continue
               inheritedLinks.pop()
               linkParameter = 0
@@ -210,7 +218,8 @@ object EfficientDecomposePlanStep {
       val methodIndex = possibleMethods(possibleMethodIndex)._2
 
       // generate all causal link inheritances
-      applyMethodToPlan(buffer, plan, resolvedFlaw, planStep, method, methodIndex, 0, 0, new mutable.ArrayStack[EfficientCausalLink](), new mutable.ArrayStack[EfficientVariableConstraint]())
+      applyMethodToPlan(buffer, plan, resolvedFlaw, planStep, method, methodIndex, 0, 0, 0,
+                        new mutable.ArrayStack[EfficientCausalLink](), new mutable.ArrayStack[EfficientVariableConstraint]())
 
       possibleMethodIndex += 1
     }
