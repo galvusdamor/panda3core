@@ -23,9 +23,9 @@ case class SymbolicPlan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinks
   assert(planStepsAndRemovedPlanSteps forall { ps => ps.arguments.size == ps.schema.parameters.size })
   //assert(planSteps forall { ps => ps.arguments forall { v => parameterVariableConstraints.variables.contains(v) } })
   planStepsAndRemovedPlanSteps foreach { ps => ps.arguments foreach { v =>
-    if (!parameterVariableConstraints.variables.contains(v))
-      println("foo")
-    assert(parameterVariableConstraints.variables.contains(v), ps.id + " - " + ps.schema.name + ": var " + v) } }
+    assert(parameterVariableConstraints.variables.contains(v), ps.id + " - " + ps.schema.name + ": var " + v)
+  }
+  }
 
   planStepWithoutInitGoal foreach { ps =>
     assert(orderingConstraints.lt(init, ps))
@@ -54,7 +54,7 @@ case class SymbolicPlan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinks
 
 
   override lazy val openPreconditions: Seq[OpenPrecondition] = allPreconditions filterNot { case (ps, literal) => causalLinks exists { case CausalLink(_, consumer, condition) =>
-    (consumer =?= ps) (variableConstraints) && (condition =?= literal) (variableConstraints)
+    consumer.id == ps.id && (condition =?= literal) (variableConstraints)
   }
   } map { case (ps, literal) => OpenPrecondition(this, ps, literal) }
 

@@ -44,9 +44,9 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable], decomposedB
 
   lazy val schemaParameterSubstitution = Substitution(schema.parameters, arguments)
 
-  /** check whether two literals are identical given a CSP */
-  def =?=(that: PlanStep)(csp: CSP): Boolean = this.schema == that.schema &&
-    ((this.arguments zip that.arguments) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2) })
+  ///** check whether two literals are identical given a CSP */
+  //def =?=(that: PlanStep)(csp: CSP): Boolean = this.schema == that.schema &&
+  //  ((this.arguments zip that.arguments) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2) })
 
   def indexOfPrecondition(l: Literal, csp: CSP): Int = indexOf(l, substitutedPreconditions, csp)
 
