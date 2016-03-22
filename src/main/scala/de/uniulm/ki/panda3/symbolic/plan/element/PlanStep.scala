@@ -9,10 +9,10 @@ import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.util.HashMemo
 
 /**
-  *
-  *
-  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
-  */
+ *
+ *
+ * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+ */
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable], decomposedByMethod: Option[DecompositionMethod], parentInDecompositionTree: Option[PlanStep])
   extends DomainUpdatable with PrettyPrintable {
 
@@ -21,12 +21,14 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable], decomposedB
   // for the symbolic planner
   override def equals(o: Any): Boolean = o match {
     case step: PlanStep => id == step.id && schema.name == step.schema.name
-    case _              => false
+    case _ => false
   }
 
   override val hashCode: Int = id
 
-
+  if (arguments.size != schema.parameters.size) {
+    System.out.println("The number of parameters given in a plan step definition does not match the number that was given in the definition of the task schema.")
+  }
   assert(arguments.size == schema.parameters.size)
   // TODO: test whether it is a subsort relation instead
   //assert((arguments zip schema.parameters) forall {case (a,b) => a.sort == b.sort})
@@ -34,23 +36,23 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable], decomposedB
   /** returns a version of the preconditions */
   lazy val substitutedPreconditions: Seq[Literal] = schema match {
     case reduced: ReducedTask => reduced.precondition.conjuncts map substitute
-    case _                    => noSupport(FORUMLASNOTSUPPORTED)
+    case _ => noSupport(FORUMLASNOTSUPPORTED)
   }
   /** returns a version of the effects */
-  lazy val substitutedEffects      : Seq[Literal] = schema match {
+  lazy val substitutedEffects: Seq[Literal] = schema match {
     case reduced: ReducedTask => reduced.effect.conjuncts map substitute
-    case _                    => noSupport(FORUMLASNOTSUPPORTED)
+    case _ => noSupport(FORUMLASNOTSUPPORTED)
   }
 
   lazy val schemaParameterSubstitution = Substitution(schema.parameters, arguments)
 
   /** check whether two literals are identical given a CSP */
   def =?=(that: PlanStep)(csp: CSP): Boolean = this.schema == that.schema &&
-    ((this.arguments zip that.arguments) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2) })
+    ((this.arguments zip that.arguments) forall { case (v1, v2) => csp.getRepresentative(v1) == csp.getRepresentative(v2)})
 
   def indexOfPrecondition(l: Literal, csp: CSP): Int = indexOf(l, substitutedPreconditions, csp)
 
-  private def indexOf(l: Literal, ls: Seq[Literal], csp: CSP): Int = (ls.zipWithIndex foldLeft -1) { case (i, (nl, j)) => if ((l =?= nl) (csp)) j else i }
+  private def indexOf(l: Literal, ls: Seq[Literal], csp: CSP): Int = (ls.zipWithIndex foldLeft -1) { case (i, (nl, j)) => if ((l =?= nl)(csp)) j else i}
 
   def indexOfEffect(l: Literal, csp: CSP): Int = indexOf(l, substitutedEffects, csp)
 
@@ -58,18 +60,20 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable], decomposedB
 
   override def update(domainUpdate: DomainUpdate): PlanStep = domainUpdate match {
     case ExchangePlanStep(oldps, newps) => if (oldps == this) newps else this
-    case _                              =>
+    case _ =>
       val decomposedByUpdated = decomposedByMethod match {
         case Some(method) => Some(method.update(domainUpdate))
-        case None         => None
+        case None => None
       }
 
       val parentInTreeUpdated = parentInDecompositionTree match {
         case Some(parent) => Some(parent.update(domainUpdate))
-        case None         => None
+        case None => None
       }
 
-      PlanStep(id, schema.update(domainUpdate), arguments map { _.update(domainUpdate) }, decomposedByUpdated, parentInTreeUpdated)
+      PlanStep(id, schema.update(domainUpdate), arguments map {
+        _.update(domainUpdate)
+      }, decomposedByUpdated, parentInTreeUpdated)
   }
 
   val isPresent: Boolean = decomposedByMethod.isEmpty
@@ -78,9 +82,15 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable], decomposedB
   override def shortInfo: String = id + ":" + schema.shortInfo
 
   /** returns a string that can be utilized to define the object */
-  override def mediumInfo: String = shortInfo + (arguments map { _.shortInfo }).mkString("(", ", ", ")")
+  override def mediumInfo: String = shortInfo + (arguments map {
+    _.shortInfo
+  }).mkString("(", ", ", ")")
 
   /** returns a more detailed information about the object */
   override def longInfo: String = mediumInfo + "\npreconditions:\n" +
-    (substitutedPreconditions map { "\t" + _.shortInfo }).mkString("\n") + "\neffects:\n" + (substitutedEffects map { "\t" + _.shortInfo }).mkString("\n")
+    (substitutedPreconditions map {
+      "\t" + _.shortInfo
+    }).mkString("\n") + "\neffects:\n" + (substitutedEffects map {
+    "\t" + _.shortInfo
+  }).mkString("\n")
 }
