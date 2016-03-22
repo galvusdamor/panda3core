@@ -31,19 +31,51 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
     buffer.toArray
   }
 
+  def severLinkToPlan: EfficientOpenPrecondition = severLinkToPlan(dismissDecompositionModifications = false) // TODO
+
+  def severLinkToPlan(dismissDecompositionModifications: Boolean): EfficientOpenPrecondition = {
+    assert(plan != null)
+    val severedFlaw = EfficientOpenPrecondition(null, planStep, preconditionIndex)
+
+    val severedModifications = new ArrayBuffer[EfficientModification]
+    var i = 0
+    while (i < resolver.length) {
+      if (!dismissDecompositionModifications || !resolver(i).isInstanceOf[EfficientDecomposePlanStep])
+        severedModifications append resolver(i).severLinkToPlan(severedFlaw)
+      i += 1
+    }
+
+    severedFlaw.precomputedResolver = Some(severedModifications.toArray)
+    severedFlaw.planFirstFreePlanStepID = plan.firstFreePlanStepID
+    severedFlaw.planFirstFreeVariableID = plan.firstFreeVariableID
+    severedFlaw
+  }
+
+
+  def equalToSeveredFlaw(flaw: EfficientFlaw): Boolean = if (flaw.isInstanceOf[EfficientOpenPrecondition]) {
+    val eop = flaw.asInstanceOf[EfficientOpenPrecondition]
+    eop.planStep == planStep && eop.preconditionIndex == preconditionIndex
+  } else false
+
+
+  private var planFirstFreePlanStepID = -1
+  private var planFirstFreeVariableID = -1
 
   /** the number of tasks (newTasks) follows the assumption that the last newTask tasks of the plan are new */
   def updateToNewPlan(newPlan: EfficientPlan, newTasks: Int, decomposedPlanSteps: Array[Int]): EfficientOpenPrecondition = {
+    assert(planFirstFreePlanStepID != -1)
+    assert(planFirstFreeVariableID != -1)
     val newResolvers = new ArrayBuffer[EfficientModification]()
     val flaw = EfficientOpenPrecondition(newPlan, this.planStep, this.preconditionIndex)
     // copy the old ones
     var i = 0
     while (i < resolver.length) {
+      // TODO take the CSPs into account
       if (resolver(i).isInstanceOf[EfficientInsertCausalLink]) {
         val asInsertLink = resolver(i).asInstanceOf[EfficientInsertCausalLink]
         // if the planstep was decomposed the link cannot be inserted any more
         if (!arrayContains(decomposedPlanSteps, asInsertLink.causalLink.producer)) {
-          val newLink = asInsertLink.causalLink.addOffsetToPlanStepsIfGreaterThan(newTasks, plan.firstFreePlanStepID)
+          val newLink = asInsertLink.causalLink.addOffsetToPlanStepsIfGreaterThan(newTasks, planFirstFreePlanStepID)
           newResolvers append EfficientInsertCausalLink(newPlan, flaw, newLink, asInsertLink.necessaryVariableConstraints)
         }
       } else if (resolver(i).isInstanceOf[EfficientInsertPlanStepWithLink]) {
@@ -51,7 +83,7 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
         // create new variables ... adding tasks to a plan also adds variables
         val newParameters: Array[Int] = new Array[Int](asInsertTask.newPlanStep._2.length)
         var parameter = 0
-        val parameterOffset = newPlan.firstFreeVariableID - plan.firstFreeVariableID
+        val parameterOffset = newPlan.firstFreeVariableID - planFirstFreeVariableID
         while (parameter < newParameters.length) {
           newParameters(parameter) = asInsertTask.newPlanStep._2(parameter) + parameterOffset
           parameter += 1
@@ -62,15 +94,16 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
         val newConstraints: Array[EfficientVariableConstraint] = new Array(asInsertTask.necessaryVariableConstraints.length)
         var constraint = 0
         while (constraint < newConstraints.length) {
-          newConstraints(constraint) = asInsertTask.necessaryVariableConstraints(constraint).addToVariableIndexIfGreaterEqualThen(parameterOffset, plan.firstFreeVariableID)
+          newConstraints(constraint) = asInsertTask.necessaryVariableConstraints(constraint).addToVariableIndexIfGreaterEqualThen(parameterOffset, planFirstFreeVariableID)
           constraint += 1
         }
 
-        val newLink = asInsertTask.causalLink.addOffsetToPlanStepsIfGreaterThan(newTasks, plan.firstFreePlanStepID)
+        val newLink = asInsertTask.causalLink.addOffsetToPlanStepsIfGreaterThan(newTasks, planFirstFreePlanStepID)
         newResolvers append EfficientInsertPlanStepWithLink(newPlan, flaw, newPlanStep, asInsertTask.parameterVariableSorts, newLink, newConstraints)
       } else {
         val asDecomposePlanStep = resolver(i).asInstanceOf[EfficientDecomposePlanStep]
         //TODO recompute these
+        // TODO currently the efficient plan dismisses these !!!!!
       }
       i += 1
     }
@@ -78,7 +111,7 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
     var possibleProducer = 2
     while (possibleProducer < newPlan.firstFreePlanStepID) {
       if (!newPlan.domain.tasks(newPlan.planStepTasks(possibleProducer)).isPrimitive && possibleProducer != planStep)
-        newResolvers appendAll EfficientDecomposePlanStep(newPlan, this, possibleProducer)
+        newResolvers appendAll EfficientDecomposePlanStep(newPlan, flaw, possibleProducer)
       possibleProducer += 1
     }
 

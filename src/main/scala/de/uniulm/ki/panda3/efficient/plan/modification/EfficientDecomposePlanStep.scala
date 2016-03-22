@@ -21,6 +21,10 @@ case class EfficientDecomposePlanStep(plan: EfficientPlan, resolvedFlaw: Efficie
                                       override val decomposedPlanStepsByMethod: Array[(Int, Int)]
                                      ) extends EfficientModification {
   assert(decomposedPlanStepsByMethod.length == 1)
+
+  def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientDecomposePlanStep(null, severedFlaw, decomposePlanStep, addedPlanSteps, addedVariableSorts,
+                                                                                                      addedVariableConstraints, addedCausalLinks, nonInducedAddedOrderings,
+                                                                                                      decomposedPlanStepsByMethod)
 }
 
 object EfficientDecomposePlanStep {

@@ -23,4 +23,12 @@ case class EfficientCausalThreat(plan: EfficientPlan, causalLink: EfficientCausa
     if (!plan.domain.tasks(plan.planStepTasks(threatingPlanStep)).isPrimitive) buffer appendAll EfficientDecomposePlanStep(plan, this, threatingPlanStep)
     buffer.toArray
   }
+
+  def severLinkToPlan : EfficientCausalThreat = EfficientCausalThreat(null,causalLink,threatingPlanStep,indexOfThreatingEffect,mgu)
+
+  def equalToSeveredFlaw(flaw: EfficientFlaw): Boolean = if (flaw.isInstanceOf[EfficientCausalThreat]) {
+    val ect = flaw.asInstanceOf[EfficientCausalThreat]
+    ect.causalLink == causalLink && ect.threatingPlanStep == threatingPlanStep && ect.indexOfThreatingEffect == indexOfThreatingEffect && ect.mgu.sameElements(mgu)
+  } else false
+
 }

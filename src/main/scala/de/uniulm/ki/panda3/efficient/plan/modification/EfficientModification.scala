@@ -24,6 +24,7 @@ trait EfficientModification {
 
 
   lazy val addedOrderings: Array[(Int, Int)] = {
+    assert(plan != null, "Orderings can only be computed if connection to parent plan has not been severed")
     val buffer = new ArrayBuffer[(Int, Int)]()
     buffer appendAll nonInducedAddedOrderings
 
@@ -39,7 +40,10 @@ trait EfficientModification {
     buffer.toArray
   }
 
-  private def taskOfPlanStep(ps: Int): Int = if (ps >= plan.firstFreePlanStepID) addedPlanSteps(ps - plan.firstFreePlanStepID)._1 else plan.planStepTasks(ps)
+  private def taskOfPlanStep(ps: Int): Int = {
+    assert(plan != null, "Tasks of plan steps can only be computed if connection to parent plan has not been severed")
+    if (ps >= plan.firstFreePlanStepID) addedPlanSteps(ps - plan.firstFreePlanStepID)._1 else plan.planStepTasks(ps)
+  }
 
 
   // here we compute all other necessary orderings, like the ones inherited from causal links
@@ -57,5 +61,11 @@ trait EfficientModification {
     result
   }
 
-  // TODO: handle inserting orderings from causal links
+  def severLinkToPlan: EfficientModification = {
+    assert(plan != null)
+    severLinkToPlan(resolvedFlaw.severLinkToPlan)
+  }
+
+  def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification
+
 }

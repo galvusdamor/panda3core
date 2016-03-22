@@ -8,4 +8,12 @@ import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientDecomposePlanSt
   */
 case class EfficientAbstractPlanStep(plan: EfficientPlan, planStep: Int) extends EfficientFlaw {
   override lazy val resolver: Array[EfficientModification] = EfficientDecomposePlanStep(plan, this, planStep)
+
+  def severLinkToPlan : EfficientAbstractPlanStep = EfficientAbstractPlanStep(null,planStep)
+
+  def equalToSeveredFlaw(flaw: EfficientFlaw): Boolean = if (flaw.isInstanceOf[EfficientAbstractPlanStep]) {
+    val eaps = flaw.asInstanceOf[EfficientAbstractPlanStep]
+    eaps.planStep == planStep
+  } else false
+
 }

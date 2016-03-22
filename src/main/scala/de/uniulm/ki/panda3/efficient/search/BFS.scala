@@ -58,7 +58,7 @@ object BFS {
 
     System.in.read()
     //dfs(initialPlan, 0)
-    val (searchNode, _, _) = startSearch(initialPlan, wrapper, Some(10000000))
+    val (searchNode, _, _) = startSearch(initialPlan, wrapper, Some(1000000))
 
 
     /*println("BFS finished with result: " + (if (plan.isDefined) "solvable" else "unsolvable"))
@@ -67,9 +67,9 @@ object BFS {
       //println(symbolicPlan)
       println(symbolicPlan.longInfo)
     }*/
-    println("Start unwrapping")
     System.in.read()
     val symNode = wrapper.wrap(searchNode)
+    println("Start unwrapping")
 
     var wrappC = 0
 
@@ -100,6 +100,8 @@ object BFS {
 
     var lastDepth = -1
     var minFlaw = Integer.MAX_VALUE
+    var total = 0
+
 
     def bfs(): (EfficientSearchNode, Option[EfficientPlan]) = {
       while (!stack.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes) {
@@ -120,10 +122,9 @@ object BFS {
           val nTime = System.currentTimeMillis()
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
           //time = nTime
-          println("Plans Expanded: " + nodes + " " + nps + " Depth " + depth)
+          println("Plans Expanded: " + nodes + " " + nps + " Depth " + depth + " Mods/plan " + total/nodes)
         }
         nodes += 1
-
 
         /*println("\n\nNEXT PLAN " + plan.hashCode() +  " - with " + flaws.length + " flaws")
       println(wrapping.wrap(plan).longInfo)
@@ -148,12 +149,14 @@ object BFS {
             myNode.modifications(flawnum) = flaws(flawnum).resolver filterNot { _.isInstanceOf[EfficientInsertPlanStepWithLink] }
             //printTime("Modification")
             //println("MODS " + myNode.modifications(flawnum).length)
+            total += myNode.modifications(flawnum).length
             if (myNode.modifications(flawnum).length < smallFlawNumMod) {
               smallFlawNumMod = myNode.modifications(flawnum).length
               myNode.selectedFlaw = flawnum
             }
             flawnum += 1
           }
+
           //println("RESULT " + myNode.selectedFlaw)
 
           //myNode.selectedFlaw = smallFlawNumMod
@@ -167,7 +170,12 @@ object BFS {
               val newPlan: EfficientPlan = plan.modify(myNode.modifications(myNode.selectedFlaw)(modNum))
 
               if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
-                val searchNode = new EfficientSearchNode(newPlan, myNode, 0)
+                //val searchNode = new EfficientSearchNode(newPlan, myNode, 0)
+                val searchNode = new EfficientSearchNode(newPlan, null, 0)
+                // force the new plan to compute its flaws
+                //newPlan.flaws
+
+
                 stack add(newPlan, searchNode, depth + 1)
                 children append ((searchNode, modNum))
               }
@@ -175,7 +183,7 @@ object BFS {
             }
           }
 
-          myNode.children = children.toArray
+          //myNode.children = children.toArray
         }
         // now the node is processed
         myNode.dirty = false

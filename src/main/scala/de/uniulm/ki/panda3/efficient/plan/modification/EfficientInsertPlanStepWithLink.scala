@@ -16,6 +16,9 @@ case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, resolvedFlaw: Ef
   override val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
   override val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array(newPlanStep)
   override val addedVariableSorts      : Array[Int]                         = parameterVariableSorts
+
+  def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientInsertPlanStepWithLink(null, severedFlaw, newPlanStep, parameterVariableSorts, causalLink,
+                                                                                                           necessaryVariableConstraints)
 }
 
 

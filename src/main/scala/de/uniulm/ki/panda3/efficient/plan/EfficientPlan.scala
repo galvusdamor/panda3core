@@ -51,14 +51,26 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     * The assumption is that the tasks sz(planstep) - nonHandledTasks .. sz(planstep)-1 are new
     */
   private def setPrecomputedOpenPreconditions(oldOpenPrecondition: Array[EfficientOpenPrecondition], modification: EfficientModification): Unit = {
-    precomputedOpenPreconditionFlaws = Some(oldOpenPrecondition)
-    appliedModification = Some(modification)
+    val severedOpenPreconditions = new Array[EfficientOpenPrecondition](oldOpenPrecondition.length)
+    var i = 0
+    while (i < severedOpenPreconditions.length) {
+      severedOpenPreconditions(i) = oldOpenPrecondition(i).severLinkToPlan(dismissDecompositionModifications = true)
+      i +=1
+    }
+
+    precomputedOpenPreconditionFlaws = Some(severedOpenPreconditions)
+    appliedModification = Some(modification.severLinkToPlan)
+  }
+
+  def severLinkToParentPlan(): Unit = {
+    precomputedAbstractPlanStepFlaws = None
+    precomputedOpenPreconditionFlaws = None
+    appliedModification = None
+    precomputedCausalThreatFlaws = None
   }
 
 
-  /**
-    * all abstract tasks of this plan
-    */
+  /** all abstract tasks of this plan */
   lazy val abstractPlanSteps: Array[EfficientAbstractPlanStep] = {
     var i = 2 // init and goal are never abstract
     val flawBuffer = new ArrayBuffer[EfficientAbstractPlanStep]()
@@ -114,14 +126,13 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       while (i < precomputed.length) {
         // check whether this flaw has actually been resolved
         val flaw = precomputed(i)
-        val flawResolved = flaw == appliedModification.get.resolvedFlaw &&
+        val flawResolved = flaw.equalToSeveredFlaw(appliedModification.get.resolvedFlaw) &&
           (appliedModification.get.isInstanceOf[EfficientInsertCausalLink] || appliedModification.get.isInstanceOf[EfficientInsertPlanStepWithLink])
 
         if (!flawResolved && planStepDecomposedByMethod(flaw.planStep) == -1)
           flawBuffer append flaw.updateToNewPlan(this, appliedModification.get.addedPlanSteps.length, appliedModification.get.decomposedPlanSteps)
         i += 1
       }
-      //println("Taken " + flawBuffer.length)
 
       // add open precondition flaws for all new tasks
       i = 0
@@ -189,6 +200,10 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     flawBuffer appendAll abstractPlanSteps
 
     if (flawBuffer.isEmpty) flawBuffer appendAll unboundVariables
+
+    // sever the link as we don't need its information any more
+    severLinkToParentPlan()
+
     flawBuffer.toArray
   }
 
