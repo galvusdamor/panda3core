@@ -29,14 +29,13 @@ import java.util.List;
  * Created by dhoeller on 25.06.15.
  */
 public class internalTaskNetwork {
-    VectorBuilder<PlanStep> planStepBuilder;
+    seqProviderList<PlanStep> planStepBuilder = new seqProviderList<>();
     Seq<PlanStep> planStepSeq = null;
     TaskOrdering taskOderings;
     CSP csp;
     int nextId = 0;
 
     public internalTaskNetwork() {
-        this.planStepBuilder = new VectorBuilder<>();
         Seq<OrderingConstraint> leerCO = new VectorBuilder<OrderingConstraint>().result();
         Seq<PlanStep> leerPS = new VectorBuilder<PlanStep>().result();
         taskOderings = new SymbolicTaskOrdering(leerCO, leerPS);
@@ -46,9 +45,7 @@ public class internalTaskNetwork {
     }
 
     public Seq<PlanStep> planSteps() {
-        if (planStepSeq == null)
-            planStepSeq = planStepBuilder.result();
-        return planStepSeq;
+        return planStepBuilder.result();
     }
 
     public Seq<CausalLink> causalLinks() {
@@ -65,7 +62,7 @@ public class internalTaskNetwork {
     }
 
     public void addPlanStep(PlanStep ps) {
-        this.planStepBuilder.$plus$eq(ps);
+        this.planStepBuilder.add(ps);
         this.taskOderings = this.taskOderings.addPlanStep(ps);
     }
 
@@ -120,7 +117,6 @@ public class internalTaskNetwork {
     }
 
     public Plan readTaskNetwork(hddlParser.Tasknetwork_defContext tnCtx, Seq<Variable> parameters, Task abstractTask, Seq<Task> tasks, Seq<Sort> sorts) {
-        HashMap<String, PlanStep> idMap = new HashMap<>(); // used to define ordering constraints
 
         ReducedTask initSchema = new ReducedTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(new Vector<Literal>(0, 0, 0)));
         ReducedTask goalSchema = new ReducedTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new
@@ -128,10 +124,11 @@ public class internalTaskNetwork {
 
         PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters(), hddlPanda3Visitor.noneForMethod, hddlPanda3Visitor.noneForPlanStep);
         PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters(), hddlPanda3Visitor.noneForMethod, hddlPanda3Visitor.noneForPlanStep);
-        this.planStepBuilder.$plus$eq(psInit);
-        this.planStepBuilder.$plus$eq(psGoal);
+        this.planStepBuilder.add(psInit);
+        this.planStepBuilder.add(psGoal);
         this.taskOderings = this.taskOderings.addPlanStep(psInit).addPlanStep(psGoal);
 
+        HashMap<String, PlanStep> idMap = new HashMap<>(); // used to define ordering constraints
 
         // read tasks
         if (tnCtx.subtask_defs() != null) {
@@ -151,7 +148,7 @@ public class internalTaskNetwork {
                 }
 
                 if (schema.parameters().size() != psVarsSeq.size()) {
-                    System.out.println("The task schema " + schema.name() + " is defined with " + schema.parameters().size() + " but used with " + psVarsSeq.size()+".");
+                    System.out.println("The task schema " + schema.name() + " is defined with " + schema.parameters().size() + " but used with " + psVarsSeq.size()+" parameters.");
                     continue;
                 }
 
@@ -161,7 +158,7 @@ public class internalTaskNetwork {
                     String id = psCtx.subtask_id().NAME().toString();
                     idMap.put(id, ps);
                 }
-                this.planStepBuilder.$plus$eq(ps);
+                this.planStepBuilder.add(ps);
             }
         }
 
