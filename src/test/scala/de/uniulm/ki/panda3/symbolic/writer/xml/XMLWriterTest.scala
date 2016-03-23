@@ -3,7 +3,9 @@ package de.uniulm.ki.panda3.symbolic.writer.xml
 import java.io.{FileInputStream, File, PrintWriter}
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
+import de.uniulm.ki.panda3.symbolic.writer.hpddl.HPDDLWriter
 import org.scalatest.FlatSpec
 
 import scala.io.Source
@@ -63,6 +65,14 @@ class XMLWriterTest extends FlatSpec {
 
     assert(correctDomain == dom)
     //assert(correctProblem == prob)
+  }
+
+  "Writing the Sample domain" must "be correct" in {
+    val domainFile = new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/xml/simpleDomain.pddl")
+    val problemFile = new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/xml/simpleProblem.pddl")
+    //val domainFile = new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/testdomain.pddl")
+    //val problemFile = new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/testproblem.pddl")
+    val (dom,prob) = HDDLParser.parseDomainAndProblem(domainFile, problemFile)
   }
 
 }
