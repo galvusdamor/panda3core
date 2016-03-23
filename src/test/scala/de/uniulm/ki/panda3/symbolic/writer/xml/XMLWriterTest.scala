@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.symbolic.writer.xml
 
 import java.io.{FileInputStream, File, PrintWriter}
 
+import de.uniulm.ki.panda3.symbolic.compiler.ToPlainFormulaRepresentation
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
@@ -10,11 +11,12 @@ import org.scalatest.FlatSpec
 
 import scala.io.Source
 import de.uniulm.ki.util._
+
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 class XMLWriterTest extends FlatSpec {
 
   "Writing the parsed smartphone domain" must "yield a specific result" in {
@@ -60,7 +62,7 @@ class XMLWriterTest extends FlatSpec {
     val correctDomain: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/xml/umtranslog_written.xml").mkString
     //val correctProblem: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/hpddl/smartphone_verysmall.hpddl").mkString
 
-    if (correctDomain != dom) writeStringToFile(dom, new File("/home/gregor/domtrans"))
+    //if (correctDomain != dom) writeStringToFile(dom, new File("/home/gregor/domtrans"))
     //if (correctProblem != prob) writeStringToFile(prob, new File("/home/gregor/prob"))
 
     assert(correctDomain == dom)
@@ -70,9 +72,21 @@ class XMLWriterTest extends FlatSpec {
   "Writing the Sample domain" must "be correct" in {
     val domainFile = new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/xml/simpleDomain.pddl")
     val problemFile = new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/xml/simpleProblem.pddl")
-    //val domainFile = new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/testdomain.pddl")
-    //val problemFile = new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/testproblem.pddl")
-    val (dom,prob) = HDDLParser.parseDomainAndProblem(domainFile, problemFile)
+    val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(domainFile, problemFile)
+
+    val (dom,prob) = ToPlainFormulaRepresentation transform parsedDomainAndProblem
+
+    val writer = new XMLWriter("simple", "simple_prob")
+
+    val domWritten = writer.writeDomain(dom)
+    val probWritten = writer.writeProblem(dom, prob)
+
+
+    val correctDomain: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/xml/simpleDomain.xml").mkString
+    val correctProblem: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/xml/simpleProblem.xml").mkString
+
+    assert(correctDomain == domWritten)
+    assert(correctProblem == probWritten)
   }
 
 }

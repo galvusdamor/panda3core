@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<domain name="simple" type="pure-hierarchical">
+    <sortDeclaration name="a" type="concrete"/>
+    <sortDeclaration name="object" type="concrete">
+        <subSort sort="a"/>
+    </sortDeclaration>
+    <relationDeclaration name="p" type="flexible">
+        <argumentSort sort="a"/>
+        <argumentSort sort="a"/>
+    </relationDeclaration>
+    <taskSchemaDeclaration name="abstract" type="complex">
+        <variableDeclaration name="?x1" sort="a"/>
+        <variableDeclaration name="?x2" sort="a"/>
+        <and/>
+        <and/>
+    </taskSchemaDeclaration>
+    <taskSchemaDeclaration name="primitive" type="primitive">
+        <variableDeclaration name="?x1" sort="a"/>
+        <variableDeclaration name="?x2" sort="a"/>
+        <and>
+            <not>
+                <atomic relation="p">
+                    <variable name="?x1"/>
+                    <variable name="?x2"/>
+                </atomic>
+            </not>
+        </and>
+        <and>
+            <atomic relation="p">
+                <variable name="?x1"/>
+                <variable name="?x2"/>
+            </atomic>
+        </and>
+    </taskSchemaDeclaration>
+    <methodDeclaration name="method0" taskSchema="abstract">
+        <variableDeclaration name="?x1" sort="a"/>
+        <variableDeclaration name="?x2" sort="a"/>
+        <taskNode name="method0_subtask_0" taskSchema="primitive">
+            <variableDeclaration name="primitive_instance_0_argument_0" sort="a"/>
+            <variableDeclaration name="primitive_instance_0_argument_1" sort="a"/>
+        </taskNode>
+        <taskNode name="method0_subtask_1" taskSchema="primitive">
+            <variableDeclaration name="primitive_instance_1_argument_2" sort="a"/>
+            <variableDeclaration name="primitive_instance_1_argument_3" sort="a"/>
+        </taskNode>
+        <orderingConstraint predecessor="method0_subtask_0" successor="method0_subtask_1"/>
+        <valueRestriction type="eq" variable="primitive_instance_0_argument_1">
+            <variable name="primitive_instance_1_argument_2"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="primitive_instance_0_argument_0">
+            <variable name="primitive_instance_1_argument_3"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="?x1">
+            <variable name="primitive_instance_0_argument_0"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="?x2">
+            <variable name="primitive_instance_0_argument_1"/>
+        </valueRestriction>
+        <valueRestriction type="neq" variable="primitive_instance_0_argument_0">
+            <variable name="primitive_instance_0_argument_1"/>
+        </valueRestriction>
+    </methodDeclaration>
+</domain>

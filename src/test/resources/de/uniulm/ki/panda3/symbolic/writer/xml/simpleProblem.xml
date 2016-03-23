@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<problem name="simple_prob" domain="simple" type="pure-hierarchical">
+    <constantDeclaration name="a1" sort="a"/>
+    <constantDeclaration name="a2" sort="a"/>
+    <constantDeclaration name="a3" sort="a"/>
+    <constantDeclaration name="a4" sort="a"/>
+    <constantDeclaration name="a5" sort="a"/>
+    <constantDeclaration name="a6" sort="a"/>
+    <initialState/>
+    <goals>
+        <fact relation="p">
+            <constant name="a1"/>
+            <constant name="a2"/>
+        </fact>
+    </goals>
+    <initialTaskNetwork>
+        <taskNode name="task_2_abstract" taskSchema="abstract">
+            <variableDeclaration name="planstep_2_argument_0_varFora1" sort="a"/>
+            <variableDeclaration name="planstep_2_argument_1_varFora2" sort="a"/>
+        </taskNode>
+        <taskNode name="task_3_abstract" taskSchema="abstract">
+            <variableDeclaration name="planstep_3_argument_0_varFora2" sort="a"/>
+            <variableDeclaration name="planstep_3_argument_1_varFora3" sort="a"/>
+        </taskNode>
+        <taskNode name="task_4_abstract" taskSchema="abstract">
+            <variableDeclaration name="planstep_4_argument_0_varFora3" sort="a"/>
+            <variableDeclaration name="planstep_4_argument_1_varFora4" sort="a"/>
+        </taskNode>
+        <valueRestriction type="eq" variable="planstep_2_argument_1_varFora2">
+            <variable name="planstep_3_argument_0_varFora2"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="planstep_3_argument_1_varFora3">
+            <variable name="planstep_4_argument_0_varFora3"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="planstep_2_argument_0_varFora1">
+            <constant name="a1"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="planstep_2_argument_1_varFora2">
+            <constant name="a2"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="planstep_3_argument_1_varFora3">
+            <constant name="a3"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="planstep_4_argument_1_varFora4">
+            <constant name="a4"/>
+        </valueRestriction>
+    </initialTaskNetwork>
+</problem>

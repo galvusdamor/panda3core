@@ -25,7 +25,7 @@
            (t1 < t2)
            )
    :constraints (and
-      (not (= ?x1 ?x2))
+      (not ( = ?x1 ?x2))
       )
   )
 
