@@ -455,15 +455,24 @@ private object XMLWriterProblem {
       taskNode.setName("task_" + ps.id + "_" + ps.schema.name)
       taskNode.setTaskSchema(ps.schema.name)
 
-      ps.arguments map { argument =>
-        if (variableToXMLVariableDeclaration.contains(argument)) variableToXMLVariableDeclaration(argument)
-        else {
-          val varDecl = new VariableDeclaration
-          varDecl.setName(argument.name)
-          varDecl.setSort(argument.sort.name)
+      ps.arguments.zipWithIndex map { case (argument, argumentIndex) =>
+        // we have to generate new variables of each argument to keep panda2 happy
+        val varDecl = new VariableDeclaration
+        varDecl.setName("planstep_" + ps.id + "_argument_" + argumentIndex + "_" + argument.name)
+        varDecl.setSort(argument.sort.name)
+
+        if (variableToXMLVariableDeclaration.contains(argument)) {
+          val valueRestriction = new ValueRestriction
+          valueRestriction.setType("eq")
+          valueRestriction.setVariable(variableToXMLVariableDeclaration(argument))
+          valueRestriction.getVariableOrConstant.add(toVariable(varDecl))
+          // add the equality constraint
+          initialTaskNetwork.getValueRestrictionOrSortRestriction add valueRestriction
+        } else {
           variableToXMLVariableDeclaration(argument) = varDecl
-          varDecl
         }
+
+        varDecl
       } foreach taskNode.getVariableDeclaration.add
       planStepsToXMLPlanSteps(ps) = taskNode
       taskNode
