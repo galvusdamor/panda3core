@@ -126,7 +126,7 @@ ordering_def : '(' subtask_id '<' subtask_id ')';
 // TODO: prefix or infix?
 //
 constraint_defs : '(' ')' | constraint_def | '(' 'and' constraint_def+ ')';
-constraint_def : '(' ')' | '(' 'not' '(' '=' var_or_const var_or_const')' ')' | '(' '=' var_or_const var_or_const ')';
+constraint_def : '(' ')' | '(' 'not' equallity var_or_const var_or_const')' ')' | equallity var_or_const var_or_const ')';
 
 //
 // action definition
@@ -146,7 +146,7 @@ gd_disjuction : '(' 'or' gd+ ')';
 gd_negation : '(' 'not' gd ')';
 gd_existential : '(exists' '(' typed_var_list ')' gd ')';
 gd_univeral : '(forall' '(' typed_var_list ')' gd ')';
-gd_equality_constraint : '(=' var_or_const var_or_const ')';
+gd_equality_constraint : equallity var_or_const var_or_const ')';
 //
 // effects
 //
@@ -172,6 +172,9 @@ cond_effect : literal | '(' 'and' literal+ ')';
 // predicates
 atomic_formula : '('predicate var_or_const*')';
 predicate : NAME;
+
+// special "predicate" for equallity
+equallity : '(' '=' | '(=';
 
 // list of typed variables and objects
 typed_var_list : typed_vars*;
