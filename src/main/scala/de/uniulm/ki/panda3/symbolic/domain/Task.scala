@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.domain
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.updates.{ReduceTasks, DomainUpdate, ExchangeTask}
-import de.uniulm.ki.panda3.symbolic.logic.{And, Formula, Literal, Variable}
+import de.uniulm.ki.panda3.symbolic.logic.{And, Formula, Literal, Variable, Constant}
 import de.uniulm.ki.util.HashMemo
 
 /**
@@ -96,4 +96,9 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
     }
   }*/
   assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains})
+}
+
+case class GroundTask(task: Task, arguments: Seq[Constant]) {
+  assert(task.parameters.size == arguments.size)
+  task.parameters.zipWithIndex foreach {case (p,i) => assert(p.sort.elements.contains(arguments(i)))}
 }

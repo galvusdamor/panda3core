@@ -3,24 +3,13 @@ package de.uniulm.ki.panda3.translation;
 import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler;
 import de.uniulm.ki.panda3.symbolic.compiler.ToPlainFormulaRepresentation;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlLexer;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
+import de.uniulm.ki.panda3.symbolic.ioInterface.FileHandler;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
-import de.uniulm.ki.panda3.symbolic.writer.hpddl.HPDDLWriter;
-import de.uniulm.ki.panda3.symbolic.writer.xml.XMLWriter;
-import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.CommonTokenStream;
 import scala.Tuple2;
-import scala.Unit;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Created by dhoeller on 27.01.16.
@@ -116,52 +105,22 @@ public class PANDAtranslator {
         }
 
 
-        inDomain = new FileReader(fromDomainFile);
-        inProblem = new FileReader(fromProblemFile);
-
         Tuple2<Domain, Plan> planningInstance = null;
         boolean readProblem = false;
         if (fromLang.equals(ourPDDLFormat)) {
-            hddlLexer lDomain = new hddlLexer(new ANTLRInputStream(inDomain));
-            hddlLexer lProblem = new hddlLexer(new ANTLRInputStream(inProblem));
-
-            hddlParser pDomain = new hddlParser(new CommonTokenStream(lDomain));
-            hddlParser pProblem = new hddlParser(new CommonTokenStream(lProblem));
-
-            planningInstance = new hddlPanda3Visitor().visitInstance(pDomain.domain(), pProblem.problem());
+            planningInstance = FileHandler.loadHDDLFromFile(fromDomainFile, fromProblemFile);
             readProblem = true;
         } else {
             System.out.println("PANDA says: Input format not yet implemented: \"" + fromLang + "\".");
         }
 
         if ((readProblem) && (toLang.equals(ronsPDDLFormat))) {
-            HPDDLWriter writer = HPDDLWriter.apply("someDomain", "someProblem");
-
-            BufferedWriter bwDomain = new BufferedWriter(new FileWriter(toDomainFile));
-            BufferedWriter bwProblem = new BufferedWriter(new FileWriter(toProblemFile));
-
-            bwDomain.write(writer.writeDomain(planningInstance._1()));
-            bwProblem.write(writer.writeProblem(planningInstance._1(), planningInstance._2()));
-
-            bwDomain.close();
-            bwProblem.close();
-
+            FileHandler.writeHPDDLToFiles(planningInstance, toDomainFile, toProblemFile);
             System.out.println("PANDA says: Done.");
         } else if ((readProblem) && (toLang.equals(ourXmlFormat))) {
-            XMLWriter writer = new XMLWriter("someDomain", "someProblem");
-
-            BufferedWriter bwDomain = new BufferedWriter(new FileWriter(toDomainFile));
-            BufferedWriter bwProblem = new BufferedWriter(new FileWriter(toProblemFile));
-
             planningInstance = SHOPMethodCompiler.transform(planningInstance);
             planningInstance = ToPlainFormulaRepresentation.transform(planningInstance);
-
-            bwDomain.write(writer.writeDomain(planningInstance._1()));
-            bwProblem.write(writer.writeProblem(planningInstance._1(), planningInstance._2()));
-
-            bwDomain.close();
-            bwProblem.close();
-
+            FileHandler.writeXMLToFiles(planningInstance, toDomainFile, toProblemFile);
             System.out.println("PANDA says: Done.");
         } else {
             System.out.println("PANDA says: Output format not yet implemented: \"" + toLang + "\".");
