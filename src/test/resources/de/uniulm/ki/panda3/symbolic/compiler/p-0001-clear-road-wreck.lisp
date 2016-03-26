@@ -36,6 +36,7 @@
   wtruck1 - water-truck
   tdriver1 - truck-driver
   backhoe1 - backhoe
+  ;tree1 tree2 - tree
   
   ;;
   ;; problem-dependent part of the state

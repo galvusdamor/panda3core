@@ -1,10 +1,10 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 
+import scala.collection.Iterator;
 import scala.collection.Seq;
+import scala.collection.immutable.Set;
 import scala.collection.immutable.VectorBuilder;
-
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by dhoeller on 05.03.16.
@@ -16,8 +16,31 @@ public class seqProviderList<T> {
         this.list = new ArrayList<T>();
     }
 
+    public seqProviderList(Seq<T> someSeq) {
+        this.list = new ArrayList<T>();
+        this.add(someSeq);
+    }
+
+    public seqProviderList(Set<T> vars) {
+        this.list = new ArrayList<T>();
+        this.add(vars);
+    }
+
     public void add(T t) {
         list.add(t);
+    }
+
+    public void add(Seq<T> someSeq) {
+        for (int i = 0; i < someSeq.size(); i++) {
+            list.add(someSeq.apply(i));
+        }
+    }
+
+    public void add(Set<T> someSet) {
+        Iterator<T> iter = someSet.iterator();
+        while(iter.hasNext()){
+            this.add(iter.next());
+        }
     }
 
     public T get(int index) {
@@ -34,5 +57,10 @@ public class seqProviderList<T> {
             res.$plus$eq(o);
         }
         return res.result();
+    }
+
+    public Set<T> resultSet() {
+        Seq<T> res = this.result();
+        return res.toSet();
     }
 }

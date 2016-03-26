@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.translation;
 
 import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler;
 import de.uniulm.ki.panda3.symbolic.compiler.ToPlainFormulaRepresentation;
+import de.uniulm.ki.panda3.symbolic.compiler.prefix.forallAndExistsPrecCompiler;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.ioInterface.FileHandler;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
@@ -115,11 +116,15 @@ public class PANDAtranslator {
         }
 
         if ((readProblem) && (toLang.equals(ronsPDDLFormat))) {
+            planningInstance = ToPlainFormulaRepresentation.transform(planningInstance);
+            planningInstance = (new forallAndExistsPrecCompiler()).transform(planningInstance, null);
+
             FileHandler.writeHPDDLToFiles(planningInstance, toDomainFile, toProblemFile);
             System.out.println("PANDA says: Done.");
         } else if ((readProblem) && (toLang.equals(ourXmlFormat))) {
-            planningInstance = SHOPMethodCompiler.transform(planningInstance);
             planningInstance = ToPlainFormulaRepresentation.transform(planningInstance);
+            planningInstance = (new forallAndExistsPrecCompiler()).transform(planningInstance, null);
+            planningInstance = SHOPMethodCompiler.transform(planningInstance);
             FileHandler.writeXMLToFiles(planningInstance, toDomainFile, toProblemFile);
             System.out.println("PANDA says: Done.");
         } else {

@@ -279,38 +279,54 @@ public class hddlPanda3Visitor {
             return visitGdConOrDisjunktion(conOrDis.and, parameters, predicates, sorts, constraints, ctx.gd_conjuction().gd());
         } else if (ctx.gd_univeral() != null) {
             return visitUniveralQuantifier(parameters, predicates, sorts, constraints, ctx.gd_univeral());
+        } else if (ctx.gd_existential() != null) {
+            return visitExistentialQuantifier(parameters, predicates, sorts, constraints, ctx.gd_existential());
         } else if (ctx.gd_disjuction() != null) { // well ...
             return visitGdConOrDisjunktion(conOrDis.or, parameters, predicates, sorts, constraints, ctx.gd_disjuction().gd());
         }
         return new And<Literal>(new Vector<Literal>(0, 0, 0));
     }
 
+    private Formula visitExistentialQuantifier(seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_existentialContext gd_existentialContext) {
+        Tuple2<Seq<Variable>, Formula> inner2 = readInner(parameters, predicates, sorts, constraints, gd_existentialContext.typed_var_list().typed_vars(), gd_existentialContext.gd());
+        return new Exists(inner2._1().apply(0), inner2._2());
+    }
+
     private Formula visitUniveralQuantifier(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_univeralContext gd_conjuctionContext) {
+        Tuple2<Seq<Variable>, Formula> inner2 = readInner(methodParams, predicates, sorts, constraints, gd_conjuctionContext.typed_var_list().typed_vars(), gd_conjuctionContext.gd());
+        return new Forall(inner2._1().apply(0), inner2._2());
+    }
+
+    private Tuple2<Seq<Variable>, Formula> readInner(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, List<hddlParser.Typed_varsContext> typed_varsContexts, hddlParser.GdContext gd) {
 
         // read new variables
         int curIndex = methodParams.size();
         seqProviderList<Variable> parameters2 = new seqProviderList<>();
+        seqProviderList<Variable> quantifiedVars = new seqProviderList<>();
+
         for (int i = 0; i < methodParams.size(); i++) {
             parameters2.add(methodParams.get(i));
         }
 
         VectorBuilder<Sort> newSorts = new VectorBuilder<>();
         VectorBuilder<String> newVarnames = new VectorBuilder<>();
-        visitTypedList(newSorts, newVarnames, sorts, gd_conjuctionContext.typed_var_list().typed_vars());
+        visitTypedList(newSorts, newVarnames, sorts, typed_varsContexts);
 
         Seq<Sort> newS = newSorts.result();
         Seq<String> newN = newVarnames.result();
 
-        // don't add the variable to original parameters as it is only locally valid
-        // DH: todo: ???
         for (int i = 0; i < newN.size(); i++) {
             parameters2.add(new Variable(curIndex + i, newN.apply(i), newS.apply(i)));
+            quantifiedVars.add(new Variable(curIndex + i, newN.apply(i), newS.apply(i)));
+        }
+
+        if (quantifiedVars.size() > 1) {
+            System.out.println("ERROR: More than one quantified Variable - this is not yet implemented.");
         }
 
         // read inner formula
-        Formula inner = visitGoalConditions(predicates, parameters2, sorts, constraints, gd_conjuctionContext.gd());
-
-        return inner;
+        Formula inner = visitGoalConditions(predicates, parameters2, sorts, constraints, gd);
+        return new Tuple2<>(quantifiedVars.result(), inner);
     }
 
     private Formula visitConEffConj(seqProviderList<Variable> parameters, Seq<Sort> sorts, Seq<Predicate> predicates, hddlParser.Eff_conjuntionContext ctx) {
@@ -350,10 +366,7 @@ public class hddlPanda3Visitor {
         seqProviderList<Formula> elements = new seqProviderList<>();
         for (hddlParser.GdContext gd : ctx) {
             Formula f = visitGoalConditions(predicates, parameters, sorts, constraints, gd);
-            if (f.getClass() != Identity.class)
-                elements.add(f);
-            else
-                System.out.println("bin hier!");
+            elements.add(f);
         }
         if (what == conOrDis.and)
             return new And(elements.result());

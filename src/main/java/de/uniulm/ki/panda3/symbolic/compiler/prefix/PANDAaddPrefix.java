@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.compiler.prefix;
 
 
+import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler;
 import de.uniulm.ki.panda3.symbolic.compiler.ToPlainFormulaRepresentation;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.ioInterface.FileHandler;
@@ -33,12 +34,13 @@ public class PANDAaddPrefix {
         }
 
         try {
-            if (args.length == 0){
+            if (args.length == 0) {
                 for (String line : getExampleCall())
-                System.out.print(line + " ");
+                    System.out.print(line + " ");
                 return;
             }
             Tuple2<Domain, Plan> domPlan = parseCallArguments(args);
+
             PrefixTransformer prefixTransformer;
             if (process == null)
                 prefixTransformer = PrefixTransformer.getRecognitionTransformer(prefix);
@@ -49,8 +51,9 @@ public class PANDAaddPrefix {
 
             // transformation introduces nasty structures that should be removed
             domPlan = ToPlainFormulaRepresentation.transform(domPlan);
+            domPlan = SHOPMethodCompiler.transform(domPlan);
 
-            FileHandler.writeHPDDLToFiles(domPlan, domain_targetPath, problem_targetPath);
+            FileHandler.writeXMLToFiles(domPlan, domain_targetPath, problem_targetPath);
 
         } catch (addPrefixException error) {
             System.out.println("[ABORT]\tRepairing plan failed due to PlanRepairException: " + error.getMessage());
@@ -83,7 +86,7 @@ public class PANDAaddPrefix {
                 "wcrew1 wtruck1 brighton-dump texaco1",
                 "wcrew1 wtruck1 brighton-dump texaco1",
                 "tcrew1 wtruck1 brighton-dump",*/
-                };
+        };
     }
 
     private static Tuple2<Domain, Plan> parseCallArguments(String[] lines) throws Exception {
