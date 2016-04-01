@@ -40,12 +40,23 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       }
   }
 
+  def isPlanStepPresentInPlan(planStep: Int): Boolean = planStepDecomposedByMethod(planStep) == -1
+
+  val numberOfAllPlanSteps: Int = planStepTasks.length
+  val numberOfPlanSteps   : Int = {
+    var number = 2
+    var i = 2
+    while (i < numberOfAllPlanSteps) {
+      if (isPlanStepPresentInPlan(i)) number += 1
+      i += 1
+    }
+    number
+  }
 
   private var precomputedAbstractPlanStepFlaws: Option[Array[EfficientAbstractPlanStep]] = None
   private var precomputedOpenPreconditionFlaws: Option[Array[EfficientOpenPrecondition]] = None
   private var appliedModification             : Option[EfficientModification]            = None
   private var precomputedCausalThreatFlaws    : Option[Array[EfficientCausalThreat]]     = None
-
 
   /** the open preconditions flaws of the parent of this plan --- and the number of newly added tasks.
     * The assumption is that the tasks sz(planstep) - nonHandledTasks .. sz(planstep)-1 are new
@@ -55,7 +66,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     var i = 0
     while (i < severedOpenPreconditions.length) {
       severedOpenPreconditions(i) = oldOpenPrecondition(i).severLinkToPlan(dismissDecompositionModifications = true)
-      i +=1
+      i += 1
     }
 
     precomputedOpenPreconditionFlaws = Some(severedOpenPreconditions)
