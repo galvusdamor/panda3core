@@ -69,17 +69,17 @@ object DFS {
       if (nodes % 100 == 0) semaphore.release()
 
       val flaws = node.plan.flaws
-      node.modifications = flaws map { _.resolvents(domain) }
+      node setModifications (flaws map { _.resolvents(domain) })
 
       // check whether we are at a dead end in the search space
       if (node.modifications exists { _.isEmpty }) {d = d - 1; crap = crap + 1; node.dirty = false; None }
       else {
         val selectedResolvers: Seq[Modification] = (node.modifications sortBy { _.size }).head
         // set the selected flaw
-        node.selectedFlaw = node.modifications indexOf selectedResolvers
+        node setSelectedFlaw (node.modifications indexOf selectedResolvers)
 
         // create all children
-        node.children = selectedResolvers.zipWithIndex map { case (m, i) => (new SearchNode(node.plan.modify(m), node, -1), i) } filterNot { _._1.plan.isSolvable contains false }
+        node setChildren (selectedResolvers.zipWithIndex map { case (m, i) => (new SearchNode(node.plan.modify(m), node, -1), i) } filterNot { _._1.plan.isSolvable contains false })
         node.dirty = false
 
         // perform the search
@@ -99,4 +99,5 @@ object DFS {
 
     (node, semaphore, { _ => abort = true })
   }
+
 }

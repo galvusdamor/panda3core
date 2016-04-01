@@ -11,6 +11,8 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class EfficientBindVariable(plan: EfficientPlan, resolvedFlaw : EfficientFlaw, variable: Int, constant: Int) extends EfficientModification {
   override val addedVariableConstraints: Array[EfficientVariableConstraint] = Array(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, variable, constant))
+
+  def severLinkToPlan(severedFlaw : EfficientFlaw) : EfficientModification = EfficientBindVariable(null,severedFlaw,variable,constant)
 }
 
 object EfficientBindVariable {

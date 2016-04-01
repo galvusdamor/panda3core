@@ -11,6 +11,8 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class EfficientMakeLiteralsUnUnifiable(plan: EfficientPlan, resolvedFlaw : EfficientFlaw , variable1: Int, variable2: Int) extends EfficientModification {
   override val addedVariableConstraints: Array[EfficientVariableConstraint] = Array(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, variable1, variable2))
+
+  def severLinkToPlan(severedFlaw : EfficientFlaw) : EfficientModification = EfficientMakeLiteralsUnUnifiable(null,severedFlaw,variable1,variable2)
 }
 
 object EfficientMakeLiteralsUnUnifiable {

@@ -14,19 +14,25 @@ import scala.collection.mutable.ArrayBuffer
 trait EfficientModification {
 
   val plan: EfficientPlan
-  val addedVariableConstraints: Array[EfficientVariableConstraint] = Array()
-  val addedVariableSorts      : Array[Int]                         = Array()
+  val addedVariableConstraints   : Array[EfficientVariableConstraint] = Array()
+  val addedVariableSorts         : Array[Int]                         = Array()
+  val decomposedPlanStepsByMethod: Array[(Int, Int)]                  = Array()
   val resolvedFlaw: EfficientFlaw
-  lazy val addedCausalLinks: Array[EfficientCausalLink]         = Array()
-  lazy val addedPlanSteps  : Array[(Int, Array[Int], Int, Int)] = Array()
+  val addedCausalLinks: Array[EfficientCausalLink]         = Array()
+  /** (type of new, parameters of new planstep, decomposed by method, parent in decomposition tree) */
+  val addedPlanSteps  : Array[(Int, Array[Int], Int, Int)] = Array()
 
-  final val addedOrderings: Array[(Int, Int)] = {
+
+  lazy val addedOrderings: Array[(Int, Int)] = {
+    assert(plan != null, "Orderings can only be computed if connection to parent plan has not been severed")
     val buffer = new ArrayBuffer[(Int, Int)]()
     buffer appendAll nonInducedAddedOrderings
 
     var i = 0
     while (i < addedCausalLinks.length) {
-      if (plan.domain.tasks(taskOfPlanStep(addedCausalLinks(i).producer)).isPrimitive && plan.domain.tasks(taskOfPlanStep(addedCausalLinks(i).consumer)).isPrimitive)
+      val producerTask = taskOfPlanStep(addedCausalLinks(i).producer)
+      val consumerTask = taskOfPlanStep(addedCausalLinks(i).consumer)
+      if (plan.domain.tasks(producerTask).isPrimitive && plan.domain.tasks(consumerTask).isPrimitive)
         buffer.append((addedCausalLinks(i).producer, addedCausalLinks(i).consumer))
       i += 1
     }
@@ -34,14 +40,32 @@ trait EfficientModification {
     buffer.toArray
   }
 
-  private def taskOfPlanStep(ps: Int): Int = if (ps >= plan.firstFreePlanStepID) addedPlanSteps(ps - plan.firstFreePlanStepID)._1 else plan.planStepTasks(ps)
+  private def taskOfPlanStep(ps: Int): Int = {
+    assert(plan != null, "Tasks of plan steps can only be computed if connection to parent plan has not been severed")
+    if (ps >= plan.firstFreePlanStepID) addedPlanSteps(ps - plan.firstFreePlanStepID)._1 else plan.planStepTasks(ps)
+  }
 
 
   // here we compute all other necessary orderings, like the ones inherited from causal links
   // the orderings to init and goal will be added by the plan itself
   // this _MUST_ be lazy!!
-  protected lazy val nonInducedAddedOrderings: Array[(Int, Int)] = Array()
+  protected val nonInducedAddedOrderings: Array[(Int, Int)] = Array()
 
+  lazy val decomposedPlanSteps: Array[Int] = {
+    val result = new Array[Int](decomposedPlanStepsByMethod.length)
+    var i = 0
+    while (i < result.length) {
+      result(i) = decomposedPlanStepsByMethod(i)._1
+      i += 1
+    }
+    result
+  }
 
-  // TODO: handle inserting orderings from causal links
+  def severLinkToPlan: EfficientModification = {
+    assert(plan != null)
+    severLinkToPlan(resolvedFlaw.severLinkToPlan)
+  }
+
+  def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification
+
 }

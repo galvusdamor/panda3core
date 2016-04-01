@@ -18,6 +18,17 @@ case class EfficientCausalThreat(plan: EfficientPlan, causalLink: EfficientCausa
     buffer appendAll EfficientMakeLiteralsUnUnifiable(plan, this, plan.argumentsOfPlanStepsEffect(threatingPlanStep, indexOfThreatingEffect),
                                                       plan.argumentsOfPlanStepsEffect(causalLink.producer, causalLink.conditionIndexOfProducer))
     buffer appendAll EfficientAddOrdering(plan, this, causalLink, threatingPlanStep)
+    // TODO really ?? ... this is done like this in the symbolic part but somehow it sounds silly (except for variable constraints, but this is already dealt with by making literal
+    // ununifiable)
+    if (!plan.domain.tasks(plan.planStepTasks(threatingPlanStep)).isPrimitive) buffer appendAll EfficientDecomposePlanStep(plan, this, threatingPlanStep)
     buffer.toArray
   }
+
+  def severLinkToPlan : EfficientCausalThreat = EfficientCausalThreat(null,causalLink,threatingPlanStep,indexOfThreatingEffect,mgu)
+
+  def equalToSeveredFlaw(flaw: EfficientFlaw): Boolean = if (flaw.isInstanceOf[EfficientCausalThreat]) {
+    val ect = flaw.asInstanceOf[EfficientCausalThreat]
+    ect.causalLink == causalLink && ect.threatingPlanStep == threatingPlanStep && ect.indexOfThreatingEffect == indexOfThreatingEffect && ect.mgu.sameElements(mgu)
+  } else false
+
 }

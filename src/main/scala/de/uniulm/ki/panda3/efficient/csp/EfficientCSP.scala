@@ -84,7 +84,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.BitS
     val copies = copyAndAddNewVariables(sortsOfNewVariables)
     val sortsOfVariables: Array[Int] = new Array(numberOfVariables + sortsOfNewVariables.length)
     var i = 0
-    while (i < sortsOfNewVariables.length) {
+    while (i < sortsOfNewVariables.length + numberOfVariables) {
       if (i < numberOfVariables) sortsOfVariables(i) = variableSorts(i)
       else sortsOfVariables(i) = sortsOfNewVariables(i - numberOfVariables)
       i += 1

@@ -46,7 +46,7 @@ class AddOrderingTest extends FlatSpec with AddOrderingTestData {
 trait AddOrderingTestData extends HasExampleDomain2 {
 
   val psinit = PlanStep(0, init, instance_variableSort1(1) :: Nil, None, None)
-  val psgoal = PlanStep(1, goal1, instance_variableSort1(1) :: Nil, None, None)
+  val psgoal = PlanStep(1, goal1, instance_variableSort1(2) :: Nil, None, None)
 
   /*
    * This is the plan in question:

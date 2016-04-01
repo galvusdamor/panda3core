@@ -59,5 +59,6 @@ class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
   }).toArray
 
   /** contains for each task an array containing all decomposition methods that can be applied to that task */
-  lazy val taskToPossibleMethods: Map[Int, Array[EfficientDecompositionMethod]] = (tasks.indices map { i => i -> (decompositionMethods.toSeq filter { _.abstractTask == i }).toArray }).toMap
+  lazy val taskToPossibleMethods: Map[Int, Array[(EfficientDecompositionMethod, Int)]] =
+    (tasks.indices map { i => i -> (decompositionMethods.zipWithIndex filter { _._1.abstractTask == i }) }).toMap
 }

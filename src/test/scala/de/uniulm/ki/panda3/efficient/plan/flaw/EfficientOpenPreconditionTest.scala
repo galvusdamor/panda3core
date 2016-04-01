@@ -19,7 +19,7 @@ class EfficientOpenPreconditionTest extends FlatSpec with HasEfficientExampleDom
 
     assert(resolvers exists {
       case EfficientInsertCausalLink(_, _, link, conditions) =>
-        link.producer == 2 && link.consumer == 3 && link.conditionIndexOfProducer == 0 && link.conditionIndexOfConsuer == 0 && conditions.length == 0
+        link.producer == 2 && link.consumer == 3 && link.conditionIndexOfProducer == 0 && link.conditionIndexOfConsumer == 0 && conditions.length == 0
       case _                                                 => false
     })
 

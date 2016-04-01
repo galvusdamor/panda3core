@@ -10,7 +10,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, PlanStep}
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class InsertCausalLink(plan: Plan, causalLink: CausalLink, equalityConstraints: Seq[Equal]) extends Modification {
+case class InsertCausalLink(plan: Plan, causalLink: CausalLink, equalityConstraints: Seq[VariableConstraint]) extends Modification {
   override def addedCausalLinks: Seq[CausalLink] = causalLink :: Nil
 
   override def addedVariableConstraints: Seq[VariableConstraint] = equalityConstraints map { case c: VariableConstraint => c}
