@@ -9,14 +9,14 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientBindVariable(plan: EfficientPlan, resolvedFlaw : EfficientFlaw, variable: Int, constant: Int) extends EfficientModification {
+case class EfficientBindVariable(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, variable: Int, constant: Int) extends EfficientModification {
   override val addedVariableConstraints: Array[EfficientVariableConstraint] = Array(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, variable, constant))
 
-  def severLinkToPlan(severedFlaw : EfficientFlaw) : EfficientModification = EfficientBindVariable(null,severedFlaw,variable,constant)
+  def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientBindVariable(null, severedFlaw, variable, constant)
 }
 
 object EfficientBindVariable {
-  def apply(plan: EfficientPlan, resolvedFlaw : EfficientFlaw, variable: Int): Array[EfficientModification] = {
+  def apply(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, variable: Int): Array[EfficientModification] = {
     val modificationBuffer = new ArrayBuffer[EfficientModification]()
     val it = plan.variableConstraints.getRemainingDomain(variable).iterator
     while (it.hasNext) {
@@ -25,4 +25,6 @@ object EfficientBindVariable {
     }
     modificationBuffer.toArray
   }
+
+  def estimate(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, variable: Int): Int = plan.variableConstraints.getRemainingDomain(variable).size
 }

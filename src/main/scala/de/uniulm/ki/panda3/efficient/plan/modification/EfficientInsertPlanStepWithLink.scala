@@ -68,4 +68,15 @@ object EfficientInsertPlanStepWithLink {
 
     buffer.toArray
   }
+
+  def estimate(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int): Int = {
+    val consumerTask = plan.domain.tasks(plan.planStepTasks(consumer))
+    val consumerLiteral = consumerTask.precondition(consumerIndex)
+
+    var possibleProducer: Array[(Int, Int)] = Array()
+    if (consumerLiteral.isPositive) possibleProducer = plan.domain.possibleProducerTasksOf(consumerLiteral.predicate)._1
+    else possibleProducer = plan.domain.possibleProducerTasksOf(consumerLiteral.predicate)._2
+
+    possibleProducer.length
+  }
 }

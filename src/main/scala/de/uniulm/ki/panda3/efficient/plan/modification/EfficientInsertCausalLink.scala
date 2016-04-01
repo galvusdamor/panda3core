@@ -17,14 +17,13 @@ case class EfficientInsertCausalLink(plan: EfficientPlan, resolvedFlaw: Efficien
   override val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
   override val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
 
-  def severLinkToPlan(severedFlaw : EfficientFlaw) : EfficientModification = EfficientInsertCausalLink(null,severedFlaw,causalLink,necessaryVariableConstraints)
+  def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientInsertCausalLink(null, severedFlaw, causalLink, necessaryVariableConstraints)
 }
 
 object EfficientInsertCausalLink {
 
-  private def addModificationFromPlanStep(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int, producer: Int, consumerLiteral: EfficientLiteral,
-                                          consumerParameters: Array[Int],
-                                          buffer: ArrayBuffer[EfficientModification]): Unit = {
+  private def iterateThroughModificationsFromPlanStep(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int, producer: Int, consumerLiteral:
+  EfficientLiteral, consumerParameters: Array[Int], whatToDo: (Int, Array[EfficientVariableConstraint]) => Unit ): Unit = {
     if (producer != consumer && plan.planStepDecomposedByMethod(producer) == -1 && !plan.ordering.gt(producer, consumer)) {
       val producerTask = plan.domain.tasks(plan.planStepTasks(producer))
       // and loop through all of their effects
@@ -37,7 +36,7 @@ object EfficientInsertCausalLink {
           val producerParameters = producerTask.getArgumentsOfLiteral(plan.planStepParameters(producer), producerLiteral)
           val mgu = plan.variableConstraints.fastMGU(consumerParameters, producerParameters)
           if (mgu.isDefined)
-            buffer append EfficientInsertCausalLink(plan, resolvedFlaw, EfficientCausalLink(producer, consumer, producerIndex, consumerIndex), mgu.get)
+            whatToDo(producerIndex, mgu.get)
         }
         producerIndex += 1
       }
@@ -59,7 +58,9 @@ object EfficientInsertCausalLink {
     // iterate through all plansteps in the plan to find possible producers
     var producer = producerFrom
     while (producer < producersTo) {
-      addModificationFromPlanStep(plan, resolvedFlaw, consumer, consumerIndex, producer, consumerLiteral, consumerParameters, buffer)
+      iterateThroughModificationsFromPlanStep(plan, resolvedFlaw, consumer, consumerIndex, producer, consumerLiteral, consumerParameters, { case (producerIndex, mgu) =>
+        buffer append EfficientInsertCausalLink(plan, resolvedFlaw, EfficientCausalLink(producer, consumer, producerIndex, consumerIndex), mgu)
+      })
       producer += 1
     }
     buffer.toArray
@@ -67,4 +68,22 @@ object EfficientInsertCausalLink {
 
   def apply(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int): Array[EfficientModification] =
     apply(plan, resolvedFlaw, consumer, consumerIndex, 0, plan.planStepTasks.length)
+
+  def estimate(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int): Int = {
+    val consumerTask = plan.domain.tasks(plan.planStepTasks(consumer))
+    val consumerLiteral = consumerTask.precondition(consumerIndex)
+    val consumerParameters = consumerTask.getArgumentsOfLiteral(plan.planStepParameters(consumer), consumerLiteral)
+
+    var numberOfModifications = 0
+
+    // iterate through all plansteps in the plan to find possible producers
+    var producer = 0
+    while (producer < plan.planStepTasks.length) {
+      iterateThroughModificationsFromPlanStep(plan, resolvedFlaw, consumer, consumerIndex, producer, consumerLiteral, consumerParameters, { case (_, _) =>
+        numberOfModifications += 1
+      })
+      producer += 1
+    }
+    numberOfModifications
+  }
 }

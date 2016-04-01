@@ -15,6 +15,24 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
   private var precomputedResolver: Option[Array[EfficientModification]] = None
 
 
+  override lazy val estimatedNumberOfResolvers: Int = if (precomputedResolver.isDefined) precomputedResolver.get.size
+  else {
+    val linkInsertions = EfficientInsertCausalLink.estimate(plan, this, planStep, preconditionIndex)
+    val planStepInsertions = EfficientInsertPlanStepWithLink.estimate(plan, this, planStep, preconditionIndex)
+
+    var numberOfResolvers = linkInsertions + planStepInsertions
+
+    // TODO decompose only those plan steps that can lead to the necessary effect
+    var possibleProducer = 2
+    while (possibleProducer < plan.firstFreePlanStepID) {
+      if (!plan.domain.tasks(plan.planStepTasks(possibleProducer)).isPrimitive && possibleProducer != planStep && plan.planStepDecomposedByMethod(possibleProducer) == -1)
+        numberOfResolvers += EfficientDecomposePlanStep.estimate(plan, this, possibleProducer)
+      possibleProducer += 1
+    }
+    numberOfResolvers
+  }
+
+
   override lazy val resolver: Array[EfficientModification] = if (precomputedResolver.isDefined) precomputedResolver.get
   else {
     val buffer = new ArrayBuffer[EfficientModification]()

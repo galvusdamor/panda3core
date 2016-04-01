@@ -14,6 +14,8 @@ trait EfficientFlaw {
 
   val resolver : Array[EfficientModification]
 
+  val estimatedNumberOfResolvers : Int
+
   def severLinkToPlan : EfficientFlaw
 
   def equalToSeveredFlaw(flaw : EfficientFlaw) : Boolean

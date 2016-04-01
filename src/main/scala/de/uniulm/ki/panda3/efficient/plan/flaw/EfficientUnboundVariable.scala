@@ -15,4 +15,6 @@ case class EfficientUnboundVariable(plan: EfficientPlan, variable: Int) extends 
     val euv = flaw.asInstanceOf[EfficientUnboundVariable]
     euv.variable == variable
   } else false
+
+  override lazy val estimatedNumberOfResolvers: Int = EfficientBindVariable.estimate(plan,this,variable)
 }

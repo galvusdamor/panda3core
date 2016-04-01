@@ -116,13 +116,13 @@ object BFS {
         }
 
         val flaws = plan.flaws
-        minFlaw = Math.min(minFlaw,flaws.length)
+        minFlaw = Math.min(minFlaw, flaws.length)
 
         if (nodes % 500 == 0 && nodes > 0) {
           val nTime = System.currentTimeMillis()
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
           //time = nTime
-          println("Plans Expanded: " + nodes + " " + nps + " Depth " + depth + " Mods/plan " + total/nodes)
+          println("Plans Expanded: " + nodes + " " + nps + " Depth " + depth + " Mods/plan " + total / nodes)
         }
         nodes += 1
 
@@ -139,19 +139,22 @@ object BFS {
         if (flaws.length == 0) {
           result = Some(plan)
         } else {
-          myNode.modifications = new Array[Array[EfficientModification]](flaws.length)
+          //myNode.modifications = new Array[Array[EfficientModification]](flaws.length)
           var flawnum = 0
           myNode.selectedFlaw = 0
           var smallFlawNumMod = Integer.MAX_VALUE
-          //println("SEARCH ")
           while (flawnum < flaws.length) {
-            //printTime("ToModcall")
-            myNode.modifications(flawnum) = flaws(flawnum).resolver filterNot { _.isInstanceOf[EfficientInsertPlanStepWithLink] }
-            //printTime("Modification")
-            //println("MODS " + myNode.modifications(flawnum).length)
-            total += myNode.modifications(flawnum).length
-            if (myNode.modifications(flawnum).length < smallFlawNumMod) {
+            //myNode.modifications(flawnum) = flaws(flawnum).resolver filterNot { _.isInstanceOf[EfficientInsertPlanStepWithLink] }
+            val numberOfModifiactions = flaws(flawnum).estimatedNumberOfResolvers
+            //total += myNode.modifications(flawnum).length
+            total += numberOfModifiactions
+            /*if (myNode.modifications(flawnum).length < smallFlawNumMod) {
               smallFlawNumMod = myNode.modifications(flawnum).length
+              myNode.selectedFlaw = flawnum
+            }*/
+            //assert(numberOfModifiactions == flaws(flawnum).resolver.length)
+            if (numberOfModifiactions < smallFlawNumMod) {
+              smallFlawNumMod = numberOfModifiactions
               myNode.selectedFlaw = flawnum
             }
             flawnum += 1
@@ -164,10 +167,14 @@ object BFS {
           val children = new ArrayBuffer[(EfficientSearchNode, Int)]()
 
           if (smallFlawNumMod != 0) {
+            //println("Resolver Call")
+            val actualModifications = flaws(myNode.selectedFlaw).resolver
+            assert(actualModifications.length == smallFlawNumMod, "Estimation of number of modifications was incorrect (" + actualModifications.length + " and " + smallFlawNumMod + ")")
             var modNum = 0
             while (modNum < smallFlawNumMod && result.isEmpty) {
               // apply modification
-              val newPlan: EfficientPlan = plan.modify(myNode.modifications(myNode.selectedFlaw)(modNum))
+              //val newPlan: EfficientPlan = plan.modify(myNode.modifications(myNode.selectedFlaw)(modNum))
+              val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))
 
               if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
                 //val searchNode = new EfficientSearchNode(newPlan, myNode, 0)
@@ -198,5 +205,4 @@ object BFS {
 
     (root, semaphore, { _ => abort = true })
   }
-
 }

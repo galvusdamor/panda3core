@@ -25,6 +25,8 @@ case class EfficientDecomposePlanStep(plan: EfficientPlan, resolvedFlaw: Efficie
   def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientDecomposePlanStep(null, severedFlaw, decomposePlanStep, addedPlanSteps, addedVariableSorts,
                                                                                                       addedVariableConstraints, addedCausalLinks, nonInducedAddedOrderings,
                                                                                                       decomposedPlanStepsByMethod)
+
+
 }
 
 object EfficientDecomposePlanStep {
@@ -140,70 +142,60 @@ object EfficientDecomposePlanStep {
         planLinksCounter += 1
       }
 
-      // determine whether there is a matching internal link
-      var linkCounter = 0
-      var isLink = false
-      val relevantLinks = if (linkIngoing) method.ingoingLinks else method.outgoingLinks
-      while (linkCounter < relevantLinks.length) {
-        isLink |= relevantLinks(linkCounter).consumerOrProducerIndex(isProducer = linkIngoing) == preconditionOrEffectIndex
-        linkCounter += 1
-      }
+      // get matching internal supporters
+      val internalSupporters = if (linkIngoing) method.ingoingSupporters(preconditionOrEffectIndex) else method.outgoingSupporters(preconditionOrEffectIndex)
+      val internalSupportersNecessary =
+        if (linkIngoing) method.ingoingSupportersContainNecessary(preconditionOrEffectIndex) else method.outgoingSupportersContainNecessary(preconditionOrEffectIndex)
 
-      // case 1: there is an ingoing link using the precondition
-      if (isLink || planLinkIndex == -1) {
+
+      if (!(planLinkIndex == -1 && internalSupportersNecessary)) {
         if (planLinkIndex == -1)
           applyMethodToPlan(buffer, plan, resolvedFlaw, decomposedPS, method, methodIndex, nextPrecondition, nextEffect, 0, inheritedLinks, inheritedLinksVariableConstraints)
-        else if (isLink && planLinkIndex != -1) assert(false, "Not yet supported")
-        //else assert(false, "Not yet supported")
-        // if there is no ingoing link this decomposition is invalid
-        // TODO: discuss whether we actually want to dismiss this case
-      } else {
-        val originalCausalLink = plan.causalLinks(planLinkIndex)
-        val outsidePlanStep = if (linkIngoing) originalCausalLink.producer else originalCausalLink.consumer
-        val outsideTask = plan.domain.tasks(plan.planStepTasks(outsidePlanStep))
-        val linkLiteral = if (linkIngoing) outsideTask.effect(originalCausalLink.conditionIndexOfProducer) else outsideTask.precondition(originalCausalLink.conditionIndexOfConsumer)
-        val outsideLiteralArguments = outsideTask.getArgumentsOfLiteral(plan.planStepParameters(outsidePlanStep), linkLiteral)
+        else {
+          val originalCausalLink = plan.causalLinks(planLinkIndex)
+          val outsidePlanStep = if (linkIngoing) originalCausalLink.producer else originalCausalLink.consumer
+          val outsideTask = plan.domain.tasks(plan.planStepTasks(outsidePlanStep))
+          val linkLiteral = if (linkIngoing) outsideTask.effect(originalCausalLink.conditionIndexOfProducer) else outsideTask.precondition(originalCausalLink.conditionIndexOfConsumer)
+          val outsideLiteralArguments = outsideTask.getArgumentsOfLiteral(plan.planStepParameters(outsidePlanStep), linkLiteral)
+
+          // inherit the link any way possible
+          var indexOfSupporter = 0
+          while (indexOfSupporter < internalSupporters.length) {
+            val newPlanStepSchema = plan.domain.tasks(method.addedPlanSteps(internalSupporters(indexOfSupporter).planStep)._1)
+            val newPlanStepArguments = method.addedPlanSteps(internalSupporters(indexOfSupporter).planStep)._2
+            val newPlanStep = internalSupporters(indexOfSupporter).planStep + plan.firstFreePlanStepID
+            val newPlanStepPrecEff = internalSupporters(indexOfSupporter).conditionIndex
+            val newPlanStepLiteral = if (linkIngoing) newPlanStepSchema.precondition(newPlanStepPrecEff) else newPlanStepSchema.effect(newPlanStepPrecEff)
 
 
-        // case 2: we need to inherit the link to every possible input
-        var newPlanStep = 0
-        while (newPlanStep < method.addedPlanSteps.length) {
-          val newPlanStepSchema = plan.domain.tasks(method.addedPlanSteps(newPlanStep)._1)
-          val newPlanStepArguments = method.addedPlanSteps(newPlanStep)._2
+            val inheritedCausalLink =
+              if (linkIngoing) EfficientCausalLink(outsidePlanStep, newPlanStep, originalCausalLink.conditionIndexOfProducer, newPlanStepPrecEff)
+              else EfficientCausalLink(newPlanStep, outsidePlanStep, newPlanStepPrecEff, originalCausalLink.conditionIndexOfConsumer)
 
-          var newPlanStepPrecEff = 0
-          val schemaPrecEff = if (linkIngoing) newPlanStepSchema.precondition else newPlanStepSchema.effect
-          while (newPlanStepPrecEff < schemaPrecEff.length) {
-            val literal = schemaPrecEff(newPlanStepPrecEff)
-            if (linkLiteral.checkPredicateAndSign(literal)) {
-              // a potential supporter, generate the causal link and decent
-              val inheritedCausalLink =
-                if (linkIngoing) EfficientCausalLink(outsidePlanStep, newPlanStep + plan.firstFreePlanStepID, originalCausalLink.conditionIndexOfProducer, newPlanStepPrecEff)
-                else EfficientCausalLink(newPlanStep + plan.firstFreePlanStepID, outsidePlanStep, newPlanStepPrecEff, originalCausalLink.conditionIndexOfConsumer)
-
-              val consumerLiteralArguments = newPlanStepSchema.getArgumentsOfLiteral(newPlanStepArguments, literal)
-              // generate the mgu
-              var linkParameter = 0
-              while (linkParameter < linkLiteral.parameterVariables.length) {
-                inheritedLinksVariableConstraints push EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, outsideLiteralArguments(linkParameter),
-                                                                                   getNewVariableID(plan, decomposedPS, consumerLiteralArguments(linkParameter)))
-                linkParameter += 1
-              }
-              inheritedLinks.push(inheritedCausalLink)
-              applyMethodToPlan(buffer, plan, resolvedFlaw, decomposedPS, method, methodIndex, currentPrecondition, currentEffect, skipFirstNCausalLinks + 1,
-                                inheritedLinks, inheritedLinksVariableConstraints)
-              // pop everything from the stack an continue
-              inheritedLinks.pop()
-              linkParameter = 0
-              while (linkParameter < linkLiteral.parameterVariables.length) {
-                inheritedLinksVariableConstraints.pop()
-                linkParameter += 1
-              }
+            val consumerLiteralArguments = newPlanStepSchema.getArgumentsOfLiteral(newPlanStepArguments, newPlanStepLiteral)
+            // generate the mgu
+            var linkParameter = 0
+            while (linkParameter < linkLiteral.parameterVariables.length) {
+              inheritedLinksVariableConstraints push EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, outsideLiteralArguments(linkParameter),
+                                                                                 getNewVariableID(plan, decomposedPS, consumerLiteralArguments(linkParameter)))
+              linkParameter += 1
             }
-            newPlanStepPrecEff += 1
+            inheritedLinks.push(inheritedCausalLink)
+            applyMethodToPlan(buffer, plan, resolvedFlaw, decomposedPS, method, methodIndex, currentPrecondition, currentEffect, skipFirstNCausalLinks + 1,
+                              inheritedLinks, inheritedLinksVariableConstraints)
+            // pop everything from the stack an continue
+            inheritedLinks.pop()
+            linkParameter = 0
+            while (linkParameter < linkLiteral.parameterVariables.length) {
+              inheritedLinksVariableConstraints.pop()
+              linkParameter += 1
+            }
+
+            indexOfSupporter += 1
           }
-          newPlanStep += 1
         }
+      } else {
+        // TODO: what to do here? We have no ingoing link but a rule how to inherit it ?!
       }
     } else {
       // end of the recursive decent, actually trigger generating the modification
@@ -228,5 +220,79 @@ object EfficientDecomposePlanStep {
       possibleMethodIndex += 1
     }
     buffer.toArray
+  }
+
+  def estimate(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, planStep: Int): Int = {
+    val possibleMethods = plan.domain.taskToPossibleMethods(plan.planStepTasks(planStep))
+
+    val hasLinkIngoing = Array.fill[Int](plan.domain.tasks(plan.planStepTasks(planStep)).precondition.length)(0)
+    val hasLinkOutgoing = Array.fill[Int](plan.domain.tasks(plan.planStepTasks(planStep)).effect.length)(0)
+
+    var causalLink = 0
+    while (causalLink < plan.causalLinks.length) {
+      val producer = plan.causalLinks(causalLink).producer
+      val consumer = plan.causalLinks(causalLink).consumer
+      if (plan.planStepDecomposedByMethod(producer) == -1 && plan.planStepDecomposedByMethod(consumer) == -1) {
+        if (producer == planStep) hasLinkOutgoing(plan.causalLinks(causalLink).conditionIndexOfProducer) += 1
+        else if (consumer == planStep) hasLinkIngoing(plan.causalLinks(causalLink).conditionIndexOfConsumer) += 1
+      }
+      causalLink += 1
+    }
+
+    var numberOfModifications = 0
+    var possibleMethodIndex = 0
+    while (possibleMethodIndex < possibleMethods.length) {
+      val method = possibleMethods(possibleMethodIndex)._1.extract
+
+      var numberOfLinkInheritances = 1 // change by multiplication
+
+      // preconditions
+      var abstractPrecondition = 0
+      while (abstractPrecondition < plan.taskOfPlanStep(planStep).precondition.length) {
+        var linkConnected: Int = 0
+        var causalLinkIndex = 0
+        while (causalLinkIndex < plan.causalLinks.length) {
+          val causalLink = plan.causalLinks(causalLinkIndex)
+          if (causalLink.consumer == planStep && plan.isPlanStepPresentInPlan(causalLink.producer)) linkConnected += 1
+          causalLinkIndex += 1
+        }
+        if (method.ingoingSupportersContainNecessary(abstractPrecondition) && linkConnected == 0) numberOfLinkInheritances = 0
+
+        // TODO these should be pruned from the domain ... at some point in time
+        //assert(method.ingoingSupporters(abstractPrecondition).length != 0)
+        if (method.ingoingSupporters(abstractPrecondition).length == 0){
+          if (linkConnected != 0) numberOfLinkInheritances = 0
+        } else
+        numberOfLinkInheritances *= Math.pow(method.ingoingSupporters(abstractPrecondition).length, linkConnected).round.toInt
+
+        abstractPrecondition += 1
+      }
+
+      // effects
+      var abstractEffect = 0
+      while (abstractEffect < plan.taskOfPlanStep(planStep).effect.length) {
+        var linkConnected: Int = 0
+        var causalLinkIndex = 0
+        while (causalLinkIndex < plan.causalLinks.length) {
+          val causalLink = plan.causalLinks(causalLinkIndex)
+          if (causalLink.producer == planStep && plan.isPlanStepPresentInPlan(causalLink.consumer)) linkConnected += 1
+          causalLinkIndex += 1
+        }
+        if (method.outgoingSupportersContainNecessary(abstractEffect) && linkConnected == 0) numberOfLinkInheritances = 0
+
+        // TODO these should be pruned from the domain ... at some point in time
+        //assert(method.outgoingSupporters(abstractEffect).length != 0)
+        if (method.outgoingSupporters(abstractEffect).length == 0){
+          if (linkConnected != 0) numberOfLinkInheritances = 0
+        } else
+        numberOfLinkInheritances *= Math.pow(method.outgoingSupporters(abstractEffect).length, linkConnected).round.toInt
+        abstractEffect += 1
+      }
+
+      numberOfModifications += numberOfLinkInheritances
+      possibleMethodIndex += 1
+    }
+
+    numberOfModifications
   }
 }

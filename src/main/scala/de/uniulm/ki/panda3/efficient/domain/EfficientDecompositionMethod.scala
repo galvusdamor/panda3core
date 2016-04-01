@@ -1,12 +1,15 @@
 package de.uniulm.ki.panda3.efficient.domain
 
-import de.uniulm.ki.panda3.efficient.csp.EfficientVariableConstraint
+import de.uniulm.ki.panda3.efficient.csp.{EfficientCSP, EfficientVariableConstraint}
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+// scalastyle:off null
 case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPlan) {
 
   val extract: EfficientExtractedMethodPlan = {
@@ -14,8 +17,53 @@ case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPla
     val innerCausalLinks = subPlan.causalLinks filter { cl => cl.consumer != 1 && cl.producer != 0 } map {
       case EfficientCausalLink(p, c, pi, ci) => EfficientCausalLink(p - 2, c - 2, pi, ci)
     }
+
+    // compute necessary supporters
+    val ingoingSupporters: Array[Array[PotentialLinkSupporter]] = new Array[Array[PotentialLinkSupporter]](subPlan.domain.tasks(abstractTask).precondition.length)
+    val outgoingSupporters: Array[Array[PotentialLinkSupporter]] = new Array[Array[PotentialLinkSupporter]](subPlan.domain.tasks(abstractTask).effect.length)
+
     val ingoingLinks = subPlan.causalLinks filter { _.producer == 0 } map { case EfficientCausalLink(p, c, pi, ci) => EfficientCausalLink(p - 2, c - 2, pi, ci) }
     val outgoingLinks = subPlan.causalLinks filter { _.consumer == 1 } map { case EfficientCausalLink(p, c, pi, ci) => EfficientCausalLink(p - 2, c - 2, pi, ci) }
+
+    ingoingLinks foreach { case EfficientCausalLink(_, c, pi, ci) =>
+      ingoingSupporters(pi) = Array[PotentialLinkSupporter](PotentialLinkSupporter(c, ci, isNecessary = true))
+    }
+
+    val outgoingLinkSupporterMap: mutable.Map[Int, ArrayBuffer[PotentialLinkSupporter]] = mutable.HashMap().withDefaultValue(new ArrayBuffer[PotentialLinkSupporter]())
+    outgoingLinks foreach { case EfficientCausalLink(p, _, pi, ci) =>
+      outgoingLinkSupporterMap(ci) append PotentialLinkSupporter(p, pi, isNecessary = true)
+    }
+    outgoingLinkSupporterMap foreach { case (idx, buffer) => outgoingSupporters(idx) = buffer.toArray }
+
+
+    // compute potential supporters
+    ingoingSupporters.indices foreach { case preconditionIndex => if (ingoingSupporters(preconditionIndex) == null) {
+      val abstractPrecondition = subPlan.domain.tasks(abstractTask).precondition(preconditionIndex)
+
+      ingoingSupporters(preconditionIndex) = (Range(2, subPlan.numberOfAllPlanSteps) flatMap { case consumer => subPlan.taskOfPlanStep(consumer).precondition.zipWithIndex collect {
+        case (literal, idx) if literal.checkPredicateAndSign(abstractPrecondition) && ((literal.parameterVariables zip abstractPrecondition.parameterVariables) forall { case (v1, v2) =>
+          subPlan.variableConstraints.areCompatible(v1, v2) != EfficientCSP.INCOMPATIBLE
+        }) =>
+          PotentialLinkSupporter(consumer - 2, idx, isNecessary = false)
+      }
+      }).toArray
+    }
+    }
+
+    outgoingSupporters.indices foreach { case effectIndex => if (outgoingSupporters(effectIndex) == null) {
+      val abstractEffect = subPlan.domain.tasks(abstractTask).effect(effectIndex)
+
+      outgoingSupporters(effectIndex) = (Range(2, subPlan.numberOfAllPlanSteps) flatMap { case producer => subPlan.taskOfPlanStep(producer).effect.zipWithIndex collect {
+        case (literal, idx) if literal.checkPredicateAndSign(abstractEffect) && ((literal.parameterVariables zip abstractEffect.parameterVariables) forall { case (v1, v2) =>
+          subPlan.variableConstraints.areCompatible(v1, v2) != EfficientCSP.INCOMPATIBLE
+        }) =>
+          PotentialLinkSupporter(producer - 2, idx, isNecessary = false)
+      }
+      }).toArray
+    }
+    }
+
+
     // TODO: remove the ones induced by causal links
     val orderings = subPlan.ordering.minimalOrderingConstraintsWithoutInitAndGoal() map { case (a, b) => (a - 2, b - 2) }
     val numberOfAbstractTaskParameters = subPlan.domain.tasks(abstractTask).parameterSorts.length
@@ -48,16 +96,21 @@ case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPla
 
 
     val allVariableConstraints = isEqualToConstant ++ necessaryEqualConstraints ++ restrictPossibleValues.flatten ++ unequalConstraints
-    EfficientExtractedMethodPlan(planSteps, newVariableSorts, allVariableConstraints.toArray, innerCausalLinks, orderings, ingoingLinks, outgoingLinks)
+    EfficientExtractedMethodPlan(planSteps, newVariableSorts, allVariableConstraints.toArray, innerCausalLinks, orderings, ingoingSupporters, outgoingSupporters)
   }
+
 }
 
+case class PotentialLinkSupporter(planStep: Int, conditionIndex: Int, isNecessary: Boolean) {
+}
 
 case class EfficientExtractedMethodPlan(addedPlanSteps: Array[(Int, Array[Int])],
                                         addedVariableSorts: Array[Int],
                                         addedVariableConstraints: Array[EfficientVariableConstraint],
                                         addedCausalLinks: Array[EfficientCausalLink],
                                         nonInducedAddedOrderings: Array[(Int, Int)],
-                                        ingoingLinks: Array[EfficientCausalLink],
-                                        outgoingLinks: Array[EfficientCausalLink]) {
+                                        ingoingSupporters: Array[Array[PotentialLinkSupporter]],
+                                        outgoingSupporters: Array[Array[PotentialLinkSupporter]]) {
+  val ingoingSupportersContainNecessary : Array[Boolean] = ingoingSupporters map { arr => arr exists { _.isNecessary } }
+  val outgoingSupportersContainNecessary: Array[Boolean] = outgoingSupporters map { arr => arr exists { _.isNecessary } }
 }

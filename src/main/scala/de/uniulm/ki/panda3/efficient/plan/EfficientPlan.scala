@@ -292,7 +292,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     val newPlan = EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethodArray, newPlanStepParentInDecompositionTree.toArray,
                                 newVariableConstraints, newOrdering, newCausalLinks.toArray)
 
-    newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)
+    //newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)
 
     newPlan
   }
