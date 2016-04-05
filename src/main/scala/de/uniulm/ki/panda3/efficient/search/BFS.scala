@@ -23,21 +23,21 @@ import scala.collection.mutable.ArrayBuffer
   */
 object BFS {
   def main(args: Array[String]) {
-    /*if (args.length != 2) {
+    if (args.length != 2) {
       println("This programm needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
       System.exit(1)
     }
     val domFile = args(0)
-    val probFile = args(1)*/
-    //val domFile = "/home/gregor/temp/panda3/domain2.lisp"
-    //val probFile = "/home/gregor/temp/panda3/problem2.lisp"
+    val probFile = args(1)
+    //val domFile = "/home/gregor/temp/send/domain2.lisp"
+    //val probFile = "/home/gregor/temp/send/problem2.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     print("Parsing domain and problem ... ")
-    //val domAndInitialPlan: (Domain, Plan) = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
-    val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    val domAndInitialPlan: (Domain, Plan) = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    //val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
     print("done\npreprocessing ... ")
     val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
 
@@ -50,16 +50,18 @@ object BFS {
     val flattened = ToPlainFormulaRepresentation.transform(simpleMethod, ())
     print("done\ntransform to efficient representation ... ")
 
-    // wrap everything into the efficient Datastructures
+    // wrap everything into the efficient datastructures
     val wrapper = Wrapping(flattened)
     val initialPlan = wrapper.unwrap(flattened._2)
 
     println("done\nstart planner")
 
-    System.in.read()
+    //System.in.read()
     //dfs(initialPlan, 0)
-    val (searchNode, _, _) = startSearch(initialPlan, wrapper, Some(1000000))
+    val (searchNode, sem, _) = startSearch(initialPlan, wrapper, None)
 
+    sem.acquire()
+    println("done")
 
     /*println("BFS finished with result: " + (if (plan.isDefined) "solvable" else "unsolvable"))
     if (plan.isDefined) {
@@ -67,7 +69,7 @@ object BFS {
       //println(symbolicPlan)
       println(symbolicPlan.longInfo)
     }*/
-    System.in.read()
+    /*System.in.read()
     val symNode = wrapper.wrap(searchNode)
     println("Start unwrapping")
 
@@ -77,7 +79,7 @@ object BFS {
       wrappC += 1
       if (wrappC % 10 == 0) println("Wrapped: " + wrappC)
       node.children foreach { case (x, _) => dfsNode(x) }
-    }
+    }*/
 
     //dfsNode(symNode)
   }
@@ -200,7 +202,15 @@ object BFS {
     }
 
     new Thread(new Runnable {
-      override def run(): Unit = println(bfs())
+      override def run(): Unit = {
+        val (_,solution) = bfs()
+        solution match {
+          case None => println("No solution")
+          case Some(plan) =>
+            val symPlan = wrapping.wrap(plan)
+            println(symPlan.longInfo)
+        }
+      }
     }).start()
 
     (root, semaphore, { _ => abort = true })

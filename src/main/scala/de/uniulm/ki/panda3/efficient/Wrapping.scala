@@ -65,7 +65,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val variableConstraints = task.parameterConstraints map { computeEfficientVariableConstraint(_, variableMap) }
 
     // if there is anything other than a literal conjunct ... we can't handle it
-    if (!task.isInstanceOf[ReducedTask]) noSupport(FORUMLASNOTSUPPORTED)
+    if (!task.isInstanceOf[ReducedTask])
+      noSupport(FORUMLASNOTSUPPORTED)
 
     val reducedTask = task.asInstanceOf[ReducedTask]
 
