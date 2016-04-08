@@ -231,7 +231,6 @@ public class hddlPanda3Visitor {
         seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
 
         // build preconditions
-        // todo: implement fancy precondition stuff
         Formula f = new And<Literal>(new Vector<Literal>(0, 0, 0));
         if (ctxTask.gd() != null) {
             f = visitGoalConditions(predicates, parameters, sorts, constraints, ctxTask.gd());

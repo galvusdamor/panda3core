@@ -12,7 +12,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-trait DomainUpdate{}
+trait DomainUpdate {}
 
 case class AddTask(newTasks: Seq[Task]) extends DomainUpdate {}
 
@@ -20,7 +20,15 @@ case class AddVariableConstraints(newConstraints: Seq[VariableConstraint]) exten
 
 case class AddMethod(newMethods: Seq[DecompositionMethod]) extends DomainUpdate {}
 
-case class AddLiteralsToInit(literals: Seq[Literal], variableConstraints: Seq[VariableConstraint]) extends DomainUpdate {}
+case class AddLiteralsToInitAndGoal(literalsInit: Seq[Literal], literalsGoal: Seq[Literal], variableConstraints: Seq[VariableConstraint]) extends DomainUpdate {}
+
+object AddLiteralsToInit {
+  def apply(literals: Seq[Literal], variableConstraints: Seq[VariableConstraint]): AddLiteralsToInitAndGoal = AddLiteralsToInitAndGoal(literals, Nil, variableConstraints)
+}
+
+object AddLiteralsToGoal {
+  def apply(literals: Seq[Literal], variableConstraints: Seq[VariableConstraint]): AddLiteralsToInitAndGoal = AddLiteralsToInitAndGoal(Nil, literals, variableConstraints)
+}
 
 case class AddPredicate(newPredicates: Seq[Predicate]) extends DomainUpdate {}
 
@@ -37,3 +45,5 @@ case class ExchangeTaskSchemaInMethods(exchange: Map[Task, Task]) extends Domain
 case class ReduceFormula() extends DomainUpdate {}
 
 case class ReduceTasks() extends DomainUpdate {}
+
+case class ExchangeVariable(oldVariable: Variable, newVariable: Variable) extends DomainUpdate {}

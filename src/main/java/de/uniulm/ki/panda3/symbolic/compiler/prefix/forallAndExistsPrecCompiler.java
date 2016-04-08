@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.symbolic.csp.Equal;
 import de.uniulm.ki.panda3.symbolic.csp.SymbolicCSP;
 import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
 import de.uniulm.ki.panda3.symbolic.domain.*;
+import de.uniulm.ki.panda3.symbolic.domain.updates.ExchangeVariable;
 import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
@@ -23,10 +24,10 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
     @Override
     public Tuple2<Domain, Plan> transform(Domain dIn, Plan pIn, Unit info) {
 
-        Seq<Task> updatedTasks = updateTasks(dIn.sorts(), dIn.tasks());
+        //Seq<Task> updatedTasks = updateTasks(dIn.sorts(), dIn.tasks());
         Seq<DecompositionMethod> updatedMethods = updateMethods(dIn.sorts(), dIn.decompositionMethods());
 
-        Domain d = new Domain(dIn.sorts(), dIn.predicates(), updatedTasks, updatedMethods, dIn.decompositionAxioms());
+        Domain d = new Domain(dIn.sorts(), dIn.predicates(), dIn.tasks(), updatedMethods, dIn.decompositionAxioms());
         Plan p = new SymbolicPlan(pIn.planSteps(), pIn.causalLinks(), pIn.orderingConstraints(), pIn.variableConstraints(), pIn.init(), pIn.goal());
 
         return new Tuple2<>(d, p);
@@ -92,7 +93,8 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
                 newVars.add(v);
                 newConstraints.add(vc);
 
-                if (forall.formula() instanceof Literal) {
+                conj.add(forall.formula().update(new ExchangeVariable(forall.v(),v)));
+                /*if (forall.formula() instanceof Literal) {
                     Literal inner = (Literal) forall.formula();
                     seqProviderList<Variable> innerParamList = new seqProviderList<>();
                     for (int j = 0; j < inner.parameterVariables().size(); j++) {
@@ -106,7 +108,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
                 } else {
                     System.out.println("ERROR: Forall contains a formula that is no literal -> this is not implemented yet");
                     // todo: @Gregor: would like to replace a variable by another one in an arbitrary formula
-                }
+                }*/
             }
 
             Formula conjunction = new And<Formula>(conj.result()); // Scala :-)

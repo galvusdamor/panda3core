@@ -214,7 +214,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
     private Tuple2<Domain, Plan> transformStep_C_x_und_generateMapMt(Tuple2<Domain, Plan> domPlan) throws addPrefixException {
         String prefixExtension = "[C]";
 
-        for(String oName : getPrimitivesFromPrefixDistinct()){
+        for (String oName : getPrimitivesFromPrefixDistinct()) {
             String tName = uniqueStringPrefix + prefixExtension + oName;
             Task relatedTask = getTaskFromDomainByName(domPlan._1(), oName);
             Task newCompoundTask = new GeneralTask(tName, false, relatedTask.parameters(), relatedTask.parameterConstraints(),
@@ -366,8 +366,9 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
     }
 
     private Tuple2<Domain, Plan> transformStep_s_i(Tuple2<Domain, Plan> domPlan) throws addPrefixException {
-        Literal tempPrecLiteral = new Literal(newPredicates.get(0), true, JavaToScala.<Variable>nil());
-        AddLiteralsToInit updateObject = new AddLiteralsToInit(JavaToScala.toScalaSeq(tempPrecLiteral), JavaToScala.<VariableConstraint>nil());
+        Literal initLit = new Literal(newPredicates.get(0), true, JavaToScala.<Variable>nil());
+        Literal goalLit = new Literal(newPredicates.get(newPredicates.size() - 1), true, JavaToScala.<Variable>nil());
+        AddLiteralsToInitAndGoal updateObject = new AddLiteralsToInitAndGoal(JavaToScala.toScalaSeq(initLit), JavaToScala.toScalaSeq(goalLit), JavaToScala.<VariableConstraint>nil());
         return new Tuple2<Domain, Plan>(domPlan._1(), domPlan._2().update(updateObject));
     }
 

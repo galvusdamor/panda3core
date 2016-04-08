@@ -10,7 +10,7 @@ import scala.Tuple2;
 
 public class PANDAaddPrefix {
 
-    private static final boolean debugMode = false;
+    private static final boolean debugMode = true;
 
     private static String domain_targetPath = null;
     private static String problem_targetPath = null;
@@ -51,10 +51,11 @@ public class PANDAaddPrefix {
 
             // transformation introduces nasty structures that should be removed
             domPlan = ToPlainFormulaRepresentation.transform(domPlan);
+            domPlan = (new forallAndExistsPrecCompiler()).transform(domPlan, null);
             domPlan = SHOPMethodCompiler.transform(domPlan);
 
-            FileHandler.writeXMLToFiles(domPlan, domain_targetPath, problem_targetPath);
-
+            //FileHandler.writeXMLToFiles(domPlan, domain_targetPath, problem_targetPath);
+            FileHandler.writeHPDDLToFiles(domPlan, domain_targetPath, problem_targetPath);
         } catch (addPrefixException error) {
             System.out.println("[ABORT]\tRepairing plan failed due to PlanRepairException: " + error.getMessage());
             error.printStackTrace();
@@ -69,19 +70,18 @@ public class PANDAaddPrefix {
     }
 
     private static String[] getExampleCall() {
+        String base = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/exp-ecai/test/";
         return new String[]{"-domain",
-                "src/test/resources/de/uniulm/ki/panda3/symbolic/compiler/monroe.lisp",
-                "/home/dhoeller/Schreibtisch/temp/dom.lisp",
+                base +"domain.lisp",
+                base +"d-0001-clear-road-wreck-0.lisp",
                 "-problem",
-                "src/test/resources/de/uniulm/ki/panda3/symbolic/compiler/p-0001-clear-road-wreck.lisp",
-                "/home/dhoeller/Schreibtisch/temp/prob.lisp",
+                base +"p-0001-clear-road-wreck.lisp",
+                base +"p-0001-clear-road-wreck-0.lisp",
 /*                    "-process",
                 "-Connects",
                 "Stuttart_London_Air_Route Stuttgart London",*/
                 "-prefix",
-                "(navegate-vehicle wcrew1 wtruck1 brighton-dump texaco1)" +
-                        "(navegate-vehicle wcrew1 wtruck1 brighton-dump texaco1)" +
-                        "(climb-in tcrew1 wtruck1 brighton-dump)",
+                "(navegate-vehicle wcrew1 wtruck1 brighton-dump twelve-corners)",
 /*                    "navegate-vehicle navegate-vehicle climb-in",
                 "wcrew1 wtruck1 brighton-dump texaco1",
                 "wcrew1 wtruck1 brighton-dump texaco1",
