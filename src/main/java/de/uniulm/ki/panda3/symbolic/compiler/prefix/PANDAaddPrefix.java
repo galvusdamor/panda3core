@@ -10,7 +10,7 @@ import scala.Tuple2;
 
 public class PANDAaddPrefix {
 
-    private static final boolean debugMode = true;
+    private static final boolean debugMode = false;
 
     private static String domain_targetPath = null;
     private static String problem_targetPath = null;

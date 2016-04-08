@@ -174,7 +174,7 @@ case class SymbolicPlan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinks
         _ update exchangeInit update exchangeGoal
       }, causalLinksAndRemovedCausalLinks map {
         _ update exchangeInit update exchangeGoal
-      }, orderingConstraints update exchangeInit update exchangeGoal, variableConstraints, newInit, goal)
+      }, orderingConstraints update exchangeInit update exchangeGoal, variableConstraints, newInit, newGoal)
     }
     case _ => SymbolicPlan(planStepsAndRemovedPlanSteps map {
       _.update(domainUpdate)
