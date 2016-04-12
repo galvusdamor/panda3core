@@ -17,6 +17,11 @@ public class PANDAaddPrefix {
 
     private static String[][] prefix = null;
     private static String[][] process = null;
+    private static boolean verify = false;
+
+    public static final String XML = "xml";
+    public static final String RON = "ron";
+    private static String outFormat = XML;
 
     public static void main(String[] args) {
         System.out.println("[START]\tRepair-Transformation");
@@ -41,21 +46,27 @@ public class PANDAaddPrefix {
             }
             Tuple2<Domain, Plan> domPlan = parseCallArguments(args);
 
-            PrefixTransformer prefixTransformer;
-            if (process == null)
-                prefixTransformer = PrefixTransformer.getRecognitionTransformer(prefix);
-            else
-                prefixTransformer = PrefixTransformer.getRepairTransformer(prefix, process);
-
-            domPlan = prefixTransformer.transform(domPlan._1(), domPlan._2(), null);
-
+            if (prefix.length > 0) {
+                PrefixTransformer prefixTransformer;
+                if ((process == null) && (PANDAaddPrefix.verify))
+                    prefixTransformer = PrefixTransformer.getVerifyTransformer(prefix);
+                else if ((process == null) && (!PANDAaddPrefix.verify))
+                    prefixTransformer = PrefixTransformer.getVerifyTransformer(prefix);
+                else
+                    prefixTransformer = PrefixTransformer.getRepairTransformer(prefix, process);
+                domPlan = prefixTransformer.transform(domPlan._1(), domPlan._2(), null);
+            }
             // transformation introduces nasty structures that should be removed
             domPlan = ToPlainFormulaRepresentation.transform(domPlan);
             domPlan = (new forallAndExistsPrecCompiler()).transform(domPlan, null);
+
+            // be sure that this is done AFTER the encoding (otherwise no decomposition will be possible before executing the prefix)
             domPlan = SHOPMethodCompiler.transform(domPlan);
 
-            //FileHandler.writeXMLToFiles(domPlan, domain_targetPath, problem_targetPath);
-            FileHandler.writeHPDDLToFiles(domPlan, domain_targetPath, problem_targetPath);
+            if (PANDAaddPrefix.outFormat.equals(XML))
+                FileHandler.writeXMLToFiles(domPlan, domain_targetPath, problem_targetPath);
+            else if (PANDAaddPrefix.outFormat.equals(RON))
+                FileHandler.writeHPDDLToFiles(domPlan, domain_targetPath, problem_targetPath);
         } catch (addPrefixException error) {
             System.out.println("[ABORT]\tRepairing plan failed due to PlanRepairException: " + error.getMessage());
             error.printStackTrace();
@@ -72,11 +83,11 @@ public class PANDAaddPrefix {
     private static String[] getExampleCall() {
         String base = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/exp-ecai/test/";
         return new String[]{"-domain",
-                base +"domain.lisp",
-                base +"d-0001-clear-road-wreck-0.lisp",
+                base + "domain.lisp",
+                base + "d-0001-clear-road-wreck-0.lisp",
                 "-problem",
-                base +"p-0001-clear-road-wreck.lisp",
-                base +"p-0001-clear-road-wreck-0.lisp",
+                base + "p-0001-clear-road-wreck.lisp",
+                base + "p-0001-clear-road-wreck-0.lisp",
 /*                    "-process",
                 "-Connects",
                 "Stuttart_London_Air_Route Stuttgart London",*/
@@ -122,14 +133,16 @@ public class PANDAaddPrefix {
                     }
                     break;
                 case "-prefix":
-                    String prefixStr = lines[++a];
-                    // want to match: "(climb-in a b)(navegate-vehicle b t g) (someother f t),(test z p), (other a w)"
-                    String[] prefixSplit = prefixStr.substring(1, prefixStr.length() - 1).split("(\\)\\(|\\) \\(|\\)\\,\\(|\\)\\, \\()");
-                    prefix = new String[prefixSplit.length][];
-                    for (int i = 0; i < prefixSplit.length; i++) {
-                        String[] action = prefixSplit[i].split(" ");
-                        prefix[i] = action;
-                    }
+                    readPrefix(lines[++a]);
+                    break;
+                case "-verify":
+                    PANDAaddPrefix.verify = true;
+                    readPrefix(lines[++a]);
+                    break;
+                case "-outFormat":
+                    String format = lines[++a];
+                    if (format.equals(RON))
+                        PANDAaddPrefix.outFormat = RON;
                     break;
                 default:
                     throw new addPrefixException("Invalid command '" + lines[a] + "'.");
@@ -137,5 +150,18 @@ public class PANDAaddPrefix {
         }
 
         return FileHandler.loadHDDLFromFile(domain_sourcePath, problem_sourcePath);
+    }
+
+    private static void readPrefix(String prefixStr) {
+        // want to match: "(climb-in a b)(navegate-vehicle b t g) (someother f t),(test z p), (other a w)"
+        String[] prefixSplit = new String[0];
+        if (prefixStr.length() > 0) {
+            prefixSplit = prefixStr.substring(1, prefixStr.length() - 1).split("(\\)\\(|\\) \\(|\\)\\,\\(|\\)\\, \\()");
+        }
+        prefix = new String[prefixSplit.length][];
+        for (int i = 0; i < prefixSplit.length; i++) {
+            String[] action = prefixSplit[i].split(" ");
+            prefix[i] = action;
+        }
     }
 }

@@ -26,7 +26,8 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
     public static Option<DecompositionMethod> noneForMethod = (Option<DecompositionMethod>) (Object) scala.None$.MODULE$;
     public static Option<PlanStep> noneForPlanStep = (Option<PlanStep>) (Object) scala.None$.MODULE$;
 
-    private String uniqueStringPrefix = "n";
+    private String uniqueStringPrefix = "";
+    String prefixExtension = "p*";
 
     private seqProviderList<Predicate> newPredicates = new seqProviderList<>();
     private seqProviderList<Task> newPrimitiveTasks = new seqProviderList<>();
@@ -41,13 +42,23 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
     enum programTasks {
         repair,
-        recognition
+        recognition,
+        verify
     }
 
     private PrefixTransformer() {
     }
 
+    public static PrefixTransformer getVerifyTransformer(String[][] prefix) {
+        System.out.println("Verify");
+        PrefixTransformer res = new PrefixTransformer();
+        res.prefixNameArguments = prefix;
+        res.whatToDo = programTasks.verify;
+        return res;
+    }
+
     public static PrefixTransformer getRepairTransformer(String[][] prefix, String[][] process) {
+        System.out.println("Repair");
         PrefixTransformer res = new PrefixTransformer();
         res.prefixNameArguments = prefix;
         res.processLiteralsValues = process;
@@ -56,6 +67,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
     }
 
     public static PrefixTransformer getRecognitionTransformer(String[][] prefix) {
+        System.out.println("Recognition");
         PrefixTransformer res = new PrefixTransformer();
         res.prefixNameArguments = prefix;
         res.whatToDo = programTasks.recognition;
@@ -97,22 +109,22 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
     /**
      * L_x is the set of new literals that is added to the preconditions to enforce the ordering of the prefix.
-     * The number of literals differs in the cases of (1) repair and (2) recognition
+     * The number of literals differs in the cases of (1) repair and (2) recognition and (3) verification.
      */
     private Tuple2<Domain, Plan> transformStep_L_x(Tuple2<Domain, Plan> domPlan) {
-        String prefixExtension = "[L]";
+        String prefixExtension = "l";
 
         int predicateCount;
-        if (this.whatToDo == programTasks.repair) {
+        if ((this.whatToDo == programTasks.repair) || (this.whatToDo == programTasks.verify)) {
             predicateCount = prefixNameArguments.length + 2;
         } else {
             predicateCount = prefixNameArguments.length + 1;
         }
 
         for (int a = 1; a <= predicateCount; a++) {
-            String tempName = uniqueStringPrefix + prefixExtension + a;
-            Predicate tempPredicate = new Predicate(tempName, JavaToScala.<Sort>nil());
-            newPredicates.add(tempPredicate);
+            String name = uniqueStringPrefix + prefixExtension + a;
+            Predicate p = new Predicate(name, JavaToScala.<Sort>nil());
+            newPredicates.add(p);
         }
 
         AddPredicate updateObject = new AddPredicate(newPredicates.result());
@@ -126,54 +138,53 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
      * todo: Daniel says: do not really know why the alpha is in the title.
      */
     private Tuple2<Domain, Plan> transformStep_O_x_und_p_mit_alpha(Tuple2<Domain, Plan> domPlan) throws addPrefixException {
-        String prefixExtension = "[O]";
 
         for (int a = 1; a <= prefixNameArguments.length; a++) {
-            String tempName = uniqueStringPrefix + prefixExtension + a;
-            Task tempRelatedTask = getTaskFromDomainByName(domPlan._1(), prefixNameArguments[a - 1][0]);
+            Task relatedTask = getTaskFromDomainByName(domPlan._1(), prefixNameArguments[a - 1][0]);
+            String newTaskName = uniqueStringPrefix + prefixExtension + a + relatedTask.name().substring(0, 1).toUpperCase() + relatedTask.name().substring(1);
 
-            ArrayList<Formula> tempPrecLiteralList = new ArrayList<Formula>();
-            Literal tempPrecLiteral = new Literal(newPredicates.get(a - 1), true, JavaToScala.<Variable>nil());
-            tempPrecLiteralList.add(tempPrecLiteral);
+            ArrayList<Formula> precLiteralList = new ArrayList<Formula>();
+            Literal precLiteral = new Literal(newPredicates.get(a - 1), true, JavaToScala.<Variable>nil());
+            precLiteralList.add(precLiteral);
 
-            ArrayList<Formula> tempEffektLiteralList = new ArrayList<Formula>();
-            Literal tempAddLiteral = new Literal(newPredicates.get(a), true, JavaToScala.<Variable>nil());
-            Literal tempDelLiteral = new Literal(newPredicates.get(a - 1), false, JavaToScala.<Variable>nil());
-            tempEffektLiteralList.add(tempAddLiteral);
-            tempEffektLiteralList.add(tempDelLiteral);
+            ArrayList<Formula> effectLiteralList = new ArrayList<Formula>();
+            Literal addLiteral = new Literal(newPredicates.get(a), true, JavaToScala.<Variable>nil());
+            Literal delLiteral = new Literal(newPredicates.get(a - 1), false, JavaToScala.<Variable>nil());
+            effectLiteralList.add(addLiteral);
+            effectLiteralList.add(delLiteral);
 
-            ArrayList<VariableConstraint> tempNewPrimitivesVariableConstraints = new ArrayList<VariableConstraint>();
+            ArrayList<VariableConstraint> newPrimVarConstraints = new ArrayList<VariableConstraint>();
 
-            for (int b = 0; b < tempRelatedTask.parameters().size(); b++) {
+            for (int b = 0; b < relatedTask.parameters().size(); b++) {
                 Constant tempConstant = getConstantFromDomainByName(domPlan._1(), prefixNameArguments[a - 1][b + 1]);
 
-                tempNewPrimitivesVariableConstraints.add(new Equal(tempRelatedTask.parameters().apply(b), tempConstant));
+                newPrimVarConstraints.add(new Equal(relatedTask.parameters().apply(b), tempConstant));
             }
 
-            Task tempNewPrimitiveTask = new GeneralTask(tempName, true, tempRelatedTask.parameters(),
-                    JavaToScala.concatJavaListToScalaSeq(tempRelatedTask.parameterConstraints(), tempNewPrimitivesVariableConstraints),
-                    new And<Formula>(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(tempRelatedTask.precondition()), tempPrecLiteralList)),
-                    new And<Formula>(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(tempRelatedTask.effect()), tempEffektLiteralList)));
-            newPrimitiveTasks.add(tempNewPrimitiveTask);
+            Task newPrimitiveTask = new GeneralTask(newTaskName, true, relatedTask.parameters(),
+                    JavaToScala.concatJavaListToScalaSeq(relatedTask.parameterConstraints(), newPrimVarConstraints),
+                    new And<Formula>(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(relatedTask.precondition()), precLiteralList)),
+                    new And<Formula>(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(relatedTask.effect()), effectLiteralList)));
+            newPrimitiveTasks.add(newPrimitiveTask);
         }
 
         // create process
         if (this.whatToDo == programTasks.repair) {
-            String tempName = uniqueStringPrefix + prefixExtension + "p";
+            String name = uniqueStringPrefix + prefixExtension + "process";
 
-            ArrayList<Literal> tempPrecLiteralList = new ArrayList<Literal>();
-            Literal tempPrecLiteral = new Literal(newPredicates.get(prefixNameArguments.length), true, JavaToScala.<Variable>nil());
-            tempPrecLiteralList.add(tempPrecLiteral);
+            ArrayList<Literal> precLiteralList = new ArrayList<Literal>();
+            Literal precLiteral = new Literal(newPredicates.get(prefixNameArguments.length), true, JavaToScala.<Variable>nil());
+            precLiteralList.add(precLiteral);
 
-            ArrayList<Literal> tempEffektLiteralList = new ArrayList<Literal>();
-            Literal tempAddLiteral = new Literal(newPredicates.get(prefixNameArguments.length + 1), true, JavaToScala.<Variable>nil());
-            Literal tempDelLiteral = new Literal(newPredicates.get(prefixNameArguments.length), false, JavaToScala.<Variable>nil());
-            tempEffektLiteralList.add(tempAddLiteral);
-            tempEffektLiteralList.add(tempDelLiteral);
+            ArrayList<Literal> effektLiteralList = new ArrayList<Literal>();
+            Literal addLiteral = new Literal(newPredicates.get(prefixNameArguments.length + 1), true, JavaToScala.<Variable>nil());
+            Literal delLiteral = new Literal(newPredicates.get(prefixNameArguments.length), false, JavaToScala.<Variable>nil());
+            effektLiteralList.add(addLiteral);
+            effektLiteralList.add(delLiteral);
 
 
-            ArrayList<VariableConstraint> tempProcessVariableConstraints = new ArrayList<VariableConstraint>();
-            ArrayList<Variable> tempProcessVariables = new ArrayList<Variable>();
+            ArrayList<VariableConstraint> processVariableConstraints = new ArrayList<VariableConstraint>();
+            ArrayList<Variable> processVariables = new ArrayList<Variable>();
 
             int tempId = 0;
 
@@ -183,24 +194,24 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
                 Predicate tempPredicate = getPredicateFromDomainByName(domPlan._1(), processLiteralsValues[a][0]);
 
-                ArrayList<Variable> tempProcessLiteralVariables = new ArrayList<Variable>();
+                ArrayList<Variable> processLiteralVariables = new ArrayList<Variable>();
                 for (int b = 1; b < processLiteralsValues[a].length; b++) {
                     tempId++;
-                    Variable tempVariable = new Variable(tempId, uniqueStringPrefix + "[V]" + "p_" + tempId, tempPredicate.argumentSorts().apply(b - 1));
-                    Constant tempConstant = getConstantFromDomainByName(domPlan._1(), processLiteralsValues[a][b]);
+                    Variable var = new Variable(tempId, uniqueStringPrefix + "[V]" + "p_" + tempId, tempPredicate.argumentSorts().apply(b - 1));
+                    Constant constant = getConstantFromDomainByName(domPlan._1(), processLiteralsValues[a][b]);
 
-                    tempProcessLiteralVariables.add(tempVariable);
-                    tempProcessVariables.add(tempVariable);
+                    processLiteralVariables.add(var);
+                    processVariables.add(var);
 
-                    tempProcessVariableConstraints.add(new Equal(tempVariable, tempConstant));
+                    processVariableConstraints.add(new Equal(var, constant));
                 }
 
-                Literal tempProcessLiteral = new Literal(getPredicateFromDomainByName(domPlan._1(), processLiteralsValues[a][0]), positive, JavaToScala.toScalaSeq(tempProcessLiteralVariables));
-                tempEffektLiteralList.add(tempProcessLiteral);
+                Literal tempProcessLiteral = new Literal(getPredicateFromDomainByName(domPlan._1(), processLiteralsValues[a][0]), positive, JavaToScala.toScalaSeq(processLiteralVariables));
+                effektLiteralList.add(tempProcessLiteral);
             }
 
-            processTaskSchema = new ReducedTask(tempName, true, JavaToScala.toScalaSeq(tempProcessVariables), JavaToScala.toScalaSeq(tempProcessVariableConstraints),
-                    new And<Literal>(JavaToScala.toScalaSeq(tempPrecLiteralList)), new And<Literal>(JavaToScala.toScalaSeq(tempEffektLiteralList)));
+            processTaskSchema = new ReducedTask(name, true, JavaToScala.toScalaSeq(processVariables), JavaToScala.toScalaSeq(processVariableConstraints),
+                    new And<Literal>(JavaToScala.toScalaSeq(precLiteralList)), new And<Literal>(JavaToScala.toScalaSeq(effektLiteralList)));
         }
         AddTask updateObject = new AddTask(newPrimitiveTasks.result());
         return new Tuple2<Domain, Plan>(domPlan._1().update(updateObject), domPlan._2());
@@ -212,7 +223,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
      * or in a (corresponding) action that is included in the enforced prefix.
      */
     private Tuple2<Domain, Plan> transformStep_C_x_und_generateMapMt(Tuple2<Domain, Plan> domPlan) throws addPrefixException {
-        String prefixExtension = "[C]";
+        String prefixExtension = "c";
 
         for (String oName : getPrimitivesFromPrefixDistinct()) {
             String tName = uniqueStringPrefix + prefixExtension + oName;
@@ -229,26 +240,27 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
     /**
      * The last new predicate is the precondition of all original actions in the domain, it is set by the effect of the
-     * process or of the last action in the prefix.
+     * process or of the last action in the prefix. In case of plan verification, no action accept the actions in the
+     * prefix shall be executable, so here the literal that is added to the prefix is never ever set.
      */
     private Tuple2<Domain, Plan> transformStep_alpha_O(Tuple2<Domain, Plan> domPlan) throws addPrefixException {
         HashMap<Task, Task> tempMap = new HashMap<Task, Task>();
 
         // new part of the precondition
-        ArrayList<Formula> tempPrecLiteralList = new ArrayList<Formula>();
-        Literal tempPrecLiteral = new Literal(newPredicates.get(newPredicates.size() - 1), true, JavaToScala.<Variable>nil());
-        tempPrecLiteralList.add(tempPrecLiteral);
+        ArrayList<Formula> precLiteralList = new ArrayList<Formula>();
+        Literal precLiteral = new Literal(newPredicates.get(newPredicates.size() - 1), true, JavaToScala.<Variable>nil());
+        precLiteralList.add(precLiteral);
 
         for (int a = 0; a < domPlan._1().tasks().size(); a++) {
-            Task tempCurrentTask = domPlan._1().tasks().apply(a);
-            if (!tempCurrentTask.isPrimitive()) {
+            Task currentTask = domPlan._1().tasks().apply(a);
+            if (!currentTask.isPrimitive()) {
                 continue;
-            } else if (tempCurrentTask.name().startsWith(uniqueStringPrefix + "[O]")) {
+            } else if (currentTask.name().startsWith(uniqueStringPrefix + prefixExtension)) {
                 continue;
             } else {
-                Task tempNewPrimitiveTask = new GeneralTask(tempCurrentTask.name(), tempCurrentTask.isPrimitive(), tempCurrentTask.parameters(), tempCurrentTask.parameterConstraints(),
-                        new And(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(tempCurrentTask.precondition()), tempPrecLiteralList)), tempCurrentTask.effect());
-                tempMap.put(tempCurrentTask, tempNewPrimitiveTask);
+                Task tempNewPrimitiveTask = new GeneralTask(currentTask.name(), currentTask.isPrimitive(), currentTask.parameters(), currentTask.parameterConstraints(),
+                        new And(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(currentTask.precondition()), precLiteralList)), currentTask.effect());
+                tempMap.put(currentTask, tempNewPrimitiveTask);
             }
         }
 
@@ -264,8 +276,8 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
      * (out of C_x) that corresponds to it.
      */
     private Tuple2<Domain, Plan> transformStep_M_t(Tuple2<Domain, Plan> domPlan, boolean useDomain) throws addPrefixException {
-        scala.collection.immutable.Map<Task, Task> tempScalaMap = JavaToScala.toScalaMap(map_M_t);
-        ExchangeTaskSchemaInMethods updateObject = new ExchangeTaskSchemaInMethods(tempScalaMap);
+        scala.collection.immutable.Map<Task, Task> scalaMap = JavaToScala.toScalaMap(map_M_t);
+        ExchangeTaskSchemaInMethods updateObject = new ExchangeTaskSchemaInMethods(scalaMap);
         Domain domain = domPlan._1();
         Plan plan = domPlan._2();
         if (useDomain) {
@@ -287,27 +299,26 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
         ArrayList<DecompositionMethod> newMethods = new ArrayList<DecompositionMethod>();
 
         for (Map.Entry<Task, Task> entry : map_M_t.entrySet()) {
-            Task tempPrimitiveTask = getTaskFromDomainByName(domPlan._1(), entry.getKey().name());
-            Task tempCompoundTask = entry.getValue();
+            Task primitiveTask = getTaskFromDomainByName(domPlan._1(), entry.getKey().name());
+            Task compoundTask = entry.getValue();
 
-            PlanStep tempPlanStepInit = getEmptyPlanStep(1, new And<>(JavaToScala.<Literal>nil()), tempCompoundTask.precondition(), tempCompoundTask.parameters());
-            PlanStep tempPlanStepGoal = getEmptyPlanStep(3, tempCompoundTask.effect(), new And<>(JavaToScala.<Literal>nil()), tempCompoundTask.parameters());
+            PlanStep psInit = getEmptyPlanStep(1, new And<>(JavaToScala.<Literal>nil()), compoundTask.precondition(), compoundTask.parameters());
+            PlanStep psGoal = getEmptyPlanStep(3, compoundTask.effect(), new And<>(JavaToScala.<Literal>nil()), compoundTask.parameters());
 
+            PlanStep psO = new PlanStep(2, primitiveTask, primitiveTask.parameters(), noneForMethod, noneForPlanStep);
 
-            PlanStep tempPlanStepO = new PlanStep(2, tempPrimitiveTask, tempPrimitiveTask.parameters(), noneForMethod, noneForPlanStep);
+            internalTaskNetwork internalTN = new internalTaskNetwork();
+            internalTN.addPlanStep(psInit);
+            internalTN.addPlanStep(psO);
+            internalTN.addPlanStep(psGoal);
+            internalTN.addOrdering(psInit, psO);
+            internalTN.addOrdering(psO, psGoal);
 
-            internalTaskNetwork tempInternalTaskNetwork = new internalTaskNetwork();
-            tempInternalTaskNetwork.addPlanStep(tempPlanStepInit);
-            tempInternalTaskNetwork.addPlanStep(tempPlanStepO);
-            tempInternalTaskNetwork.addPlanStep(tempPlanStepGoal);
-            tempInternalTaskNetwork.addOrdering(tempPlanStepInit, tempPlanStepO);
-            tempInternalTaskNetwork.addOrdering(tempPlanStepO, tempPlanStepGoal);
+            SymbolicPlan subPlan = new SymbolicPlan(internalTN.planSteps(), internalTN.causalLinks(), internalTN.taskOrderings(),
+                    internalTN.csp().addVariables(psO.arguments()), psInit, psGoal);
 
-            SymbolicPlan tempSubPlan = new SymbolicPlan(tempInternalTaskNetwork.planSteps(), tempInternalTaskNetwork.causalLinks(), tempInternalTaskNetwork.taskOrderings(),
-                    tempInternalTaskNetwork.csp().addVariables(tempPlanStepO.arguments()), tempPlanStepInit, tempPlanStepGoal);
-
-            DecompositionMethod tempDecompositionMethod = new SimpleDecompositionMethod(tempCompoundTask, tempSubPlan);
-            newMethods.add(tempDecompositionMethod);
+            DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(compoundTask, subPlan);
+            newMethods.add(decompositionMethod);
         }
 
         String[] primitivesFromPrefixDistinct = getPrimitivesFromPrefixDistinct();
@@ -357,8 +368,8 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
                         psInit, psGoal);
             }
 
-            DecompositionMethod tempDecompositionMethod = new SimpleDecompositionMethod(correspondingCompoundTask, tempSubPlan);
-            newMethods.add(tempDecompositionMethod);
+            DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(correspondingCompoundTask, tempSubPlan);
+            newMethods.add(decompositionMethod);
         }
 
         AddMethod updateObject = new AddMethod(JavaToScala.toScalaSeq(newMethods));
@@ -367,7 +378,12 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
     private Tuple2<Domain, Plan> transformStep_s_i(Tuple2<Domain, Plan> domPlan) throws addPrefixException {
         Literal initLit = new Literal(newPredicates.get(0), true, JavaToScala.<Variable>nil());
-        Literal goalLit = new Literal(newPredicates.get(newPredicates.size() - 1), true, JavaToScala.<Variable>nil());
+        int goalLiteralIndex;
+        if (whatToDo == programTasks.verify)
+            goalLiteralIndex = newPredicates.size() - 2;
+        else goalLiteralIndex = newPredicates.size() - 1;
+
+        Literal goalLit = new Literal(newPredicates.get(goalLiteralIndex), true, JavaToScala.<Variable>nil());
         AddLiteralsToInitAndGoal updateObject = new AddLiteralsToInitAndGoal(JavaToScala.toScalaSeq(initLit), JavaToScala.toScalaSeq(goalLit), JavaToScala.<VariableConstraint>nil());
         return new Tuple2<Domain, Plan>(domPlan._1(), domPlan._2().update(updateObject));
     }
