@@ -12,10 +12,13 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, newPlanStep: (Int, Array[Int], Int, Int), parameterVariableSorts: Array[Int],
                                            causalLink: EfficientCausalLink, necessaryVariableConstraints: Array[EfficientVariableConstraint]) extends EfficientModification {
-  override      val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
-  override lazy val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
-  override lazy val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array(newPlanStep)
-  override      val addedVariableSorts      : Array[Int]                         = parameterVariableSorts
+  override val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
+  override val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
+  override val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array(newPlanStep)
+  override val addedVariableSorts      : Array[Int]                         = parameterVariableSorts
+
+  def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientInsertPlanStepWithLink(null, severedFlaw, newPlanStep, parameterVariableSorts, causalLink,
+                                                                                                           necessaryVariableConstraints)
 }
 
 
@@ -64,5 +67,16 @@ object EfficientInsertPlanStepWithLink {
     }
 
     buffer.toArray
+  }
+
+  def estimate(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int): Int = {
+    val consumerTask = plan.domain.tasks(plan.planStepTasks(consumer))
+    val consumerLiteral = consumerTask.precondition(consumerIndex)
+
+    var possibleProducer: Array[(Int, Int)] = Array()
+    if (consumerLiteral.isPositive) possibleProducer = plan.domain.possibleProducerTasksOf(consumerLiteral.predicate)._1
+    else possibleProducer = plan.domain.possibleProducerTasksOf(consumerLiteral.predicate)._2
+
+    possibleProducer.length
   }
 }

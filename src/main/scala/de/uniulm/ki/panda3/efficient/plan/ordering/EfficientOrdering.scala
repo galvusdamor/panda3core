@@ -3,17 +3,17 @@ package de.uniulm.ki.panda3.efficient.plan.ordering
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering._
 
 /**
- * The assumption is, that there are exactly sz(orderingConstraints) many tasks, which are numbered 0..sz(orderingConstraints)-1
- *
- * The matrix contained in this object describes the relation between two tasks using the constants of the companion object [[de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering]]
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * The assumption is, that there are exactly sz(orderingConstraints) many tasks, which are numbered 0..sz(orderingConstraints)-1
+  *
+  * The matrix contained in this object describes the relation between two tasks using the constants of the companion object [[de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering]]
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), var isConsistent: Boolean = true) extends PartialOrdering[Int] {
 
   /**
-   * Propagate newly inserted ordering constraints using Bellman-Ford
-   */
+    * Propagate newly inserted ordering constraints using Bellman-Ford
+    */
   private def propagate(edgesFrom: Array[Int], edgesTo: Array[Int]): Unit = {
     assert(edgesFrom.length == edgesTo.length)
     var edge = 0
@@ -59,20 +59,20 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
 
 
   /**
-   * deep-clone this CSP
-   */
+    * deep-clone this CSP
+    */
   def copy(): EfficientOrdering = addPlanSteps(0)
 
   /**
-   * add the given amount of plan steps without any connection to the rest of the plan steps
-   *
-   * the new plan steps will be numbered sz(orderingConstraints) .. sz(orderingConstraints) + newPlanSteps - 1
-   */
+    * add the given amount of plan steps without any connection to the rest of the plan steps
+    *
+    * the new plan steps will be numbered sz(orderingConstraints) .. sz(orderingConstraints) + newPlanSteps - 1
+    */
   def addPlanSteps(newPlanSteps: Int): EfficientOrdering = addPlanStepsWithMaybeFromBase(fromBase = false, -1, None, -1, newPlanSteps)
 
   /**
-   * adds the ordering constraint before < after to the ordering. This will automatically re-compute the transitive hull of the ordering relation
-   */
+    * adds the ordering constraint before < after to the ordering. This will automatically re-compute the transitive hull of the ordering relation
+    */
   def addOrderingConstraint(before: Int, after: Int): Unit =
     if (orderingConstraints(before)(after) == SAME || orderingConstraints(before)(after) == AFTER) isConsistent = false
     else {
@@ -82,11 +82,11 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
     }
 
   /**
-   * removes a plan step entirely from the ordering, while preserving all ordering constraints that went through it.
-   * All plan steps with an index greater than ps will be renumbered s.t. the numbers are again contiguous, i.e. 1 will be substracted from them
-   *
-   * E.g. if 1 is removed from {0<1<2,3}, the result will be {0<1,2}, not {0,1,2}
-   */
+    * removes a plan step entirely from the ordering, while preserving all ordering constraints that went through it.
+    * All plan steps with an index greater than ps will be renumbered s.t. the numbers are again contiguous, i.e. 1 will be substracted from them
+    *
+    * E.g. if 1 is removed from {0<1<2,3}, the result will be {0<1,2}, not {0,1,2}
+    */
   def removePlanStep(ps: Int): EfficientOrdering = {
     val newOrdering = new Array[Array[Byte]](orderingConstraints.length - 1)
     var i = 0
@@ -104,15 +104,15 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
 
 
   /**
-   * indexBaseInNew will assume the index of oldPlanStep, while the newly added plan steps will receive the next sz(internalOrdering)-1 numbers
-   */
+    * indexBaseInNew will assume the index of oldPlanStep, while the newly added plan steps will receive the next sz(internalOrdering)-1 numbers
+    */
   def replacePlanStep(oldPlanStep: Int, ordering: EfficientOrdering, indexBaseInNew: Int): EfficientOrdering =
     addPlanStepsWithMaybeFromBase(fromBase = true, oldPlanStep, Some(ordering.orderingConstraints), indexBaseInNew, -1)
 
 
   /**
-   * internal function that actually performs the copying-around needed to copy, add, delete and replace plan steps.
-   */
+    * internal function that actually performs the copying-around needed to copy, add, delete and replace plan steps.
+    */
   private def addPlanStepsWithMaybeFromBase(fromBase: Boolean, base: Int, internalOrdering: Option[Array[Array[Byte]]], indexBaseInNew: Int, newPlanSteps: Int): EfficientOrdering = {
     val originalSize = orderingConstraints.length
     val newOrdering = new Array[Array[Byte]](originalSize + (if (fromBase) internalOrdering.get.length - 1 else newPlanSteps))
@@ -166,4 +166,22 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
     }
     new EfficientOrdering(newOrdering, isConsistent)
   }
+
+  def minimalOrderingConstraintsWithoutInitAndGoal(): Array[(Int, Int)] = if (!isConsistent) Array()
+  else {
+    val ord = orderingConstraints.map(_.clone())
+
+    // run floyd-warshall backwards
+    for (from <- ord.indices; middle <- ord.indices)
+      if (ord(from)(middle) != DONTKNOW)
+        for (to <- ord.indices)
+          if (from != middle && to != middle && from != to)
+            (ord(from)(middle), ord(middle)(to)) match {
+              case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME)     => ord(from)(to) = DONTKNOW
+              case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) => ord(from)(to) = DONTKNOW
+              case (_, _)                                             => ()
+            }
+    (for (from <- 2 until ord.length; to <- from + 1 until ord.length; if ord(from)(to) == BEFORE) yield (from, to)).toArray
+  }
+
 }

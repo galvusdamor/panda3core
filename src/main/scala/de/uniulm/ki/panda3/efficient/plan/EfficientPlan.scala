@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.efficient.csp.EfficientCSP
 import de.uniulm.ki.panda3.efficient.domain.{EfficientTask, EfficientDomain}
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw._
-import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
+import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientInsertPlanStepWithLink, EfficientInsertCausalLink, EfficientModification}
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
 
 import scala.collection.mutable.ArrayBuffer
@@ -34,27 +34,54 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       println(domain.tasks(planStepTasks(ps)))
       println(planStepParameters(ps))*/
       assert(domain.tasks(planStepTasks(ps)).parameterSorts.length == planStepParameters(ps).length)
+
+      planStepParameters(ps).indices foreach { arg =>
+        planStepParameters(ps)(arg) < firstFreeVariableID
+      }
   }
 
+  def isPlanStepPresentInPlan(planStep: Int): Boolean = planStepDecomposedByMethod(planStep) == -1
+
+  val numberOfAllPlanSteps: Int = planStepTasks.length
+  val numberOfPlanSteps   : Int = {
+    var number = 2
+    var i = 2
+    while (i < numberOfAllPlanSteps) {
+      if (isPlanStepPresentInPlan(i)) number += 1
+      i += 1
+    }
+    number
+  }
 
   private var precomputedAbstractPlanStepFlaws: Option[Array[EfficientAbstractPlanStep]] = None
   private var precomputedOpenPreconditionFlaws: Option[Array[EfficientOpenPrecondition]] = None
   private var appliedModification             : Option[EfficientModification]            = None
   private var precomputedCausalThreatFlaws    : Option[Array[EfficientCausalThreat]]     = None
 
-
   /** the open preconditions flaws of the parent of this plan --- and the number of newly added tasks.
     * The assumption is that the tasks sz(planstep) - nonHandledTasks .. sz(planstep)-1 are new
     */
   private def setPrecomputedOpenPreconditions(oldOpenPrecondition: Array[EfficientOpenPrecondition], modification: EfficientModification): Unit = {
-    precomputedOpenPreconditionFlaws = Some(oldOpenPrecondition)
-    appliedModification = Some(modification)
+    val severedOpenPreconditions = new Array[EfficientOpenPrecondition](oldOpenPrecondition.length)
+    var i = 0
+    while (i < severedOpenPreconditions.length) {
+      severedOpenPreconditions(i) = oldOpenPrecondition(i).severLinkToPlan(dismissDecompositionModifications = true)
+      i += 1
+    }
+
+    precomputedOpenPreconditionFlaws = Some(severedOpenPreconditions)
+    appliedModification = Some(modification.severLinkToPlan)
+  }
+
+  def severLinkToParentPlan(): Unit = {
+    precomputedAbstractPlanStepFlaws = None
+    precomputedOpenPreconditionFlaws = None
+    appliedModification = None
+    precomputedCausalThreatFlaws = None
   }
 
 
-  /**
-    * all abstract tasks of this plan
-    */
+  /** all abstract tasks of this plan */
   lazy val abstractPlanSteps: Array[EfficientAbstractPlanStep] = {
     var i = 2 // init and goal are never abstract
     val flawBuffer = new ArrayBuffer[EfficientAbstractPlanStep]()
@@ -78,7 +105,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
         var foundSupporter = false
         while (causalLink < causalLinks.length) {
           // checking whether this is the correct causal-link
-          if (causalLinks(causalLink).consumer == planStep && causalLinks(causalLink).conditionIndexOfConsuer == precondition) foundSupporter = true
+          if (causalLinks(causalLink).consumer == planStep && causalLinks(causalLink).conditionIndexOfConsumer == precondition) foundSupporter = true
           causalLink += 1
         }
 
@@ -110,10 +137,13 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       while (i < precomputed.length) {
         // check whether this flaw has actually been resolved
         val flaw = precomputed(i)
-        if (flaw != appliedModification.get.resolvedFlaw) flawBuffer append flaw.updateToNewPlan(this, appliedModification.get.addedPlanSteps.length)
+        val flawResolved = flaw.equalToSeveredFlaw(appliedModification.get.resolvedFlaw) &&
+          (appliedModification.get.isInstanceOf[EfficientInsertCausalLink] || appliedModification.get.isInstanceOf[EfficientInsertPlanStepWithLink])
+
+        if (!flawResolved && planStepDecomposedByMethod(flaw.planStep) == -1)
+          flawBuffer append flaw.updateToNewPlan(this, appliedModification.get.addedPlanSteps.length, appliedModification.get.decomposedPlanSteps)
         i += 1
       }
-      //println("Taken " + flawBuffer.length)
 
       // add open precondition flaws for all new tasks
       i = 0
@@ -133,34 +163,40 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     while (causalLinkNumber < causalLinks.length) {
       // extract information from the link
       val causalLink = causalLinks(causalLinkNumber)
-      val producer = domain.tasks(planStepTasks(causalLink.producer))
-      val producerLiteral = producer.effect(causalLink.conditionIndexOfProducer)
-      val linkpredicate = producerLiteral.predicate
-      val linkType = producerLiteral.isPositive
-      val linkArguments = producer.getArgumentsOfLiteral(planStepParameters(causalLink.producer), producerLiteral)
+
+      // check whether the link is still present
+      if (planStepDecomposedByMethod(causalLink.producer) == -1 && planStepDecomposedByMethod(causalLink.consumer) == -1) {
+
+        val producer = domain.tasks(planStepTasks(causalLink.producer))
+        val consumer = domain.tasks(planStepTasks(causalLink.consumer))
+        val producerLiteral = producer.effect(causalLink.conditionIndexOfProducer)
+        val linkpredicate = producerLiteral.predicate
+        val linkType = producerLiteral.isPositive
+        val linkArguments = producer.getArgumentsOfLiteral(planStepParameters(causalLink.producer), producerLiteral)
 
 
-      var planStepNumber = 2 // init an goal can nether threat a link
-      while (planStepNumber < planStepTasks.length) {
-        if (planStepDecomposedByMethod(planStepNumber) == -1) {
-          var effectNumber = 0
-          val planStep = domain.tasks(planStepTasks(planStepNumber))
+        var planStepNumber = 2 // init and goal can nether threat a link
+        while (planStepNumber < planStepTasks.length) {
+          if (planStepDecomposedByMethod(planStepNumber) == -1) {
+            var effectNumber = 0
+            val planStep = domain.tasks(planStepTasks(planStepNumber))
 
-          // check whether it can be ore
-          if (!ordering.lt(planStepNumber, causalLink.producer) && !ordering.gt(causalLink.consumer, planStepNumber)) {
+            // check whether it can before
+            if (!ordering.lteq(planStepNumber, causalLink.producer) && !ordering.lteq(causalLink.consumer, planStepNumber)) {
 
-            while (effectNumber < planStep.effect.length) {
-              val effect = planStep.effect(effectNumber)
-              if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
-                // check whether unification is possible
-                val mgu = variableConstraints.fastMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
-                if (mgu.isDefined) flawBuffer append EfficientCausalThreat(this, causalLink, planStepNumber, effectNumber, mgu.get)
+              while (effectNumber < planStep.effect.length) {
+                val effect = planStep.effect(effectNumber)
+                if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
+                  // check whether unification is possible
+                  val mgu = variableConstraints.fastMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
+                  if (mgu.isDefined) flawBuffer append EfficientCausalThreat(this, causalLink, planStepNumber, effectNumber, mgu.get)
+                }
+                effectNumber += 1
               }
-              effectNumber += 1
             }
           }
+          planStepNumber += 1
         }
-        planStepNumber += 1
       }
       causalLinkNumber += 1
     }
@@ -175,6 +211,10 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     flawBuffer appendAll abstractPlanSteps
 
     if (flawBuffer.isEmpty) flawBuffer appendAll unboundVariables
+
+    // sever the link as we don't need its information any more
+    severLinkToParentPlan()
+
     flawBuffer.toArray
   }
 
@@ -215,7 +255,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       newPlanStepParameters append modification.addedPlanSteps(newPS)._2
       newPlanStepDecomposedByMethod append modification.addedPlanSteps(newPS)._3
       newPlanStepParentInDecompositionTree append modification.addedPlanSteps(newPS)._4
-      // add a new ordering
+      // new plan steps are between init and goal
       newOrdering.addOrderingConstraint(0, firstFreePlanStepID + newPS) // init < ps
       newOrdering.addOrderingConstraint(firstFreePlanStepID + newPS, 1) // ps < goal
       newPS += 1
@@ -239,10 +279,20 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     }
 
 
-    val newPlan = EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethod.toArray, newPlanStepParentInDecompositionTree.toArray,
+    val newPlanStepDecomposedByMethodArray = newPlanStepDecomposedByMethod.toArray
+
+    // 5. mark all decomposed planteps as decomposed
+    var decomposedPS = 0
+    while (decomposedPS < modification.decomposedPlanStepsByMethod.length) {
+      val decompositionInformation = modification.decomposedPlanStepsByMethod(decomposedPS)
+      newPlanStepDecomposedByMethodArray(decompositionInformation._1) = decompositionInformation._2
+      decomposedPS += 1
+    }
+
+    val newPlan = EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethodArray, newPlanStepParentInDecompositionTree.toArray,
                                 newVariableConstraints, newOrdering, newCausalLinks.toArray)
 
-    newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)
+    //newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)
 
     newPlan
   }
