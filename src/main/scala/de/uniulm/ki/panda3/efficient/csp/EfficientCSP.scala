@@ -246,10 +246,10 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.BitS
       val internalConstant = switchConstant(constraint.other)
       // if equal, we have already set this constraint
       if (variableRepresentative != internalConstant)
-        if (variableRepresentative < 0) potentiallyConsistent = false
+        if (variableRepresentative < 0 || !remainingDomains(variableRepresentative).contains(constraint.other)) potentiallyConsistent = false
         else {
           remainingDomains(variableRepresentative).clear()
-          remainingDomains(variableRepresentative).add(switchConstant(internalConstant))
+          remainingDomains(variableRepresentative).add(constraint.other)
           // we just set it, so propagate
           propagate(variableRepresentative)
         }

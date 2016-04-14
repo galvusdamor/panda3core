@@ -320,8 +320,11 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val tempSort = Sort("variable_" + v + "_sort", possibleConstants.toSeq, Nil)
       OfSort(variables(v), tempSort)
     }
+    val equalConstraints = for (v1 <- variables.indices if plan.variableConstraints.isRepresentativeAVariable(v1);
+                                v2 <- Range(v1 + 1, variables.length) if plan.variableConstraints.isRepresentativeAVariable(v2);
+                                if plan.variableConstraints.areEqual(v1, v2)) yield Equal(variables(v1), variables(v2))
     val unequalConstraints = variables.indices flatMap { v => plan.variableConstraints.getVariableUnequalTo(v) map { w => NotEqual(variables(v), variables(w)) } }
-    val csp = new SymbolicCSP(variables.toSet, possibleValuesConstraints ++ unequalConstraints)
+    val csp = new SymbolicCSP(variables.toSet, possibleValuesConstraints ++ unequalConstraints ++ equalConstraints)
 
     // determine the modification stuff
     val allwaysAllowedModifications = classOf[AddOrdering] :: classOf[BindVariableToValue] :: classOf[InsertCausalLink] :: classOf[MakeLiteralsUnUnifiable] :: Nil
@@ -343,6 +346,10 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val symbolicPlan = SymbolicPlan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1), ModificationsByClass(allowedModifications: _*),
                                     FlawsByClass(allowedFlaws: _*), planStepDecomposedByMethod, parentsInDecompositionTree)
     // sanity checks
+    if (symbolicPlan.variableConstraints.isSolvable.getOrElse(true) != plan.variableConstraints.potentiallyConsistent) {
+      println(symbolicPlan.variableConstraints.isSolvable + " " + plan.variableConstraints.potentiallyConsistent)
+      csp.isSolvable
+    }
     assert(symbolicPlan.variableConstraints.isSolvable.getOrElse(true) == plan.variableConstraints.potentiallyConsistent)
     if (symbolicPlan.flaws.size != plan.flaws.length)
       println(symbolicPlan.flaws.size + "==" + plan.flaws.length)

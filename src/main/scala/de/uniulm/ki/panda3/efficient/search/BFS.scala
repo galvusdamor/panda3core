@@ -34,7 +34,8 @@ object BFS {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
     val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     print("Parsing domain and problem ... ")
     //val domAndInitialPlan: (Domain, Plan) = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
     val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
@@ -58,7 +59,7 @@ object BFS {
 
     System.in.read()
     //dfs(initialPlan, 0)
-    val (searchNode, sem, _) = startSearch(initialPlan, wrapper, None)
+    val (searchNode, sem, _) = startSearch(initialPlan, wrapper, Some(2000), true)
 
     sem.acquire()
     println("done")
@@ -69,7 +70,7 @@ object BFS {
       //println(symbolicPlan)
       println(symbolicPlan.longInfo)
     }*/
-    /*System.in.read()
+    System.in.read()
     val symNode = wrapper.wrap(searchNode)
     println("Start unwrapping")
 
@@ -79,12 +80,12 @@ object BFS {
       wrappC += 1
       if (wrappC % 10 == 0) println("Wrapped: " + wrappC)
       node.children foreach { case (x, _) => dfsNode(x) }
-    }*/
+    }
 
-    //dfsNode(symNode)
+    dfsNode(symNode)
   }
 
-  def startSearch(initialPlan: EfficientPlan, wrapping: Wrapping, nodeLimit: Option[Int]): (EfficientSearchNode, Semaphore, Unit => Unit) = {
+  def startSearch(initialPlan: EfficientPlan, wrapping: Wrapping, nodeLimit: Option[Int], buildTree: Boolean): (EfficientSearchNode, Semaphore, Unit => Unit) = {
     val semaphore: Semaphore = new Semaphore(0)
     val root = new EfficientSearchNode(initialPlan, null, Double.MaxValue)
 
@@ -141,36 +142,35 @@ object BFS {
         if (flaws.length == 0) {
           result = Some(plan)
         } else {
-          //myNode.modifications = new Array[Array[EfficientModification]](flaws.length)
+          if (buildTree) myNode.modifications = new Array[Array[EfficientModification]](flaws.length)
           var flawnum = 0
           myNode.selectedFlaw = 0
           var smallFlawNumMod = Integer.MAX_VALUE
           while (flawnum < flaws.length) {
-            //myNode.modifications(flawnum) = flaws(flawnum).resolver filterNot { _.isInstanceOf[EfficientInsertPlanStepWithLink] }
-            val numberOfModifiactions = flaws(flawnum).estimatedNumberOfResolvers
-            //total += myNode.modifications(flawnum).length
-            total += numberOfModifiactions
-            /*if (myNode.modifications(flawnum).length < smallFlawNumMod) {
-              smallFlawNumMod = myNode.modifications(flawnum).length
-              myNode.selectedFlaw = flawnum
-            }*/
-            //assert(numberOfModifiactions == flaws(flawnum).resolver.length)
-            if (numberOfModifiactions < smallFlawNumMod) {
-              smallFlawNumMod = numberOfModifiactions
-              myNode.selectedFlaw = flawnum
+            if (buildTree) {
+              myNode.modifications(flawnum) = flaws(flawnum).resolver
+              total += myNode.modifications(flawnum).length
+              if (myNode.modifications(flawnum).length < smallFlawNumMod) {
+                smallFlawNumMod = myNode.modifications(flawnum).length
+                myNode.selectedFlaw = flawnum
+              }
+            } else {
+              val numberOfModifiactions = flaws(flawnum).estimatedNumberOfResolvers
+              total += numberOfModifiactions
+              if (numberOfModifiactions < smallFlawNumMod) {
+                smallFlawNumMod = numberOfModifiactions
+                myNode.selectedFlaw = flawnum
+              }
             }
+            //assert(numberOfModifiactions == flaws(flawnum).resolver.length)
             flawnum += 1
           }
-
           // println("RESULT " + myNode.selectedFlaw + " @ " + smallFlawNumMod)
-
-          //myNode.selectedFlaw = smallFlawNumMod
 
           val children = new ArrayBuffer[(EfficientSearchNode, Int)]()
 
           if (smallFlawNumMod != 0) {
-            //println("Resolver Call")
-            val actualModifications = flaws(myNode.selectedFlaw).resolver
+            val actualModifications = if (buildTree) myNode.modifications(myNode.selectedFlaw) else flaws(myNode.selectedFlaw).resolver
             assert(actualModifications.length == smallFlawNumMod, "Estimation of number of modifications was incorrect (" + actualModifications.length + " and " + smallFlawNumMod + ")")
             var modNum = 0
             while (modNum < smallFlawNumMod && result.isEmpty) {
@@ -179,11 +179,9 @@ object BFS {
               val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))
 
               if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
-                //val searchNode = new EfficientSearchNode(newPlan, myNode, 0)
-                val searchNode = new EfficientSearchNode(newPlan, null, 0)
-                // force the new plan to compute its flaws
-                //newPlan.flaws
+                val searchNode = if (buildTree) new EfficientSearchNode(newPlan, myNode, 0) else new EfficientSearchNode(newPlan, null, 0)
 
+                if (buildTree) newPlan.flaws // force the new plan to compute its flaws
 
                 stack add(newPlan, searchNode, depth + 1)
                 children append ((searchNode, modNum))
@@ -191,8 +189,7 @@ object BFS {
               modNum += 1
             }
           }
-
-          //myNode.children = children.toArray
+          if (buildTree) myNode.children = children.toArray
         }
         // now the node is processed
         myNode.dirty = false
