@@ -6,6 +6,9 @@ package de.uniulm.ki.panda3.efficient.csp
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class EfficientVariableConstraint(constraintType: Int, variable: Int, other: Int) {
+  assert(constraintType >= 0 && constraintType <= 5)
+  assert(variable >= 0)
+  assert(other >= 0)
 
   def addToVariableIndexIfGreaterEqualThen(offset: Int, ifGEQThen: Int): EfficientVariableConstraint = {
     var newVariable = variable
