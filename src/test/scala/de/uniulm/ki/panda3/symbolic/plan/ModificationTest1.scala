@@ -6,24 +6,26 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw.{OpenPrecondition, UnboundVariable}
 import de.uniulm.ki.panda3.symbolic.plan.modification.{BindVariableToValue, InsertCausalLink, InsertPlanStepWithLink}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
+import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 import org.scalatest.FlatSpec
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 // scalastyle:off magic.number
 class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
 
-  val planstep0init = PlanStep(0, init, instance_variableSort1(1) :: Nil, None,None)
-  val planstep1goal = PlanStep(1, goal1, instance_variableSort1(2) :: Nil, None,None)
+  val planstep0init = PlanStep(0, init, instance_variableSort1(1) :: Nil)
+  val planstep1goal = PlanStep(1, goal1, instance_variableSort1(2) :: Nil)
 
 
   "Modifications" must "be computed for Open Preconditions" in {
     val plan1PlanSteps = planstep0init :: planstep1goal :: Nil
     val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps).addOrdering(planstep0init, planstep1goal),
-                                           SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2)), Nil), planstep0init, planstep1goal)
+                                           SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2)), Nil), planstep0init, planstep1goal, AllModifications, AllFlaws, Map(),
+                                           Map())
     // it should be possible to solve the plan
     assert(plan1.isSolvable.isEmpty)
 
@@ -40,16 +42,16 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     // there should be exactly one modification
     assert(plan1flawModifications.size == 1)
     // and it should a the needed plan step
-    assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, _, _, _) => ps.schema == task1})
-    assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, _, _, _) => ps.id == 2})
-    assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, _, _) => cl.producer == ps})
-    assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, _, _) => cl.consumer == planstep1goal})
-    assert(plan1flawModifications exists { case InsertPlanStepWithLink(_, _, constr, _) => constr.size == 1})
+    assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, _, _, _) => ps.schema == task1 })
+    assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, _, _, _) => ps.id == 2 })
+    assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, _, _) => cl.producer == ps })
+    assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, _, _) => cl.consumer == planstep1goal })
+    assert(plan1flawModifications exists { case InsertPlanStepWithLink(_, _, constr, _) => constr.size == 1 })
     assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, _, constr, _) => constr.head == Equal(ps.arguments.head, instance_variableSort1(2)) })
     assert(plan1flawModifications exists { case InsertPlanStepWithLink(ps, cl, constr, _) =>
       val newCSP = plan1.variableConstraints.addVariables(ps.arguments).addConstraints(constr)
-      (cl.condition =?= planstep1goal.substitutedPreconditions.head)(newCSP) &&
-        (cl.condition =?= ps.substitutedPreconditions.head.negate)(newCSP)
+      (cl.condition =?= planstep1goal.substitutedPreconditions.head) (newCSP) &&
+        (cl.condition =?= ps.substitutedPreconditions.head.negate) (newCSP)
     })
 
 
@@ -60,8 +62,9 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     // properties of this plan
     assert(plan2.planSteps.size == 3)
     assert(plan2.causalLinks.size == 1)
-    assert(plan2.causalLinks exists { case CausalLink(p, c, l) => p == plan2.planSteps(2) && c == planstep1goal && (l =?= planstep1goal.substitutedPreconditions.head)(
-      plan2.variableConstraints)
+    assert(plan2.causalLinks exists { case CausalLink(p, c, l) => p == plan2.planSteps(2) && c == planstep1goal && (l =?= planstep1goal.substitutedPreconditions.head) (
+                                                                                                                                                                         plan2
+                                                                                                                                                                           .variableConstraints)
     })
     assert(plan2.orderingConstraints.lteq(plan2.planSteps(2), planstep1goal))
 
@@ -76,13 +79,13 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
     val plan2flawModifications = plan2flaws.head.resolvents(exampleDomain1)
 
     assert(plan2flawModifications.size == 1)
-    assert(plan2flawModifications exists { case InsertCausalLink(_, cl, _) => cl.producer == planstep0init})
-    assert(plan2flawModifications exists { case InsertCausalLink(_, cl, _) => cl.consumer == plan2.planSteps(2)})
-    assert(plan2flawModifications exists { case InsertCausalLink(_, _, constr) => constr.size == 1})
+    assert(plan2flawModifications exists { case InsertCausalLink(_, cl, _) => cl.producer == planstep0init })
+    assert(plan2flawModifications exists { case InsertCausalLink(_, cl, _) => cl.consumer == plan2.planSteps(2) })
+    assert(plan2flawModifications exists { case InsertCausalLink(_, _, constr) => constr.size == 1 })
     assert(plan2flawModifications exists { case InsertCausalLink(_, _, constr) => constr.head == Equal(planstep0init.arguments.head, plan2.planSteps(2).arguments.head) })
     assert(plan2flawModifications exists { case InsertCausalLink(_, cl, constr) =>
       val csp = plan2.variableConstraints.addConstraints(constr)
-      (cl.condition =?= planstep0init.substitutedEffects.head)(csp) && (cl.condition =?= plan2.planSteps(2).substitutedPreconditions.head)(csp)
+      (cl.condition =?= planstep0init.substitutedEffects.head) (csp) && (cl.condition =?= plan2.planSteps(2).substitutedPreconditions.head) (csp)
     })
 
 

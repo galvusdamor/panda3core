@@ -2368,8 +2368,8 @@
         <taskNode name="method0_subtask_4" taskSchema="deliver">
             <variableDeclaration name="deliver_instance_4_argument_4" sort="Package"/>
         </taskNode>
-        <orderingConstraint predecessor="method0_subtask_3" successor="method0_subtask_4"/>
         <orderingConstraint predecessor="method0_subtask_2" successor="method0_subtask_3"/>
+        <orderingConstraint predecessor="method0_subtask_3" successor="method0_subtask_4"/>
         <valueRestriction type="eq" variable="t_p">
             <variable name="pickup_instance_2_argument_0"/>
         </valueRestriction>
@@ -2608,8 +2608,8 @@
             <variableDeclaration name="carry_between_tcenters_instance_4_argument_9" sort="TCenter"/>
             <variableDeclaration name="carry_between_tcenters_instance_4_argument_10" sort="TCenter"/>
         </taskNode>
-        <orderingConstraint predecessor="method11_subtask_3" successor="method11_subtask_4"/>
         <orderingConstraint predecessor="method11_subtask_2" successor="method11_subtask_3"/>
+        <orderingConstraint predecessor="method11_subtask_3" successor="method11_subtask_4"/>
         <valueRestriction type="eq" variable="hcott_p">
             <variable name="carry_direct_instance_2_argument_0"/>
         </valueRestriction>
@@ -2708,8 +2708,8 @@
             <variableDeclaration name="carry_direct_instance_4_argument_9" sort="Location"/>
             <variableDeclaration name="carry_direct_instance_4_argument_10" sort="Location"/>
         </taskNode>
-        <orderingConstraint predecessor="method13_subtask_3" successor="method13_subtask_4"/>
         <orderingConstraint predecessor="method13_subtask_2" successor="method13_subtask_3"/>
+        <orderingConstraint predecessor="method13_subtask_3" successor="method13_subtask_4"/>
         <valueRestriction type="eq" variable="hcotd_p">
             <variable name="carry_between_tcenters_instance_2_argument_0"/>
         </valueRestriction>
@@ -2825,9 +2825,9 @@
             <variableDeclaration name="carry_direct_instance_5_argument_13" sort="Location"/>
             <variableDeclaration name="carry_direct_instance_5_argument_14" sort="Location"/>
         </taskNode>
+        <orderingConstraint predecessor="method15_subtask_2" successor="method15_subtask_3"/>
         <orderingConstraint predecessor="method15_subtask_3" successor="method15_subtask_4"/>
         <orderingConstraint predecessor="method15_subtask_4" successor="method15_subtask_5"/>
-        <orderingConstraint predecessor="method15_subtask_2" successor="method15_subtask_3"/>
         <valueRestriction type="eq" variable="hcottd_p">
             <variable name="carry_direct_instance_2_argument_0"/>
         </valueRestriction>
@@ -2944,8 +2944,8 @@
             <variableDeclaration name="carry_direct_instance_4_argument_9" sort="Location"/>
             <variableDeclaration name="carry_direct_instance_4_argument_10" sort="Location"/>
         </taskNode>
-        <orderingConstraint predecessor="method17_subtask_3" successor="method17_subtask_4"/>
         <orderingConstraint predecessor="method17_subtask_2" successor="method17_subtask_3"/>
+        <orderingConstraint predecessor="method17_subtask_3" successor="method17_subtask_4"/>
         <valueRestriction type="eq" variable="hccc_p">
             <variable name="carry_direct_instance_2_argument_0"/>
         </valueRestriction>
@@ -3110,8 +3110,8 @@
             <variableDeclaration name="carry_direct_instance_4_argument_11" sort="Location"/>
             <variableDeclaration name="carry_direct_instance_4_argument_12" sort="Location"/>
         </taskNode>
-        <orderingConstraint predecessor="method21_subtask_3" successor="method21_subtask_4"/>
         <orderingConstraint predecessor="method21_subtask_2" successor="method21_subtask_3"/>
+        <orderingConstraint predecessor="method21_subtask_3" successor="method21_subtask_4"/>
         <valueRestriction type="eq" variable="hcvhn_p">
             <variable name="carry_direct_instance_2_argument_0"/>
         </valueRestriction>
@@ -3238,8 +3238,8 @@
             <variableDeclaration name="carry_direct_instance_4_argument_12" sort="Location"/>
             <variableDeclaration name="carry_direct_instance_4_argument_13" sort="Location"/>
         </taskNode>
-        <orderingConstraint predecessor="method23_subtask_3" successor="method23_subtask_4"/>
         <orderingConstraint predecessor="method23_subtask_2" successor="method23_subtask_3"/>
+        <orderingConstraint predecessor="method23_subtask_3" successor="method23_subtask_4"/>
         <valueRestriction type="eq" variable="hcvhh_p">
             <variable name="carry_direct_instance_2_argument_0"/>
         </valueRestriction>
@@ -3358,9 +3358,9 @@
             <variableDeclaration name="unload_top_instance_5_argument_10" sort="Vehicle"/>
             <variableDeclaration name="unload_top_instance_5_argument_11" sort="Location"/>
         </taskNode>
+        <orderingConstraint predecessor="method25_subtask_2" successor="method25_subtask_3"/>
         <orderingConstraint predecessor="method25_subtask_3" successor="method25_subtask_4"/>
         <orderingConstraint predecessor="method25_subtask_4" successor="method25_subtask_5"/>
-        <orderingConstraint predecessor="method25_subtask_2" successor="method25_subtask_3"/>
         <valueRestriction type="eq" variable="hcd_p">
             <variable name="load_top_instance_3_argument_3"/>
         </valueRestriction>
@@ -3445,8 +3445,8 @@
             <variableDeclaration name="unload_top_instance_4_argument_7" sort="Vehicle"/>
             <variableDeclaration name="unload_top_instance_4_argument_8" sort="Location"/>
         </taskNode>
-        <orderingConstraint predecessor="method26_subtask_3" successor="method26_subtask_4"/>
         <orderingConstraint predecessor="method26_subtask_2" successor="method26_subtask_3"/>
+        <orderingConstraint predecessor="method26_subtask_3" successor="method26_subtask_4"/>
         <valueRestriction type="eq" variable="hcd_p">
             <variable name="load_top_instance_2_argument_0"/>
         </valueRestriction>
@@ -3562,10 +3562,10 @@
             <variableDeclaration name="detach_train_car_instance_5_argument_10" sort="Traincar"/>
             <variableDeclaration name="detach_train_car_instance_5_argument_11" sort="Location"/>
         </taskNode>
+        <orderingConstraint predecessor="method29_subtask_2" successor="method29_subtask_3"/>
         <orderingConstraint predecessor="method29_subtask_3" successor="method29_subtask_4"/>
         <orderingConstraint predecessor="method29_subtask_3" successor="method29_subtask_5"/>
         <orderingConstraint predecessor="method29_subtask_4" successor="method29_subtask_5"/>
-        <orderingConstraint predecessor="method29_subtask_2" successor="method29_subtask_3"/>
         <valueRestriction type="eq" variable="hmt_v">
             <variable name="attach_train_car_instance_3_argument_4"/>
         </valueRestriction>
@@ -3650,9 +3650,9 @@
             <variableDeclaration name="detach_train_car_instance_4_argument_7" sort="Traincar"/>
             <variableDeclaration name="detach_train_car_instance_4_argument_8" sort="Location"/>
         </taskNode>
-        <orderingConstraint predecessor="method30_subtask_3" successor="method30_subtask_4"/>
-        <orderingConstraint predecessor="method30_subtask_2" successor="method30_subtask_4"/>
         <orderingConstraint predecessor="method30_subtask_2" successor="method30_subtask_3"/>
+        <orderingConstraint predecessor="method30_subtask_2" successor="method30_subtask_4"/>
+        <orderingConstraint predecessor="method30_subtask_3" successor="method30_subtask_4"/>
         <valueRestriction type="eq" variable="hmt_v">
             <variable name="attach_train_car_instance_2_argument_1"/>
         </valueRestriction>
@@ -3711,9 +3711,9 @@
         <taskNode name="method31_subtask_4" taskSchema="close_door">
             <variableDeclaration name="close_door_instance_4_argument_4" sort="Regular_Vehicle"/>
         </taskNode>
-        <orderingConstraint predecessor="method31_subtask_3" successor="method31_subtask_4"/>
-        <orderingConstraint predecessor="method31_subtask_2" successor="method31_subtask_4"/>
         <orderingConstraint predecessor="method31_subtask_2" successor="method31_subtask_3"/>
+        <orderingConstraint predecessor="method31_subtask_2" successor="method31_subtask_4"/>
+        <orderingConstraint predecessor="method31_subtask_3" successor="method31_subtask_4"/>
         <sortRestriction type="eq" variable="ul_p" sort="Regular"/>
         <sortRestriction type="neq" variable="ul_v" sort="Airplane"/>
         <valueRestriction type="eq" variable="ul_p">
@@ -3794,9 +3794,9 @@
         <taskNode name="method33_subtask_4" taskSchema="disconnect_chute">
             <variableDeclaration name="disconnect_chute_instance_4_argument_4" sort="Hopper_Vehicle"/>
         </taskNode>
-        <orderingConstraint predecessor="method33_subtask_3" successor="method33_subtask_4"/>
-        <orderingConstraint predecessor="method33_subtask_2" successor="method33_subtask_4"/>
         <orderingConstraint predecessor="method33_subtask_2" successor="method33_subtask_3"/>
+        <orderingConstraint predecessor="method33_subtask_2" successor="method33_subtask_4"/>
+        <orderingConstraint predecessor="method33_subtask_3" successor="method33_subtask_4"/>
         <valueRestriction type="eq" variable="ul_p">
             <variable name="empty_hopper_instance_3_argument_1"/>
         </valueRestriction>
@@ -3846,12 +3846,12 @@
             <variableDeclaration name="disconnect_hose_instance_6_argument_7" sort="Tanker_Vehicle"/>
             <variableDeclaration name="disconnect_hose_instance_6_argument_8" sort="Liquid"/>
         </taskNode>
+        <orderingConstraint predecessor="method34_subtask_2" successor="method34_subtask_3"/>
+        <orderingConstraint predecessor="method34_subtask_2" successor="method34_subtask_4"/>
+        <orderingConstraint predecessor="method34_subtask_2" successor="method34_subtask_6"/>
         <orderingConstraint predecessor="method34_subtask_3" successor="method34_subtask_4"/>
         <orderingConstraint predecessor="method34_subtask_3" successor="method34_subtask_5"/>
         <orderingConstraint predecessor="method34_subtask_4" successor="method34_subtask_5"/>
-        <orderingConstraint predecessor="method34_subtask_2" successor="method34_subtask_6"/>
-        <orderingConstraint predecessor="method34_subtask_2" successor="method34_subtask_4"/>
-        <orderingConstraint predecessor="method34_subtask_2" successor="method34_subtask_3"/>
         <orderingConstraint predecessor="method34_subtask_5" successor="method34_subtask_6"/>
         <valueRestriction type="eq" variable="ul_p">
             <variable name="empty_tank_instance_4_argument_4"/>
@@ -3921,10 +3921,10 @@
         <taskNode name="method35_subtask_5" taskSchema="raise_ramp">
             <variableDeclaration name="raise_ramp_instance_5_argument_5" sort="Vehicle"/>
         </taskNode>
+        <orderingConstraint predecessor="method35_subtask_2" successor="method35_subtask_3"/>
         <orderingConstraint predecessor="method35_subtask_2" successor="method35_subtask_5"/>
         <orderingConstraint predecessor="method35_subtask_3" successor="method35_subtask_4"/>
         <orderingConstraint predecessor="method35_subtask_4" successor="method35_subtask_5"/>
-        <orderingConstraint predecessor="method35_subtask_2" successor="method35_subtask_3"/>
         <valueRestriction type="eq" variable="ul_p">
             <variable name="unload_livestock_instance_3_argument_1"/>
         </valueRestriction>
@@ -3969,9 +3969,9 @@
         <taskNode name="method36_subtask_4" taskSchema="raise_ramp">
             <variableDeclaration name="raise_ramp_instance_4_argument_4" sort="Vehicle"/>
         </taskNode>
-        <orderingConstraint predecessor="method36_subtask_3" successor="method36_subtask_4"/>
-        <orderingConstraint predecessor="method36_subtask_2" successor="method36_subtask_4"/>
         <orderingConstraint predecessor="method36_subtask_2" successor="method36_subtask_3"/>
+        <orderingConstraint predecessor="method36_subtask_2" successor="method36_subtask_4"/>
+        <orderingConstraint predecessor="method36_subtask_3" successor="method36_subtask_4"/>
         <valueRestriction type="eq" variable="ul_p">
             <variable name="unload_cars_instance_3_argument_1"/>
         </valueRestriction>
@@ -4023,11 +4023,11 @@
             <variableDeclaration name="detach_conveyor_ramp_instance_6_argument_9" sort="Plane_Ramp"/>
             <variableDeclaration name="detach_conveyor_ramp_instance_6_argument_10" sort="Location"/>
         </taskNode>
+        <orderingConstraint predecessor="method37_subtask_2" successor="method37_subtask_3"/>
+        <orderingConstraint predecessor="method37_subtask_2" successor="method37_subtask_6"/>
         <orderingConstraint predecessor="method37_subtask_3" successor="method37_subtask_4"/>
         <orderingConstraint predecessor="method37_subtask_3" successor="method37_subtask_5"/>
         <orderingConstraint predecessor="method37_subtask_4" successor="method37_subtask_5"/>
-        <orderingConstraint predecessor="method37_subtask_2" successor="method37_subtask_6"/>
-        <orderingConstraint predecessor="method37_subtask_2" successor="method37_subtask_3"/>
         <orderingConstraint predecessor="method37_subtask_5" successor="method37_subtask_6"/>
         <valueRestriction type="eq" variable="ul_p">
             <variable name="unload_package_instance_4_argument_4"/>
@@ -4134,8 +4134,8 @@
         <taskNode name="method40_subtask_4" taskSchema="post_guard_inside">
             <variableDeclaration name="post_guard_inside_instance_4_argument_4" sort="Armored"/>
         </taskNode>
-        <orderingConstraint predecessor="method40_subtask_3" successor="method40_subtask_4"/>
         <orderingConstraint predecessor="method40_subtask_2" successor="method40_subtask_3"/>
+        <orderingConstraint predecessor="method40_subtask_3" successor="method40_subtask_4"/>
         <sortRestriction type="eq" variable="lt_p" sort="Valuable"/>
         <valueRestriction type="eq" variable="lt_p">
             <variable name="load_instance_3_argument_1"/>
@@ -4189,8 +4189,8 @@
         <taskNode name="method42_subtask_4" taskSchema="remove_warning_signs">
             <variableDeclaration name="remove_warning_signs_instance_4_argument_4" sort="Vehicle"/>
         </taskNode>
-        <orderingConstraint predecessor="method42_subtask_3" successor="method42_subtask_4"/>
         <orderingConstraint predecessor="method42_subtask_2" successor="method42_subtask_3"/>
+        <orderingConstraint predecessor="method42_subtask_3" successor="method42_subtask_4"/>
         <sortRestriction type="eq" variable="ult_p" sort="Hazardous"/>
         <valueRestriction type="eq" variable="ult_p">
             <variable name="unload_instance_2_argument_0"/>
@@ -4223,8 +4223,8 @@
         <taskNode name="method43_subtask_4" taskSchema="remove_guard">
             <variableDeclaration name="remove_guard_instance_4_argument_4" sort="Armored"/>
         </taskNode>
-        <orderingConstraint predecessor="method43_subtask_3" successor="method43_subtask_4"/>
         <orderingConstraint predecessor="method43_subtask_2" successor="method43_subtask_3"/>
+        <orderingConstraint predecessor="method43_subtask_3" successor="method43_subtask_4"/>
         <sortRestriction type="eq" variable="ult_p" sort="Valuable"/>
         <valueRestriction type="eq" variable="ult_v">
             <variable name="post_guard_outside_instance_2_argument_0"/>
@@ -4257,9 +4257,9 @@
         <taskNode name="method44_subtask_4" taskSchema="close_door">
             <variableDeclaration name="close_door_instance_4_argument_4" sort="Regular_Vehicle"/>
         </taskNode>
-        <orderingConstraint predecessor="method44_subtask_3" successor="method44_subtask_4"/>
-        <orderingConstraint predecessor="method44_subtask_2" successor="method44_subtask_4"/>
         <orderingConstraint predecessor="method44_subtask_2" successor="method44_subtask_3"/>
+        <orderingConstraint predecessor="method44_subtask_2" successor="method44_subtask_4"/>
+        <orderingConstraint predecessor="method44_subtask_3" successor="method44_subtask_4"/>
         <sortRestriction type="eq" variable="l_p" sort="Regular"/>
         <sortRestriction type="neq" variable="l_v" sort="Airplane"/>
         <valueRestriction type="eq" variable="l_p">
@@ -4340,9 +4340,9 @@
         <taskNode name="method46_subtask_4" taskSchema="disconnect_chute">
             <variableDeclaration name="disconnect_chute_instance_4_argument_4" sort="Hopper_Vehicle"/>
         </taskNode>
-        <orderingConstraint predecessor="method46_subtask_3" successor="method46_subtask_4"/>
-        <orderingConstraint predecessor="method46_subtask_2" successor="method46_subtask_4"/>
         <orderingConstraint predecessor="method46_subtask_2" successor="method46_subtask_3"/>
+        <orderingConstraint predecessor="method46_subtask_2" successor="method46_subtask_4"/>
+        <orderingConstraint predecessor="method46_subtask_3" successor="method46_subtask_4"/>
         <valueRestriction type="eq" variable="l_p">
             <variable name="fill_hopper_instance_3_argument_1"/>
         </valueRestriction>
@@ -4392,12 +4392,12 @@
             <variableDeclaration name="disconnect_hose_instance_6_argument_7" sort="Tanker_Vehicle"/>
             <variableDeclaration name="disconnect_hose_instance_6_argument_8" sort="Liquid"/>
         </taskNode>
+        <orderingConstraint predecessor="method47_subtask_2" successor="method47_subtask_3"/>
+        <orderingConstraint predecessor="method47_subtask_2" successor="method47_subtask_4"/>
+        <orderingConstraint predecessor="method47_subtask_2" successor="method47_subtask_6"/>
         <orderingConstraint predecessor="method47_subtask_3" successor="method47_subtask_4"/>
         <orderingConstraint predecessor="method47_subtask_3" successor="method47_subtask_5"/>
         <orderingConstraint predecessor="method47_subtask_4" successor="method47_subtask_5"/>
-        <orderingConstraint predecessor="method47_subtask_2" successor="method47_subtask_6"/>
-        <orderingConstraint predecessor="method47_subtask_2" successor="method47_subtask_4"/>
-        <orderingConstraint predecessor="method47_subtask_2" successor="method47_subtask_3"/>
         <orderingConstraint predecessor="method47_subtask_5" successor="method47_subtask_6"/>
         <valueRestriction type="eq" variable="l_p">
             <variable name="connect_hose_instance_2_argument_1"/>
@@ -4467,11 +4467,11 @@
         <taskNode name="method48_subtask_5" taskSchema="raise_ramp">
             <variableDeclaration name="raise_ramp_instance_5_argument_5" sort="Vehicle"/>
         </taskNode>
+        <orderingConstraint predecessor="method48_subtask_2" successor="method48_subtask_3"/>
+        <orderingConstraint predecessor="method48_subtask_2" successor="method48_subtask_4"/>
         <orderingConstraint predecessor="method48_subtask_2" successor="method48_subtask_5"/>
         <orderingConstraint predecessor="method48_subtask_3" successor="method48_subtask_4"/>
         <orderingConstraint predecessor="method48_subtask_4" successor="method48_subtask_5"/>
-        <orderingConstraint predecessor="method48_subtask_2" successor="method48_subtask_4"/>
-        <orderingConstraint predecessor="method48_subtask_2" successor="method48_subtask_3"/>
         <valueRestriction type="eq" variable="l_p">
             <variable name="load_livestock_instance_4_argument_2"/>
         </valueRestriction>
@@ -4516,9 +4516,9 @@
         <taskNode name="method49_subtask_4" taskSchema="raise_ramp">
             <variableDeclaration name="raise_ramp_instance_4_argument_4" sort="Vehicle"/>
         </taskNode>
-        <orderingConstraint predecessor="method49_subtask_3" successor="method49_subtask_4"/>
-        <orderingConstraint predecessor="method49_subtask_2" successor="method49_subtask_4"/>
         <orderingConstraint predecessor="method49_subtask_2" successor="method49_subtask_3"/>
+        <orderingConstraint predecessor="method49_subtask_2" successor="method49_subtask_4"/>
+        <orderingConstraint predecessor="method49_subtask_3" successor="method49_subtask_4"/>
         <valueRestriction type="eq" variable="l_p">
             <variable name="load_cars_instance_3_argument_1"/>
         </valueRestriction>
@@ -4570,11 +4570,11 @@
             <variableDeclaration name="detach_conveyor_ramp_instance_6_argument_9" sort="Plane_Ramp"/>
             <variableDeclaration name="detach_conveyor_ramp_instance_6_argument_10" sort="Location"/>
         </taskNode>
+        <orderingConstraint predecessor="method50_subtask_2" successor="method50_subtask_3"/>
+        <orderingConstraint predecessor="method50_subtask_2" successor="method50_subtask_6"/>
         <orderingConstraint predecessor="method50_subtask_3" successor="method50_subtask_4"/>
         <orderingConstraint predecessor="method50_subtask_3" successor="method50_subtask_5"/>
         <orderingConstraint predecessor="method50_subtask_4" successor="method50_subtask_5"/>
-        <orderingConstraint predecessor="method50_subtask_2" successor="method50_subtask_6"/>
-        <orderingConstraint predecessor="method50_subtask_2" successor="method50_subtask_3"/>
         <orderingConstraint predecessor="method50_subtask_5" successor="method50_subtask_6"/>
         <sortRestriction type="eq" variable="l_p" sort="Regular"/>
         <valueRestriction type="eq" variable="l_p">

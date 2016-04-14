@@ -18,9 +18,9 @@ trait EfficientModification {
   val addedVariableSorts         : Array[Int]                         = Array()
   val decomposedPlanStepsByMethod: Array[(Int, Int)]                  = Array()
   val resolvedFlaw: EfficientFlaw
-  val addedCausalLinks: Array[EfficientCausalLink]         = Array()
-  /** (type of new, parameters of new planstep, decomposed by method, parent in decomposition tree) */
-  val addedPlanSteps  : Array[(Int, Array[Int], Int, Int)] = Array()
+  val addedCausalLinks: Array[EfficientCausalLink]              = Array()
+  /** (type of new, parameters of new planstep, decomposed by method, parent in decomposition tree, ps in method subplan) */
+  val addedPlanSteps  : Array[(Int, Array[Int], Int, Int, Int)] = Array()
 
 
   lazy val addedOrderings: Array[(Int, Int)] = {

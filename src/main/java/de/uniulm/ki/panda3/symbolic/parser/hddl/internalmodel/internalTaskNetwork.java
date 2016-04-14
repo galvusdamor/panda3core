@@ -14,6 +14,8 @@ import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering;
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering;
+import de.uniulm.ki.panda3.symbolic.search.NoFlaws$;
+import de.uniulm.ki.panda3.symbolic.search.NoModifications$;
 import scala.Option;
 import scala.Some;
 import scala.collection.Seq;
@@ -122,8 +124,8 @@ public class internalTaskNetwork {
         ReducedTask goalSchema = new ReducedTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new
                 And<Literal>(new Vector<Literal>(0, 0, 0)));
 
-        PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters(), hddlPanda3Visitor.noneForMethod, hddlPanda3Visitor.noneForPlanStep);
-        PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters(), hddlPanda3Visitor.noneForMethod, hddlPanda3Visitor.noneForPlanStep);
+        PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters());
+        PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters());
         this.planStepBuilder.add(psInit);
         this.planStepBuilder.add(psGoal);
         this.taskOderings = this.taskOderings.addPlanStep(psInit).addPlanStep(psGoal);
@@ -152,7 +154,7 @@ public class internalTaskNetwork {
                     continue;
                 }
 
-                PlanStep ps = new PlanStep(i, schema, psVarsSeq, hddlPanda3Visitor.noneForMethod, hddlPanda3Visitor.noneForPlanStep);
+                PlanStep ps = new PlanStep(i, schema, psVarsSeq);
                 this.taskOderings = this.taskOderings.addPlanStep(ps).addOrdering(OrderingConstraint.apply(psInit,ps)).addOrdering(OrderingConstraint.apply(ps,psGoal));
                 if (psCtx.subtask_id() != null) {
                     String id = psCtx.subtask_id().NAME().toString();
@@ -204,7 +206,8 @@ public class internalTaskNetwork {
             }
         }
         Seq<CausalLink> causalLinks = (new VectorBuilder<CausalLink>()).result();
-        Plan subPlan = new SymbolicPlan(ps, causalLinks, this.taskOderings, this.csp, psInit, psGoal);
+        Plan subPlan = new SymbolicPlan(ps, causalLinks, this.taskOderings, this.csp, psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$,hddlPanda3Visitor.planStepsDecomposedBy,
+                hddlPanda3Visitor.planStepsDecompositionParents);
         return subPlan;
     }
 

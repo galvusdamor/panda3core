@@ -12,6 +12,7 @@ import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
 import de.uniulm.ki.panda3.symbolic.plan.{SymbolicPlan, Plan}
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, CausalLink, PlanStep}
+import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 import org.scalatest.FlatSpec
 
 /**
@@ -61,7 +62,7 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     expectedTasks map { t => (t, wrapperExample4.unwrap(t)) } foreach { case (t, i) =>
       val efficientTask = efficientDomainExample4.tasks(i)
       val symTask = t.asInstanceOf[ReducedTask]
-      WrappingChecker.assertEqual(symTask,efficientTask,wrapperExample4)
+      WrappingChecker.assertEqual(symTask, efficientTask, wrapperExample4)
     }
   }
 
@@ -75,7 +76,7 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
   }
 
   it must "lead to the correct plan" in {
-    WrappingChecker.assertEqual(plan2WithTwoLinks,efficientInitialPlanExample4,  wrapperExample4)
+    WrappingChecker.assertEqual(plan2WithTwoLinks, efficientInitialPlanExample4, wrapperExample4)
   }
 
 
@@ -92,7 +93,7 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     val adHocSort = Sort("Ad hoc sort", constantSort1(1) :: Nil, Nil)
 
     val adHocVariable = Variable(1, "instance_variable_" + 1 + "_sort1", adHocSort)
-    val adHocPsAbstract2 = PlanStep(2, abstractTask2, adHocVariable :: Nil, None, None)
+    val adHocPsAbstract2 = PlanStep(2, abstractTask2, adHocVariable :: Nil)
 
     val adHocCausalLinkInit2Abstract2P1 = CausalLink(psInit2, adHocPsAbstract2, psInit2.substitutedEffects.head)
     val adHocCausalLinkInit2Abstract2P2 = CausalLink(psInit2, adHocPsAbstract2, psInit2.substitutedEffects(1))
@@ -101,7 +102,8 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     val adHocPlanSteps = psInit2 :: psGoal2 :: adHocPsAbstract2 :: Nil
     val adHocPlan2WithTwoLinks = SymbolicPlan(adHocPlanSteps, adHocCausalLinkInit2Abstract2P1 :: adHocCausalLinkInit2Abstract2P2 :: Nil,
                                               SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, adHocPsAbstract2), adHocPlanSteps),
-                                              SymbolicCSP(Set(instance_variableSort1(1), adHocVariable),  Equal(adHocVariable,psInit2.arguments.head):: Nil), psInit2, psGoal2)
+                                              SymbolicCSP(Set(instance_variableSort1(1), adHocVariable), Equal(adHocVariable, psInit2.arguments.head) :: Nil), psInit2, psGoal2,
+                                              AllModifications, AllFlaws, Map(), Map())
 
 
     effucientPlanExample4AdHocSort = wrapperExample4.unwrap(adHocPlan2WithTwoLinks)

@@ -5,6 +5,7 @@ import de.uniulm.ki.panda3.symbolic.logic.{And, Literal}
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
 import de.uniulm.ki.panda3.symbolic.plan.{Plan, SymbolicPlan}
+import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 
 /**
   * The third example domain, the first to contain an abstract task and decomposition methods
@@ -16,7 +17,6 @@ import de.uniulm.ki.panda3.symbolic.plan.{Plan, SymbolicPlan}
   *
   *
   * TODO: There should be a second test abstract task for
-  *
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
@@ -35,9 +35,9 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
                                                                       precondition = And[Literal](Literal(predicate1, isPositive = true, variableSort1(9) :: Nil) :: Nil),
                                                                       effect = And[Literal](Nil))
 
-  val initOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(0, initTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil, None,None)
-  val goalOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(2, goalTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil, None,None)
-  val actualPlanStepOfPlanOfDecompositionMethod1: PlanStep     = PlanStep(1, task1, variableSort1(7) :: Nil, None,None)
+  val initOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(0, initTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil)
+  val goalOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(2, goalTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil)
+  val actualPlanStepOfPlanOfDecompositionMethod1: PlanStep     = PlanStep(1, task1, variableSort1(7) :: Nil)
   val planStepsOfPlanOfDecompositionMethod1                    = initOfPlanOfDecompositionMethod1 :: goalOfPlanOfDecompositionMethod1 :: actualPlanStepOfPlanOfDecompositionMethod1 :: Nil
   val taskOrderingOfPlanOfDecompositionMethod1  : TaskOrdering = SymbolicTaskOrdering(OrderingConstraint(initOfPlanOfDecompositionMethod1, actualPlanStepOfPlanOfDecompositionMethod1)
                                                                                         :: OrderingConstraint(actualPlanStepOfPlanOfDecompositionMethod1,
@@ -45,7 +45,8 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
   val cspOfPlanOfDecompositionMethod1           : CSP          = SymbolicCSP(Set(variableSort1(7)), Nil)
 
   val planOfDecompositionMethod1: Plan                      = SymbolicPlan(planStepsOfPlanOfDecompositionMethod1, Nil, taskOrderingOfPlanOfDecompositionMethod1,
-                                                                           cspOfPlanOfDecompositionMethod1, initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1)
+                                                                           cspOfPlanOfDecompositionMethod1, initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1,
+                                                                           AllModifications, AllFlaws, Map(), Map())
   /** a decomposition method without causal links */
   val decompositionMethod1      : SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask1, planOfDecompositionMethod1)
 
@@ -56,7 +57,8 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
     CausalLink(actualPlanStepOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1.substitutedPreconditions.head) :: Nil
 
   val planOfDecompositionMethod2: Plan = SymbolicPlan(planStepsOfPlanOfDecompositionMethod1, causalLinksOfDecompositionMethod2, taskOrderingOfPlanOfDecompositionMethod1,
-                                                      cspOfPlanOfDecompositionMethod1, initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1)
+                                                      cspOfPlanOfDecompositionMethod1, initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1, AllModifications, AllFlaws, Map(),
+                                                      Map())
 
   /** a decomposition method with causal links */
   val decompositionMethod2: SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask1, planOfDecompositionMethod2)

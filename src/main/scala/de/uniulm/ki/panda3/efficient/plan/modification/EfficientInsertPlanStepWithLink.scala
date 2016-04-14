@@ -10,12 +10,12 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, newPlanStep: (Int, Array[Int], Int, Int), parameterVariableSorts: Array[Int],
+case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, newPlanStep: (Int, Array[Int], Int, Int, Int), parameterVariableSorts: Array[Int],
                                            causalLink: EfficientCausalLink, necessaryVariableConstraints: Array[EfficientVariableConstraint]) extends EfficientModification {
-  override val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
-  override val addedCausalLinks        : Array[EfficientCausalLink]         = Array(causalLink)
-  override val addedPlanSteps          : Array[(Int, Array[Int], Int, Int)] = Array(newPlanStep)
-  override val addedVariableSorts      : Array[Int]                         = parameterVariableSorts
+  override val addedVariableConstraints: Array[EfficientVariableConstraint]      = necessaryVariableConstraints
+  override val addedCausalLinks        : Array[EfficientCausalLink]              = Array(causalLink)
+  override val addedPlanSteps          : Array[(Int, Array[Int], Int, Int, Int)] = Array(newPlanStep)
+  override val addedVariableSorts      : Array[Int]                              = parameterVariableSorts
 
   def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientInsertPlanStepWithLink(null, severedFlaw, newPlanStep, parameterVariableSorts, causalLink,
                                                                                                            necessaryVariableConstraints)
@@ -24,7 +24,9 @@ case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, resolvedFlaw: Ef
 
 object EfficientInsertPlanStepWithLink {
 
-  def apply(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int): Array[EfficientModification] = {
+  def apply(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int): Array[EfficientModification] = if (!plan.problemConfiguration.taskInsertionAllowed)
+    Array()
+  else {
     val buffer = new ArrayBuffer[EfficientModification]()
 
     val consumerTask = plan.domain.tasks(plan.planStepTasks(consumer))
@@ -60,7 +62,7 @@ object EfficientInsertPlanStepWithLink {
         j += 1
       }
 
-      val planStep = (possibleProducer(i)._1, planStepParameterVariables, -1, -1)
+      val planStep = (possibleProducer(i)._1, planStepParameterVariables, -1, -1, -1)
       val causalLink = EfficientCausalLink(plan.firstFreePlanStepID, consumer, possibleProducer(i)._2, consumerIndex)
       buffer append EfficientInsertPlanStepWithLink(plan, resolvedFlaw, planStep, newVariableSorts, causalLink, constraintsBuffer.toArray)
       i += 1
@@ -69,7 +71,8 @@ object EfficientInsertPlanStepWithLink {
     buffer.toArray
   }
 
-  def estimate(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int): Int = {
+  def estimate(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int): Int = if (!plan.problemConfiguration.taskInsertionAllowed) 0
+  else {
     val consumerTask = plan.domain.tasks(plan.planStepTasks(consumer))
     val consumerLiteral = consumerTask.precondition(consumerIndex)
 

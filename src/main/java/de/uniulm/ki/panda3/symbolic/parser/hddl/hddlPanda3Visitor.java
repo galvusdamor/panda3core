@@ -12,23 +12,58 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
+import de.uniulm.ki.panda3.symbolic.plan.flaw.AbstractPlanStep;
+import de.uniulm.ki.panda3.symbolic.plan.flaw.CausalThreat;
+import de.uniulm.ki.panda3.symbolic.plan.flaw.OpenPrecondition;
+import de.uniulm.ki.panda3.symbolic.plan.flaw.UnboundVariable;
+import de.uniulm.ki.panda3.symbolic.plan.modification.*;
+import de.uniulm.ki.panda3.symbolic.search.FlawsByClass;
+import de.uniulm.ki.panda3.symbolic.search.IsFlawAllowed;
+import de.uniulm.ki.panda3.symbolic.search.IsModificationAllowed;
+import de.uniulm.ki.panda3.symbolic.search.ModificationsByClass;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import scala.*;
+import scala.collection.JavaConversions;
 import scala.collection.Seq;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
 import scala.runtime.AbstractFunction1;
 
 import java.util.*;
+import java.util.HashMap;
 
 /**
  * Created by dhoeller on 14.04.15.
  */
 public class hddlPanda3Visitor {
-    public static Option<DecompositionMethod> noneForMethod = (Option<DecompositionMethod>) (Object) scala.None$.MODULE$;
-    public static Option<PlanStep> noneForPlanStep = (Option<PlanStep>) (Object) scala.None$.MODULE$;
+
+    private final static List<Class<?>> allowedModificationsClasses = new LinkedList<>();
+    private final static List<Class<?>> allowedFlawClasses = new LinkedList<>();
+
+    static {
+
+        allowedModificationsClasses.add(AddOrdering.class);
+        allowedModificationsClasses.add(BindVariableToValue.class);
+        allowedModificationsClasses.add(DecomposePlanStep.class);
+        allowedModificationsClasses.add(InsertCausalLink.class);
+        //allowedModificationsClasses.add(InsertPlanStepWithLink.class); // TODO what to do Daniel ???
+        allowedModificationsClasses.add(MakeLiteralsUnUnifiable.class);
+
+        allowedFlawClasses.add(AbstractPlanStep.class);
+        allowedFlawClasses.add(CausalThreat.class);
+        allowedFlawClasses.add(OpenPrecondition.class);
+        allowedFlawClasses.add(UnboundVariable.class);
+
+    }
+
+    public final static IsModificationAllowed allowedModifications = new ModificationsByClass(JavaToScala.toScalaSeq(allowedModificationsClasses));
+    public final static IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
+    public final static scala.collection.immutable.Map<PlanStep, DecompositionMethod> planStepsDecomposedBy =
+            scala.collection.immutable.Map$.MODULE$.<PlanStep, DecompositionMethod>empty();
+    public final static scala.collection.immutable.Map<PlanStep, Tuple2<PlanStep, PlanStep>> planStepsDecompositionParents =
+            scala.collection.immutable.Map$.MODULE$.<PlanStep, Tuple2<PlanStep, PlanStep>>empty();
 
 
     public Tuple2<Domain, Plan> visitInstance(@NotNull hddlParser.DomainContext ctxDomain, @NotNull hddlParser.ProblemContext ctxProblem) {
@@ -46,10 +81,10 @@ public class hddlPanda3Visitor {
         Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms);
 
         Seq<Variable> initArguments = init.parameters();
-        PlanStep psInit = new PlanStep(0, init, initArguments, noneForMethod, noneForPlanStep);
+        PlanStep psInit = new PlanStep(0, init, initArguments);
 
         Seq<Variable> goalArguments = goal.parameters();
-        PlanStep psGoal = new PlanStep(1, goal, goalArguments, noneForMethod, noneForPlanStep);
+        PlanStep psGoal = new PlanStep(1, goal, goalArguments);
 
         // initial plan
         internalTaskNetwork tn = new internalTaskNetwork();
@@ -62,7 +97,8 @@ public class hddlPanda3Visitor {
 
         visitInitialTN(ctxProblem.p_htn(), tn, tasks, sorts);
 
-        Plan p = new SymbolicPlan(tn.planSteps(), tn.causalLinks(), tn.taskOrderings(), tn.csp(), psInit, psGoal);
+
+        Plan p = new SymbolicPlan(tn.planSteps(), tn.causalLinks(), tn.taskOrderings(), tn.csp(), psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
 
         Tuple2<Domain, Plan> initialProblem = new Tuple2<>(d, p);
         return initialProblem;
@@ -99,7 +135,7 @@ public class hddlPanda3Visitor {
                 parameters.$plus$eq(v);
             }
 
-            PlanStep psNew = new PlanStep(psID++, schema, parameters.result(), noneForMethod, noneForPlanStep);
+            PlanStep psNew = new PlanStep(psID++, schema, parameters.result());
             tn.addPlanStep(psNew);
             for (int i = 0; i < tn.planSteps().size(); i++) {
                 PlanStep ps = tn.planSteps().apply(i);

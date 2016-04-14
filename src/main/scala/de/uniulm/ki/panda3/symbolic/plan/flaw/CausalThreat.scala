@@ -12,7 +12,7 @@ import de.uniulm.ki.panda3.symbolic.plan.modification.{AddOrdering, DecomposePla
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 case class CausalThreat(plan: Plan, link: CausalLink, threater: PlanStep, effectOfThreater: Literal) extends Flaw {
-  override def resolvents(domain: Domain): Seq[Modification] = AddOrdering(plan, threater, link) ++ MakeLiteralsUnUnifiable(plan, link.condition, effectOfThreater.negate) ++
+  override def computeAllResolvents(domain: Domain): Seq[Modification] = AddOrdering(plan, threater, link) ++ MakeLiteralsUnUnifiable(plan, link.condition, effectOfThreater.negate) ++
     DecomposePlanStep(plan, threater, domain)
 
   /** returns a string by which this object may be referenced */

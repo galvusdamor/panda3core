@@ -23,21 +23,21 @@ import scala.collection.mutable.ArrayBuffer
   */
 object BFS {
   def main(args: Array[String]) {
-    if (args.length != 2) {
+    /*if (args.length != 2) {
       println("This programm needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
       System.exit(1)
     }
     val domFile = args(0)
-    val probFile = args(1)
+    val probFile = args(1)*/
     //val domFile = "/home/gregor/temp/send/domain2.lisp"
     //val probFile = "/home/gregor/temp/send/problem2.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     print("Parsing domain and problem ... ")
-    val domAndInitialPlan: (Domain, Plan) = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
-    //val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    //val domAndInitialPlan: (Domain, Plan) = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
     print("done\npreprocessing ... ")
     val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
 
@@ -56,7 +56,7 @@ object BFS {
 
     println("done\nstart planner")
 
-    //System.in.read()
+    System.in.read()
     //dfs(initialPlan, 0)
     val (searchNode, sem, _) = startSearch(initialPlan, wrapper, None)
 
@@ -162,7 +162,7 @@ object BFS {
             flawnum += 1
           }
 
-          //println("RESULT " + myNode.selectedFlaw)
+          // println("RESULT " + myNode.selectedFlaw + " @ " + smallFlawNumMod)
 
           //myNode.selectedFlaw = smallFlawNumMod
 
@@ -203,9 +203,9 @@ object BFS {
 
     new Thread(new Runnable {
       override def run(): Unit = {
-        val (_,solution) = bfs()
+        val (_, solution) = bfs()
         solution match {
-          case None => println("No solution")
+          case None       => println("No solution")
           case Some(plan) =>
             val symPlan = wrapping.wrap(plan)
             println(symPlan.longInfo)

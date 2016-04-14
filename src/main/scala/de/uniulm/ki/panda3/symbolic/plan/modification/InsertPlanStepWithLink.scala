@@ -31,7 +31,7 @@ object InsertPlanStepWithLink {
     val newConstraints = schema.parameterConstraints map { c => c.substitute(sub) }
 
     // new plan step
-    val producer = PlanStep(plan.getFirstFreePlanStepID, schema, parameter, None, None)
+    val producer = PlanStep(plan.getFirstFreePlanStepID, schema, parameter)
     val link = CausalLink(producer, consumer, precondition)
 
     // new csp, for tight checking of possible causal links

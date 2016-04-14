@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.efficient
 import de.uniulm.ki.panda3.efficient.csp.{EfficientCSP, EfficientVariableConstraint}
 import de.uniulm.ki.panda3.efficient.domain.{EfficientDecompositionMethod, EfficientTask, EfficientDomain}
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
-import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
+import de.uniulm.ki.panda3.efficient.plan.{ProblemConfiguration, EfficientPlan}
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw._
 import de.uniulm.ki.panda3.efficient.plan.modification._
@@ -18,7 +18,7 @@ import de.uniulm.ki.panda3.symbolic.plan.modification._
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
 import de.uniulm.ki.panda3.symbolic.plan.{SymbolicPlan, Plan}
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
-import de.uniulm.ki.panda3.symbolic.search.SearchNode
+import de.uniulm.ki.panda3.symbolic.search._
 import de.uniulm.ki.util.{SimpleDirectedGraph, BiMap}
 
 /**
@@ -73,7 +73,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val preconditions = reducedTask.precondition.conjuncts map { computeEfficientLiteral(_, variableMap) }
     val effects = reducedTask.effect.conjuncts map { computeEfficientLiteral(_, variableMap) }
 
-    EfficientTask(isPrimitive = task.isPrimitive, parameterSorts.toArray, variableConstraints.toArray, preconditions.toArray, effects.toArray, isInitOrGoal)
+    EfficientTask(isPrimitive = task.isPrimitive, parameterSorts.toArray, variableConstraints.toArray, preconditions.toArray, effects.toArray, allowedToInsert = !isInitOrGoal)
   }
 
 
@@ -89,18 +89,18 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val orderedTasks = (plan.init :: plan.goal :: Nil) ++ plan.planStepWithoutInitGoal
     val planStepTasks = orderedTasks map { ps => domainTasks(ps.schema) }
     val planStepParameters = orderedTasks map { ps => (ps.arguments map { variablesMap(_) }).toArray }
-    val planStepDecomposedBy = orderedTasks map {
-      _.decomposedByMethod match {
-        case Some(method) => domainDecompositionMethods(method)
-        case None         => -1
-      }
+    val planStepDecomposedBy = orderedTasks map { ps =>
+      if (plan.planStepDecomposedByMethod.contains(ps))
+        domainDecompositionMethods(plan.planStepDecomposedByMethod(ps))
+      else -1
     }
-    val planStepParentInDecompositionTree = orderedTasks map {
-      _.parentInDecompositionTree match {
-        case Some(ps) => unwrap(ps, plan)
-        case None     => -1
-      }
+    val decompositionInformationPerPlanStep = orderedTasks map { ps =>
+      if (plan.planStepParentInDecompositionTree.contains(ps))
+        (unwrap(plan.planStepParentInDecompositionTree(ps)._1, plan), unwrap(plan.planStepParentInDecompositionTree(ps)._2, plan))
+      else (-1, -1)
     }
+    val planStepParentInDecompositionTree = decompositionInformationPerPlanStep map { _._1 }
+    val planStepIsInstanceOfSubPlanPlanStep = decompositionInformationPerPlanStep map { _._2 }
 
     // CSP
     val symbolicVariableSorts = variableOrder map { _.sort }
@@ -130,8 +130,20 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     // causal links
     val causalLinks = plan.causalLinks map { unwrap(_, plan) }
 
-    EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, planStepDecomposedBy.toArray, planStepParentInDecompositionTree.toArray, efficientCSP, ordering,
-                  causalLinks.toArray)
+    // problem configuration
+    val problemConfiguration: ProblemConfiguration = (plan.isModificationAllowed, plan.isFlawAllowed) match {
+      case (ModificationsByClass(modificationList@_*), FlawsByClass(flawList@_*)) =>
+        // TODO contains the assumption that we are doing forward planning ... (to be changed by Daniel if he wants to implement his plan recognition search)
+        val taskInsertionAllowed = modificationList contains classOf[InsertPlanStepWithLink]
+        val decompositionAllowed = flawList contains classOf[AbstractPlanStep]
+        ProblemConfiguration(taskInsertionAllowed, decompositionAllowed)
+      case (NoModifications, NoFlaws)                                             => ProblemConfiguration(false, false) // only occurs in method subplans
+      case (AllModifications, AllFlaws)                                           => ProblemConfiguration(true, true) // only occurs in tests
+      case _                                                                      => noSupport(UNSUPPORTEDPROBLEMTYPE)
+    }
+
+    EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, planStepDecomposedBy.toArray, planStepParentInDecompositionTree.toArray, planStepIsInstanceOfSubPlanPlanStep
+      .toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)
   }
 
   private def newVariableFormEfficient(variableIndex: Int, sortIndex: Int): Variable = Variable(variableIndex, "variable_" + variableIndex, domainSorts.back(sortIndex))
@@ -286,11 +298,9 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     taskCreationGraph.topologicalOrdering.get foreach { psIndex =>
       val arguments = plan.planStepParameters(psIndex) map { variables(_) }
       val psDecomposedBy = plan.planStepDecomposedByMethod(psIndex)
-      val decomposedBy = if (psDecomposedBy != -1) Some(wrapDecompositionMethod(psDecomposedBy)) else None
       val psParent = plan.planStepParentInDecompositionTree(psIndex)
-      val parent = if (psParent != -1) Some(planStepArray(psParent)) else None
 
-      planStepArray(psIndex) = PlanStep(psIndex, domainTasks.back(plan.planStepTasks(psIndex)), arguments, decomposedBy, parent)
+      planStepArray(psIndex) = PlanStep(psIndex, domainTasks.back(plan.planStepTasks(psIndex)), arguments)
     }
 
     // causal links
@@ -313,9 +323,25 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val unequalConstraints = variables.indices flatMap { v => plan.variableConstraints.getVariableUnequalTo(v) map { w => NotEqual(variables(v), variables(w)) } }
     val csp = new SymbolicCSP(variables.toSet, possibleValuesConstraints ++ unequalConstraints)
 
+    // determine the modification stuff
+    val allwaysAllowedModifications = classOf[AddOrdering] :: classOf[BindVariableToValue] :: classOf[InsertCausalLink] :: classOf[MakeLiteralsUnUnifiable] :: Nil
+    val allowedModifications = allwaysAllowedModifications ++ (if (plan.problemConfiguration.taskInsertionAllowed) classOf[InsertPlanStepWithLink] :: Nil else Nil) ++
+      (if (plan.problemConfiguration.decompositionAllowed) classOf[DecomposePlanStep] :: Nil else Nil)
+    val allwaysAllowedFlaws = classOf[CausalThreat] :: classOf[OpenPrecondition] :: classOf[UnboundVariable] :: Nil
+    val allowedFlaws = allwaysAllowedFlaws ++ (if (plan.problemConfiguration.decompositionAllowed) classOf[AbstractPlanStep] :: Nil else Nil)
+
+    // decomposition history
+    val planStepDecomposedByMethod = (plan.planStepDecomposedByMethod.zipWithIndex collect { case (method, ps) if method != -1 => (planStepArray(ps), wrapDecompositionMethod(method)) })
+      .toMap
+    val parentsInDecompositionTree = ((plan.planStepParentInDecompositionTree zip plan.planStepIsInstanceOfSubPlanPlanStep).zipWithIndex collect {
+      case ((parent, subPlanPS), ps) if parent != -1 =>
+        assert(subPlanPS != -1)
+        (planStepArray(ps), (planStepArray(parent), planStepArray(subPlanPS)))
+    }).toMap
 
     // and return the actual plan
-    val symbolicPlan = SymbolicPlan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1))
+    val symbolicPlan = SymbolicPlan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1), ModificationsByClass(allowedModifications: _*),
+                                    FlawsByClass(allowedFlaws: _*), planStepDecomposedByMethod, parentsInDecompositionTree)
     // sanity checks
     assert(symbolicPlan.variableConstraints.isSolvable.getOrElse(true) == plan.variableConstraints.potentiallyConsistent)
     if (symbolicPlan.flaws.size != plan.flaws.length)
@@ -375,7 +401,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         case (sortIndex, variableIndex) => newVariableFormEfficient(variableIndex, sortIndex)
       }
       val appliedDecompositionMethod = wrapDecompositionMethod(decomposedByMethod(0)._2)
-      val nonPresentDecomposedPlanStep = wrapPlanStep(decomposedPS, wrappedPlan).asNonPresent(appliedDecompositionMethod)
+      val nonPresentDecomposedPlanStep = wrapPlanStep(decomposedPS, wrappedPlan)
 
       // compute all variables
       val allVariables: Seq[Variable] = sortVariables((wrappedPlan.variableConstraints.variables ++ newVariables).toSeq)
@@ -385,10 +411,13 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       }
 
       // instanciate the new plansteps
-      val insertedPlanSteps = addedPlanSteps.zipWithIndex map { case ((schemaID, arguments, _, _), index) =>
+      val insertedPlanSteps = addedPlanSteps.zipWithIndex map { case ((schemaID, arguments, _, _, _), index) =>
         val symbolicArguments = arguments map { wrapVariableSorted(_, allVariables) }
-        PlanStep(index + wrappedPlan.getFirstFreePlanStepID, wrapTask(schemaID), symbolicArguments, None, Some(nonPresentDecomposedPlanStep))
+        PlanStep(index + wrappedPlan.getFirstFreePlanStepID, wrapTask(schemaID), symbolicArguments)
       }
+      // and compute the mapping
+      // TODO might be buggy due to different task orderings in the efficient decomposition modification
+      val planStepMapping = (insertedPlanSteps zip (addedPlanSteps map { addedPS => appliedDecompositionMethod.subPlan.planSteps(addedPS._5) })).toMap
 
       def getPlanStep(id: Int): PlanStep = if (id >= wrappedPlan.getFirstFreePlanStepID) insertedPlanSteps(id - wrappedPlan.getFirstFreePlanStepID) else wrapPlanStep(id, wrappedPlan)
 
@@ -403,16 +432,18 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val (innerLinks, inheritedLinks) = allCausalLinks partition { link => (insertedPlanSteps contains link.producer) && (insertedPlanSteps contains link.consumer) }
 
       // inserted subplan
-      val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil, None, None)
-      val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil, None, None)
+      val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
+      val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
       val subPlanPlanSteps = insertedPlanSteps :+ init :+ goal
       val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) }
       val ordering = SymbolicTaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
       val csp = SymbolicCSP((newVariables ++ nonPresentDecomposedPlanStep.arguments).toSet, innerConstraints)
-      val subPlan = SymbolicPlan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal)
+      val subPlan = SymbolicPlan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](),
+                                 Map[PlanStep, (PlanStep, PlanStep)]())
 
       // construct the modification
-      DecomposePlanStep(wrapPlanStep(decomposedPS, wrappedPlan), nonPresentDecomposedPlanStep, subPlan, outerConstraints, inheritedLinks, appliedDecompositionMethod, wrappedPlan)
+      DecomposePlanStep(wrapPlanStep(decomposedPS, wrappedPlan), nonPresentDecomposedPlanStep, subPlan, outerConstraints, inheritedLinks, appliedDecompositionMethod, planStepMapping,
+                        wrappedPlan)
     case EfficientInsertCausalLink(_, _, link, constraints)                                                                                                           =>
       val symbolicLink = wrap(link, wrappedPlan)
       val sortedVariables = sortVariables(wrappedPlan.variableConstraints.variables.toSeq)
@@ -422,7 +453,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val newPlanStepArguments = parameterSorts zip Range(wrappedPlan.getFirstFreeVariableID, wrappedPlan.getFirstFreeVariableID + parameterSorts.length) map {
         case (sortIndex, variableIndex) => newVariableFormEfficient(variableIndex, sortIndex)
       }
-      val newPlanStep = PlanStep(wrappedPlan.getFirstFreePlanStepID, wrapTask(planstep._1), newPlanStepArguments, None, None)
+      val newPlanStep = PlanStep(wrappedPlan.getFirstFreePlanStepID, wrapTask(planstep._1), newPlanStepArguments)
 
       // we have to build the link ourselves, as one of its plan steps does not yet exist in the plan
       val linkConsumer = wrapPlanStep(link.consumer, wrappedPlan)

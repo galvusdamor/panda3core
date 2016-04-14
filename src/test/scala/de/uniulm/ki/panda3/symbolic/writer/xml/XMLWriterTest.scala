@@ -62,7 +62,7 @@ class XMLWriterTest extends FlatSpec {
     val correctDomain: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/xml/umtranslog_written.xml").mkString
     //val correctProblem: String = Source.fromFile("src/test/resources/de/uniulm/ki/panda3/symbolic/writer/hpddl/smartphone_verysmall.hpddl").mkString
 
-    //if (correctDomain != dom) writeStringToFile(dom, new File("/home/gregor/domtrans"))
+    if (correctDomain != dom) writeStringToFile(dom, new File("/home/gregor/domtrans"))
     //if (correctProblem != prob) writeStringToFile(prob, new File("/home/gregor/prob"))
 
     assert(correctDomain == dom)

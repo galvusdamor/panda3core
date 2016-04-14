@@ -106,7 +106,7 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
           newParameters(parameter) = asInsertTask.newPlanStep._2(parameter) + parameterOffset
           parameter += 1
         }
-        val newPlanStep = (asInsertTask.newPlanStep._1, newParameters, asInsertTask.newPlanStep._3, asInsertTask.newPlanStep._4)
+        val newPlanStep = (asInsertTask.newPlanStep._1, newParameters, asInsertTask.newPlanStep._3, asInsertTask.newPlanStep._4, asInsertTask.newPlanStep._5)
 
         // update the constraints
         val newConstraints: Array[EfficientVariableConstraint] = new Array(asInsertTask.necessaryVariableConstraints.length)

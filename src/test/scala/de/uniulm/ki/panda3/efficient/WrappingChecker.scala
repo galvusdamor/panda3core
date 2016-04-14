@@ -106,10 +106,11 @@ object WrappingChecker {
         val planStepsEqual = psMapping forall { case (effPS, symPS) =>
           val tasksEqual = efficientPlan.planStepTasks(effPS) == wrapper.unwrap(symPS.schema)
           val argumentsEqual = checkEqual(symPS.arguments, efficientPlan.planStepParameters(effPS), variableMapping)
-          val decompositionMethodEqual = if (symPS.decomposedByMethod.isEmpty) efficientPlan.planStepDecomposedByMethod(effPS) == -1
-          else wrapper.wrapDecompositionMethod(efficientPlan.planStepDecomposedByMethod(effPS)) == symPS.decomposedByMethod.get
-          val parentPlanStepEqual = if (symPS.parentInDecompositionTree.isEmpty) efficientPlan.planStepParentInDecompositionTree(effPS) == -1
-          else wrapper.wrapTask(efficientPlan.planStepParentInDecompositionTree(effPS)) == symPS.parentInDecompositionTree.get
+          val decompositionMethodEqual = if (!(symbolicPlan.planStepDecomposedByMethod contains symPS)) efficientPlan.planStepDecomposedByMethod(effPS) == -1
+          else wrapper.wrapDecompositionMethod(efficientPlan.planStepDecomposedByMethod(effPS)) == symbolicPlan.planStepDecomposedByMethod(symPS)
+          val parentPlanStepEqual = if (!(symbolicPlan.planStepParentInDecompositionTree contains symPS))
+            efficientPlan.planStepParentInDecompositionTree(effPS) == -1
+          else wrapper.wrapTask(efficientPlan.planStepParentInDecompositionTree(effPS)) == symbolicPlan.planStepParentInDecompositionTree(symPS)._1
 
           tasksEqual && argumentsEqual && decompositionMethodEqual && parentPlanStepEqual
         }

@@ -20,12 +20,15 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+// TODO there is no place to save the mapping, which planstep one is in their HTN parent's applied method subplan
 case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStepParameters: Array[Array[Int]], planStepDecomposedByMethod: Array[Int],
-                         planStepParentInDecompositionTree: Array[Int], variableConstraints: EfficientCSP, ordering: EfficientOrdering, causalLinks: Array[EfficientCausalLink]) {
+                         planStepParentInDecompositionTree: Array[Int], planStepIsInstanceOfSubPlanPlanStep: Array[Int], variableConstraints: EfficientCSP, ordering: EfficientOrdering,
+                         causalLinks: Array[EfficientCausalLink], problemConfiguration: ProblemConfiguration) {
 
   assert(planStepTasks.length == planStepParameters.length)
   assert(planStepTasks.length == planStepDecomposedByMethod.length)
   assert(planStepTasks.length == planStepParentInDecompositionTree.length)
+  assert(planStepTasks.length == planStepIsInstanceOfSubPlanPlanStep.length)
   planStepTasks.indices foreach {
     ps =>
       /*println("PS " + ps)
@@ -208,7 +211,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     val flawBuffer = new ArrayBuffer[EfficientFlaw]()
     flawBuffer appendAll causalThreats
     flawBuffer appendAll openPreconditions
-    flawBuffer appendAll abstractPlanSteps
+    if (problemConfiguration.decompositionAllowed) flawBuffer appendAll abstractPlanSteps
 
     if (flawBuffer.isEmpty) flawBuffer appendAll unboundVariables
 
@@ -236,6 +239,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     val newPlanStepParameters = new ArrayBuffer[Array[Int]]()
     val newPlanStepDecomposedByMethod = new ArrayBuffer[Int]()
     val newPlanStepParentInDecompositionTree = new ArrayBuffer[Int]()
+    val newPlanStepIsInstanceOfSubPlanPlanStep= new ArrayBuffer[Int]()
     val newCausalLinks = new ArrayBuffer[EfficientCausalLink]()
     val newVariableConstraints: EfficientCSP = variableConstraints.addVariables(modification.addedVariableSorts)
     val newOrdering: EfficientOrdering = ordering.addPlanSteps(modification.addedPlanSteps.length)
@@ -244,6 +248,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     newPlanStepParameters appendAll planStepParameters
     newPlanStepDecomposedByMethod appendAll planStepDecomposedByMethod
     newPlanStepParentInDecompositionTree appendAll planStepParentInDecompositionTree
+    newPlanStepIsInstanceOfSubPlanPlanStep appendAll planStepIsInstanceOfSubPlanPlanStep
     newCausalLinks appendAll causalLinks
 
     // apply the modification
@@ -255,6 +260,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       newPlanStepParameters append modification.addedPlanSteps(newPS)._2
       newPlanStepDecomposedByMethod append modification.addedPlanSteps(newPS)._3
       newPlanStepParentInDecompositionTree append modification.addedPlanSteps(newPS)._4
+      newPlanStepIsInstanceOfSubPlanPlanStep append modification.addedPlanSteps(newPS)._5
       // new plan steps are between init and goal
       newOrdering.addOrderingConstraint(0, firstFreePlanStepID + newPS) // init < ps
       newOrdering.addOrderingConstraint(firstFreePlanStepID + newPS, 1) // ps < goal
@@ -290,7 +296,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     }
 
     val newPlan = EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethodArray, newPlanStepParentInDecompositionTree.toArray,
-                                newVariableConstraints, newOrdering, newCausalLinks.toArray)
+                                newPlanStepIsInstanceOfSubPlanPlanStep.toArray,newVariableConstraints, newOrdering, newCausalLinks.toArray, problemConfiguration)
 
     //newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)
 

@@ -69,7 +69,7 @@ class EfficientPlanTest extends FlatSpec with HasEfficientExampleDomain1 {
     val flaw = (simpleOpenPreconditionPlan.openPreconditions find { _.planStep == 3 }).get
     assert(flaw.resolver.length == 4)
 
-    val modification = (flaw.resolver find { case EfficientInsertPlanStepWithLink(_, _, (2, _, _, _), _, _, _) => true; case _ => false }).get
+    val modification = (flaw.resolver find { case EfficientInsertPlanStepWithLink(_, _, (2, _, _, _,_), _, _, _) => true; case _ => false }).get
 
     modifiedPlan = simpleOpenPreconditionPlan modify modification
   }

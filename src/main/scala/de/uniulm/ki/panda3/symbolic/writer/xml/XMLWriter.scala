@@ -326,7 +326,9 @@ private object XMLWriterDomain {
       } foreach methodDecl.getValueRestrictionOrSortRestriction.add
 
       // ordering constraints
-      method.subPlan.orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(method.subPlan.init, method.subPlan.goal) } map {
+      method.subPlan.orderingConstraints.originalOrderingConstraints.sortWith({ case (plan.element.OrderingConstraint(prev1, after1), plan.element.OrderingConstraint(prev2, after2)) =>
+        if (prev1.id != prev2.id) prev1.id < prev2.id else after1.id < after2.id
+                                                                               }) filterNot { _.containsAny(method.subPlan.init, method.subPlan.goal) } map {
         case plan.element.OrderingConstraint(before, after) =>
           val ordering = new OrderingConstraint
           ordering.setPredecessor(planStepsToTaskNodes(before))

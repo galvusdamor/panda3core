@@ -6,11 +6,14 @@ import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
 import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.domain.updates.*;
 import de.uniulm.ki.panda3.symbolic.logic.*;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalTaskNetwork;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
+import de.uniulm.ki.panda3.symbolic.search.NoFlaws$;
+import de.uniulm.ki.panda3.symbolic.search.NoModifications$;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import scala.Option;
 import scala.Tuple2;
@@ -134,7 +137,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
     /**
      * O_x is the set of new actions that represent the elements in the prefix. p is the process that is added in plan repair.
-     * <p/>
+     * <p>
      * todo: Daniel says: do not really know why the alpha is in the title.
      */
     private Tuple2<Domain, Plan> transformStep_O_x_und_p_mit_alpha(Tuple2<Domain, Plan> domPlan) throws addPrefixException {
@@ -305,7 +308,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             PlanStep psInit = getEmptyPlanStep(1, new And<>(JavaToScala.<Literal>nil()), compoundTask.precondition(), compoundTask.parameters());
             PlanStep psGoal = getEmptyPlanStep(3, compoundTask.effect(), new And<>(JavaToScala.<Literal>nil()), compoundTask.parameters());
 
-            PlanStep psO = new PlanStep(2, primitiveTask, primitiveTask.parameters(), noneForMethod, noneForPlanStep);
+            PlanStep psO = new PlanStep(2, primitiveTask, primitiveTask.parameters());
 
             internalTaskNetwork internalTN = new internalTaskNetwork();
             internalTN.addPlanStep(psInit);
@@ -315,7 +318,8 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             internalTN.addOrdering(psO, psGoal);
 
             SymbolicPlan subPlan = new SymbolicPlan(internalTN.planSteps(), internalTN.causalLinks(), internalTN.taskOrderings(),
-                    internalTN.csp().addVariables(psO.arguments()), psInit, psGoal);
+                    internalTN.csp().addVariables(psO.arguments()), psInit, psGoal, domPlan._2().isModificationAllowed(),
+                    domPlan._2().isFlawAllowed(), domPlan._2().planStepDecomposedByMethod(), domPlan._2().planStepParentInDecompositionTree());
 
             DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(compoundTask, subPlan);
             newMethods.add(decompositionMethod);
@@ -337,7 +341,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
             PlanStep psInit = getEmptyPlanStep(1, new And<>(JavaToScala.<Literal>nil()), correspondingCompoundTask.precondition(), correspondingCompoundTask.parameters());
             PlanStep psGoal = getEmptyPlanStep(4, correspondingCompoundTask.effect(), new And<>(JavaToScala.<Literal>nil()), correspondingCompoundTask.parameters());
-            PlanStep tempPlanStep_O = new PlanStep(2, currentNewPrimitiveTask, currentNewPrimitiveTask.parameters(), noneForMethod, noneForPlanStep);
+            PlanStep tempPlanStep_O = new PlanStep(2, currentNewPrimitiveTask, currentNewPrimitiveTask.parameters());
 
             internalTaskNetwork subnetwork = new internalTaskNetwork();
             subnetwork.addPlanStep(psInit);
@@ -351,21 +355,21 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             // In case of plan repair, the process is added, but not in recognition
             if ((whatToDo == programTasks.repair) && (a == newPrimitiveTasks.size() - 1)) {
                 PlanStep psProcess = null;
-                psProcess = new PlanStep(3, processTaskSchema, processTaskSchema.parameters(), noneForMethod, noneForPlanStep);
+                psProcess = new PlanStep(3, processTaskSchema, processTaskSchema.parameters());
                 subnetwork.addPlanStep(psProcess);
                 subnetwork.addOrdering(tempPlanStep_O, psProcess);
                 subnetwork.addOrdering(psProcess, psGoal);
 
                 tempSubPlan = new SymbolicPlan(subnetwork.planSteps(), subnetwork.causalLinks(), subnetwork.taskOrderings(),
                         subnetwork.csp().addVariables(tempPlanStep_O.arguments()).addVariables(psProcess.arguments()),
-                        psInit, psGoal);
+                        psInit, psGoal,NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,hddlPanda3Visitor.planStepsDecompositionParents);
 
             } else {
                 subnetwork.addOrdering(tempPlanStep_O, psGoal);
 
                 tempSubPlan = new SymbolicPlan(subnetwork.planSteps(), subnetwork.causalLinks(), subnetwork.taskOrderings(),
                         subnetwork.csp().addVariables(tempPlanStep_O.arguments()),
-                        psInit, psGoal);
+                        psInit, psGoal,NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,hddlPanda3Visitor.planStepsDecompositionParents);
             }
 
             DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(correspondingCompoundTask, tempSubPlan);
@@ -393,7 +397,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
         String tempName = uniqueStringPrefix + prefixExtension + "[" + java.util.UUID.randomUUID() + "]";
         Task tempEmptyTask = new GeneralTask(tempName, true, variablesOfprecsAndEffects, JavaToScala.<VariableConstraint>nil(), precondition, effect);
-        return new PlanStep(id, tempEmptyTask, variablesOfprecsAndEffects, noneForMethod, noneForPlanStep);
+        return new PlanStep(id, tempEmptyTask, variablesOfprecsAndEffects);
     }
 
     public String[] getPrimitivesFromPrefixDistinct() {

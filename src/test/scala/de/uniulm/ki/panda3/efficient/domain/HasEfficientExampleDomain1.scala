@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.efficient.domain
 
 import de.uniulm.ki.panda3.efficient.csp.{EfficientVariableConstraint, EfficientCSP}
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
-import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
+import de.uniulm.ki.panda3.efficient.plan.{ProblemConfiguration, EfficientPlan}
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
 
@@ -37,6 +37,7 @@ trait HasEfficientExampleDomain1 {
   val task5  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(new EfficientLiteral(1, true, Array(0))), false)
   val domain = new EfficientDomain(Array(Array()), Array(Array(0), Array(0), Array(0)), Array(Array(), Array(0), Array(0, 0)), Array(init, goal, task1, task2, task3, task4, task5), Array())
 
+  val problemConfiguration = ProblemConfiguration(true,true)
 
   val efficientPlanTestPlan = {
     // the order of tasks is scrambled to test whether we access the correct one
@@ -49,7 +50,7 @@ trait HasEfficientExampleDomain1 {
     ordering.addOrderingConstraint(5, 3)
     val causalLink = EfficientCausalLink(3, 4, 0, 0)
     EfficientPlan(domain, Array(0, 1, 4, 2, 3, 4, 4, 4), Array(Array(), Array(), Array(0, 2), Array(1), Array(3), Array(4, 4), Array(5, 5), Array(5, 5)),
-                  Array(-1, -1, -1, -1, -1, -1, -1, 1), Array(-1, -1, -1, -1, -1, -1, -1, -1), csp, ordering, Array(causalLink))
+                  Array(-1, -1, -1, -1, -1, -1, -1, 1), Array(-1, -1, -1, -1, -1, -1, -1, -1), Array(-1, -1, -1, -1, -1, -1, -1, -1), csp, ordering, Array(causalLink),problemConfiguration)
   }
 
 
@@ -76,6 +77,7 @@ trait HasEfficientExampleDomain1 {
     ordering.addOrderingConstraint(3, 1)
     ordering.addOrderingConstraint(2, 1)
 
-    EfficientPlan(domain, Array(0, 1, 6, 4), Array(Array(), Array(), Array(0), Array(0, 0)), Array(-1, -1, -1, -1), Array(-1, -1, -1, -1), csp, ordering, Array())
+    EfficientPlan(domain, Array(0, 1, 6, 4), Array(Array(), Array(), Array(0), Array(0, 0)), Array(-1, -1, -1, -1), Array(-1, -1, -1, -1), Array(-1, -1, -1, -1), csp, ordering, Array(),
+                  problemConfiguration)
   }
 }

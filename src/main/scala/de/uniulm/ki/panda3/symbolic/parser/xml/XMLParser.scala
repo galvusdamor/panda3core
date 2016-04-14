@@ -12,8 +12,12 @@ import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate, Sort}
 import de.uniulm.ki.panda3.symbolic.parser.{StepwiseParser, Parser}
 import de.uniulm.ki.panda3.symbolic.parser.xml.problem.Problem
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
+import de.uniulm.ki.panda3.symbolic.plan.flaw.{AbstractPlanStep, UnboundVariable, OpenPrecondition, CausalThreat}
+import de.uniulm.ki.panda3.symbolic.plan.modification._
 import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
 import de.uniulm.ki.panda3.symbolic.plan.{Plan, SymbolicPlan, element}
+import de.uniulm.ki.panda3.symbolic.search._
+import de.uniulm.ki.panda3.symbolic._
 import org.xml.sax.{InputSource, XMLReader}
 
 import scala.collection._
@@ -134,9 +138,9 @@ object XMLParser extends StepwiseParser {
       val abstractTaskParameterVariables = (JavaConversions.asScalaBuffer(xmlMethod.getVariableDeclaration) ++ additionalParameterList) map variables
 
       val init: PlanStep = PlanStep(0, GeneralTask("method_init", isPrimitive = true, abstractTaskSchema.parameters, Nil, logic.And[Literal](Nil), abstractTaskSchema.precondition),
-                                    abstractTaskParameterVariables, None, None)
+                                    abstractTaskParameterVariables)
       val goal: PlanStep = PlanStep(1, GeneralTask("method_goal", isPrimitive = true, abstractTaskSchema.parameters, Nil, abstractTaskSchema.effect, logic.And[Literal](Nil)),
-                                    abstractTaskParameterVariables, None, None)
+                                    abstractTaskParameterVariables)
 
 
       SimpleDecompositionMethod(abstractTaskSchema,
@@ -241,7 +245,7 @@ object XMLParser extends StepwiseParser {
       }
 
       // build the planstep
-      PlanStep(index + 2, taskSchemaOfThePlanStep, arguments ++ otherArguments, None, None)
+      PlanStep(index + 2, taskSchemaOfThePlanStep, arguments ++ otherArguments)
     }) :+ init :+ goal
     val xmlTaskNodesToScalaPlanSteps: Map[TaskNode, PlanStep] = (JavaConversions.asScalaBuffer(planDef.getTaskNode) zip planSteps).toMap
 
@@ -276,7 +280,7 @@ object XMLParser extends StepwiseParser {
         case "neq" => NotOfSort(v, sort)
       }
     }
-    val csp: CSP = SymbolicCSP((variablesIntroducedByCausalLinks ++ (xmlVariableToScalaVariable map { _._2 })).toSet, (causalLinks flatMap { _._2 }) ++ valueRestrictions ++
+    val csp: CSP = SymbolicCSP((variablesIntroducedByCausalLinks ++ xmlVariableToScalaVariable.values).toSet, (causalLinks flatMap { _._2 }) ++ valueRestrictions ++
       inheritedVariableConstraints)
 
     // get the order induced by the causal links and the explicitly mentioned order
@@ -285,11 +289,12 @@ object XMLParser extends StepwiseParser {
     val orderingConstraints: Seq[element.OrderingConstraint] = (orderingConstraintsImpliedByCausalLinks ++
       (JavaConversions.asScalaBuffer(planDef.getOrderingConstraint) map { oc => element
         .OrderingConstraint(xmlTaskNodesToScalaPlanSteps(oc.getPredecessor.asInstanceOf[TaskNode]), xmlTaskNodesToScalaPlanSteps(oc.getSuccessor.asInstanceOf[TaskNode]))
-      }) ++ element.OrderingConstraint.allBetween(init, goal, planSteps filterNot { ps => ps == init || ps == goal }: _*)).toSet.toSeq
+      }) ++ element.OrderingConstraint.allBetween(init, goal, planSteps filterNot { ps => ps == init || ps == goal }: _*)).distinct
 
     val taskOrdering: TaskOrdering = SymbolicTaskOrdering(orderingConstraints, planSteps)
 
-    SymbolicPlan(planSteps, causalLinks map { _._1 }, taskOrdering, csp, init, goal)
+    SymbolicPlan(planSteps, causalLinks map { _._1 }, taskOrdering, csp, init, goal, NoModifications, NoFlaws, immutable.Map[PlanStep, DecompositionMethod](),
+                 immutable.Map[PlanStep, (PlanStep, PlanStep)]())
   }
 
   def parseProblem(problemStream: InputStream, inputDomain: Domain): (Domain, Plan) = {
@@ -324,7 +329,7 @@ object XMLParser extends StepwiseParser {
                                             logic.And[Literal](JavaConversions.asScalaBuffer(problem.getInitialState.getFact)
                                                                  map { factToLiteral(_, domain, nameToVariablesForConstants, isPositive = true) }))
 
-    val init: PlanStep = PlanStep(0, initTask, variablesForConstants, None, None)
+    val init: PlanStep = PlanStep(0, initTask, variablesForConstants)
 
 
 
@@ -334,7 +339,7 @@ object XMLParser extends StepwiseParser {
       extractProblemLiterals(goalLiteral, domain, nameToVariablesForConstants, Map())
     }
     val goalTask: Task = ReducedTask("goal", isPrimitive = true, variablesForConstants, variableConstraintsForConstants, logic.And[Literal](goalLiterals), logic.And[Literal](Nil))
-    val goal: PlanStep = PlanStep(1, goalTask, variablesForConstants, None, None)
+    val goal: PlanStep = PlanStep(1, goalTask, variablesForConstants)
 
     // variables declared in the plan steps
     val variableNameToVariable: mutable.Map[String, logic.Variable] = mutable.Map()
@@ -361,7 +366,7 @@ object XMLParser extends StepwiseParser {
         variable
       }
 
-      val ps = PlanStep(id + 2, schema, arguments ++ otherArguments, None, None)
+      val ps = PlanStep(id + 2, schema, arguments ++ otherArguments)
       xmlPlanStepToScalaPlanStep.put(node.getName, ps)
       ps
     }
@@ -415,10 +420,34 @@ object XMLParser extends StepwiseParser {
     }
 
     val csp: CSP = SymbolicCSP(nameToVariablesForConstants.values.toSet ++ variableNameToVariable.values, variableConstraintsForConstants ++ additionalVariableConstraints)
-
-
     val planStepsWithInitAndGoal = planSteps :+ init :+ goal
-    (domain, SymbolicPlan(planStepsWithInitAndGoal, causalLinks, SymbolicTaskOrdering(orderingConstraint, planStepsWithInitAndGoal), csp, init, goal))
+
+    // determine which problem type we have
+    // non-hierarchical
+    // pure-hierarchical
+    // hybrid
+
+
+    val (modifications: IsModificationAllowed, flaws: IsFlawAllowed) = if (problem.getType == "non-hierarchical") {
+      val mods = ModificationsByClass(classOf[AddOrdering], classOf[BindVariableToValue], classOf[InsertCausalLink], classOf[InsertPlanStepWithLink], classOf[MakeLiteralsUnUnifiable])
+      val flaws = FlawsByClass(classOf[CausalThreat], classOf[OpenPrecondition], classOf[UnboundVariable])
+      (mods, flaws)
+    } else if (problem.getType == "pure-hierarchical") {
+      val mods = ModificationsByClass(classOf[AddOrdering], classOf[BindVariableToValue], classOf[InsertCausalLink], classOf[MakeLiteralsUnUnifiable], classOf[DecomposePlanStep])
+      val flaws = FlawsByClass(classOf[CausalThreat], classOf[OpenPrecondition], classOf[UnboundVariable], classOf[AbstractPlanStep])
+      (mods, flaws)
+    } else if (problem.getType == "hybrid") {
+      val mods = ModificationsByClass(classOf[AddOrdering], classOf[BindVariableToValue], classOf[InsertCausalLink], classOf[InsertPlanStepWithLink], classOf[MakeLiteralsUnUnifiable],
+                                      classOf[DecomposePlanStep])
+      val flaws = FlawsByClass(classOf[CausalThreat], classOf[OpenPrecondition], classOf[UnboundVariable], classOf[AbstractPlanStep])
+      (mods, flaws)
+    } else noSupport(UNSUPPORTEDPROBLEMTYPE)
+
+
+    val planStepDecomposedBy = immutable.Map[PlanStep, DecompositionMethod]()
+    val planStepParent = immutable.Map[PlanStep, (PlanStep, PlanStep)]()
+    (domain, SymbolicPlan(planStepsWithInitAndGoal, causalLinks, SymbolicTaskOrdering(orderingConstraint, planStepsWithInitAndGoal), csp, init, goal,
+                          modifications, flaws, planStepDecomposedBy, planStepParent))
   }
 
   def factToLiteral(fact: problem.Fact, dom: Domain, nameToVariablesForConstants: Map[String, logic.Variable], isPositive: Boolean): Literal = {

@@ -13,7 +13,7 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class EfficientDecomposePlanStep(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, decomposePlanStep: Int,
-                                      override val addedPlanSteps: Array[(Int, Array[Int], Int, Int)],
+                                      override val addedPlanSteps: Array[(Int, Array[Int], Int, Int, Int)],
                                       override val addedVariableSorts: Array[Int],
                                       override val addedVariableConstraints: Array[EfficientVariableConstraint],
                                       override val addedCausalLinks: Array[EfficientCausalLink],
@@ -42,7 +42,7 @@ object EfficientDecomposePlanStep {
   EfficientExtractedMethodPlan, methodIndex: Int, inheritedCausalLinks: Array[EfficientCausalLink], variableConstraintsForInheritedLinks: Array[EfficientVariableConstraint]): Unit = {
 
     // create new instances of the plan steps
-    val addedPlanSteps: Array[(Int, Array[Int], Int, Int)] = new Array[(Int, Array[Int], Int, Int)](method.addedPlanSteps.length)
+    val addedPlanSteps: Array[(Int, Array[Int], Int, Int, Int)] = new Array[(Int, Array[Int], Int, Int, Int)](method.addedPlanSteps.length)
     var ps = 0
     while (ps < method.addedPlanSteps.length) {
       val oldParameters = method.addedPlanSteps(ps)._2
@@ -52,7 +52,7 @@ object EfficientDecomposePlanStep {
         parameters(parameter) = getNewVariableID(plan, decomposedPS, oldParameters(parameter))
         parameter += 1
       }
-      addedPlanSteps(ps) = (method.addedPlanSteps(ps)._1, parameters, -1, decomposedPS)
+      addedPlanSteps(ps) = (method.addedPlanSteps(ps)._1, parameters, -1, decomposedPS, ps + 2)
       ps += 1
     }
 
@@ -260,10 +260,10 @@ object EfficientDecomposePlanStep {
 
         // TODO these should be pruned from the domain ... at some point in time
         //assert(method.ingoingSupporters(abstractPrecondition).length != 0)
-        if (method.ingoingSupporters(abstractPrecondition).length == 0){
+        if (method.ingoingSupporters(abstractPrecondition).length == 0) {
           if (linkConnected != 0) numberOfLinkInheritances = 0
         } else
-        numberOfLinkInheritances *= Math.pow(method.ingoingSupporters(abstractPrecondition).length, linkConnected).round.toInt
+          numberOfLinkInheritances *= Math.pow(method.ingoingSupporters(abstractPrecondition).length, linkConnected).round.toInt
 
         abstractPrecondition += 1
       }
@@ -282,10 +282,10 @@ object EfficientDecomposePlanStep {
 
         // TODO these should be pruned from the domain ... at some point in time
         //assert(method.outgoingSupporters(abstractEffect).length != 0)
-        if (method.outgoingSupporters(abstractEffect).length == 0){
+        if (method.outgoingSupporters(abstractEffect).length == 0) {
           if (linkConnected != 0) numberOfLinkInheritances = 0
         } else
-        numberOfLinkInheritances *= Math.pow(method.outgoingSupporters(abstractEffect).length, linkConnected).round.toInt
+          numberOfLinkInheritances *= Math.pow(method.outgoingSupporters(abstractEffect).length, linkConnected).round.toInt
         abstractEffect += 1
       }
 

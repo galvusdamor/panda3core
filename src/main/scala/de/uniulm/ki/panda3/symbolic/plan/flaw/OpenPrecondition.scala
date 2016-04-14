@@ -15,7 +15,7 @@ import de.uniulm.ki.panda3.symbolic._
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class OpenPrecondition(plan: Plan, planStep: PlanStep, precondition: Literal) extends Flaw {
-  override def resolvents(domain: Domain): Seq[Modification] = InsertPlanStepWithLink(plan, planStep, precondition, domain) ++ InsertCausalLink(plan, planStep, precondition) ++
+  override def computeAllResolvents(domain: Domain): Seq[Modification] = InsertPlanStepWithLink(plan, planStep, precondition, domain) ++ InsertCausalLink(plan, planStep, precondition) ++
     resolverByDecompose(domain)
 
 

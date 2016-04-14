@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.plan.modification
 
 import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint
+import de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod
 import de.uniulm.ki.panda3.symbolic.logic.Variable
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
@@ -29,6 +30,10 @@ trait Modification {
   def addedPlanSteps: Seq[PlanStep] = Nil
 
   def addedCausalLinks: Seq[CausalLink] = Nil
+
+  def setParentOfPlanSteps : Seq[(PlanStep,(PlanStep,PlanStep))] = Nil
+
+  def setPlanStepDecomposedByMethod : Seq[(PlanStep,DecompositionMethod)]  = Nil
 
   def nonInducedAddedOrderingConstraints: Seq[OrderingConstraint] = Nil
 

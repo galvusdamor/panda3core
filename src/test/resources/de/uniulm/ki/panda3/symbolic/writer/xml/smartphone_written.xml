@@ -3498,8 +3498,8 @@
         <taskNode name="method0_subtask_2" taskSchema="enterMode_Home"/>
         <taskNode name="method0_subtask_3" taskSchema="press_Home.Clock"/>
         <taskNode name="method0_subtask_4" taskSchema="press_Clock.Alarm"/>
-        <orderingConstraint predecessor="method0_subtask_3" successor="method0_subtask_4"/>
         <orderingConstraint predecessor="method0_subtask_2" successor="method0_subtask_3"/>
+        <orderingConstraint predecessor="method0_subtask_3" successor="method0_subtask_4"/>
         <causalLink producer="method0_subtask_2" consumer="method0_subtask_3">
             <atomic relation="inMode_Home"/>
         </causalLink>
@@ -3600,10 +3600,10 @@
             <variableDeclaration name="press_Calendar.NewAppointment.OK_instance_5_argument_4" sort="Appointment"/>
             <variableDeclaration name="press_Calendar.NewAppointment.OK_instance_5_argument_5" sort="Date"/>
         </taskNode>
+        <orderingConstraint predecessor="method5_subtask_2" successor="method5_subtask_3"/>
         <orderingConstraint predecessor="method5_subtask_3" successor="method5_subtask_4"/>
         <orderingConstraint predecessor="method5_subtask_3" successor="method5_subtask_5"/>
         <orderingConstraint predecessor="method5_subtask_4" successor="method5_subtask_5"/>
-        <orderingConstraint predecessor="method5_subtask_2" successor="method5_subtask_3"/>
         <valueRestriction type="eq" variable="newObj_variable14">
             <variable name="configure_Appointment_instance_4_argument_1"/>
         </valueRestriction>
@@ -3665,8 +3665,8 @@
         <taskNode name="method7_subtask_2" taskSchema="enterMode_Home"/>
         <taskNode name="method7_subtask_3" taskSchema="press_Home.Programs"/>
         <taskNode name="method7_subtask_4" taskSchema="press_Programs.Tasks"/>
-        <orderingConstraint predecessor="method7_subtask_3" successor="method7_subtask_4"/>
         <orderingConstraint predecessor="method7_subtask_2" successor="method7_subtask_3"/>
+        <orderingConstraint predecessor="method7_subtask_3" successor="method7_subtask_4"/>
         <causalLink producer="method7_subtask_2" consumer="method7_subtask_3">
             <atomic relation="inMode_Home"/>
         </causalLink>
@@ -3708,10 +3708,10 @@
         <taskNode name="method9_subtask_5" taskSchema="press_Tasks.NewTask.OK">
             <variableDeclaration name="press_Tasks.NewTask.OK_instance_5_argument_2" sort="Task"/>
         </taskNode>
+        <orderingConstraint predecessor="method9_subtask_2" successor="method9_subtask_3"/>
         <orderingConstraint predecessor="method9_subtask_3" successor="method9_subtask_4"/>
         <orderingConstraint predecessor="method9_subtask_3" successor="method9_subtask_5"/>
         <orderingConstraint predecessor="method9_subtask_4" successor="method9_subtask_5"/>
-        <orderingConstraint predecessor="method9_subtask_2" successor="method9_subtask_3"/>
         <valueRestriction type="eq" variable="newObj_variable27">
             <variable name="configure_Task_instance_4_argument_1"/>
         </valueRestriction>
@@ -3929,9 +3929,9 @@
         <taskNode name="method23_subtask_4" taskSchema="press_Contacts.NewContact.OK">
             <variableDeclaration name="press_Contacts.NewContact.OK_instance_4_argument_4" sort="Contact"/>
         </taskNode>
-        <orderingConstraint predecessor="method23_subtask_3" successor="method23_subtask_4"/>
-        <orderingConstraint predecessor="method23_subtask_2" successor="method23_subtask_4"/>
         <orderingConstraint predecessor="method23_subtask_2" successor="method23_subtask_3"/>
+        <orderingConstraint predecessor="method23_subtask_2" successor="method23_subtask_4"/>
+        <orderingConstraint predecessor="method23_subtask_3" successor="method23_subtask_4"/>
         <valueRestriction type="eq" variable="newObj_variable54">
             <variable name="configure_Contact_instance_3_argument_2"/>
         </valueRestriction>
@@ -4005,9 +4005,9 @@
             <variableDeclaration name="select_People.AddFavourite.Picture_instance_5_argument_2" sort="Contact"/>
             <variableDeclaration name="select_People.AddFavourite.Picture_instance_5_argument_3" sort="Picture"/>
         </taskNode>
+        <orderingConstraint predecessor="method26_subtask_2" successor="method26_subtask_3"/>
         <orderingConstraint predecessor="method26_subtask_3" successor="method26_subtask_4"/>
         <orderingConstraint predecessor="method26_subtask_4" successor="method26_subtask_5"/>
-        <orderingConstraint predecessor="method26_subtask_2" successor="method26_subtask_3"/>
         <valueRestriction type="eq" variable="newObj_variable64">
             <variable name="select_People.AddFavourite.Contact_instance_3_argument_0"/>
         </valueRestriction>
@@ -4116,8 +4116,8 @@
             <variableDeclaration name="select_People.AddFavourite.FavouriteNumber_WithPicture_instance_4_argument_1" sort="Contact"/>
             <variableDeclaration name="select_People.AddFavourite.FavouriteNumber_WithPicture_instance_4_argument_2" sort="Picture"/>
         </taskNode>
-        <orderingConstraint predecessor="method34_subtask_3" successor="method34_subtask_4"/>
         <orderingConstraint predecessor="method34_subtask_2" successor="method34_subtask_3"/>
+        <orderingConstraint predecessor="method34_subtask_3" successor="method34_subtask_4"/>
         <valueRestriction type="eq" variable="newObj_variable64">
             <variable name="select_People.AddFavourite.Contact_instance_3_argument_0"/>
         </valueRestriction>
@@ -4191,8 +4191,8 @@
             <variableDeclaration name="press_Telephone.Call_instance_4_argument_0" sort="Contactable"/>
             <variableDeclaration name="press_Telephone.Call_instance_4_argument_1" sort="Call"/>
         </taskNode>
-        <orderingConstraint predecessor="method39_subtask_3" successor="method39_subtask_4"/>
         <orderingConstraint predecessor="method39_subtask_2" successor="method39_subtask_3"/>
+        <orderingConstraint predecessor="method39_subtask_3" successor="method39_subtask_4"/>
         <valueRestriction type="eq" variable="call_variable1">
             <variable name="press_Telephone.Call_instance_4_argument_1"/>
         </valueRestriction>
@@ -4257,8 +4257,8 @@
             <variableDeclaration name="select_Contacts.Details.Number_instance_4_argument_3" sort="Call"/>
             <variableDeclaration name="select_Contacts.Details.Number_instance_4_argument_4" sort="Contactable"/>
         </taskNode>
-        <orderingConstraint predecessor="method42_subtask_3" successor="method42_subtask_4"/>
         <orderingConstraint predecessor="method42_subtask_2" successor="method42_subtask_3"/>
+        <orderingConstraint predecessor="method42_subtask_3" successor="method42_subtask_4"/>
         <valueRestriction type="eq" variable="call_variable1">
             <variable name="select_Contacts.Details.Number_instance_4_argument_3"/>
         </valueRestriction>
@@ -4299,8 +4299,8 @@
             <variableDeclaration name="select_People.FavouriteSelected.Number_instance_4_argument_3" sort="Call"/>
             <variableDeclaration name="select_People.FavouriteSelected.Number_instance_4_argument_4" sort="Contactable"/>
         </taskNode>
-        <orderingConstraint predecessor="method43_subtask_3" successor="method43_subtask_4"/>
         <orderingConstraint predecessor="method43_subtask_2" successor="method43_subtask_3"/>
+        <orderingConstraint predecessor="method43_subtask_3" successor="method43_subtask_4"/>
         <valueRestriction type="eq" variable="call_variable1">
             <variable name="select_People.FavouriteSelected.Number_instance_4_argument_3"/>
         </valueRestriction>
@@ -4432,9 +4432,9 @@
             <variableDeclaration name="press_NewMessage.Send_instance_5_argument_0" sort="Contactable"/>
             <variableDeclaration name="press_NewMessage.Send_instance_5_argument_1" sort="SMS"/>
         </taskNode>
+        <orderingConstraint predecessor="method53_subtask_2" successor="method53_subtask_3"/>
         <orderingConstraint predecessor="method53_subtask_3" successor="method53_subtask_4"/>
         <orderingConstraint predecessor="method53_subtask_4" successor="method53_subtask_5"/>
-        <orderingConstraint predecessor="method53_subtask_2" successor="method53_subtask_3"/>
         <valueRestriction type="eq" variable="newObj_variable95">
             <variable name="press_NewMessage.Send_instance_5_argument_0"/>
         </valueRestriction>
@@ -4467,9 +4467,9 @@
             <variableDeclaration name="press_NewMessage.Send_Mobile_instance_5_argument_4" sort="Contactable"/>
             <variableDeclaration name="press_NewMessage.Send_Mobile_instance_5_argument_5" sort="SMS"/>
         </taskNode>
+        <orderingConstraint predecessor="method54_subtask_2" successor="method54_subtask_3"/>
         <orderingConstraint predecessor="method54_subtask_3" successor="method54_subtask_4"/>
         <orderingConstraint predecessor="method54_subtask_4" successor="method54_subtask_5"/>
-        <orderingConstraint predecessor="method54_subtask_2" successor="method54_subtask_3"/>
         <valueRestriction type="eq" variable="newObj_variable95">
             <variable name="press_NewMessage.Send_Mobile_instance_5_argument_4"/>
         </valueRestriction>
@@ -4529,11 +4529,11 @@
         <taskNode name="method56_subtask_6" taskSchema="press_EMail.NewEMail">
             <variableDeclaration name="press_EMail.NewEMail_instance_6_argument_5" sort="EMailAccount"/>
         </taskNode>
-        <orderingConstraint predecessor="method56_subtask_6" successor="method56_subtask_4"/>
-        <orderingConstraint predecessor="method56_subtask_3" successor="method56_subtask_6"/>
-        <orderingConstraint predecessor="method56_subtask_6" successor="method56_subtask_5"/>
-        <orderingConstraint predecessor="method56_subtask_4" successor="method56_subtask_5"/>
         <orderingConstraint predecessor="method56_subtask_2" successor="method56_subtask_3"/>
+        <orderingConstraint predecessor="method56_subtask_3" successor="method56_subtask_6"/>
+        <orderingConstraint predecessor="method56_subtask_4" successor="method56_subtask_5"/>
+        <orderingConstraint predecessor="method56_subtask_6" successor="method56_subtask_4"/>
+        <orderingConstraint predecessor="method56_subtask_6" successor="method56_subtask_5"/>
         <valueRestriction type="eq" variable="newObj_variable117">
             <variable name="enter_EMailAddress_instance_4_argument_1"/>
         </valueRestriction>
@@ -4634,10 +4634,10 @@
             <variableDeclaration name="press_EMail.NewEMail.Send_instance_6_argument_5" sort="Contactable"/>
             <variableDeclaration name="press_EMail.NewEMail.Send_instance_6_argument_6" sort="EMail"/>
         </taskNode>
-        <orderingConstraint predecessor="method60_subtask_3" successor="method60_subtask_4"/>
-        <orderingConstraint predecessor="method60_subtask_4" successor="method60_subtask_6"/>
-        <orderingConstraint predecessor="method60_subtask_4" successor="method60_subtask_5"/>
         <orderingConstraint predecessor="method60_subtask_2" successor="method60_subtask_3"/>
+        <orderingConstraint predecessor="method60_subtask_3" successor="method60_subtask_4"/>
+        <orderingConstraint predecessor="method60_subtask_4" successor="method60_subtask_5"/>
+        <orderingConstraint predecessor="method60_subtask_4" successor="method60_subtask_6"/>
         <orderingConstraint predecessor="method60_subtask_5" successor="method60_subtask_6"/>
         <valueRestriction type="eq" variable="newObj_variable117">
             <variable name="press_EMail.NewEMail.Send_instance_6_argument_5"/>
@@ -4995,8 +4995,8 @@
             <variableDeclaration name="extractsMultipleInformation_instance_4_argument_3" sort="Contactable"/>
             <variableDeclaration name="extractsMultipleInformation_instance_4_argument_4" sort="Message"/>
         </taskNode>
-        <orderingConstraint predecessor="method81_subtask_3" successor="method81_subtask_4"/>
         <orderingConstraint predecessor="method81_subtask_2" successor="method81_subtask_3"/>
+        <orderingConstraint predecessor="method81_subtask_3" successor="method81_subtask_4"/>
         <valueRestriction type="eq" variable="newObj_variable219">
             <variable name="contact_instance_3_argument_1"/>
         </valueRestriction>
