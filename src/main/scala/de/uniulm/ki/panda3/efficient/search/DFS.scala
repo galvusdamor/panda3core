@@ -41,53 +41,60 @@ object DFS {
 
     System.in.read()
 
-    time = System.currentTimeMillis()
     //dfs(initialPlan, 0)
-    dfs(initialPlan,0)
+    initTime = System.currentTimeMillis()
+    nodes = 0
+
+    dfs(initialPlan, 0)
   }
 
-  var time: Long = 0
-
-  def printTime(str: String): Unit = {
-    val nTime = System.currentTimeMillis()
-    println(str + " " + (nTime - time))
-
-    time = nTime
-  }
+  var initTime: Long = System.currentTimeMillis()
+  var nodes: Int = 0 // count the nodes
 
   def dfs(plan: EfficientPlan, depth: Int): Option[EfficientPlan] = if (plan.flaws.length == 0) Some(plan)
   else {
-    println(depth)
-    printTime("ToFlaw")
+
+    if (nodes % 500 == 0 && nodes > 0) {
+      val nTime = System.currentTimeMillis()
+      val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
+      //time = nTime
+      println("Plans Expanded: " + nodes + " " + nps + " Depth " + depth )
+    }
+    nodes += 1
+
+
     val flaws = plan.flaws
-    printTime("Flaws")
-    val modifications = new Array[Array[EfficientModification]](flaws.length)
+    //val modifications = new Array[Array[EfficientModification]](flaws.length)
     var flawnum = 0
     var smallFlaw = 0
     var smallFlawNumMod = 0x3f3f3f3f
-    println("Number of flaws " + flaws.length)
     while (flawnum < flaws.length) {
       //printTime("ToModcall")
-      modifications(flawnum) = flaws(flawnum).resolver
+      val modnum = flaws(flawnum).estimatedNumberOfResolvers
+      //modifications(flawnum) = flaws(flawnum).resolver
       //printTime("Modification")
-      if (modifications(flawnum).length < smallFlawNumMod) {
-        smallFlawNumMod = modifications(flawnum).length
+      if (modnum < smallFlawNumMod) {
+        smallFlawNumMod = modnum
         smallFlaw = flawnum
       }
+      /*if (modifications(flawnum).length < smallFlawNumMod) {
+        smallFlawNumMod = modifications(flawnum).length
+        smallFlaw = flawnum
+      }*/
       flawnum += 1
     }
-    printTime("Modification")
 
     if (smallFlawNumMod == 0) None
     else {
       var result: Option[EfficientPlan] = None
       var modNum = 0
+      val resolver = flaws(smallFlaw).resolver
+      assert(resolver.length == smallFlawNumMod)
       while (modNum < smallFlawNumMod && result.isEmpty) {
         // apply modification
-        printTime("ToPlan")
-        val newPlan = plan.modify(modifications(smallFlaw)(modNum))
-        printTime("ToModify")
+        val newPlan = plan.modify(resolver(modNum))
         result = dfs(newPlan, depth + 1)
+        modNum += 1
       }
       result
     }
