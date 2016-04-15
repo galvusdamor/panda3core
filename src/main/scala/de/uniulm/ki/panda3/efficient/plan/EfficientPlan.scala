@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.efficient.plan.flaw._
 import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientInsertPlanStepWithLink, EfficientInsertCausalLink, EfficientModification}
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
 
+import scala.collection.{mutable, BitSet}
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -18,12 +19,15 @@ import scala.collection.mutable.ArrayBuffer
   * - similar to the CSP and to literals, constants are stored in their negative representation (see [[de.uniulm.ki.panda3.efficient.switchConstant]])
   * - init and goal are assumed to be the plan steps indexed 0 and 1 respectively
   *
+  * - the supporter arrays first contain all supporters for positive and negative predicates in an alternating fashion. For Predicate i the positive supporters are stored in 2*i, the
+  * negative ones in 2*i+1
+  *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // TODO there is no place to save the mapping, which planstep one is in their HTN parent's applied method subplan
 case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStepParameters: Array[Array[Int]], planStepDecomposedByMethod: Array[Int],
                          planStepParentInDecompositionTree: Array[Int], planStepIsInstanceOfSubPlanPlanStep: Array[Int], variableConstraints: EfficientCSP, ordering: EfficientOrdering,
-                         causalLinks: Array[EfficientCausalLink], problemConfiguration: ProblemConfiguration) {
+                         causalLinks: Array[EfficientCausalLink], problemConfiguration: ProblemConfiguration)() {
 
   assert(planStepTasks.length == planStepParameters.length)
   assert(planStepTasks.length == planStepDecomposedByMethod.length)
@@ -42,6 +46,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
         planStepParameters(ps)(arg) < firstFreeVariableID
       }
   }
+  //assert(possibleSupportersByDecompositionPerLiteral.length == 2 * domain.predicates.length)
 
   def isPlanStepPresentInPlan(planStep: Int): Boolean = planStepDecomposedByMethod(planStep) == -1
 
@@ -239,7 +244,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     val newPlanStepParameters = new ArrayBuffer[Array[Int]]()
     val newPlanStepDecomposedByMethod = new ArrayBuffer[Int]()
     val newPlanStepParentInDecompositionTree = new ArrayBuffer[Int]()
-    val newPlanStepIsInstanceOfSubPlanPlanStep= new ArrayBuffer[Int]()
+    val newPlanStepIsInstanceOfSubPlanPlanStep = new ArrayBuffer[Int]()
     val newCausalLinks = new ArrayBuffer[EfficientCausalLink]()
     val newVariableConstraints: EfficientCSP = variableConstraints.addVariables(modification.addedVariableSorts)
     val newOrdering: EfficientOrdering = ordering.addPlanSteps(modification.addedPlanSteps.length)
@@ -296,7 +301,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     }
 
     val newPlan = EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethodArray, newPlanStepParentInDecompositionTree.toArray,
-                                newPlanStepIsInstanceOfSubPlanPlanStep.toArray,newVariableConstraints, newOrdering, newCausalLinks.toArray, problemConfiguration)
+                                newPlanStepIsInstanceOfSubPlanPlanStep.toArray, newVariableConstraints, newOrdering, newCausalLinks.toArray, problemConfiguration)()
 
     //newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)
 
@@ -312,4 +317,41 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
   val firstFreeVariableID: Int = variableConstraints.numberOfVariables
   val firstFreePlanStepID: Int = planStepTasks.length
+
+  lazy val possibleSupportersByDecompositionPerLiteral: Array[Array[Int]] = EfficientPlan.computeDecompositionSupportersPerLiteral(domain, planStepTasks, planStepDecomposedByMethod)
+}
+
+object EfficientPlan {
+  private def computeDecompositionSupportersPerLiteral(domain: EfficientDomain, planStepTasks: Array[Int], planStepDecomposedByMethod: Array[Int]): Array[Array[Int]] = {
+    val supporters = new Array[mutable.BitSet](2 * domain.predicates.length)
+    var i = 0
+    while (i < supporters.length) {
+      supporters(i) = mutable.BitSet()
+      i += 1
+    }
+
+    // iterate over all tasks
+    i = 2
+    while (i < planStepTasks.length) {
+      if (planStepDecomposedByMethod(i) == -1 && !domain.tasks(planStepTasks(i)).isPrimitive) {
+        val supportedLiterals = domain.taskSchemaTransitionGraph.taskCanSupportByDecomposition(planStepTasks(i))
+        var j = 0
+        while (j < supportedLiterals.length) {
+          val predicateIndex = 2 * supportedLiterals(j)._1 + (if (supportedLiterals(j)._2) 0 else 1)
+          supporters(predicateIndex) add i
+          j += 1
+        }
+      }
+      i += 1
+    }
+
+    // store the result in a big array
+    val result = new Array[Array[Int]](2 * domain.predicates.length)
+    i = 0
+    while (i < result.length) {
+      result(i) = supporters(i).toArray
+      i += 1
+    }
+    result
+  }
 }

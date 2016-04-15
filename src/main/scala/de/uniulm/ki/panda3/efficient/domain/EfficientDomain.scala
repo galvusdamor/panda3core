@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.efficient.domain
 
+import de.uniulm.ki.panda3.efficient.domain.datastructures.EfficientTaskSchemaTransitionGraph
+
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -15,10 +17,10 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
-                      var sortsOfConstant: Array[Array[Int]] = Array(),
-                      var predicates: Array[Array[Int]] = Array(),
-                      var tasks: Array[EfficientTask] = Array(),
-                      var decompositionMethods: Array[EfficientDecompositionMethod] = Array()) {
+                           var sortsOfConstant: Array[Array[Int]] = Array(),
+                           var predicates: Array[Array[Int]] = Array(),
+                           var tasks: Array[EfficientTask] = Array(),
+                           var decompositionMethods: Array[EfficientDecompositionMethod] = Array()) {
 
 
   var constantsOfSort: Array[Array[Int]] = Array()
@@ -37,7 +39,6 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
   }
 
   lazy val insertableTasks: Array[EfficientTask] = tasks filter { _.allowedToInsert }
-
 
   /** the ith index of the array contains all possible tasks that produce predicate i. The first list in the pair the positive ones, the second the negative ones.
     * The inner pairs each contain the index of the task and the index of the possible producer
@@ -61,4 +62,7 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
   /** contains for each task an array containing all decomposition methods that can be applied to that task */
   lazy val taskToPossibleMethods: Map[Int, Array[(EfficientDecompositionMethod, Int)]] =
     (tasks.indices map { i => i -> (decompositionMethods.zipWithIndex filter { _._1.abstractTask == i }) }).toMap
+
+
+  lazy val taskSchemaTransitionGraph: EfficientTaskSchemaTransitionGraph = EfficientTaskSchemaTransitionGraph(this)
 }

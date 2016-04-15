@@ -23,12 +23,22 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
     var numberOfResolvers = linkInsertions + planStepInsertions
 
     // TODO decompose only those plan steps that can lead to the necessary effect
-    var possibleProducer = 2
+    /*var possibleProducer = 2
     while (possibleProducer < plan.firstFreePlanStepID) {
-      if (!plan.domain.tasks(plan.planStepTasks(possibleProducer)).isPrimitive && possibleProducer != planStep && plan.planStepDecomposedByMethod(possibleProducer) == -1)
+      if (!plan.domain.tasks(plan.planStepTasks(possibleProducer)).isPrimitive && plan.planStepDecomposedByMethod(possibleProducer) == -1)
         numberOfResolvers += EfficientDecomposePlanStep.estimate(plan, this, possibleProducer)
       possibleProducer += 1
+    }*/
+
+    val precondition = plan.domain.tasks(plan.planStepTasks(planStep)).precondition(preconditionIndex)
+    val literalIndex = 2 * precondition.predicate + (if (precondition.isPositive) 0 else 1)
+    val possibleProducer = plan.possibleSupportersByDecompositionPerLiteral(literalIndex)
+    var indexOnPossibleProducer = 0
+    while (indexOnPossibleProducer < possibleProducer.length) {
+      numberOfResolvers += EfficientDecomposePlanStep.estimate(plan, this, possibleProducer(indexOnPossibleProducer))
+      indexOnPossibleProducer += 1
     }
+
     numberOfResolvers
   }
 

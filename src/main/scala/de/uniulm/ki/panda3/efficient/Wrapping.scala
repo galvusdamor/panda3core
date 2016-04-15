@@ -143,7 +143,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     }
 
     EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, planStepDecomposedBy.toArray, planStepParentInDecompositionTree.toArray, planStepIsInstanceOfSubPlanPlanStep
-      .toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)
+      .toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)()
   }
 
   private def newVariableFormEfficient(variableIndex: Int, sortIndex: Int): Variable = Variable(variableIndex, "variable_" + variableIndex, domainSorts.back(sortIndex))

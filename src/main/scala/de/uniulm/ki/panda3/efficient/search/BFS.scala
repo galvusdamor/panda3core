@@ -55,7 +55,7 @@ object BFS {
 
     System.in.read()
     //dfs(initialPlan, 0)
-    val (searchNode, sem, _) = startSearch(initialPlan, wrapper, Some(2000), true)
+    val (searchNode, sem, _) = startSearch(initialPlan, wrapper, Some(2000000), false)
 
     sem.acquire()
     println("done")
@@ -170,9 +170,9 @@ object BFS {
 
           if (smallFlawNumMod != 0) {
             val actualModifications = if (buildTree) myNode.modifications(myNode.selectedFlaw) else flaws(myNode.selectedFlaw).resolver
-            assert(actualModifications.length == smallFlawNumMod, "Estimation of number of modifications was incorrect (" + actualModifications.length + " and " + smallFlawNumMod + ")")
+            //assert(actualModifications.length == smallFlawNumMod, "Estimation of number of modifications was incorrect (" + actualModifications.length + " and " + smallFlawNumMod + ")")
             var modNum = 0
-            while (modNum < smallFlawNumMod && result.isEmpty) {
+            while (modNum < actualModifications.length && result.isEmpty) {
               // apply modification
               //val newPlan: EfficientPlan = plan.modify(myNode.modifications(myNode.selectedFlaw)(modNum))
               val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))

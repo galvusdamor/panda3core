@@ -33,9 +33,9 @@ case class SymbolicCSP(variables: Set[Variable], constraints: Seq[VariableConstr
 
 
   private def checkIntegrity() = {
-    //assert(unequal forall { _._2 forall { remainingDomain.contains } })
-    //assert(unequal forall { _._2 forall { variables.contains } })
-    //assert(unequal forall { case (v1, vals) => vals forall { case v2 => unequal(v2).contains(v1) } })
+    assert(unequal forall { _._2 forall { remainingDomain.contains } })
+    assert(unequal forall { _._2 forall { variables.contains } })
+    assert(unequal forall { case (v1, vals) => vals forall { case v2 => unequal(v2).contains(v1) } })
   }
 
 
