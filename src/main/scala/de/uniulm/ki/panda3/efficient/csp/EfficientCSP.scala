@@ -340,9 +340,20 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.BitS
 
       if (compatibility == EfficientCSP.INCOMPATIBLE) possible = false
       else if (compatibility == EfficientCSP.COMPATIBLE) {
-        val constraint = EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, x, y)
-        csp.addConstraint(constraint)
-        mgu append constraint
+        val constraint: EfficientVariableConstraint = if (x >= 0 && y >= 0) EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, x, y)
+        else if (x >= 0 || y >= 0) {
+          // one of the reps is a
+          val variable = if (x >= 0) x else y
+          val constant = if (x >= 0) switchConstant(y) else switchConstant(x)
+          EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, variable, constant)
+        } else {
+          assert(x == y, "These are compatible constants, they should be equal")
+          null
+        }
+        if (constraint != null) {
+          csp.addConstraint(constraint)
+          mgu append constraint
+        }
       }
       i += 1
     }
@@ -364,7 +375,16 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.BitS
 
       if (compatibility == EfficientCSP.INCOMPATIBLE) possible = false
       else if (compatibility == EfficientCSP.COMPATIBLE) {
-        mgu append EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, x, y)
+        if (x >= 0 && y >= 0) {
+          mgu append EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, x, y)
+        } else if (x >= 0 || y >= 0) {
+          // one of the reps is a
+          val variable = if (x >= 0) x else y
+          val constant = if (x >= 0) switchConstant(y) else switchConstant(x)
+          mgu append EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, variable, constant)
+        } else {
+          assert(x == y, "These are compatible constants, they should be equal")
+        }
       }
       i += 1
     }
