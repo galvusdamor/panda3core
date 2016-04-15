@@ -7,8 +7,8 @@ version := "0.2.0"
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.5" % "test"
-libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.5"
 
+libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.5"
 
 scalastyleConfig := baseDirectory.value / "project" / "scalastyle_config.xml"
 
