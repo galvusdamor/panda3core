@@ -46,6 +46,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
         planStepParameters(ps)(arg) < firstFreeVariableID
       }
   }
+
   //assert(possibleSupportersByDecompositionPerLiteral.length == 2 * domain.predicates.length)
 
   def isPlanStepPresentInPlan(planStep: Int): Boolean = planStepDecomposedByMethod(planStep) == -1
@@ -240,32 +241,37 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
   }
 
   def modify(modification: EfficientModification): EfficientPlan = {
-    val newPlanStepTasks = new ArrayBuffer[Int]()
-    val newPlanStepParameters = new ArrayBuffer[Array[Int]]()
-    val newPlanStepDecomposedByMethod = new ArrayBuffer[Int]()
-    val newPlanStepParentInDecompositionTree = new ArrayBuffer[Int]()
-    val newPlanStepIsInstanceOfSubPlanPlanStep = new ArrayBuffer[Int]()
-    val newCausalLinks = new ArrayBuffer[EfficientCausalLink]()
     val newVariableConstraints: EfficientCSP = variableConstraints.addVariables(modification.addedVariableSorts)
     val newOrdering: EfficientOrdering = ordering.addPlanSteps(modification.addedPlanSteps.length)
-
-    newPlanStepTasks appendAll planStepTasks
-    newPlanStepParameters appendAll planStepParameters
-    newPlanStepDecomposedByMethod appendAll planStepDecomposedByMethod
-    newPlanStepParentInDecompositionTree appendAll planStepParentInDecompositionTree
-    newPlanStepIsInstanceOfSubPlanPlanStep appendAll planStepIsInstanceOfSubPlanPlanStep
-    newCausalLinks appendAll causalLinks
 
     // apply the modification
 
     // 1. new plan steps and the init -> ps -> goal orderings
+    val numberOfNewPlanSteps = firstFreePlanStepID + modification.addedPlanSteps.length
+    val newPlanStepTasks = new Array[Int](numberOfNewPlanSteps)
+    val newPlanStepParameters = new Array[Array[Int]](numberOfNewPlanSteps)
+    val newPlanStepDecomposedByMethod = new Array[Int](numberOfNewPlanSteps)
+    val newPlanStepParentInDecompositionTree = new Array[Int](numberOfNewPlanSteps)
+    val newPlanStepIsInstanceOfSubPlanPlanStep = new Array[Int](numberOfNewPlanSteps)
+
+    var oldPS = 0
+    while (oldPS < firstFreePlanStepID) {
+      newPlanStepTasks(oldPS) = planStepTasks(oldPS)
+      newPlanStepParameters(oldPS) = planStepParameters(oldPS)
+      newPlanStepDecomposedByMethod(oldPS) = planStepDecomposedByMethod(oldPS)
+      newPlanStepParentInDecompositionTree(oldPS) = planStepParentInDecompositionTree(oldPS)
+      newPlanStepIsInstanceOfSubPlanPlanStep(oldPS) = planStepIsInstanceOfSubPlanPlanStep(oldPS)
+      oldPS += 1
+    }
+
     var newPS = 0
     while (newPS < modification.addedPlanSteps.length) {
-      newPlanStepTasks append modification.addedPlanSteps(newPS)._1
-      newPlanStepParameters append modification.addedPlanSteps(newPS)._2
-      newPlanStepDecomposedByMethod append modification.addedPlanSteps(newPS)._3
-      newPlanStepParentInDecompositionTree append modification.addedPlanSteps(newPS)._4
-      newPlanStepIsInstanceOfSubPlanPlanStep append modification.addedPlanSteps(newPS)._5
+      val newPSIndex = firstFreePlanStepID + newPS
+      newPlanStepTasks(newPSIndex) = modification.addedPlanSteps(newPS)._1
+      newPlanStepParameters(newPSIndex) = modification.addedPlanSteps(newPS)._2
+      newPlanStepDecomposedByMethod(newPSIndex) = modification.addedPlanSteps(newPS)._3
+      newPlanStepParentInDecompositionTree(newPSIndex) = modification.addedPlanSteps(newPS)._4
+      newPlanStepIsInstanceOfSubPlanPlanStep(newPSIndex) = modification.addedPlanSteps(newPS)._5
       // new plan steps are between init and goal
       newOrdering.addOrderingConstraint(0, firstFreePlanStepID + newPS) // init < ps
       newOrdering.addOrderingConstraint(firstFreePlanStepID + newPS, 1) // ps < goal
@@ -273,7 +279,16 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     }
 
     // 2. new causal links
-    newCausalLinks appendAll modification.addedCausalLinks
+    val newCausalLinks = new Array[EfficientCausalLink](causalLinks.length + modification.addedCausalLinks.length)
+    var causalLinkIndex = 0
+    while (causalLinkIndex < newCausalLinks.length) {
+      if (causalLinkIndex < causalLinks.length)
+        newCausalLinks(causalLinkIndex) = causalLinks(causalLinkIndex)
+      else
+        newCausalLinks(causalLinkIndex) = modification.addedCausalLinks(causalLinkIndex - causalLinks.length)
+
+      causalLinkIndex += 1
+    }
 
     // 3. variable constraints
     var constraint = 0
@@ -290,18 +305,16 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     }
 
 
-    val newPlanStepDecomposedByMethodArray = newPlanStepDecomposedByMethod.toArray
-
     // 5. mark all decomposed planteps as decomposed
     var decomposedPS = 0
     while (decomposedPS < modification.decomposedPlanStepsByMethod.length) {
       val decompositionInformation = modification.decomposedPlanStepsByMethod(decomposedPS)
-      newPlanStepDecomposedByMethodArray(decompositionInformation._1) = decompositionInformation._2
+      newPlanStepDecomposedByMethod(decompositionInformation._1) = decompositionInformation._2
       decomposedPS += 1
     }
 
-    val newPlan = EfficientPlan(domain, newPlanStepTasks.toArray, newPlanStepParameters.toArray, newPlanStepDecomposedByMethodArray, newPlanStepParentInDecompositionTree.toArray,
-                                newPlanStepIsInstanceOfSubPlanPlanStep.toArray, newVariableConstraints, newOrdering, newCausalLinks.toArray, problemConfiguration)()
+    val newPlan = EfficientPlan(domain, newPlanStepTasks, newPlanStepParameters, newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree,
+                                newPlanStepIsInstanceOfSubPlanPlanStep, newVariableConstraints, newOrdering, newCausalLinks, problemConfiguration)()
 
     //newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)
 
