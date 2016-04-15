@@ -78,6 +78,7 @@ object BFS {
 
     def dfsNode(node: SearchNode): Unit = {
       wrappC += 1
+      node.modifications // force the evaluation
       if (wrappC % 10 == 0) println("Wrapped: " + wrappC)
       node.children foreach { case (x, _) => dfsNode(x) }
     }
@@ -201,6 +202,7 @@ object BFS {
     new Thread(new Runnable {
       override def run(): Unit = {
         val (_, solution) = bfs()
+        semaphore.release()
         solution match {
           case None       => println("No solution")
           case Some(plan) =>

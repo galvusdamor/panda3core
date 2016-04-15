@@ -94,7 +94,10 @@ object DFS {
     }
 
     new Thread(new Runnable {
-      override def run(): Unit = println(search(domain, node))
+      override def run(): Unit = {
+        search(domain, node)
+        semaphore.release()
+      }
     }).start()
 
     (node, semaphore, { _ => abort = true })
