@@ -381,15 +381,18 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         searchNode setSelectedFlaw (searchNode.plan.flaws indexWhere { flaw => FlawEquivalenceChecker(efficientSearchNode.plan.flaws(efficientSearchNode.selectedFlaw), flaw, this) })
         assert(searchNode.selectedFlaw != -1)
         assert(searchNode.plan.flaws.size == efficientSearchNode.plan.flaws.length)
+        assert(searchNode.plan.flaws.size == efficientSearchNode.modifications.length)
         // reorder modifications
-        searchNode setModifications { () => searchNode.plan.flaws map { flaw =>
-          val otherFlawIndex = efficientSearchNode.plan.flaws indexWhere { efficientFlaw => FlawEquivalenceChecker(efficientFlaw, flaw, this) }
-          (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
-        }
+        searchNode setModifications { () =>
+          val modifications = searchNode.plan.flaws map { flaw =>
+            val otherFlawIndex = efficientSearchNode.plan.flaws indexWhere { efficientFlaw => FlawEquivalenceChecker(efficientFlaw, flaw, this) }
+            (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
+          }
+          assert(modifications.length == searchNode.plan.flaws.size)
+          modifications
         }
         searchNode setChildren { () => efficientSearchNode.children map { case (node, i) => (wrapWithParent(node, searchNode), i) } }
       }
-
       searchNode
     }
 
