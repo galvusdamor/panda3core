@@ -22,7 +22,7 @@ object SHOPMethodCompiler extends DomainTransformer[Unit] {
         // instantiate
         val preconditionPlanStep = new PlanStep(subPlan.getFirstFreePlanStepID, preconditionTaskSchema, preconditionTaskSchema.parameters)
         // make this plan step the first actual task in the method
-        val newOrdering = subPlan.orderingConstraints.addOrderings(OrderingConstraint.allAfter(preconditionPlanStep, subPlan.planStepWithoutInitGoal :+ subPlan.goal: _*))
+        val newOrdering = subPlan.orderingConstraints.addOrderings(OrderingConstraint.allAfter(preconditionPlanStep, subPlan.planStepsWithoutInitGoal :+ subPlan.goal: _*))
           .addOrdering(subPlan.init, preconditionPlanStep)
 
 

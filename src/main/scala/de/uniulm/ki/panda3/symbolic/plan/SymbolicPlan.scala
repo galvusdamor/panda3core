@@ -28,7 +28,7 @@ case class SymbolicPlan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinks
   }
   }
 
-  planStepWithoutInitGoal foreach { ps =>
+  planStepsWithoutInitGoal foreach { ps =>
     assert(orderingConstraints.lt(init, ps))
     assert(orderingConstraints.lt(ps, goal))
   }
@@ -70,7 +70,7 @@ case class SymbolicPlan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinks
     ((variableConstraints.variables map variableConstraints.getRepresentative) collect { case v: Variable => UnboundVariable(this, v) }).toSeq
 
   override lazy val notInsertedByDecomposition: Seq[NotInsertedByDecomposition] =
-    planStepWithoutInitGoal filterNot { planStepParentInDecompositionTree.contains } map { NotInsertedByDecomposition(this, _) }
+    planStepsWithoutInitGoal filterNot { planStepParentInDecompositionTree.contains } map { NotInsertedByDecomposition(this, _) }
 
   override def isSolvable: Option[Boolean] = if (!orderingConstraints.isConsistent || variableConstraints.isSolvable.contains(false)) Some(false) else if (flaws.isEmpty) Some(true) else None
 

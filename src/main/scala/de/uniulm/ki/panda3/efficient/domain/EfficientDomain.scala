@@ -14,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
+case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
                       var sortsOfConstant: Array[Array[Int]] = Array(),
                       var predicates: Array[Array[Int]] = Array(),
                       var tasks: Array[EfficientTask] = Array(),

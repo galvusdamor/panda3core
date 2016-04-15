@@ -21,11 +21,13 @@ trait Plan extends DomainUpdatable with PrettyPrintable {
     if (hardFlaws.isEmpty) unboundVariables else hardFlaws
   } filter isFlawAllowed
 
-  lazy val planStepWithoutInitGoal: Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
+  lazy val planStepsWithoutInitGoal: Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
 
   lazy val planStepsAndRemovedPlanStepsWithoutInitGoal: Seq[PlanStep] = planStepsAndRemovedPlanSteps filter { ps => ps != init && ps != goal }
 
   lazy val initAndGoal = init :: goal :: Nil
+
+  lazy val planStepsAndRemovedWithInitAndGoalFirst = (init  :: goal :: Nil ) ++ planStepsAndRemovedPlanStepsWithoutInitGoal
 
   val isModificationAllowed: IsModificationAllowed
   val isFlawAllowed        : IsFlawAllowed
@@ -77,7 +79,7 @@ trait Plan extends DomainUpdatable with PrettyPrintable {
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod]]s. */
   def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution[Variable] = Substitution[Variable](Nil, Nil), parentPlanStep: PlanStep): (Plan,
-    Substitution[Variable], Map[PlanStep,PlanStep])
+    Substitution[Variable], Map[PlanStep, PlanStep])
 
   override def update(domainUpdate: DomainUpdate): Plan
 

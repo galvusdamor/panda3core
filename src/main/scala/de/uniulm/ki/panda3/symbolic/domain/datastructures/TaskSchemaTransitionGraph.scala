@@ -17,7 +17,7 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraph[Task]
 
   /** describes which tasks can be obtained from a given task by applying a given decomposition method */
   val canBeDirectlyDecomposedIntoVia: Map[Task, Set[(DecompositionMethod, Task)]] = (domain.tasks map { case task => (task, (domain.decompositionMethods flatMap { case method => method
-    .subPlan.planStepWithoutInitGoal.map { case ps => (method, ps.schema) }
+    .subPlan.planStepsWithoutInitGoal.map { case ps => (method, ps.schema) }
   }).toSet)
   }).toMap[Task, Set[(DecompositionMethod, Task)]]
 

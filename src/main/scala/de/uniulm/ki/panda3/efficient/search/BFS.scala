@@ -1,19 +1,15 @@
 package de.uniulm.ki.panda3.efficient.search
 
+
 import java.io.FileInputStream
-import java.lang.AssertionError
 import java.util
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
-import de.uniulm.ki.panda3.efficient.plan.flaw.{EfficientCausalThreat, EfficientOpenPrecondition, EfficientAbstractPlanStep}
-import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientDecomposePlanStep, EfficientInsertPlanStepWithLink, EfficientModification}
+import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.panda3.symbolic.compiler.{SHOPMethodCompiler, ToPlainFormulaRepresentation, ClosedWorldAssumption}
-import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
-import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.SearchNode
 
 import scala.collection.mutable.ArrayBuffer
@@ -71,6 +67,8 @@ object BFS {
       println(symbolicPlan.longInfo)
     }*/
     System.in.read()
+
+
     val symNode = wrapper.wrap(searchNode)
     println("Start unwrapping")
 
@@ -78,7 +76,7 @@ object BFS {
 
     def dfsNode(node: SearchNode): Unit = {
       wrappC += 1
-      node.modifications // force the evaluation
+      //node.modifications // force the evaluation
       if (wrappC % 10 == 0) println("Wrapped: " + wrappC)
       node.children foreach { case (x, _) => dfsNode(x) }
     }

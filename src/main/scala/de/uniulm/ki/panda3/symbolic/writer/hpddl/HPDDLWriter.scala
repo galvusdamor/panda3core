@@ -80,7 +80,7 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
 
 
     // sub tasks
-    val planStepToID: Map[PlanStep, Int] = plan.planStepWithoutInitGoal.zipWithIndex.toMap
+    val planStepToID: Map[PlanStep, Int] = plan.planStepsWithoutInitGoal.zipWithIndex.toMap
     planStepToID.toSeq sortBy {
       _._1.id
     } foreach { case (ps, tIdx) =>

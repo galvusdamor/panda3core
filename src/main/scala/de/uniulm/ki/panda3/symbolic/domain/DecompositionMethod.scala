@@ -28,7 +28,7 @@ trait DecompositionMethod extends DomainUpdatable{
   }
   assert(abstractTask.parameters forall subPlan.variableConstraints.variables.contains)
 
-  lazy val canGenerate: Seq[Predicate] = subPlan.planStepWithoutInitGoal map { _.schema } map {
+  lazy val canGenerate: Seq[Predicate] = subPlan.planStepsWithoutInitGoal map { _.schema } map {
     case reduced: ReducedTask => reduced
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   } flatMap { _.effect.conjuncts map { _.predicate } }

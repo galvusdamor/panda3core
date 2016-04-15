@@ -130,7 +130,7 @@ object DecomposePlanStep {
 
             // compute all possibilities to add one link. This list still contains impossible inheritances signaled by an unsolvable CSP
             val possibilitiesToAddLink: Seq[(Seq[CausalLink], PlanStep, CSP, Seq[VariableConstraint])] = possibleLinks flatMap { case (links, csp, constraints) => copiedPlan
-              .planStepWithoutInitGoal flatMap {
+              .planStepsWithoutInitGoal flatMap {
               // if ingoing != Nil, then such a link was chosen, i.e. it needs to be connected to a precondition of some task in the sub-plan
               ps => (if (ingoingLinks != Nil) ps.substitutedPreconditions else ps.substitutedEffects) map { literal =>
                 (cl.condition #?# literal) (csp) match {

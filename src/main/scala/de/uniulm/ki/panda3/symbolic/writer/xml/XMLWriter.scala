@@ -231,7 +231,7 @@ private object XMLWriterDomain {
       var newVariablesCounter = 0
       val taskParametersToVariables: mutable.Map[logic.Variable, VariableDeclaration] = new mutable.HashMap[logic.Variable, VariableDeclaration]()
       // all tasks in the plan
-      val temp = method.subPlan.planStepWithoutInitGoal map { ps =>
+      val temp = method.subPlan.planStepsWithoutInitGoal map { ps =>
         val tasknode = new TaskNode
         tasknode.setTaskSchema(tasksToTaskDeclarations(ps.schema))
         tasknode.setName("method" + idx + "_subtask_" + ps.id)
@@ -452,7 +452,7 @@ private object XMLWriterProblem {
     // 4.1 plan steps
     val variableToXMLVariableDeclaration: mutable.Map[logic.Variable, VariableDeclaration] = new mutable.HashMap[logic.Variable, VariableDeclaration]()
     val planStepsToXMLPlanSteps: mutable.Map[PlanStep, TaskNode] = new mutable.HashMap[PlanStep, TaskNode]()
-    plan.planStepWithoutInitGoal map { ps =>
+    plan.planStepsWithoutInitGoal map { ps =>
       val taskNode = new TaskNode
       taskNode.setName("task_" + ps.id + "_" + ps.schema.name)
       taskNode.setTaskSchema(ps.schema.name)
