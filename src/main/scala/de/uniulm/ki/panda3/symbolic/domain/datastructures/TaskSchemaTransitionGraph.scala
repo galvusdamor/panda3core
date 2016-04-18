@@ -16,26 +16,31 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraph[Task]
   override val vertices: Seq[Task] = domain.tasks
 
   /** describes which tasks can be obtained from a given task by applying a given decomposition method */
-  val canBeDirectlyDecomposedIntoVia: Map[Task, Set[(DecompositionMethod, Task)]] = (domain.tasks map { case task => (task, (domain.decompositionMethods flatMap { case method => method
-    .subPlan.planStepsWithoutInitGoal.map { case ps => (method, ps.schema) }
-  }).toSet)
+  val canBeDirectlyDecomposedIntoVia: Map[Task, Set[(DecompositionMethod, Task)]] = (domain.tasks map { case task => (task, (domain.decompositionMethods filter { _.abstractTask == task }
+    flatMap { case method => method.subPlan.planStepsWithoutInitGoal.map { case ps => (method, ps.schema) } }).toSet)
   }).toMap[Task, Set[(DecompositionMethod, Task)]]
-
+  // assertion for the decomposition via
+  canBeDirectlyDecomposedIntoVia foreach { case (task, setofDecomps) => setofDecomps foreach { case (method, _) => assert(method.abstractTask == task) } }
 
   val canBeDirectlyDecomposedInto: Map[Task, Seq[Task]] = canBeDirectlyDecomposedIntoVia map { case (t, tasks) => (t, tasks.toSeq map { _._2 }) }
 
-  /** the boolean states whether the preciate can be produced negated or positive */
-  val canBeDirectlyDecomposedIntoForPredicate: Map[(Task, Predicate, Boolean), Set[(DecompositionMethod, Task)]] = (canBeDirectlyDecomposedIntoVia flatMap { case (task, set) =>
-    task match {
-      case reducedTask: ReducedTask => reducedTask.effect.conjuncts map { effect => (task, effect.predicate, effect.isPositive) -> set }
-      case _                        => noSupport(FORUMLASNOTSUPPORTED)
-    }
-  }).withDefault({ _ => Set[(DecompositionMethod, Task)]() })
-
   /** adjacency list of the graph */
-  override def edges: Map[Task, Seq[Task]] = canBeDirectlyDecomposedInto
+  override val edges: Map[Task, Seq[Task]] = canBeDirectlyDecomposedInto
+
 
   lazy val canBeDecomposedIntoVia: Map[Task, Seq[(DecompositionMethod, Task)]] = canBeDirectlyDecomposedIntoVia map { case (task, directDecomps) => (task, directDecomps
     .toSeq flatMap { case (method, subtask) => reachable(subtask) map { (method, _) } })
   }
+
+  /** the boolean states whether the preciate can be produced negated or positive */
+  lazy val canBeDirectlyDecomposedIntoForPredicate: Map[(Task, Predicate, Boolean), Seq[(DecompositionMethod, Task)]] = canBeDecomposedIntoVia flatMap { case (task, set) =>
+    (for (pred <- domain.predicates; positive <- true :: false :: Nil) yield (pred, positive)) map { case (pred, positive) =>
+      val targetDecompositions = set filter {
+        case (method, reducedTask: ReducedTask) => reducedTask.effect.conjuncts exists { eff => eff.predicate == pred && eff.isPositive == positive }
+        case _                                  => noSupport(FORUMLASNOTSUPPORTED)
+      }
+      (task, pred, positive) -> targetDecompositions
+    }
+  }
+
 }
