@@ -1,5 +1,8 @@
 package de.uniulm.ki.util
 
+import de.uniulm.ki.panda3.symbolic.PrettyPrintable
+
+import scala.StringBuilder
 import scala.collection.mutable
 
 /**
@@ -83,7 +86,7 @@ trait DirectedGraph[T] {
         recursionResult :+ sccNodes.toSeq
       } else recursionResult
     }
-   vertices flatMap { node => if (!dfsNumber.contains(node)) tarjan(node) else Nil }
+    vertices flatMap { node => if (!dfsNumber.contains(node)) tarjan(node) else Nil }
   }
 
   def getComponentOf(node: T): Option[Seq[T]] = stronglyConnectedComponents find { _.contains(node) }
@@ -164,6 +167,21 @@ trait DirectedGraph[T] {
                                                      case Some(nextOrder) => Some(nextOrder ++ order)
                                                    }
                                                  })
+  }
+
+  lazy val toDot: String = {
+    val dotString = new StringBuilder()
+
+    dotString append "digraph someDirectedGraph{\n"
+    edgeList foreach { case (a, b) => dotString append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + ";\n" }
+    dotString append "\n"
+    vertices.zipWithIndex foreach { case (obj, index) =>
+      val string = (obj match {case pp: PrettyPrintable => pp.shortInfo; case x => x.toString}).replace('\"', '\'')
+      dotString append ("\ta" + index + "[label=\"Z" + string + "\"];\n")
+    }
+    dotString append "}"
+
+    dotString.toString
   }
 }
 
