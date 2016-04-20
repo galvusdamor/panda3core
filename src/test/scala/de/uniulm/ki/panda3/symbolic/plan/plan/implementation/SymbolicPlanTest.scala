@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, CausalLink, PlanStep}
-import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
+import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 import org.scalatest.FlatSpec
 
@@ -46,7 +46,7 @@ class SymbolicPlanTest extends FlatSpec {
 
   "Computing open preconditions" must "be possible" in {
     val plan1PlanSteps = psInit :: psGoal :: PlanStep(2, schemaCons, p_v1 :: p_v2 :: Nil) :: Nil
-    val plan1: Plan = Plan(plan1PlanSteps, Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps).addOrderings(OrderingConstraint.allBetween(psInit, psGoal, plan1PlanSteps(2))),
+    val plan1: Plan = Plan(plan1PlanSteps, Nil, TaskOrdering(Nil, plan1PlanSteps).addOrderings(OrderingConstraint.allBetween(psInit, psGoal, plan1PlanSteps(2))),
                                            SymbolicCSP(Set(p_v1, p_v2), Nil), psInit, psGoal, AllModifications, AllFlaws,Map(),Map())
 
     assert(plan1.allPreconditions.size == 1)
@@ -56,7 +56,7 @@ class SymbolicPlanTest extends FlatSpec {
   "Computing open preconditions" must "not contain protected preconditions" in {
     val plan1PlanSteps = psInit :: psGoal :: PlanStep(2, schemaCons, p_v1 :: p_v2 :: Nil) :: PlanStep(3, schemaCons, p_v2 :: p_v1 :: Nil) :: Nil
     val plan1: Plan = Plan(plan1PlanSteps, CausalLink(plan1PlanSteps(3), plan1PlanSteps(2), Literal(predicate1, isPositive = true, p_v1
-      :: p_v2 :: Nil)) :: Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps).addOrderings(OrderingConstraint.allBetween(psInit, psGoal, plan1PlanSteps(2), plan1PlanSteps(3))),
+      :: p_v2 :: Nil)) :: Nil, TaskOrdering(Nil, plan1PlanSteps).addOrderings(OrderingConstraint.allBetween(psInit, psGoal, plan1PlanSteps(2), plan1PlanSteps(3))),
                                            SymbolicCSP(Set(p_v1, p_v2), Nil), psInit, psGoal, AllModifications, AllFlaws,Map(),Map())
 
     assert(plan1.allPreconditions.size == 2)
@@ -71,7 +71,7 @@ class SymbolicPlanTest extends FlatSpec {
     val ps2 = PlanStep(4, schemaDestr, p_v3 :: p_v4 :: Nil)
     val plan1PlanSteps = psInit :: psGoal :: ps0 :: ps1 :: ps2 :: Nil
     val plan1: Plan = Plan(plan1PlanSteps, CausalLink(ps0, ps1, Literal(predicate1, isPositive = true, p_v1 :: p_v2 :: Nil)) :: Nil,
-                                           SymbolicTaskOrdering(Nil, plan1PlanSteps).addOrderings(OrderingConstraint.allBetween(psInit, psGoal, ps0, ps1, ps2)),
+                           TaskOrdering(Nil, plan1PlanSteps).addOrderings(OrderingConstraint.allBetween(psInit, psGoal, ps0, ps1, ps2)),
                                            SymbolicCSP(Set(p_v1, p_v2, p_v3, p_v4), Nil), psInit, psGoal, AllModifications, AllFlaws,Map(),Map())
     assert(plan1.causalThreats.size == 1)
   }

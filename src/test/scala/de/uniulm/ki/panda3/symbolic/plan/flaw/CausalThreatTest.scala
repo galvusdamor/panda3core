@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.symbolic.domain.HasExampleDomain2
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.modification.{AddOrdering, MakeLiteralsUnUnifiable}
-import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
+import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 import org.scalatest.FlatSpec
 
@@ -30,7 +30,7 @@ class CausalThreatTest extends FlatSpec with HasExampleDomain2 {
 
   val planPlanSteps      = psinit :: psgoal :: ps2 :: ps3 :: Nil
   val plan: Plan = Plan(planPlanSteps, cl :: Nil,
-                                        SymbolicTaskOrdering(Nil, planPlanSteps).addOrdering(psinit, psgoal).addOrdering(psinit, ps2).addOrdering(psinit, ps3).addOrdering(ps2, psgoal)
+                        TaskOrdering(Nil, planPlanSteps).addOrdering(psinit, psgoal).addOrdering(psinit, ps2).addOrdering(psinit, ps3).addOrdering(ps2, psgoal)
                                           .addOrdering(ps3, psgoal), SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psgoal,
                                         AllModifications, AllFlaws, Map(), Map())
 

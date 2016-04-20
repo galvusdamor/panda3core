@@ -23,7 +23,7 @@ class SymbolicOrderingTest extends FlatSpec {
 
   "Orderings inference" must "allow simple inference" in {
     // a dummy plan
-    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), getPlanStepList(3))
+    val order = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), getPlanStepList(3))
 
     assert(order.isConsistent)
     assert(order.lteq(getPlanStep(0), getPlanStep(2)))
@@ -33,14 +33,8 @@ class SymbolicOrderingTest extends FlatSpec {
 
   it must "allow almost simple inference" in {
     // a dummy plan
-    val order = new SymbolicTaskOrdering(
-                                          Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6,
-                                                                                                                                                                           2) :+
-                                            getOrdering(2,
-                                                                                                                                                                                             7) :+ getOrdering(7,
-                                                                                                                                                                                                               3),
-                                          getPlanStepList(8))
-
+    val order = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+
+                               getOrdering(2, 7) :+ getOrdering(7, 3), getPlanStepList(8))
     assert(order.isConsistent)
     assert(order.lteq(getPlanStep(0), getPlanStep(2)))
     assert(order.lteq(getPlanStep(0), getPlanStep(3)))
@@ -59,14 +53,10 @@ class SymbolicOrderingTest extends FlatSpec {
 
   "Orderings update" must "allow incremental calculations" in {
     // a dummy plan
-    val order1 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), getPlanStepList(3))
+    val order1 = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), getPlanStepList(3))
 
-    val order2 = new SymbolicTaskOrdering(
-                                           Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6,
-                                                                                                                                                                            2) :+
-                                             getOrdering(2,
-                                                                                                                                                                                              7),
-                                           getPlanStepList(8))
+    val order2 = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7),
+                              getPlanStepList(8))
     order2.initialiseExplicitly(5, 5, order1.arrangement())
 
     assert(order2.isConsistent)
@@ -80,13 +70,8 @@ class SymbolicOrderingTest extends FlatSpec {
     assert(order2.tryCompare(getPlanStep(5), getPlanStep(7)) === None)
     assert(order2.tryCompare(getPlanStep(6), getPlanStep(4)) === Some(-1))
 
-    val order3 = new SymbolicTaskOrdering(
-                                           Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6,
-                                                                                                                                                                            2) :+
-                                             getOrdering(2,
-                                                                                                                                                                                              7) :+ getOrdering(7,
-                                                                                                                                                                                                                3),
-                                           getPlanStepList(8))
+    val order3 = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7) :+
+                                getOrdering(7, 3), getPlanStepList(8))
     order3.initialiseExplicitly(1, 0, order2.arrangement())
 
     assert(order3.isConsistent)
@@ -105,7 +90,7 @@ class SymbolicOrderingTest extends FlatSpec {
 
   it must "allow add Ordering" in {
     // a dummy plan
-    val order1 = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), getPlanStepList(3))
+    val order1 = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2), getPlanStepList(3))
 
     assert(order1.isConsistent)
     assert(order1.lteq(getPlanStep(0), getPlanStep(2)))
@@ -146,39 +131,29 @@ class SymbolicOrderingTest extends FlatSpec {
 
   "Orderings inconsistencies" must "find simple inconsistencies" in {
     // a dummy plan
-    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 0), getPlanStepList(3))
+    val order = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 0), getPlanStepList(3))
 
     assert(!order.isConsistent)
   }
 
   it must "find tricky inconsistencies" in {
     // a dummy plan
-    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 0), getPlanStepList(2))
+    val order = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 0), getPlanStepList(2))
 
     assert(!order.isConsistent)
   }
 
   it must "find complex inconsistencies" in {
     // a dummy plan
-    val order = new SymbolicTaskOrdering(
-                                          Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6,
-                                                                                                                                                                           2) :+
-                                            getOrdering(2,
-                                                                                                                                                                                             7) :+ getOrdering(7,
-                                                                                                                                                                                                               3) :+
-                                            getOrdering(5, 1), getPlanStepList(8))
-
+    val order = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+ getOrdering(2, 7) :+
+                               getOrdering(7, 3) :+ getOrdering(5, 1), getPlanStepList(8))
     assert(!order.isConsistent)
   }
 
 
   "Reduced Orderings" must "be computable" in {
-    val order = new SymbolicTaskOrdering(
-                                          Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6,
-                                                                                                                                                                           2) :+ getOrdering(2,
-                                                                                                                                                                                             7) :+ getOrdering(7,
-                                                                                                                                                                                                               3) :+
-                                            getOrdering(6, 5), getPlanStepList(8))
+    val order = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4) :+ getOrdering(3, 5) :+ getOrdering(6, 2) :+
+                                           getOrdering(2, 7) :+ getOrdering(7, 3) :+ getOrdering(6, 5), getPlanStepList(8))
 
     val minimalOrdering = order.minimalOrderingConstraints()
 
@@ -194,7 +169,7 @@ class SymbolicOrderingTest extends FlatSpec {
   }
 
   "Removing Tasks" must "be correct" in {
-    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4), getPlanStepList(5))
+    val order = TaskOrdering(Vector() :+ getOrdering(0, 1) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(3, 4), getPlanStepList(5))
 
     val order2Removed: TaskOrdering = order.removePlanStep(getPlanStep(2))
 
@@ -207,7 +182,7 @@ class SymbolicOrderingTest extends FlatSpec {
   }
 
   it must "also be correct of the transitive hull was already computed" in {
-    val order = new SymbolicTaskOrdering(Vector() :+ getOrdering(0, 2) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(2, 4), getPlanStepList(5))
+    val order = TaskOrdering(Vector() :+ getOrdering(0, 2) :+ getOrdering(1, 2) :+ getOrdering(2, 3) :+ getOrdering(2, 4), getPlanStepList(5))
 
     // run the initialization
     order.initialiseExplicitly()

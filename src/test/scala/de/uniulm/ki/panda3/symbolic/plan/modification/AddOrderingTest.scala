@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, HasExampleDomai
 import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
-import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
+import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 import org.scalatest.FlatSpec
 
@@ -65,7 +65,7 @@ trait AddOrderingTestData extends HasExampleDomain2 {
 
     // hacky as we use psgoal as a real action
     val planPlanSteps = psinit :: psRealGoal :: psgoal :: promotionDemotionPlanPS2 :: promotionDemotionPlanPS3 :: Nil
-    val ordering = SymbolicTaskOrdering(Nil, planPlanSteps).addOrdering(promotionDemotionPlanPS2, psgoal)
+    val ordering = TaskOrdering(Nil, planPlanSteps).addOrdering(promotionDemotionPlanPS2, psgoal)
       .addOrderings(OrderingConstraint.allBetween(psinit, psRealGoal, promotionDemotionPlanPS2, promotionDemotionPlanPS3, psgoal))
     Plan(planPlanSteps, cl :: Nil, ordering, SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psRealGoal,
                  AllModifications, AllFlaws, Map(), Map())
@@ -86,7 +86,7 @@ trait AddOrderingTestData extends HasExampleDomain2 {
   val demotionNotPossiblePlan: Plan = {
     val planPlanSteps = psinit :: psgoal :: demotionNotPossiblePlanPS2 :: demotionNotPossiblePlanPS3 :: Nil
     Plan(planPlanSteps, Nil,
-                 SymbolicTaskOrdering(Nil, planPlanSteps).addOrderings(OrderingConstraint.allBetween(psinit, psgoal, demotionNotPossiblePlanPS2, demotionNotPossiblePlanPS3)),
+         TaskOrdering(Nil, planPlanSteps).addOrderings(OrderingConstraint.allBetween(psinit, psgoal, demotionNotPossiblePlanPS2, demotionNotPossiblePlanPS3)),
                  SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psgoal, AllModifications, AllFlaws, Map(), Map())
   }
 }

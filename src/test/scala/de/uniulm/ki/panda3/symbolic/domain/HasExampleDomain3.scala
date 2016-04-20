@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.domain
 import de.uniulm.ki.panda3.symbolic.csp.{CSP, SymbolicCSP}
 import de.uniulm.ki.panda3.symbolic.logic.{And, Literal}
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
-import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
+import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 
@@ -39,7 +39,7 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
   val goalOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(2, goalTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil)
   val actualPlanStepOfPlanOfDecompositionMethod1: PlanStep     = PlanStep(1, task1, variableSort1(7) :: Nil)
   val planStepsOfPlanOfDecompositionMethod1                    = initOfPlanOfDecompositionMethod1 :: goalOfPlanOfDecompositionMethod1 :: actualPlanStepOfPlanOfDecompositionMethod1 :: Nil
-  val taskOrderingOfPlanOfDecompositionMethod1  : TaskOrdering = SymbolicTaskOrdering(OrderingConstraint(initOfPlanOfDecompositionMethod1, actualPlanStepOfPlanOfDecompositionMethod1)
+  val taskOrderingOfPlanOfDecompositionMethod1  : TaskOrdering = TaskOrdering(OrderingConstraint(initOfPlanOfDecompositionMethod1, actualPlanStepOfPlanOfDecompositionMethod1)
                                                                                         :: OrderingConstraint(actualPlanStepOfPlanOfDecompositionMethod1,
                                                                                                               goalOfPlanOfDecompositionMethod1) :: Nil, planStepsOfPlanOfDecompositionMethod1)
   val cspOfPlanOfDecompositionMethod1           : CSP          = SymbolicCSP(Set(variableSort1(7)), Nil)

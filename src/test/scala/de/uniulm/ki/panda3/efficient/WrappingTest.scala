@@ -9,9 +9,9 @@ import de.uniulm.ki.panda3.symbolic.csp.{Equal, SymbolicCSP}
 import de.uniulm.ki.panda3.symbolic.domain.{Task, ReducedTask, Domain, HasExampleProblem4}
 import de.uniulm.ki.panda3.symbolic.logic.{Variable, Sort}
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
-import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, CausalLink, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 import org.scalatest.FlatSpec
 
@@ -101,7 +101,7 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     // create a plan  init| -> a1 -> |goal (with one causal link)
     val adHocPlanSteps = psInit2 :: psGoal2 :: adHocPsAbstract2 :: Nil
     val adHocPlan2WithTwoLinks = Plan(adHocPlanSteps, adHocCausalLinkInit2Abstract2P1 :: adHocCausalLinkInit2Abstract2P2 :: Nil,
-                                              SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, adHocPsAbstract2), adHocPlanSteps),
+                                              TaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, adHocPsAbstract2), adHocPlanSteps),
                                               SymbolicCSP(Set(instance_variableSort1(1), adHocVariable), Equal(adHocVariable, psInit2.arguments.head) :: Nil), psInit2, psGoal2,
                                               AllModifications, AllFlaws, Map(), Map())
 

@@ -15,9 +15,9 @@ import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification._
-import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.search._
 import de.uniulm.ki.util.{SimpleDirectedGraph, BiMap}
 
@@ -311,7 +311,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     // ordering constraints
     val orderingConstraints =
       plan.planStepTasks.indices flatMap { b => plan.planStepTasks.indices collect { case a if plan.ordering.lt(a, b) => OrderingConstraint(planStepArray(a), planStepArray(b)) } }
-    val ordering = new SymbolicTaskOrdering(orderingConstraints, planStepArray)
+    val ordering = new TaskOrdering(orderingConstraints, planStepArray)
 
     // construct the csp
     val possibleValuesConstraints = variables.indices map { v =>
@@ -446,7 +446,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
       val subPlanPlanSteps = insertedPlanSteps :+ init :+ goal
       val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) }
-      val ordering = SymbolicTaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
+      val ordering = TaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
       val csp = SymbolicCSP((newVariables ++ nonPresentDecomposedPlanStep.arguments).toSet, innerConstraints)
       val subPlan = Plan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](),
                                  Map[PlanStep, (PlanStep, PlanStep)]())

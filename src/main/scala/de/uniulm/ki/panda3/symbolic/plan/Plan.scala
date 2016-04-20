@@ -8,7 +8,7 @@ import de.uniulm.ki.panda3.symbolic.logic.{Formula, And, Literal, Variable}
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
-import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
+import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.search.{IsModificationAllowed, IsFlawAllowed}
 import de.uniulm.ki.util.HashMemo
 
@@ -20,8 +20,8 @@ import de.uniulm.ki.util.HashMemo
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemovedCausalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering, parameterVariableConstraints: CSP,
-                        init: PlanStep, goal: PlanStep, isModificationAllowed: IsModificationAllowed, isFlawAllowed: IsFlawAllowed,
-                        planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)]) extends
+                init: PlanStep, goal: PlanStep, isModificationAllowed: IsModificationAllowed, isFlawAllowed: IsFlawAllowed,
+                planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)]) extends
   DomainUpdatable with PrettyPrintable with HashMemo {
 
   assert(planStepsAndRemovedPlanSteps forall {
@@ -129,7 +129,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       orderingConstraints.removePlanSteps(modification.removedPlanSteps).addPlanSteps(modification.addedPlanSteps).addOrderings(modification.addedOrderingConstraints)
     else {
       val newOrderingConstraints = (orderingConstraints.originalOrderingConstraints diff modification.removedOrderingConstraints) union modification.addedOrderingConstraints
-      SymbolicTaskOrdering(newOrderingConstraints, newPlanStepsIncludingRemovedOnes)
+      TaskOrdering(newOrderingConstraints, newPlanStepsIncludingRemovedOnes)
     }
 
 
@@ -146,7 +146,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     val newPlanStepParentInDecompositionTree = planStepParentInDecompositionTree ++ modification.setParentOfPlanSteps
 
     Plan(newPlanStepsIncludingRemovedOnes, newCausalLinks, newOrderingConstraints, newVariableConstraints, init, goal, isModificationAllowed, isFlawAllowed,
-                 newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree)
+         newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree)
   }
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod]]s. */
@@ -175,7 +175,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     val newInit = substitutePlanStep(init)
     val newGoal = substitutePlanStep(goal)
 
-    val newOrderingConstraints = SymbolicTaskOrdering(orderingConstraints.originalOrderingConstraints map {
+    val newOrderingConstraints = TaskOrdering(orderingConstraints.originalOrderingConstraints map {
       case OrderingConstraint(b, a) => OrderingConstraint(substitutePlanStep(b), substitutePlanStep(a))
     }, newPlanSteps)
 
@@ -201,12 +201,12 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
   def update(domainUpdate: DomainUpdate): Plan = domainUpdate match {
     case AddVariables(newVariables)                                        => Plan(planStepsAndRemovedPlanSteps, causalLinksAndRemovedCausalLinks, orderingConstraints,
-                                                                                           variableConstraints.addVariables(newVariables), init, goal, isModificationAllowed, isFlawAllowed,
-                                                                                           planStepDecomposedByMethod, planStepParentInDecompositionTree)
+                                                                                   variableConstraints.addVariables(newVariables), init, goal, isModificationAllowed, isFlawAllowed,
+                                                                                   planStepDecomposedByMethod, planStepParentInDecompositionTree)
     case AddVariableConstraints(newVariableConstraints)                    => Plan(planStepsAndRemovedPlanSteps, causalLinksAndRemovedCausalLinks, orderingConstraints,
-                                                                                           variableConstraints.addConstraints(newVariableConstraints), init, goal, isModificationAllowed,
-                                                                                           isFlawAllowed,
-                                                                                           planStepDecomposedByMethod, planStepParentInDecompositionTree)
+                                                                                   variableConstraints.addConstraints(newVariableConstraints), init, goal, isModificationAllowed,
+                                                                                   isFlawAllowed,
+                                                                                   planStepDecomposedByMethod, planStepParentInDecompositionTree)
     case AddLiteralsToInitAndGoal(literalsInit, literalsGoal, constraints) => {
       // TODO: currently we only support this operation if all literals are 0-ary
       assert((literalsInit ++ literalsGoal) forall {
@@ -239,27 +239,27 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       }, causalLinksAndRemovedCausalLinks map {
         _ update exchangeInit update exchangeGoal
       },
-                   orderingConstraints update exchangeInit update exchangeGoal,
-                   variableConstraints, newInit, goal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
+           orderingConstraints update exchangeInit update exchangeGoal,
+           variableConstraints, newInit, goal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
     }
     case _                                                                 => Plan(planStepsAndRemovedPlanSteps map {
       _.update(domainUpdate)
     },
-                                                                                           causalLinksAndRemovedCausalLinks map {
-                                                                                             _.update(domainUpdate)
-                                                                                           },
-                                                                                           orderingConstraints.update(domainUpdate),
-                                                                                           variableConstraints.update(domainUpdate), init.update(domainUpdate), goal.update(domainUpdate),
-                                                                                           isModificationAllowed, isFlawAllowed,
-                                                                                           planStepDecomposedByMethod map {
-                                                                                             case (ps, method) => (ps update domainUpdate, method update
-                                                                                               domainUpdate)
-                                                                                           },
-                                                                                           planStepParentInDecompositionTree map {
-                                                                                             case (ps, (parent, inPlan)) =>
-                                                                                               (ps update domainUpdate, (parent update domainUpdate, inPlan update domainUpdate))
-                                                                                           }
-                                                                                          )
+                                                                                   causalLinksAndRemovedCausalLinks map {
+                                                                                     _.update(domainUpdate)
+                                                                                   },
+                                                                                   orderingConstraints.update(domainUpdate),
+                                                                                   variableConstraints.update(domainUpdate), init.update(domainUpdate), goal.update(domainUpdate),
+                                                                                   isModificationAllowed, isFlawAllowed,
+                                                                                   planStepDecomposedByMethod map {
+                                                                                     case (ps, method) => (ps update domainUpdate, method update
+                                                                                       domainUpdate)
+                                                                                   },
+                                                                                   planStepParentInDecompositionTree map {
+                                                                                     case (ps, (parent, inPlan)) =>
+                                                                                       (ps update domainUpdate, (parent update domainUpdate, inPlan update domainUpdate))
+                                                                                   }
+                                                                                  )
   }
 
   def isPresent(planStep: PlanStep): Boolean = !planStepDecomposedByMethod.contains(planStep)

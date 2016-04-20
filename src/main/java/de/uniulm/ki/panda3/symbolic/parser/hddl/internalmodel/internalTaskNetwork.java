@@ -11,7 +11,6 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.CausalLink;
 import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
-import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering;
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering;
 import de.uniulm.ki.panda3.symbolic.search.NoFlaws$;
 import de.uniulm.ki.panda3.symbolic.search.NoModifications$;
@@ -39,7 +38,7 @@ public class internalTaskNetwork {
     public internalTaskNetwork() {
         Seq<OrderingConstraint> leerCO = new VectorBuilder<OrderingConstraint>().result();
         Seq<PlanStep> leerPS = new VectorBuilder<PlanStep>().result();
-        taskOderings = new SymbolicTaskOrdering(leerCO, leerPS);
+        taskOderings = new TaskOrdering(leerCO, leerPS);
         Set<Variable> pVariables = new VectorBuilder<Variable>().result().toSet();
         Seq<VariableConstraint> pVC = new VectorBuilder<VariableConstraint>().result();
         csp = new SymbolicCSP(pVariables, pVC);
