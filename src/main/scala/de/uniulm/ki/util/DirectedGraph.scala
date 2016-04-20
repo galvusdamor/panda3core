@@ -2,7 +2,6 @@ package de.uniulm.ki.util
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 
-import scala.StringBuilder
 import scala.collection.mutable
 
 /**
@@ -12,7 +11,7 @@ import scala.collection.mutable
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait DirectedGraph[T] {
+trait DirectedGraph[T] extends DotPrintable {
 
   /** a list of all node of the graph */
   def vertices: Seq[T]
@@ -20,7 +19,7 @@ trait DirectedGraph[T] {
   /** adjacency list of the graph */
   def edges: Map[T, Seq[T]]
 
-  // TODO: add this as a delayed intializerr
+  // TODO: add this as a delayed intializer
   //require(edges.size == vertices.size)
 
   /** list of all edges as a list of pairs */
@@ -169,19 +168,19 @@ trait DirectedGraph[T] {
                                                  })
   }
 
-  lazy val toDot: String = {
-    val dotString = new StringBuilder()
+  override lazy val dotString: String = {
+    val dotStringBuilder = new StringBuilder()
 
-    dotString append "digraph someDirectedGraph{\n"
-    edgeList foreach { case (a, b) => dotString append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + ";\n" }
-    dotString append "\n"
+    dotStringBuilder append "digraph someDirectedGraph{\n"
+    edgeList foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + ";\n" }
+    dotStringBuilder append "\n"
     vertices.zipWithIndex foreach { case (obj, index) =>
       val string = (obj match {case pp: PrettyPrintable => pp.shortInfo; case x => x.toString}).replace('\"', '\'')
-      dotString append ("\ta" + index + "[label=\"Z" + string + "\"];\n")
+      dotStringBuilder append ("\ta" + index + "[label=\"" + string + "\"];\n")
     }
-    dotString append "}"
+    dotStringBuilder append "}"
 
-    dotString.toString
+    dotStringBuilder.toString
   }
 }
 

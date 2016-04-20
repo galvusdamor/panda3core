@@ -112,6 +112,4 @@ class GraphTest extends FlatSpec {
 
     for ((v1, v2) <- g4.edgeList) assert(g4Ordering.indexOf(v1) < g4Ordering.indexOf(v2))
   }
-
-
 }
