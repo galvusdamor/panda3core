@@ -11,7 +11,7 @@ import scala.collection.mutable
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait DirectedGraph[T] extends DotPrintable {
+trait DirectedGraph[T] extends DotPrintable[Unit] {
 
   /** a list of all node of the graph */
   def vertices: Seq[T]
@@ -182,6 +182,9 @@ trait DirectedGraph[T] extends DotPrintable {
 
     dotStringBuilder.toString
   }
+
+  /** The DOT representation of the object with options */
+  override def dotString(options: Unit): String = dotString
 }
 
 

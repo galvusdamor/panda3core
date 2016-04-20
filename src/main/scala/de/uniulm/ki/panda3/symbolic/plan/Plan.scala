@@ -4,13 +4,14 @@ import de.uniulm.ki.panda3.symbolic.csp.{CSP, Substitution}
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.panda3.symbolic.logic.{Formula, And, Literal, Variable}
+import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.search.{IsModificationAllowed, IsFlawAllowed}
-import de.uniulm.ki.util.HashMemo
+import de.uniulm.ki.util.{DotPrintable, HashMemo}
+import de.uniulm.ki.panda3.symbolic.writer._
 
 /**
   * Simple implementation of a plan, based on symbols
@@ -22,7 +23,7 @@ import de.uniulm.ki.util.HashMemo
 case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemovedCausalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering, parameterVariableConstraints: CSP,
                 init: PlanStep, goal: PlanStep, isModificationAllowed: IsModificationAllowed, isFlawAllowed: IsFlawAllowed,
                 planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)]) extends
-  DomainUpdatable with PrettyPrintable with HashMemo {
+  DomainUpdatable with PrettyPrintable with HashMemo with DotPrintable[PlanDotOptions] {
 
   assert(planStepsAndRemovedPlanSteps forall {
     ps => ps.arguments.size == ps.schema.parameters.size
@@ -41,10 +42,11 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       assert(orderingConstraints.lt(ps, goal))
   }
 
-  lazy val planSteps  : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
-  lazy val causalLinks: Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter {
+  lazy val planSteps       : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
+  lazy val causalLinks     : Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter {
     cl => isPresent(cl.producer) && isPresent(cl.consumer)
   }
+  lazy val removedPlanSteps: Seq[PlanStep]   = planStepsAndRemovedPlanSteps filterNot isPresent
 
   lazy val flaws: Seq[Flaw] = {
     val hardFlaws = causalThreats ++ openPreconditions ++ abstractPlanSteps // ++ notInsertedByDecomposition
@@ -277,4 +279,178 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
   /** returns a more detailed information about the object */
   override def longInfo: String = shortInfo
+
+  lazy val layersOfDecompositionHierarchy: Seq[Seq[PlanStep]] = {
+    def depthInHierarchy(ps: PlanStep): Int = if (!(planStepParentInDecompositionTree contains ps)) 0 else 1 + depthInHierarchy(planStepParentInDecompositionTree(ps)._1)
+    val depthMap = removedPlanSteps map { ps => (ps, depthInHierarchy(ps)) } groupBy { _._2 }
+    depthMap.toSeq.sortBy(_._1) map { case (_, pss) => pss map { _._1 } sortBy { _.id } }
+  }
+
+  def childrenInDecompositionTreeOf(ps: PlanStep): Seq[PlanStep] = planStepsAndRemovedPlanStepsWithoutInitGoal filter { child =>
+    if (planStepParentInDecompositionTree contains child) planStepParentInDecompositionTree(child)._1 == ps else false
+  } sortBy { _.id }
+
+  /** The DOT representation of the object with options */
+  override def dotString(options: PlanDotOptions): String = {
+    val dotStringBuilder = new StringBuilder()
+
+    dotStringBuilder append "digraph somePlan{\n"
+    dotStringBuilder append "\trankdir=\"LR\";"
+
+
+    def connectToParent(ps: PlanStep) = if (planStepParentInDecompositionTree contains ps) {
+      val (parent, _) = planStepParentInDecompositionTree(ps)
+      dotStringBuilder append "\tPS" + parent.id + " -> PS" + ps.id + "[style=dashed,constraint=false];\n"
+    }
+
+    dotStringBuilder append ("subgraph cluster_initG{\n\trank=min;\nstyle=invis\n\tPS" + init.id + "[height=10,label=\"init\",shape=box];\n}\n")
+    dotStringBuilder append ("subgraph cluster_goalG{\n\trank=max;\nstyle=invis\n\tPS" + goal.id + "[height=10,label=\"goal\",shape=box];\n}\n")
+
+    dotStringBuilder append "subgraph cluster_inner{\nstyle=invis\n"
+
+    // hierarchy graph on top
+    if (options.showHierarchy) {
+      dotStringBuilder append "\nsubgraph cluster_hierarchy{\nstyle=invis\n"
+      // if appropriate also the decomposition hierarchy
+      layersOfDecompositionHierarchy.zipWithIndex foreach { case (layer, i) =>
+        dotStringBuilder append "\nsubgraph cluster_hierarchy_layer" + i + "{\nstyle=invis\n"
+        layer foreach printPS(",style=dotted")
+        layer zip layer.tail foreach { case (a, b) => dotStringBuilder append "\tPS" + a.id + " -> PS" + b.id + "[style=invis];\n" }
+        dotStringBuilder append "}\n"
+      }
+      // decomposition arrows
+      dotStringBuilder append "\n"
+      removedPlanSteps foreach connectToParent
+      dotStringBuilder append "}\n"
+    }
+
+    dotStringBuilder append "subgraph cluster_mainPlan{\nstyle=invis\n"
+    //dotStringBuilder append "\trankdir=\"LR\";"
+    // init and goal
+
+    def variablesToString(vars: Seq[Variable]): String = (vars map { v => variableConstraints.getRepresentative(v) match {
+      case vv: Variable => toPDDLIdentifier(vv.name)
+      case c: Constant  => c.name
+    }
+    }).mkString(",")
+
+    // ordinary plan steps
+    def printPS(addition: String)(ps: PlanStep) = ps match {
+      case PlanStep(id, schema, args) =>
+        dotStringBuilder append ("\tPS" + id + "[label=\"" + schema.name)
+        if (options.showParameters) {
+          dotStringBuilder append ("(" + variablesToString(args) + ")")
+        }
+        dotStringBuilder append "\"" + addition
+        if (ps.schema.isPrimitive) dotStringBuilder append ",shape=box"
+        dotStringBuilder append "];\n"
+    }
+    planStepsWithoutInitGoal foreach printPS("")
+
+
+    // ordering constraints
+    dotStringBuilder append "\n"
+
+    def reachableViaCausalLinksFrom(from: PlanStep, to: PlanStep): Boolean = if (from == to) true
+    else {
+      // TODO might introduce cycles ...
+      causalLinksAndRemovedCausalLinks exists { case CausalLink(p, c, _) => if (p == from) reachableViaCausalLinksFrom(c, to) else false }
+    }
+
+    val orderingFilterCausalLinks: OrderingConstraint => Boolean =
+      if (options.omitImpliedOrderings) {case OrderingConstraint(before, after) => !reachableViaCausalLinksFrom(before, after)} else {case _ => true}
+    val orderingFilterHierarchy: OrderingConstraint => Boolean =
+      if (options.showHierarchy) {case _ => true} else {case OrderingConstraint(before, after) => isPresent(before) && isPresent(after)}
+    val displayedOrderings = orderingConstraints.minimalOrderingConstraints() filter orderingFilterHierarchy filter orderingFilterCausalLinks
+
+
+    displayedOrderings foreach { case OrderingConstraint(before, after) =>
+      if (before != init || after != goal) {
+        dotStringBuilder append ("\tPS" + before.id + " -> PS" + after.id + "[style=\"")
+        dotStringBuilder append (if (options.showOrdering) "dotted" else "invis")
+        dotStringBuilder append "\""
+        if (options.showHierarchy && ((isPresent(before) && !isPresent(after)) || (!isPresent(before) && isPresent(after))))
+          dotStringBuilder append ",constraint=false"
+
+        dotStringBuilder append "];\n"
+      }
+    }
+
+    // show causal links
+    dotStringBuilder append "\n"
+    if (options.showCausalLinks) causalLinks foreach { case CausalLink(producer, consumer, condition) =>
+      dotStringBuilder append ("\tPS" + producer.id + " -> PS" + consumer.id + "[label=\"" + condition.predicate.name)
+      if (options.showParameters) {
+        dotStringBuilder append ("(" + variablesToString(condition.parameterVariables) + ")")
+      }
+      dotStringBuilder append "\"];\n"
+    }
+
+    if (options.showOpenPreconditions) {
+      dotStringBuilder append "\n"
+      openPreconditions.zipWithIndex foreach { case (OpenPrecondition(_, ps, literal), idx) =>
+        dotStringBuilder append "\tOP" + idx + "[label=\"" + literal.predicate.name
+        if (options.showParameters) dotStringBuilder append variablesToString(literal.parameterVariables)
+        dotStringBuilder append "\",shape=diamond];\n"
+        dotStringBuilder append "\tOP" + idx + " -> PS" + ps.id + "[style=dashed];\n"
+        dotStringBuilder append "\tPS" + init.id + " -> OP" + idx + "[style=invis];\n"
+      }
+    }
+    // end of the main plan
+    dotStringBuilder append "}\n"
+
+    // connect layers
+    if (options.showHierarchy) planSteps foreach connectToParent
+    // sorting
+    dotStringBuilder append "\n"
+    /*removedPlanSteps foreach { parent =>
+      val children = childrenInDecompositionTreeOf(parent) filterNot  isPresent
+      children.take(children.length / 2) foreach { child => dotStringBuilder append "\tPS" + child.id + " -> PS" + parent.id + "[style=invis];\n" }
+      //if (children.length % 2 == 1) dotStringBuilder append "\t{rank=same;PS" + children(children.length / 2).id + " -> PS" + parent.id + " }\n"
+      children.drop((children.length) / 2) foreach { child => dotStringBuilder append "\tPS" + parent.id + " -> PS" + child.id + "[style=invis];\n" }
+    }*/
+
+    // end of the inner graph
+    dotStringBuilder append "}\n"
+
+
+
+    dotStringBuilder append "}"
+    dotStringBuilder.toString
+  }
+
+  override lazy val dotString: String = dotString(PlanDotOptions(showParameters = true, showOrdering = true, omitImpliedOrderings = true, showCausalLinks = true, showHierarchy = false,
+                                                                 showOpenPreconditions = true))
 }
+
+case class PlanDotOptions(showParameters: Boolean, showOrdering: Boolean, omitImpliedOrderings: Boolean, showCausalLinks: Boolean, showHierarchy: Boolean, showOpenPreconditions: Boolean) {}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
