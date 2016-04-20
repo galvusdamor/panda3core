@@ -10,7 +10,6 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalTaskNetwor
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.parserUtil;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
-import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.panda3.symbolic.plan.flaw.AbstractPlanStep;
 import de.uniulm.ki.panda3.symbolic.plan.flaw.CausalThreat;
@@ -98,7 +97,8 @@ public class hddlPanda3Visitor {
         visitInitialTN(ctxProblem.p_htn(), tn, tasks, sorts);
 
 
-        Plan p = new SymbolicPlan(tn.planSteps(), tn.causalLinks(), tn.taskOrderings(), tn.csp(), psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+        Plan p = new Plan(tn.planSteps(), tn.causalLinks(), tn.taskOrderings(), tn.csp(), psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy,
+                planStepsDecompositionParents);
 
         Tuple2<Domain, Plan> initialProblem = new Tuple2<>(d, p);
         return initialProblem;

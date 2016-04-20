@@ -10,7 +10,7 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalTaskNetwork;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
-import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan;
+import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.panda3.symbolic.search.NoFlaws$;
 import de.uniulm.ki.panda3.symbolic.search.NoModifications$;
@@ -317,7 +317,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             internalTN.addOrdering(psInit, psO);
             internalTN.addOrdering(psO, psGoal);
 
-            SymbolicPlan subPlan = new SymbolicPlan(internalTN.planSteps(), internalTN.causalLinks(), internalTN.taskOrderings(),
+            Plan subPlan = new Plan(internalTN.planSteps(), internalTN.causalLinks(), internalTN.taskOrderings(),
                     internalTN.csp().addVariables(psO.arguments()), psInit, psGoal, domPlan._2().isModificationAllowed(),
                     domPlan._2().isFlawAllowed(), domPlan._2().planStepDecomposedByMethod(), domPlan._2().planStepParentInDecompositionTree());
 
@@ -350,7 +350,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             subnetwork.addOrdering(psInit, tempPlanStep_O);
             subnetwork.addOrdering(tempPlanStep_O, psGoal);
 
-            SymbolicPlan tempSubPlan = null;
+            Plan tempSubPlan = null;
 
             // In case of plan repair, the process is added, but not in recognition
             if ((whatToDo == programTasks.repair) && (a == newPrimitiveTasks.size() - 1)) {
@@ -360,14 +360,14 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
                 subnetwork.addOrdering(tempPlanStep_O, psProcess);
                 subnetwork.addOrdering(psProcess, psGoal);
 
-                tempSubPlan = new SymbolicPlan(subnetwork.planSteps(), subnetwork.causalLinks(), subnetwork.taskOrderings(),
+                tempSubPlan = new Plan(subnetwork.planSteps(), subnetwork.causalLinks(), subnetwork.taskOrderings(),
                         subnetwork.csp().addVariables(tempPlanStep_O.arguments()).addVariables(psProcess.arguments()),
                         psInit, psGoal,NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,hddlPanda3Visitor.planStepsDecompositionParents);
 
             } else {
                 subnetwork.addOrdering(tempPlanStep_O, psGoal);
 
-                tempSubPlan = new SymbolicPlan(subnetwork.planSteps(), subnetwork.causalLinks(), subnetwork.taskOrderings(),
+                tempSubPlan = new Plan(subnetwork.planSteps(), subnetwork.causalLinks(), subnetwork.taskOrderings(),
                         subnetwork.csp().addVariables(tempPlanStep_O.arguments()),
                         psInit, psGoal,NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,hddlPanda3Visitor.planStepsDecompositionParents);
             }

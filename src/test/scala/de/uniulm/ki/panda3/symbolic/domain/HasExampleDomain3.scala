@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.symbolic.csp.{CSP, SymbolicCSP}
 import de.uniulm.ki.panda3.symbolic.logic.{And, Literal}
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
-import de.uniulm.ki.panda3.symbolic.plan.{Plan, SymbolicPlan}
+import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 
 /**
@@ -44,7 +44,7 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
                                                                                                               goalOfPlanOfDecompositionMethod1) :: Nil, planStepsOfPlanOfDecompositionMethod1)
   val cspOfPlanOfDecompositionMethod1           : CSP          = SymbolicCSP(Set(variableSort1(7)), Nil)
 
-  val planOfDecompositionMethod1: Plan                      = SymbolicPlan(planStepsOfPlanOfDecompositionMethod1, Nil, taskOrderingOfPlanOfDecompositionMethod1,
+  val planOfDecompositionMethod1: Plan                      = Plan(planStepsOfPlanOfDecompositionMethod1, Nil, taskOrderingOfPlanOfDecompositionMethod1,
                                                                            cspOfPlanOfDecompositionMethod1, initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1,
                                                                            AllModifications, AllFlaws, Map(), Map())
   /** a decomposition method without causal links */
@@ -56,7 +56,7 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
                                                                       initOfPlanOfDecompositionMethod1.substitutedEffects.head) ::
     CausalLink(actualPlanStepOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1.substitutedPreconditions.head) :: Nil
 
-  val planOfDecompositionMethod2: Plan = SymbolicPlan(planStepsOfPlanOfDecompositionMethod1, causalLinksOfDecompositionMethod2, taskOrderingOfPlanOfDecompositionMethod1,
+  val planOfDecompositionMethod2: Plan = Plan(planStepsOfPlanOfDecompositionMethod1, causalLinksOfDecompositionMethod2, taskOrderingOfPlanOfDecompositionMethod1,
                                                       cspOfPlanOfDecompositionMethod1, initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1, AllModifications, AllFlaws, Map(),
                                                       Map())
 

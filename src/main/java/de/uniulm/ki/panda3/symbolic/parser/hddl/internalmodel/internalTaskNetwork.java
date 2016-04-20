@@ -8,7 +8,6 @@ import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
-import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan;
 import de.uniulm.ki.panda3.symbolic.plan.element.CausalLink;
 import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
@@ -206,7 +205,7 @@ public class internalTaskNetwork {
             }
         }
         Seq<CausalLink> causalLinks = (new VectorBuilder<CausalLink>()).result();
-        Plan subPlan = new SymbolicPlan(ps, causalLinks, this.taskOderings, this.csp, psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$,hddlPanda3Visitor.planStepsDecomposedBy,
+        Plan subPlan = new Plan(ps, causalLinks, this.taskOderings, this.csp, psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$,hddlPanda3Visitor.planStepsDecomposedBy,
                 hddlPanda3Visitor.planStepsDecompositionParents);
         return subPlan;
     }

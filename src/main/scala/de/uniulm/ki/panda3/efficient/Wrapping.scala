@@ -16,7 +16,7 @@ import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification._
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
-import de.uniulm.ki.panda3.symbolic.plan.{SymbolicPlan, Plan}
+import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.search._
 import de.uniulm.ki.util.{SimpleDirectedGraph, BiMap}
@@ -343,7 +343,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     }).toMap
 
     // and return the actual plan
-    val symbolicPlan = SymbolicPlan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1), ModificationsByClass(allowedModifications: _*),
+    val symbolicPlan = Plan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1), ModificationsByClass(allowedModifications: _*),
                                     FlawsByClass(allowedFlaws: _*), planStepDecomposedByMethod, parentsInDecompositionTree)
     // sanity checks
     if (symbolicPlan.variableConstraints.isSolvable.getOrElse(true) != plan.variableConstraints.potentiallyConsistent) {
@@ -448,7 +448,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) }
       val ordering = SymbolicTaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
       val csp = SymbolicCSP((newVariables ++ nonPresentDecomposedPlanStep.arguments).toSet, innerConstraints)
-      val subPlan = SymbolicPlan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](),
+      val subPlan = Plan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](),
                                  Map[PlanStep, (PlanStep, PlanStep)]())
 
       // construct the modification

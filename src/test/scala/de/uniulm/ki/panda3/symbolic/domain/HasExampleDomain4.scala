@@ -2,9 +2,9 @@ package de.uniulm.ki.panda3.symbolic.domain
 
 import de.uniulm.ki.panda3.symbolic.csp.{CSP, SymbolicCSP}
 import de.uniulm.ki.panda3.symbolic.logic.{And, Literal}
+import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
-import de.uniulm.ki.panda3.symbolic.plan.{Plan, SymbolicPlan}
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 
 /**
@@ -51,7 +51,7 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
                                                                                        planStepsOfPlanOfDecompositionMethod3)
   val cspOfPlanOfDecompositionMethod3            : CSP          = SymbolicCSP(Set(variableSort1(7), variableSort1(8), variableSort1(9), variableSort1(10), variableSort1(11)), Nil)
 
-  val planOfDecompositionMethod3: Plan                      = SymbolicPlan(planStepsOfPlanOfDecompositionMethod3, Nil, taskOrderingOfPlanOfDecompositionMethod3,
+  val planOfDecompositionMethod3: Plan                      = Plan(planStepsOfPlanOfDecompositionMethod3, Nil, taskOrderingOfPlanOfDecompositionMethod3,
                                                                            cspOfPlanOfDecompositionMethod3, initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3,
                                                                            AllModifications, AllFlaws, Map(), Map())
   /** a decomposition method without causal links */
@@ -59,7 +59,7 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
 
   /** an empty decomposition method */
   val decompositionMethodEpsilon: SimpleDecompositionMethod =
-    SimpleDecompositionMethod(abstractTask2, SymbolicPlan(initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil, Nil,
+    SimpleDecompositionMethod(abstractTask2, Plan(initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil, Nil,
                                                           SymbolicTaskOrdering(OrderingConstraint.allBetween(initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3),
                                                                                initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil),
                                                           SymbolicCSP(Set(variableSort1(7)), Nil), initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3, AllModifications,

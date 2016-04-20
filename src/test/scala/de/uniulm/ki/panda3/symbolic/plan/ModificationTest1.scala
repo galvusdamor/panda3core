@@ -23,7 +23,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
 
   "Modifications" must "be computed for Open Preconditions" in {
     val plan1PlanSteps = planstep0init :: planstep1goal :: Nil
-    val plan1: SymbolicPlan = SymbolicPlan(plan1PlanSteps, Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps).addOrdering(planstep0init, planstep1goal),
+    val plan1: Plan = Plan(plan1PlanSteps, Nil, SymbolicTaskOrdering(Nil, plan1PlanSteps).addOrdering(planstep0init, planstep1goal),
                                            SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2)), Nil), planstep0init, planstep1goal, AllModifications, AllFlaws, Map(),
                                            Map())
     // it should be possible to solve the plan

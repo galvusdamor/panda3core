@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.plan.modification
 
 import de.uniulm.ki.panda3.symbolic.csp.{NotEqual, SymbolicCSP}
 import de.uniulm.ki.panda3.symbolic.domain.HasExampleDomain2
-import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan
+import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
@@ -32,7 +32,7 @@ class MakeLiteralsUnUnifiableTest extends FlatSpec with HasExampleDomain2 {
 
 
     val planPlanSteps = psinit :: psgoal :: ps2 :: ps3 :: Nil
-    val plan: SymbolicPlan = SymbolicPlan(planPlanSteps, Nil, SymbolicTaskOrdering(Nil, planPlanSteps).addOrderings(OrderingConstraint.allBetween(psinit, psgoal, ps2, ps3)),
+    val plan: Plan = Plan(planPlanSteps, Nil, SymbolicTaskOrdering(Nil, planPlanSteps).addOrderings(OrderingConstraint.allBetween(psinit, psgoal, ps2, ps3)),
                                           SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psgoal, AllModifications, AllFlaws,
                                           Map(), Map())
 

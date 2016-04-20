@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
 import de.uniulm.ki.panda3.symbolic.csp.SymbolicCSP
-import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan
+import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.SymbolicTaskOrdering
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
@@ -25,15 +25,15 @@ trait HasExampleProblem4 extends HasExampleDomain4 {
   val causalLinkInit2Abstract2P2 = CausalLink(psInit2, psAbstract2, psInit2.substitutedEffects(1))
 
   // create a plan  init| -> a1 -> |goal (with one causal link)
-  val plan2WithoutLink = SymbolicPlan(planPlanSteps2, Nil, SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2),
+  val plan2WithoutLink = Plan(planPlanSteps2, Nil, SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2),
                                       SymbolicCSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
 
   // create a plan  init| -> a1 -> |goal (with one causal link)
-  val plan2WithOneLink = SymbolicPlan(planPlanSteps2, causalLinkInit2Abstract2P1 :: Nil, SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2),
+  val plan2WithOneLink = Plan(planPlanSteps2, causalLinkInit2Abstract2P1 :: Nil, SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2),
                                       SymbolicCSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
 
   // create a plan  init| -> a1 -> |goal (without causal links)
-  val plan2WithTwoLinks = SymbolicPlan(planPlanSteps2, causalLinkInit2Abstract2P1 :: causalLinkInit2Abstract2P2 :: Nil,
+  val plan2WithTwoLinks = Plan(planPlanSteps2, causalLinkInit2Abstract2P1 :: causalLinkInit2Abstract2P2 :: Nil,
                                        SymbolicTaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2), SymbolicCSP(Set(instance_variableSort1(1)), Nil),
                                        psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
 }

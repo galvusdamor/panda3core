@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.compiler
 
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic.{Formula, And}
-import de.uniulm.ki.panda3.symbolic.plan.{SymbolicPlan, Plan}
+import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 
 /**
@@ -26,7 +26,7 @@ object SHOPMethodCompiler extends DomainTransformer[Unit] {
           .addOrdering(subPlan.init, preconditionPlanStep)
 
 
-        (SimpleDecompositionMethod(abstractTask, new SymbolicPlan(subPlan.planSteps :+ preconditionPlanStep, subPlan.causalLinks, newOrdering, subPlan.variableConstraints, subPlan.init,
+        (SimpleDecompositionMethod(abstractTask, new Plan(subPlan.planSteps :+ preconditionPlanStep, subPlan.causalLinks, newOrdering, subPlan.variableConstraints, subPlan.init,
                                                                   subPlan.goal, subPlan.isModificationAllowed, subPlan.isFlawAllowed, subPlan.planStepDecomposedByMethod,
                                                                   subPlan.planStepParentInDecompositionTree)), Some(preconditionTaskSchema))
     }

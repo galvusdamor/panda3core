@@ -10,7 +10,6 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.ExchangeVariable;
 import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
-import de.uniulm.ki.panda3.symbolic.plan.SymbolicPlan;
 import scala.Tuple2;
 import scala.Tuple3;
 import scala.Unit;
@@ -28,7 +27,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
         Seq<DecompositionMethod> updatedMethods = updateMethods(dIn.sorts(), dIn.decompositionMethods());
 
         Domain d = new Domain(dIn.sorts(), dIn.predicates(), dIn.tasks(), updatedMethods, dIn.decompositionAxioms());
-        Plan p = new SymbolicPlan(pIn.planSteps(), pIn.causalLinks(), pIn.orderingConstraints(), pIn.variableConstraints(), pIn.init(), pIn.goal(), pIn.isModificationAllowed(),pIn
+        Plan p = new Plan(pIn.planSteps(), pIn.causalLinks(), pIn.orderingConstraints(), pIn.variableConstraints(), pIn.init(), pIn.goal(), pIn.isModificationAllowed(),pIn
                 .isFlawAllowed(),pIn.planStepDecomposedByMethod(),pIn.planStepParentInDecompositionTree());
 
         return new Tuple2<>(d, p);
@@ -45,7 +44,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
                 SHOPDecompositionMethod sdm = (SHOPDecompositionMethod) m;
                 Tuple3<Set<Variable>, Seq<VariableConstraint>, Formula> updated = updatePrec(sdm.subPlan().variableConstraints().variables(), sdm.subPlan().variableConstraints().constraints(), sdm.methodPrecondition(), sorts);
                 CSP newCSP = new SymbolicCSP(updated._1(), updated._2());
-                Plan newSubPlan = new SymbolicPlan(
+                Plan newSubPlan = new Plan(
                         sdm.subPlan().planStepsAndRemovedPlanSteps(),
                         sdm.subPlan().causalLinks(),
                         sdm.subPlan().orderingConstraints(),

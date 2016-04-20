@@ -15,7 +15,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.plan.flaw.{AbstractPlanStep, UnboundVariable, OpenPrecondition, CausalThreat}
 import de.uniulm.ki.panda3.symbolic.plan.modification._
 import de.uniulm.ki.panda3.symbolic.plan.ordering.{SymbolicTaskOrdering, TaskOrdering}
-import de.uniulm.ki.panda3.symbolic.plan.{Plan, SymbolicPlan, element}
+import de.uniulm.ki.panda3.symbolic.plan.{Plan, element}
 import de.uniulm.ki.panda3.symbolic.search._
 import de.uniulm.ki.panda3.symbolic._
 import org.xml.sax.{InputSource, XMLReader}
@@ -293,7 +293,7 @@ object XMLParser extends StepwiseParser {
 
     val taskOrdering: TaskOrdering = SymbolicTaskOrdering(orderingConstraints, planSteps)
 
-    SymbolicPlan(planSteps, causalLinks map { _._1 }, taskOrdering, csp, init, goal, NoModifications, NoFlaws, immutable.Map[PlanStep, DecompositionMethod](),
+    Plan(planSteps, causalLinks map { _._1 }, taskOrdering, csp, init, goal, NoModifications, NoFlaws, immutable.Map[PlanStep, DecompositionMethod](),
                  immutable.Map[PlanStep, (PlanStep, PlanStep)]())
   }
 
@@ -446,7 +446,7 @@ object XMLParser extends StepwiseParser {
 
     val planStepDecomposedBy = immutable.Map[PlanStep, DecompositionMethod]()
     val planStepParent = immutable.Map[PlanStep, (PlanStep, PlanStep)]()
-    (domain, SymbolicPlan(planStepsWithInitAndGoal, causalLinks, SymbolicTaskOrdering(orderingConstraint, planStepsWithInitAndGoal), csp, init, goal,
+    (domain, Plan(planStepsWithInitAndGoal, causalLinks, SymbolicTaskOrdering(orderingConstraint, planStepsWithInitAndGoal), csp, init, goal,
                           modifications, flaws, planStepDecomposedBy, planStepParent))
   }
 
