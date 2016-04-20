@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.plan.modification
 
-import de.uniulm.ki.panda3.symbolic.csp.SymbolicCSP
+import de.uniulm.ki.panda3.symbolic.csp.CSP
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, HasExampleDomain2, Task}
 import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -67,7 +67,7 @@ trait AddOrderingTestData extends HasExampleDomain2 {
     val planPlanSteps = psinit :: psRealGoal :: psgoal :: promotionDemotionPlanPS2 :: promotionDemotionPlanPS3 :: Nil
     val ordering = TaskOrdering(Nil, planPlanSteps).addOrdering(promotionDemotionPlanPS2, psgoal)
       .addOrderings(OrderingConstraint.allBetween(psinit, psRealGoal, promotionDemotionPlanPS2, promotionDemotionPlanPS3, psgoal))
-    Plan(planPlanSteps, cl :: Nil, ordering, SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psRealGoal,
+    Plan(planPlanSteps, cl :: Nil, ordering, CSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psRealGoal,
                  AllModifications, AllFlaws, Map(), Map())
   }
   val promotionDemotionDomain     = Domain(sort1 :: Nil, predicate1 :: predicate2 :: Nil, task1 :: task2 :: goal1 :: Nil, Nil, Nil)
@@ -87,6 +87,6 @@ trait AddOrderingTestData extends HasExampleDomain2 {
     val planPlanSteps = psinit :: psgoal :: demotionNotPossiblePlanPS2 :: demotionNotPossiblePlanPS3 :: Nil
     Plan(planPlanSteps, Nil,
          TaskOrdering(Nil, planPlanSteps).addOrderings(OrderingConstraint.allBetween(psinit, psgoal, demotionNotPossiblePlanPS2, demotionNotPossiblePlanPS3)),
-                 SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psgoal, AllModifications, AllFlaws, Map(), Map())
+         CSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psgoal, AllModifications, AllFlaws, Map(), Map())
   }
 }

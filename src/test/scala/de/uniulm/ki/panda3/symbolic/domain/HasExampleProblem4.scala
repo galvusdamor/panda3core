@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
-import de.uniulm.ki.panda3.symbolic.csp.SymbolicCSP
+import de.uniulm.ki.panda3.symbolic.csp.CSP
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
@@ -26,14 +26,14 @@ trait HasExampleProblem4 extends HasExampleDomain4 {
 
   // create a plan  init| -> a1 -> |goal (with one causal link)
   val plan2WithoutLink = Plan(planPlanSteps2, Nil, TaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2),
-                                      SymbolicCSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
+                              CSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
 
   // create a plan  init| -> a1 -> |goal (with one causal link)
   val plan2WithOneLink = Plan(planPlanSteps2, causalLinkInit2Abstract2P1 :: Nil, TaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2),
-                                      SymbolicCSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
+                              CSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
 
   // create a plan  init| -> a1 -> |goal (without causal links)
   val plan2WithTwoLinks = Plan(planPlanSteps2, causalLinkInit2Abstract2P1 :: causalLinkInit2Abstract2P2 :: Nil,
-                               TaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2), SymbolicCSP(Set(instance_variableSort1(1)), Nil),
+                               TaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2), CSP(Set(instance_variableSort1(1)), Nil),
                                        psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
 }

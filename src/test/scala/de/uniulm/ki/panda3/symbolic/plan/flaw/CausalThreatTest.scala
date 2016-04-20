@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.plan.flaw
 
-import de.uniulm.ki.panda3.symbolic.csp.{NotEqual, SymbolicCSP}
+import de.uniulm.ki.panda3.symbolic.csp.{CSP, NotEqual}
 import de.uniulm.ki.panda3.symbolic.domain.HasExampleDomain2
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
@@ -31,7 +31,7 @@ class CausalThreatTest extends FlatSpec with HasExampleDomain2 {
   val planPlanSteps      = psinit :: psgoal :: ps2 :: ps3 :: Nil
   val plan: Plan = Plan(planPlanSteps, cl :: Nil,
                         TaskOrdering(Nil, planPlanSteps).addOrdering(psinit, psgoal).addOrdering(psinit, ps2).addOrdering(psinit, ps3).addOrdering(ps2, psgoal)
-                                          .addOrdering(ps3, psgoal), SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psgoal,
+                                          .addOrdering(ps3, psgoal), CSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psgoal,
                                         AllModifications, AllFlaws, Map(), Map())
 
 

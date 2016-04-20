@@ -280,7 +280,7 @@ object XMLParser extends StepwiseParser {
         case "neq" => NotOfSort(v, sort)
       }
     }
-    val csp: CSP = SymbolicCSP((variablesIntroducedByCausalLinks ++ xmlVariableToScalaVariable.values).toSet, (causalLinks flatMap { _._2 }) ++ valueRestrictions ++
+    val csp: CSP = CSP((variablesIntroducedByCausalLinks ++ xmlVariableToScalaVariable.values).toSet, (causalLinks flatMap { _._2 }) ++ valueRestrictions ++
       inheritedVariableConstraints)
 
     // get the order induced by the causal links and the explicitly mentioned order
@@ -419,7 +419,7 @@ object XMLParser extends StepwiseParser {
       }
     }
 
-    val csp: CSP = SymbolicCSP(nameToVariablesForConstants.values.toSet ++ variableNameToVariable.values, variableConstraintsForConstants ++ additionalVariableConstraints)
+    val csp: CSP = CSP(nameToVariablesForConstants.values.toSet ++ variableNameToVariable.values, variableConstraintsForConstants ++ additionalVariableConstraints)
     val planStepsWithInitAndGoal = planSteps :+ init :+ goal
 
     // determine which problem type we have

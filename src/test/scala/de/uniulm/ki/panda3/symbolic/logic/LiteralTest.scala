@@ -30,7 +30,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Checking equality" must "be possible" in {
-    val csp : SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4, v5), Nil)
+    val csp : CSP = CSP(HashSet(v1, v2, v3, v4, v5), Nil)
 
     val l1: Literal = Literal(p1, isPositive = false, v1 :: v2 :: Nil)
     val l2: Literal = Literal(p1, isPositive = true, v1 :: v1 :: Nil)
@@ -45,7 +45,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Checking equality" must "be possible using constraints" in {
-    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equal(v1, v2))
+    val csp: CSP = CSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equal(v1, v2))
 
     val l1: Literal = Literal(p1, isPositive = false, v1 :: v2 :: Nil)
     val l2: Literal = Literal(p1, isPositive = false, v1 :: v1 :: Nil)
@@ -62,7 +62,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Unification" must "be possible" in {
-    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equal(v1, v2))
+    val csp: CSP = CSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equal(v1, v2))
 
     val l1: Literal = Literal(p1, isPositive = false, v1 :: v2 :: Nil)
     val l3: Literal = Literal(p1, isPositive = false, v1 :: v3 :: Nil)
@@ -85,7 +85,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Unification of literals with only a single argument" must "be possible" in {
-    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2), Nil)
+    val csp: CSP = CSP(HashSet(v1, v2), Nil)
 
     val l1: Literal = Literal(p4, isPositive = false, v1 :: Nil)
     val l2: Literal = Literal(p4, isPositive = false, v2 :: Nil)
@@ -107,7 +107,7 @@ class LiteralTest extends FlatSpec {
   }
 
   "Unification" must "be impossible for non-equal predicates" in {
-    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equal(v1, v2))
+    val csp: CSP = CSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(Equal(v1, v2))
 
     val l1: Literal = Literal(p1, isPositive = false, v1 :: v2 :: Nil)
     val l3: Literal = Literal(p2, isPositive = false, v1 :: v5 :: Nil)
@@ -120,7 +120,7 @@ class LiteralTest extends FlatSpec {
 
 
   "Unification" must "be impossible of the CSP says so" in {
-    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(NotEqual(v2, v3))
+    val csp: CSP = CSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(NotEqual(v2, v3))
 
     val l1: Literal = Literal(p1, isPositive = false, v1 :: v2 :: Nil)
     val l3: Literal = Literal(p1, isPositive = false, v1 :: v3 :: Nil)
@@ -132,7 +132,7 @@ class LiteralTest extends FlatSpec {
   }
 
   "Differentiation" must "be possible for two Literals" in {
-    val csp: SymbolicCSP = SymbolicCSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(NotEqual(v2, v3))
+    val csp: CSP = CSP(HashSet(v1, v2, v3, v4), Nil).addConstraint(NotEqual(v2, v3))
 
     val l1: Literal = Literal(p1, isPositive = false, v1 :: v2 :: Nil)
     val l2: Literal = Literal(p1, isPositive = false, v1 :: v3 :: Nil)

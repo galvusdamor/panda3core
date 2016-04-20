@@ -3,7 +3,6 @@ package de.uniulm.ki.panda3.symbolic.compiler.prefix;
 import de.uniulm.ki.panda3.symbolic.compiler.DomainTransformer;
 import de.uniulm.ki.panda3.symbolic.csp.CSP;
 import de.uniulm.ki.panda3.symbolic.csp.Equal;
-import de.uniulm.ki.panda3.symbolic.csp.SymbolicCSP;
 import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
 import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.domain.updates.ExchangeVariable;
@@ -43,7 +42,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
             } else { // SHOP-method with preconditions
                 SHOPDecompositionMethod sdm = (SHOPDecompositionMethod) m;
                 Tuple3<Set<Variable>, Seq<VariableConstraint>, Formula> updated = updatePrec(sdm.subPlan().variableConstraints().variables(), sdm.subPlan().variableConstraints().constraints(), sdm.methodPrecondition(), sorts);
-                CSP newCSP = new SymbolicCSP(updated._1(), updated._2());
+                CSP newCSP = new CSP(updated._1(), updated._2());
                 Plan newSubPlan = new Plan(
                         sdm.subPlan().planStepsAndRemovedPlanSteps(),
                         sdm.subPlan().causalLinks(),

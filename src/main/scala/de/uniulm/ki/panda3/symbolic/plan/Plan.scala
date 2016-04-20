@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.plan
 
-import de.uniulm.ki.panda3.symbolic.csp.{CSP, Substitution, SymbolicCSP}
+import de.uniulm.ki.panda3.symbolic.csp.{CSP, Substitution}
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic._
@@ -139,7 +139,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       val newVariableSet = (variableConstraints.variables diff modification.removedVariables.toSet) union modification.addedVariables.toSet
       val newConstraintSet = (variableConstraints.constraints diff modification.removedVariableConstraints) union modification.addedVariableConstraints
 
-      SymbolicCSP(newVariableSet, newConstraintSet)
+      CSP(newVariableSet, newConstraintSet)
     }
 
     val newPlanStepDecomposedByMethod = planStepDecomposedByMethod ++ modification.setPlanStepDecomposedByMethod
@@ -188,7 +188,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
                                              Literal(l.predicate, l.isPositive, l.parameterVariables map sub))
     }
 
-    val newVariableConstraints = SymbolicCSP(newVariables.toSet, variableConstraints.constraints map {
+    val newVariableConstraints = CSP(newVariables.toSet, variableConstraints.constraints map {
       _.substitute(sub)
     })
 

@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.plan
 
-import de.uniulm.ki.panda3.symbolic.csp.{Equal, SymbolicCSP}
+import de.uniulm.ki.panda3.symbolic.csp.{CSP, Equal}
 import de.uniulm.ki.panda3.symbolic.domain.HasExampleDomain1
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw.{OpenPrecondition, UnboundVariable}
@@ -24,7 +24,7 @@ class ModificationTest1 extends FlatSpec with HasExampleDomain1 {
   "Modifications" must "be computed for Open Preconditions" in {
     val plan1PlanSteps = planstep0init :: planstep1goal :: Nil
     val plan1: Plan = Plan(plan1PlanSteps, Nil, TaskOrdering(Nil, plan1PlanSteps).addOrdering(planstep0init, planstep1goal),
-                           SymbolicCSP(Set(instance_variableSort1(1), instance_variableSort1(2)), Nil), planstep0init, planstep1goal, AllModifications, AllFlaws, Map(), Map())
+                           CSP(Set(instance_variableSort1(1), instance_variableSort1(2)), Nil), planstep0init, planstep1goal, AllModifications, AllFlaws, Map(), Map())
     // it should be possible to solve the plan
     assert(plan1.isSolvable.isEmpty)
 

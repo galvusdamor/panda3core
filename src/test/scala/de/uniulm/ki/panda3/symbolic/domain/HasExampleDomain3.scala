@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
-import de.uniulm.ki.panda3.symbolic.csp.{CSP, SymbolicCSP}
+import de.uniulm.ki.panda3.symbolic.csp.CSP
 import de.uniulm.ki.panda3.symbolic.logic.{And, Literal}
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
@@ -42,7 +42,7 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
   val taskOrderingOfPlanOfDecompositionMethod1  : TaskOrdering = TaskOrdering(OrderingConstraint(initOfPlanOfDecompositionMethod1, actualPlanStepOfPlanOfDecompositionMethod1)
                                                                                         :: OrderingConstraint(actualPlanStepOfPlanOfDecompositionMethod1,
                                                                                                               goalOfPlanOfDecompositionMethod1) :: Nil, planStepsOfPlanOfDecompositionMethod1)
-  val cspOfPlanOfDecompositionMethod1           : CSP          = SymbolicCSP(Set(variableSort1(7)), Nil)
+  val cspOfPlanOfDecompositionMethod1           : CSP          = CSP(Set(variableSort1(7)), Nil)
 
   val planOfDecompositionMethod1: Plan                      = Plan(planStepsOfPlanOfDecompositionMethod1, Nil, taskOrderingOfPlanOfDecompositionMethod1,
                                                                            cspOfPlanOfDecompositionMethod1, initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1,

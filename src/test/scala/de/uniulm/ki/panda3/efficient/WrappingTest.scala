@@ -5,7 +5,7 @@ import java.io.FileInputStream
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, ClosedWorldAssumption, ExpandSortHierarchy}
-import de.uniulm.ki.panda3.symbolic.csp.{Equal, SymbolicCSP}
+import de.uniulm.ki.panda3.symbolic.csp.{Equal, CSP}
 import de.uniulm.ki.panda3.symbolic.domain.{Task, ReducedTask, Domain, HasExampleProblem4}
 import de.uniulm.ki.panda3.symbolic.logic.{Variable, Sort}
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
@@ -102,7 +102,7 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     val adHocPlanSteps = psInit2 :: psGoal2 :: adHocPsAbstract2 :: Nil
     val adHocPlan2WithTwoLinks = Plan(adHocPlanSteps, adHocCausalLinkInit2Abstract2P1 :: adHocCausalLinkInit2Abstract2P2 :: Nil,
                                               TaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, adHocPsAbstract2), adHocPlanSteps),
-                                              SymbolicCSP(Set(instance_variableSort1(1), adHocVariable), Equal(adHocVariable, psInit2.arguments.head) :: Nil), psInit2, psGoal2,
+                                      CSP(Set(instance_variableSort1(1), adHocVariable), Equal(adHocVariable, psInit2.arguments.head) :: Nil), psInit2, psGoal2,
                                               AllModifications, AllFlaws, Map(), Map())
 
 

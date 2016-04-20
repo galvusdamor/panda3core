@@ -41,7 +41,7 @@ public class internalTaskNetwork {
         taskOderings = new TaskOrdering(leerCO, leerPS);
         Set<Variable> pVariables = new VectorBuilder<Variable>().result().toSet();
         Seq<VariableConstraint> pVC = new VectorBuilder<VariableConstraint>().result();
-        csp = new SymbolicCSP(pVariables, pVC);
+        csp = new CSP(pVariables, pVC);
     }
 
     public Seq<PlanStep> planSteps() {

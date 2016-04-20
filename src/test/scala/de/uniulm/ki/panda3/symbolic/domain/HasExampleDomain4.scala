@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
-import de.uniulm.ki.panda3.symbolic.csp.{CSP, SymbolicCSP}
+import de.uniulm.ki.panda3.symbolic.csp.CSP
 import de.uniulm.ki.panda3.symbolic.logic.{And, Literal}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
@@ -49,7 +49,7 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
                                                                                                                      actualPlanStep3OfPlanOfDecompositionMethod3,
                                                                                                                      actualPlanStep4OfPlanOfDecompositionMethod3),
                                                                                        planStepsOfPlanOfDecompositionMethod3)
-  val cspOfPlanOfDecompositionMethod3            : CSP          = SymbolicCSP(Set(variableSort1(7), variableSort1(8), variableSort1(9), variableSort1(10), variableSort1(11)), Nil)
+  val cspOfPlanOfDecompositionMethod3            : CSP          = CSP(Set(variableSort1(7), variableSort1(8), variableSort1(9), variableSort1(10), variableSort1(11)), Nil)
 
   val planOfDecompositionMethod3: Plan                      = Plan(planStepsOfPlanOfDecompositionMethod3, Nil, taskOrderingOfPlanOfDecompositionMethod3,
                                                                            cspOfPlanOfDecompositionMethod3, initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3,
@@ -62,7 +62,7 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
     SimpleDecompositionMethod(abstractTask2, Plan(initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil, Nil,
                                                   TaskOrdering(OrderingConstraint.allBetween(initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3),
                                                                                initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil),
-                                                          SymbolicCSP(Set(variableSort1(7)), Nil), initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3, AllModifications,
+                                                  CSP(Set(variableSort1(7)), Nil), initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3, AllModifications,
                                                           AllFlaws, Map(), Map()))
 
   val init4: ReducedTask = ReducedTask("init", isPrimitive = true, variableSort1(3) :: Nil, Nil, precondition = And[Literal](Nil), effect =

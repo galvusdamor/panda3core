@@ -324,7 +324,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
                                 v2 <- Range(v1 + 1, variables.length) if plan.variableConstraints.isRepresentativeAVariable(v2);
                                 if plan.variableConstraints.areEqual(v1, v2)) yield Equal(variables(v1), variables(v2))
     val unequalConstraints = variables.indices flatMap { v => plan.variableConstraints.getVariableUnequalTo(v) map { w => NotEqual(variables(v), variables(w)) } }
-    val csp = new SymbolicCSP(variables.toSet, possibleValuesConstraints ++ unequalConstraints ++ equalConstraints)
+    val csp = new CSP(variables.toSet, possibleValuesConstraints ++ unequalConstraints ++ equalConstraints)
 
     // determine the modification stuff
     val allwaysAllowedModifications = classOf[AddOrdering] :: classOf[BindVariableToValue] :: classOf[InsertCausalLink] :: classOf[MakeLiteralsUnUnifiable] :: Nil
@@ -447,7 +447,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val subPlanPlanSteps = insertedPlanSteps :+ init :+ goal
       val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) }
       val ordering = TaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
-      val csp = SymbolicCSP((newVariables ++ nonPresentDecomposedPlanStep.arguments).toSet, innerConstraints)
+      val csp = CSP((newVariables ++ nonPresentDecomposedPlanStep.arguments).toSet, innerConstraints)
       val subPlan = Plan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](),
                                  Map[PlanStep, (PlanStep, PlanStep)]())
 
