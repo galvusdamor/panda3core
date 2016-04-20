@@ -3,26 +3,26 @@ package de.uniulm.ki.util
 import org.scalatest.FlatSpec
 
 /**
- * teststhe Graph implementation
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * teststhe Graph implementation
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 // scalastyle:off magic.number
 class GraphTest extends FlatSpec {
 
   val edges = (0, 1) ::(1, 2) ::(2, 0) ::(2, 3) ::(3, 4) ::(4, 5) ::(5, 3) :: Nil
-  val g = SimpleDirectedGraph(0 until 6, edges)
-  val g2 = SimpleDirectedGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) :: edges)
-  val g3 = SimpleDirectedGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) ::(3, 7) :: edges)
-  val g4 = SimpleDirectedGraph(0 until 8, (0, 1) ::(1, 2) ::(2, 4) ::(4, 5) ::(5, 6) ::(5, 7) ::(1, 3) ::(3, 4) :: Nil)
+  val g     = SimpleDirectedGraph(0 until 6, edges)
+  val g2    = SimpleDirectedGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) :: edges)
+  val g3    = SimpleDirectedGraph(0 until 9, (6, 0) ::(3, 7) ::(7, 8) ::(3, 7) :: edges)
+  val g4    = SimpleDirectedGraph(0 until 8, (0, 1) ::(1, 2) ::(2, 4) ::(4, 5) ::(5, 6) ::(5, 7) ::(1, 3) ::(3, 4) :: Nil)
 
   "Graphs" must "have the correct SCCs" in {
     val sccs = g.stronglyConnectedComponents
 
     assert(sccs.size == 2)
-    assert(sccs forall {_.size == 3})
-    assert(sccs exists {_ forall { n => n == 0 || n == 1 || n == 2 }})
-    assert(sccs exists {_ forall { n => n == 3 || n == 4 || n == 5 }})
+    assert(sccs forall { _.size == 3 })
+    assert(sccs exists { _ forall { n => n == 0 || n == 1 || n == 2 } })
+    assert(sccs exists { _ forall { n => n == 3 || n == 4 || n == 5 } })
 
     assert(g.getComponentOf(0) match { case Some(l) => l.toSet == Set(0, 1, 2); case None => false })
     assert(g.getComponentOf(1) match { case Some(l) => l.toSet == Set(0, 1, 2); case None => false })
@@ -51,17 +51,17 @@ class GraphTest extends FlatSpec {
   "Condensation" must "be correct" in {
 
     assert(condens.vertices.size == 2)
-    assert(condens.vertices exists {_.toSet == Set(0, 1, 2)})
-    assert(condens.vertices exists {_.toSet == Set(3, 4, 5)})
+    assert(condens.vertices exists { _.toSet == Set(0, 1, 2) })
+    assert(condens.vertices exists { _.toSet == Set(3, 4, 5) })
     assert(condens.edgeList.size == 1)
     assert(condens.edgeList exists { case (from, to) => from.toSet == Set(0, 1, 2) && to.toSet == Set(3, 4, 5) })
   }
 
   "Sources" must "be computed correctly" in {
-    assert(g.sources.size == 0)
+    assert(g.sources.isEmpty)
 
     assert(condens.sources.size == 1)
-    assert(condens.sources exists {_.toSet == Set(0, 1, 2)})
+    assert(condens.sources exists { _.toSet == Set(0, 1, 2) })
   }
 
   "Reachability" must "be computed correctly" in {
@@ -70,18 +70,18 @@ class GraphTest extends FlatSpec {
 
     for (v <- (0 until 3) :+ 6) {
       assert(reachabilityMap(v).size == 8)
-      assert((0 until 6) :+ 7 :+ 8 forall {reachabilityMap(v).contains(_)})
+      assert((0 until 6) :+ 7 :+ 8 forall { reachabilityMap(v).contains(_) })
     }
 
     for (v <- 3 until 6) {
       assert(reachabilityMap(v).size == 5)
-      assert((3 until 6) :+ 7 :+ 8 forall {reachabilityMap(v).contains(_)})
+      assert((3 until 6) :+ 7 :+ 8 forall { reachabilityMap(v).contains(_) })
     }
 
     // the outside nodes
     assert(reachabilityMap(7).size == 1)
     assert(reachabilityMap(7) contains 8)
-    assert(reachabilityMap(8).size == 0)
+    assert(reachabilityMap(8).isEmpty)
   }
 
   it must "not contain duplicats" in {
@@ -90,7 +90,7 @@ class GraphTest extends FlatSpec {
     assert(reachabilityMap.size == 9)
 
     assert(reachabilityMap(6).size == 8)
-    assert((0 until 6) :+ 7 :+ 8 forall {reachabilityMap(6).contains(_)})
+    assert((0 until 6) :+ 7 :+ 8 forall { reachabilityMap(6).contains(_) })
 
     for (v <- 0 until 9) assert(reachabilityMap(v).size == reachabilityMap(v).toSet.size)
   }
@@ -100,9 +100,9 @@ class GraphTest extends FlatSpec {
     val g2Ordering = g2.topologicalOrdering
     val g3Ordering = g3.topologicalOrdering
 
-    assert(gOrdering == None)
-    assert(g2Ordering == None)
-    assert(g3Ordering == None)
+    assert(gOrdering.isEmpty)
+    assert(g2Ordering.isEmpty)
+    assert(g3Ordering.isEmpty)
   }
 
   it must "be correct if one exists" in {
@@ -112,4 +112,6 @@ class GraphTest extends FlatSpec {
 
     for ((v1, v2) <- g4.edgeList) assert(g4Ordering.indexOf(v1) < g4Ordering.indexOf(v2))
   }
+
+
 }
