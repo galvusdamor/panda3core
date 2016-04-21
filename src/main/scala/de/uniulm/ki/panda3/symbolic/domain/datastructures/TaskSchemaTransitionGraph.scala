@@ -18,7 +18,7 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraph[Task]
   /** describes which tasks can be obtained from a given task by applying a given decomposition method */
   val canBeDirectlyDecomposedIntoVia: Map[Task, Set[(DecompositionMethod, Task)]] = (domain.tasks map { case task => (task, (domain.decompositionMethods filter { _.abstractTask == task }
     flatMap { case method => method.subPlan.planStepsWithoutInitGoal.map { case ps => (method, ps.schema) } }).toSet)
-  }).toMap[Task, Set[(DecompositionMethod, Task)]]
+  }).toMap
   // assertion for the decomposition via
   canBeDirectlyDecomposedIntoVia foreach { case (task, setofDecomps) => setofDecomps foreach { case (method, _) => assert(method.abstractTask == task) } }
 
@@ -29,7 +29,7 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraph[Task]
 
 
   lazy val canBeDecomposedIntoVia: Map[Task, Seq[(DecompositionMethod, Task)]] = canBeDirectlyDecomposedIntoVia map { case (task, directDecomps) => (task, directDecomps
-    .toSeq flatMap { case (method, subtask) => reachable(subtask) map { (method, _) } })
+    .toSeq flatMap { case (method, subtask) => (reachable(subtask) :+ subtask) map { (method, _) } })
   }
 
   /** the boolean states whether the preciate can be produced negated or positive */
@@ -42,5 +42,4 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraph[Task]
       (task, pred, positive) -> targetDecompositions
     }
   }
-
 }
