@@ -35,7 +35,8 @@ case class EfficientCausalThreat(plan: EfficientPlan, causalLink: EfficientCausa
                                                                     plan.argumentsOfPlanStepsEffect(causalLink.producer, causalLink.conditionIndexOfProducer))
     val addOrdering = EfficientAddOrdering.estimate(plan, this, causalLink, threatingPlanStep)
 
-    val decompose = if (!plan.domain.tasks(plan.planStepTasks(threatingPlanStep)).isPrimitive) EfficientDecomposePlanStep.estimate(plan, this, threatingPlanStep) else 0
+    // TODO is there any target predicate ????
+    val decompose = if (!plan.domain.tasks(plan.planStepTasks(threatingPlanStep)).isPrimitive) EfficientDecomposePlanStep.estimate(plan, this, threatingPlanStep,-1,false) else 0
 
     makeUnUnifiable + addOrdering + decompose
   }

@@ -16,5 +16,5 @@ case class EfficientAbstractPlanStep(plan: EfficientPlan, planStep: Int) extends
     eaps.planStep == planStep
   } else false
 
-  override lazy val estimatedNumberOfResolvers: Int = EfficientDecomposePlanStep.estimate(plan, this, planStep)
+  override lazy val estimatedNumberOfResolvers: Int = EfficientDecomposePlanStep.estimate(plan, this, planStep,-1,false)
 }

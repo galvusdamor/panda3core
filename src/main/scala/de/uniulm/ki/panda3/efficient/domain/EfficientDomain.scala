@@ -1,7 +1,9 @@
 package de.uniulm.ki.panda3.efficient.domain
 
 import de.uniulm.ki.panda3.efficient.domain.datastructures.EfficientTaskSchemaTransitionGraph
+import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 
+import scala.collection.BitSet
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -63,6 +65,17 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
   lazy val taskToPossibleMethods: Map[Int, Array[(EfficientDecompositionMethod, Int)]] =
     (tasks.indices map { i => i -> (decompositionMethods.zipWithIndex filter { _._1.abstractTask == i }) }).toMap
 
-
   lazy val taskSchemaTransitionGraph: EfficientTaskSchemaTransitionGraph = EfficientTaskSchemaTransitionGraph(this)
+
+
+  /** This applied literal encoding (i.e. +l is 2*l and -l is 2*l+1) */
+  lazy val methodCanSupportLiteral: Array[BitSet] = {
+    decompositionMethods map { method =>
+      val containedTasks = method.subPlan.planStepTasks.drop(2)
+      val reachableTasks = containedTasks flatMap taskSchemaTransitionGraph.reachable
+
+      val literals = (containedTasks ++ reachableTasks) flatMap { task => tasks(task).effect map { case EfficientLiteral(pred, isPositive, _) => 2 * pred + (if (isPositive) 0 else 1) } }
+      BitSet(literals: _*)
+    }
+  }
 }
