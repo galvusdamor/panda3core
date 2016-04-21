@@ -74,84 +74,86 @@ object DecomposePlanStep {
       val joinedCSP: CSP = currentPlan.variableConstraints.addVariables((copiedPlan.variableConstraints.variables -- decomposedPS.arguments).toSeq)
         .addConstraints(copiedPlan.variableConstraints.constraints)
 
-
-      // causal links handling -> in pairs (ingoing, outgoing) links
-      // causal links from and to init and goal of the methods subplan (i.e. those that _must_ be respected)
-      val methodSpecifiedCausalLinks = copiedPlan.causalLinks filter { cl => cl.containsOne(copiedPlan.init, copiedPlan.goal) } partition { _.producer == copiedPlan.init }
-      // pre-exisiting causal links involving the task to be decomposed
-      val causalLinksWithDecomposedPlanStep = currentPlan.causalLinks filter { _.contains(decomposedPS) } partition { _.consumer == decomposedPS }
-
-
-
-      // compute which plan steps are directly inherited, i.e. those specified by the init or goal of the plan
-      // note, that this _cannot_ introduce new variable constraints, iff the subplan is a valid plan
-      // first compute an auxiliary data-structure
-      val ingoingLinksWithMatchingInner = causalLinksWithDecomposedPlanStep._1 map { case cl@CausalLink(_, _, precondition) =>
-        val effectLiteralOfSubPlanInit = copiedPlan.init.substitutedEffects(decomposedPS.indexOfPrecondition(precondition, currentPlan.variableConstraints))
-
-        (cl, methodSpecifiedCausalLinks._1 find { case CausalLink(_, _, effect) => (effectLiteralOfSubPlanInit =?= effect) (copiedPlan.variableConstraints) })
-      }
-      // compute the new links created by direct inheritance
-      val directlyInheritedLinksIngoing: Seq[CausalLink] = ingoingLinksWithMatchingInner collect { case (ingoingCL, Some(innerCL)) => CausalLink(ingoingCL.producer, innerCL.consumer,
-                                                                                                                                                 ingoingCL.condition)
-      }
-      // and separate those remaining
-      val remainingLinksIngoing = ingoingLinksWithMatchingInner collect { case (cl, None) => cl }
-
-
-      // the same for outgoing links
-      val outgoingLinksWithMatchingInner = causalLinksWithDecomposedPlanStep._2 map { case cl@CausalLink(_, _, effect) =>
-        val preconditionLiteralOfSubPlanGoal = copiedPlan.goal.substitutedPreconditions(decomposedPS.indexOfEffect(effect, currentPlan.variableConstraints))
-
-        (cl, methodSpecifiedCausalLinks._2 find { case CausalLink(_, _, precondition) => (preconditionLiteralOfSubPlanGoal =?= precondition) (copiedPlan.variableConstraints) })
-      }
-      val directlyInheritedLinksOutgoing: Seq[CausalLink] = outgoingLinksWithMatchingInner collect { case (outgoingCL, Some(innerCL)) => CausalLink(innerCL.producer, outgoingCL.consumer,
-                                                                                                                                                    outgoingCL.condition)
-      }
-      // and separate those remaining
-      val remainingLinksOutgoing = outgoingLinksWithMatchingInner collect { case (cl, None) => cl }
-
-
-
-      // if not all specified causal links can be inherited, this is not a legal decomposition
-      if (directlyInheritedLinksIngoing.size != methodSpecifiedCausalLinks._1.size || directlyInheritedLinksOutgoing.size != methodSpecifiedCausalLinks._2.size)
-        Nil
+      if (joinedCSP.isSolvable.contains(false)) Nil
       else {
-        // compute all possible ways to inherit the ingoing causal links
-        def generateAllPossibleInheritances(ingoingLinks: Seq[CausalLink], outgoingLinks: Seq[CausalLink]): Seq[(Seq[CausalLink], CSP, Seq[VariableConstraint])] =
-          if (ingoingLinks == Nil && outgoingLinks == Nil) (Nil, joinedCSP, Nil) :: Nil // list containing an empty list
-          else {
-            val cl = if (ingoingLinks != Nil) ingoingLinks.head else outgoingLinks.head
-            val recursionIngoing = if (ingoingLinks != Nil) ingoingLinks.drop(1) else ingoingLinks
-            val recursionOutgoing = if (ingoingLinks != Nil) outgoingLinks else outgoingLinks.drop(1)
 
-            val possibleLinks = generateAllPossibleInheritances(recursionIngoing, recursionOutgoing)
+        // causal links handling -> in pairs (ingoing, outgoing) links
+        // causal links from and to init and goal of the methods subplan (i.e. those that _must_ be respected)
+        val methodSpecifiedCausalLinks = copiedPlan.causalLinks filter { cl => cl.containsOne(copiedPlan.init, copiedPlan.goal) } partition { _.producer == copiedPlan.init }
+        // pre-exisiting causal links involving the task to be decomposed
+        val causalLinksWithDecomposedPlanStep = currentPlan.causalLinks filter { _.contains(decomposedPS) } partition { _.consumer == decomposedPS }
+
+        // compute which plan steps are directly inherited, i.e. those specified by the init or goal of the plan
+        // note, that this _cannot_ introduce new variable constraints, iff the subplan is a valid plan
+        // first compute an auxiliary data-structure
+        val ingoingLinksWithMatchingInner = causalLinksWithDecomposedPlanStep._1 map { case cl@CausalLink(_, _, precondition) =>
+          val effectLiteralOfSubPlanInit = copiedPlan.init.substitutedEffects(decomposedPS.indexOfPrecondition(precondition, currentPlan.variableConstraints))
+
+          (cl, methodSpecifiedCausalLinks._1 find { case CausalLink(_, _, effect) => (effectLiteralOfSubPlanInit =?= effect) (copiedPlan.variableConstraints) })
+        }
+        // compute the new links created by direct inheritance
+        val directlyInheritedLinksIngoing: Seq[CausalLink] = ingoingLinksWithMatchingInner collect { case (ingoingCL, Some(innerCL)) => CausalLink(ingoingCL.producer, innerCL.consumer,
+                                                                                                                                                   ingoingCL.condition)
+        }
+        // and separate those remaining
+        val remainingLinksIngoing = ingoingLinksWithMatchingInner collect { case (cl, None) => cl }
 
 
-            // compute all possibilities to add one link. This list still contains impossible inheritances signaled by an unsolvable CSP
-            val possibilitiesToAddLink: Seq[(Seq[CausalLink], PlanStep, CSP, Seq[VariableConstraint])] = possibleLinks flatMap { case (links, csp, constraints) => copiedPlan
-              .planStepsWithoutInitGoal flatMap {
-              // if ingoing != Nil, then such a link was chosen, i.e. it needs to be connected to a precondition of some task in the sub-plan
-              ps => (if (ingoingLinks != Nil) ps.substitutedPreconditions else ps.substitutedEffects) map { literal =>
-                (cl.condition #?# literal) (csp) match {
-                  case None      => (links, ps, UnsolvableCSP, Nil)
-                  case Some(mgu) => (links, ps, csp.addConstraints(mgu), constraints ++ mgu)
+        // the same for outgoing links
+        val outgoingLinksWithMatchingInner = causalLinksWithDecomposedPlanStep._2 map { case cl@CausalLink(_, _, effect) =>
+          val preconditionLiteralOfSubPlanGoal = copiedPlan.goal.substitutedPreconditions(decomposedPS.indexOfEffect(effect, currentPlan.variableConstraints))
+
+          (cl, methodSpecifiedCausalLinks._2 find { case CausalLink(_, _, precondition) => (preconditionLiteralOfSubPlanGoal =?= precondition) (copiedPlan.variableConstraints) })
+        }
+        val directlyInheritedLinksOutgoing: Seq[CausalLink] = outgoingLinksWithMatchingInner collect { case (outgoingCL, Some(innerCL)) => CausalLink(innerCL.producer, outgoingCL.consumer,
+                                                                                                                                                      outgoingCL.condition)
+        }
+        // and separate those remaining
+        val remainingLinksOutgoing = outgoingLinksWithMatchingInner collect { case (cl, None) => cl }
+
+
+
+        // if not all specified causal links can be inherited, this is not a legal decomposition
+        if (directlyInheritedLinksIngoing.size != methodSpecifiedCausalLinks._1.size || directlyInheritedLinksOutgoing.size != methodSpecifiedCausalLinks._2.size)
+          Nil
+        else {
+          // compute all possible ways to inherit the ingoing causal links
+          def generateAllPossibleInheritances(ingoingLinks: Seq[CausalLink], outgoingLinks: Seq[CausalLink]): Seq[(Seq[CausalLink], CSP, Seq[VariableConstraint])] =
+            if (ingoingLinks == Nil && outgoingLinks == Nil) (Nil, joinedCSP, Nil) :: Nil // list containing an empty list
+            else {
+              val cl = if (ingoingLinks != Nil) ingoingLinks.head else outgoingLinks.head
+              val recursionIngoing = if (ingoingLinks != Nil) ingoingLinks.drop(1) else ingoingLinks
+              val recursionOutgoing = if (ingoingLinks != Nil) outgoingLinks else outgoingLinks.drop(1)
+
+              val possibleLinks = generateAllPossibleInheritances(recursionIngoing, recursionOutgoing)
+
+
+              // compute all possibilities to add one link. This list still contains impossible inheritances signaled by an unsolvable CSP
+              val possibilitiesToAddLink: Seq[(Seq[CausalLink], PlanStep, CSP, Seq[VariableConstraint])] = possibleLinks flatMap { case (links, csp, constraints) => copiedPlan
+                .planStepsWithoutInitGoal flatMap {
+                // if ingoing != Nil, then such a link was chosen, i.e. it needs to be connected to a precondition of some task in the sub-plan
+                ps => (if (ingoingLinks != Nil) ps.substitutedPreconditions else ps.substitutedEffects) map { literal =>
+                  (cl.condition #?# literal) (csp) match {
+                    case None      => (links, ps, UnsolvableCSP, Nil)
+                    case Some(mgu) => (links, ps, csp.addConstraints(mgu), constraints ++ mgu)
+                  }
                 }
               }
-            }
+              }
+
+              possibilitiesToAddLink collect { case (links, ps, csp, constraints) if !csp.isSolvable.contains(false) =>
+                val newLink = if (ingoingLinks != Nil) CausalLink(cl.producer, ps, cl.condition) else CausalLink(ps, cl.consumer, cl.condition)
+                (links :+ newLink, csp, constraints)
+              }
             }
 
-            possibilitiesToAddLink collect { case (links, ps, csp, constraints) if !csp.isSolvable.contains(false) =>
-              val newLink = if (ingoingLinks != Nil) CausalLink(cl.producer, ps, cl.condition) else CausalLink(ps, cl.consumer, cl.condition)
-              (links :+ newLink, csp, constraints)
-            }
+
+          generateAllPossibleInheritances(remainingLinksIngoing, remainingLinksOutgoing) map { case (links, _, linkConstraints) =>
+            val causalLinks: Seq[CausalLink] = directlyInheritedLinksIngoing ++ directlyInheritedLinksOutgoing ++ links
+            DecomposePlanStep(decomposedPS, nonPresentDecomposedPS, copiedPlan, linkConstraints, causalLinks, method, planStepMapping, currentPlan)
           }
-
-
-        generateAllPossibleInheritances(remainingLinksIngoing, remainingLinksOutgoing) map { case (links, _, linkConstraints) =>
-          val causalLinks: Seq[CausalLink] = directlyInheritedLinksIngoing ++ directlyInheritedLinksOutgoing ++ links
-          DecomposePlanStep(decomposedPS, nonPresentDecomposedPS, copiedPlan, linkConstraints, causalLinks, method, planStepMapping, currentPlan)
         }
       }
     }
+
 }
