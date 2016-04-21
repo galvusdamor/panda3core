@@ -379,7 +379,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
         // the order of the flaws in both representations might not be identical so we need to do a bit of reordering
         searchNode setSelectedFlaw (searchNode.plan.flaws indexWhere { flaw => FlawEquivalenceChecker(efficientSearchNode.plan.flaws(efficientSearchNode.selectedFlaw), flaw, this) })
-        assert(searchNode.selectedFlaw != -1)
+        assert(searchNode.selectedFlaw != -1 || searchNode.dirty || searchNode.searchState == SearchState.SOLUTION || searchNode.searchState == SearchState.DEADEND_HEURISTIC
+                 || searchNode.searchState == SearchState.DEADEND_CSP || searchNode.searchState == SearchState.DEADEND_UNRESOLVABLEFLAW)
         assert(searchNode.plan.flaws.size == efficientSearchNode.plan.flaws.length)
         assert(searchNode.plan.flaws.size == efficientSearchNode.modifications.length)
         // reorder modifications
