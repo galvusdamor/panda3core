@@ -10,7 +10,7 @@ import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneHierarchy, PruneTasks}
 import de.uniulm.ki.panda3.symbolic.compiler.{SHOPMethodCompiler, ToPlainFormulaRepresentation, ClosedWorldAssumption}
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.ReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.search.SearchNode
 import de.uniulm.ki.util.Dot2PdfCompiler
@@ -53,13 +53,22 @@ object BFS {
     println("\ncurrent domain:")
     println(flattened._1.statisticsString)
 
+    val liftedRelaxedInitialState = flattened._2.init.schema.effectsAsPredicateBool
+    val liftedReachabilityAnalysis = LiftedForwardSearchReachabilityAnalysis(flattened._1, liftedRelaxedInitialState.toSet)
+    println("lifted analysis")
+    println("" + liftedReachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
+    println("" + liftedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
+
+
+
     val groundedInitialState = flattened._2.groundedInitialState
-    val reachabilityAnalysis = ReachabilityAnalysis(flattened._1, groundedInitialState.toSet)
+    val groundedReachabilityAnalysis = GroundedForwardSearchReachabilityAnalysis(flattened._1, groundedInitialState.toSet)
 
-    println("\n" + reachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
-    println("\n" + reachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
+    println("grounded analysis")
+    println("" + groundedReachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
+    println("" + groundedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
 
-    val disallowedTasks = flattened._1.primitiveTasks filterNot reachabilityAnalysis.reachableLiftedActions.contains
+    val disallowedTasks = flattened._1.primitiveTasks filterNot groundedReachabilityAnalysis.reachableLiftedActions.contains
     val prunedDomain = PruneHierarchy.transform(flattened, disallowedTasks.toSet)
 
     println("reduced domain:")

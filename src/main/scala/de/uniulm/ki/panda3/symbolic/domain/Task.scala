@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
+import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.updates.{ReduceTasks, DomainUpdate, ExchangeTask}
@@ -88,11 +89,16 @@ trait Task extends DomainUpdatable with PrettyPrintable {
   /** returns a more detailed information about the object */
   override def longInfo: String = mediumInfo + "\npreconditions:\n" + precondition.shortInfo + "\n" +
     "\neffects:\n" + effect.shortInfo + "\n"
+
+  val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)]
+  val effectsAsPredicateBool     : Seq[(Predicate, Boolean)]
 }
 
 case class GeneralTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], precondition: Formula, effect: Formula)
   extends Task with HashMemo {
 
+  override lazy val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)] = noSupport(FORUMLASNOTSUPPORTED)
+  override lazy val effectsAsPredicateBool     : Seq[(Predicate, Boolean)] = noSupport(FORUMLASNOTSUPPORTED)
 }
 
 case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], precondition: And[Literal], effect: And[Literal])
@@ -105,4 +111,7 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
     }
   }*/
   assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })
+
+  lazy val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)] = (precondition.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
+  lazy val effectsAsPredicateBool     : Seq[(Predicate, Boolean)] = (effect.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
 }
