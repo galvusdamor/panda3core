@@ -8,9 +8,12 @@ import java.util.concurrent.Semaphore
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
+import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneHierarchy, PruneTasks}
 import de.uniulm.ki.panda3.symbolic.compiler.{SHOPMethodCompiler, ToPlainFormulaRepresentation, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.ReachabilityAnalysis
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.search.SearchNode
+import de.uniulm.ki.util.Dot2PdfCompiler
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -27,10 +30,10 @@ object BFS {
     val probFile = args(1)*/
     //val domFile = "/home/gregor/temp/send/domain2.lisp"
     //val probFile = "/home/gregor/temp/send/problem2.lisp"
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     print("Parsing domain and problem ... ")
     //val domAndInitialPlan: (Domain, Plan) = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
@@ -45,43 +48,59 @@ object BFS {
     val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
     val simpleMethod = SHOPMethodCompiler.transform(cwaApplied, ())
     val flattened = ToPlainFormulaRepresentation.transform(simpleMethod, ())
+
+    print("done\nreducing the model ... ")
+    println("\ncurrent domain:")
+    println(flattened._1.statisticsString)
+
+    val groundedInitialState = flattened._2.groundedInitialState
+    val reachabilityAnalysis = ReachabilityAnalysis(flattened._1, groundedInitialState.toSet)
+
+    println("\n" + reachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
+    println("\n" + reachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
+
+    val disallowedTasks = flattened._1.primitiveTasks filterNot reachabilityAnalysis.reachableLiftedActions.contains
+    val prunedDomain = PruneHierarchy.transform(flattened, disallowedTasks.toSet)
+
+    println("reduced domain:")
+    println(prunedDomain._1.statisticsString)
+
+    //System.exit(0)
     print("done\ntransform to efficient representation ... ")
 
     // wrap everything into the efficient datastructures
-    val wrapper = Wrapping(flattened)
-    val initialPlan = wrapper.unwrap(flattened._2)
+
+    val domainToSearchWith = prunedDomain
+
+
+    val wrapper = Wrapping(domainToSearchWith)
+    val initialPlan = wrapper.unwrap(domainToSearchWith._2)
 
     println("done\nstart planner")
 
-    System.in.read()
+    //System.in.read()
     //dfs(initialPlan, 0)
-    val (searchNode, sem, _) = startSearch(initialPlan, wrapper, Some(2000000), false)
+    val buildTree = false
+    val (searchNode, sem, _) = startSearch(initialPlan, wrapper, Some(2000000), buildTree)
 
     sem.acquire()
     println("done")
 
-    /*println("BFS finished with result: " + (if (plan.isDefined) "solvable" else "unsolvable"))
-    if (plan.isDefined) {
-      val symbolicPlan = wrapper.wrap(plan.get)
-      //println(symbolicPlan)
-      println(symbolicPlan.longInfo)
-    }*/
-    System.in.read()
+    if (buildTree) {
+      val symNode = wrapper.wrap(searchNode)
+      println("Start unwrapping")
 
+      var wrappC = 0
 
-    val symNode = wrapper.wrap(searchNode)
-    println("Start unwrapping")
+      def dfsNode(node: SearchNode): Unit = {
+        wrappC += 1
+        //node.modifications // force the evaluation
+        if (wrappC % 10 == 0) println("Wrapped: " + wrappC)
+        node.children foreach { case (x, _) => dfsNode(x) }
+      }
 
-    var wrappC = 0
-
-    def dfsNode(node: SearchNode): Unit = {
-      wrappC += 1
-      //node.modifications // force the evaluation
-      if (wrappC % 10 == 0) println("Wrapped: " + wrappC)
-      node.children foreach { case (x, _) => dfsNode(x) }
+      dfsNode(symNode)
     }
-
-    dfsNode(symNode)
   }
 
   def startSearch(initialPlan: EfficientPlan, wrapping: Wrapping, nodeLimit: Option[Int], buildTree: Boolean): (EfficientSearchNode, Semaphore, Unit => Unit) = {
@@ -128,6 +147,12 @@ object BFS {
         }
         nodes += 1
 
+
+        /*if (nodes == 1000){
+          val symPlan = wrapping.wrap(plan)
+          Dot2PdfCompiler.writeDotToFile(symPlan,"/home/gregor/test.pdf")
+          System.exit(0)
+        }*/
         /*println("\n\nNEXT PLAN " + plan.hashCode() +  " - with " + flaws.length + " flaws")
       println(wrapping.wrap(plan).longInfo)
       println("Flaws:")
@@ -202,10 +227,12 @@ object BFS {
         val (_, solution) = bfs()
         semaphore.release()
         solution match {
-          case None       => println("No solution")
+          case None       => println("No solution after visiting " + nodes + " search nodes")
           case Some(plan) =>
             val symPlan = wrapping.wrap(plan)
-            println(symPlan.longInfo)
+            Dot2PdfCompiler.writeDotToFile(symPlan, "/home/gregor/test.pdf")
+            println("Found a solution after visiting " + nodes + " search nodes")
+          //println(symPlan.longInfo)
         }
       }
     }).start()

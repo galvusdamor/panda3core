@@ -9,6 +9,7 @@ import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
+import de.uniulm.ki.util.Dot2PdfCompiler
 
 /**
   * This is a very simple DFS planner
@@ -21,7 +22,7 @@ object DFS {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
     val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     val domAlone: Domain = XMLParser.parseDomain(new FileInputStream(domFile))
     val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem(new FileInputStream(probFile), domAlone)
     val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
@@ -95,7 +96,13 @@ object DFS {
 
     new Thread(new Runnable {
       override def run(): Unit = {
-        search(domain, node)
+        val result = search(domain, node)
+        if (result.isDefined){
+          val solution = result.get
+          println("Found a solution after visiting " + nodes + " search nodes")
+          Dot2PdfCompiler.writeDotToFile(solution,"/home/gregor/test.pdf")
+        }
+
         semaphore.release()
       }
     }).start()
