@@ -12,7 +12,7 @@ object Dot2PdfCompiler {
   def writeDotToFile[X](dotObject: DotPrintable[X], file: String): Unit = writeDotToFile(dotObject.dotString, file)
 
   def writeDotToFile(dotString: String, file: String): Unit = {
-    println(dotString)
+   // println(dotString)
     val prepString = dotString.replaceAll("\n", "\\\\n").replaceAll("\t", "\\\\t").replaceAll("'", "\\'")
     ("echo -e " + prepString + "") #| ("dot -Tpdf -o " + file) !!
   }
