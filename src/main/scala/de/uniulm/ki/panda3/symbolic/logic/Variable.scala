@@ -6,16 +6,16 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeVariable, DomainUpda
 import de.uniulm.ki.util.HashMemo
 
 /**
- * Represents variables of a [[CSP]].
- * Each variable has a name and it belongs to some [[Sort]].
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * Represents variables of a [[CSP]].
+  * Each variable has a name and it belongs to some [[Sort]].
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 case class Variable(id: Int, name: String, sort: Sort) extends Value with PrettyPrintable with HashMemo {
   /** the map must contain EVERY sort of the domain, even if does not change */
   override def update(domainUpdate: DomainUpdate): Variable = domainUpdate match {
     case ExchangeVariable(oldVariable, newVariable) => if (this == oldVariable) newVariable else this
-    case _ => Variable(id, name, sort.update(domainUpdate))
+    case _                                          => Variable(id, name, sort.update(domainUpdate))
   }
 
   override val isConstant: Boolean = false

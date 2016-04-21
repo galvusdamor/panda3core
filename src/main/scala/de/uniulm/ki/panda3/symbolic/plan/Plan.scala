@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.plan
 
-import de.uniulm.ki.panda3.symbolic.csp.{CSP, Substitution}
+import de.uniulm.ki.panda3.symbolic.csp.{CSP, PartialSubstitution}
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic._
@@ -152,8 +152,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   }
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod]]s. */
-  def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: Substitution[Variable], parentPlanStep: PlanStep):
-  (Plan, Substitution[Variable], Map[PlanStep, PlanStep]) = {
+  def newInstance(firstFreePlanStepID: Int, firstFreeVariableID: Int, partialSubstitution: PartialSubstitution[Variable], parentPlanStep: PlanStep):
+  (Plan, PartialSubstitution[Variable], Map[PlanStep, PlanStep]) = {
     assert(planSteps.size == planStepsAndRemovedPlanSteps.size)
     val oldPlanVariables = variableConstraints.variables.toSeq
 
@@ -161,7 +161,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       case (v, id) =>
         if (partialSubstitution(v) == v) Variable(id, v.name, v.sort) else partialSubstitution(v)
     }
-    val sub = Substitution(oldPlanVariables, newVariables)
+    val sub = PartialSubstitution(oldPlanVariables, newVariables)
 
     val planStepMapping = planSteps zip (firstFreePlanStepID until firstFreePlanStepID + planSteps.size) map {
       case (ps, id) =>
@@ -417,6 +417,14 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
     dotStringBuilder append "}"
     dotStringBuilder.toString
+  }
+
+  lazy val groundedInitialState: Seq[GroundLiteral] = init.substitutedEffects map { case Literal(predicate, isPositive, parameters) =>
+    GroundLiteral(predicate, isPositive, parameters map { v =>
+      val value = variableConstraints.getRepresentative(v)
+      assert(value.isInstanceOf[Constant])
+      value.asInstanceOf[Constant]
+    })
   }
 
   override lazy val dotString: String = dotString(PlanDotOptions(showParameters = true, showOrdering = true, omitImpliedOrderings = true, showCausalLinks = true, showHierarchy = false,

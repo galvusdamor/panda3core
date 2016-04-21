@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.plan.modification
 
-import de.uniulm.ki.panda3.symbolic.csp.{Substitution, VariableConstraint}
+import de.uniulm.ki.panda3.symbolic.csp.{PartialSubstitution, VariableConstraint}
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -27,7 +27,7 @@ object InsertPlanStepWithLink {
     // generate new variables
     val firstFreeVariableID = plan.getFirstFreeVariableID
     val parameter = for (newVar <- schema.parameters zip (firstFreeVariableID until firstFreeVariableID + schema.parameters.size)) yield Variable(newVar._2, newVar._1.name, newVar._1.sort)
-    val sub = Substitution(schema.parameters, parameter)
+    val sub = PartialSubstitution(schema.parameters, parameter)
     val newConstraints = schema.parameterConstraints map { c => c.substitute(sub) }
 
     // new plan step

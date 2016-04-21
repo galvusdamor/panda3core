@@ -22,7 +22,7 @@ sealed trait VariableConstraint extends DomainUpdatable {
 
   val getVariables: Seq[Variable]
 
-  def substitute(sub: Substitution[Variable]): VariableConstraint
+  def substitute(sub: PartialSubstitution[Variable]): VariableConstraint
 
   override def update(domainUpdate: DomainUpdate): VariableConstraint
 }
@@ -46,7 +46,7 @@ case class Equal(left: Variable, right: Value) extends VariableConstraint {
     case _                  => left :: Nil
   }
 
-  override def substitute(sub: Substitution[Variable]): VariableConstraint = {
+  override def substitute(sub: PartialSubstitution[Variable]): VariableConstraint = {
     val newLeft = sub(left)
     right match {
       case v: Variable => Equal(newLeft, sub(v))
@@ -75,7 +75,7 @@ case class NotEqual(left: Variable, right: Value) extends VariableConstraint {
     case _                  => left :: Nil
   }
 
-  override def substitute(sub: Substitution[Variable]): VariableConstraint = {
+  override def substitute(sub: PartialSubstitution[Variable]): VariableConstraint = {
     val newLeft = sub(left)
     right match {
       case v: Variable => NotEqual(newLeft, sub(v))
@@ -93,7 +93,7 @@ case class NotEqual(left: Variable, right: Value) extends VariableConstraint {
 case class OfSort(left: Variable, right: Sort) extends VariableConstraint {
   override val getVariables = left :: Nil
 
-  override def substitute(sub: Substitution[Variable]): VariableConstraint = OfSort(sub(left), right)
+  override def substitute(sub: PartialSubstitution[Variable]): VariableConstraint = OfSort(sub(left), right)
 
   override def update(domainUpdate: DomainUpdate): OfSort = OfSort(left.update(domainUpdate), right.update(domainUpdate))
 }
@@ -104,7 +104,7 @@ case class OfSort(left: Variable, right: Sort) extends VariableConstraint {
 case class NotOfSort(left: Variable, right: Sort) extends VariableConstraint {
   override val getVariables = left :: Nil
 
-  override def substitute(sub: Substitution[Variable]): VariableConstraint = NotOfSort(sub(left), right)
+  override def substitute(sub: PartialSubstitution[Variable]): VariableConstraint = NotOfSort(sub(left), right)
 
   override def update(domainUpdate: DomainUpdate): NotOfSort = NotOfSort(left.update(domainUpdate), right.update(domainUpdate))
 }

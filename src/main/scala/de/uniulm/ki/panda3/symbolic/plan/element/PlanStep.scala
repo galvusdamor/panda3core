@@ -1,10 +1,10 @@
 package de.uniulm.ki.panda3.symbolic.plan.element
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
-import de.uniulm.ki.panda3.symbolic.csp.{CSP, Substitution}
+import de.uniulm.ki.panda3.symbolic.csp.{TotalSubstitution, CSP, PartialSubstitution}
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, ReducedTask, DomainUpdatable, Task}
-import de.uniulm.ki.panda3.symbolic.logic.{Literal, Variable}
+import de.uniulm.ki.panda3.symbolic.logic.{GroundLiteral, Constant, Literal, Variable}
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.util.HashMemo
 
@@ -44,7 +44,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
 
-  lazy val schemaParameterSubstitution = Substitution(schema.parameters, arguments)
+  lazy val schemaParameterSubstitution = PartialSubstitution(schema.parameters, arguments)
 
   ///** check whether two literals are identical given a CSP */
   //def =?=(that: PlanStep)(csp: CSP): Boolean = this.schema == that.schema &&
@@ -78,4 +78,24 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
     }).mkString("\n") + "\neffects:\n" + (substitutedEffects map {
     "\t" + _.shortInfo
   }).mkString("\n")
+}
+
+/**
+  * A ground task is basically a planstep without an id.
+  */
+case class GroundTask(task: Task, arguments: Seq[Constant]) {
+  assert(task.parameters.size == arguments.size)
+  task.parameters.zipWithIndex foreach { case (p, i) => assert(p.sort.elements.contains(arguments(i))) }
+
+  private lazy val parameterSubstitution : TotalSubstitution[Variable,Constant] = TotalSubstitution(task.parameters,arguments)
+
+  lazy val substitutedPreconditions: Seq[GroundLiteral] = task match {
+    case reduced: ReducedTask => reduced.precondition.conjuncts map {_ ground parameterSubstitution}
+    case _                    => noSupport(FORUMLASNOTSUPPORTED)
+  }
+  /** returns a version of the effects */
+  lazy val substitutedEffects      : Seq[GroundLiteral] = task match {
+    case reduced: ReducedTask => reduced.effect.conjuncts map {_ ground parameterSubstitution}
+    case _                    => noSupport(FORUMLASNOTSUPPORTED)
+  }
 }

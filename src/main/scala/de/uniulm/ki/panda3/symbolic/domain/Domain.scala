@@ -4,6 +4,7 @@ import de.uniulm.ki.panda3.symbolic.csp.{OfSort, NotOfSort}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.TaskSchemaTransitionGraph
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.logic._
+import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraph}
 
 /**
@@ -36,6 +37,10 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   })
   }).toMap
 
+  lazy val primitiveTasks: Seq[Task] = tasks filter { _.isPrimitive }
+  lazy val abstractTasks : Seq[Task] = tasks filterNot { _.isPrimitive }
+
+  lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
 
   /**
     * Determines the sort a constant originally belonged to.
@@ -101,7 +106,6 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     (allSorts filter { sorts.contains(_) }).distinct
   }
 
-
   override def update(domainUpdate: DomainUpdate): Domain = domainUpdate match {
     case AddMethod(newMethods)            => Domain(sorts, predicates, tasks, decompositionMethods ++ newMethods, decompositionAxioms)
     case AddPredicate(newPredicates)      => Domain(sorts, predicates ++ newPredicates, tasks, decompositionMethods, decompositionAxioms)
@@ -111,4 +115,14 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                     decompositionMethods map { _.update(domainUpdate) },
                                                     decompositionAxioms)
   }
+
+  lazy val statistics: Map[String, Any] = Map(
+                                               "number of sorts" -> sorts.size,
+                                               "number of predicates" -> predicates.size,
+                                               "number of tasks" -> tasks.size,
+                                               "number of abstract tasks" -> abstractTasks.size,
+                                               "number of primitive tasks" -> primitiveTasks.size,
+                                               "number of decomposition methods" -> decompositionMethods.size
+                                             )
+  lazy val statisticsString : String = statistics.mkString("\n")
 }

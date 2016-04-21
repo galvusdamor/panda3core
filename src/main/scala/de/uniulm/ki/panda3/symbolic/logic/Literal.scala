@@ -17,7 +17,7 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 
   def isNegative: Boolean = !isPositive
 
-  lazy val containedVariables : Set[Variable] = parameterVariables.toSet
+  lazy val containedVariables: Set[Variable] = parameterVariables.toSet
 
   /** check whether two literals are identical given a CSP */
   def =?=(that: Literal)(csp: CSP): Boolean = this.predicate == that.predicate && this.isPositive == that.isPositive &&
@@ -26,6 +26,7 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 
   /**
     * check whether two literals can be unified given a CSP
+    *
     * @return an option to the mgu, if None, there is no such unifier
     */
   def #?#(that: Literal)(csp: CSP): Option[Seq[Equal]] = if (this.predicate != that.predicate || this.isPositive != that.isPositive) {
@@ -49,16 +50,36 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
   def !?!(that: Literal)(csp: CSP): Seq[NotEqual] = if (this.predicate != that.predicate || this.isPositive != that.isPositive) Nil
   else (this.parameterVariables zip that.parameterVariables) collect { case (v1, v2) if csp.getRepresentative(v1) != csp.getRepresentative(v2) => NotEqual(v1, v2) }
 
-  override def update(domainUpdate: DomainUpdate): Literal = Literal(predicate.update(domainUpdate), isPositive, parameterVariables map {_.update(domainUpdate)})
+  override def update(domainUpdate: DomainUpdate): Literal = Literal(predicate.update(domainUpdate), isPositive, parameterVariables map { _.update(domainUpdate) })
 
   /** returns a short information about the object */
-  override def shortInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameterVariables map {_.shortInfo}).mkString("(", ", ", ")")
+  override def shortInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameterVariables map { _.shortInfo }).mkString("(", ", ", ")")
 
   /** returns a string that can be utilized to define the object */
   override def mediumInfo: String = shortInfo
 
   /** returns a more detailed information about the object */
-  override def longInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameterVariables map {_.longInfo}).mkString("(", ", ", ")")
+  override def longInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameterVariables map { _.longInfo }).mkString("(", ", ", ")")
 
   override val isEmpty: Boolean = false
+
+  def ground(totalSubstitution: TotalSubstitution[Variable, Constant]): GroundLiteral = GroundLiteral(predicate, isPositive, parameterVariables map totalSubstitution)
+}
+
+case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo {
+
+  override val isEmpty: Boolean = false
+
+  override def update(domainUpdate: DomainUpdate): Formula = GroundLiteral(predicate update domainUpdate, isPositive, parameter map { _ update domainUpdate })
+
+  override val containedVariables: Set[Variable] = Set()
+
+  /** returns a string that can be utilized to define the object */
+  override def mediumInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameter map { _.mediumInfo }).mkString("(", ", ", ")")
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameter map { _.shortInfo }).mkString("(", ", ", ")")
+
+  /** returns a detailed information about the object */
+  override def longInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameter map { _.longInfo }).mkString("(", ", ", ")")
 }

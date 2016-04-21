@@ -6,10 +6,10 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangeSorts}
 import de.uniulm.ki.util.HashMemo
 
 /**
- * Sorts aggregate constants of First Order Logic
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * Sorts aggregate constants of First Order Logic
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo {
 
   override def update(domainUpdate: DomainUpdate): Sort = domainUpdate match {
@@ -21,9 +21,13 @@ case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) exte
   override def shortInfo: String = name
 
   /** returns a string that can be utilized to define the object */
-  override def mediumInfo: String = name
+  override def mediumInfo: String = mediumInfo
 
   /** returns a more detailed information about the object */
-  override def longInfo: String = name + ": " + (elements map {_.shortInfo}).mkString(", ") + "; subsorts: " + (subSorts map {_.shortInfo}).mkString(", ")
+  override def longInfo: String = mediumInfo + ": " + (elements map { _.shortInfo }).mkString(", ") + "; subsorts: " + (subSorts map { _.shortInfo }).mkString(", ")
+}
 
+object Sort {
+  def allPossibleInstantiations(sorts: Seq[Sort]): Seq[Seq[Constant]] =
+    sorts.foldLeft[Seq[Seq[Constant]]](Nil :: Nil)({ case (args, sort) => sort.elements flatMap { c => args map { _ :+ c } } })
 }

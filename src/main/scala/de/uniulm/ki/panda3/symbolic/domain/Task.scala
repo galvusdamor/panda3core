@@ -3,7 +3,8 @@ package de.uniulm.ki.panda3.symbolic.domain
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.updates.{ReduceTasks, DomainUpdate, ExchangeTask}
-import de.uniulm.ki.panda3.symbolic.logic.{And, Formula, Literal, Variable, Constant}
+import de.uniulm.ki.panda3.symbolic.logic._
+import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.util.HashMemo
 
 /**
@@ -27,9 +28,10 @@ trait Task extends DomainUpdatable with PrettyPrintable {
   lazy val taskCSP: CSP = CSP(parameters.toSet, parameterConstraints)
 
   def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = {
-    val sub = Substitution(parameters, newParameter)
+    val sub = PartialSubstitution(parameters, newParameter)
     Literal(literal.predicate, literal.isPositive, literal.parameterVariables map sub)
   }
+
 
   override def update(domainUpdate: DomainUpdate): Task = domainUpdate match {
     case ExchangeTask(map) => if (map.contains(this)) map(this) else this
@@ -53,27 +55,35 @@ trait Task extends DomainUpdatable with PrettyPrintable {
       (newPrecondition, newEffect) match {
         // the type parameter will be erased by the compiler, so we have to check it again
         case (pre: And[Literal], eff: And[Literal]) if pre.containsOnlyLiterals && eff.containsOnlyLiterals =>
-          ReducedTask(name, isPrimitive, parameters map {
-            _.update(domainUpdate)
-          }, parameterConstraints map {
-            _.update(domainUpdate)
-          }, pre.asInstanceOf[And[Literal]], eff.asInstanceOf[And[Literal]])
-        case _                                                                                              => GeneralTask(name, isPrimitive, parameters map {
-          _.update(domainUpdate)
-        }, parameterConstraints map {
-          _.update(domainUpdate)
-        },
-                                                                                                                           newPrecondition, newEffect)
+          ReducedTask(name, isPrimitive, parameters map { _.update(domainUpdate) }, parameterConstraints map { _.update(domainUpdate) }, pre.asInstanceOf[And[Literal]],
+                      eff.asInstanceOf[And[Literal]])
+        case _                                                                                              =>
+          GeneralTask(name, isPrimitive, parameters map { _.update(domainUpdate) }, parameterConstraints map { _.update(domainUpdate) }, newPrecondition, newEffect)
       }
+  }
+
+  lazy val instantiateGround: Seq[GroundTask] = {
+    val allInstantiations = Sort.allPossibleInstantiations(parameters map { _.sort })
+    // check all constraints
+    val allValidInstantiations = allInstantiations filter { params =>
+      def constForVar(v: Variable): Constant = params(parameters indexOf v)
+      parameterConstraints forall {
+        case Equal(v1, c: Constant)     => constForVar(v1) == c
+        case Equal(v1, v2: Variable)    => constForVar(v2) == constForVar(v2)
+        case NotEqual(v1, c: Constant)  => constForVar(v1) != c
+        case NotEqual(v1, v2: Variable) => constForVar(v2) != constForVar(v2)
+        case OfSort(v, s)               => s.elements contains constForVar(v)
+        case NotOfSort(v, s)            => !(s.elements contains constForVar(v))
+      }
+    }
+    allInstantiations map { params => GroundTask(this, params) }
   }
 
   /** returns a short information about the object */
   override def shortInfo: String = name
 
   /** returns a string that can be utilized to define the object */
-  override def mediumInfo: String = shortInfo + (parameters map {
-    _.shortInfo
-  }).mkString("(", ", ", ")")
+  override def mediumInfo: String = shortInfo + (parameters map { _.shortInfo }).mkString("(", ", ", ")")
 
   /** returns a more detailed information about the object */
   override def longInfo: String = mediumInfo + "\npreconditions:\n" + precondition.shortInfo + "\n" +
@@ -91,16 +101,8 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
     (precondition.conjuncts ++ effect.conjuncts) foreach {l => l.parameterVariables foreach { v =>
       println("VARIABLE " + v)
       println("CONTAINS " + parameters contains v)
-
     }
-
-
     }
   }*/
   assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })
-}
-
-case class GroundTask(task: Task, arguments: Seq[Constant]) {
-  assert(task.parameters.size == arguments.size)
-  task.parameters.zipWithIndex foreach { case (p, i) => assert(p.sort.elements.contains(arguments(i))) }
 }

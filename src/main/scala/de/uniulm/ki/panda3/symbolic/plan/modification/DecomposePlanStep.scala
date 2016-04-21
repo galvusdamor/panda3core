@@ -65,7 +65,7 @@ object DecomposePlanStep {
       val firstFreePlanStepID = currentPlan.getFirstFreePlanStepID
       val firstFreeVariableID = currentPlan.getFirstFreeVariableID
 
-      val decomposedAbstractTasksParameterSubstitution = Substitution(method.abstractTask.parameters, decomposedPS.arguments)
+      val decomposedAbstractTasksParameterSubstitution = PartialSubstitution(method.abstractTask.parameters, decomposedPS.arguments)
 
       // copy the plan to get new variable and plan step ids
       val (copiedPlan, _, planStepMapping) = method.subPlan.newInstance(firstFreePlanStepID, firstFreeVariableID, decomposedAbstractTasksParameterSubstitution, nonPresentDecomposedPS)
