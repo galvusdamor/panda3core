@@ -1,9 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl;
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlLexer;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.writer.hpddl.HPDDLWriter;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -33,8 +30,8 @@ public class TestHddlVisitorParser {
             hddlLexer lDomain = new hddlLexer(new ANTLRInputStream(inDomain));
             hddlLexer lProblem = new hddlLexer(new ANTLRInputStream(inProblem));
 
-            hddlParser pDomain = new hddlParser(new CommonTokenStream(lDomain));
-            hddlParser pProblem = new hddlParser(new CommonTokenStream(lProblem));
+            antlrHDDLParser pDomain = new antlrHDDLParser(new CommonTokenStream(lDomain));
+            antlrHDDLParser pProblem = new antlrHDDLParser(new CommonTokenStream(lProblem));
 
             Tuple2<Domain, Plan> tup = new hddlPanda3Visitor().visitInstance(pDomain.domain(), pProblem.problem());
 

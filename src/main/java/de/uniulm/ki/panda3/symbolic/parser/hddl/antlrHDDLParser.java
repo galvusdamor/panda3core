@@ -6,11 +6,9 @@ import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.*;
 import org.antlr.v4.runtime.tree.*;
 import java.util.List;
-import java.util.Iterator;
-import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
-public class hddlParser extends Parser {
+public class antlrHDDLParser extends Parser {
 	static { RuntimeMetaData.checkVersion("4.5", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
@@ -117,7 +115,7 @@ public class hddlParser extends Parser {
 	@Override
 	public ATN getATN() { return _ATN; }
 
-	public hddlParser(TokenStream input) {
+	public antlrHDDLParser(TokenStream input) {
 		super(input);
 		_interp = new ParserATNSimulator(this,_ATN,_decisionToDFA,_sharedContextCache);
 	}
@@ -325,7 +323,7 @@ public class hddlParser extends Parser {
 	}
 
 	public static class Domain_symbolContext extends ParserRuleContext {
-		public TerminalNode NAME() { return getToken(hddlParser.NAME, 0); }
+		public TerminalNode NAME() { return getToken(antlrHDDLParser.NAME, 0); }
 		public Domain_symbolContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -391,9 +389,9 @@ public class hddlParser extends Parser {
 	}
 
 	public static class Require_defsContext extends ParserRuleContext {
-		public List<TerminalNode> REQUIRE_NAME() { return getTokens(hddlParser.REQUIRE_NAME); }
+		public List<TerminalNode> REQUIRE_NAME() { return getTokens(antlrHDDLParser.REQUIRE_NAME); }
 		public TerminalNode REQUIRE_NAME(int i) {
-			return getToken(hddlParser.REQUIRE_NAME, i);
+			return getToken(antlrHDDLParser.REQUIRE_NAME, i);
 		}
 		public Require_defsContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -527,9 +525,9 @@ public class hddlParser extends Parser {
 	}
 
 	public static class New_typesContext extends ParserRuleContext {
-		public List<TerminalNode> NAME() { return getTokens(hddlParser.NAME); }
+		public List<TerminalNode> NAME() { return getTokens(antlrHDDLParser.NAME); }
 		public TerminalNode NAME(int i) {
-			return getToken(hddlParser.NAME, i);
+			return getToken(antlrHDDLParser.NAME, i);
 		}
 		public New_typesContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -810,7 +808,7 @@ public class hddlParser extends Parser {
 	}
 
 	public static class Task_symbolContext extends ParserRuleContext {
-		public TerminalNode NAME() { return getToken(hddlParser.NAME, 0); }
+		public TerminalNode NAME() { return getToken(antlrHDDLParser.NAME, 0); }
 		public Task_symbolContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -1015,7 +1013,7 @@ public class hddlParser extends Parser {
 	}
 
 	public static class Method_symbolContext extends ParserRuleContext {
-		public TerminalNode NAME() { return getToken(hddlParser.NAME, 0); }
+		public TerminalNode NAME() { return getToken(antlrHDDLParser.NAME, 0); }
 		public Method_symbolContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -1214,7 +1212,7 @@ public class hddlParser extends Parser {
 	}
 
 	public static class Subtask_idContext extends ParserRuleContext {
-		public TerminalNode NAME() { return getToken(hddlParser.NAME, 0); }
+		public TerminalNode NAME() { return getToken(antlrHDDLParser.NAME, 0); }
 		public Subtask_idContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -2457,7 +2455,7 @@ public class hddlParser extends Parser {
 	}
 
 	public static class PredicateContext extends ParserRuleContext {
-		public TerminalNode NAME() { return getToken(hddlParser.NAME, 0); }
+		public TerminalNode NAME() { return getToken(antlrHDDLParser.NAME, 0); }
 		public PredicateContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -2627,9 +2625,9 @@ public class hddlParser extends Parser {
 		public Var_typeContext var_type() {
 			return getRuleContext(Var_typeContext.class,0);
 		}
-		public List<TerminalNode> VAR_NAME() { return getTokens(hddlParser.VAR_NAME); }
+		public List<TerminalNode> VAR_NAME() { return getTokens(antlrHDDLParser.VAR_NAME); }
 		public TerminalNode VAR_NAME(int i) {
-			return getToken(hddlParser.VAR_NAME, i);
+			return getToken(antlrHDDLParser.VAR_NAME, i);
 		}
 		public Typed_varsContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -2730,7 +2728,7 @@ public class hddlParser extends Parser {
 	}
 
 	public static class New_constsContext extends ParserRuleContext {
-		public TerminalNode NAME() { return getToken(hddlParser.NAME, 0); }
+		public TerminalNode NAME() { return getToken(antlrHDDLParser.NAME, 0); }
 		public New_constsContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -2759,7 +2757,7 @@ public class hddlParser extends Parser {
 	}
 
 	public static class Var_typeContext extends ParserRuleContext {
-		public TerminalNode NAME() { return getToken(hddlParser.NAME, 0); }
+		public TerminalNode NAME() { return getToken(antlrHDDLParser.NAME, 0); }
 		public Var_typeContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -2788,8 +2786,8 @@ public class hddlParser extends Parser {
 	}
 
 	public static class Var_or_constContext extends ParserRuleContext {
-		public TerminalNode NAME() { return getToken(hddlParser.NAME, 0); }
-		public TerminalNode VAR_NAME() { return getToken(hddlParser.VAR_NAME, 0); }
+		public TerminalNode NAME() { return getToken(antlrHDDLParser.NAME, 0); }
+		public TerminalNode VAR_NAME() { return getToken(antlrHDDLParser.VAR_NAME, 0); }
 		public Var_or_constContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -2823,9 +2821,9 @@ public class hddlParser extends Parser {
 	}
 
 	public static class ProblemContext extends ParserRuleContext {
-		public List<TerminalNode> NAME() { return getTokens(hddlParser.NAME); }
+		public List<TerminalNode> NAME() { return getTokens(antlrHDDLParser.NAME); }
 		public TerminalNode NAME(int i) {
-			return getToken(hddlParser.NAME, i);
+			return getToken(antlrHDDLParser.NAME, i);
 		}
 		public P_htnContext p_htn() {
 			return getRuleContext(P_htnContext.class,0);

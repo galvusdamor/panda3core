@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.ioInterface;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlLexer;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.antlrHDDLParser;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.writer.hpddl.HPDDLWriter;
 import de.uniulm.ki.panda3.symbolic.writer.xml.XMLWriter;
@@ -28,8 +28,8 @@ public class FileHandler {
         hddlLexer lDomain = new hddlLexer(new ANTLRInputStream(inDomain));
         hddlLexer lProblem = new hddlLexer(new ANTLRInputStream(inProblem));
 
-        hddlParser pDomain = new hddlParser(new CommonTokenStream(lDomain));
-        hddlParser pProblem = new hddlParser(new CommonTokenStream(lProblem));
+        antlrHDDLParser pDomain = new antlrHDDLParser(new CommonTokenStream(lDomain));
+        antlrHDDLParser pProblem = new antlrHDDLParser(new CommonTokenStream(lProblem));
 
         planningInstance = new hddlPanda3Visitor().visitInstance(pDomain.domain(), pProblem.problem());
         return planningInstance;

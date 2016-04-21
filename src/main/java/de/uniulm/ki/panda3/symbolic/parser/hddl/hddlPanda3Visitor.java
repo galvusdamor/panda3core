@@ -24,14 +24,12 @@ import de.uniulm.ki.panda3.util.JavaToScala;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import scala.*;
-import scala.collection.JavaConversions;
 import scala.collection.Seq;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
 import scala.runtime.AbstractFunction1;
 
 import java.util.*;
-import java.util.HashMap;
 
 /**
  * Created by dhoeller on 14.04.15.
@@ -65,7 +63,7 @@ public class hddlPanda3Visitor {
             scala.collection.immutable.Map$.MODULE$.<PlanStep, Tuple2<PlanStep, PlanStep>>empty();
 
 
-    public Tuple2<Domain, Plan> visitInstance(@NotNull hddlParser.DomainContext ctxDomain, @NotNull hddlParser.ProblemContext ctxProblem) {
+    public Tuple2<Domain, Plan> visitInstance(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
 
         Seq<Sort> sorts = visitTypeAndObjDef(ctxDomain, ctxProblem);
         Seq<Predicate> predicates = visitPredicateDeclaration(sorts, ctxDomain.predicates_def());
@@ -104,16 +102,16 @@ public class hddlPanda3Visitor {
         return initialProblem;
     }
 
-    private void visitInitialTN(hddlParser.P_htnContext p_htnContext, internalTaskNetwork tn, Seq<Task> tasks, Seq<Sort> sorts) {
-        hddlParser.Subtask_defsContext subtask = p_htnContext.tasknetwork_def().subtask_defs();
+    private void visitInitialTN(antlrHDDLParser.P_htnContext p_htnContext, internalTaskNetwork tn, Seq<Task> tasks, Seq<Sort> sorts) {
+        antlrHDDLParser.Subtask_defsContext subtask = p_htnContext.tasknetwork_def().subtask_defs();
         int nextId = 0;
         int psID = 2;
 
-        for (hddlParser.Subtask_defContext oneST : subtask.subtask_def()) {
+        for (antlrHDDLParser.Subtask_defContext oneST : subtask.subtask_def()) {
             Task schema = parserUtil.taskByName(oneST.task_symbol().getText(), tasks);
             VectorBuilder<Variable> parameters = new VectorBuilder<>();
 
-            for (final hddlParser.Var_or_constContext constant : oneST.var_or_const()) {
+            for (final antlrHDDLParser.Var_or_constContext constant : oneST.var_or_const()) {
                 assert (constant.VAR_NAME() == null); // must not be a variable
                 assert (constant.NAME() != null); // must actually be a constant
 
@@ -151,7 +149,7 @@ public class hddlPanda3Visitor {
         return;
     }
 
-    private Task visitGoalState(Seq<Sort> sorts, Seq<Predicate> predicates, hddlParser.P_goalContext ctx) {
+    private Task visitGoalState(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_goalContext ctx) {
         seqProviderList<VariableConstraint> parameterConstraints = new seqProviderList<VariableConstraint>();
         seqProviderList<Variable> taskParameters = getVariableForEveryConst(sorts, parameterConstraints);
         Formula f = new And<Literal>(new Vector<Literal>(0, 0, 0));
@@ -161,12 +159,12 @@ public class hddlPanda3Visitor {
         return new GeneralTask("goal", true, taskParameters.result(), parameterConstraints.result(), f, new And<Literal>(new Vector<Literal>(0, 0, 0)));
     }
 
-    private Task visitInitialState(Seq<Sort> sorts, Seq<Predicate> predicates, hddlParser.P_initContext ctx) {
+    private Task visitInitialState(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_initContext ctx) {
         seqProviderList<VariableConstraint> varConstraints = new seqProviderList<>();
         seqProviderList<Variable> parameter = getVariableForEveryConst(sorts, varConstraints);
 
         seqProviderList<Literal> initEffects = new seqProviderList<>();
-        for (hddlParser.LiteralContext lc : ctx.literal()) {
+        for (antlrHDDLParser.LiteralContext lc : ctx.literal()) {
             if (lc.atomic_formula() != null) {
                 initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, true, lc.atomic_formula()));
             } else if (lc.neg_atomic_formula() != null) {
@@ -193,9 +191,9 @@ public class hddlPanda3Visitor {
         return taskParameter;
     }
 
-    private Seq<DecompositionMethod> visitMethodDef(List<hddlParser.Method_defContext> ctx, Seq<Sort> sorts, Seq<Predicate> predicates, Seq<Task> tasks) {
+    private Seq<DecompositionMethod> visitMethodDef(List<antlrHDDLParser.Method_defContext> ctx, Seq<Sort> sorts, Seq<Predicate> predicates, Seq<Task> tasks) {
         VectorBuilder<DecompositionMethod> methods = new VectorBuilder<>();
-        for (hddlParser.Method_defContext m : ctx) {
+        for (antlrHDDLParser.Method_defContext m : ctx) {
             // Read abstract task
             String taskname = m.task_symbol().NAME().toString();
             Task abstractTask = parserUtil.taskByName(taskname, tasks);
@@ -248,20 +246,20 @@ public class hddlPanda3Visitor {
         return methods.result();
     }
 
-    private Seq<Task> visitTaskDefs(Seq<Sort> sorts, Seq<Predicate> predicates, hddlParser.DomainContext ctxDomain) {
+    private Seq<Task> visitTaskDefs(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.DomainContext ctxDomain) {
         VectorBuilder<Task> tasks = new VectorBuilder<>();
-        for (hddlParser.Action_defContext a : ctxDomain.action_def()) {
+        for (antlrHDDLParser.Action_defContext a : ctxDomain.action_def()) {
             Task t = visitTaskDef(sorts, predicates, a.task_def(), true);
             tasks.$plus$eq(t);
         }
-        for (hddlParser.Comp_task_defContext c : ctxDomain.comp_task_def()) {
+        for (antlrHDDLParser.Comp_task_defContext c : ctxDomain.comp_task_def()) {
             Task t = visitTaskDef(sorts, predicates, c.task_def(), false);
             tasks.$plus$eq(t);
         }
         return tasks.result();
     }
 
-    private Task visitTaskDef(Seq<Sort> sorts, Seq<Predicate> predicates, hddlParser.Task_defContext ctxTask, boolean isPrimitive) {
+    private Task visitTaskDef(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Task_defContext ctxTask, boolean isPrimitive) {
         String taskName = ctxTask.task_symbol().NAME().toString();
         seqProviderList<Variable> parameters = typedParamsToVars(sorts, 0, ctxTask.typed_var_list().typed_vars());
         seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
@@ -285,7 +283,7 @@ public class hddlPanda3Visitor {
         return new GeneralTask(taskName, isPrimitive, parameters.result(), constraints.result(), f, f2);
     }
 
-    private seqProviderList<Variable> typedParamsToVars(Seq<Sort> sorts, int startId, List<hddlParser.Typed_varsContext> vars) {
+    private seqProviderList<Variable> typedParamsToVars(Seq<Sort> sorts, int startId, List<antlrHDDLParser.Typed_varsContext> vars) {
         VectorBuilder<Sort> bVarSorts = new VectorBuilder<>();
         VectorBuilder<String> bVarNames = new VectorBuilder<>();
         visitTypedList(bVarSorts, bVarNames, sorts, vars);
@@ -305,7 +303,7 @@ public class hddlPanda3Visitor {
      * Dispatcher for parsing goal descriptions (GD). Please be aware that these descriptions are used at several
      * places in the grammar, e.g. as precondition of actions, tasks or methods and not just as goal condition.
      */
-    private Formula visitGoalConditions(Seq<Predicate> predicates, seqProviderList<Variable> parameters, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.GdContext ctx) {
+    private Formula visitGoalConditions(Seq<Predicate> predicates, seqProviderList<Variable> parameters, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.GdContext ctx) {
         if (ctx.atomic_formula() != null) { // a single precondition
             return visitAtomFormula(parameters, predicates, sorts, constraints, true, ctx.atomic_formula());
         } else if (ctx.gd_negation() != null) { // a negated single precondition
@@ -322,17 +320,17 @@ public class hddlPanda3Visitor {
         return new And<Literal>(new Vector<Literal>(0, 0, 0));
     }
 
-    private Formula visitExistentialQuantifier(seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_existentialContext gd_existentialContext) {
+    private Formula visitExistentialQuantifier(seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.Gd_existentialContext gd_existentialContext) {
         Tuple2<Seq<Variable>, Formula> inner2 = readInner(parameters, predicates, sorts, constraints, gd_existentialContext.typed_var_list().typed_vars(), gd_existentialContext.gd());
         return new Exists(inner2._1().apply(0), inner2._2());
     }
 
-    private Formula visitUniveralQuantifier(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_univeralContext gd_conjuctionContext) {
+    private Formula visitUniveralQuantifier(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.Gd_univeralContext gd_conjuctionContext) {
         Tuple2<Seq<Variable>, Formula> inner2 = readInner(methodParams, predicates, sorts, constraints, gd_conjuctionContext.typed_var_list().typed_vars(), gd_conjuctionContext.gd());
         return new Forall(inner2._1().apply(0), inner2._2());
     }
 
-    private Tuple2<Seq<Variable>, Formula> readInner(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, List<hddlParser.Typed_varsContext> typed_varsContexts, hddlParser.GdContext gd) {
+    private Tuple2<Seq<Variable>, Formula> readInner(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, List<antlrHDDLParser.Typed_varsContext> typed_varsContexts, antlrHDDLParser.GdContext gd) {
 
         // read new variables
         int curIndex = methodParams.size();
@@ -364,16 +362,16 @@ public class hddlPanda3Visitor {
         return new Tuple2<>(quantifiedVars.result(), inner);
     }
 
-    private Formula visitConEffConj(seqProviderList<Variable> parameters, Seq<Sort> sorts, Seq<Predicate> predicates, hddlParser.Eff_conjuntionContext ctx) {
+    private Formula visitConEffConj(seqProviderList<Variable> parameters, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Eff_conjuntionContext ctx) {
         seqProviderList<Literal> conj = new seqProviderList<>();
 
-        for (hddlParser.C_effectContext eff : ctx.c_effect()) {
+        for (antlrHDDLParser.C_effectContext eff : ctx.c_effect()) {
             conj.add(visitConEff(parameters, sorts, predicates, eff));
         }
         return new And(conj.result());
     }
 
-    private Literal visitConEff(seqProviderList<Variable> parameters, Seq<Sort> sorts, Seq<Predicate> predicates, hddlParser.C_effectContext ctx) {
+    private Literal visitConEff(seqProviderList<Variable> parameters, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.C_effectContext ctx) {
         if (ctx.literal() != null) {
             if (ctx.literal().atomic_formula() != null) {
                 return visitAtomFormula(parameters, predicates, sorts, null, true, ctx.literal().atomic_formula());
@@ -397,9 +395,9 @@ public class hddlPanda3Visitor {
     /**
      * Parse a conjunction or disjunction of goal conditions
      */
-    private Formula visitGdConOrDisjunktion(conOrDis what, seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, List<hddlParser.GdContext> ctx) {
+    private Formula visitGdConOrDisjunktion(conOrDis what, seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, List<antlrHDDLParser.GdContext> ctx) {
         seqProviderList<Formula> elements = new seqProviderList<>();
-        for (hddlParser.GdContext gd : ctx) {
+        for (antlrHDDLParser.GdContext gd : ctx) {
             Formula f = visitGoalConditions(predicates, parameters, sorts, constraints, gd);
             elements.add(f);
         }
@@ -415,7 +413,7 @@ public class hddlPanda3Visitor {
      * @return In the first case it returns the negation of the inner formula, in the second case it adds
      * the constraint and returns the logical identity.
      */
-    private Formula visitNegAtomFormula(seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, hddlParser.Gd_negationContext ctx) {
+    private Formula visitNegAtomFormula(seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.Gd_negationContext ctx) {
         if (ctx.gd().gd_equality_constraint() != null) {
             Variable var1 = getVariable(ctx.gd().gd_equality_constraint().var_or_const(0), parameters, constraints, sorts);
             Variable var2 = getVariable(ctx.gd().gd_equality_constraint().var_or_const(1), parameters, constraints, sorts);
@@ -437,7 +435,7 @@ public class hddlPanda3Visitor {
      * @param ctx
      * @return
      */
-    private Literal visitAtomFormula(seqProviderList<Variable> taskParameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, boolean isPositive, hddlParser.Atomic_formulaContext ctx) {
+    private Literal visitAtomFormula(seqProviderList<Variable> taskParameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, boolean isPositive, antlrHDDLParser.Atomic_formulaContext ctx) {
         //
         // get predicate definition
         //
@@ -458,9 +456,9 @@ public class hddlPanda3Visitor {
         // get variable definition
         //
         seqProviderList<Variable> parameterVariables = new seqProviderList<>();
-        List<hddlParser.Var_or_constContext> params = ctx.var_or_const();
+        List<antlrHDDLParser.Var_or_constContext> params = ctx.var_or_const();
 
-        for (hddlParser.Var_or_constContext param : params) {
+        for (antlrHDDLParser.Var_or_constContext param : params) {
             Variable var = getVariable(param, taskParameters, constraints, sorts);
             parameterVariables.add(var);
         }
@@ -482,7 +480,7 @@ public class hddlPanda3Visitor {
      * @param sorts       (in) The sort hierarchy that also contains constants for every sort.
      * @return Method returns a variable that may be out of the parameter list, or the initial state definition
      */
-    private Variable getVariable(hddlParser.Var_or_constContext param, seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts) {
+    private Variable getVariable(antlrHDDLParser.Var_or_constContext param, seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts) {
         Variable var = null;
         if (param.VAR_NAME() != null) {
             // this is a variable
@@ -535,15 +533,15 @@ public class hddlPanda3Visitor {
     }
 
 
-    private Seq<Predicate> visitPredicateDeclaration(Seq<Sort> sorts, hddlParser.Predicates_defContext ctx) {
+    private Seq<Predicate> visitPredicateDeclaration(Seq<Sort> sorts, antlrHDDLParser.Predicates_defContext ctx) {
         VectorBuilder<Predicate> predicates = new VectorBuilder<>();
 
-        List<hddlParser.Atomic_formula_skeletonContext> listDefs = ctx.atomic_formula_skeleton();
+        List<antlrHDDLParser.Atomic_formula_skeletonContext> listDefs = ctx.atomic_formula_skeleton();
         if (listDefs == null) {
             return new Vector<>(0, 0, 0);
         }
 
-        for (hddlParser.Atomic_formula_skeletonContext def : listDefs) {
+        for (antlrHDDLParser.Atomic_formula_skeletonContext def : listDefs) {
             String predName = def.predicate().NAME().toString();
             VectorBuilder<Sort> pSorts = new VectorBuilder<>();
             readTypedList(pSorts, new VectorBuilder<String>(), sorts, def.typed_var_list().typed_vars(), "Predicate \"" + predName + "\"");
@@ -557,12 +555,12 @@ public class hddlPanda3Visitor {
     The following method(s) read a typed list and fills the first vector with their names and the second one with the types. The vectors equal in length.
     Please provide a meaningful description of who is reading as last parameter
      */
-    private void visitTypedList(VectorBuilder<Sort> lSorts, VectorBuilder<String> lNames, Seq<Sort> sorts, List<hddlParser.Typed_varsContext> ctx) {
+    private void visitTypedList(VectorBuilder<Sort> lSorts, VectorBuilder<String> lNames, Seq<Sort> sorts, List<antlrHDDLParser.Typed_varsContext> ctx) {
         readTypedList(lSorts, lNames, sorts, ctx, "Somebody");
     }
 
-    private void readTypedList(VectorBuilder<Sort> outSorts, VectorBuilder<String> outNames, Seq<Sort> sorts, List<hddlParser.Typed_varsContext> ctx, String ErrorMsgWhoIsReader) {
-        for (hddlParser.Typed_varsContext varList : ctx) { // one list contains one or more var of the same type
+    private void readTypedList(VectorBuilder<Sort> outSorts, VectorBuilder<String> outNames, Seq<Sort> sorts, List<antlrHDDLParser.Typed_varsContext> ctx, String ErrorMsgWhoIsReader) {
+        for (antlrHDDLParser.Typed_varsContext varList : ctx) { // one list contains one or more var of the same type
 
             String sortName = varList.var_type().NAME().toString();
             Sort s = null;
@@ -584,16 +582,16 @@ public class hddlPanda3Visitor {
         }
     }
 
-    public Seq<Sort> visitTypeAndObjDef(@NotNull hddlParser.DomainContext ctxDomain, @NotNull hddlParser.ProblemContext ctxProblem) {
+    public Seq<Sort> visitTypeAndObjDef(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
 
         // Extract type hierarchy from domain file
         internalSortsAndConsts internalSortModel = new internalSortsAndConsts(); // do not pass out, use only here
 
-        List<hddlParser.One_defContext> typeDefs = ctxDomain.type_def().one_def(); // the "one_def" tag might appear more than once
+        List<antlrHDDLParser.One_defContext> typeDefs = ctxDomain.type_def().one_def(); // the "one_def" tag might appear more than once
 
-        for (hddlParser.One_defContext typeDef : typeDefs) {
+        for (antlrHDDLParser.One_defContext typeDef : typeDefs) {
 
-            hddlParser.New_typesContext newTypes = typeDef.new_types();
+            antlrHDDLParser.New_typesContext newTypes = typeDef.new_types();
 
             final String parent_type = typeDef.var_type().NAME().toString();
             for (int j = 0; j < newTypes.getChildCount(); j++) {
@@ -604,11 +602,11 @@ public class hddlPanda3Visitor {
 
         // Extract constant symbols from domain and problem file
         if (ctxDomain.const_def() != null) {
-            List<hddlParser.Typed_objsContext> domainConsts = ctxDomain.const_def().typed_obj_list().typed_objs();
+            List<antlrHDDLParser.Typed_objsContext> domainConsts = ctxDomain.const_def().typed_obj_list().typed_objs();
             addToInternalModel(internalSortModel, domainConsts);
         }
         if (ctxProblem.p_object_declaration() != null) {
-            List<hddlParser.Typed_objsContext> problemConsts = ctxProblem.p_object_declaration().typed_obj_list().typed_objs();
+            List<antlrHDDLParser.Typed_objsContext> problemConsts = ctxProblem.p_object_declaration().typed_obj_list().typed_objs();
             addToInternalModel(internalSortModel, problemConsts);
         }
 
@@ -633,8 +631,8 @@ public class hddlPanda3Visitor {
         return JavaToScala.toScalaSeq(allsorts);
     }
 
-    private void addToInternalModel(internalSortsAndConsts internalModel, List<hddlParser.Typed_objsContext> consts) {
-        for (hddlParser.Typed_objsContext c : consts) {
+    private void addToInternalModel(internalSortsAndConsts internalModel, List<antlrHDDLParser.Typed_objsContext> consts) {
+        for (antlrHDDLParser.Typed_objsContext c : consts) {
             final String type = c.var_type().NAME().toString();
             for (int j = 0; j < c.new_consts().size(); j++) {
                 final String constName = c.new_consts().get(j).getText();

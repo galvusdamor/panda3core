@@ -15,8 +15,8 @@ object HDDLParser extends Parser {
   def parseDomainAndProblem(domainFile: InputStream, problemFile: InputStream): (Domain, Plan) = {
     val lDomain: hddlLexer = new hddlLexer(new ANTLRInputStream(domainFile))
     val lProblem: hddlLexer = new hddlLexer(new ANTLRInputStream(problemFile))
-    val pDomain: hddlParser = new hddlParser(new CommonTokenStream(lDomain))
-    val pProblem: hddlParser = new hddlParser(new CommonTokenStream(lProblem))
+    val pDomain: antlrHDDLParser = new antlrHDDLParser(new CommonTokenStream(lDomain))
+    val pProblem: antlrHDDLParser = new antlrHDDLParser(new CommonTokenStream(lProblem))
     new hddlPanda3Visitor().visitInstance(pDomain.domain, pProblem.problem)
   }
 }

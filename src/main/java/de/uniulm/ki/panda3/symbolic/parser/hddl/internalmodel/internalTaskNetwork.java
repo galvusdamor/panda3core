@@ -1,12 +1,11 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 
 import de.uniulm.ki.panda3.symbolic.csp.*;
-import de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlParser;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.antlrHDDLParser;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.CausalLink;
 import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint;
@@ -14,13 +13,10 @@ import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering;
 import de.uniulm.ki.panda3.symbolic.search.NoFlaws$;
 import de.uniulm.ki.panda3.symbolic.search.NoModifications$;
-import scala.Option;
-import scala.Some;
 import scala.collection.Seq;
 import scala.collection.immutable.Set;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
-import scala.runtime.AbstractFunction1;
 
 import java.util.HashMap;
 import java.util.List;
@@ -93,11 +89,11 @@ public class internalTaskNetwork {
         this.csp = this.csp.addConstraints(vc);
     }
 
-    public boolean connectMethVarsAndTaskVars(Seq<Variable> methodParams, Task abstractTask, List<hddlParser.Var_or_constContext> givenParamsCtx) {
+    public boolean connectMethVarsAndTaskVars(Seq<Variable> methodParams, Task abstractTask, List<antlrHDDLParser.Var_or_constContext> givenParamsCtx) {
         boolean paramsOk = true;
         for (int i = 0; i < givenParamsCtx.size(); i++) {
 
-            hddlParser.Var_or_constContext param = givenParamsCtx.get(i);
+            antlrHDDLParser.Var_or_constContext param = givenParamsCtx.get(i);
 
             if (param.NAME() != null) { // this is a consts
                 System.out.println("ERROR: not yet implemented - a const is used in task definition");
@@ -116,7 +112,7 @@ public class internalTaskNetwork {
         return paramsOk;
     }
 
-    public Plan readTaskNetwork(hddlParser.Tasknetwork_defContext tnCtx, Seq<Variable> parameters, Task abstractTask, Seq<Task> tasks, Seq<Sort> sorts) {
+    public Plan readTaskNetwork(antlrHDDLParser.Tasknetwork_defContext tnCtx, Seq<Variable> parameters, Task abstractTask, Seq<Task> tasks, Seq<Sort> sorts) {
 
         ReducedTask initSchema = new ReducedTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(new Vector<Literal>(0, 0, 0)));
         ReducedTask goalSchema = new ReducedTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new
@@ -133,7 +129,7 @@ public class internalTaskNetwork {
         // read tasks
         if (tnCtx.subtask_defs() != null) {
             for (int i = 0; i < tnCtx.subtask_defs().subtask_def().size(); i++) {
-                hddlParser.Subtask_defContext psCtx = tnCtx.subtask_defs().subtask_def().get(i);
+                antlrHDDLParser.Subtask_defContext psCtx = tnCtx.subtask_defs().subtask_def().get(i);
 
                 VectorBuilder<Variable> psVars = new VectorBuilder<>();
                 readTaskParamsAndMatchToMethodParams(psCtx.var_or_const(), psVars, parameters, sorts);
@@ -164,7 +160,7 @@ public class internalTaskNetwork {
 
         // read variable constraints
         if (tnCtx.constraint_defs() != null) {
-            for (hddlParser.Constraint_defContext constraint : tnCtx.constraint_defs().constraint_def()) {
+            for (antlrHDDLParser.Constraint_defContext constraint : tnCtx.constraint_defs().constraint_def()) {
                 VectorBuilder<Variable> vars = new VectorBuilder<>();
                 readTaskParamsAndMatchToMethodParams(constraint.var_or_const(), vars, parameters, sorts);
                 Seq<Variable> v = vars.result();
@@ -188,7 +184,7 @@ public class internalTaskNetwork {
             }
         } else { // i.e. :tasks or :subtasks
             if ((tnCtx.ordering_defs() != null) && (tnCtx.ordering_defs().ordering_def() != null)) {
-                for (hddlParser.Ordering_defContext o : tnCtx.ordering_defs().ordering_def()) {
+                for (antlrHDDLParser.Ordering_defContext o : tnCtx.ordering_defs().ordering_def()) {
                     String idLeft = o.subtask_id(0).NAME().toString();
                     String idRight = o.subtask_id(1).NAME().toString();
                     if (!idMap.containsKey(idLeft)) {
@@ -209,10 +205,10 @@ public class internalTaskNetwork {
         return subPlan;
     }
 
-    private boolean readTaskParamsAndMatchToMethodParams(List<hddlParser.Var_or_constContext> vcCtx, VectorBuilder<Variable> psVars, Seq<Variable> parameters, Seq<Sort> sorts) {
+    private boolean readTaskParamsAndMatchToMethodParams(List<antlrHDDLParser.Var_or_constContext> vcCtx, VectorBuilder<Variable> psVars, Seq<Variable> parameters, Seq<Sort> sorts) {
         boolean everythingFine = true;
         for (int j = 0; j < vcCtx.size(); j++) {
-            hddlParser.Var_or_constContext v = vcCtx.get(j);
+            antlrHDDLParser.Var_or_constContext v = vcCtx.get(j);
             if (v.NAME() != null) { // this is a constant ...
                 String constName = v.NAME().toString();
                 final Constant c = new Constant(constName);
