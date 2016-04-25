@@ -8,10 +8,10 @@ import java.util.concurrent.Semaphore
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneHierarchy, PruneTasks}
-import de.uniulm.ki.panda3.symbolic.compiler.{SHOPMethodCompiler, ToPlainFormulaRepresentation, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.symbolic.compiler.pruning.PruneHierarchy
+import de.uniulm.ki.panda3.symbolic.compiler.{ClosedWorldAssumption, SHOPMethodCompiler, ToPlainFormulaRepresentation}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
-import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
+import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.search.SearchNode
 import de.uniulm.ki.util.Dot2PdfCompiler
 
@@ -27,17 +27,22 @@ object BFS {
       System.exit(1)
     }
     val domFile = args(0)
-    val probFile = args(1)*/
+    val probFile = args(1)
+    */
+
+    val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
+    val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
+
     //val domFile = "/home/gregor/temp/send/domain2.lisp"
     //val probFile = "/home/gregor/temp/send/problem2.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     print("Parsing domain and problem ... ")
-    //val domAndInitialPlan: (Domain, Plan) = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
-    val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    val domAndInitialPlan = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    //val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
     print("done\npreprocessing ... ")
     val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
 
@@ -130,6 +135,7 @@ object BFS {
 
     var lastDepth = -1
     var minFlaw = Integer.MAX_VALUE
+    var layerNumberOfNodes = 0
     var total = 0
 
 
@@ -137,12 +143,15 @@ object BFS {
       while (!stack.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes) {
         val (plan, myNode, depth) = stack.pop()
 
+        //Dot2PdfCompiler.writeDotToFile(wrapping.wrap(plan), "/home/dhoeller/searchnode" + nodes +".pdf")
+
         assert(depth >= lastDepth)
         if (depth != lastDepth) {
-          println("Completed Depth " + lastDepth + " Minimal flaw count " + minFlaw)
+          println("Completed Depth " + lastDepth + " Number Of Nodes: " + (nodes - layerNumberOfNodes) + " Minimal flaw count " + minFlaw)
 
           lastDepth = depth
           minFlaw = Integer.MAX_VALUE
+          layerNumberOfNodes = nodes
         }
 
         val flaws = plan.flaws
@@ -239,7 +248,7 @@ object BFS {
           case None       => println("No solution after visiting " + nodes + " search nodes")
           case Some(plan) =>
             val symPlan = wrapping.wrap(plan)
-            Dot2PdfCompiler.writeDotToFile(symPlan, "/home/gregor/test.pdf")
+            Dot2PdfCompiler.writeDotToFile(symPlan, "/home/dhoeller/test.pdf")
             println("Found a solution after visiting " + nodes + " search nodes")
           //println(symPlan.longInfo)
         }

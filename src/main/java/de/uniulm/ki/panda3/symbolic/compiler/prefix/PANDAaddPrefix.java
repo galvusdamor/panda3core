@@ -51,7 +51,7 @@ public class PANDAaddPrefix {
                 if ((process == null) && (PANDAaddPrefix.verify))
                     prefixTransformer = PrefixTransformer.getVerifyTransformer(prefix);
                 else if ((process == null) && (!PANDAaddPrefix.verify))
-                    prefixTransformer = PrefixTransformer.getVerifyTransformer(prefix);
+                    prefixTransformer = PrefixTransformer.getRecognitionTransformer(prefix);
                 else
                     prefixTransformer = PrefixTransformer.getRepairTransformer(prefix, process);
                 domPlan = prefixTransformer.transform(domPlan._1(), domPlan._2(), null);

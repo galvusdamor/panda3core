@@ -23,13 +23,14 @@ import de.uniulm.ki.panda3.symbolic.search.ModificationsByClass;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
-import scala.*;
+import scala.Tuple2;
 import scala.collection.Seq;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
 import scala.runtime.AbstractFunction1;
 
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created by dhoeller on 14.04.15.
@@ -316,7 +317,18 @@ public class hddlPanda3Visitor {
             return visitExistentialQuantifier(parameters, predicates, sorts, constraints, ctx.gd_existential());
         } else if (ctx.gd_disjuction() != null) { // well ...
             return visitGdConOrDisjunktion(conOrDis.or, parameters, predicates, sorts, constraints, ctx.gd_disjuction().gd());
+        } else if (ctx.gd_equality_constraint() != null) {
+            return visitEqConstraint(parameters, sorts, constraints, ctx);
+        } else {
+            throw new IllegalArgumentException("ERROR: Feature in Precondition is not implemented");
         }
+    }
+
+    private Formula visitEqConstraint(seqProviderList<Variable> parameters, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.GdContext ctx) {
+        Variable var1 = getVariable(ctx.gd_equality_constraint().var_or_const(0), parameters, constraints, sorts);
+        Variable var2 = getVariable(ctx.gd_equality_constraint().var_or_const(1), parameters, constraints, sorts);
+        Equal ne = new Equal(var1, var2);
+        constraints.add(ne);
         return new And<Literal>(new Vector<Literal>(0, 0, 0));
     }
 
