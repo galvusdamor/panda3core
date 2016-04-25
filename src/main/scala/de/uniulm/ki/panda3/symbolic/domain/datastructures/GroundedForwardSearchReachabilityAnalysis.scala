@@ -20,10 +20,12 @@ case class GroundedForwardSearchReachabilityAnalysis(domain: Domain, initialStat
     }
 
     // function to compute all layers
-    def iterateLayer(initialState: Set[GroundLiteral]): Seq[(Set[GroundTask], Set[GroundLiteral])] = {
+    def iterateLayer(state: Set[GroundLiteral]): Seq[(Set[GroundTask], Set[GroundLiteral])] = {
       // build the next layer
-      val nextLayer = buildLayer(initialState)
-      if (nextLayer._2.size == initialState.size) Nil
+      val nextLayer = buildLayer(state)
+      if (nextLayer._2.size == state.size) {
+        if (state == initialState) nextLayer :: Nil else Nil
+      }
       else {
         val nextLayers = iterateLayer(nextLayer._2)
         nextLayer +: nextLayers
