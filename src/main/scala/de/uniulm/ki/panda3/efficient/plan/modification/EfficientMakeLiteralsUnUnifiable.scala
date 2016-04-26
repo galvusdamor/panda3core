@@ -13,6 +13,9 @@ case class EfficientMakeLiteralsUnUnifiable(plan: EfficientPlan, resolvedFlaw: E
   override val addedVariableConstraints: Array[EfficientVariableConstraint] = Array(EfficientVariableConstraint(EfficientVariableConstraint.UNEQUALVARIABLE, variable1, variable2))
 
   def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientMakeLiteralsUnUnifiable(null, severedFlaw, variable1, variable2)
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "Make variables non-unifyable " + variable1 + " != " + variable2
 }
 
 object EfficientMakeLiteralsUnUnifiable {

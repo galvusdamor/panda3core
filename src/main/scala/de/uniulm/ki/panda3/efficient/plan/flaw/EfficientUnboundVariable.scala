@@ -17,4 +17,7 @@ case class EfficientUnboundVariable(plan: EfficientPlan, variable: Int) extends 
   } else false
 
   override lazy val estimatedNumberOfResolvers: Int = EfficientBindVariable.estimate(plan,this,variable)
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "Unbound Variable " + variable
 }

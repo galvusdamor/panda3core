@@ -4,6 +4,7 @@ import de.uniulm.ki.panda3.efficient.csp.EfficientVariableConstraint
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw.EfficientFlaw
+import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -11,7 +12,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait EfficientModification {
+trait EfficientModification extends PrettyPrintable{
 
   val plan: EfficientPlan
   val addedVariableConstraints   : Array[EfficientVariableConstraint] = Array()
@@ -68,4 +69,9 @@ trait EfficientModification {
 
   def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification
 
+  /** returns a detailed information about the object */
+  override def longInfo: String = shortInfo
+
+  /** returns a string that can be utilized to define the object */
+  override def mediumInfo: String = shortInfo
 }

@@ -7,7 +7,7 @@ import de.uniulm.ki.panda3.symbolic.search.SearchState
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class EfficientSearchNode(nodePlan: EfficientPlan, nodeParent: EfficientSearchNode, nodeHeuristic: Double) {
+class EfficientSearchNode(nodePlan: EfficientPlan, nodeParent: EfficientSearchNode, nodeHeuristic: Double, nodeModHist: String = "") extends Ordered[EfficientSearchNode] {
   /** the plan contained in this search node, if it has no flaws this is a solution */
   val plan     : EfficientPlan       = nodePlan
   /** the nodes parent */
@@ -15,8 +15,9 @@ class EfficientSearchNode(nodePlan: EfficientPlan, nodeParent: EfficientSearchNo
   /** the computed heuristic of this node. This might be -1 if the search procedure does not use a heuristic */
   val heuristic: Double              = nodeHeuristic
 
+  val modHist: String  = nodeModHist: String
   /** if this flag is true only the current plan, the heuristic and its parent are valid! Do not read any other information */
-  var dirty: Boolean = true
+  var dirty  : Boolean = true
 
 
   /** returns the current state of this search node */
@@ -34,4 +35,6 @@ class EfficientSearchNode(nodePlan: EfficientPlan, nodeParent: EfficientSearchNo
   var children     : Array[(EfficientSearchNode, Int)]   = Array()
   /** any possible further payload */
   var payload      : Any                                 = null
+
+  override def compare(that: EfficientSearchNode): Int = Math.signum(that.heuristic - this.heuristic).toInt
 }

@@ -26,7 +26,8 @@ case class EfficientDecomposePlanStep(plan: EfficientPlan, resolvedFlaw: Efficie
                                                                                                       addedVariableConstraints, addedCausalLinks, nonInducedAddedOrderings,
                                                                                                       decomposedPlanStepsByMethod)
 
-
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "Decompose PS " + decomposedPlanSteps + " with " + addedPlanSteps.mkString("(",",",")")
 }
 
 object EfficientDecomposePlanStep {
@@ -97,14 +98,42 @@ object EfficientDecomposePlanStep {
       causalLink += 1
     }
 
-    // TODO this adds transitively implied orderings as well as those implied be causal links. It might be faster to transfer the ordering matrix directly ...
-    val nonInducedAddedOrderings: Array[(Int, Int)] = new Array[(Int, Int)](method.nonInducedAddedOrderings.length)
+
+    // compute inherited ordering constraints
+    val inheritedOrderingConstraintsBuffer = new ArrayBuffer[Int]()
+    var planStep = 2
+    while (planStep < plan.numberOfAllPlanSteps) {
+      if (planStep != decomposedPS && plan.isPlanStepPresentInPlan(planStep)) {
+        if (plan.ordering.lt(planStep, decomposedPS)) inheritedOrderingConstraintsBuffer append -planStep
+        if (plan.ordering.lt(decomposedPS, planStep)) inheritedOrderingConstraintsBuffer append planStep
+      }
+      planStep += 1
+    }
+    val inheritedOrderingConstraints = inheritedOrderingConstraintsBuffer.toArray
+
+    // TODO this adds transitively implied orderings as well as those implied by causal links. It might be faster to transfer the ordering matrix directly ...
+    val nonInducedAddedOrderings: Array[(Int, Int)] = new Array[(Int, Int)](method.nonInducedAddedOrderings.length + method.addedPlanSteps.length * inheritedOrderingConstraints.length)
     var ordering = 0
-    while (ordering < nonInducedAddedOrderings.length) {
+    while (ordering < method.nonInducedAddedOrderings.length) {
       val oldOrdering = method.nonInducedAddedOrderings(ordering)
       nonInducedAddedOrderings(ordering) = (oldOrdering._1 + plan.firstFreePlanStepID, oldOrdering._2 + plan.firstFreePlanStepID)
       ordering += 1
     }
+
+
+    ps = 0
+    while (ps < method.addedPlanSteps.length) {
+      var inheritedPS = 0
+      while (inheritedPS < inheritedOrderingConstraints.length) {
+        nonInducedAddedOrderings(method.nonInducedAddedOrderings.length + ps * inheritedOrderingConstraints.length + inheritedPS) =
+          if (inheritedOrderingConstraints(inheritedPS) < 0) (-inheritedOrderingConstraints(inheritedPS), ps + plan.firstFreePlanStepID)
+          else (ps + plan.firstFreePlanStepID, inheritedOrderingConstraints(inheritedPS))
+        inheritedPS += 1
+      }
+      ps += 1
+    }
+
+
 
     // add the constructed modification to the buffer
     buffer append

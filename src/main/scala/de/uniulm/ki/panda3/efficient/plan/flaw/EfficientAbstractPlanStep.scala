@@ -17,4 +17,7 @@ case class EfficientAbstractPlanStep(plan: EfficientPlan, planStep: Int) extends
   } else false
 
   override lazy val estimatedNumberOfResolvers: Int = EfficientDecomposePlanStep.estimate(plan, this, planStep,-1,false)
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "Abstract PS: " + planStep
 }

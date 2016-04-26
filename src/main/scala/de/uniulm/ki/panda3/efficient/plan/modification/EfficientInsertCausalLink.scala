@@ -18,6 +18,9 @@ case class EfficientInsertCausalLink(plan: EfficientPlan, resolvedFlaw: Efficien
   override val addedVariableConstraints: Array[EfficientVariableConstraint] = necessaryVariableConstraints
 
   def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientInsertCausalLink(null, severedFlaw, causalLink, necessaryVariableConstraints)
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "Insert CL " + causalLink
 }
 
 object EfficientInsertCausalLink {
