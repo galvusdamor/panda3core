@@ -181,7 +181,7 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
               case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) => ord(from)(to) = DONTKNOW
               case (_, _)                                             => ()
             }
-    (for (from <- 2 until ord.length; to <- from + 1 until ord.length; if ord(from)(to) == BEFORE) yield (from, to)).toArray
+    (for (from <- 2 until ord.length; to <- 2 until ord.length; if ord(from)(to) == BEFORE) yield (from, to)).toArray
   }
 
 }
