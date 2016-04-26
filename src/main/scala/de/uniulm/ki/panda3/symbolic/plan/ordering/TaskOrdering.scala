@@ -251,7 +251,9 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
   override def mediumInfo: String = shortInfo
 
   /** returns a more detailed information about the object */
-  override def longInfo: String = "OrderingConstraints:\n" + ((tasks zip tasks) collect { case (t1, t2) if lt(t1, t2) => "\t" + t1.shortInfo + " -> " + t2.shortInfo })
+  override def longInfo: String = "OrderingConstraints:\n" + (
+    (for (t1 <- tasks ; t2 <- tasks) yield (t1,t2))
+      collect { case (t1, t2) if lt(t1, t2) => "\t" + t1.shortInfo + " -> " + t2    .shortInfo })    .mkString("\n")
 
 }
 
