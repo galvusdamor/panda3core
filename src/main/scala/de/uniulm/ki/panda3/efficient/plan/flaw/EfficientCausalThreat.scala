@@ -40,4 +40,8 @@ case class EfficientCausalThreat(plan: EfficientPlan, causalLink: EfficientCausa
 
     makeUnUnifiable + addOrdering + decompose
   }
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "Causal Threat: CL " + causalLink + " on PS: " + threatingPlanStep + " with effect " + indexOfThreatingEffect
+
 }

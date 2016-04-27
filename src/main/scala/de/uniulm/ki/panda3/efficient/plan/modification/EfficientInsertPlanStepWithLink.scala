@@ -19,6 +19,9 @@ case class EfficientInsertPlanStepWithLink(plan: EfficientPlan, resolvedFlaw: Ef
 
   def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientInsertPlanStepWithLink(null, severedFlaw, newPlanStep, parameterVariableSorts, causalLink,
                                                                                                            necessaryVariableConstraints)
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "InsertPS " + newPlanStep + " and CL " + causalLink
 }
 
 

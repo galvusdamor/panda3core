@@ -1,0 +1,113 @@
+(define (domain transport)
+  (:requirements :typing :action-costs :hierachie )
+  (:types
+    notype - object
+  )
+
+  (:predicates
+    (nopredicate)
+  )
+
+  (:task I
+    :parameters ( )
+    :precondition ( )
+    :effect ( )
+  )
+
+  (:task A
+    :parameters ( )
+    :precondition ( )
+    :effect ( )
+  )
+  (:task B
+    :parameters ( )
+    :precondition ( )
+    :effect ( )
+  )
+  (:task C
+    :parameters ( )
+    :precondition ( )
+    :effect ( )
+  )
+
+  (:method m1
+    :parameters ()
+    :task (I)
+    :subtasks (and
+      (t1 (A))
+      (t2 (B)))
+    :ordering (and
+      (t1 < t2))
+  )
+
+  (:method m2
+    :parameters ()
+    :task (I)
+    :subtasks (and
+      (t1 (B))
+      (t2 (C)))
+    :ordering ()
+  )
+
+  (:method m3
+      :parameters ()
+      :task (A)
+      :subtasks (and
+        (t2 (p1)))
+      :ordering ()
+    )
+  (:method m4
+      :parameters ()
+      :task (A)
+      :subtasks (and
+        (t2 (p2)))
+      :ordering ()
+    )
+
+  (:method m5
+      :parameters ()
+      :task (B)
+      :subtasks (and
+        (t2 (p3)))
+      :ordering ()
+    )
+
+  (:method m6
+    :parameters ()
+    :task (C)
+    :subtasks (and
+      (t1 (A))
+      (t2 (C)))
+    :ordering (and
+      (t1 < t2))
+  )
+
+  (:method m7
+      :parameters ()
+      :task (C)
+      :subtasks (and
+        (t2 (B)))
+      :ordering ()
+    )
+
+
+
+  (:action p1
+    :parameters ()
+    :precondition ( )
+    :effect ( )
+  )
+
+  (:action p2
+    :parameters ()
+    :precondition ( )
+    :effect ( )
+  )
+
+  (:action p3
+    :parameters ()
+    :precondition ( )
+    :effect ( )
+  )
+
+)

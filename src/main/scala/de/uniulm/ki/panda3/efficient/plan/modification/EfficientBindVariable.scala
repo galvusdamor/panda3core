@@ -13,6 +13,9 @@ case class EfficientBindVariable(plan: EfficientPlan, resolvedFlaw: EfficientFla
   override val addedVariableConstraints: Array[EfficientVariableConstraint] = Array(EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, variable, constant))
 
   def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientBindVariable(null, severedFlaw, variable, constant)
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "Bind variable to value: " + variable + " = " + constant
 }
 
 object EfficientBindVariable {

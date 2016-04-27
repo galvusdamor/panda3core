@@ -1,31 +1,29 @@
 package de.uniulm.ki.panda3.efficient.search
 
-
 import java.io.FileInputStream
 import java.util
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
+import de.uniulm.ki.panda3.efficient.heuristic.{EfficientNumberOfFlaws, EfficientHeuristic}
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneHierarchy, PruneTasks}
-import de.uniulm.ki.panda3.symbolic.compiler.{SHOPMethodCompiler, ToPlainFormulaRepresentation, ClosedWorldAssumption}
-import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.compiler.pruning.PruneHierarchy
+import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
-import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
-import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.SearchNode
 import de.uniulm.ki.util.Dot2PdfCompiler
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object BFS {
+object HeuristicSearch {
 
-  var outputPDF : String = "plan.pdf"
+  var outputPDF: String = "plan.pdf"
 
   def main(args: Array[String]) {
     /*if (args.length != 3) {
@@ -34,15 +32,8 @@ object BFS {
     }
     val domFile = args(0)
     val probFile = args(1)
-    outputPDF = args(2)
-    */
-
-    val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
-    val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
-
-    //val domFile = "/home/gregor/temp/send/domain2.lisp"
-    //val probFile = "/home/gregor/temp/send/problem2.lisp"
-    outputPDF = "/home/dhoeller/Schreibtisch/test.pdf"
+    outputPDF = args(2)*/
+    outputPDF = "/home/gregor/test.pdf"
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
@@ -50,8 +41,9 @@ object BFS {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
-    //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
-    //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
+    val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
+    val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
+
     print("Parsing domain and problem ... ")
     val domAndInitialPlan = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
     //val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
@@ -75,6 +67,8 @@ object BFS {
     println("lifted analysis")
     println("" + liftedReachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
     println("" + liftedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
+
+
 
     val groundedInitialState = flattened._2.groundedInitialState
     val groundedReachabilityAnalysis = GroundedForwardSearchReachabilityAnalysis(flattened._1, groundedInitialState.toSet)
@@ -102,10 +96,11 @@ object BFS {
 
     println("done\nstart planner")
 
-    //System.in.read()
+    System.in.read()
     //dfs(initialPlan, 0)
     val buildTree = false
-    val (searchNode, sem, _) = startSearch(initialPlan, wrapper, Some(2000000), buildTree)
+    val heuristic = EfficientNumberOfFlaws
+    val (searchNode, sem, _) = startSearch(initialPlan, wrapper, Some(2000000), buildTree, heuristic)
 
     sem.acquire()
     println("done")
@@ -127,7 +122,9 @@ object BFS {
     }
   }
 
-  def startSearch(initialPlan: EfficientPlan, wrapping: Wrapping, nodeLimit: Option[Int], buildTree: Boolean): (EfficientSearchNode, Semaphore, Unit => Unit) = {
+  def startSearch(initialPlan: EfficientPlan, wrapping: Wrapping, nodeLimit: Option[Int], buildTree: Boolean,
+                  heuristic: EfficientHeuristic): (EfficientSearchNode, Semaphore, Unit => Unit) = {
+    import scala.math.Ordering.Implicits._
     val semaphore: Semaphore = new Semaphore(0)
     val root = new EfficientSearchNode(initialPlan, null, Double.MaxValue)
 
@@ -139,57 +136,38 @@ object BFS {
 
     var abort = false
 
-    val stack = new util.ArrayDeque[(EfficientPlan, EfficientSearchNode, Int)]()
+    val searchQueue = new mutable.PriorityQueue[(EfficientSearchNode, Int)]()
+    //new util.ArrayDeque[(EfficientPlan, EfficientSearchNode, Int)]()
     var result: Option[EfficientPlan] = None
-    stack.add((initialPlan, root, 0))
+    searchQueue.enqueue((root, 0))
 
-    var lastDepth = -1
+    var lowestHeuristicFound = Double.MaxValue
     var minFlaw = Integer.MAX_VALUE
-    var layerNumberOfNodes = 0
     var total = 0
 
 
-    def bfs(): (EfficientSearchNode, Option[EfficientPlan]) = {
-      while (!stack.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes) {
-        val (plan, myNode, depth) = stack.pop()
-
-        //Dot2PdfCompiler.writeDotToFile(wrapping.wrap(plan), "/home/dhoeller/searchnode" + nodes +".pdf")
-
-        assert(depth >= lastDepth)
-        if (depth != lastDepth) {
-          println("Completed Depth " + lastDepth + " Number Of Nodes: " + (nodes - layerNumberOfNodes) + " Minimal flaw count " + minFlaw)
-
-          lastDepth = depth
-          minFlaw = Integer.MAX_VALUE
-          layerNumberOfNodes = nodes
-        }
-
+    def heuristicSearch(): (EfficientSearchNode, Option[EfficientPlan]) = {
+      while (searchQueue.nonEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes) {
+        val (myNode, depth) = searchQueue.dequeue()
+        val plan = myNode.plan
         val flaws = plan.flaws
         minFlaw = Math.min(minFlaw, flaws.length)
 
-        if (nodes % 500 == 0 && nodes > 0) {
+        //println("Queue size: "  + searchQueue.size)
+        // heuristic statistics
+        if (myNode.heuristic < lowestHeuristicFound) {
+          lowestHeuristicFound = myNode.heuristic
+          println("Found new lowest heuristic value: " + lowestHeuristicFound + " @ plan #" + nodes)
+        }
+
+
+        if (nodes % 300 == 0 && nodes > 0) {
           val nTime = System.currentTimeMillis()
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
-          //time = nTime
-          println("Plans Expanded: " + nodes + " " + nps + " Depth " + depth + " Mods/plan " + total / nodes)
+          println("Plans Expanded: " + nodes + " " + nps + " Queue size " + searchQueue.length + " Mods/plan " + total / nodes)
         }
         nodes += 1
 
-
-        /*if (nodes == 1000){
-          val symPlan = wrapping.wrap(plan)
-          Dot2PdfCompiler.writeDotToFile(symPlan,"/home/gregor/test.pdf")
-          System.exit(0)
-        }*/
-        /*println("\n\nNEXT PLAN " + plan.hashCode() +  " - with " + flaws.length + " flaws")
-      println(wrapping.wrap(plan).longInfo)
-      println("Flaws:")
-      flaws foreach {
-        case EfficientAbstractPlanStep(_,ps) => println("ABSTRACT PLAN STEP: " + ps)
-        case EfficientOpenPrecondition(_,ps,prec) => println("OPEN PRECONDITION: " + ps + " -> " + prec)
-        case EfficientCausalThreat(_,_,ps,_,_) => println("CAUSAL THREAT: by " + ps)
-        case x => println(x)
-      }*/
 
         if (flaws.length == 0) {
           result = Some(plan)
@@ -224,6 +202,7 @@ object BFS {
           if (smallFlawNumMod != 0) {
             val actualModifications = if (buildTree) myNode.modifications(myNode.selectedFlaw) else flaws(myNode.selectedFlaw).resolver
             //assert(actualModifications.length == smallFlawNumMod, "Estimation of number of modifications was incorrect (" + actualModifications.length + " and " + smallFlawNumMod + ")")
+            //val allmods = actualModifications map {_.longInfo} mkString("[",",","]")
             var modNum = 0
             while (modNum < actualModifications.length && result.isEmpty) {
               // apply modification
@@ -231,9 +210,12 @@ object BFS {
               val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))
 
               if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
-                val searchNode = if (buildTree) new EfficientSearchNode(newPlan, myNode, 0) else new EfficientSearchNode(newPlan, null, 0)
+                val heuristicValue = heuristic.computeHeuristic(newPlan)
+                //val modString = myNode.modHist + "\n" + flaws(myNode.selectedFlaw).longInfo + "\n" + actualModifications(modNum).longInfo + " (" + (smallFlawNumMod-1) + " alternatives)" +
+                //"\n" + allmods
+                val searchNode = if (buildTree) new EfficientSearchNode(newPlan, myNode, 0) else new EfficientSearchNode(newPlan, null, heuristicValue/*, modString*/)
 
-                stack add(newPlan, searchNode, depth + 1)
+                searchQueue enqueue ((searchNode, depth + 1))
                 children append ((searchNode, modNum))
               }
               modNum += 1
@@ -250,7 +232,7 @@ object BFS {
 
     new Thread(new Runnable {
       override def run(): Unit = {
-        val (_, solution) = bfs()
+        val (_, solution) = heuristicSearch()
         semaphore.release()
         solution match {
           case None       => println("No solution after visiting " + nodes + " search nodes")
@@ -258,7 +240,8 @@ object BFS {
             val symPlan = wrapping.wrap(plan)
             Dot2PdfCompiler.writeDotToFile(symPlan, outputPDF)
             println("Found a solution after visiting " + nodes + " search nodes")
-          //println(symPlan.longInfo)
+            //println(symPlan.longInfo)
+            //println(symPlan.orderingConstraints.longInfo)
         }
       }
     }).start()

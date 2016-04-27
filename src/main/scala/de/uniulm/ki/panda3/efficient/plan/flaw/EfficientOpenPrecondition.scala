@@ -151,4 +151,7 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
     flaw
   }
 
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "Open precondition: PS " + planStep + " precondition " + preconditionIndex
+
 }
