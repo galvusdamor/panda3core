@@ -319,7 +319,10 @@ public class hddlPanda3Visitor {
             return visitGdConOrDisjunktion(conOrDis.or, parameters, predicates, sorts, constraints, ctx.gd_disjuction().gd());
         } else if (ctx.gd_equality_constraint() != null) {
             return visitEqConstraint(parameters, sorts, constraints, ctx);
+        } else if (ctx.gd_empty() != null) {
+            return new And<Literal>(new Vector<Literal>(0, 0, 0));
         } else {
+            System.out.println(ctx.getText());
             throw new IllegalArgumentException("ERROR: Feature in Precondition is not implemented");
         }
     }
