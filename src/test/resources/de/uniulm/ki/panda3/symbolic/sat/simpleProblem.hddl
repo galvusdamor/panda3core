@@ -1,0 +1,17 @@
+(define (problem transport1)
+ (:domain transport)
+ (:objects
+ )
+ (:htn
+  :tasks (and
+    (t1 (I)))
+  :ordering ( )
+  :constraints ( )
+ )
+ (:init
+   (nopredicate)
+ )
+ (:goal (and
+  (nopredicate)
+ ))
+)

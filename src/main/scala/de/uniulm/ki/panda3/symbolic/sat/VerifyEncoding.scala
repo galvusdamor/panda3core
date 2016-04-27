@@ -240,9 +240,9 @@ object VerifyEncoding {
     val p2 = dom.primitiveTasks.find({ _.name == "p2" }).get
     val p3 = dom.primitiveTasks.find({ _.name == "p3" }).get
 
-    val verifySeq = p1 :: p3 :: p1 :: p3 :: Nil
+    val verifySeq = p1 :: p1 :: p1 :: p3 :: p1 :: p3 :: Nil
 
-    val encoder = VerifyEncoding(dom, iniPlan, verifySeq)(5)
+    val encoder = VerifyEncoding(dom, iniPlan, verifySeq)(7)
 
     println("K " + encoder.K + " DELTA " + encoder.DELTA)
 
