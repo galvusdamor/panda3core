@@ -76,6 +76,9 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
     (for (i <- Range(0, numberOfInstances); j <- Range(0, numberOfInstances) if i != j; k <- Range(0, numberOfInstances) if i != k && j != k) yield
       impliesRightAnd(before(layer, i, j) :: before(layer, j, k) :: Nil, before(layer, i, k) :: Nil)).flatten
 
+  private def consistentOrderForLayer(layer: Int, numberOfInstances: Int): Seq[Clause] =
+    (for (i <- Range(0, numberOfInstances); j <- Range(0, numberOfInstances) if i != j) yield impliesNot(before(layer, i, j), before(layer, j, i))).flatten
+
   // the method applied _to_ the layer
   private def applyMethod(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap { pos =>
     val methodRestrictsAT = domain.decompositionMethods flatMap { decompositionMethod =>
@@ -109,21 +112,33 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   }
   }
 
-  private def methodMustHaveChildren(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap { pos =>
+  private def methodMustHaveChildren(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap { fatherPos =>
     domain.decompositionMethods flatMap { case m@SimpleDecompositionMethod(_, subPlan) =>
       // those selected
       val presentChildren: Seq[Clause] = subPlan.planStepsWithoutInitGoal.zipWithIndex flatMap { case (ps, childNumber) =>
-        val mustChildren: Seq[Clause] = impliesRightOr(method(layer, pos, m) :: Nil, Range(0, numberOfInstances) map { childPos => child(layer + 1, childPos, pos, childNumber) })
+        val mustChildren: Seq[Clause] = impliesRightOr(method(layer, fatherPos, m) :: Nil, Range(0, numberOfInstances) map { childPos => child(layer + 1, childPos, fatherPos, childNumber) })
         // types of the children
         val childrenType: Seq[Clause] = Range(0, numberOfInstances) flatMap { childPos =>
-          impliesRightAnd(child(layer + 1, childPos, pos, childNumber) :: method(layer, pos, m) :: Nil, action(layer + 1, childPos, ps.schema) :: Nil)
+          impliesRightAnd(child(layer + 1, childPos, fatherPos, childNumber) :: method(layer, fatherPos, m) :: Nil, action(layer + 1, childPos, ps.schema) :: Nil)
         }
         mustChildren ++ childrenType
       }
-      val nonPresentChildren: Seq[Clause] = Range(subPlan.planStepsWithoutInitGoal.length, DELTA) flatMap { childNumber =>
-        impliesAllNot(method(layer, pos, m), Range(0, numberOfInstances) map { childPos => child(layer + 1, childPos, pos, childNumber) })
+
+      // order of the children
+      val minimalOrdering = subPlan.orderingConstraints.minimalOrderingConstraints() filterNot { _.containsAny(m.subPlan.initAndGoal: _*) }
+      val childrenOrder: Seq[Clause] = minimalOrdering flatMap { case OrderingConstraint(beforePS, afterPS) =>
+        val beforePos: Int = subPlan.planStepsWithoutInitGoal indexOf beforePS
+        val afterPos: Int = subPlan.planStepsWithoutInitGoal indexOf afterPS
+        Range(0, numberOfInstances) flatMap { childBeforePos => Range(0, numberOfInstances) flatMap { childAfterPos =>
+          impliesRightAnd(method(layer, fatherPos, m) :: child(layer + 1, childBeforePos, fatherPos, beforePos) :: child(layer + 1, childAfterPos, fatherPos, afterPos) :: Nil,
+                          before(layer + 1, childBeforePos, childAfterPos) :: Nil)
+        }
+        }
       }
-      presentChildren ++ nonPresentChildren
+      val nonPresentChildren: Seq[Clause] = Range(subPlan.planStepsWithoutInitGoal.length, DELTA) flatMap { childNumber =>
+        impliesAllNot(method(layer, fatherPos, m), Range(0, numberOfInstances) map { childPos => child(layer + 1, childPos, fatherPos, childNumber) })
+      }
+      presentChildren ++ nonPresentChildren ++ childrenOrder
     }
   }
 
@@ -131,6 +146,20 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
     impliesRightAnd(action(layer - 1, pos, task) :: Nil, action(layer, pos, task) :: Nil) ++ impliesRightAnd(action(layer - 1, pos, task) :: Nil, child(layer, pos, pos, 0) :: Nil)
   }
   }
+
+  private def maintainOrdering(layer: Int, numberOfInstances: Int): Seq[Clause] =
+    Range(0, numberOfInstances) flatMap { parentBeforePos => Range(0, numberOfInstances) flatMap { parentAfterPos =>
+      Range(0, numberOfInstances) flatMap { childBeforePos => Range(0, numberOfInstances) flatMap { childAfterPos =>
+        Range(0, DELTA) flatMap { beforeChildMethodIndex => Range(0, DELTA) flatMap { afterChildMethodIndex =>
+          impliesRightAnd(child(layer, childBeforePos, parentBeforePos, beforeChildMethodIndex) ::
+                            child(layer, childAfterPos, parentAfterPos, afterChildMethodIndex) ::
+                            before(layer - 1, parentBeforePos, parentAfterPos) :: Nil, before(layer, childBeforePos, childAfterPos) :: Nil)
+        }
+        }
+      }
+      }
+    }
+    }
 
   lazy val numberOfLayers          = K
   lazy val numberOfActionsPerLayer = taskSequence.length
@@ -149,7 +178,7 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
     val ordinaryLayers: Seq[Clause] = Range(0, K) flatMap { layer =>
       val actionSelect = selectActionsForLayer(layer, numberOfActionsPerLayer)
-      val order = transitiveOrderForLayer(layer, numberOfActionsPerLayer)
+      val order = transitiveOrderForLayer(layer, numberOfActionsPerLayer) ++ consistentOrderForLayer(layer, numberOfActionsPerLayer) ++ maintainOrdering(layer, numberOfActionsPerLayer)
       val methods = applyMethod(layer, numberOfActionsPerLayer) ++ notTwoMethods(layer, numberOfActionsPerLayer) ++ methodMustHaveChildren(layer, numberOfActionsPerLayer)
       val childOf = mustBeChildOf(layer, numberOfActionsPerLayer) ++ fatherMustExist(layer, numberOfActionsPerLayer)
       val childrenType = maintainPrimitive(layer, numberOfActionsPerLayer)
@@ -157,9 +186,12 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
       actionSelect ++ order ++ methods ++ childOf ++ childrenType
     }
 
-    val primitves: Seq[Clause] = taskSequence.zipWithIndex map { case (task, index) => Clause(action(K - 1, index, task)) }
+    val indexedTaskSequence = taskSequence.zipWithIndex
+    val primitives: Seq[Clause] = indexedTaskSequence map { case (task, index) => Clause(action(K - 1, index, task)) }
+    val primitiveOrdering: Seq[Clause] = Range(0, taskSequence.length - 1) map { case index => Clause(before(K - 1, index, index + 1))
+    }
 
-    layerMinusOne ++ ordinaryLayers ++ primitves
+    layerMinusOne ++ ordinaryLayers ++ primitives ++ primitiveOrdering
   }
 
 
@@ -208,14 +240,15 @@ object VerifyEncoding {
     val p2 = dom.primitiveTasks.find({ _.name == "p2" }).get
     val p3 = dom.primitiveTasks.find({ _.name == "p3" }).get
 
-    val verifySeq = p2 :: p1 :: p1 :: p1 :: p2 :: p3 :: p3 :: Nil
+    val verifySeq = p1 :: p3 :: p1 :: p3 :: Nil
 
-    val encoder = VerifyEncoding(dom, iniPlan, verifySeq)(8)
+    val encoder = VerifyEncoding(dom, iniPlan, verifySeq)(5)
 
     println("K " + encoder.K + " DELTA " + encoder.DELTA)
 
     val encodedString = encoder.miniSATString
 
+    println("Variables : " + encoder.atoms.length + " Constraints: " + encoder.formula.length)
 
     writeStringToFile(encoder.formula mkString "\n", new File("/home/gregor/formula"))
     writeStringToFile(encodedString, new File("/home/gregor/foo"))
