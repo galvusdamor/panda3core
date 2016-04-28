@@ -22,8 +22,8 @@ import scala.io.Source
 //scalastyle:off number.of.methods
 case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[Task])(val K: Int = 2 * taskSequence.length * (domain.abstractTasks.length + 1)) {
 
-  domain.tasks foreach { _.parameters.isEmpty }
-  domain.predicates foreach { _.argumentSorts.isEmpty }
+  domain.tasks foreach { t => assert(t.parameters.isEmpty) }
+  domain.predicates foreach { p => assert(p.argumentSorts.isEmpty) }
   assert(initialPlan.init.substitutedEffects.length == domain.predicates.length)
 
   val DELTA = domain.decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
@@ -34,15 +34,15 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   // ATOMS
   private def methodIndex(method: DecompositionMethod): Int = domain.decompositionMethods indexOf method
 
-  private def predicateIndex(predicate: Predicate): Int = domain.predicates indexOf predicate
+  def predicateIndex(predicate: Predicate): Int = domain.predicates indexOf predicate
 
-  private def action(layer: Int, position: Int, task: Task): String = "action^" + layer + "_" + position + "," + taskIndex(task)
+  def action(layer: Int, position: Int, task: Task): String = "action^" + layer + "_" + position + "," + taskIndex(task)
 
   private def actionUsed(layer: Int, position: Int): String = "actionUsed^" + layer + "_" + position
 
   private def actionAbstract(layer: Int, position: Int): String = "actionAbstract^" + layer + "_" + position
 
-  private def childWithIndex(layer: Int, position: Int, father: Int, indexOnMethod: Int): String = "child^" + layer + "_" + position + "," + father + "," + indexOnMethod
+  def childWithIndex(layer: Int, position: Int, father: Int, indexOnMethod: Int): String = "child^" + layer + "_" + position + "," + father + "," + indexOnMethod
 
   private def childOf(layer: Int, position: Int, father: Int): String = "childof^" + layer + "_" + position + "," + father
 
