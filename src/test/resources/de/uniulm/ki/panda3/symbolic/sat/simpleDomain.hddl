@@ -5,7 +5,10 @@
   )
 
   (:predicates
-    (nopredicate)
+    (x)
+    (y)
+    (z)
+    (g)
   )
 
   (:task I
@@ -94,20 +97,20 @@
 
   (:action p1
     :parameters ()
-    :precondition ( )
-    :effect ( )
+    :precondition (x)
+    :effect (and (y) (not (x)))
   )
 
   (:action p2
     :parameters ()
-    :precondition ( )
-    :effect ( )
+    :precondition (x)
+    :effect (and (z))
   )
 
   (:action p3
     :parameters ()
-    :precondition ( )
-    :effect ( )
+    :precondition (and (y) (z))
+    :effect (g)
   )
 
 )

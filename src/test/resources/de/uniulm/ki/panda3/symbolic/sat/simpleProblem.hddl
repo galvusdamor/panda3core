@@ -9,9 +9,9 @@
   :constraints ( )
  )
  (:init
-   (nopredicate)
+   (x)
  )
  (:goal (and
-  (nopredicate)
+  (g)
  ))
 )
