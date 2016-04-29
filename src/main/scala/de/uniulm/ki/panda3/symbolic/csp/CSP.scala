@@ -237,7 +237,7 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
   /** executes uni propagation on a set of given variables */
   private def unitPropagation(toPropagate: Iterable[Variable] = detectUnitPropagation()): Unit = if (toPropagate.isEmpty) {() }
   else {
-    val x: Iterable[Variable] = (toPropagate flatMap { variable =>
+    val x: Set[Variable] = (toPropagate flatMap { variable =>
       if (!isPotentiallySolvable) {Vector() }
       else {
         val constant = remainingDomain(variable).last // this one exists and is the only element
@@ -266,7 +266,8 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
       }
     }).toSet // eliminate duplicates
 
-    if (isPotentiallySolvable) unitPropagation(x)
+    // subtraction seems to be necessary as another variable can issue a propagare of a not yet propagated variable
+    if (isPotentiallySolvable) unitPropagation(x -- toPropagate)
     checkIntegrity()
   }
 
