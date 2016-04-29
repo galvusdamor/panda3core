@@ -78,31 +78,38 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
     // helper methods
     def groundPS(oldPS: PlanStep, mapVariable: Variable => Constant): PlanStep = PlanStep(oldPS.id, groundedTasks(oldPS.schema)(oldPS.arguments map mapVariable)._1, Nil)
 
-    def groundPlan(plan: Plan, innerCSP: CSP): Plan = {
+    def groundPlan(plan: Plan, innerCSP: CSP): Option[Plan] = {
       def mapVariable(variable: Variable): Constant = innerCSP.getRepresentative(variable) match {
         case c: Constant => c
         case _           => throw new AssertionError("I've bound all variables to constants, but the CSP didn't return a constant")
       }
-      // create the inner plan
-      val groundedPlanStepMapping = (plan.planSteps map { ps => (ps, groundPS(ps, mapVariable)) }).toMap
-      val actualGroundedPlansteps = groundedPlanStepMapping.values.toSeq
+      // check whether it is possible to ground the method
+      val allTasksReachable = plan.planSteps forall { ps => groundedTasks(ps.schema) contains (ps.arguments map mapVariable) }
 
-      val orderingConstraints = plan.orderingConstraints.originalOrderingConstraints map {
-        case OrderingConstraint(before, after) => OrderingConstraint(groundedPlanStepMapping(before), groundedPlanStepMapping(after))
-      }
+      if (!allTasksReachable) {
+        None
+      } else {
+        // create the inner plan
+        val groundedPlanStepMapping = (plan.planSteps map { ps => (ps, groundPS(ps, mapVariable)) }).toMap
+        val actualGroundedPlansteps = groundedPlanStepMapping.values.toSeq
 
-      val causalLinks = plan.causalLinks map { case CausalLink(producer, consumer, condition) =>
-        // get the correct ground Literal
-        val groundCondition = condition match {
-          case Literal(predicate, isPositive, parameterVariables) =>
-            val parameterConstants = parameterVariables map mapVariable
-            Literal(groundedPredicates(predicate)(parameterConstants), isPositive, Nil)
+        val orderingConstraints = plan.orderingConstraints.originalOrderingConstraints map {
+          case OrderingConstraint(before, after) => OrderingConstraint(groundedPlanStepMapping(before), groundedPlanStepMapping(after))
         }
-        CausalLink(groundedPlanStepMapping(producer), groundedPlanStepMapping(consumer), groundCondition)
-      }
 
-      Plan(actualGroundedPlansteps, causalLinks, TaskOrdering(orderingConstraints, actualGroundedPlansteps), CSP(Set(), Nil),
-           groundedPlanStepMapping(plan.init), groundedPlanStepMapping(plan.goal), plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map())
+        val causalLinks = plan.causalLinks map { case CausalLink(producer, consumer, condition) =>
+          // get the correct ground Literal
+          val groundCondition = condition match {
+            case Literal(predicate, isPositive, parameterVariables) =>
+              val parameterConstants = parameterVariables map mapVariable
+              Literal(groundedPredicates(predicate)(parameterConstants), isPositive, Nil)
+          }
+          CausalLink(groundedPlanStepMapping(producer), groundedPlanStepMapping(consumer), groundCondition)
+        }
+
+        Some(Plan(actualGroundedPlansteps, causalLinks, TaskOrdering(orderingConstraints, actualGroundedPlansteps), CSP(Set(), Nil),
+                  groundedPlanStepMapping(plan.init), groundedPlanStepMapping(plan.goal), plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map()))
+      }
     }
 
 
@@ -126,7 +133,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
               val additionalConstraints = instantiation map { case (v, c) => Equal(v, c) }
               val innerCSP = boundCSP addConstraints additionalConstraints
               if (innerCSP.isSolvable contains false) None else Some(groundPlan(subPlan, innerCSP))
-            } filter { _.isDefined } map { _.get } map { SimpleDecompositionMethod(groundedAbstractTask, _) }
+            } filter { _.isDefined } map { _.get } filter { _.isDefined } map { _.get } map { SimpleDecompositionMethod(groundedAbstractTask, _) }
         }
       case _                                                => noSupport(NONSIMPLEMETHOD)
     }
@@ -135,6 +142,8 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
     plan.variableConstraints.variables foreach { v => assert(plan.variableConstraints.getRepresentative(v).isInstanceOf[Constant]) }
     // TODO handle decomposition axioms ?!?
     assert(domain.decompositionAxioms.isEmpty)
-    (Domain(Nil, allGroundedPredicates.toSeq, allGroundedTasks.toSeq, groundedDecompositionMethods, Nil), groundPlan(plan, plan.variableConstraints))
+    val initialPlanOption = groundPlan(plan, plan.variableConstraints)
+    assert(initialPlanOption.isDefined)
+    (Domain(Nil, allGroundedPredicates.toSeq, allGroundedTasks.toSeq, groundedDecompositionMethods, Nil), initialPlanOption.get)
   }
 }
