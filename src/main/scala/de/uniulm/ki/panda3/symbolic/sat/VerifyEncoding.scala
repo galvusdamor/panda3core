@@ -27,6 +27,9 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   assert(initialPlan.init.substitutedEffects.length == domain.predicates.length)
 
   val DELTA = domain.decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
+  lazy val numberOfLayers          = K
+  lazy val numberOfActionsPerLayer = taskSequence.length
+
 
   def taskIndex(task: Task): Int = domain.tasks indexOf task
 
@@ -54,38 +57,35 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
 
   // LOGICALS ABBREVIATIONS
-  private def atLeastOneOf(atoms: Seq[String]): Seq[Clause] = Clause(atoms map { (_, true) }) :: Nil
+  private def atLeastOneOf(atoms: Seq[String]): Clause = Clause(atoms map { (_, true) })
 
   private def atMostOneOf(atoms: Seq[String]): Seq[Clause] = for (i <- atoms.indices; j <- Range(i + 1, atoms.length)) yield Clause((atoms(i), false) ::(atoms(j), false) :: Nil)
 
-  private def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms) ++ atLeastOneOf(atoms)
+  private def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms) :+ atLeastOneOf(atoms)
 
-  private def impliesNot(left: String, right: String): Seq[Clause] = Clause((left, false) ::(right, false) :: Nil) :: Nil
+  private def impliesNot(left: String, right: String): Clause = Clause((left, false) ::(right, false) :: Nil)
 
   private def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) ::(leftFalse, true) ::(right, false) :: Nil) :: Nil
 
-  private def impliesAllNot(left: String, right: Seq[String]): Seq[Clause] = right flatMap { impliesNot(left, _) }
+  private def impliesAllNot(left: String, right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
+
+  private def impliesSingle(left: String, right: String): Clause = Clause((left, false) ::(right, true) :: Nil)
+
 
   private def impliesRightAnd(leftConjunct: Seq[String], rightConjunct: Seq[String]): Seq[Clause] = {
     val negLeft = leftConjunct map { (_, false) }
     rightConjunct map { r => Clause(negLeft :+(r, true)) }
   }
 
-  private def impliesRightOr(leftConjunct: Seq[String], rightConjunct: Seq[String]): Seq[Clause] = {
+  private def impliesRightOr(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
     val negLeft = leftConjunct map { (_, false) }
     Clause(negLeft ++ (rightConjunct map { x => (x, true) }))
-  } :: Nil
+  }
 
   private def allImply(left: Seq[String], target: String): Seq[Clause] = left flatMap { x => impliesRightAnd(x :: Nil, target :: Nil) }
 
 
   // FORMULA STRUCTURE
-  private def selectActionsForLayer(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap { pos =>
-    val actionAtoms: Seq[String] = domain.tasks map { task => action(layer, pos, task) }
-    val abstractActions: Seq[String] = domain.abstractTasks map { task => action(layer, pos, task) }
-    atMostOneOf(actionAtoms) ++ allImply(actionAtoms, actionUsed(layer, pos)) ++ allImply(abstractActions, actionAbstract(layer, pos)) ++
-      impliesRightOr(actionAbstract(layer, pos) :: Nil, abstractActions) ++ impliesRightOr(actionUsed(layer, pos) :: Nil, actionAtoms)
-  }
 
   private def noActionForLayerFrom(layer: Int, firstNoAction: Int, numberOfInstances: Int): Seq[Clause] = Range(firstNoAction, numberOfInstances) flatMap { pos =>
     val actionAtoms: Seq[String] = domain.tasks map { task => action(layer, pos, task) }
@@ -93,64 +93,67 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   }
 
 
-  private def transitiveOrderForLayer(layer: Int, numberOfInstances: Int): Seq[Clause] =
-    (for (i <- Range(0, numberOfInstances); j <- Range(0, numberOfInstances) if i != j; k <- Range(0, numberOfInstances) if i != k && j != k) yield
+  private def selectActionsForLayer(layer: Int, position: Int): Seq[Clause] = {
+    val actionAtoms: Seq[String] = domain.tasks map { task => action(layer, position, task) }
+    val abstractActions: Seq[String] = domain.abstractTasks map { task => action(layer, position, task) }
+    atMostOneOf(actionAtoms) ++ allImply(actionAtoms, actionUsed(layer, position)) ++ allImply(abstractActions, actionAbstract(layer, position)) :+
+      impliesRightOr(actionAbstract(layer, position) :: Nil, abstractActions) :+ impliesRightOr(actionUsed(layer, position) :: Nil, actionAtoms)
+  }
+
+
+  private def transitiveOrderForLayer(layer: Int): Seq[Clause] =
+    (for (i <- Range(0, numberOfActionsPerLayer); j <- Range(0, numberOfActionsPerLayer) if i != j; k <- Range(0, numberOfActionsPerLayer) if i != k && j != k) yield
       impliesRightAnd(before(layer, i, j) :: before(layer, j, k) :: Nil, before(layer, i, k) :: Nil)).flatten
 
-  private def consistentOrderForLayer(layer: Int, numberOfInstances: Int): Seq[Clause] =
-    (for (i <- Range(0, numberOfInstances); j <- Range(0, numberOfInstances) if i != j) yield impliesNot(before(layer, i, j), before(layer, j, i))).flatten
+  private def consistentOrderForLayer(layer: Int): Seq[Clause] =
+    for (i <- Range(0, numberOfActionsPerLayer); j <- Range(0, numberOfActionsPerLayer) if i != j) yield impliesNot(before(layer, i, j), before(layer, j, i))
 
   // the method applied _to_ the layer
-  private def applyMethod(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap { pos =>
-    val methodRestrictsAT = domain.decompositionMethods flatMap { decompositionMethod =>
-      impliesRightAnd(method(layer, pos, decompositionMethod) :: Nil, action(layer, pos, decompositionMethod.abstractTask) :: Nil)
+  private def applyMethod(layer: Int, position: Int): Seq[Clause] = {
+    val methodRestrictsAT = domain.decompositionMethods map { decompositionMethod =>
+      impliesSingle(method(layer, position, decompositionMethod), action(layer, position, decompositionMethod.abstractTask))
     }
-    val methodMustBeApplied = impliesRightOr(actionAbstract(layer, pos) :: Nil, domain.decompositionMethods map { m => method(layer, pos, m) })
+    val methodMustBeApplied = impliesRightOr(actionAbstract(layer, position) :: Nil, domain.decompositionMethods map { m => method(layer, position, m) })
 
-    methodRestrictsAT ++ methodMustBeApplied
+    methodRestrictsAT :+ methodMustBeApplied
   }
 
-  private def notTwoMethods(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap { pos =>
-    atMostOneOf(domain.decompositionMethods map { method(layer, pos, _) })
-  }
+  private def notTwoMethods(layer: Int, position: Int): Seq[Clause] = atMostOneOf(domain.decompositionMethods map { method(layer, position, _) })
 
-  private def childImpliesChildOf(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap { pos =>
-    Range(0, numberOfInstances) flatMap { father =>
-      val childrenPredicates = Range(0, DELTA) map { childWithIndex(layer, pos, father, _) }
+  private def childImpliesChildOf(layer: Int, position: Int): Seq[Clause] = {
+    Range(0, numberOfActionsPerLayer) flatMap { father =>
+      val childrenPredicates = Range(0, DELTA) map { childWithIndex(layer, position, father, _) }
 
-      (childrenPredicates flatMap { child => impliesRightAnd(child :: Nil, childOf(layer, pos, father) :: Nil) }) ++
-        impliesRightOr(childOf(layer, pos, father) :: Nil, childrenPredicates)
-
-
+      (childrenPredicates map { child => impliesSingle(child, childOf(layer, position, father)) }) :+
+        impliesRightOr(childOf(layer, position, father) :: Nil, childrenPredicates)
     }
   }
 
 
-  private def mustBeChildOf(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap {
-    pos =>
-      val fathers = Range(0, numberOfInstances) flatMap {
-        father => Range(0, DELTA) map {
-          mPos => childWithIndex(layer, pos, father, mPos)
-        }
+  private def mustBeChildOf(layer: Int, position: Int): Seq[Clause] = {
+    val fathers = Range(0, numberOfActionsPerLayer) flatMap {
+      father => Range(0, DELTA) map {
+        mPos => childWithIndex(layer, position, father, mPos)
       }
-      val children: Seq[Seq[String]] = Range(0, DELTA) map {
-        mPos => Range(0, numberOfInstances) map {
-          childPos => childWithIndex(layer, childPos, pos, mPos)
-        }
+    }
+    val children: Seq[Seq[String]] = Range(0, DELTA) map {
+      mPos => Range(0, numberOfActionsPerLayer) map {
+        childPos => childWithIndex(layer, childPos, position, mPos)
       }
+    }
 
-      impliesRightOr(actionUsed(layer, pos) :: Nil, fathers) ++ atMostOneOf(fathers) ++ (children flatMap atMostOneOf)
+    (children flatMap atMostOneOf) ++ atMostOneOf(fathers) :+ impliesRightOr(actionUsed(layer, position) :: Nil, fathers)
   }
 
 
-  private def fatherMustExist(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap {
-    pos => Range(0, numberOfInstances) flatMap {
+  private def fatherMustExist(layer: Int, position: Int): Seq[Clause] = {
+    Range(0, numberOfActionsPerLayer) flatMap {
       father =>
         Range(0, DELTA) flatMap {
           mPos =>
-            val mustHaveAnyFather = impliesRightAnd(childWithIndex(layer, pos, father, mPos) :: Nil, actionUsed(layer - 1, father) :: Nil)
-            val ifNotFirstFatherMustBeAbstract = if (mPos != 0 || father != pos)
-              impliesRightAnd(childWithIndex(layer, pos, father, mPos) :: Nil, actionAbstract(layer - 1, father) :: Nil)
+            val mustHaveAnyFather = impliesRightAnd(childWithIndex(layer, position, father, mPos) :: Nil, actionUsed(layer - 1, father) :: Nil)
+            val ifNotFirstFatherMustBeAbstract = if (mPos != 0 || father != position)
+              impliesSingle(childWithIndex(layer, position, father, mPos), actionAbstract(layer - 1, father)) :: Nil
             else Nil
 
             mustHaveAnyFather ++ ifNotFirstFatherMustBeAbstract
@@ -158,174 +161,152 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
     }
   }
 
-  private def methodMustHaveChildren(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap {
-    fatherPos =>
-      domain.decompositionMethods flatMap {
-        case m@SimpleDecompositionMethod(_, subPlan) =>
-          // those selected
-          val presentChildren: Seq[Clause] = subPlan.planStepsWithoutInitGoal.zipWithIndex flatMap {
-            case (ps, childNumber) =>
-              val mustChildren: Seq[Clause] = impliesRightOr(method(layer, fatherPos, m) :: Nil,
-                                                             Range(0, numberOfInstances) map {
-                                                               childPos => childWithIndex(layer + 1, childPos, fatherPos, childNumber)
-                                                             })
-              // types of the children
-              val childrenType: Seq[Clause] = Range(0, numberOfInstances) flatMap {
-                childPos =>
-                  impliesRightAnd(childWithIndex(layer + 1, childPos, fatherPos, childNumber) :: method(layer, fatherPos, m) :: Nil, action(layer + 1, childPos, ps.schema) :: Nil)
-              }
-              mustChildren ++ childrenType
-          }
-
-          // order of the children
-          val minimalOrdering = subPlan.orderingConstraints.minimalOrderingConstraints() filterNot {
-            _.containsAny(m.subPlan.initAndGoal: _*)
-          }
-          val childrenOrder: Seq[Clause] = minimalOrdering flatMap {
-            case OrderingConstraint(beforePS, afterPS) =>
-              val beforePos: Int = subPlan.planStepsWithoutInitGoal indexOf beforePS
-              val afterPos: Int = subPlan.planStepsWithoutInitGoal indexOf afterPS
-              Range(0, numberOfInstances) flatMap {
-                childBeforePos => Range(0, numberOfInstances) flatMap {
-                  childAfterPos =>
-                    impliesRightAnd(method(layer, fatherPos, m) :: childWithIndex(layer + 1, childBeforePos, fatherPos, beforePos) :: childWithIndex(layer + 1, childAfterPos, fatherPos,
-                                                                                                                                                     afterPos) :: Nil,
-                                    before(layer + 1, childBeforePos, childAfterPos) :: Nil)
-                }
-              }
-          }
-          val nonPresentChildren: Seq[Clause] = Range(subPlan.planStepsWithoutInitGoal.length, DELTA) flatMap {
-            childNumber =>
-              impliesAllNot(method(layer, fatherPos, m), Range(0, numberOfInstances) map {
-                childPos => childWithIndex(layer + 1, childPos, fatherPos, childNumber)
-              })
-          }
-          presentChildren ++ nonPresentChildren ++ childrenOrder
-      }
-  }
-
-  private def maintainPrimitive(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap {
-    pos => domain.primitiveTasks flatMap {
-      task =>
-        impliesRightAnd(action(layer - 1, pos, task) :: Nil, action(layer, pos, task) :: Nil) ++ impliesRightAnd(action(layer - 1, pos, task) :: Nil,
-                                                                                                                 childWithIndex(layer, pos, pos, 0) :: Nil)
-    }
-  }
-
-  private def maintainOrdering(layer: Int, numberOfInstances: Int): Seq[Clause] =
-    Range(0, numberOfInstances) flatMap {
-      parentBeforePos => Range(0, numberOfInstances) flatMap {
-        parentAfterPos =>
-          Range(0, numberOfInstances) flatMap {
-            childBeforePos => Range(0, numberOfInstances) flatMap {
-              childAfterPos =>
-                impliesRightAnd(childOf(layer, childBeforePos, parentBeforePos) :: childOf(layer, childAfterPos, parentAfterPos) ::
-                                  before(layer - 1, parentBeforePos, parentAfterPos) :: Nil, before(layer, childBeforePos, childAfterPos) :: Nil)
+  private def methodMustHaveChildren(layer: Int, fatherPosition: Int): Seq[Clause] = {
+    domain.decompositionMethods flatMap {
+      case m@SimpleDecompositionMethod(_, subPlan) =>
+        // those selected
+        val presentChildren: Seq[Clause] = subPlan.planStepsWithoutInitGoal.zipWithIndex flatMap {
+          case (ps, childNumber) =>
+            val mustChildren: Clause = impliesRightOr(method(layer, fatherPosition, m) :: Nil,
+                                                      Range(0, numberOfActionsPerLayer) map { childPos => childWithIndex(layer + 1, childPos, fatherPosition, childNumber) })
+            // types of the children
+            val childrenType: Seq[Clause] = Range(0, numberOfActionsPerLayer) flatMap {
+              childPos =>
+                impliesRightAnd(childWithIndex(layer + 1, childPos, fatherPosition, childNumber) :: method(layer, fatherPosition, m) :: Nil, action(layer + 1, childPos, ps.schema) :: Nil)
             }
-          }
-      }
-    }
-
-  private def primitivesApplicable(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap {
-    pos => domain.primitiveTasks flatMap {
-      case task: ReducedTask =>
-        task.precondition.conjuncts flatMap {
-          case Literal(pred, isPositive, _) => // there won't be any parameters
-            if (isPositive)
-              impliesRightAnd(action(layer, pos, task) :: Nil, statePredicate(layer, pos, pred) :: Nil)
-            else
-              impliesNot(action(layer, pos, task), statePredicate(layer, pos, pred))
+            childrenType :+ mustChildren
         }
-      case _                 => noSupport(FORUMLASNOTSUPPORTED)
+
+        // order of the children
+        val minimalOrdering = subPlan.orderingConstraints.minimalOrderingConstraints() filterNot {
+          _.containsAny(m.subPlan.initAndGoal: _*)
+        }
+        val childrenOrder: Seq[Clause] = minimalOrdering flatMap {
+          case OrderingConstraint(beforePS, afterPS) =>
+            val beforePos: Int = subPlan.planStepsWithoutInitGoal indexOf beforePS
+            val afterPos: Int = subPlan.planStepsWithoutInitGoal indexOf afterPS
+            Range(0, numberOfActionsPerLayer) flatMap {
+              childBeforePos => Range(0, numberOfActionsPerLayer) flatMap {
+                childAfterPos =>
+                  impliesRightAnd(method(layer, fatherPosition, m) :: childWithIndex(layer + 1, childBeforePos, fatherPosition, beforePos) ::
+                                    childWithIndex(layer + 1, childAfterPos, fatherPosition, afterPos) :: Nil, before(layer + 1, childBeforePos, childAfterPos) :: Nil)
+              }
+            }
+        }
+        val nonPresentChildren: Seq[Clause] = Range(subPlan.planStepsWithoutInitGoal.length, DELTA) flatMap {
+          childNumber =>
+            impliesAllNot(method(layer, fatherPosition, m), Range(0, numberOfActionsPerLayer) map {
+              childPos => childWithIndex(layer + 1, childPos, fatherPosition, childNumber)
+            })
+        }
+        presentChildren ++ nonPresentChildren ++ childrenOrder
     }
   }
 
-  private def stateChange(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap {
-    pos => domain.primitiveTasks flatMap {
-      case task: ReducedTask =>
-        task.effect.conjuncts flatMap {
-          case Literal(pred, isPositive, _) => // there won't be any parameters
-            if (isPositive)
-              impliesRightAnd(action(layer, pos, task) :: Nil, statePredicate(layer, pos + 1, pred) :: Nil)
-            else
-              impliesNot(action(layer, pos, task), statePredicate(layer, pos + 1, pred))
-        }
-      case _                 => noSupport(FORUMLASNOTSUPPORTED)
+  private def maintainPrimitive(layer: Int, position: Int): Seq[Clause] =
+    domain.primitiveTasks flatMap {
+      task => impliesSingle(action(layer - 1, position, task), action(layer, position, task)) ::
+        impliesSingle(action(layer - 1, position, task), childWithIndex(layer, position, position, 0)) :: Nil
     }
+
+  private def maintainOrdering(layer: Int, parentBeforePos: Int): Seq[Clause] =
+    Range(0, numberOfActionsPerLayer) flatMap {
+      parentAfterPos =>
+        Range(0, numberOfActionsPerLayer) flatMap {
+          childBeforePos => Range(0, numberOfActionsPerLayer) flatMap {
+            childAfterPos =>
+              impliesRightAnd(childOf(layer, childBeforePos, parentBeforePos) :: childOf(layer, childAfterPos, parentAfterPos) ::
+                                before(layer - 1, parentBeforePos, parentAfterPos) :: Nil, before(layer, childBeforePos, childAfterPos) :: Nil)
+          }
+        }
+    }
+
+  private def primitivesApplicable(layer: Int, position: Int): Seq[Clause] = domain.primitiveTasks flatMap {
+    case task: ReducedTask =>
+      task.precondition.conjuncts map {
+        case Literal(pred, isPositive, _) => // there won't be any parameters
+          if (isPositive)
+            impliesSingle(action(layer, position, task), statePredicate(layer, position, pred))
+          else
+            impliesNot(action(layer, position, task), statePredicate(layer, position, pred))
+      }
+    case _                 => noSupport(FORUMLASNOTSUPPORTED)
+  }
+
+  private def stateChange(layer: Int, position: Int): Seq[Clause] = domain.primitiveTasks flatMap {
+    case task: ReducedTask =>
+      task.effect.conjuncts map {
+        case Literal(pred, isPositive, _) => // there won't be any parameters
+          if (isPositive)
+            impliesSingle(action(layer, position, task), statePredicate(layer, position + 1, pred))
+          else
+            impliesNot(action(layer, position, task), statePredicate(layer, position + 1, pred))
+      }
+    case _                 => noSupport(FORUMLASNOTSUPPORTED)
   }
 
   // maintains the state only if all actions are actually executed
-  private def weakMaintainState(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap {
-    pos => domain.predicates flatMap {
-      predicate =>
-        true :: false :: Nil flatMap {
-          isPositive => domain.primitiveTasks flatMap {
-            case task: ReducedTask =>
-              if (!(task.effect.conjuncts exists {
-                l => l.predicate == predicate && l.isPositive == isPositive
-              })) {
-                if (isPositive) // if there is no effect making it true then anything that is false stays false
-                  impliesTrueAntNotToNot(action(layer, pos, task), statePredicate(layer, pos, predicate), statePredicate(layer, pos + 1, predicate))
-                else // anything that is true stays true
-                  impliesRightAnd(action(layer, pos, task) :: statePredicate(layer, pos, predicate) :: Nil, statePredicate(layer, pos + 1, predicate) :: Nil)
-              } else Nil
+  private def weakMaintainState(layer: Int, position: Int): Seq[Clause] = domain.predicates flatMap {
+    predicate =>
+      true :: false :: Nil flatMap {
+        isPositive => domain.primitiveTasks flatMap {
+          case task: ReducedTask =>
+            if (!(task.effect.conjuncts exists {
+              l => l.predicate == predicate && l.isPositive == isPositive
+            })) {
+              if (isPositive) // if there is no effect making it true then anything that is false stays false
+                impliesTrueAntNotToNot(action(layer, position, task), statePredicate(layer, position, predicate), statePredicate(layer, position + 1, predicate))
+              else // anything that is true stays true
+                impliesRightAnd(action(layer, position, task) :: statePredicate(layer, position, predicate) :: Nil, statePredicate(layer, position + 1, predicate) :: Nil)
+            } else Nil
+          case _                 => noSupport(FORUMLASNOTSUPPORTED)
+        }
+      }
+  }
+
+  // maintains the state only if all actions are actually executed
+  private def maintainState(layer: Int, position: Int): Seq[Clause] = domain.predicates flatMap {
+    predicate =>
+      true :: false :: Nil map {
+        makeItPositive =>
+          val changingActions: Seq[Task] = domain.primitiveTasks filter {
+            case task: ReducedTask => task.effect.conjuncts exists {
+              l => l.predicate == predicate && l.isPositive == makeItPositive
+            }
             case _                 => noSupport(FORUMLASNOTSUPPORTED)
           }
-        }
-    }
+          val taskLiterals = changingActions map { action(layer, position, _) } map { (_, true) }
+          Clause(taskLiterals :+(statePredicate(layer, position, predicate), makeItPositive) :+(statePredicate(layer, position + 1, predicate), !makeItPositive))
+      }
   }
 
-  // maintains the state only if all actions are actually executed
-  private def maintainState(layer: Int, numberOfInstances: Int): Seq[Clause] = Range(0, numberOfInstances) flatMap {
-    pos => domain.predicates flatMap {
-      predicate =>
-        true :: false :: Nil map {
-          makeItPositive =>
-            val changingActions: Seq[Task] = domain.primitiveTasks filter {
-              case task: ReducedTask => task.effect.conjuncts exists {
-                l => l.predicate == predicate && l.isPositive == makeItPositive
-              }
-              case _                 => noSupport(FORUMLASNOTSUPPORTED)
-            }
-            val taskLiterals = changingActions map {
-              action(layer, pos, _)
-            } map {
-              (_, true)
-            }
-            Clause(taskLiterals :+(statePredicate(layer, pos, predicate), makeItPositive) :+(statePredicate(layer, pos + 1, predicate), !makeItPositive))
-        }
-    }
-  }
-
-  lazy val numberOfLayers          = K
-  lazy val numberOfActionsPerLayer = taskSequence.length
 
   lazy val decompositionFormula: Seq[Clause] = {
     // can't deal with this yet
     initialPlan.planStepsWithoutInitGoal foreach {
       ps => assert(!ps.schema.isPrimitive)
     }
-    val layerMinusOne: Seq[Clause] = (initialPlan.planStepsWithoutInitGoal.zipWithIndex flatMap {
-      case (ps, i) =>
-        // assert specific actions
-        Clause(action(-1, i, ps.schema)) :: Clause(actionUsed(-1, i)) :: Clause(actionAbstract(-1, i)) :: Nil
-    }) ++ (initialPlan.orderingConstraints.minimalOrderingConstraints() filterNot {
+    val layerMinusOneActions: Seq[Clause] = initialPlan.planStepsWithoutInitGoal.zipWithIndex flatMap {
+      case (ps, i) => Clause(action(-1, i, ps.schema)) :: Clause(actionUsed(-1, i)) :: Clause(actionAbstract(-1, i)) :: Nil
+    }
+    val layerMinusOneNoOtherAction: Seq[Clause] = noActionForLayerFrom(-1, initialPlan.planStepsWithoutInitGoal.length, numberOfActionsPerLayer)
+    val layerMinusOneOrdering: Seq[Clause] = initialPlan.orderingConstraints.minimalOrderingConstraints() filterNot {
       _.containsAny(initialPlan.initAndGoal: _*)
     } map {
       case OrderingConstraint(beforePS, afterPS) => Clause(before(-1, initialPlan.planStepsWithoutInitGoal indexOf beforePS, initialPlan.planStepsWithoutInitGoal indexOf afterPS))
-    }) ++ applyMethod(-1, initialPlan.planStepsWithoutInitGoal.length) ++ notTwoMethods(-1, initialPlan.planStepsWithoutInitGoal.length) ++
-      methodMustHaveChildren(-1, initialPlan.planStepsAndRemovedPlanSteps.length) ++
-      selectActionsForLayer(-1, initialPlan.planStepsWithoutInitGoal.length) ++ noActionForLayerFrom(-1, initialPlan.planStepsWithoutInitGoal.length, numberOfActionsPerLayer)
+    }
+    val generalConstraintsLayerMinusOne = Range(0, numberOfActionsPerLayer) flatMap { position =>
+      applyMethod(-1, position) ++ notTwoMethods(-1, position) ++ methodMustHaveChildren(-1, position) ++ selectActionsForLayer(-1, position)
+    }
 
-    val ordinaryLayers: Seq[Clause] = Range(0, K) flatMap {
-      layer =>
-        val actionSelect = selectActionsForLayer(layer, numberOfActionsPerLayer)
-        val order = transitiveOrderForLayer(layer, numberOfActionsPerLayer) ++ consistentOrderForLayer(layer, numberOfActionsPerLayer) ++ maintainOrdering(layer, numberOfActionsPerLayer)
-        val methods = applyMethod(layer, numberOfActionsPerLayer) ++ notTwoMethods(layer, numberOfActionsPerLayer) ++ methodMustHaveChildren(layer, numberOfActionsPerLayer)
-        val childOf = mustBeChildOf(layer, numberOfActionsPerLayer) ++ fatherMustExist(layer, numberOfActionsPerLayer) ++ childImpliesChildOf(layer, numberOfActionsPerLayer)
-        val childrenType = maintainPrimitive(layer, numberOfActionsPerLayer)
+    val layerMinusOne = layerMinusOneActions ++ layerMinusOneNoOtherAction ++ layerMinusOneOrdering ++ generalConstraintsLayerMinusOne
 
-        actionSelect ++ order ++ methods ++ childOf ++ childrenType
+    val ordinaryLayers: Seq[Clause] = Range(0, K) flatMap { layer => (Range(0, numberOfActionsPerLayer) flatMap { position =>
+      selectActionsForLayer(layer, position) ++ maintainOrdering(layer, position) ++
+        applyMethod(layer, position) ++ notTwoMethods(layer, position) ++ methodMustHaveChildren(layer, position) ++
+        mustBeChildOf(layer, position) ++ fatherMustExist(layer, position) ++ childImpliesChildOf(layer, position) ++
+        maintainPrimitive(layer, position)
+    }) ++ transitiveOrderForLayer(layer) ++ consistentOrderForLayer(layer)
     }
 
     val primitiveOrdering: Seq[Clause] = Range(0, taskSequence.length - 1) map {
@@ -337,8 +318,11 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
   lazy val givenActionsFormula: Seq[Clause] = taskSequence.zipWithIndex map { case (task, index) => Clause(action(K - 1, index, task)) }
 
-  lazy val stateTransitionFormula: Seq[Clause] = primitivesApplicable(K - 1, numberOfActionsPerLayer) ++ stateChange(K - 1, numberOfActionsPerLayer) ++
-    maintainState(K - 1, numberOfActionsPerLayer)
+  lazy val noAbstractsFormula: Seq[Clause] = Range(0, numberOfActionsPerLayer) flatMap { position => domain.abstractTasks map { task => Clause((action(K - 1, position, task), false)) } }
+
+  lazy val stateTransitionFormula: Seq[Clause] = Range(0, numberOfActionsPerLayer) flatMap { position =>
+    primitivesApplicable(K - 1, position) ++ stateChange(K - 1, position) ++ maintainState(K - 1, position)
+  }
 
   lazy val initialAndGoalState: Seq[Clause] = {
     val init = initialPlan.init.substitutedEffects map {
@@ -351,17 +335,27 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
     init ++ goal
   }
 
-  lazy val atoms: Seq[String] = ((decompositionFormula ++ givenActionsFormula ++ stateTransitionFormula ++ initialAndGoalState) flatMap { _.disjuncts map { _._1 } }).distinct
+  lazy val atoms      : Seq[String]      = ((decompositionFormula ++ givenActionsFormula ++ stateTransitionFormula ++ initialAndGoalState) flatMap { _.disjuncts map { _._1 } }).distinct
+  lazy val atomIndices: Map[String, Int] = atoms.zipWithIndex.toMap
+
 
   def miniSATString(formulas: Seq[Clause]*): String = {
     val flatFormulas = formulas.flatten
     val header = "p cnf " + atoms.length + " " + flatFormulas.length + "\n"
 
-    val formString = flatFormulas map {
-      case Clause(lits) => ((lits map { case (atom, isPos) => ((atoms indexOf atom) + 1) * (if (isPos) 1 else -1) }) :+ 0) mkString " "
-    } mkString "\n"
+    val stringBuffer = new StringBuffer()
 
-    header + formString
+    flatFormulas foreach {
+      case Clause(lits) =>
+        lits foreach { case (atom, isPos) =>
+          val atomInt = (atomIndices(atom) + 1) * (if (isPos) 1 else -1)
+          stringBuffer append atomInt
+          stringBuffer append ' '
+        }
+        stringBuffer append "0\n"
+    }
+
+    header + stringBuffer.toString
   }
 }
 
@@ -405,10 +399,20 @@ object VerifyEncoding {
 
     println("K " + encoder.K + " DELTA " + encoder.DELTA)
 
+
+    System.in.read()
+    val startTime = System.currentTimeMillis()
+
     val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialAndGoalState //++ encoder.givenActionsFormula
+    val formulaTime = System.currentTimeMillis()
     val encodedString = encoder.miniSATString(usedFormula)
 
     println("Variables : " + encoder.atoms.length + " Constraints: " + encoder.decompositionFormula.length)
+    println("Time needed to compute the formula: " + (formulaTime - startTime) + "ms")
+    println("Time needed to convert the formula into a string: " + (System.currentTimeMillis() - formulaTime) + "ms")
+
+    System.exit(0)
+
 
     writeStringToFile(usedFormula mkString "\n", new File("/home/gregor/formula"))
     writeStringToFile(encodedString, new File("/home/gregor/foo"))
