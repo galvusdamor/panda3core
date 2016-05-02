@@ -1,10 +1,11 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
-import de.uniulm.ki.panda3.symbolic.logic.{Formula, Literal, Predicate}
+import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 
 import de.uniulm.ki.panda3.symbolic._
+import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask}
 import de.uniulm.ki.util.HashMemo
 
 /**
@@ -12,7 +13,7 @@ import de.uniulm.ki.util.HashMemo
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait DecompositionMethod extends DomainUpdatable{
+trait DecompositionMethod extends DomainUpdatable {
 
   val abstractTask: Task
   val subPlan     : Plan
@@ -39,17 +40,26 @@ trait DecompositionMethod extends DomainUpdatable{
 
 /**
   * The most simple implementation of a decomposition method
+  *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends DecompositionMethod with HashMemo{
+case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends DecompositionMethod with HashMemo {
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate))
 }
 
 /**
   * In addition to a plan, SHOPs (and SHOP2s) decomposition methods also may have preconditions. For the semantics of these preconditions see the SHOP/SHOP2 papers
+  *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula) extends DecompositionMethod with HashMemo {
   override def update(domainUpdate: DomainUpdate): SHOPDecompositionMethod = SHOPDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate),
                                                                                                      methodPrecondition update domainUpdate)
+}
+
+case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) {
+  val groundAbstractTask                    : GroundTask      = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
+  val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map { case PlanStep(_, schema, arguments) =>
+    GroundTask(schema, arguments map variableBinding)
+  }
 }

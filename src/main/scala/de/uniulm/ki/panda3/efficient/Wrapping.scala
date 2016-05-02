@@ -388,12 +388,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         searchNode setModifications { () =>
           val modifications = searchNode.plan.flaws.zipWithIndex map { case (flaw, idx) =>
             val otherFlawIndex = efficientSearchNode.plan.flaws indexWhere { efficientFlaw => FlawEquivalenceChecker(efficientFlaw, flaw, this) }
-            val innerModifications = (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
-            println("TEST " + flaw.resolvents(symbolicDomain).length + " == " + efficientSearchNode.modifications(otherFlawIndex).length)
-            val symbolicMods = flaw.resolvents(symbolicDomain)
-            val efficientMods = efficientSearchNode.modifications(otherFlawIndex)
             assert(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length)
-            innerModifications
+            (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
           }
           assert(modifications.length == searchNode.plan.flaws.size)
           modifications
