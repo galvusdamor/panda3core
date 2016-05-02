@@ -7,7 +7,7 @@ import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint
+import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, OrderingConstraint}
 import scala.collection._
 import de.uniulm.ki.util._
 import de.uniulm.ki.panda3.symbolic._
@@ -31,13 +31,20 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   lazy val numberOfActionsPerLayer = taskSequence.length
 
 
-  def taskIndex(task: Task): Int = domain.tasks indexOf task
+  private val taskIndices          : Map[Task, Int]                = domain.tasks.zipWithIndex.toMap.withDefaultValue(-1) // TODO hack!!
+  private val predicateIndices     : Map[Predicate, Int]           = domain.predicates.zipWithIndex.toMap
+  private val methodIndices        : Map[DecompositionMethod, Int] = domain.decompositionMethods.zipWithIndex.toMap
+  private val methodPlanStepIndices: Map[Plan, Map[PlanStep, Int]] = (domain.decompositionMethods map { _.subPlan } map { plan =>
+    (plan, plan.planStepsWithoutInitGoal.zipWithIndex.toMap)
+  }).toMap
+
+  def taskIndex(task: Task): Int = taskIndices(task)
 
 
   // ATOMS
-  private def methodIndex(method: DecompositionMethod): Int = domain.decompositionMethods indexOf method
+  private def methodIndex(method: DecompositionMethod): Int = methodIndices(method)
 
-  def predicateIndex(predicate: Predicate): Int = domain.predicates indexOf predicate
+  def predicateIndex(predicate: Predicate): Int = predicateIndices(predicate)
 
   def action(layer: Int, position: Int, task: Task): String = "action^" + layer + "_" + position + "," + taskIndex(task)
 
@@ -183,8 +190,8 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
         }
         val childrenOrder: Seq[Clause] = minimalOrdering flatMap {
           case OrderingConstraint(beforePS, afterPS) =>
-            val beforePos: Int = subPlan.planStepsWithoutInitGoal indexOf beforePS
-            val afterPos: Int = subPlan.planStepsWithoutInitGoal indexOf afterPS
+            val beforePos: Int = methodPlanStepIndices(subPlan)(beforePS) //subPlan.planStepsWithoutInitGoal indexOf beforePS
+            val afterPos: Int = methodPlanStepIndices(subPlan)(afterPS) // subPlan.planStepsWithoutInitGoal indexOf afterPS
             Range(0, numberOfActionsPerLayer) flatMap {
               childBeforePos => Range(0, numberOfActionsPerLayer) flatMap {
                 childAfterPos =>
