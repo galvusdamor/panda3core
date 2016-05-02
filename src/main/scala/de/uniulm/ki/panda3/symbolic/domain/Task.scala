@@ -26,7 +26,8 @@ trait Task extends DomainUpdatable with PrettyPrintable {
   val precondition        : Formula
   val effect              : Formula
 
-  lazy val taskCSP: CSP = CSP(parameters.toSet, parameterConstraints)
+  lazy val isAbstract: Boolean = !isPrimitive
+  lazy val taskCSP   : CSP     = CSP(parameters.toSet, parameterConstraints)
 
   def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = {
     val sub = PartialSubstitution(parameters, newParameter)

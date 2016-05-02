@@ -12,7 +12,7 @@ import scala.collection.mutable.ArrayBuffer
 // scalastyle:off null
 case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPlan) {
 
-  val extract: EfficientExtractedMethodPlan = {
+  lazy val extract: EfficientExtractedMethodPlan = {
     val planSteps: Array[(Int, Array[Int])] = (2 until subPlan.planStepTasks.length map { case ps => (subPlan.planStepTasks(ps), subPlan.planStepParameters(ps)) }).toArray
     val innerCausalLinks = subPlan.causalLinks filter { cl => cl.consumer != 1 && cl.producer != 0 } map {
       case EfficientCausalLink(p, c, pi, ci) => EfficientCausalLink(p - 2, c - 2, pi, ci)
@@ -40,25 +40,30 @@ case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPla
     ingoingSupporters.indices foreach { case preconditionIndex => if (ingoingSupporters(preconditionIndex) == null) {
       val abstractPrecondition = subPlan.domain.tasks(abstractTask).precondition(preconditionIndex)
 
-      ingoingSupporters(preconditionIndex) = (Range(2, subPlan.numberOfAllPlanSteps) flatMap { case consumer => subPlan.taskOfPlanStep(consumer).precondition.zipWithIndex collect {
-        case (literal, idx) if literal.checkPredicateAndSign(abstractPrecondition) && ((literal.parameterVariables zip abstractPrecondition.parameterVariables) forall { case (v1, v2) =>
-          subPlan.variableConstraints.areCompatible(v1, v2) != EfficientCSP.INCOMPATIBLE
-        }) =>
-          PotentialLinkSupporter(consumer - 2, idx, isNecessary = false)
-      }
+      ingoingSupporters(preconditionIndex) = (Range(2, subPlan.numberOfAllPlanSteps) flatMap { case consumer =>
+        val planStep = subPlan.taskOfPlanStep(consumer)
+        planStep.precondition.zipWithIndex collect {
+          case (literal, idx) if literal.checkPredicateAndSign(abstractPrecondition) &&
+            ((planStep.getArgumentsOfLiteral(subPlan.planStepParameters(consumer), literal) zip abstractPrecondition.parameterVariables) forall { case (v1, v2) =>
+              subPlan.variableConstraints.areCompatible(v1, v2) != EfficientCSP.INCOMPATIBLE
+            }) =>
+            PotentialLinkSupporter(consumer - 2, idx, isNecessary = false)
+        }
       }).toArray
     }
     }
 
     outgoingSupporters.indices foreach { case effectIndex => if (outgoingSupporters(effectIndex) == null) {
       val abstractEffect = subPlan.domain.tasks(abstractTask).effect(effectIndex)
-
-      outgoingSupporters(effectIndex) = (Range(2, subPlan.numberOfAllPlanSteps) flatMap { case producer => subPlan.taskOfPlanStep(producer).effect.zipWithIndex collect {
-        case (literal, idx) if literal.checkPredicateAndSign(abstractEffect) && ((literal.parameterVariables zip abstractEffect.parameterVariables) forall { case (v1, v2) =>
-          subPlan.variableConstraints.areCompatible(v1, v2) != EfficientCSP.INCOMPATIBLE
-        }) =>
-          PotentialLinkSupporter(producer - 2, idx, isNecessary = false)
-      }
+      outgoingSupporters(effectIndex) = (Range(2, subPlan.numberOfAllPlanSteps) flatMap { case producer =>
+        val planStep = subPlan.taskOfPlanStep(producer)
+        planStep.effect.zipWithIndex collect {
+          case (literal, idx) if literal.checkPredicateAndSign(abstractEffect) &&
+            ((planStep.getArgumentsOfLiteral(subPlan.planStepParameters(producer), literal) zip abstractEffect.parameterVariables) forall { case (v1, v2) =>
+              subPlan.variableConstraints.areCompatible(v1, v2) != EfficientCSP.INCOMPATIBLE
+            }) =>
+            PotentialLinkSupporter(producer - 2, idx, isNecessary = false)
+        }
       }).toArray
     }
     }

@@ -57,7 +57,8 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
       stack.push(node)
       onStack.add(node)
 
-      val recursionResult: Seq[Seq[T]] = edges(node) flatMap { neighbour =>
+      val recursionResult: Seq[Seq[T]] = if (!edges.contains(node)) Nil
+      else edges(node) flatMap { neighbour =>
         if (dfsNumber.contains(neighbour)) {
           // search on stack, if found adjust lowlink
           if (onStack(neighbour))

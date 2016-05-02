@@ -122,6 +122,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val efficientCSP = new EfficientCSP(domain)().addVariables((usableVariableSorts map { domainSorts(_) }).toArray)
     plan.variableConstraints.constraints foreach { efficientCSP addConstraint computeEfficientVariableConstraint(_, variablesMap.toMap) }
     necessaryVariableConstraints foreach efficientCSP.addConstraint
+    assert(efficientCSP.potentiallyConsistent != plan.variableConstraints.isSolvable.contains(false))
 
     // ordering
     val ordering = new EfficientOrdering().addPlanSteps(orderedTasks.length)
@@ -344,7 +345,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
     // and return the actual plan
     val symbolicPlan = Plan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1), ModificationsByClass(allowedModifications: _*),
-                                    FlawsByClass(allowedFlaws: _*), planStepDecomposedByMethod, parentsInDecompositionTree)
+                            FlawsByClass(allowedFlaws: _*), planStepDecomposedByMethod, parentsInDecompositionTree)
     // sanity checks
     if (symbolicPlan.variableConstraints.isSolvable.getOrElse(true) != plan.variableConstraints.potentiallyConsistent) {
       println(symbolicPlan.variableConstraints.isSolvable + " " + plan.variableConstraints.potentiallyConsistent)
@@ -385,9 +386,14 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         assert(searchNode.plan.flaws.size == efficientSearchNode.modifications.length)
         // reorder modifications
         searchNode setModifications { () =>
-          val modifications = searchNode.plan.flaws map { flaw =>
+          val modifications = searchNode.plan.flaws.zipWithIndex map { case (flaw, idx) =>
             val otherFlawIndex = efficientSearchNode.plan.flaws indexWhere { efficientFlaw => FlawEquivalenceChecker(efficientFlaw, flaw, this) }
-            (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
+            val innerModifications = (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
+            println("TEST " + flaw.resolvents(symbolicDomain).length + " == " + efficientSearchNode.modifications(otherFlawIndex).length)
+            val symbolicMods = flaw.resolvents(symbolicDomain)
+            val efficientMods = efficientSearchNode.modifications(otherFlawIndex)
+            assert(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length)
+            innerModifications
           }
           assert(modifications.length == searchNode.plan.flaws.size)
           modifications
@@ -446,11 +452,12 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
       val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
       val subPlanPlanSteps = insertedPlanSteps :+ init :+ goal
-      val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) }
+      val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) } filter {
+        case OrderingConstraint(before, after) => subPlanPlanSteps.contains(before) && subPlanPlanSteps.contains(after)
+      }
       val ordering = TaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
       val csp = CSP((newVariables ++ nonPresentDecomposedPlanStep.arguments).toSet, innerConstraints)
-      val subPlan = Plan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](),
-                                 Map[PlanStep, (PlanStep, PlanStep)]())
+      val subPlan = Plan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](), Map[PlanStep, (PlanStep, PlanStep)]())
 
       // construct the modification
       DecomposePlanStep(wrapPlanStep(decomposedPS, wrappedPlan), nonPresentDecomposedPlanStep, subPlan, outerConstraints, inheritedLinks, appliedDecompositionMethod, planStepMapping,

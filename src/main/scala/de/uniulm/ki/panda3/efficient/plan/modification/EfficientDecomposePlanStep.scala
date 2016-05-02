@@ -27,7 +27,7 @@ case class EfficientDecomposePlanStep(plan: EfficientPlan, resolvedFlaw: Efficie
                                                                                                       decomposedPlanStepsByMethod)
 
   /** returns a string by which this object may be referenced */
-  override def shortInfo: String = "Decompose PS " + decomposedPlanSteps + " with " + addedPlanSteps.mkString("(",",",")")
+  override def shortInfo: String = "Decompose PS " + decomposedPlanSteps + " with " + addedPlanSteps.mkString("(", ",", ")")
 }
 
 object EfficientDecomposePlanStep {
@@ -247,12 +247,26 @@ object EfficientDecomposePlanStep {
     var possibleMethodIndex = 0
     while (possibleMethodIndex < possibleMethods.length) {
       if (targetPredicate == -1 || plan.domain.methodCanSupportLiteral(possibleMethods(possibleMethodIndex)._2)(literal)) {
-        val method = possibleMethods(possibleMethodIndex)._1.extract
+        val method = possibleMethods(possibleMethodIndex)._1
+        val methodExtract = method.extract
         val methodIndex = possibleMethods(possibleMethodIndex)._2
 
+        // check whether parameter of abstract task are compatible
+        var parameter = 0
+        var parameterOK = method.subPlan.variableConstraints.potentiallyConsistent
+        val abstractTaskParameter = plan.planStepParameters(planStep)
+        while (parameter < abstractTaskParameter.length) {
+          if (!plan.variableConstraints.isRepresentativeAVariable(abstractTaskParameter(parameter))) {
+            val boundToConstant = plan.variableConstraints.getRepresentativeConstant(abstractTaskParameter(parameter))
+            parameterOK &= method.subPlan.variableConstraints.getRemainingDomain(parameter) contains boundToConstant
+          }
+          parameter += 1
+        }
+
+        if (parameterOK)
         // generate all causal link inheritances
-        applyMethodToPlan(buffer, plan, resolvedFlaw, planStep, method, methodIndex, 0, 0, 0,
-                          new mutable.ArrayStack[EfficientCausalLink](), new mutable.ArrayStack[EfficientVariableConstraint]())
+          applyMethodToPlan(buffer, plan, resolvedFlaw, planStep, methodExtract, methodIndex, 0, 0, 0,
+                            new mutable.ArrayStack[EfficientCausalLink](), new mutable.ArrayStack[EfficientVariableConstraint]())
       }
       possibleMethodIndex += 1
     }

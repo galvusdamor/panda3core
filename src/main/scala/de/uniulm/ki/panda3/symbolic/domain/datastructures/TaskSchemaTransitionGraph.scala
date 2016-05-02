@@ -33,13 +33,13 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraph[Task]
   }
 
   /** the boolean states whether the preciate can be produced negated or positive */
-  lazy val canBeDirectlyDecomposedIntoForPredicate: Map[(Task, Predicate, Boolean), Seq[(DecompositionMethod, Task)]] = canBeDecomposedIntoVia flatMap { case (task, set) =>
+  lazy val canBeDirectlyDecomposedIntoForPredicate: Map[(Task, Predicate, Boolean), Seq[DecompositionMethod]] = canBeDecomposedIntoVia flatMap { case (task, set) =>
     (for (pred <- domain.predicates; positive <- true :: false :: Nil) yield (pred, positive)) map { case (pred, positive) =>
       val targetDecompositions = set filter {
         case (method, reducedTask: ReducedTask) => reducedTask.effect.conjuncts exists { eff => eff.predicate == pred && eff.isPositive == positive }
         case _                                  => noSupport(FORUMLASNOTSUPPORTED)
-      }
-      (task, pred, positive) -> targetDecompositions
+      } map {_._1}
+      (task, pred, positive) -> targetDecompositions.distinct
     }
   }
 }
