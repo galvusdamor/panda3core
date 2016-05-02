@@ -21,7 +21,7 @@ case class LiftedForwardSearchReachabilityAnalysis(domain: Domain, initialState:
       // build the next layer
       val nextLayer = buildLayer(state)
       if (nextLayer._2.size == state.size) {
-        if (state == initialState) nextLayer :: Nil else Nil
+        nextLayer :: Nil
       }
       else {
         val nextLayers = iterateLayer(nextLayer._2)
