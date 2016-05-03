@@ -1,12 +1,13 @@
-package de.uniulm.ki.panda3.symbolic.domain.datastructures
+package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{LayeredLiftedPrimitiveReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class LiftedForwardSearchReachabilityAnalysis(domain: Domain, initialState: Set[(Predicate, Boolean)]) extends LiftedReachabilityAnalysis {
+case class LiftedForwardSearchReachabilityAnalysis(domain: Domain, initialState: Set[(Predicate, Boolean)]) extends LayeredLiftedPrimitiveReachabilityAnalysis {
 
   override protected val layer: Seq[(Set[Task], Set[(Predicate, Boolean)])] = {
     // function to build a single layer

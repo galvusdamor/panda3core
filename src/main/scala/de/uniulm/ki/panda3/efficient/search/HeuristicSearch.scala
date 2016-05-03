@@ -10,8 +10,9 @@ import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.PruneHierarchy
 import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{LiftedForwardSearchReachabilityAnalysis, GroundedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
+import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.search.SearchNode
 import de.uniulm.ki.util.Dot2PdfCompiler
 
@@ -38,15 +39,15 @@ object HeuristicSearch {
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
-    val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
-    val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
+    //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
 
     print("Parsing domain and problem ... ")
-    val domAndInitialPlan = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
-    //val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    //val domAndInitialPlan = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
     print("done\npreprocessing ... ")
     val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
 
@@ -65,7 +66,7 @@ object HeuristicSearch {
     val liftedRelaxedInitialState = flattened._2.init.schema.effectsAsPredicateBool
     val liftedReachabilityAnalysis = LiftedForwardSearchReachabilityAnalysis(flattened._1, liftedRelaxedInitialState.toSet)
     println("lifted analysis")
-    println("" + liftedReachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
+    println("" + liftedReachabilityAnalysis.reachableLiftedPrimitiveActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
     println("" + liftedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
 
 
@@ -74,10 +75,10 @@ object HeuristicSearch {
     val groundedReachabilityAnalysis = GroundedForwardSearchReachabilityAnalysis(flattened._1, groundedInitialState.toSet)
 
     println("grounded analysis")
-    println("" + groundedReachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
+    println("" + groundedReachabilityAnalysis.reachableLiftedPrimitiveActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
     println("" + groundedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
 
-    val disallowedTasks = flattened._1.primitiveTasks filterNot groundedReachabilityAnalysis.reachableLiftedActions.contains
+    val disallowedTasks = flattened._1.primitiveTasks filterNot groundedReachabilityAnalysis.reachableLiftedPrimitiveActions.contains
     val prunedDomain = PruneHierarchy.transform(flattened, disallowedTasks.toSet)
 
     println("reduced domain:")
@@ -210,10 +211,10 @@ object HeuristicSearch {
               val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))
 
               if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
-                val heuristicValue = heuristic.computeHeuristic(newPlan)
+                val heuristicValue = newPlan.numberOfPlanSteps //heuristic.computeHeuristic(newPlan)
                 //val modString = myNode.modHist + "\n" + flaws(myNode.selectedFlaw).longInfo + "\n" + actualModifications(modNum).longInfo + " (" + (smallFlawNumMod-1) + " alternatives)" +
                 //"\n" + allmods
-                val searchNode = if (buildTree) new EfficientSearchNode(newPlan, myNode, 0) else new EfficientSearchNode(newPlan, null, heuristicValue/*, modString*/)
+                val searchNode = if (buildTree) new EfficientSearchNode(newPlan, myNode, 0) else new EfficientSearchNode(newPlan, null, heuristicValue /*, modString*/)
 
                 searchQueue enqueue ((searchNode, depth + 1))
                 children append ((searchNode, modNum))
@@ -240,8 +241,8 @@ object HeuristicSearch {
             val symPlan = wrapping.wrap(plan)
             Dot2PdfCompiler.writeDotToFile(symPlan, outputPDF)
             println("Found a solution after visiting " + nodes + " search nodes")
-            //println(symPlan.longInfo)
-            //println(symPlan.orderingConstraints.longInfo)
+          //println(symPlan.longInfo)
+          //println(symPlan.orderingConstraints.longInfo)
         }
       }
     }).start()

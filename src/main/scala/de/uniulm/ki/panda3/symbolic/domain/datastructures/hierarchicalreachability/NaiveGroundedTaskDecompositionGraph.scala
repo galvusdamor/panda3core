@@ -1,17 +1,19 @@
-package de.uniulm.ki.panda3.symbolic.domain.datastructures
+package de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability
 
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.csp.Equal
 import de.uniulm.ki.panda3.symbolic.domain._
-import de.uniulm.ki.panda3.symbolic.logic.{Variable, Sort, Constant}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{ReachabilityAnalysis, GroundedPrimitiveReachabilityAnalysis, GroundedReachabilityAnalysis}
+import de.uniulm.ki.panda3.symbolic.logic.{GroundLiteral, Constant, Sort, Variable}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask}
-import de.uniulm.ki.util.{SimpleAndOrGraph, AndOrGraph}
+import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
+import de.uniulm.ki.util.{AndOrGraph, SimpleAndOrGraph}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedReachabilityAnalysis, prunePrimitive: Boolean) {
+case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis, prunePrimitive: Boolean) extends
+  GroundedReachabilityAnalysis {
 
   lazy val taskDecompositionGraph: AndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod] = {
     // compute groundings of abstract tasks naively
@@ -73,7 +75,7 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
       }
     }
 
-    val allGroundedActions: Set[GroundTask] = (abstractTaskGroundings.values.flatten ++ groundedReachabilityAnalysis.reachableGroundActions).toSet
+    val allGroundedActions: Set[GroundTask] = (abstractTaskGroundings.values.flatten ++ groundedReachabilityAnalysis.reachableGroundPrimitiveActions).toSet
     val (remainingGroundTasks, remainingGroundMethods) = pruneMethodsAndTasksIfPossible(allGroundedActions, groundedDecompositionMethods.values.flatten.toSet)
 
     val prunedTaskToMethodEdges = groundedDecompositionMethods collect { case (a, b) if remainingGroundTasks contains a => (a, b.toSet intersect remainingGroundMethods) }
@@ -81,7 +83,7 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
     val firstAndOrGraph = SimpleAndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod](remainingGroundTasks, remainingGroundMethods, prunedTaskToMethodEdges,
                                                                                             prunedMethodToTaskEdges.toMap)
 
-    // rechability analysis
+    // reachability analysis
     // TODO handle the case where the initial plan contains variable, e.g. by introducing a new method
     initialPlan.variableConstraints.variables foreach { v => assert(initialPlan.variableConstraints.getRepresentative(v).isInstanceOf[Constant]) }
     val initialPlanGrounding = initialPlan.planStepsWithoutInitGoal map { case PlanStep(_, schema, arguments) =>
@@ -93,8 +95,7 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
     firstAndOrGraph pruneToEntities reachableEntities
   }
 
-  lazy val reachableGroundedMethods       : Seq[GroundedDecompositionMethod] = taskDecompositionGraph.orVertices.toSeq
-  lazy val reachableGroundedTasks         : Seq[GroundTask]                  = taskDecompositionGraph.andVertices.toSeq
-  lazy val reachableGroundedAbstractTasks : Seq[GroundTask]                  = reachableGroundedTasks filter { _.task.isAbstract }
-  lazy val reachableGroundedPrimitiveTasks: Seq[GroundTask]                  = reachableGroundedTasks filter { _.task.isPrimitive }
+  override lazy val reachableGroundedTasks: Seq[GroundTask] = taskDecompositionGraph.andVertices.toSeq
+  override lazy val reachableGroundMethods : Seq[GroundedDecompositionMethod] = taskDecompositionGraph.orVertices.toSeq
+  override lazy val reachableGroundLiterals: Seq[GroundLiteral]               = groundedReachabilityAnalysis.reachableGroundLiterals
 }

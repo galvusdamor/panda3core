@@ -11,7 +11,7 @@ import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneHierarchy, PruneTasks}
 import de.uniulm.ki.panda3.symbolic.compiler.{SHOPMethodCompiler, ToPlainFormulaRepresentation, ClosedWorldAssumption}
 import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{LiftedForwardSearchReachabilityAnalysis, GroundedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -25,7 +25,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 object BFS {
 
-  var outputPDF : String = "plan.pdf"
+  var outputPDF: String = "plan.pdf"
 
   def main(args: Array[String]) {
     /*if (args.length != 3) {
@@ -37,12 +37,15 @@ object BFS {
     outputPDF = args(2)
     */
 
-    val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
-    val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
+    //val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
+    //val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
 
     //val domFile = "/home/gregor/temp/send/domain2.lisp"
     //val probFile = "/home/gregor/temp/send/problem2.lisp"
-    outputPDF = "/home/dhoeller/Schreibtisch/test.pdf"
+    //outputPDF = "/home/dhoeller/Schreibtisch/test.pdf"
+    outputPDF = "/home/gregor/test.pdf"
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
@@ -53,8 +56,8 @@ object BFS {
     //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
     print("Parsing domain and problem ... ")
-    val domAndInitialPlan = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
-    //val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    //val domAndInitialPlan = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+    val domAndInitialPlan = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
     print("done\npreprocessing ... ")
     val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
 
@@ -73,17 +76,17 @@ object BFS {
     val liftedRelaxedInitialState = flattened._2.init.schema.effectsAsPredicateBool
     val liftedReachabilityAnalysis = LiftedForwardSearchReachabilityAnalysis(flattened._1, liftedRelaxedInitialState.toSet)
     println("lifted analysis")
-    println("" + liftedReachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
+    println("" + liftedReachabilityAnalysis.reachableLiftedPrimitiveActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
     println("" + liftedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
 
     val groundedInitialState = flattened._2.groundedInitialState
     val groundedReachabilityAnalysis = GroundedForwardSearchReachabilityAnalysis(flattened._1, groundedInitialState.toSet)
 
     println("grounded analysis")
-    println("" + groundedReachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
+    println("" + groundedReachabilityAnalysis.reachableLiftedPrimitiveActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
     println("" + groundedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
 
-    val disallowedTasks = flattened._1.primitiveTasks filterNot groundedReachabilityAnalysis.reachableLiftedActions.contains
+    val disallowedTasks = flattened._1.primitiveTasks filterNot groundedReachabilityAnalysis.reachableLiftedPrimitiveActions.contains
     val prunedDomain = PruneHierarchy.transform(flattened, disallowedTasks.toSet)
 
     println("reduced domain:")
@@ -94,7 +97,7 @@ object BFS {
 
     // wrap everything into the efficient datastructures
 
-    val domainToSearchWith = prunedDomain
+    val domainToSearchWith = flattened //prunedDomain
 
 
     val wrapper = Wrapping(domainToSearchWith)
@@ -104,7 +107,7 @@ object BFS {
 
     //System.in.read()
     //dfs(initialPlan, 0)
-    val buildTree = false
+    val buildTree = true
     val (searchNode, sem, _) = startSearch(initialPlan, wrapper, Some(2000000), buildTree)
 
     sem.acquire()
@@ -118,8 +121,9 @@ object BFS {
 
       def dfsNode(node: SearchNode): Unit = {
         wrappC += 1
-        //node.modifications // force the evaluation
-        if (wrappC % 10 == 0) println("Wrapped: " + wrappC)
+        node.modifications // force the evaluation
+        if (wrappC % 10 == 0)
+          println("Wrapped: " + wrappC)
         node.children foreach { case (x, _) => dfsNode(x) }
       }
 

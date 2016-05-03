@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.domain.datastructures
 
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, DecompositionMethod, Domain, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.util.DirectedGraph
 

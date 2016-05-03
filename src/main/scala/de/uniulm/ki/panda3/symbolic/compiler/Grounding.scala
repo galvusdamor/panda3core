@@ -1,8 +1,8 @@
 package de.uniulm.ki.panda3.symbolic.compiler
 
 import de.uniulm.ki.panda3.symbolic.csp.{CSP, Equal, VariableConstraint}
-import de.uniulm.ki.panda3.symbolic.domain.{SimpleDecompositionMethod, ReducedTask, Task, Domain}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.domain.{SimpleDecompositionMethod, ReducedTask, Task, Domain}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep, GroundTask}
@@ -48,7 +48,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
       case _                                                                   => noSupport(FORUMLASNOTSUPPORTED)
     }
 
-    val groundedPrimitiveTasks: Map[Task, Map[Seq[Constant], (Task, GroundTask)]] = reachabilityAnalysis.reachableGroundActions groupBy { _.task } map { case (t, groundActs) =>
+    val groundedPrimitiveTasks: Map[Task, Map[Seq[Constant], (Task, GroundTask)]] = reachabilityAnalysis.reachableGroundPrimitiveActions groupBy { _.task } map { case (t, groundActs) =>
       val taskMap: Map[Seq[Constant], (Task, GroundTask)] = groundActs groupBy { _.arguments } map { case (args, taskList) =>
         assert(taskList.length == 1)
         assert(taskList.head.task.isPrimitive) // this can only be a primitive action

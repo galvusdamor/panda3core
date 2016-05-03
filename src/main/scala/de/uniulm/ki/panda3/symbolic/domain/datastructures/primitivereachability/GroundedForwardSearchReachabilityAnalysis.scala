@@ -1,6 +1,7 @@
-package de.uniulm.ki.panda3.symbolic.domain.datastructures
+package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{LayeredGroundedPrimitiveReachabilityAnalysis, GroundedPrimitiveReachabilityAnalysis, GroundedReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 
@@ -9,7 +10,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class GroundedForwardSearchReachabilityAnalysis(domain: Domain, initialState: Set[GroundLiteral]) extends GroundedReachabilityAnalysis {
+case class GroundedForwardSearchReachabilityAnalysis(domain: Domain, initialState: Set[GroundLiteral]) extends LayeredGroundedPrimitiveReachabilityAnalysis {
 
   protected lazy val layer: Seq[(Set[GroundTask], Set[GroundLiteral])] = {
     // function to build a single layer
