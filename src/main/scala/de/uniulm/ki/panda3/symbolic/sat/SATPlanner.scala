@@ -5,7 +5,8 @@ import java.io.{File, FileInputStream}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.PruneHierarchy
 import de.uniulm.ki.panda3.symbolic.compiler.{Grounding, ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
 import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{LiftedForwardSearchReachabilityAnalysis, GroundedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -30,11 +31,11 @@ object SATPlanner {
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--1--3.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--1--3.xml"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/p01-hierarchical.xml"
@@ -55,28 +56,37 @@ object SATPlanner {
     val liftedRelaxedInitialState = flattened._2.init.schema.effectsAsPredicateBool
     val liftedReachabilityAnalysis = LiftedForwardSearchReachabilityAnalysis(flattened._1, liftedRelaxedInitialState.toSet)
     println("lifted analysis")
-    println("" + liftedReachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
+    println("" + liftedReachabilityAnalysis.reachableLiftedPrimitiveActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
     println("" + liftedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
 
     val groundedInitialState = flattened._2.groundedInitialState
     val groundedReachabilityAnalysis = GroundedForwardSearchReachabilityAnalysis(flattened._1, groundedInitialState.toSet)
 
     println("grounded analysis")
-    println("" + groundedReachabilityAnalysis.reachableLiftedActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
+    println("" + groundedReachabilityAnalysis.reachableLiftedPrimitiveActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
     println("" + groundedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
+    println("" + groundedReachabilityAnalysis.reachableGroundPrimitiveActions.size + " grounded primitive tasks reachable")
+    println("" + groundedReachabilityAnalysis.reachableGroundLiterals.size + " grounded literals reachable")
 
-    val disallowedTasks = flattened._1.primitiveTasks filterNot groundedReachabilityAnalysis.reachableLiftedActions.contains
+    val disallowedTasks = flattened._1.primitiveTasks filterNot groundedReachabilityAnalysis.reachableLiftedPrimitiveActions.contains
     val prunedDomain = PruneHierarchy.transform(flattened, disallowedTasks.toSet)
 
+    val tdg = NaiveGroundedTaskDecompositionGraph(prunedDomain._1, prunedDomain._2, groundedReachabilityAnalysis, true)
+
+    println("TDG:\nreachable ATs: " + tdg.reachableGroundAbstractActions.size + "\nreachable methods: " + tdg.reachableGroundMethods.size)
+
+
     // ground the domain ...
-    val groundedDomain = Grounding.transform(prunedDomain, groundedReachabilityAnalysis)
+    val groundedDomain = Grounding.transform(prunedDomain, tdg)
     println(groundedDomain._1.statisticsString)
 
     val (dom, iniPlan) = groundedDomain
 
+    writeStringToFile(HPDDLWriter("foo", "Bar").writeDomain(dom), new File("/home/gregor/groundedDom.hpddl"))
+    writeStringToFile(HPDDLWriter("foo", "Bar").writeProblem(dom, iniPlan), new File("/home/gregor/groundedProf.hpddl"))
 
-    //writeStringToFile(HPDDLWriter("foo", "Bar").writeDomain(dom), new File("/home/gregor/groundedDom.hpddl"))
-    //writeStringToFile(HPDDLWriter("foo", "Bar").writeProblem(dom, iniPlan), new File("/home/gregor/groundedProf.hpddl"))
+    //System.exit(0)
+
 
     println(dom.statisticsString)
     //val p1 = dom.primitiveTasks.find({ _.name == "p1" }).get
@@ -84,9 +94,9 @@ object SATPlanner {
     //val p3 = dom.primitiveTasks.find({ _.name == "p3" }).get
 
     // TODO still coded very badly
-    val verifySeq = Range(0, 11) map { _ => null }
+    val verifySeq = Range(0, 14) map { _ => null }
 
-    val encoder = VerifyEncoding(dom, iniPlan, verifySeq)(5)
+    val encoder = VerifyEncoding(dom, iniPlan, verifySeq)(7)
 
     println("K " + encoder.K + " DELTA " + encoder.DELTA)
 
@@ -104,10 +114,9 @@ object SATPlanner {
     val stringToFileTime = System.currentTimeMillis()
     println("Time needed to wirte the string to file: " + (stringToFileTime - stringTime) + "ms")
 
-    //System.exit(0)
     try {
       println("Starting minisat")
-      //"minisat /home/gregor/foo /home/gregor/res.txt" !
+      "minisat /home/gregor/foo /home/gregor/res.txt" !
     } catch {
       case rt: RuntimeException => println("Minisat exitcode problem ...")
     }
@@ -135,7 +144,7 @@ object SATPlanner {
             if ((encoder.atoms contains childString) && (literals contains (1 + (encoder.atoms indexOf childString)))) {
               // find parent and myself
               val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
-              assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
+              assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a father")
               val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
               assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
               (fatherStringOption.get, childStringOption.get) :: Nil
