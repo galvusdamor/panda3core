@@ -24,12 +24,12 @@ class GraphTest extends FlatSpec {
     assert(sccs exists { _ forall { n => n == 0 || n == 1 || n == 2 } })
     assert(sccs exists { _ forall { n => n == 3 || n == 4 || n == 5 } })
 
-    assert(g.getComponentOf(0) match { case Some(l) => l.toSet == Set(0, 1, 2); case None => false })
-    assert(g.getComponentOf(1) match { case Some(l) => l.toSet == Set(0, 1, 2); case None => false })
-    assert(g.getComponentOf(2) match { case Some(l) => l.toSet == Set(0, 1, 2); case None => false })
-    assert(g.getComponentOf(3) match { case Some(l) => l.toSet == Set(3, 4, 5); case None => false })
-    assert(g.getComponentOf(4) match { case Some(l) => l.toSet == Set(3, 4, 5); case None => false })
-    assert(g.getComponentOf(5) match { case Some(l) => l.toSet == Set(3, 4, 5); case None => false })
+    assert(g.getComponentOf(0) == Set(0, 1, 2))
+    assert(g.getComponentOf(1) == Set(0, 1, 2))
+    assert(g.getComponentOf(2) == Set(0, 1, 2))
+    assert(g.getComponentOf(3) == Set(3, 4, 5))
+    assert(g.getComponentOf(4) == Set(3, 4, 5))
+    assert(g.getComponentOf(5) == Set(3, 4, 5))
   }
 
   it must "have the correct list of edges" in {

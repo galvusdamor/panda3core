@@ -25,6 +25,6 @@ case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends D
 
   lazy val taskCanSupportByDecomposition: Map[Int, Array[(Int, Boolean)]] = (vertices map { task =>
       val produciblePredicates = reachable(task) filterNot { _ == task } flatMap { subTask => domain.tasks(subTask).effect map { eff => (eff.predicate, eff.isPositive) } }
-      (task, produciblePredicates.distinct.toArray)
+      (task, produciblePredicates.toArray)
     }).toMap
 }

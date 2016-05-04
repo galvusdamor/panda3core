@@ -29,7 +29,7 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraph[Task]
 
 
   lazy val canBeDecomposedIntoVia: Map[Task, Seq[(DecompositionMethod, Task)]] = canBeDirectlyDecomposedIntoVia map { case (task, directDecomps) => (task, directDecomps
-    .toSeq flatMap { case (method, subtask) => (reachable(subtask) :+ subtask) map { (method, _) } })
+    .toSeq flatMap { case (method, subtask) => (reachable(subtask) + subtask) map { (method, _) } })
   }
 
   /** the boolean states whether the preciate can be produced negated or positive */

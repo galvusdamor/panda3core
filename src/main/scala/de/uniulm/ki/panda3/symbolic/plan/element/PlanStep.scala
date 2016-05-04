@@ -83,19 +83,22 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
 /**
   * A ground task is basically a planstep without an id.
   */
-case class GroundTask(task: Task, arguments: Seq[Constant]) {
+case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
   assert(task.parameters.size == arguments.size)
   task.parameters.zipWithIndex foreach { case (p, i) => assert(p.sort.elements.contains(arguments(i))) }
 
-  private lazy val parameterSubstitution : TotalSubstitution[Variable,Constant] = TotalSubstitution(task.parameters,arguments)
+  private lazy val parameterSubstitution: TotalSubstitution[Variable, Constant] = TotalSubstitution(task.parameters, arguments)
 
   lazy val substitutedPreconditions: Seq[GroundLiteral] = task match {
-    case reduced: ReducedTask => reduced.precondition.conjuncts map {_ ground parameterSubstitution}
+    case reduced: ReducedTask => reduced.precondition.conjuncts map { _ ground parameterSubstitution }
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
+
+  lazy val substitutedPreconditionsSet: Set[GroundLiteral] = substitutedPreconditions.toSet
+
   /** returns a version of the effects */
-  lazy val substitutedEffects      : Seq[GroundLiteral] = task match {
-    case reduced: ReducedTask => reduced.effect.conjuncts map {_ ground parameterSubstitution}
+  lazy val substitutedEffects         : Seq[GroundLiteral] = task match {
+    case reduced: ReducedTask => reduced.effect.conjuncts map { _ ground parameterSubstitution }
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
 }

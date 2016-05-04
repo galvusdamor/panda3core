@@ -19,13 +19,13 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraph[T] {
   lazy val edges: Map[T, Seq[T]] = {
     val edg = (andEdges ++ orEdges) map { case (a, b) => (a, b.toSeq) }
 
-    edg.values.flatten foreach { x => assert(vertices contains x) }
+    //edg.values.flatten foreach { x => assert(vertices contains x) }
 
     edg
   }
 
   /** does not remove vertices */
-  def pruneToEntities(restrictToEntities: Seq[T]): AndOrGraph[T, A, O] = {
+  def pruneToEntities(restrictToEntities: Set[T]): AndOrGraph[T, A, O] = {
     val prunedAndVertices = andVertices filter { restrictToEntities.contains }
     val prunedOrVertices = orVertices filter { restrictToEntities.contains }
     val prunedAndEdges = andEdges filter { case (a, _) => restrictToEntities contains a }
@@ -41,4 +41,6 @@ case class SimpleAndOrGraph[T, A <: T, O <: T](andVertices: Set[A], orVertices: 
   orEdges foreach { o => assert(orVertices contains o._1) }
   andEdges foreach { _._2 foreach { o => assert(orVertices contains o) } }
   orEdges foreach { _._2 foreach { a => assert(andVertices contains a) } }
+  assert(andVertices.size == andEdges.size)
+  assert(orVertices.size == orEdges.size)
 }

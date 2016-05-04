@@ -6,16 +6,17 @@ import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 
 /**
-  * A very simple, delete relaxed reachability analysis
+  * A very simple, mutex relaxed reachability analysis
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class GroundedForwardSearchReachabilityAnalysis(domain: Domain, initialState: Set[GroundLiteral]) extends LayeredGroundedPrimitiveReachabilityAnalysis {
+case class GroundedForwardSearchReachabilityAnalysis(domain: Domain, initialState: Set[GroundLiteral])(allowedGroundings: Seq[GroundTask] = domain.allGroundedPrimitiveTasks) extends
+  LayeredGroundedPrimitiveReachabilityAnalysis {
 
   protected lazy val layer: Seq[(Set[GroundTask], Set[GroundLiteral])] = {
     // function to build a single layer
     def buildLayer(state: Set[GroundLiteral]): (Set[GroundTask], Set[GroundLiteral]) = {
-      val applicableGroundActions = domain.allGroundedPrimitiveTasks filter { _.substitutedPreconditions.toSet subsetOf state }
+      val applicableGroundActions = allowedGroundings filter { _.substitutedPreconditionsSet subsetOf state }
       val resultingState = state ++ (applicableGroundActions flatMap { _.substitutedEffects })
       (applicableGroundActions.toSet, resultingState)
     }
@@ -26,8 +27,7 @@ case class GroundedForwardSearchReachabilityAnalysis(domain: Domain, initialStat
       val nextLayer = buildLayer(state)
       if (nextLayer._2.size == state.size) {
         nextLayer :: Nil
-      }
-      else {
+      } else {
         val nextLayers = iterateLayer(nextLayer._2)
         nextLayer +: nextLayers
       }

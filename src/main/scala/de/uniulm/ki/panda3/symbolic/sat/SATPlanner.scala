@@ -31,14 +31,14 @@ object SATPlanner {
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--1--3.xml"
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/p01-hierarchical.xml"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/p01-hierarchical.xml"
 
     val domAndInitialPlan: (Domain, Plan) = XMLParser.asParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
 
@@ -53,27 +53,54 @@ object SATPlanner {
     val flattened = ToPlainFormulaRepresentation.transform(simpleMethod, ())
 
 
+    var beginMillis :Long = System.currentTimeMillis()
     val liftedRelaxedInitialState = flattened._2.init.schema.effectsAsPredicateBool
     val liftedReachabilityAnalysis = LiftedForwardSearchReachabilityAnalysis(flattened._1, liftedRelaxedInitialState.toSet)
+    println()
     println("lifted analysis")
     println("" + liftedReachabilityAnalysis.reachableLiftedPrimitiveActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
     println("" + liftedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
+    println("Time: " + (System.currentTimeMillis() - beginMillis))
+    beginMillis = System.currentTimeMillis()
+
 
     val groundedInitialState = flattened._2.groundedInitialState
-    val groundedReachabilityAnalysis = GroundedForwardSearchReachabilityAnalysis(flattened._1, groundedInitialState.toSet)
+    val groundedReachabilityAnalysis = GroundedForwardSearchReachabilityAnalysis(flattened._1, groundedInitialState.toSet)()
 
-    println("grounded analysis")
+    println()
+    println("grounded analysis - I")
     println("" + groundedReachabilityAnalysis.reachableLiftedPrimitiveActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
     println("" + groundedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
     println("" + groundedReachabilityAnalysis.reachableGroundPrimitiveActions.size + " grounded primitive tasks reachable")
     println("" + groundedReachabilityAnalysis.reachableGroundLiterals.size + " grounded literals reachable")
+    println("Time: " + (System.currentTimeMillis() - beginMillis))
+    beginMillis = System.currentTimeMillis()
 
     val disallowedTasks = flattened._1.primitiveTasks filterNot groundedReachabilityAnalysis.reachableLiftedPrimitiveActions.contains
     val prunedDomain = PruneHierarchy.transform(flattened, disallowedTasks.toSet)
 
     val tdg = NaiveGroundedTaskDecompositionGraph(prunedDomain._1, prunedDomain._2, groundedReachabilityAnalysis, true)
 
-    println("TDG:\nreachable ATs: " + tdg.reachableGroundAbstractActions.size + "\nreachable methods: " + tdg.reachableGroundMethods.size)
+    println()
+    println("TDG:")
+    println("reachable ground abstract tasks: " + tdg.reachableGroundAbstractActions.size)
+    println("reachable ground primitive tasks: " + tdg.reachableGroundPrimitiveActions.size)
+    println("reachable methods: " + tdg.reachableGroundMethods.size)
+    println("Time: " + (System.currentTimeMillis() - beginMillis))
+    beginMillis = System.currentTimeMillis()
+    // try reachability again
+
+    System.exit(0)
+
+    val secondGroundedReachabilityAnalysis = GroundedForwardSearchReachabilityAnalysis(flattened._1, groundedInitialState.toSet)(tdg.reachableGroundedTasks)
+    println()
+    println("grounded analysis - II")
+    println("" + groundedReachabilityAnalysis.reachableLiftedPrimitiveActions.size + " of " + flattened._1.primitiveTasks.size + " primitive tasks reachable")
+    println("" + groundedReachabilityAnalysis.reachableLiftedLiterals.size + " of " + 2 * flattened._1.predicates.size + " lifted literals reachable")
+    println("" + groundedReachabilityAnalysis.reachableGroundPrimitiveActions.size + " grounded primitive tasks reachable")
+    println("" + groundedReachabilityAnalysis.reachableGroundLiterals.size + " grounded literals reachable")
+    println("Time: " + (System.currentTimeMillis() - beginMillis))
+    beginMillis = System.currentTimeMillis()
 
 
     // ground the domain ...
@@ -84,9 +111,6 @@ object SATPlanner {
 
     writeStringToFile(HPDDLWriter("foo", "Bar").writeDomain(dom), new File("/home/gregor/groundedDom.hpddl"))
     writeStringToFile(HPDDLWriter("foo", "Bar").writeProblem(dom, iniPlan), new File("/home/gregor/groundedProf.hpddl"))
-
-    //System.exit(0)
-
 
     println(dom.statisticsString)
     //val p1 = dom.primitiveTasks.find({ _.name == "p1" }).get

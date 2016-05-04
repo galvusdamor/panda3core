@@ -32,13 +32,16 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
     val topTask = ReducedTask("__grounding__top", isPrimitive = false, alreadyGroundedVariableMapping.keys.toSeq, Nil, initSchema.effect, goalSchema.precondition)
     val topMethod = SimpleDecompositionMethod(topTask, initialPlan)
 
+    var beginMillis = System.currentTimeMillis()
     // compute groundings of abstract tasks naively
     val abstractTaskGroundings: Map[Task, Set[GroundTask]] = (domain.abstractTasks map { abstractTask =>
       val groundedTasks = (Sort.allPossibleInstantiations(abstractTask.parameters map { _.sort }) filter abstractTask.areParametersAllowed map { GroundTask(abstractTask, _) }).toSet
       (abstractTask, groundedTasks)
     }).toMap + (topTask -> Set(GroundTask(topTask, topTask.parameters map alreadyGroundedVariableMapping)))
 
-    println(abstractTaskGroundings(topTask).size)
+    println("Time (Ground abstract Tasks): " + (System.currentTimeMillis() - beginMillis))
+    beginMillis = System.currentTimeMillis()
+
     assert(abstractTaskGroundings(topTask).size == 1)
     val topGrounded = abstractTaskGroundings(topTask).head
 
@@ -70,6 +73,10 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
       case _                                                       => noSupport(NONSIMPLEMETHOD)
     } groupBy { _._1 } map { case (gt, s) => (gt, s flatMap { _._2 }) }
 
+    println("Time (Decomposition Methods " + groundedDecompositionMethods.values.map { _.length }.sum + " ): " + (System.currentTimeMillis() - beginMillis))
+    beginMillis = System.currentTimeMillis()
+
+
     /**
       * @return abstract tasks and methods that remain in the pruning
       */
@@ -79,14 +86,19 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
       val stillSupportedMethods: Set[GroundedDecompositionMethod] = remainingGroundMethods filter { _.subPlanGroundedTasksWithoutInitAndGoal forall { remainingGroundTasks.contains } }
 
 
-      if (stillSupportedMethods.size == remainingGroundMethods.size) // nothing to prune
+      if (stillSupportedMethods.size == remainingGroundMethods.size) {
+        // nothing to prune
+        println("Time (Pruning): " + (System.currentTimeMillis() - beginMillis))
+        beginMillis = System.currentTimeMillis()
         (remainingGroundTasks, remainingGroundMethods)
-      else {
+      } else {
         // find all supported abstract tasks
         val stillSupportedAbstractGroundTasks: Set[GroundTask] = stillSupportedMethods map { _.groundAbstractTask }
         val stillSupportedPrimitiveGroundTasks: Set[GroundTask] =
           if (prunePrimitive) stillSupportedMethods flatMap { _.subPlanGroundedTasksWithoutInitAndGoal filter { _.task.isPrimitive } } else remainingGroundTasks filter { _.task.isPrimitive }
 
+        println("Time (Pruning): " + (System.currentTimeMillis() - beginMillis))
+        beginMillis = System.currentTimeMillis()
         if (stillSupportedAbstractGroundTasks.size + stillSupportedPrimitiveGroundTasks.size == remainingGroundTasks.size)
           (remainingGroundTasks, stillSupportedMethods) // no tasks have been pruned so stop
         else pruneMethodsAndTasksIfPossible(stillSupportedAbstractGroundTasks ++ stillSupportedPrimitiveGroundTasks, stillSupportedMethods)
@@ -96,11 +108,16 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
     val allGroundedActions: Set[GroundTask] = (abstractTaskGroundings.values.flatten ++ groundedReachabilityAnalysis.reachableGroundPrimitiveActions).toSet
     val (remainingGroundTasks, remainingGroundMethods) = pruneMethodsAndTasksIfPossible(allGroundedActions, groundedDecompositionMethods.values.flatten.toSet)
 
-    val prunedTaskToMethodEdges = groundedDecompositionMethods collect { case (a, b) if remainingGroundTasks contains a => (a, b.toSet intersect remainingGroundMethods) }
+    val prunedTaskToMethodEdgesMaybeIncomplete = groundedDecompositionMethods collect { case (a, b) if remainingGroundTasks contains a => (a, b.toSet intersect remainingGroundMethods) }
+    val notMappedTasks = remainingGroundTasks diff prunedTaskToMethodEdgesMaybeIncomplete.keySet
+    val prunedTaskToMethodEdges = prunedTaskToMethodEdgesMaybeIncomplete ++ (notMappedTasks map { _ -> Set[GroundedDecompositionMethod]() })
     val prunedMethodToTaskEdges = remainingGroundMethods map { case m => (m, m.subPlanGroundedTasksWithoutInitAndGoal.toSet) }
     val firstAndOrGraph = SimpleAndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod](remainingGroundTasks, remainingGroundMethods, prunedTaskToMethodEdges,
                                                                                             prunedMethodToTaskEdges.toMap)
     // reachability analysis
+    println("Time (AndOrGraph): " + (System.currentTimeMillis() - beginMillis))
+    beginMillis = System.currentTimeMillis()
+    //System.in.read()
     val allReachable = firstAndOrGraph.reachable(topGrounded)
     val rechableWithoutTop = allReachable partition {
       case GroundedDecompositionMethod(m, _) => m.abstractTask == topTask
@@ -109,7 +126,10 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
 
     val topMethods = rechableWithoutTop._1 collect { case x: GroundedDecompositionMethod => x }
 
-    (firstAndOrGraph pruneToEntities rechableWithoutTop._2, if (isInitialPlanGround) Nil else (topGrounded :: Nil), if (isInitialPlanGround) Nil else topMethods)
+    println("Time (Reachability): " + (System.currentTimeMillis() - beginMillis))
+    beginMillis = System.currentTimeMillis()
+
+    (firstAndOrGraph pruneToEntities rechableWithoutTop._2, if (isInitialPlanGround) Nil else (topGrounded :: Nil), if (isInitialPlanGround) Nil else topMethods.toSeq)
   }
 
   override lazy val reachableGroundedTasks         : Seq[GroundTask]                  = taskDecompositionGraph._1.andVertices.toSeq
