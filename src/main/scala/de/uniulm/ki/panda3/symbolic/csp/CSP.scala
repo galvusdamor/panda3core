@@ -34,7 +34,7 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
   private var isPotentiallySolvable = true
 
 
-  private def checkIntegrity() = {
+  private def checkIntegrity() = if (!CSP.CHECKCSPINTEGRITY) true else {
     assert(unequal forall { _._2 forall { remainingDomain.contains } })
     assert(unequal forall { _._2 forall { variables.contains } })
     assert(unequal forall { case (v1, vals) => vals forall { case v2 => unequal(v2).contains(v1) } })
@@ -338,7 +338,10 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
     case Constant(_)         => Nil
     case v@Variable(_, _, _) => unequal(v).toSeq
   }
+}
 
+object CSP {
+  private val CHECKCSPINTEGRITY : Boolean = false
 }
 
 
