@@ -379,7 +379,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     // show causal links
     dotStringBuilder append "\n"
     if (options.showCausalLinks) causalLinks foreach { case CausalLink(producer, consumer, condition) =>
-      dotStringBuilder append ("\tPS" + producer.id + " -> PS" + consumer.id + "[label=\"" + condition.predicate.name)
+      dotStringBuilder append ("\tPS" + producer.id + " -> PS" + consumer.id + "[label=\"" + (if (condition.isNegative) "not " else "") + condition.predicate.name)
       if (options.showParameters) {
         dotStringBuilder append ("(" + variablesToString(condition.parameterVariables) + ")")
       }
