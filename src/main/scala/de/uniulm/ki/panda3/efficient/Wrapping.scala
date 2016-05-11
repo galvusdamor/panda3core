@@ -499,7 +499,12 @@ private object FlawEquivalenceChecker {
       efficientAbstractPlanStep.planStep == wrapper.unwrap(abstractPlanStep.ps, abstractPlanStep.plan)
     // causal threat
     case (efficientCausalThreat: EfficientCausalThreat, causalThreat: CausalThreat) =>
-      true
+      val threatherSame = efficientCausalThreat.threatingPlanStep == wrapper.unwrap(causalThreat.threater, causalThreat.plan)
+      val threatherEffectSame = efficientCausalThreat.indexOfThreatingEffect ==
+        causalThreat.threater.indexOfEffect(causalThreat.effectOfThreater, causalThreat.plan.variableConstraints)
+      val linkSame = efficientCausalThreat.causalLink == wrapper.unwrap(causalThreat.link, causalThreat.plan)
+
+      threatherSame && threatherEffectSame && linkSame
     // open precondition
     case (efficientOpenPrecondition: EfficientOpenPrecondition, openPrecondition: OpenPrecondition) =>
       val samePlanStep = efficientOpenPrecondition.planStep == wrapper.unwrap(openPrecondition.planStep, openPrecondition.plan)
