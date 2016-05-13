@@ -26,7 +26,7 @@ class TimeCapsule {
   }
 
   /**
-    * returns an imutable copy of the internally accumulated time
+    * returns an immutable copy of the internally accumulated time
     */
   def timeMap: Map[String, Long] = currentAccumulatedTime.toMap
 }
