@@ -4,13 +4,11 @@ import java.io.InputStream
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
-import de.uniulm.ki.panda3.efficient.search.EfficientSearchNode
+import de.uniulm.ki.panda3.efficient.heuristic.{EfficientNumberOfPlanSteps, EfficientNumberOfFlaws, AlwaysZeroHeuristic}
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler.{Grounding, ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
 import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, PrimitiveReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
@@ -94,11 +92,42 @@ case class PlanningConfiguration(
       timeCapsule stop COMPUTE_EFFICIENT_REPRESENTATION
 
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
-        case BFSType => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
-                                                         searchConfiguration.nodeLimit, releaseSemaphoreEvery,
-                                                         searchConfiguration.printSearchInfo, postprocessingConfiguration.resultsToProduce contains SearchSpace,
-                                                         informationCapsule, timeCapsule)
-        case _       => throw new UnsupportedOperationException("Any other efficient search algorithm besides BFS is not supported.")
+        case algo => algo match {
+          case BFSType                => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
+                                                                          searchConfiguration.nodeLimit, releaseSemaphoreEvery,
+                                                                          searchConfiguration.printSearchInfo,
+                                                                          postprocessingConfiguration.resultsToProduce contains SearchSpace,
+                                                                          informationCapsule, timeCapsule)
+          case DijkstraType           =>
+            // just use the zero heuristic
+            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, true)
+            heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
+                                        searchConfiguration.nodeLimit, releaseSemaphoreEvery,
+                                        searchConfiguration.printSearchInfo,
+                                        postprocessingConfiguration.resultsToProduce contains SearchSpace,
+                                        informationCapsule, timeCapsule)
+          case AStarType | GreedyType =>
+            // prepare the heuristic
+            val heuristicInstance = searchConfiguration.heuristic match {
+              case Some(heuristic) => heuristic match {
+                case NumberOfFlaws          => EfficientNumberOfFlaws
+                case NumberOfPlanSteps      => EfficientNumberOfPlanSteps
+                case WeightedFlaws          => ???
+                case TDGMinimumModification => ???
+              }
+              case None            => throw new UnsupportedOperationException("In order to use a heuristic search procedure, a heuristic must be defined.")
+            }
+
+            val useCosts = algo match {case AStarType => true; case _ => false}
+
+            val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, useCosts)
+            heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
+                                        searchConfiguration.nodeLimit, releaseSemaphoreEvery,
+                                        searchConfiguration.printSearchInfo,
+                                        postprocessingConfiguration.resultsToProduce contains SearchSpace,
+                                        informationCapsule, timeCapsule)
+          case _ => throw new UnsupportedOperationException("Any other efficient search algorithm besides BFS is not supported.")
+        }
       }
 
       val wrappedSearchTreeRoot = wrapper.wrap(searchTreeRoot)

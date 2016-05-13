@@ -54,6 +54,7 @@ object Timings {
   val SEARCH_FLAW_SELECTOR            = "20 search:10:flaw selector"
   val SEARCH_FLAW_RESOLVER            = "20 search:20:flaw resolver computation"
   val SEARCH_GENERATE_SUCCESSORS      = "20 search:30:apply modifications"
+  val SEARCH_COMPUTE_HEURISTIC        = "20 search:40:compute heuristic"
 }
 
 object Information {
