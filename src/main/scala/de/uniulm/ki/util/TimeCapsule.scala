@@ -21,7 +21,9 @@ class TimeCapsule {
     assert(currentStarts contains activity, "Tried to stop measuring\"" + activity + "\", whose measurement hasn't started")
 
     val lastTime = currentAccumulatedTime(activity)
-    val newTime = System.currentTimeMillis() - lastTime
+    val newTime = System.currentTimeMillis() - currentStarts(activity) + lastTime
+    currentStarts remove activity
+
     currentAccumulatedTime.put(activity, newTime)
   }
 
