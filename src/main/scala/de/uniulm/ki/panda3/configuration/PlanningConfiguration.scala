@@ -20,11 +20,11 @@ import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class PlanningConfiguration(
-                                  parsingConfiguration: ParsingConfiguration,
-                                  preprocessingConfiguration: PreprocessingConfiguration,
-                                  searchConfiguration: SearchConfiguration,
-                                  postprocessingConfiguration: PostprocessingConfiguration) {
+case class PlanningConfiguration(printGeneralInformation: Boolean, printAdditionalData: Boolean,
+                                 parsingConfiguration: ParsingConfiguration,
+                                 preprocessingConfiguration: PreprocessingConfiguration,
+                                 searchConfiguration: SearchConfiguration,
+                                 postprocessingConfiguration: PostprocessingConfiguration) {
 
   import Timings._
 
@@ -126,7 +126,7 @@ case class PlanningConfiguration(
                                         searchConfiguration.printSearchInfo,
                                         postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                         informationCapsule, timeCapsule)
-          case _ => throw new UnsupportedOperationException("Any other efficient search algorithm besides BFS is not supported.")
+          case _                      => throw new UnsupportedOperationException("Any other efficient search algorithm besides BFS is not supported.")
         }
       }
 
@@ -164,12 +164,14 @@ case class PlanningConfiguration(
     // parse the problem and run the main function
     timeCapsule start PARSING
 
+    info("Parting domain ... ")
     timeCapsule start FILEPARSER
     val parsedDomainAndProblem = parsingConfiguration.parserType match {
       case XMLParserType  => XMLParser.asParser.parseDomainAndProblem(domain, problem)
       case HDDLParserType => HDDLParser.parseDomainAndProblem(domain, problem)
     }
     timeCapsule stop FILEPARSER
+    info("done.\nPreparing internal domain representation ... ")
 
     timeCapsule start PARSER_SORT_EXPANSION
     val sortsExpandedDomainAndProblem = if (parsingConfiguration.expandSortHierarchy) {
@@ -191,6 +193,7 @@ case class PlanningConfiguration(
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule stop PARSING
+    info("done.\n")
     (flattened, timeCapsule)
   }
 
@@ -226,31 +229,44 @@ case class PlanningConfiguration(
 
     val emptyAnalysis = AnalysisMap(Map())
 
+    extra("Initial domain\n" + domain.statisticsString + "\n")
+
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
     val liftedResult = if (preprocessingConfiguration.liftedReachability) {
+      info("Lifted reachability analysis ... ")
       val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(domain, problem, emptyAnalysis)
       val disallowedTasks = domain.primitiveTasks filterNot newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.contains
-      (PruneHierarchy.transform(domain, problem, disallowedTasks.toSet), newAnalysisMap)
+      val pruned = PruneHierarchy.transform(domain, problem, disallowedTasks.toSet)
+      info("done.\n")
+      extra(pruned._1.statisticsString + "\n")
+      (pruned, newAnalysisMap)
     } else ((domain, problem), emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
     // grounded reachability analysis
     timeCapsule start GROUNDED_REACHABILITY_ANALYSIS
     val groundedResult = if (preprocessingConfiguration.groundedReachability) {
+      info("Grounded reachability analysis ... ")
       val newAnalysisMap = runGroundedForwardSearchReachabilityAnalysis(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
       val disallowedTasks = liftedResult._1._1.primitiveTasks filterNot newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.contains
-      (PruneHierarchy.transform(liftedResult._1._1, liftedResult._1._2, disallowedTasks.toSet), newAnalysisMap)
+      val pruned = PruneHierarchy.transform(liftedResult._1._1, liftedResult._1._2, disallowedTasks.toSet)
+      info("done.\n")
+      extra(pruned._1.statisticsString + "\n")
+      (pruned, newAnalysisMap)
     } else liftedResult
     timeCapsule stop GROUNDED_REACHABILITY_ANALYSIS
 
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
     val tdgResult = if (preprocessingConfiguration.naiveGroundedTaskDecompositionGraph) {
+      info("Naive TDG ... ")
       // get the reachability analysis, if there is none, just use the trivial one
       val newAnalysisMap = runNaiveGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2)
-
-      (PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods), newAnalysisMap)
+      val pruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
+      info("done.\n")
+      extra(pruned._1.statisticsString + "\n")
+      (pruned, newAnalysisMap)
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
@@ -259,14 +275,23 @@ case class PlanningConfiguration(
       if (preprocessingConfiguration.groundDomain) {
         val tdg = tdgResult._2(SymbolicGroundedTaskDecompositionGraph)
 
+        info("Grounding ... ")
         timeCapsule start GROUNDING
-        val result = (Grounding.transform(tdgResult._1, tdg), emptyAnalysis) // since we grounded the domain every analysis we performed so far becomes invalid
+        val result = Grounding.transform(tdgResult._1, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
         timeCapsule stop GROUNDING
+        info("done.\n")
+        extra(result._1.statisticsString + "\n")
         timeCapsule stop PREPROCESSING
-        (result, timeCapsule)
+        ((result, emptyAnalysis), timeCapsule)
       } else (tdgResult, timeCapsule)
     } else runPreprocessing(tdgResult._1._1, tdgResult._1._2, timeCapsule)
   }
+
+
+  private def info(s: String): Unit = if (printGeneralInformation) print(s)
+
+  private def extra(s: String): Unit = if (printAdditionalData) print(s)
+
 }
 
 /**
