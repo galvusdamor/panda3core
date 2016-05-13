@@ -1,57 +1,33 @@
 package de.uniulm.ki.panda3.symbolic.search
 
-//import scala.pickling.Defaults._, scala.pickling.json._
-import java.io.FileInputStream
 import java.util.concurrent.Semaphore
 
-import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.configuration.{ResultFunction, AbortFunction, SymbolicSearchAlgorithm}
 import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
-import de.uniulm.ki.util.Dot2PdfCompiler
+import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 /**
   * This is a very simple DFS planner
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object DFS {
-
-  def main(args: Array[String]) {
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
-    val domAlone: Domain = XMLParser.parseDomain(new FileInputStream(domFile))
-    val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem(new FileInputStream(probFile), domAlone)
-    val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
-
-    val parsedDom = domAndInitialPlan._1.update(sortExpansion)
-    val parsedProblem = domAndInitialPlan._2.update(sortExpansion)
-
-    // apply the CWA
-    val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
-    val flattened = ToPlainFormulaRepresentation.transform(cwaApplied._1, cwaApplied._2, ())
-
-    val x = startSearch(flattened._1, flattened._2, None)
-
-    x._2.acquire()
-    println("100 Nodes generated")
-    //val json = x._1.pickle
-    //println(json.toString)
-  }
-
+object DFS extends SymbolicSearchAlgorithm {
 
   /**
     * This functions starts the (asynchronious) search for a solution to a given planning problem.
     * It returns a pointer to the search space and a semaphore signaling that new search nodes have been inserted into the tree.
     *
-    * The semaphore will not be released for every search node, but after a couple 100 ones.
+    * The semaphore will not be released for every search node, but after a couple releaseEvery ones.
     */
-  def startSearch(domain: Domain, initialPlan: Plan, nodeLimit: Option[Int]): (SearchNode, Semaphore, Unit => Unit) = {
+  override def startSearch(domain: Domain, initialPlan: Plan,
+                           nodeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
+                           informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
+  (SearchNode, Semaphore, ResultFunction[Plan], AbortFunction) = {
+    import de.uniulm.ki.panda3.configuration.Timings._
+    import de.uniulm.ki.panda3.configuration.Information._
+
     val semaphore: Semaphore = new Semaphore(0)
     val node: SearchNode = new SearchNode(initialPlan, null, -1)
 
@@ -63,53 +39,65 @@ object DFS {
 
     var abort = false
 
-    def search(domain: Domain, node: SearchNode): Option[Plan] = if (node.plan.flaws.isEmpty) Some(node.plan)
-    else if ((nodeLimit.isDefined && nodes > nodeLimit.get) || abort) None
-    else {
-      nodes = nodes + 1
-      d = d + 1
-      if (nodes % 10 == 0) println(nodes * 1000.0 / (System.currentTimeMillis() - initTime) + " " + d + s" $crap/$nodes")
-      if (nodes % 100 == 0) semaphore.release()
-
+    def search(domain: Domain, node: SearchNode): Option[Plan] = {
+      timeCapsule start SEARCH_FLAW_COMPUTATION
       val flaws = node.plan.flaws
-      node setModifications (flaws map { _.resolvents(domain) })
+      timeCapsule stop SEARCH_FLAW_COMPUTATION
 
-      // check whether we are at a dead end in the search space
-      if (node.modifications exists { _.isEmpty }) {d = d - 1; crap = crap + 1; node.dirty = false; None }
+      if (flaws.isEmpty) Some(node.plan)
+      else if ((nodeLimit.isDefined && nodes > nodeLimit.get) || abort) None
       else {
-        val selectedResolvers: Seq[Modification] = (node.modifications sortBy { _.size }).head
-        // set the selected flaw
-        node setSelectedFlaw (node.modifications indexOf selectedResolvers)
+        informationCapsule increment NUMBER_OF_NODES
+        nodes = nodes + 1
+        d = d + 1
+        if (printSearchInfo && nodes % 10 == 0) println(nodes * 1000.0 / (System.currentTimeMillis() - initTime) + " " + d + s" $crap/$nodes")
 
-        // create all children
-        node setChildren (selectedResolvers.zipWithIndex map { case (m, i) => (new SearchNode(node.plan.modify(m), node, -1), i) } filterNot { _._1.plan.isSolvable contains false })
-        node.dirty = false
+        if (releaseEvery.isDefined && nodes % releaseEvery.get == 0) semaphore.release()
 
-        // perform the search
-        val ret = (node.children map { _._1 }).foldLeft[Option[Plan]](None)({
-                                                                              case (Some(p), _) => Some(p)
-                                                                              case (None, res)  => search(domain, res)
-                                                                            })
-        d = d - 1
+        timeCapsule start SEARCH_FLAW_RESOLVER
+        node setModifications (flaws map { _.resolvents(domain) })
+        timeCapsule stop SEARCH_FLAW_RESOLVER
 
-        ret
+        // check whether we are at a dead end in the search space
+        if (node.modifications exists { _.isEmpty }) {d = d - 1; crap = crap + 1; node.dirty = false; None }
+        else {
+          timeCapsule start SEARCH_FLAW_SELECTOR
+          val selectedResolvers: Seq[Modification] = (node.modifications sortBy { _.size }).head
+          // set the selected flaw
+          node setSelectedFlaw (node.modifications indexOf selectedResolvers)
+          timeCapsule stop SEARCH_FLAW_SELECTOR
+
+          // create all children
+          timeCapsule start SEARCH_GENERATE_SUCCESSORS
+          node setChildren (selectedResolvers.zipWithIndex map { case (m, i) => (new SearchNode(node.plan.modify(m), node, -1), i) } filterNot { _._1.plan.isSolvable contains false })
+          node.dirty = false
+          timeCapsule stop SEARCH_GENERATE_SUCCESSORS
+
+          // perform the search
+          val ret = (node.children map { _._1 }).foldLeft[Option[Plan]](None)({
+                                                                                case (Some(p), _) => Some(p)
+                                                                                case (None, res)  => search(domain, res)
+                                                                              })
+          d = d - 1
+
+          ret
+        }
       }
     }
 
+    val resultSemaphore = new Semaphore(0)
+    var result: Option[Plan] = None
+
     new Thread(new Runnable {
       override def run(): Unit = {
-        val result = search(domain, node)
-        if (result.isDefined){
-          val solution = result.get
-          println("Found a solution after visiting " + nodes + " search nodes")
-          Dot2PdfCompiler.writeDotToFile(solution,"/home/gregor/test.pdf")
-        }
-
+        timeCapsule start SEARCH
+        result = search(domain, node)
+        timeCapsule stop SEARCH
+        // notify waiting threads
+        resultSemaphore.release()
         semaphore.release()
       }
     }).start()
-
-    (node, semaphore, { _ => abort = true })
+    (node, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result }), AbortFunction({ _ => abort = true }))
   }
-
 }

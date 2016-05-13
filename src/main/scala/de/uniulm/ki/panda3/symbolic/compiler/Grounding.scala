@@ -24,7 +24,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
           val argumentMapping = litList groupBy { _.parameter } map { case (args, lits) =>
             assert(lits.length == 1)
             val onlyLit = lits.head
-            val newPredicateName = onlyLit.predicate.name + ((onlyLit.parameter map { _.name }) mkString("(", ",", ")"))
+            val newPredicateName = onlyLit.predicate.name + ((onlyLit.parameter map { _.name }) mkString("[", ",", "]"))
             (args, Predicate(newPredicateName, Nil))
           }
           (predicate, argumentMapping)
@@ -34,7 +34,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
     // ----- Tasks
     def groundTaskToGroundedTask(groundTask: GroundTask): Task = groundTask match {
       case g@GroundTask(ReducedTask(name, isPrimitive, _, _, _, _), constants) =>
-        val newTaskName = name + ((constants map { _.name }) mkString("(", ",", ")"))
+        val newTaskName = name + ((constants map { _.name }) mkString("[", ",", "]"))
         // ground precondition and effect
         val preconditionLiterals = g.substitutedPreconditions map {
           case GroundLiteral(predicate, isPositive, parameter) => Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)
