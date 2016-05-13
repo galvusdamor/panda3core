@@ -15,9 +15,20 @@ class EfficientSearchNode(nodePlan: EfficientPlan, nodeParent: EfficientSearchNo
   /** the computed heuristic of this node. This might be -1 if the search procedure does not use a heuristic */
   val heuristic: Double              = nodeHeuristic
 
-  val modHist: String  = nodeModHist: String
+  val modHist: String = nodeModHist: String
+
   /** if this flag is true only the current plan, the heuristic and its parent are valid! Do not read any other information */
-  var dirty  : Boolean = true
+  def dirty: Boolean = innerDirty
+
+  private var innerDirty           : Boolean              = true
+  private var callBackIfSetNotDirty: Option[Unit => Unit] = None
+
+  def setNotDirty(): Unit = {
+    innerDirty = false
+    if (callBackIfSetNotDirty.isDefined) (callBackIfSetNotDirty.get) ()
+  }
+
+  def setNotDirtyCallBack(callback: Unit => Unit): Unit = callBackIfSetNotDirty = Some(callback)
 
 
   /** returns the current state of this search node */

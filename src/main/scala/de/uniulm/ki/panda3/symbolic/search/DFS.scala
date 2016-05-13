@@ -22,7 +22,7 @@ object DFS extends SymbolicSearchAlgorithm {
     * The semaphore will not be released for every search node, but after a couple releaseEvery ones.
     */
   override def startSearch(domain: Domain, initialPlan: Plan,
-                           nodeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
+                           nodeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean, buildSearchTree: Boolean,
                            informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
   (SearchNode, Semaphore, ResultFunction[Plan], AbortFunction) = {
     import de.uniulm.ki.panda3.configuration.Timings._
@@ -38,6 +38,7 @@ object DFS extends SymbolicSearchAlgorithm {
     var crap: Int = 0 // and how many dead ends we have encountered
 
     var abort = false
+    informationCapsule increment NUMBER_OF_NODES
 
     def search(domain: Domain, node: SearchNode): Option[Plan] = {
       timeCapsule start SEARCH_FLAW_COMPUTATION
@@ -47,7 +48,7 @@ object DFS extends SymbolicSearchAlgorithm {
       if (flaws.isEmpty) Some(node.plan)
       else if ((nodeLimit.isDefined && nodes > nodeLimit.get) || abort) None
       else {
-        informationCapsule increment NUMBER_OF_NODES
+        informationCapsule increment NUMBER_OF_EXPANDED_NODES
         nodes = nodes + 1
         d = d + 1
         if (printSearchInfo && nodes % 10 == 0) println(nodes * 1000.0 / (System.currentTimeMillis() - initTime) + " " + d + s" $crap/$nodes")
@@ -70,6 +71,7 @@ object DFS extends SymbolicSearchAlgorithm {
           // create all children
           timeCapsule start SEARCH_GENERATE_SUCCESSORS
           node setChildren (selectedResolvers.zipWithIndex map { case (m, i) => (new SearchNode(node.plan.modify(m), node, -1), i) } filterNot { _._1.plan.isSolvable contains false })
+          informationCapsule.add(NUMBER_OF_NODES, node.children.size)
           node.dirty = false
           timeCapsule stop SEARCH_GENERATE_SUCCESSORS
 

@@ -225,7 +225,7 @@ object HeuristicSearch {
           if (buildTree) myNode.children = children.toArray
         }
         // now the node is processed
-        myNode.dirty = false
+        myNode.setNotDirty()
       }
       semaphore.release()
       (root, result)

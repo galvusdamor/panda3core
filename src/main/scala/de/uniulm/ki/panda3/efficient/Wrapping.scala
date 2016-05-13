@@ -372,9 +372,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val wrappedPlan = wrap(efficientSearchNode.plan)
       val searchNode = new SearchNode(wrappedPlan, parent, efficientSearchNode.heuristic)
 
-      // set the things that only exist if the node is not dirty any more
-      searchNode.dirty = efficientSearchNode.dirty
-      if (!searchNode.dirty) {
+      def computeContentIfNotDirty(unit: Unit): Unit = {
+        searchNode.dirty = false
         // TODO payload transformator ???
         searchNode setPayload efficientSearchNode.payload
 
@@ -383,6 +382,10 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         assert(searchNode.selectedFlaw != -1 || searchNode.dirty || searchNode.searchState == SearchState.SOLUTION || searchNode.searchState == SearchState.DEADEND_HEURISTIC
                  || searchNode.searchState == SearchState.DEADEND_CSP || searchNode.searchState == SearchState.DEADEND_UNRESOLVABLEFLAW)
         assert(searchNode.plan.flaws.size == efficientSearchNode.plan.flaws.length)
+
+        if (searchNode.plan.flaws.size != efficientSearchNode.modifications.length)
+          println(searchNode.plan.flaws.size + " == " + efficientSearchNode.modifications.length)
+
         assert(searchNode.plan.flaws.size == efficientSearchNode.modifications.length)
         // reorder modifications
         searchNode setModifications { () =>
@@ -396,6 +399,15 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         }
         searchNode setChildren { () => efficientSearchNode.children map { case (node, i) => (wrapWithParent(node, searchNode), i) } }
       }
+
+      if (efficientSearchNode.dirty)
+        efficientSearchNode.setNotDirtyCallBack(computeContentIfNotDirty)
+      else
+        computeContentIfNotDirty()
+
+      // set the things that only exist if the node is not dirty any more
+      searchNode.dirty = efficientSearchNode.dirty
+
       searchNode
     }
 

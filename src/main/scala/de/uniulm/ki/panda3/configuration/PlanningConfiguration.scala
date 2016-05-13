@@ -4,8 +4,9 @@ import java.io.InputStream
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
+import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.search.EfficientSearchNode
-import de.uniulm.ki.panda3.symbolic
+import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler.{Grounding, ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
 import de.uniulm.ki.panda3.symbolic.domain.Domain
@@ -77,6 +78,7 @@ case class PlanningConfiguration(
     if (!searchConfiguration.efficientSearch) {
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
         case DFSType => symbolic.search.DFS.startSearch(domainAndPlan._1, domainAndPlan._2, searchConfiguration.nodeLimit, releaseSemaphoreEvery, searchConfiguration.printSearchInfo,
+                                                        postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                                         informationCapsule, timeCapsule)
         case _       => throw new UnsupportedOperationException("Any other symbolic search algorithm besides DFS is not supported.")
       }
@@ -86,25 +88,27 @@ case class PlanningConfiguration(
         runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult)
       })
     } else {
+      timeCapsule start COMPUTE_EFFICIENT_REPRESENTATION
       val wrapper = Wrapping(domainAndPlan)
-      val initialPlan = wrapper.unwrap(domainAndPlan._2)
+      val efficientInitialPlan = wrapper.unwrap(domainAndPlan._2)
+      timeCapsule stop COMPUTE_EFFICIENT_REPRESENTATION
 
-      ???
+      val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
+        case BFSType => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
+                                                         searchConfiguration.nodeLimit, releaseSemaphoreEvery,
+                                                         searchConfiguration.printSearchInfo, postprocessingConfiguration.resultsToProduce contains SearchSpace,
+                                                         informationCapsule, timeCapsule)
+        case _       => throw new UnsupportedOperationException("Any other efficient search algorithm besides BFS is not supported.")
+      }
+
+      val wrappedSearchTreeRoot = wrapper.wrap(searchTreeRoot)
+      (wrappedSearchTreeRoot, nodesProcessed, abortFunction, { _ =>
+        val actualResult: Option[Plan] = resultfunction(()) map { wrapper.wrap }
+
+        runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult)
+      })
     }
   }
-
-  //  case class SearchStatus() extends ResultType {type ResultType = SearchState}
-
-  //case class SearchResult() extends ResultType {type ResultType = Option[Plan]}
-
-  //case class SearchStatistics() extends ResultType {type ResultType = Any}
-
-  //case class SearchSpace() extends ResultType {type ResultType = SearchNode}
-
-  //case class SolutionInternalString() extends ResultType {type ResultType = Option[String]}
-
-  //case class SolutionDotString() extends ResultType {type ResultType = Option[String]}
-
 
   def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan]): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {

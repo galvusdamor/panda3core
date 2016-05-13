@@ -14,7 +14,7 @@ import scala.util.Success
   * @param heuristic the computed heuristic of this node. This might be -1 if the search procedure does not use a heuristic
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SearchNode(/*id : Int, */plan: Plan, parent: SearchNode, heuristic: Double) {
+case class SearchNode(/*id : Int, */ plan: Plan, parent: SearchNode, heuristic: Double) {
 
   /** if this flag is true only the current plan, the heuristic and its parent are valid! Do not read any other information */
   var dirty: Boolean = true
@@ -56,9 +56,10 @@ case class SearchNode(/*id : Int, */plan: Plan, parent: SearchNode, heuristic: D
 
   /** the flaw selected for refinement */
   def selectedFlaw: Int = {
+    assert(!dirty)
     if (memorySelectedFlaw.isEmpty) {
       memorySelectedFlaw = promiseSelectedFlaw match {
-        case Some(x) => Some(x())
+        case Some(x) => assert(!dirty); Some(x())
         case _       => None
       }
     }
@@ -70,7 +71,7 @@ case class SearchNode(/*id : Int, */plan: Plan, parent: SearchNode, heuristic: D
   def modifications: Seq[Seq[Modification]] = {
     if (memoryModifications.isEmpty) {
       memoryModifications = promiseModifications match {
-        case Some(x) => Some(x())
+        case Some(x) => assert(!dirty); Some(x())
         case _       => None
       }
     }
@@ -81,7 +82,7 @@ case class SearchNode(/*id : Int, */plan: Plan, parent: SearchNode, heuristic: D
   def children: Seq[(SearchNode, Int)] = {
     if (memoryChildren.isEmpty) {
       memoryChildren = promiseChildren match {
-        case Some(x) => Some(x())
+        case Some(x) => assert(!dirty); Some(x())
         case _       => None
       }
     }
@@ -92,7 +93,7 @@ case class SearchNode(/*id : Int, */plan: Plan, parent: SearchNode, heuristic: D
   def payload: Any = {
     if (memoryPayload.isEmpty) {
       memoryPayload = promisePayload match {
-        case Some(x) => Some(x())
+        case Some(x) => assert(!dirty); Some(x())
         case _       => None
       }
     }
