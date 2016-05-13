@@ -14,10 +14,11 @@ class TimeCapsule {
 
   def start(activity: String): Unit = {
     assert(!(currentStarts contains activity), "Tried to start measuring\"" + activity + "\", whose measurement is already running")
-    currentStarts.put(activity, System.currentTimeMillis())
+    startOrLetRun(activity)
   }
 
-  def hasStarted(activity : String) : Boolean = currentStarts contains activity
+
+  def startOrLetRun(activity: String): Unit = if (!(currentStarts contains activity)) currentStarts.put(activity, System.currentTimeMillis())
 
   def stop(activity: String): Unit = {
     assert(currentStarts contains activity, "Tried to stop measuring\"" + activity + "\", whose measurement hasn't started")
