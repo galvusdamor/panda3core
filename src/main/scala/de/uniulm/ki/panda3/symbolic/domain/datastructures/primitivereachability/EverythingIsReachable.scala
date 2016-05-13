@@ -8,11 +8,11 @@ import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EverythingIsReachable(domain: Domain, initialState: Set[GroundLiteral])(allowedGroundings: Seq[GroundTask] = domain.allGroundedPrimitiveTasks) extends
+case class EverythingIsReachable(domain: Domain, initialState: Set[GroundLiteral]) extends
   LayeredGroundedPrimitiveReachabilityAnalysis {
 
   override protected val layer: Seq[(Set[GroundTask], Set[GroundLiteral])] = {
-    val allGroundTasks = allowedGroundings.toSet
+    val allGroundTasks = domain.allGroundedPrimitiveTasks.toSet
     val reachableLiterals = allGroundTasks flatMap { _.substitutedEffects.toSet }
     (allGroundTasks, reachableLiterals) :: Nil
   }

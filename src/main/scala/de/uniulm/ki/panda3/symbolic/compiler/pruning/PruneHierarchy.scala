@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.compiler.pruning
 
 import de.uniulm.ki.panda3.symbolic.compiler.DomainTransformer
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 
 /**
@@ -9,10 +9,10 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object PruneDecompositionMethods extends DomainTransformer[Unit] {
+object PruneInconsistentDecompositionMethods extends DomainTransformer[Unit] {
 
   override def transform(domain: Domain, plan: Plan, unit: Unit): (Domain, Plan) = {
-    val validDecompositionMethods = domain.decompositionMethods filter { _.subPlan.planStepsWithoutInitGoal map {_.schema} forall domain.tasks.contains }
+    val validDecompositionMethods = domain.decompositionMethods filter { _.subPlan.planStepsWithoutInitGoal map { _.schema } forall domain.tasks.contains }
     val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks, validDecompositionMethods, domain.decompositionAxioms)
     (reducedDomain, plan)
   }
@@ -31,11 +31,20 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
     val initialPruning = PruneTasks.transform(domain, plan, removedTasks)
 
     def propagateInHierarchy(curDomain: Domain): Domain = {
-      val withoutMethods = PruneDecompositionMethods.transform(curDomain, plan, ())
+      val withoutMethods = PruneInconsistentDecompositionMethods.transform(curDomain, plan, ())
       val withoutAbstractTasks = PruneUselessAbstractTasks.transform(withoutMethods, ())
       if (withoutAbstractTasks._1 == curDomain) curDomain else propagateInHierarchy(withoutAbstractTasks._1)
     }
 
     (propagateInHierarchy(initialPruning._1), plan)
+  }
+}
+
+object PruneDecompositionMethods extends DomainTransformer[Seq[DecompositionMethod]] {
+  /** takes a domain, an initial plan and some additional Information and transforms them */
+  override def transform(domain: Domain, plan: Plan, remainingMethods: Seq[DecompositionMethod]): (Domain, Plan) = {
+    val domainWithOutMethods = Domain(domain.sorts, domain.predicates, domain.tasks, remainingMethods, domain.decompositionAxioms)
+    // run recursive pruning
+    PruneHierarchy.transform(domainWithOutMethods, plan, Set())
   }
 }
