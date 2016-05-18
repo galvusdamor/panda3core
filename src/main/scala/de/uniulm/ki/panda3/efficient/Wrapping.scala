@@ -227,6 +227,11 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
   def wrapVariable(variable: Int, task: Task): Variable = task.parameters(variable)
 
+  def wrapVariable(variable: Int, decompositionMethod: DecompositionMethod): Variable =
+    if (variable < decompositionMethod.abstractTask.parameters.length) decompositionMethod.abstractTask.parameters(variable)
+    else
+      sortVariables((decompositionMethod.subPlan.variableConstraints.variables -- decompositionMethod.abstractTask.parameters).toSeq)(variable - decompositionMethod.abstractTask.parameters
+        .length)
 
   // PLANSTEP
   def unwrap(planStep: PlanStep, plan: Plan): Int = plan.planStepsAndRemovedWithInitAndGoalFirst.indexOf(planStep)
@@ -404,6 +409,13 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         searchNode setModifications { () =>
           val modifications = searchNode.plan.flaws.zipWithIndex map { case (flaw, idx) =>
             val otherFlawIndex = efficientSearchNode.plan.flaws indexWhere { efficientFlaw => FlawEquivalenceChecker(efficientFlaw, flaw, this) }
+
+            if (!(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length)) {
+              val symbolicMods = flaw.resolvents(symbolicDomain)
+              val efficientMods = efficientSearchNode.modifications(otherFlawIndex)
+              println(flaw.resolvents(symbolicDomain).length + " == " + efficientSearchNode.modifications(otherFlawIndex).length)
+            }
+
             assert(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length)
             (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
           }
