@@ -19,7 +19,11 @@ case class InsertCausalLink(plan: Plan, causalLink: CausalLink, equalityConstrai
 object InsertCausalLink {
 
   def apply(plan: Plan, consumer: PlanStep, precondition: Literal): Seq[InsertCausalLink] =
-    plan.planSteps flatMap { p => if (plan.orderingConstraints.gt(p, consumer)) Nil else apply(plan, p, consumer, precondition) }
+    plan.planSteps flatMap { p => if (plan.orderingConstraints.gt(p, consumer)) Nil
+    else {
+      if (p != consumer || p.schema.isAbstract) apply(plan, p, consumer, precondition) else Nil
+    }
+    }
 
   /** creates causal links for the preconditions of the given consumer, supported by an effect of the producer */
   def apply(plan: Plan, producer: PlanStep, consumer: PlanStep, precondition: Literal): Seq[InsertCausalLink] = {
