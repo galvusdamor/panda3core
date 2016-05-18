@@ -4,7 +4,9 @@ import java.io.InputStream
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.heuristic.{EfficientNumberOfPlanSteps, EfficientNumberOfFlaws, AlwaysZeroHeuristic}
+import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
+import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.{EfficientGroundedTaskDecompositionGraph, EfficientTDGFromGroundedSymbolic}
+import de.uniulm.ki.panda3.efficient.heuristic.{MinimumModificationEffortHeuristic, EfficientNumberOfPlanSteps, EfficientNumberOfFlaws, AlwaysZeroHeuristic}
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler.{Grounding, ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
@@ -91,6 +93,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val efficientInitialPlan = wrapper.unwrap(domainAndPlan._2)
       timeCapsule stop COMPUTE_EFFICIENT_REPRESENTATION
 
+      // in some cases we need to re-do some steps of the preparation as we have to transfer them into the efficient representation
+      timeCapsule start HEURISTICS_PREPARATION
+      if (searchConfiguration.heuristic contains TDGMinimumModification) analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
+      timeCapsule stop HEURISTICS_PREPARATION
+
+
+
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
         case algo => algo match {
           case BFSType                => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
@@ -113,7 +122,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case NumberOfFlaws          => EfficientNumberOfFlaws
                 case NumberOfPlanSteps      => EfficientNumberOfPlanSteps
                 case WeightedFlaws          => ???
-                case TDGMinimumModification => ???
+                case TDGMinimumModification => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG))
               }
               case None            => throw new UnsupportedOperationException("In order to use a heuristic search procedure, a heuristic must be defined.")
             }
@@ -164,7 +173,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // parse the problem and run the main function
     timeCapsule start PARSING
 
-    info("Parting domain ... ")
+    info("Parsing domain ... ")
     timeCapsule start FILEPARSER
     val parsedDomainAndProblem = parsingConfiguration.parserType match {
       case XMLParserType  => XMLParser.asParser.parseDomainAndProblem(domain, problem)
@@ -220,6 +229,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     val tdg = NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
 
     analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg)
+  }
+
+  private def createEfficientTDGFromSymbolic(wrapping: Wrapping, analysisMap: AnalysisMap): AnalysisMap = {
+    val groundedTDG = analysisMap(SymbolicGroundedTaskDecompositionGraph)
+    val tdg = EfficientTDGFromGroundedSymbolic(groundedTDG, wrapping)
+
+    analysisMap + (EfficientGroundedTDG -> tdg)
   }
 
 
