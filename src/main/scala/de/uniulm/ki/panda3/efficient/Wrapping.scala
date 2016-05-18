@@ -309,10 +309,23 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       CausalLink(planStepArray(producer), planStepArray(consumer), planStepArray(producer).substitutedEffects(producerEffectIndex))
     }
 
-    // ordering constraints
-    val orderingConstraints =
-      plan.planStepTasks.indices flatMap { b => plan.planStepTasks.indices collect { case a if plan.ordering.lt(a, b) => OrderingConstraint(planStepArray(a), planStepArray(b)) } }
+    // ordering constraints -- reuse the already computed transitive ordering constraints of the efficient implementation
+    val innerArrangement: Array[Array[Byte]] = Array.ofDim(planStepArray.length, planStepArray.length)
+    val orderingConstraints = (for (ps1 <- planStepArray.indices; ps2 <- planStepArray.indices) yield {
+      val relation = plan.ordering.tryCompare(ps1, ps2)
+      innerArrangement(ps1)(ps2) = relation match {
+        case None    => TaskOrdering.DONTKNOW
+        case Some(x) => x.toByte
+      }
+
+      relation match {
+        case Some(TaskOrdering.BEFORE) => Some(OrderingConstraint(planStepArray(ps1), planStepArray(ps2)))
+        case _                         => None
+      }
+    }) collect { case Some(x) => x }
+
     val ordering = new TaskOrdering(orderingConstraints, planStepArray)
+    ordering.initialiseExplicitly(0, 0, innerArrangement) // tell the ordering to use the result of the efficient one
 
     // construct the csp
     val possibleValuesConstraints = variables.indices map { v =>
