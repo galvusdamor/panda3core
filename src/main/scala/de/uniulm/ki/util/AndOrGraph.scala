@@ -1,5 +1,7 @@
 package de.uniulm.ki.util
 
+import scala.collection.mutable
+
 /**
   * And Vertices are those that occur in and rules, i.e., all their successors are or
   *
@@ -18,9 +20,7 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraph[T] {
   /** adjacency list of the graph */
   lazy val edges: Map[T, Seq[T]] = {
     val edg = (andEdges ++ orEdges) map { case (a, b) => (a, b.toSeq) }
-
     //edg.values.flatten foreach { x => assert(vertices contains x) }
-
     edg
   }
 
@@ -32,6 +32,30 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraph[T] {
     val prunedOrEdges = orEdges filter { case (o, _) => restrictToEntities contains o }
 
     SimpleAndOrGraph(prunedAndVertices, prunedOrVertices, prunedAndEdges, prunedOrEdges)
+  }
+
+
+  def minSumTraversal(root: A, evaluate: (A => Double)): Double = {
+    val seen: scala.collection.mutable.Set[A] = mutable.HashSet[A]()
+
+    def mini(root: A, evaluate: (A => Double)): Double = if (!andEdges.contains(root) || andEdges(root).isEmpty) evaluate(root)
+    else if (seen.contains(root)) Double.MaxValue
+    else {
+      seen.add(root) // side effect
+      val it = andEdges(root).iterator
+      var value = Double.MaxValue
+      while (it.hasNext) value = Math.min(value, 1 + sum(it.next(), evaluate))
+      value
+    }
+
+    def sum(root: O, evaluate: (A => Double)): Double = {
+      val it = orEdges(root).iterator
+      var value = 0.0
+      while (it.hasNext) value += mini(it.next(), evaluate)
+      value
+    }
+
+    mini(root, evaluate)
   }
 }
 
