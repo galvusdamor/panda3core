@@ -122,7 +122,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case NumberOfFlaws          => EfficientNumberOfFlaws
                 case NumberOfPlanSteps      => EfficientNumberOfPlanSteps
                 case WeightedFlaws          => ???
-                case TDGMinimumModification => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG))
+                case TDGMinimumModification => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
               }
               case None            => throw new UnsupportedOperationException("In order to use a heuristic search procedure, a heuristic must be defined.")
             }

@@ -41,8 +41,8 @@ object Main {
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
     val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
     //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
@@ -54,7 +54,7 @@ object Main {
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(XMLParserType),
                                              PreprocessingConfiguration(true, true, true, true, false, true),
-                                             SearchConfiguration(None, true, BFSType, None /*Some(TDGMinimumModification)*/, true),
+                                             SearchConfiguration(None, true, AStarType, Some(TDGMinimumModification), true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
                                                                              SearchStatistics,

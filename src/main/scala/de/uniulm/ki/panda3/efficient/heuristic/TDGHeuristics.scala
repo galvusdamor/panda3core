@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.efficient.heuristic
 
-import de.uniulm.ki.panda3.efficient.domain.EfficientGroundTask
+import de.uniulm.ki.panda3.efficient.domain.{EfficientDomain, EfficientGroundTask}
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientGroundedTaskDecompositionGraph
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 
@@ -12,27 +12,31 @@ trait TDGHeuristics extends EfficientHeuristic {
 }
 
 
-case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGroundedTaskDecompositionGraph) extends TDGHeuristics {
+case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGroundedTaskDecompositionGraph, domain: EfficientDomain) extends TDGHeuristics {
 
-  private def computeHeuristic(planStep: Int, parameter: Array[Int], numberOfChoosenParameters: Int, plan: EfficientPlan): Double =
-    if (numberOfChoosenParameters == parameter.length) {
+  // memoise the heuristic values for task groundings
+  private val modificationEfforts: Map[EfficientGroundTask, Double] = taskDecompositionTree.graph.andVertices map { groundTask =>
+    groundTask -> taskDecompositionTree.graph.minSumTraversal(groundTask, { task => domain.tasks(task.taskID).precondition.length })
+  } toMap
+
+
+  private def computeHeuristic(planStep: Int, parameter: Array[Int], numberOfChosenParameters: Int, plan: EfficientPlan): Double =
+    if (numberOfChosenParameters == parameter.length) {
       // query the TDG
       val groundTask = EfficientGroundTask(plan.planStepTasks(planStep), parameter)
-      if (!taskDecompositionTree.graph.andVertices.contains(groundTask)) Double.MaxValue
-      else
-        taskDecompositionTree.graph.minSumTraversal(groundTask, { task => plan.domain.tasks(task.taskID).precondition.length })
+      if (!modificationEfforts.contains(groundTask)) Double.MaxValue else modificationEfforts(groundTask)
     } else {
       val psParams = plan.planStepParameters(planStep)
-      val variableInQuestion = psParams(numberOfChoosenParameters)
+      val variableInQuestion = psParams(numberOfChosenParameters)
       if (!plan.variableConstraints.isRepresentativeAVariable(variableInQuestion)) {
         // if a parameter is already bound to a constant
-        parameter(numberOfChoosenParameters) = plan.variableConstraints.getRepresentativeVariable(variableInQuestion)
-        computeHeuristic(planStep, parameter, numberOfChoosenParameters + 1, plan)
+        parameter(numberOfChosenParameters) = plan.variableConstraints.getRepresentativeVariable(variableInQuestion)
+        computeHeuristic(planStep, parameter, numberOfChosenParameters + 1, plan)
       } else {
         // check whether this variable is identical to another we have already bound
         var otherParameter = 0
         var identicalTo = -1
-        while (otherParameter < numberOfChoosenParameters) {
+        while (otherParameter < numberOfChosenParameters) {
           val otherParameterVariable = psParams(otherParameter)
           if (plan.variableConstraints.isRepresentativeAVariable(otherParameterVariable) &&
             plan.variableConstraints.getRepresentativeVariable(otherParameterVariable) == plan.variableConstraints.getRepresentativeVariable(variableInQuestion))
@@ -41,16 +45,16 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
         }
 
         if (identicalTo != -1) {
-          parameter(numberOfChoosenParameters) = parameter(identicalTo)
-          computeHeuristic(planStep, parameter, numberOfChoosenParameters + 1, plan)
+          parameter(numberOfChosenParameters) = parameter(identicalTo)
+          computeHeuristic(planStep, parameter, numberOfChosenParameters + 1, plan)
         } else {
           // ok now we actually have to ground
           val remainingValues = plan.variableConstraints.getRemainingDomain(variableInQuestion).toArray
           var heuristicMin = Double.MaxValue
           var constant = 0
           while (constant < remainingValues.length) {
-            parameter(numberOfChoosenParameters) = remainingValues(constant)
-            heuristicMin = Math.min(heuristicMin, computeHeuristic(planStep, parameter, numberOfChoosenParameters + 1, plan))
+            parameter(numberOfChosenParameters) = remainingValues(constant)
+            heuristicMin = Math.min(heuristicMin, computeHeuristic(planStep, parameter, numberOfChosenParameters + 1, plan))
             constant += 1
           }
           heuristicMin
@@ -73,7 +77,7 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
 
     var i = 1 // init can't have a flaw
     while (i < plan.numberOfAllPlanSteps) {
-      if (plan.isPlanStepPresentInPlan(i) && plan.domain.tasks(plan.planStepTasks(i)).isAbstract) {
+      if (plan.isPlanStepPresentInPlan(i) && domain.tasks(plan.planStepTasks(i)).isAbstract) {
         // we have to ground here
         heuristicValue += computeHeuristic(i, new Array[Int](plan.planStepParameters(i).length), 0, plan)
       }
