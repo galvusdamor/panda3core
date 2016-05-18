@@ -4,7 +4,7 @@ import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.efficient.search.HeuristicSearch
-import de.uniulm.ki.panda3.symbolic.search.SearchState
+import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util._
 
 
@@ -28,8 +28,8 @@ object Main {
 
     //val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
 
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
@@ -39,11 +39,13 @@ object Main {
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
     //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
+    //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
@@ -52,10 +54,15 @@ object Main {
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(XMLParserType),
                                              PreprocessingConfiguration(true, true, true, true, false, true),
-                                             SearchConfiguration(Some(30000), true, GreedyType, Some(NumberOfFlaws), false),
-                                             PostprocessingConfiguration(Set(ProcessingTimings, SearchStatus, SearchResult, SearchStatistics, //SearchSpace,
-                                                                             SolutionInternalString, SolutionDotString))
-                                            )
+                                             SearchConfiguration(None, true, BFSType, None /*Some(TDGMinimumModification)*/, true),
+                                             PostprocessingConfiguration(Set(ProcessingTimings,
+                                                                             SearchStatus, SearchResult,
+                                                                             SearchStatistics,
+                                                                             //SearchSpace,
+                                                                             SolutionInternalString,
+                                                                             SolutionDotString)))
+
+    System.in.read()
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
 
@@ -72,6 +79,13 @@ object Main {
         Dot2PdfCompiler.writeDotToFile(results(SolutionDotString).get, outputPDF)
       }
     }
+    // check the tree
+    def dfs(searchNode: SearchNode): Unit = if (!searchNode.dirty) {
+      searchNode.modifications.length // force computation (and check of assertions)
+      searchNode.children foreach { x => dfs(x._1) }
+    }
+
+    if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) dfs(results(SearchSpace))
   }
 
 
