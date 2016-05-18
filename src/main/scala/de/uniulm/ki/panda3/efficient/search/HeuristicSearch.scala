@@ -131,7 +131,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
                 val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
-                val searchNode = if (buildTree) new EfficientSearchNode(newPlan, myNode, 0) else new EfficientSearchNode(newPlan, null, heuristicValue)
+                val searchNode = if (buildTree) new EfficientSearchNode(newPlan, myNode, heuristicValue) else new EfficientSearchNode(newPlan, null, heuristicValue)
 
                 searchQueue enqueue ((searchNode, depth + 1))
                 children append ((searchNode, modNum))
