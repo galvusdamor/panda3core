@@ -119,3 +119,6 @@ case class EfficientExtractedMethodPlan(addedPlanSteps: Array[(Int, Array[Int])]
   val ingoingSupportersContainNecessary : Array[Boolean] = ingoingSupporters map { arr => arr exists { _.isNecessary } }
   val outgoingSupportersContainNecessary: Array[Boolean] = outgoingSupporters map { arr => arr exists { _.isNecessary } }
 }
+
+
+case class EfficientGroundedDecompositionMethod(methodIndex : Int, methodArguments : Array[Int])
