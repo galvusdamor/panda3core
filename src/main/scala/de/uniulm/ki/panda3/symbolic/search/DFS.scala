@@ -29,7 +29,7 @@ object DFS extends SymbolicSearchAlgorithm {
     import de.uniulm.ki.panda3.configuration.Information._
 
     val semaphore: Semaphore = new Semaphore(0)
-    val node: SearchNode = new SearchNode(initialPlan, null, -1)
+    val node: SearchNode = new SearchNode(0, initialPlan, null, -1)
 
     // variables for the search
     val initTime: Long = System.currentTimeMillis()
@@ -70,7 +70,9 @@ object DFS extends SymbolicSearchAlgorithm {
 
           // create all children
           timeCapsule start SEARCH_GENERATE_SUCCESSORS
-          node setChildren (selectedResolvers.zipWithIndex map { case (m, i) => (new SearchNode(node.plan.modify(m), node, -1), i) } filterNot { _._1.plan.isSolvable contains false })
+          node setChildren (selectedResolvers.zipWithIndex map { case (m, i) =>
+            (new SearchNode(informationCapsule(NUMBER_OF_NODES + i), node.plan.modify(m), node, -1), i)
+          } filterNot { _._1.plan.isSolvable contains false })
           informationCapsule.add(NUMBER_OF_NODES, node.children.size)
           node.dirty = false
           timeCapsule stop SEARCH_GENERATE_SUCCESSORS

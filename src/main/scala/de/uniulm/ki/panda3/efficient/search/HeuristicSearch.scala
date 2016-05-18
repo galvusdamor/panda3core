@@ -34,7 +34,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
 
 
     val semaphore: Semaphore = new Semaphore(0)
-    val root = new EfficientSearchNode(initialPlan, null, Double.MaxValue)
+    val root = new EfficientSearchNode(0,initialPlan, null, Double.MaxValue)
 
     // variables for the search
     val initTime: Long = System.currentTimeMillis()
@@ -131,7 +131,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
                 val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
-                val searchNode = if (buildTree) new EfficientSearchNode(newPlan, myNode, heuristicValue) else new EfficientSearchNode(newPlan, null, heuristicValue)
+                val nodeNumber = informationCapsule(NUMBER_OF_NODES)
+                val searchNode = if (buildTree) new EfficientSearchNode(nodeNumber,newPlan, myNode, heuristicValue) else new EfficientSearchNode(nodeNumber,newPlan, null, heuristicValue)
 
                 searchQueue enqueue ((searchNode, depth + 1))
                 children append ((searchNode, modNum))

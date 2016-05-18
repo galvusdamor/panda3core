@@ -7,13 +7,15 @@ import de.uniulm.ki.panda3.symbolic.search.SearchState
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class EfficientSearchNode(nodePlan: EfficientPlan, nodeParent: EfficientSearchNode, nodeHeuristic: Double, nodeModHist: String = "") extends Ordered[EfficientSearchNode] {
+class EfficientSearchNode(nodeID: Int, nodePlan: EfficientPlan, nodeParent: EfficientSearchNode, nodeHeuristic: Double, nodeModHist: String = "") extends Ordered[EfficientSearchNode] {
   /** the plan contained in this search node, if it has no flaws this is a solution */
   val plan     : EfficientPlan       = nodePlan
   /** the nodes parent */
   val parent   : EfficientSearchNode = nodeParent
   /** the computed heuristic of this node. This might be -1 if the search procedure does not use a heuristic */
   val heuristic: Double              = nodeHeuristic
+  /** a unique ID for this search node */
+  val id       : Int                 = nodeID
 
   val modHist: String = nodeModHist: String
 

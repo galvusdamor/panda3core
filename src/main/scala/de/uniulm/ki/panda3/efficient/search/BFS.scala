@@ -23,7 +23,7 @@ object BFS extends EfficientSearchAlgorithm {
     import de.uniulm.ki.panda3.configuration.Information._
 
     val semaphore: Semaphore = new Semaphore(0)
-    val root = new EfficientSearchNode(initialPlan, null, Double.MaxValue)
+    val root = new EfficientSearchNode(0,initialPlan, null, Double.MaxValue)
 
     // variables for the search
     val initTime: Long = System.currentTimeMillis()
@@ -115,7 +115,8 @@ object BFS extends EfficientSearchAlgorithm {
 
               if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
                 informationCapsule increment NUMBER_OF_NODES
-                val searchNode = if (buildTree) new EfficientSearchNode(newPlan, myNode, 0) else new EfficientSearchNode(newPlan, null, 0)
+                val nodeNumber = informationCapsule(NUMBER_OF_NODES)
+                val searchNode = if (buildTree) new EfficientSearchNode(nodeNumber, newPlan, myNode, 0) else new EfficientSearchNode(nodeNumber,newPlan, null, 0)
 
                 stack add(newPlan, searchNode, depth + 1)
                 children append ((searchNode, modNum))

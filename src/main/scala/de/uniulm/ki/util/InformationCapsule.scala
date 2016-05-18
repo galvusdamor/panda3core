@@ -26,6 +26,7 @@ class InformationCapsule {
 
   def max(key: String, value: Int): Unit = internalInformation.put(key, math.max(value, internalInformation(key)))
 
+  def apply(key: String): Int = internalInformation(key)
 
   def informationMap: Map[String, Int] = internalInformation.toMap
 }

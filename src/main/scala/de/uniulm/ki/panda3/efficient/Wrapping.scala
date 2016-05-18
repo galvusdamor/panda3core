@@ -388,7 +388,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     def wrapWithParent(efficientSearchNode: EfficientSearchNode, parent: SearchNode): SearchNode = {
       // set the essentials
       val wrappedPlan = wrap(efficientSearchNode.plan)
-      val searchNode = new SearchNode(wrappedPlan, parent, efficientSearchNode.heuristic)
+      val searchNode = new SearchNode(efficientSearchNode.id,wrappedPlan, parent, efficientSearchNode.heuristic)
 
       def computeContentIfNotDirty(unit: Unit): Unit = {
         searchNode.dirty = false
