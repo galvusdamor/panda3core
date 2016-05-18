@@ -12,7 +12,7 @@ import de.uniulm.ki.util.HashMemo
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], tasks: Seq[PlanStep]) extends PartialOrdering[PlanStep]
-                                                                                                                    with DomainUpdatable with PrettyPrintable with HashMemo {
+                                                                                                            with DomainUpdatable with PrettyPrintable with HashMemo {
 
   import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering._
 
@@ -79,7 +79,7 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
   def replacePlanStep(psOld: PlanStep, psNew: PlanStep): TaskOrdering =
     if (!(tasks contains psOld)) this
     else {
-      val newOrdering = TaskOrdering(originalOrderingConstraints map { _.update(ExchangePlanStep(psOld, psNew)) },                                                                       tasks map { case ps => if (ps == psOld) psNew else ps })
+      val newOrdering = TaskOrdering(originalOrderingConstraints map { _.update(ExchangePlanStep(psOld, psNew)) }, tasks map { case ps => if (ps == psOld) psNew else ps })
 
       // if this ordering was already initialised let the new one know what we did so far
       if (isTransitiveHullComputed)
@@ -138,10 +138,15 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
   def initialiseExplicitly(lastKOrderingsAreNew: Int = originalOrderingConstraints.length, lastKTasksAreNew: Int = numberOfTasks,
                            prevArrangement: Array[Array[Byte]] = Array.ofDim(0, 0)): Unit = {
     // init the current arrangement with the old one
-    prevArrangement.indices.foreach(i => prevArrangement(i).copyToArray(innerArrangement(i)))
-    // update the arrangement
-    Range(originalOrderingConstraints.length - lastKOrderingsAreNew, originalOrderingConstraints.length).foreach(i => {
+    var i = 0
+    while (i < prevArrangement.length) {
+      prevArrangement(i).copyToArray(innerArrangement(i))
+      i += 1
+    }
 
+    // update the arrangement
+    i = originalOrderingConstraints.length - lastKOrderingsAreNew
+    while (i < originalOrderingConstraints.length) {
       val beforeID = planStepToArrangementIndex(originalOrderingConstraints(i).before)
       val afterID = planStepToArrangementIndex(originalOrderingConstraints(i).after)
 
@@ -149,41 +154,73 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
       if (innerArrangement(beforeID)(afterID) == SAME) computedInconsistent = true
       innerArrangement(beforeID)(afterID) = BEFORE
       innerArrangement(afterID)(beforeID) = AFTER
-    })
+
+      i += 1
+    }
     if (!computedInconsistent) {
 
       // for new tasks fill the diagonal
-      Range(numberOfTasks - lastKTasksAreNew, numberOfTasks).foreach(i => innerArrangement(i)(i) = SAME)
+      var i = numberOfTasks - lastKTasksAreNew
+      while (i < numberOfTasks) {
+        innerArrangement(i)(i) = SAME
+        i += 1
+      }
 
       // run bellman-ford for new edges
-      for (newEdge <- originalOrderingConstraints.length - lastKOrderingsAreNew until originalOrderingConstraints.length; from <- innerArrangement.indices) {
-        val beforeID = planStepToArrangementIndex(originalOrderingConstraints(newEdge).before)
-        val afterID = planStepToArrangementIndex(originalOrderingConstraints(newEdge).after)
+      var newEdge = originalOrderingConstraints.length - lastKOrderingsAreNew
+      while (newEdge < originalOrderingConstraints.length) {
+        var from = 0
+        while (from < innerArrangement.length) {
+          val beforeID = planStepToArrangementIndex(originalOrderingConstraints(newEdge).before)
+          val afterID = planStepToArrangementIndex(originalOrderingConstraints(newEdge).after)
 
-        val edgeTypeFromNew = innerArrangement(from)(beforeID)
-        if (edgeTypeFromNew != DONTKNOW)
-          for (to <- innerArrangement.indices) {
-            val edgeTypeNewTo = innerArrangement(afterID)(to)
-            (edgeTypeFromNew, edgeTypeNewTo) match {
-              case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) =>
-                innerArrangement(from)(to) = BEFORE
-                innerArrangement(to)(from) = AFTER
-              case (_, _)                                             => ()
+          val edgeTypeFromNew = innerArrangement(from)(beforeID)
+          if (edgeTypeFromNew != DONTKNOW) {
+            var to = 0
+            while (to < innerArrangement.length) {
+              val edgeTypeNewTo = innerArrangement(afterID)(to)
+              (edgeTypeFromNew, edgeTypeNewTo) match {
+                case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) =>
+                  innerArrangement(from)(to) = BEFORE
+                  innerArrangement(to)(from) = AFTER
+                case (_, _)                                             => ()
+              }
+              to += 1
             }
           }
+          from += 1
+        }
+        newEdge += 1
       }
 
       // run floyd-warshall for new tasks
-      for (middle <- numberOfTasks - lastKTasksAreNew until numberOfTasks; from <- innerArrangement.indices)
-        if (innerArrangement(from)(middle) != DONTKNOW) for (to <- innerArrangement.indices)
-          (innerArrangement(from)(middle), innerArrangement(middle)(to)) match {
-            case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME)     => innerArrangement(from)(to) = AFTER
-            case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) => innerArrangement(from)(to) = BEFORE
-            case (_, _)                                             => ()
+      var middle = numberOfTasks - lastKTasksAreNew
+      while (middle < numberOfTasks) {
+        var from = 0
+        while (from < innerArrangement.length) {
+          if (innerArrangement(from)(middle) != DONTKNOW) {
+            var to = 0
+            while (to < innerArrangement.length) {
+              (innerArrangement(from)(middle), innerArrangement(middle)(to)) match {
+                case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME)     => innerArrangement(from)(to) = AFTER
+                case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) => innerArrangement(from)(to) = BEFORE
+                case (_, _)                                             => ()
+              }
+              to += 1
+            }
           }
+          from += 1
+        }
+
+        middle += 1
+      }
 
       // check for inconsistency
-      for (i <- 0 to numberOfTasks - 1) computedInconsistent = computedInconsistent | innerArrangement(i)(i) != SAME
+      i = 0
+      while (i < numberOfTasks) {
+        computedInconsistent = computedInconsistent | innerArrangement(i)(i) != SAME
+        i += 1
+      }
 
       isTransitiveHullComputed = true
     }
@@ -252,8 +289,8 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
 
   /** returns a more detailed information about the object */
   override def longInfo: String = "OrderingConstraints:\n" + (
-    (for (t1 <- tasks ; t2 <- tasks) yield (t1,t2))
-      collect { case (t1, t2) if lt(t1, t2) => "\t" + t1.shortInfo + " -> " + t2    .shortInfo })    .mkString("\n")
+    (for (t1 <- tasks; t2 <- tasks) yield (t1, t2))
+      collect { case (t1, t2) if lt(t1, t2) => "\t" + t1.shortInfo + " -> " + t2.shortInfo }).mkString("\n")
 
 }
 
