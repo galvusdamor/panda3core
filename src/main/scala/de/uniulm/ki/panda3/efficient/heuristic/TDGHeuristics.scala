@@ -30,7 +30,7 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
       val variableInQuestion = psParams(numberOfChosenParameters)
       if (!plan.variableConstraints.isRepresentativeAVariable(variableInQuestion)) {
         // if a parameter is already bound to a constant
-        parameter(numberOfChosenParameters) = plan.variableConstraints.getRepresentativeVariable(variableInQuestion)
+        parameter(numberOfChosenParameters) = plan.variableConstraints.getRepresentativeConstant(variableInQuestion)
         computeHeuristic(planStep, parameter, numberOfChosenParameters + 1, plan)
       } else {
         // check whether this variable is identical to another we have already bound
