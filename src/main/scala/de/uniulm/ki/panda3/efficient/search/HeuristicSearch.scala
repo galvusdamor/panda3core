@@ -50,7 +50,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
 
     var lowestHeuristicFound = Double.MaxValue
     var minFlaw = Integer.MAX_VALUE
-    var minFlawCurrentInterval = Integer.MAX_VALUE
+    var minHeuristicCurrentInterval = Double.MaxValue
+    var maxHeuristicCurrentInterval = -Double.MaxValue
 
     informationCapsule increment NUMBER_OF_NODES
 
@@ -62,21 +63,26 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
         val flaws = plan.flaws
         timeCapsule stop SEARCH_FLAW_COMPUTATION
         minFlaw = Math.min(minFlaw, flaws.length)
-        minFlawCurrentInterval = Math.min(minFlawCurrentInterval, flaws.length)
+
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
 
+        //println("PLAN " + plan.numberOfPlanSteps + "/" + plan.numberOfAllPlanSteps + " @ " + myNode.heuristic)
 
         // heuristic statistics
         if (myNode.heuristic < lowestHeuristicFound) {
           lowestHeuristicFound = myNode.heuristic
           if (printSearchInfo) println("Found new lowest heuristic value: " + lowestHeuristicFound + " @ plan #" + nodes)
         }
+        minHeuristicCurrentInterval = Math.min(minHeuristicCurrentInterval, myNode.heuristic)
+        maxHeuristicCurrentInterval = Math.max(maxHeuristicCurrentInterval, myNode.heuristic)
 
         if (nodes % 300 == 0 && nodes > 0) {
           val nTime = System.currentTimeMillis()
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
-          if (printSearchInfo) println("Plans Expanded: " + nodes + " " + nps + " Queue size " + searchQueue.length + " Recently lowest Heuristic " + minFlawCurrentInterval)
-          minFlawCurrentInterval = Integer.MAX_VALUE
+          if (printSearchInfo) println("Plans Expanded: " + nodes + " " + nps + " Queue size " + searchQueue.length + " Recently lowest Heuristic " + minHeuristicCurrentInterval +
+                                         " Recently highest Heuristic " + maxHeuristicCurrentInterval)
+          minHeuristicCurrentInterval = Double.MaxValue
+          maxHeuristicCurrentInterval = -Double.MaxValue
         }
         nodes += 1
 
@@ -131,7 +137,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
                 val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
-                //println("PLAN " + newPlan.numberOfPlanSteps + " @ " + heuristicValue)
+                assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps)
 
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
                 val searchNode = if (buildTree) new EfficientSearchNode(nodeNumber, newPlan, myNode, heuristicValue) else new EfficientSearchNode(nodeNumber, newPlan, null, heuristicValue)

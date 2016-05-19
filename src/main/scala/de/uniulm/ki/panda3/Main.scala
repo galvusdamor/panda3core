@@ -63,8 +63,8 @@ object Main {
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(XMLParserType),
-                                             PreprocessingConfiguration(true, true, true, true, false, true),
-                                             SearchConfiguration(None, true, GreedyType, Some(TDGMinimumModification), true),
+                                             PreprocessingConfiguration(true, true, true, true, false, false),
+                                             SearchConfiguration(None, true, GreedyType, Some(NumberOfPlanSteps), true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
                                                                              SearchStatistics,
@@ -89,8 +89,11 @@ object Main {
         Dot2PdfCompiler.writeDotToFile(results(SolutionDotString).get, outputPDF)
       }
     }
+    var doneCounter = 0
     // check the tree
     def dfs(searchNode: SearchNode): Unit = if (!searchNode.dirty) {
+      doneCounter += 1
+      if (doneCounter % 10 == 0) println("traversed " + doneCounter)
       //searchNode.modifications.length // force computation (and check of assertions)
       searchNode.children foreach { x => dfs(x._1) }
     }
