@@ -43,9 +43,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   }
 
   lazy val planSteps       : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
-  lazy val causalLinks     : Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter {
-    cl => isPresent(cl.producer) && isPresent(cl.consumer)
-  }
+  lazy val causalLinks     : Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter { cl => isPresent(cl.producer) && isPresent(cl.consumer) }
   lazy val removedPlanSteps: Seq[PlanStep]   = planStepsAndRemovedPlanSteps filterNot isPresent
 
   lazy val flaws: Seq[Flaw] = {
