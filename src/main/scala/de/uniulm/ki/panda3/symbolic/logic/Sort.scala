@@ -30,4 +30,7 @@ case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) exte
 object Sort {
   def allPossibleInstantiations(sorts: Seq[Sort]): Seq[Seq[Constant]] =
     sorts.foldLeft[Seq[Seq[Constant]]](Nil :: Nil)({ case (args, sort) => sort.elements flatMap { c => args map { _ :+ c } } })
+
+  def allPossibleInstantiationsWithVariables(varsWithValues: Seq[(Variable, Seq[Constant])]): Seq[Seq[(Variable, Constant)]] =
+    varsWithValues.foldLeft[Seq[Seq[(Variable, Constant)]]](Nil :: Nil)({ case (args, (vari, values)) => values flatMap { c => args map { _ :+(vari, c) } } })
 }

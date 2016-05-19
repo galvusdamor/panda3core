@@ -19,6 +19,9 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
   /** adjacency list of the graph */
   def edges: Map[T, Seq[T]]
 
+  /** adjacency list of the graph */
+  private lazy val edgesSet: Map[T, Set[T]] = edges map { case (a, b) => (a, b.toSet) }
+
   // TODO: add this as a delayed intializer
   //require(edges.size == vertices.size)
 
@@ -41,7 +44,7 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
   }
 
 
-  lazy val stronglyConnectedComponents: Seq[Seq[T]] = {
+  lazy val stronglyConnectedComponents: Seq[Set[T]] = {
     // use Tarjan's algorithm to find the SCCs
     val lowLink: mutable.Map[T, Int] = mutable.HashMap()
     val dfsNumber: mutable.Map[T, Int] = mutable.HashMap()
@@ -50,14 +53,15 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
 
     var dfs = 0
 
-    def tarjan(node: T): Seq[Seq[T]] = {
+    def tarjan(node: T): Seq[Set[T]] = {
       dfsNumber(node) = dfs
       lowLink(node) = dfs
       dfs = dfs + 1
       stack.push(node)
       onStack.add(node)
 
-      val recursionResult: Seq[Seq[T]] = edges(node) flatMap { neighbour =>
+      val recursionResult: Seq[Set[T]] = if (!edges.contains(node)) Nil
+      else edges(node) flatMap { neighbour =>
         if (dfsNumber.contains(neighbour)) {
           // search on stack, if found adjust lowlink
           if (onStack(neighbour))
@@ -72,7 +76,7 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
       }
 
       if (dfsNumber(node) == lowLink(node)) {
-        val sccNodes: mutable.ListBuffer[T] = mutable.ListBuffer()
+        val sccNodes: mutable.HashSet[T] = mutable.HashSet()
         var stop = false
         while (!stop) {
           val v = stack.pop()
@@ -82,47 +86,54 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
           if (v == node)
             stop = true
         }
-        recursionResult :+ sccNodes.toSeq
+        recursionResult :+ sccNodes.toSet
       } else recursionResult
     }
     vertices flatMap { node => if (!dfsNumber.contains(node)) tarjan(node) else Nil }
   }
 
-  def getComponentOf(node: T): Option[Seq[T]] = stronglyConnectedComponents find { _.contains(node) }
+  lazy val getComponentOf: Map[T, Set[T]] = {
+    val x = (stronglyConnectedComponents flatMap { scc => scc map { elem => (elem, scc) } }).toMap
+      assert(x.size == vertices.length)
+    x
+  }
 
 
-  lazy val condensation: DirectedGraph[Seq[T]] =
-    SimpleDirectedGraph(stronglyConnectedComponents,
-                        (edgeList map { case (from, to) => (getComponentOf(from).get, getComponentOf(to).get) }) collect { case e@(from, to) if from != to => e })
+  lazy val condensation: DirectedGraph[Set[T]] = {
+    val edgeMap: Map[Set[T], Seq[Set[T]]] = (stronglyConnectedComponents map { comp =>
+      val edgeto = comp flatMap { elem => edges(elem) map getComponentOf filter { _ ne comp } }
+      (comp, edgeto.toSeq)
+    }).toMap
+    SimpleDirectedGraph(stronglyConnectedComponents, edgeMap)
+  }
 
   lazy val sources: Seq[T] = (degrees collect { case (node, (in, _)) if in == 0 => node }).toSeq
 
 
   /** computes for each node, which other nodes can be reached from it using the edges of the graph */
   // TODO: this computation might be inefficient
-  lazy val reachable: Map[T, Seq[T]] = {
-    val reachabilityMap: mutable.Map[T, Seq[T]] = mutable.HashMap()
+  lazy val reachable: Map[T, Set[T]] = {
+    val reachabilityMap: mutable.Map[T, Set[T]] = mutable.HashMap()
 
-    def dfs(scc: Seq[T]): Unit = {
+    def dfs(scc: Set[T]): Unit = {
       // if any node of the scc is already in the map, simply ignore it
       if (!reachabilityMap.contains(scc.head)) {
         condensation.edges(scc) foreach dfs
 
-        val allReachable =
-          ((if (scc.size > 1) scc else Nil) ++ (condensation.edges(scc) flatMap { neighbour => reachabilityMap(neighbour.head) ++ (if (neighbour.size == 1) neighbour else Nil) })).distinct
+        val allReachable: Set[T] =
+          (if (scc.size > 1) scc else Set()) ++ (condensation.edges(scc) flatMap { neighbour => reachabilityMap(neighbour.head) ++ (if (neighbour.size == 1) neighbour else Nil) })
 
         scc foreach { reachabilityMap(_) = allReachable }
       }
     }
     // run the dfs on all source SCCs of the condensation
     condensation.sources foreach dfs
-
     assert(reachabilityMap.size == vertices.size)
     reachabilityMap.toMap
   }
 
 
-  lazy val transitiveClosure = SimpleDirectedGraph(vertices, reachable)
+  lazy val transitiveClosure = SimpleDirectedGraph(vertices, reachable map { case (a, b) => (a, b.toSeq) })
 
 
   /**

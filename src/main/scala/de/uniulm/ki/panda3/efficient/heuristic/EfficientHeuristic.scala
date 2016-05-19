@@ -9,3 +9,8 @@ trait EfficientHeuristic {
 
   def computeHeuristic(plan: EfficientPlan): Double
 }
+
+
+object AlwaysZeroHeuristic extends EfficientHeuristic{
+  override def computeHeuristic(plan: EfficientPlan): Double = 0
+}

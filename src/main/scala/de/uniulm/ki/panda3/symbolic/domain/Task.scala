@@ -26,7 +26,8 @@ trait Task extends DomainUpdatable with PrettyPrintable {
   val precondition        : Formula
   val effect              : Formula
 
-  lazy val taskCSP: CSP = CSP(parameters.toSet, parameterConstraints)
+  lazy val isAbstract: Boolean = !isPrimitive
+  lazy val taskCSP   : CSP     = CSP(parameters.toSet, parameterConstraints)
 
   def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = {
     val sub = PartialSubstitution(parameters, newParameter)
@@ -91,14 +92,24 @@ trait Task extends DomainUpdatable with PrettyPrintable {
     "\neffects:\n" + effect.shortInfo + "\n"
 
   val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)]
-  val effectsAsPredicateBool     : Seq[(Predicate, Boolean)]
+  val effectsAsPredicateBool      : Seq[(Predicate, Boolean)]
+
+  def areParametersAllowed(parameterConstants: Seq[Constant]): Boolean = parameterConstraints forall {
+    case Equal(var1, var2: Variable)     => parameterConstants(parameters indexOf var1) == parameterConstants(parameters indexOf var2)
+    case Equal(vari, const: Constant)    => parameterConstants(parameters indexOf vari) == const
+    case NotEqual(var1, var2: Variable)  => parameterConstants(parameters indexOf var1) != parameterConstants(parameters indexOf var2)
+    case NotEqual(vari, const: Constant) => parameterConstants(parameters indexOf vari) != const
+    case OfSort(vari, sort)              => sort.elements contains parameterConstants(parameters indexOf vari)
+    case NotOfSort(vari, sort)           => !(sort.elements contains parameterConstants(parameters indexOf vari))
+  }
+
 }
 
 case class GeneralTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], precondition: Formula, effect: Formula)
   extends Task with HashMemo {
 
   override lazy val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)] = noSupport(FORUMLASNOTSUPPORTED)
-  override lazy val effectsAsPredicateBool     : Seq[(Predicate, Boolean)] = noSupport(FORUMLASNOTSUPPORTED)
+  override lazy val effectsAsPredicateBool      : Seq[(Predicate, Boolean)] = noSupport(FORUMLASNOTSUPPORTED)
 }
 
 case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], precondition: And[Literal], effect: And[Literal])
@@ -113,5 +124,5 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
   assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })
 
   lazy val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)] = (precondition.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
-  lazy val effectsAsPredicateBool     : Seq[(Predicate, Boolean)] = (effect.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
+  lazy val effectsAsPredicateBool      : Seq[(Predicate, Boolean)] = (effect.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
 }

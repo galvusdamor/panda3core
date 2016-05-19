@@ -6,11 +6,14 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanSt
 import de.uniulm.ki.panda3.symbolic.logic.Literal
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 case class CausalLink(producer: PlanStep, consumer: PlanStep, condition: Literal) extends DomainUpdatable with PrettyPrintable {
+  assert(producer.schema.isAbstract || producer != consumer)
+
+
   def containsOne(pss: PlanStep*): Boolean = (pss foldLeft false) { case (b, ps) => b || contains(ps) }
 
   def contains(ps: PlanStep): Boolean = ps == producer || ps == consumer

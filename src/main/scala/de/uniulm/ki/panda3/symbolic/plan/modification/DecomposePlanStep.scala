@@ -74,9 +74,9 @@ object DecomposePlanStep {
       val joinedCSP: CSP = currentPlan.variableConstraints.addVariables((copiedPlan.variableConstraints.variables -- decomposedPS.arguments).toSeq)
         .addConstraints(copiedPlan.variableConstraints.constraints)
 
-      if (joinedCSP.isSolvable.contains(false)) Nil
+      // the joinedCSP does not take constraints into account which are imposed by the parameter types of the plans tasks
+      if (joinedCSP.isSolvable.contains(false) || method.subPlan.variableConstraints.isSolvable.contains(false)) Nil
       else {
-
         // causal links handling -> in pairs (ingoing, outgoing) links
         // causal links from and to init and goal of the methods subplan (i.e. those that _must_ be respected)
         val methodSpecifiedCausalLinks = copiedPlan.causalLinks filter { cl => cl.containsOne(copiedPlan.init, copiedPlan.goal) } partition { _.producer == copiedPlan.init }

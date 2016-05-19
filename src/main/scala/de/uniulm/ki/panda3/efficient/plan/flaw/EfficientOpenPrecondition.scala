@@ -35,7 +35,8 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
     val possibleProducer = plan.possibleSupportersByDecompositionPerLiteral(literalIndex)
     var indexOnPossibleProducer = 0
     while (indexOnPossibleProducer < possibleProducer.length) {
-      numberOfResolvers += EfficientDecomposePlanStep.estimate(plan, this, possibleProducer(indexOnPossibleProducer), precondition.predicate, precondition.isPositive)
+      if (!plan.ordering.gt(possibleProducer(indexOnPossibleProducer), planStep)) // don't decompose plan steps that cannot possibly support the precondition
+        numberOfResolvers += EfficientDecomposePlanStep.estimate(plan, this, possibleProducer(indexOnPossibleProducer), precondition.predicate, precondition.isPositive)
       indexOnPossibleProducer += 1
     }
 
@@ -55,7 +56,8 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
     val possibleProducer = plan.possibleSupportersByDecompositionPerLiteral(literalIndex)
     var indexOnPossibleProducer = 0
     while (indexOnPossibleProducer < possibleProducer.length) {
-      buffer appendAll EfficientDecomposePlanStep(plan, this, possibleProducer(indexOnPossibleProducer), precondition.predicate, precondition.isPositive)
+      if (!plan.ordering.gt(possibleProducer(indexOnPossibleProducer), planStep)) // don't decompose plan steps that cannot possibly support the precondition
+        buffer appendAll EfficientDecomposePlanStep(plan, this, possibleProducer(indexOnPossibleProducer), precondition.predicate, precondition.isPositive)
       indexOnPossibleProducer += 1
     }
     buffer.toArray

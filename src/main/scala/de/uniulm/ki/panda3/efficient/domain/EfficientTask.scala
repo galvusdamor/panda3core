@@ -15,6 +15,8 @@ import scala.collection.mutable.ArrayBuffer
 case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], constraints: Array[EfficientVariableConstraint], precondition: Array[EfficientLiteral],
                          effect: Array[EfficientLiteral], allowedToInsert: Boolean) {
 
+  val isAbstract = !isPrimitive
+
   /** given a literal of this task and the actual parameters of this task, it returns the actual arguments of the literal */
   def getArgumentsOfLiteral(taskArguments: Array[Int], literal: EfficientLiteral): Array[Int] = {
     val arguments = new Array[Int](literal.parameterVariables.length)
@@ -35,3 +37,5 @@ case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], const
   }
 
 }
+
+case class EfficientGroundTask(taskID: Int, arguments: Array[Int])
