@@ -33,18 +33,18 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   /**
     * Runs the complete planner (including the parser) and returs the results
     */
-  def runResultSearch(domain: InputStream, problem: InputStream, timeCapsule: TimeCapsule = new TimeCapsule()): ResultMap = runSearchHandle(domain, problem, None, timeCapsule)._5()
+  def runResultSearch(domain: InputStream, problem: InputStream, timeCapsule: TimeCapsule = new TimeCapsule()): ResultMap = runSearchHandle(domain, problem, None, timeCapsule)._6()
 
   /**
     * Runs the complete planner and returs the results
     */
-  def runResultSearch(domain: Domain, problem: Plan, timeCapsule: TimeCapsule): ResultMap = runSearchHandle(domain, problem, None, timeCapsule)._5()
+  def runResultSearch(domain: Domain, problem: Plan, timeCapsule: TimeCapsule): ResultMap = runSearchHandle(domain, problem, None, timeCapsule)._6()
 
   /**
     * Runs the complete planner (including the parser) and returns a handle to the search and a waiting function for the result
     */
   def runSearchHandle(domain: InputStream, problem: InputStream, releaseSemaphoreEvery: Option[Int], timeCapsule: TimeCapsule = new TimeCapsule()):
-  (Domain, SearchNode, Semaphore, AbortFunction, Unit => ResultMap) = {
+  (Domain, SearchNode, Semaphore, AbortFunction, InformationCapsule, Unit => ResultMap) = {
     val parsedDomainAndProblem = runParsing(domain, problem, timeCapsule)
     runSearchHandle(parsedDomainAndProblem._1._1, parsedDomainAndProblem._1._2, releaseSemaphoreEvery, parsedDomainAndProblem._2)
   }
@@ -53,7 +53,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     * Runs the complete planner and returns a handle to the search and a waiting function for the result
     */
   def runSearchHandle(domain: Domain, problem: Plan, releaseSemaphoreEvery: Option[Int], timeCapsule: TimeCapsule):
-  (Domain, SearchNode, Semaphore, AbortFunction, Unit => ResultMap) = {
+  (Domain, SearchNode, Semaphore, AbortFunction, InformationCapsule, Unit => ResultMap) = {
     // run the preprocessing step
     val ((domainAndPlan, preprocessedAnalysisMap), _) = runPreprocessing(domain, problem, timeCapsule)
 
@@ -83,7 +83,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         case _       => throw new UnsupportedOperationException("Any other symbolic search algorithm besides DFS is not supported.")
       }
 
-      (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, { _ =>
+      (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(())
         runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult)
       })
@@ -140,9 +140,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       }
 
       val wrappedSearchTreeRoot = wrapper.wrap(searchTreeRoot)
-      (domainAndPlan._1, wrappedSearchTreeRoot, nodesProcessed, abortFunction, { _ =>
+      (domainAndPlan._1, wrappedSearchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(()) map { wrapper.wrap }
-
         runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult)
       })
     }
