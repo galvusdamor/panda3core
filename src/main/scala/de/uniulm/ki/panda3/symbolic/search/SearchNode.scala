@@ -9,12 +9,17 @@ import scala.util.Success
 /**
   * Represents a search state in a search space. This structure will (usually, i.e., we will probably never have loops do the systematicity) be a tree.
   *
-  * @param plan      the plan contained in this search node, if it has no flaws this is a solution
-  * @param parent    the nodes parent node
-  * @param heuristic the computed heuristic of this node. This might be -1 if the search procedure does not use a heuristic
+  * @param nodeId      the plan contained in this search node, if it has no flaws this is a solution
+  * @param nodePlan    the nodes parent node
+  * @param nodeParent the computed heuristic of this node. This might be -1 if the search procedure does not use a heuristic
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SearchNode(id : Int, plan: Plan, parent: SearchNode, heuristic: Double) {
+class SearchNode(nodeId: Int, nodePlan: Unit => Plan, nodeParent: SearchNode, nodeHeuristic: Double) {
+
+  val id: Int = nodeId
+  lazy val plan: Plan = nodePlan()
+  val parent   : SearchNode = nodeParent
+  val heuristic: Double     = nodeHeuristic
 
   /** if this flag is true only the current plan, the heuristic and its parent are valid! Do not read any other information */
   var dirty: Boolean = true
