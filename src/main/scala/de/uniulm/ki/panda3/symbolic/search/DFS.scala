@@ -45,8 +45,10 @@ object DFS extends SymbolicSearchAlgorithm {
       val flaws = node.plan.flaws
       timeCapsule stop SEARCH_FLAW_COMPUTATION
 
-      if (flaws.isEmpty) Some(node.plan)
-      else if ((nodeLimit.isDefined && nodes > nodeLimit.get) || abort) None
+      if (flaws.isEmpty) {
+        node.dirty = false
+        Some(node.plan)
+      } else if ((nodeLimit.isDefined && nodes > nodeLimit.get) || abort) None
       else {
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
         nodes = nodes + 1
@@ -60,7 +62,7 @@ object DFS extends SymbolicSearchAlgorithm {
         timeCapsule stop SEARCH_FLAW_RESOLVER
 
         // check whether we are at a dead end in the search space
-        if (node.modifications exists { _.isEmpty }) {d = d - 1; crap = crap + 1; node.dirty = false; None }
+        if (node.modifications exists { _.isEmpty }) {d = d - 1; crap = crap + 1; node.dirty = false; node.setSelectedFlaw(-1); None }
         else {
           timeCapsule start SEARCH_FLAW_SELECTOR
           val selectedResolvers: Seq[Modification] = (node.modifications sortBy { _.size }).head

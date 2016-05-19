@@ -390,7 +390,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val searchNode = new SearchNode(efficientSearchNode.id, { _ =>
         val plan = wrap(efficientSearchNode.plan)
         assert(plan.flaws.size == efficientSearchNode.plan.flaws.length)
-        assert(plan.flaws.size == efficientSearchNode.modifications.length)
+
         plan
       }, parent, efficientSearchNode.heuristic)
 
@@ -402,8 +402,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         // the order of the flaws in both representations might not be identical so we need to do a bit of reordering
         searchNode setSelectedFlaw { () =>
           val flawIndex = searchNode.plan.flaws indexWhere { flaw => FlawEquivalenceChecker(efficientSearchNode.plan.flaws(efficientSearchNode.selectedFlaw), flaw, this) }
-          assert(flawIndex != -1 || searchNode.dirty || searchNode.searchState == SearchState.SOLUTION || searchNode.searchState == SearchState.DEADEND_HEURISTIC
-                   || searchNode.searchState == SearchState.DEADEND_CSP || searchNode.searchState == SearchState.DEADEND_UNRESOLVABLEFLAW)
+          assert(flawIndex != -1 || efficientSearchNode.dirty || efficientSearchNode.searchState == SearchState.SOLUTION || efficientSearchNode.searchState == SearchState.DEADEND_HEURISTIC
+                   || efficientSearchNode.searchState == SearchState.DEADEND_CSP || efficientSearchNode.searchState == SearchState.DEADEND_UNRESOLVABLEFLAW)
           flawIndex
         }
         // reorder modifications
@@ -420,10 +420,14 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
             assert(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length)
             (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
           }
+          assert(searchNode.plan.flaws.size == efficientSearchNode.modifications.length)
           assert(modifications.length == searchNode.plan.flaws.size)
           modifications
         }
         searchNode setChildren { () => efficientSearchNode.children map { case (node, i) => (wrapWithParent(node, searchNode), i) } }
+
+        if (efficientSearchNode.searchState != SearchState.INSEARCH && efficientSearchNode.searchState != SearchState.EXPLORED)
+          searchNode setSearchState efficientSearchNode.searchState
       }
 
       if (efficientSearchNode.dirty)
