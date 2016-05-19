@@ -68,6 +68,10 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.BitS
     remainingDomains(unionFind.getRepresentative(variable))
   }
 
+  def isValuePossible(variable: Int, constant: Int): Boolean = if (unionFind.getRepresentative(variable) < 0)
+    switchConstant(unionFind.getRepresentative(variable)) == constant
+  else remainingDomains(unionFind.getRepresentative(variable)) contains constant
+
   def getVariableUnequalTo(variable: Int): mutable.Set[Int] = if (unionFind.getRepresentative(variable) < 0) new mutable.HashSet[Int]()
   else unequal(unionFind.getRepresentative(variable)).clone()
 

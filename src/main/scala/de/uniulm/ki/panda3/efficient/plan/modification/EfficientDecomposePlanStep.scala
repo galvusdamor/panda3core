@@ -62,6 +62,7 @@ object EfficientDecomposePlanStep {
     val addedVariableConstraints: Array[EfficientVariableConstraint] =
       new Array[EfficientVariableConstraint](method.addedVariableConstraints.length + variableConstraintsForInheritedLinks.length)
     var constraint = 0
+    var cspWouldBeInconsistent = false
     // those contained inside the method
     while (constraint < method.addedVariableConstraints.length) {
       val oldConstraint = method.addedVariableConstraints(constraint)
@@ -73,6 +74,10 @@ object EfficientDecomposePlanStep {
       } else {
         // other is a constant or a sort so just keep it
         addedVariableConstraints(constraint) = EfficientVariableConstraint(oldConstraint.constraintType, newVariableOfVariable, oldConstraint.other)
+
+        // sanity check
+        if (oldConstraint.constraintType == EfficientVariableConstraint.EQUALCONSTANT && newVariableOfVariable < plan.variableConstraints.numberOfVariables)
+          cspWouldBeInconsistent |= !plan.variableConstraints.isValuePossible(newVariableOfVariable, oldConstraint.other)
       }
       constraint += 1
     }
@@ -136,7 +141,7 @@ object EfficientDecomposePlanStep {
 
 
     // add the constructed modification to the buffer
-    buffer append
+    if (!cspWouldBeInconsistent) buffer append
       EfficientDecomposePlanStep(plan, resolvedFlaw, decomposedPS, addedPlanSteps, addedVariableSorts, addedVariableConstraints, addedCausalLinks, nonInducedAddedOrderings,
                                  Array((decomposedPS, methodIndex)))
   }
@@ -312,7 +317,7 @@ object EfficientDecomposePlanStep {
           if (method.ingoingSupportersContainNecessary(abstractPrecondition) && linkConnected == 0) numberOfLinkInheritances = 0
 
           // TODO these should be pruned from the domain ... at some point in time
-          //assert(method.ingoingSupporters(abstractPrecondition).length != 0)
+          assert(method.ingoingSupporters(abstractPrecondition).length != 0)
           if (method.ingoingSupporters(abstractPrecondition).length == 0) {
             if (linkConnected != 0) numberOfLinkInheritances = 0
           } else
@@ -334,7 +339,7 @@ object EfficientDecomposePlanStep {
           if (method.outgoingSupportersContainNecessary(abstractEffect) && linkConnected == 0) numberOfLinkInheritances = 0
 
           // TODO these should be pruned from the domain ... at some point in time
-          //assert(method.outgoingSupporters(abstractEffect).length != 0)
+          assert(method.outgoingSupporters(abstractEffect).length != 0)
           if (method.outgoingSupporters(abstractEffect).length == 0) {
             if (linkConnected != 0) numberOfLinkInheritances = 0
           } else
