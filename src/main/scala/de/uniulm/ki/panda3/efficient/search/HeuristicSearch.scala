@@ -138,6 +138,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
                 val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
+                //println("HEURISTIC " + heuristicValue)
+
                 assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps)
 
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)

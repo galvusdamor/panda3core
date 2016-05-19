@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.efficient.domain
 
-import de.uniulm.ki.panda3.efficient.csp.{EfficientVariableConstraint, EfficientVariableConstraint$}
+import de.uniulm.ki.panda3.efficient.csp.{EfficientVariableConstraint}
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 
 import scala.collection.mutable.ArrayBuffer
@@ -38,13 +38,12 @@ case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], const
 
 }
 
-case class EfficientGroundTask(taskID: Int, arguments: Array[Int]){
+case class EfficientGroundTask(taskID: Int, arguments: Array[Int]) {
   // we need a special equals as we use arrays
-  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[EfficientGroundTask]){
+  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[EfficientGroundTask]) {
     val that = o.asInstanceOf[EfficientGroundTask]
-
-    if (this.taskID != that.taskID) false
-
-    this.arguments sameElements that.arguments
+    if (this.taskID != that.taskID) false else this.arguments sameElements that.arguments
   } else false
+
+  override def hashCode(): Int = taskID
 }

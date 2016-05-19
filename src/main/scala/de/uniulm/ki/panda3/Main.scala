@@ -63,16 +63,16 @@ object Main {
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(XMLParserType),
-                                             PreprocessingConfiguration(true, true, true, true, false, false),
-                                             SearchConfiguration(None, true, GreedyType, Some(NumberOfPlanSteps), true),
+                                             PreprocessingConfiguration(true, true, true, true, false, true),
+                                             SearchConfiguration(None, true, GreedyType, Some(TDGMinimumModification), true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
                                                                              SearchStatistics,
-                                                                             SearchSpace,
+                                                                             //SearchSpace,
                                                                              SolutionInternalString,
                                                                              SolutionDotString)))
 
-   // System.in.read()
+    // System.in.read()
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
 
@@ -94,11 +94,17 @@ object Main {
     def dfs(searchNode: SearchNode): Unit = if (!searchNode.dirty) {
       doneCounter += 1
       if (doneCounter % 10 == 0) println("traversed " + doneCounter)
+      println("STATE: " + searchNode.searchState)
       //searchNode.modifications.length // force computation (and check of assertions)
       searchNode.children foreach { x => dfs(x._1) }
     }
 
-    if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) dfs(results(SearchSpace))
+    //System.in.read()
+
+    if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) {
+      results(SearchSpace).recomputeSearchState()
+      dfs(results(SearchSpace))
+    }
   }
 
 
