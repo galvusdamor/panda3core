@@ -19,6 +19,10 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
     groundTask -> taskDecompositionTree.graph.minSumTraversal(groundTask, { task => domain.tasks(task.taskID).precondition.length })
   } toMap
 
+  {
+    modificationEfforts foreach { case (gt, v) => println(gt.taskID + " " + v) }
+  }
+
 
   private def computeHeuristic(planStep: Int, parameter: Array[Int], numberOfChosenParameters: Int, plan: EfficientPlan): Double =
     if (numberOfChosenParameters == parameter.length) {
@@ -70,7 +74,8 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
     var cl = 0
     while (cl < plan.causalLinks.length) {
       val link = plan.causalLinks(cl)
-      if (plan.isPlanStepPresentInPlan(link.producer) && plan.isPlanStepPresentInPlan(link.consumer)) heuristicValue -= 1
+      if (plan.isPlanStepPresentInPlan(link.producer) && plan.isPlanStepPresentInPlan(link.consumer) && domain.tasks(plan.planStepTasks(link.consumer)).isAbstract)
+        heuristicValue -= 1
       cl += 1
     }
 

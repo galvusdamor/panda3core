@@ -38,4 +38,13 @@ case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], const
 
 }
 
-case class EfficientGroundTask(taskID: Int, arguments: Array[Int])
+case class EfficientGroundTask(taskID: Int, arguments: Array[Int]){
+  // we need a special equals as we use arrays
+  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[EfficientGroundTask]){
+    val that = o.asInstanceOf[EfficientGroundTask]
+
+    if (this.taskID != that.taskID) false
+
+    this.arguments sameElements that.arguments
+  } else false
+}
