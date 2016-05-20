@@ -40,7 +40,7 @@ class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral], co
       }
     }
 
-    def createActionInstances(task: ReducedTask, gl: GroundLiteral) = {
+    def createActionInstances(task: ReducedTask, assignMap: Map[Variable, Constant], gl: GroundLiteral, precons: Set[Literal]) = {
 
     }
 
