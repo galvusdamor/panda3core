@@ -86,7 +86,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(())
-        runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult)
+        runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult,domainAndPlan)
       })
     } else {
       timeCapsule start COMPUTE_EFFICIENT_REPRESENTATION
@@ -143,12 +143,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val wrappedSearchTreeRoot = wrapper.wrap(searchTreeRoot)
       (domainAndPlan._1, wrappedSearchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(()) map { wrapper.wrap }
-        runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult)
+        runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan)
       })
     }
   }
 
-  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan]): ResultMap =
+  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan], domainAndPlan: (Domain,Plan)): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings => timeCapsule.timeMap
       case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
@@ -156,11 +156,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         SearchState.UNSOLVABLE
       else SearchState.INSEARCH
 
-      case SearchResult           => result
-      case SearchStatistics       => informationCapsule.informationMap
-      case SearchSpace            => rootNode
-      case SolutionInternalString => result match {case Some(plan) => Some(plan.longInfo); case _ => None}
-      case SolutionDotString      => result match {case Some(plan) => Some(plan.dotString); case _ => None}
+      case SearchResult              => result
+      case SearchStatistics          => informationCapsule.informationMap
+      case SearchSpace               => rootNode
+      case SolutionInternalString    => result match {case Some(plan) => Some(plan.longInfo); case _ => None}
+      case SolutionDotString         => result match {case Some(plan) => Some(plan.dotString); case _ => None}
+      case PreprocessedDomainAndPlan => domainAndPlan
     })
     } toMap
              )

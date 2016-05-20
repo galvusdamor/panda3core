@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.configuration
 
+import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 
@@ -25,6 +26,8 @@ object SearchSpace extends ResultType {type ResultType = SearchNode}
 object SolutionInternalString extends ResultType {type ResultType = Option[String]}
 
 object SolutionDotString extends ResultType {type ResultType = Option[String]}
+
+object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain,Plan)}
 
 
 object Timings {
