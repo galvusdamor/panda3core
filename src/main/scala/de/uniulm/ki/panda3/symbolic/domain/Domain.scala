@@ -29,6 +29,10 @@ import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraph}
 case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
                   decompositionAxioms: Seq[DecompositionAxiom]) extends DomainUpdatable {
 
+  // sanity check for the sorts
+  sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
+
+
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph        = TaskSchemaTransitionGraph(this)
   lazy val constants                : Seq[Constant]                    = (sorts flatMap { _.elements }).distinct
   lazy val sortGraph                : DirectedGraph[Sort]              = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
@@ -71,6 +75,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
     update(domainUpdate)
   }
+
 
   def expandSortHierarchy(): DomainUpdate = {
     val sortTranslationMap = sortGraph.topologicalOrdering.get.foldRight[Map[Sort, Sort]](Map[Sort, Sort]())({ case (oldSort, translationMap) =>
