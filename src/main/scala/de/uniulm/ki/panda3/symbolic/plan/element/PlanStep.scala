@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp.{TotalSubstitution, CSP, PartialSubstitution}
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, ReducedTask, DomainUpdatable, Task}
-import de.uniulm.ki.panda3.symbolic.logic.{GroundLiteral, Constant, Literal, Variable}
+import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.util.HashMemo
 
@@ -97,8 +97,18 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
   lazy val substitutedPreconditionsSet: Set[GroundLiteral] = substitutedPreconditions.toSet
 
   /** returns a version of the effects */
-  lazy val substitutedEffects         : Seq[GroundLiteral] = task match {
+  lazy val substitutedEffects: Seq[GroundLiteral] = task match {
     case reduced: ReducedTask => reduced.effect.conjuncts map { _ ground parameterSubstitution }
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
+  }
+}
+
+
+case class PartiallyInstantiatedTask(task: Task, arguments: Map[Variable, Constant]) extends HashMemo {
+
+  lazy val allInstantiations: Seq[GroundTask] = Sort.allPossibleInstantiationsWithVariables(task.parameters filterNot  { arguments.contains } map { v => (v, v.sort.elements) }) map {
+    case newlyBoundVariables =>
+      val allVariablesMap = arguments ++ newlyBoundVariables
+      GroundTask(task, task.parameters map allVariablesMap)
   }
 }
