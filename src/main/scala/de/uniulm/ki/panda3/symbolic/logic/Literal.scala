@@ -68,6 +68,8 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 
 case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo {
 
+  lazy val negate = copy(isPositive = !isPositive)
+
   override val isEmpty: Boolean = false
 
   override def update(domainUpdate: DomainUpdate): Formula = GroundLiteral(predicate update domainUpdate, isPositive, parameter map { _ update domainUpdate })
