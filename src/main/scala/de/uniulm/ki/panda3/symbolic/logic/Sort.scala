@@ -12,9 +12,11 @@ import de.uniulm.ki.util.HashMemo
   */
 case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo {
 
-  override def update(domainUpdate: DomainUpdate): Sort = domainUpdate match {
+  override def update(domainUpdate: DomainUpdate): Sort = (domainUpdate match {
     case ExchangeSorts(map) => if (map.contains(this)) map(this) else this
     case _                  => this
+  }) match {
+    case Sort(n, e, ss) => Sort(n, e, ss map { _ update domainUpdate })
   }
 
   /** returns a short information about the object */

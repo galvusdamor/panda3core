@@ -15,7 +15,7 @@ import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachabili
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
-import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.plan.{PlanDotOptions, Plan}
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
@@ -55,7 +55,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   def runSearchHandle(domain: Domain, problem: Plan, releaseSemaphoreEvery: Option[Int], timeCapsule: TimeCapsule):
   (Domain, SearchNode, Semaphore, AbortFunction, InformationCapsule, Unit => ResultMap) = {
     // run the preprocessing step
-    val ((domainAndPlan, preprocessedAnalysisMap), _) = runPreprocessing(domain, problem, timeCapsule)
+    val (domainAndPlanFullyParsed, _) = runParsingPostProcessing(domain, problem, timeCapsule)
+    val ((domainAndPlan, preprocessedAnalysisMap), _) = runPreprocessing(domainAndPlanFullyParsed._1, domainAndPlanFullyParsed._2, timeCapsule)
 
     // !!!! ATTENTION we use side effects for the sake of simplicity
     var analysisMap = preprocessedAnalysisMap
@@ -179,13 +180,19 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case HDDLParserType => HDDLParser.parseDomainAndProblem(domain, problem)
     }
     timeCapsule stop FILEPARSER
-    info("done.\nPreparing internal domain representation ... ")
+    info("done\n")
+    (parsedDomainAndProblem, timeCapsule)
+  }
 
+  def runParsingPostProcessing(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): ((Domain, Plan), TimeCapsule) = {
+    info("Preparing internal domain representation ... ")
+
+    timeCapsule startOrLetRun PARSING
     timeCapsule start PARSER_SORT_EXPANSION
     val sortsExpandedDomainAndProblem = if (parsingConfiguration.expandSortHierarchy) {
-      val sortExpansion = parsedDomainAndProblem._1.expandSortHierarchy()
-      (parsedDomainAndProblem._1.update(sortExpansion), parsedDomainAndProblem._2.update(sortExpansion))
-    } else parsedDomainAndProblem
+      val sortExpansion = domain.expandSortHierarchy()
+      (domain.update(sortExpansion), problem.update(sortExpansion))
+    } else (domain, problem)
     timeCapsule stop PARSER_SORT_EXPANSION
 
     timeCapsule start PARSER_CWA

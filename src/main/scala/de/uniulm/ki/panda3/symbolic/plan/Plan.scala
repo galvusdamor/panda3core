@@ -425,11 +425,11 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     })
   }
 
-  override lazy val dotString: String = dotString(PlanDotOptions(showParameters = true, showOrdering = true, omitImpliedOrderings = true, showCausalLinks = true, showHierarchy = false,
-                                                                 showOpenPreconditions = true))
+  override lazy val dotString: String = dotString(PlanDotOptions())
 }
 
-case class PlanDotOptions(showParameters: Boolean, showOrdering: Boolean, omitImpliedOrderings: Boolean, showCausalLinks: Boolean, showHierarchy: Boolean, showOpenPreconditions: Boolean) {}
+case class PlanDotOptions(showParameters: Boolean = true, showOrdering: Boolean = true, omitImpliedOrderings: Boolean = true, showCausalLinks: Boolean = true,
+                          showHierarchy: Boolean = false, showOpenPreconditions: Boolean = true) {}
 
 
 
