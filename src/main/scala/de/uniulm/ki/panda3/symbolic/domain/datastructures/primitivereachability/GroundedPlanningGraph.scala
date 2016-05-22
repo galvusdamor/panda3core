@@ -35,21 +35,33 @@ class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral], co
     def buildGraph(layer: (Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)]), newPropositions: Set[GroundLiteral], deletedMutexes: Set[(GroundLiteral, GroundLiteral)]): Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
       /*fillPreconMap(newPropositions)*/
       val assignMap: Map[Variable, Constant] = Map()
-      val newActions = newPropositions map { (gl: GroundLiteral) => domain.consumersOf.get(gl.predicate) map {tasks: Seq[ReducedTask] => tasks map { (t: ReducedTask) => createActionInstances(t, assignMap, gl, (t.precondition.conjuncts find { (l: Literal) => l.predicate == gl.predicate }).get, t.precondition.conjuncts) } } }
+      val newActions = newPropositions map { (gl: GroundLiteral) => domain.consumersOf.get(gl.predicate) map { tasks: Seq[ReducedTask] => tasks map { (t: ReducedTask) => createActionInstances(t, assignMap, gl, (t.precondition.conjuncts find { (l: Literal) => l.predicate == gl.predicate }).get, t.precondition.conjuncts) } } }
     }
 
     def createActionInstances(task: ReducedTask, assignMap: Map[Variable, Constant], gl: GroundLiteral, l: Literal, precons: Seq[Literal]): Set[GroundTask] = {
-      val correct: Boolean = ((l.parameterVariables zip gl.parameter) map {t: (Variable, Constant) => (assignMap.get(t._1) == t._2)}).foldLeft(false)((eb: Boolean, zb: Boolean) => eb || zb)
-      if(correct) {
-        var assign = assignMap ++ (l.parameterVariables zip gl.parameter).toMap
-
+      if (gl == Nil) {
+        Set.empty[GroundTask]
+      } else {
+        val correct: Boolean = ((l.parameterVariables zip gl.parameter) map { t: (Variable, Constant) => (assignMap.get(t._1) == t._2) }).foldLeft(false)((b1: Boolean, b2: Boolean) => b1 || b2)
+        if (correct) {
+          val updatedAssignMap = assignMap ++ (l.parameterVariables zip gl.parameter).toMap
+          val updatedPrecons = (precons filterNot { (lit: Literal) => lit == l })
+          if (updatedPrecons.size == 0) {
+            /*
+             * TODO: convert the updatedAssignMap back to a Seq[Constant] in the correct order.
+             */
+            Set(GroundTask(task, ???))
+          } else {
+            updatedPrecons map { (lit: Literal) => preconMap.get(lit.predicate) getOrElse(Set.empty[GroundLiteral]) map { (newgl: GroundLiteral) => createActionInstances(task, updatedAssignMap, newgl, lit, updatedPrecons) }
+          }
+        }
       }
     }
 
-    def fillPreconMap(propositions: Set[GroundLiteral]): Unit = {
-      propositions.foreach((p:GroundLiteral) => preconMap.addBinding(p.predicate, p) )
-    }
+      def fillPreconMap(propositions: Set[GroundLiteral]): Unit = {
+        propositions.foreach((p: GroundLiteral) => preconMap.addBinding(p.predicate, p))
+      }
 
-    buildGraph((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)]), initialState, Set.empty[(GroundLiteral, GroundLiteral)])
+      buildGraph((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)]), initialState, Set.empty[(GroundLiteral, GroundLiteral)])
+    }
   }
-}
