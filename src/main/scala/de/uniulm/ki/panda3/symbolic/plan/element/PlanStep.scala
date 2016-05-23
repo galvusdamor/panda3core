@@ -1,10 +1,10 @@
 package de.uniulm.ki.panda3.symbolic.plan.element
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
-import de.uniulm.ki.panda3.symbolic.csp.{TotalSubstitution, CSP, PartialSubstitution}
+import de.uniulm.ki.panda3.symbolic.csp.{CSP, PartialSubstitution, TotalSubstitution}
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
-import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, ReducedTask, DomainUpdatable, Task}
-import de.uniulm.ki.panda3.symbolic.logic.{GroundLiteral, Constant, Literal, Variable}
+import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, DomainUpdatable, ReducedTask, Task}
+import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.util.HashMemo
 
@@ -99,6 +99,16 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
   /** returns a version of the effects */
   lazy val substitutedEffects         : Seq[GroundLiteral] = task match {
     case reduced: ReducedTask => reduced.effect.conjuncts map { _ ground parameterSubstitution }
+    case _                    => noSupport(FORUMLASNOTSUPPORTED)
+  }
+
+  lazy val substitutedDelEffects: Seq[GroundLiteral] = task match {
+    case reduced: ReducedTask => reduced.effect.conjuncts filter { (l: Literal) => l.isNegative } map { _ ground parameterSubstitution}
+    case _                    => noSupport(FORUMLASNOTSUPPORTED)
+  }
+
+  lazy val substitutedAddEffectrs: Seq[GroundLiteral] = task match {
+    case reduced: ReducedTask => reduced.effect.conjuncts filter { (l: Literal) => l.isPositive} map { _ ground parameterSubstitution}
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
 }

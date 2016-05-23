@@ -32,11 +32,16 @@ class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral], co
       fillPreconMap(newPropositions)
 
       val assignMap: Map[Variable, Constant] = Map()
-      //  Instantiate actions which become available because of the new propositions "union" deletion of mutexes
+      //  Instantiate actions which become available because of new propositions and deletion of mutexes
       val newActions: Set[GroundTask] = ((newPropositions ++ (deletedMutexes flatMap { (t: (GroundLiteral, GroundLiteral)) => Set(t._1, t._2) })) flatMap { (gl: GroundLiteral) => {
         domain.consumersOf.getOrElse(gl.predicate, Seq.empty[ReducedTask]) flatMap { (t: ReducedTask) => createActionInstances(t, assignMap, gl, (t.precondition.conjuncts find { (l: Literal) => l.predicate == gl.predicate }).get, t.precondition.conjuncts) }
       }
       })
+      val allActions: Set[GroundTask] = layer._1 ++ newActions
+      /*
+       * TODO: Try to shorten the expression; check/filter unnecessary Pairs;
+       */
+      val newActionMutexes: Set[(GroundTask, GroundTask)] = allActions flatMap { (gt1: GroundTask) => allActions map {(gt2: GroundTask) => (gt1, gt2)}} filter {(gtPair: (GroundTask, GroundTask)) => ((gtPair._1.substitutedDelEffects intersect (gtPair._2.substitutedAddEffectrs union  gtPair._2.substitutedPreconditions)).isEmpty && (gtPair._2.substitutedDelEffects intersect (gtPair._1.substitutedAddEffectrs union  gtPair._1.substitutedPreconditions)).isEmpty) || (gtPair._1.substitutedPreconditions flatMap {(gt1: GroundLiteral) => gtPair._2.substitutedPreconditions map { (gt2: GroundLiteral) => (gt1, gt2)}} map { (glPair: (GroundLiteral, GroundLiteral)) => layer._4.contains(glPair) || layer._4.contains(glPair.swap)} ).foldLeft(false)((b1: Boolean, b2: Boolean) => b1 || b2) }
 
       /*
      * TODO: Check the correctness for special cases.
