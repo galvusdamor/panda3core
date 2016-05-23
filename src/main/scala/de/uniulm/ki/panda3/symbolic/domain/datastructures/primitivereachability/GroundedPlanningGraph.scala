@@ -1,11 +1,14 @@
 package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 
+import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.LayeredGroundedPrimitiveReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.domain.updates.ReduceFormula
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 
 import collection.mutable.{HashMap, MultiMap}
+import scala.collection.mutable
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -23,6 +26,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     def buildGraph(previousLayer: (Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)]),
                    addedPropositions: Set[GroundLiteral], deletedMutexes: Set[(GroundLiteral, GroundLiteral)]):
                    Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
+      println("BuildGraph!")
       fillPreconMap(addedPropositions)
       //  Instantiate actions which become available because of new propositions and deletion of mutexes
       val newActions: Set[GroundTask] = addedPropositions ++ (deletedMutexes flatMap { mutex => Set(mutex._1, mutex._2) }) flatMap { groundLiteral => {
@@ -35,12 +39,12 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       /*
        * TODO: Try to shorten the expressions; check/filter unnecessary Pairs;
        */
-      val newActionMutexes: Set[(GroundTask, GroundTask)] = (for (x <- allActions; y <- allActions) yield (x, y)) filter { case (gTask1, gTask2) => ((gTask1.substitutedDelEffects intersect
+      val newActionMutexes: Set[(GroundTask, GroundTask)] = (for (x <- newActions; y <- allActions) yield (x, y)) filter { case (gTask1, gTask2) => ((gTask1.substitutedDelEffects intersect
         (gTask2.substitutedAddEffects union gTask2.substitutedPreconditions)).isEmpty && (gTask2.substitutedDelEffects intersect
         (gTask1.substitutedAddEffects union gTask1.substitutedPreconditions)).isEmpty) ||
         (for(x <- gTask1.substitutedPreconditions; y <- gTask2.substitutedPreconditions) yield (x,y)).exists(previousLayer._4.contains(_))
       }
-      val newPropositions: Set[GroundLiteral] = (newActions flatMap { nA => nA.substitutedAddEffects }) -- previousLayer._3
+      val newPropositions: Set[GroundLiteral] = (newActions flatMap { newAction => newAction.substitutedAddEffects }) -- previousLayer._3
       /*
        * TODO: Think about a better way to compute proposition-mutexes.
        */
@@ -50,10 +54,12 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
                y <- allActions filter { gTask => gTask.substitutedAddEffects contains gLiteral2 }) yield(x,y)) exists {
             gTaskPair =>  newActionMutexes(gTaskPair) || newActionMutexes(gTaskPair.swap)} }
 
+      println("np:" + newPropositions.size)
+      val thisLayer = (allActions, newActionMutexes, allPropositions, allPropositionMutexes)
       if (newPropositions.isEmpty && previousLayer._4.size == allPropositionMutexes.size) {
-        Seq.empty[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])]
+        //Seq.empty[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])]
+        Seq(thisLayer)
       } else {
-        val thisLayer = (allActions, newActionMutexes, allPropositions, allPropositionMutexes)
         thisLayer +: buildGraph(thisLayer, newPropositions, previousLayer._4 intersect allPropositionMutexes)
       }
     }
@@ -64,11 +70,16 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       val correct: Boolean = (literal.parameterVariables zip groundLiteral.parameter) forall { case (variable, constant) => assignMap.getOrElse(variable, constant) == constant }
       val updatedGroundLiterals = groundLiterals :+ groundLiteral
       val mutexFree: Boolean = (for(x <- updatedGroundLiterals; y <- updatedGroundLiterals) yield (x,y)) exists {
-        potentialMutex => mutexes(potentialMutex) || mutexes(potentialMutex.swap)}
+        potentialMutex => !(mutexes(potentialMutex) || mutexes(potentialMutex.swap))}
+      println(task.name)
+      println(mutexes)
+      println(correct, mutexFree)
       if(correct && mutexFree) {
         val updatedAssignMap = assignMap ++ (literal.parameterVariables zip groundLiteral.parameter)
         val updatedPrecons = unsignedPrecons filterNot { _ == literal }
         if(updatedPrecons.isEmpty) {
+          println("Action instaniated! Task: " + task.name)
+          println(task.effect)
           /*
            * TODO: Fix arguments for Task which have parameters that don't exists in the tasks' preconditions.
            */
@@ -89,4 +100,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     buildGraph((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)]), initialState, Set.empty[(GroundLiteral, GroundLiteral)])
   }
   private val preconMap = new HashMap[Predicate, collection.mutable.Set[GroundLiteral]] with MultiMap[Predicate, GroundLiteral]
+
+  private def createNOOP(literal: Literal, groundLiteral: GroundLiteral): GroundTask = {
+    GroundTask(ReducedTask("NO-OP", true, literal.parameterVariables, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal))), groundLiteral.parameter)
+  }
 }
