@@ -11,7 +11,7 @@ import scala.collection.mutable
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral], computeMutexes: Boolean, isSerial: Boolean, disallowedTasks: Either[Seq[GroundTask], Seq[Task]]) extends
+case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral], computeMutexes: Boolean, isSerial: Boolean, disallowedTasks: Either[Seq[GroundTask], Seq[Task]]) extends
   LayeredGroundedPrimitiveReachabilityAnalysis {
 
 
