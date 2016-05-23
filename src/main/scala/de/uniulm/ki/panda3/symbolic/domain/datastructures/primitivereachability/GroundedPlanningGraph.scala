@@ -28,21 +28,24 @@ class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral], co
   protected lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
     ???
 
-    def buildGraph(layer: (Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)]), newPropositions: Set[GroundLiteral], deletedMutexes: Set[(GroundLiteral, GroundLiteral)]): Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
-      fillPreconMap(newPropositions)
+    def buildGraph(layer: (Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)]), addedPropositions: Set[GroundLiteral], deletedMutexes: Set[(GroundLiteral, GroundLiteral)]): Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
+      fillPreconMap(addedPropositions)
 
       val assignMap: Map[Variable, Constant] = Map()
       //  Instantiate actions which become available because of new propositions and deletion of mutexes
-      val newActions: Set[GroundTask] = ((newPropositions ++ (deletedMutexes flatMap { (t: (GroundLiteral, GroundLiteral)) => Set(t._1, t._2) })) flatMap { (gl: GroundLiteral) => {
+      val newActions: Set[GroundTask] = ((addedPropositions ++ (deletedMutexes flatMap { (t: (GroundLiteral, GroundLiteral)) => Set(t._1, t._2) })) flatMap { (gl: GroundLiteral) => {
         domain.consumersOf.getOrElse(gl.predicate, Seq.empty[ReducedTask]) flatMap { (t: ReducedTask) => createActionInstances(t, assignMap, gl, (t.precondition.conjuncts find { (l: Literal) => l.predicate == gl.predicate }).get, t.precondition.conjuncts) }
       }
       })
       val allActions: Set[GroundTask] = layer._1 ++ newActions
       /*
-       * TODO: Try to shorten the expression; check/filter unnecessary Pairs;
+       * TODO: Try to shorten the expressions; check/filter unnecessary Pairs;
        */
-      val newActionMutexes: Set[(GroundTask, GroundTask)] = allActions flatMap { (gt1: GroundTask) => allActions map {(gt2: GroundTask) => (gt1, gt2)}} filter {(gtPair: (GroundTask, GroundTask)) => ((gtPair._1.substitutedDelEffects intersect (gtPair._2.substitutedAddEffectrs union  gtPair._2.substitutedPreconditions)).isEmpty && (gtPair._2.substitutedDelEffects intersect (gtPair._1.substitutedAddEffectrs union  gtPair._1.substitutedPreconditions)).isEmpty) || (gtPair._1.substitutedPreconditions flatMap {(gt1: GroundLiteral) => gtPair._2.substitutedPreconditions map { (gt2: GroundLiteral) => (gt1, gt2)}} map { (glPair: (GroundLiteral, GroundLiteral)) => layer._4.contains(glPair) || layer._4.contains(glPair.swap)} ).foldLeft(false)((b1: Boolean, b2: Boolean) => b1 || b2) }
-
+      val newActionMutexes: Set[(GroundTask, GroundTask)] = allActions flatMap { (gt1: GroundTask) => allActions map {(gt2: GroundTask) => (gt1, gt2)}} filter {(gtPair: (GroundTask, GroundTask)) => ((gtPair._1.substitutedDelEffects intersect (gtPair._2.substitutedAddEffects union  gtPair._2.substitutedPreconditions)).isEmpty && (gtPair._2.substitutedDelEffects intersect (gtPair._1.substitutedAddEffects union  gtPair._1.substitutedPreconditions)).isEmpty) || (gtPair._1.substitutedPreconditions flatMap { (gt1: GroundLiteral) => gtPair._2.substitutedPreconditions map { (gt2: GroundLiteral) => (gt1, gt2)}} map { (glPair: (GroundLiteral, GroundLiteral)) => layer._4.contains(glPair) || layer._4.contains(glPair.swap)} ).foldLeft(false)((b1: Boolean, b2: Boolean) => b1 || b2) }
+      val newPropositions: Set[GroundLiteral] = (newActions flatMap { (nA: GroundTask) => nA.substitutedAddEffects})--layer._3
+      val newPropositionMutexes: Set[(GroundLiteral, GroundLiteral)] = (newPropositions flatMap { (gl1: GroundLiteral) => (newPropositions ++ layer._3) map {(gl2: GroundLiteral) => (gl1, gl2)}}) filter { (glPair: (GroundLiteral, GroundLiteral)) => (((allActions filter { (gt: GroundTask) => gt.substitutedAddEffects contains( glPair._1)}) flatMap {(gt1: GroundTask) => (allActions filter { (gt:GroundTask) => gt.substitutedAddEffects contains( glPair._2)}) map { (gt2: GroundTask) => (gt1, gt2)}}) map { (gtPair: (GroundTask, GroundTask)) => ((layer._2 ++ newActionMutexes) contains(gtPair)) || ((layer._2 ++ newActionMutexes) contains(gtPair.swap))}).foldLeft(false)((b1: Boolean, b2: Boolean) => b1 || b2) }
+      val allPropositionMutexes: Set[(GroundLiteral, GroundLiteral)] = ((newPropositions ++ layer._3) flatMap { (gl1: GroundLiteral) => (newPropositions ++ layer._3) map {(gl2: GroundLiteral) => (gl1, gl2)}}) filter { (glPair: (GroundLiteral, GroundLiteral)) => (((allActions filter { (gt: GroundTask) => gt.substitutedAddEffects contains( glPair._1)}) flatMap {(gt1: GroundTask) => (allActions filter { (gt:GroundTask) => gt.substitutedAddEffects contains( glPair._2)}) map { (gt2: GroundTask) => (gt1, gt2)}}) map { (gtPair: (GroundTask, GroundTask)) => ((layer._2 ++ newActionMutexes) contains(gtPair)) || ((layer._2 ++ newActionMutexes) contains(gtPair.swap))}).foldLeft(false)((b1: Boolean, b2: Boolean) => b1 || b2) }
+      
       /*
      * TODO: Check the correctness for special cases.
      */

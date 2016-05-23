@@ -107,7 +107,7 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
 
-  lazy val substitutedAddEffectrs: Seq[GroundLiteral] = task match {
+  lazy val substitutedAddEffects: Seq[GroundLiteral] = task match {
     case reduced: ReducedTask => reduced.effect.conjuncts filter { (l: Literal) => l.isPositive} map { _ ground parameterSubstitution}
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
