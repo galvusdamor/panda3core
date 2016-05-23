@@ -42,9 +42,12 @@ class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral], co
      * TODO: Check the correctness for special cases.
      */
       def createActionInstances(task: ReducedTask, assignMap: Map[Variable, Constant], gl: GroundLiteral, l: Literal, precons: Seq[Literal]): Set[GroundTask] = {
-        gl match {
+        /*
+         * TODO: Think about the necessity of gl matching
+         */
+        /*gl match {
           case null => Set.empty[GroundTask]
-          case _ => {
+          case _ => {*/
             val correct: Boolean = ((l.parameterVariables zip gl.parameter) map { t: (Variable, Constant) => (assignMap.get(t._1) == t._2) }).foldLeft(false)((b1: Boolean, b2: Boolean) => b1 || b2)
             correct match {
               case true => {
@@ -62,8 +65,8 @@ class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral], co
               }
               case false => Set.empty[GroundTask]
             }
-          }
-        }
+          /*}
+        }*/
       }
 
       def fillPreconMap(propositions: Set[GroundLiteral]): Unit = {
