@@ -48,7 +48,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       val allPropositionMutexes: Set[(GroundLiteral, GroundLiteral)] = (for (x <- allPropositions; y <- allPropositions) yield (x, y)) filter { case (gLiteral1,gLiteral2) =>
           (for(x <- allActions filter { gTask => gTask.substitutedAddEffects contains gLiteral1 };
                y <- allActions filter { gTask => gTask.substitutedAddEffects contains gLiteral2 }) yield(x,y)) exists {
-            gTaskPair =>  newActionMutexes.contains(gTaskPair) || newActionMutexes.contains(gTaskPair.swap)} }
+            gTaskPair =>  newActionMutexes(gTaskPair) || newActionMutexes(gTaskPair.swap)} }
 
       if (newPropositions.isEmpty && previousLayer._4.size == allPropositionMutexes.size) {
         Seq.empty[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])]
@@ -64,15 +64,16 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       val correct: Boolean = (literal.parameterVariables zip groundLiteral.parameter) forall { case (variable, constant) => assignMap.getOrElse(variable, constant) == constant }
       val updatedGroundLiterals = groundLiterals :+ groundLiteral
       val mutexFree: Boolean = (for(x <- updatedGroundLiterals; y <- updatedGroundLiterals) yield (x,y)) exists {
-        potentialMutex => (mutexes contains potentialMutex) || (mutexes contains potentialMutex.swap )}
+        potentialMutex => mutexes(potentialMutex) || mutexes(potentialMutex.swap)}
       if(correct && mutexFree) {
         val updatedAssignMap = assignMap ++ (literal.parameterVariables zip groundLiteral.parameter)
         val updatedPrecons = unsignedPrecons filterNot { _ == literal }
         if(updatedPrecons.isEmpty) {
           /*
-           * TODO: Implement action initiation
+           * TODO: Fix arguments for Task which have parameters that don't exists in the tasks' preconditions.
            */
-           Set(GroundTask(task, ???))
+          val arguments: Seq[Constant] = task.parameters map { variable => updatedAssignMap(variable)}
+           Set(GroundTask(task, arguments))
         } else {
           (updatedPrecons flatMap { literal => preconMap(literal.predicate) flatMap { potentialGroundLiteral =>
             createActionInstances(task, potentialGroundLiteral, literal, updatedPrecons, mutexes, updatedAssignMap, updatedGroundLiterals) } }).toSet
