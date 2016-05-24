@@ -21,7 +21,7 @@ case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) exte
   override def shortInfo: String = name
 
   /** returns a string that can be utilized to define the object */
-  override def mediumInfo: String = mediumInfo
+  override def mediumInfo: String = shortInfo
 
   /** returns a more detailed information about the object */
   override def longInfo: String = mediumInfo + ": " + (elements map { _.shortInfo }).mkString(", ") + "; subsorts: " + (subSorts map { _.shortInfo }).mkString(", ")

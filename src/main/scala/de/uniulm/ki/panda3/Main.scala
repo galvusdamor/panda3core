@@ -15,9 +15,9 @@ import de.uniulm.ki.util._
   */
 object Main {
   def main(args: Array[String]) {
-    println("This is Panda3")
+    /*println("This is Panda3")
 
-    /*if (args.length != 3) {
+    if (args.length != 3) {
       println("This programm needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the name of the output file. If the file extension is .dot a dot file will be" +
                 " written, else a pdf.")
       System.exit(1)
@@ -33,7 +33,7 @@ object Main {
 
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
-    //outputPDF = "/home/dhoeller/Schreibtisch/test.pdf"
+    //val outputPDF = "/home/dhoeller/Schreibtisch/test.pdf"
     val outputPDF = "/home/gregor/test.pdf"
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
@@ -47,6 +47,16 @@ object Main {
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
 
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
+
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--1--3.xml"
+
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/p01-hierarchical.xml"
+
+
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
@@ -54,7 +64,7 @@ object Main {
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(XMLParserType),
                                              PreprocessingConfiguration(true, true, true, true, false, true),
-                                             SearchConfiguration(None, true, AStarType, Some(TDGMinimumModification), true),
+                                             SearchConfiguration(None, true, GreedyType, Some(TDGMinimumModification), true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
                                                                              SearchStatistics,
@@ -62,7 +72,7 @@ object Main {
                                                                              SolutionInternalString,
                                                                              SolutionDotString)))
 
-    System.in.read()
+    // System.in.read()
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
 
@@ -79,13 +89,22 @@ object Main {
         Dot2PdfCompiler.writeDotToFile(results(SolutionDotString).get, outputPDF)
       }
     }
+    var doneCounter = 0
     // check the tree
     def dfs(searchNode: SearchNode): Unit = if (!searchNode.dirty) {
-      searchNode.modifications.length // force computation (and check of assertions)
+      doneCounter += 1
+      if (doneCounter % 10 == 0) println("traversed " + doneCounter)
+      println("STATE: " + searchNode.searchState)
+      //searchNode.modifications.length // force computation (and check of assertions)
       searchNode.children foreach { x => dfs(x._1) }
     }
 
-    if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) dfs(results(SearchSpace))
+    //System.in.read()
+
+    if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) {
+      results(SearchSpace).recomputeSearchState()
+      dfs(results(SearchSpace))
+    }
   }
 
 

@@ -108,7 +108,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     }
 
     val allSorts = sorts ++ taskSorts ++ parameterConstraintSorts ++ planVariableSorts ++ planConstraintSorts
-    (allSorts filter { sorts.contains(_) }).distinct
+    (allSorts filter sorts.contains).distinct
   }
 
   override def update(domainUpdate: DomainUpdate): Domain = domainUpdate match {
@@ -121,13 +121,13 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                     decompositionAxioms)
   }
 
-  lazy val statistics: Map[String, Any] = Map(
-                                               "number of sorts" -> sorts.size,
-                                               "number of predicates" -> predicates.size,
-                                               "number of tasks" -> tasks.size,
-                                               "number of abstract tasks" -> abstractTasks.size,
-                                               "number of primitive tasks" -> primitiveTasks.size,
-                                               "number of decomposition methods" -> decompositionMethods.size
-                                             )
-  lazy val statisticsString : String = statistics.mkString("\n")
+  lazy val statistics      : Map[String, Any] = Map(
+                                                     "number of sorts" -> sorts.size,
+                                                     "number of predicates" -> predicates.size,
+                                                     "number of tasks" -> tasks.size,
+                                                     "number of abstract tasks" -> abstractTasks.size,
+                                                     "number of primitive tasks" -> primitiveTasks.size,
+                                                     "number of decomposition methods" -> decompositionMethods.size
+                                                   )
+  lazy val statisticsString: String           = statistics.mkString("\n")
 }

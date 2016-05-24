@@ -72,6 +72,7 @@ object BFS extends EfficientSearchAlgorithm {
 
         if (flaws.length == 0) {
           result = Some(plan)
+          myNode.setNotDirty()
         } else {
           if (buildTree) myNode.modifications = new Array[Array[EfficientModification]](flaws.length)
           var flawnum = 0

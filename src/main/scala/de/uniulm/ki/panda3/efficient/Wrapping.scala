@@ -387,8 +387,12 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
     def wrapWithParent(efficientSearchNode: EfficientSearchNode, parent: SearchNode): SearchNode = {
       // set the essentials
-      val wrappedPlan = wrap(efficientSearchNode.plan)
-      val searchNode = new SearchNode(efficientSearchNode.id,wrappedPlan, parent, efficientSearchNode.heuristic)
+      val searchNode = new SearchNode(efficientSearchNode.id, { _ =>
+        val plan = wrap(efficientSearchNode.plan)
+        assert(plan.flaws.size == efficientSearchNode.plan.flaws.length)
+
+        plan
+      }, parent, efficientSearchNode.heuristic)
 
       def computeContentIfNotDirty(unit: Unit): Unit = {
         searchNode.dirty = false
@@ -396,15 +400,12 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         searchNode setPayload efficientSearchNode.payload
 
         // the order of the flaws in both representations might not be identical so we need to do a bit of reordering
-        searchNode setSelectedFlaw (searchNode.plan.flaws indexWhere { flaw => FlawEquivalenceChecker(efficientSearchNode.plan.flaws(efficientSearchNode.selectedFlaw), flaw, this) })
-        assert(searchNode.selectedFlaw != -1 || searchNode.dirty || searchNode.searchState == SearchState.SOLUTION || searchNode.searchState == SearchState.DEADEND_HEURISTIC
-                 || searchNode.searchState == SearchState.DEADEND_CSP || searchNode.searchState == SearchState.DEADEND_UNRESOLVABLEFLAW)
-        assert(searchNode.plan.flaws.size == efficientSearchNode.plan.flaws.length)
-
-        if (searchNode.plan.flaws.size != efficientSearchNode.modifications.length)
-          println(searchNode.plan.flaws.size + " == " + efficientSearchNode.modifications.length)
-
-        assert(searchNode.plan.flaws.size == efficientSearchNode.modifications.length)
+        searchNode setSelectedFlaw { () =>
+          val flawIndex = searchNode.plan.flaws indexWhere { flaw => FlawEquivalenceChecker(efficientSearchNode.plan.flaws(efficientSearchNode.selectedFlaw), flaw, this) }
+          assert(flawIndex != -1 || efficientSearchNode.dirty || efficientSearchNode.searchState == SearchState.SOLUTION || efficientSearchNode.searchState == SearchState.DEADEND_HEURISTIC
+                   || efficientSearchNode.searchState == SearchState.DEADEND_CSP || efficientSearchNode.searchState == SearchState.DEADEND_UNRESOLVABLEFLAW)
+          flawIndex
+        }
         // reorder modifications
         searchNode setModifications { () =>
           val modifications = searchNode.plan.flaws.zipWithIndex map { case (flaw, idx) =>
@@ -419,10 +420,14 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
             assert(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length)
             (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
           }
+          assert(searchNode.plan.flaws.size == efficientSearchNode.modifications.length)
           assert(modifications.length == searchNode.plan.flaws.size)
           modifications
         }
         searchNode setChildren { () => efficientSearchNode.children map { case (node, i) => (wrapWithParent(node, searchNode), i) } }
+
+        if (efficientSearchNode.searchState != SearchState.INSEARCH && efficientSearchNode.searchState != SearchState.EXPLORED)
+          searchNode setSearchState efficientSearchNode.searchState
       }
 
       if (efficientSearchNode.dirty)
