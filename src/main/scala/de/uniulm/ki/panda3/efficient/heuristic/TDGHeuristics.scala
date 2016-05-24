@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.efficient.heuristic
 import de.uniulm.ki.panda3.efficient.domain.{EfficientDomain, EfficientGroundTask}
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientGroundedTaskDecompositionGraph
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
+import de.uniulm.ki.util.DotPrintable
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -12,11 +13,14 @@ trait TDGHeuristics extends EfficientHeuristic {
 }
 
 
-case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGroundedTaskDecompositionGraph, domain: EfficientDomain) extends TDGHeuristics {
+case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGroundedTaskDecompositionGraph, domain: EfficientDomain) extends TDGHeuristics with DotPrintable[Unit] {
 
   // memoise the heuristic values for task groundings
-  private val modificationEfforts: Map[EfficientGroundTask, Double] = taskDecompositionTree.graph.andVertices map { groundTask =>
-    groundTask -> taskDecompositionTree.graph.minSumTraversal(groundTask, { task => domain.tasks(task.taskID).precondition.length })
+  val modificationEfforts: Map[EfficientGroundTask, Double] = taskDecompositionTree.graph.andVertices map { groundTask =>
+    groundTask -> taskDecompositionTree.graph.minSumTraversal(groundTask, { groundTask =>
+      val task = domain.tasks(groundTask.taskID)
+      if (task.initOrGoalTask) 0 else task.precondition.length
+    })
   } toMap
 
   private def computeHeuristic(planStep: Int, parameter: Array[Int], numberOfChosenParameters: Int, plan: EfficientPlan): Double =
@@ -75,7 +79,7 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
     }
 
 
-    var i = 1 // init can't have a flaw
+    var i = 2 // init can't have a flaw
     while (i < plan.numberOfAllPlanSteps) {
       if (plan.isPlanStepPresentInPlan(i) && domain.tasks(plan.planStepTasks(i)).isAbstract) {
         // we have to ground here
@@ -85,5 +89,27 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
       i += 1
     }
     heuristicValue
+  }
+
+  override val dotString: String = dotString(())
+
+  /** The DOT representation of the object with options */
+  override def dotString(options: Unit): String = {
+    val dotStringBuilder = new StringBuilder()
+
+    dotStringBuilder append "digraph somePlan{\n"
+    dotStringBuilder append "\trankdir=\"LR\";"
+
+    val groundTaskToIndex = modificationEfforts.keys.zipWithIndex.toMap
+    modificationEfforts foreach { case (gt, h) => dotStringBuilder append ("GT" + groundTaskToIndex(gt) + "[label=\"" + gt.taskID + "|" + h + "\"];") }
+
+    groundTaskToIndex.keys foreach { case from =>
+      taskDecompositionTree.graph.andEdges(from) flatMap taskDecompositionTree.graph.orEdges foreach { case to =>
+        dotStringBuilder append ("GT" + groundTaskToIndex(from) + " -> GT" + groundTaskToIndex(to) + ";")
+      }
+    }
+
+    dotStringBuilder append "}"
+    dotStringBuilder.toString
   }
 }
