@@ -38,9 +38,9 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       /*
        * TODO: Try to shorten the expressions; check/filter unnecessary Pairs;
        */
-      val newActionMutexes: Set[(GroundTask, GroundTask)] = (for (x <- allActions; y <- allActions) yield (x, y)) filter { case (gTask1, gTask2) => !(gTask1.substitutedDelEffects intersect
-        (gTask2.substitutedAddEffects union gTask2.substitutedPreconditions)).isEmpty ||
-        (for(x <- gTask1.substitutedPreconditions; y <- gTask2.substitutedPreconditions) yield (x,y)).exists(previousLayer._4.contains(_))
+      val newActionMutexes: Set[(GroundTask, GroundTask)] = (for (x <- allActions; y <- allActions) yield (x, y)) filter { case (gTask1, gTask2) => (gTask1.substitutedDelEffects intersect
+        (gTask2.substitutedAddEffects union gTask2.substitutedPreconditions)).nonEmpty ||
+        (for(x <- gTask1.substitutedPreconditions; y <- gTask2.substitutedPreconditions) yield (x,y)).exists(previousLayer._4.contains)
       }
       val newPropositions: Set[GroundLiteral] = (newActions flatMap { newAction => newAction.substitutedAddEffects }) -- previousLayer._3
       /*
