@@ -28,7 +28,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
 
 
     assert(planningGraph.graphSize == 3)
-    assert(planningGraph.reachableGroundLiterals exists {_.predicate.name == "Z"})
+    assert(planningGraph.reachableGroundLiterals exists {_.predicate.name == "d"})
   }
 
 }
