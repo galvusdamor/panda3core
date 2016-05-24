@@ -27,17 +27,17 @@ trait HasEfficientExampleDomain1 {
     * 5: task4(0,1) :       : +1(0),+1(1),+0()
     * 6: task5(0)   : +1(0) : +1(0)
     */
-  val init   = new EfficientTask(true, Array(), Array(), Array(), Array(), true)
-  val goal   = new EfficientTask(true, Array(), Array(), Array(new EfficientLiteral(0, true, Array())), Array(), true)
-  val task1  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(0, true, Array())), Array(new EfficientLiteral(1, true, Array(0))), true)
-  val task2  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(), true)
-  val task3  = new EfficientTask(false, Array(0, 0), Array(), Array(new EfficientLiteral(1, true, Array(1))), Array(new EfficientLiteral(1, false, Array(0))), true)
+  val init   = new EfficientTask(true, Array(), Array(), Array(), Array(), false, true)
+  val goal   = new EfficientTask(true, Array(), Array(), Array(new EfficientLiteral(0, true, Array())), Array(), false, true)
+  val task1  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(0, true, Array())), Array(new EfficientLiteral(1, true, Array(0))), true, false)
+  val task2  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(), true, false)
+  val task3  = new EfficientTask(false, Array(0, 0), Array(), Array(new EfficientLiteral(1, true, Array(1))), Array(new EfficientLiteral(1, false, Array(0))), true, false)
   val task4  = new EfficientTask(false, Array(0, 0), Array(), Array(),
-                                 Array(new EfficientLiteral(1, true, Array(0)), new EfficientLiteral(1, true, Array(1)), new EfficientLiteral(0, true, Array())), true)
-  val task5  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(new EfficientLiteral(1, true, Array(0))), false)
+                                 Array(new EfficientLiteral(1, true, Array(0)), new EfficientLiteral(1, true, Array(1)), new EfficientLiteral(0, true, Array())), true, false)
+  val task5  = new EfficientTask(true, Array(0), Array(), Array(new EfficientLiteral(1, true, Array(0))), Array(new EfficientLiteral(1, true, Array(0))), false, false)
   val domain = new EfficientDomain(Array(Array()), Array(Array(0), Array(0), Array(0)), Array(Array(), Array(0), Array(0, 0)), Array(init, goal, task1, task2, task3, task4, task5), Array())
 
-  val problemConfiguration = ProblemConfiguration(true,true)
+  val problemConfiguration = ProblemConfiguration(true, true)
 
   val efficientPlanTestPlan = {
     // the order of tasks is scrambled to test whether we access the correct one
@@ -50,7 +50,8 @@ trait HasEfficientExampleDomain1 {
     ordering.addOrderingConstraint(5, 3)
     val causalLink = EfficientCausalLink(3, 4, 0, 0)
     EfficientPlan(domain, Array(0, 1, 4, 2, 3, 4, 4, 4), Array(Array(), Array(), Array(0, 2), Array(1), Array(3), Array(4, 4), Array(5, 5), Array(5, 5)),
-                  Array(-1, -1, -1, -1, -1, -1, -1, 1), Array(-1, -1, -1, -1, -1, -1, -1, -1), Array(-1, -1, -1, -1, -1, -1, -1, -1), csp, ordering, Array(causalLink),problemConfiguration)()
+                  Array(-1, -1, -1, -1, -1, -1, -1, 1), Array(-1, -1, -1, -1, -1, -1, -1, -1), Array(-1, -1, -1, -1, -1, -1, -1, -1), csp, ordering, Array(causalLink),
+                  problemConfiguration)()
   }
 
 

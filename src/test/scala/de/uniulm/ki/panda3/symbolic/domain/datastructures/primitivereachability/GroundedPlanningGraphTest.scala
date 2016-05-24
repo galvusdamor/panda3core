@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 
 import java.io.FileInputStream
 
-import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.symbolic.compiler.{RemoveNegativePreconditions, ToPlainFormulaRepresentation, ClosedWorldAssumption}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import org.scalatest.FlatSpec
 
@@ -28,7 +28,28 @@ class GroundedPlanningGraphTest extends FlatSpec {
 
 
     assert(planningGraph.graphSize == 3)
-    assert(planningGraph.reachableGroundLiterals exists {_.predicate.name == "d"})
+    assert(planningGraph.reachableGroundLiterals exists { _.predicate.name == "d" })
+  }
+
+  it must "recognise impossible situations" in {
+    val domainFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
+    val problemFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
+
+    val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
+    // we assume that the domain is grounded
+
+    // cwa
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, ())
+    val plainFormula = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
+    val (domain, initialPlan) = RemoveNegativePreconditions.transform(plainFormula, ())
+
+
+    val groundedInitialState = initialPlan.groundedInitialState filter { _.isPositive }
+    val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
+
+
+    assert(planningGraph.graphSize == 3) // TODO: check whether this is correct manually!
+    assert(!(planningGraph.reachableGroundLiterals exists { _.predicate.name == "d" }))
   }
 
 }

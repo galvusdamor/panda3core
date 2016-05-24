@@ -37,10 +37,11 @@ object Timings {
 
 
   val PREPROCESSING                  = "02 preprocessing:00:total"
-  val LIFTED_REACHABILITY_ANALYSIS   = "02 preprocessing:01:lifted reachabiltiy analysis"
-  val GROUNDED_REACHABILITY_ANALYSIS = "02 preprocessing:02:grounded reachabiltiy analysis"
-  val GROUNDED_TDG_ANALYSIS          = "02 preprocessing:03:grounded task decomposition graph analysis"
-  val GROUNDING                      = "02 preprocessing:04:grounding"
+  val COMPILE_NEGATIVE_PRECONFITIONS = "02 preprocessing:01:compile negative preconditions"
+  val LIFTED_REACHABILITY_ANALYSIS   = "02 preprocessing:11:lifted reachabiltiy analysis"
+  val GROUNDED_REACHABILITY_ANALYSIS = "02 preprocessing:12:grounded reachabiltiy analysis"
+  val GROUNDED_TDG_ANALYSIS          = "02 preprocessing:23:grounded task decomposition graph analysis"
+  val GROUNDING                      = "02 preprocessing:84:grounding"
 
 
   val HEURISTICS_PREPARATION = "03 heuristics preparation:00:total"

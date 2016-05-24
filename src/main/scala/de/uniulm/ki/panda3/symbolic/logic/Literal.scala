@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.logic
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
+import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeLiteralsByPredicate, DomainUpdate}
 import de.uniulm.ki.util.HashMemo
 
 /**
@@ -50,7 +50,12 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
   def !?!(that: Literal)(csp: CSP): Seq[NotEqual] = if (this.predicate != that.predicate || this.isPositive != that.isPositive) Nil
   else (this.parameterVariables zip that.parameterVariables) collect { case (v1, v2) if csp.getRepresentative(v1) != csp.getRepresentative(v2) => NotEqual(v1, v2) }
 
-  override def update(domainUpdate: DomainUpdate): Literal = Literal(predicate.update(domainUpdate), isPositive, parameterVariables map { _.update(domainUpdate) })
+  override def update(domainUpdate: DomainUpdate): Literal = domainUpdate match {
+    case ExchangeLiteralsByPredicate(exchangeMap, _) =>
+      val newPredicate = if (isPositive) exchangeMap(predicate)._1 else exchangeMap(predicate)._2
+      Literal(newPredicate, true, parameterVariables)
+    case _                                           => Literal(predicate.update(domainUpdate), isPositive, parameterVariables map { _.update(domainUpdate) })
+  }
 
   /** returns a short information about the object */
   override def shortInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameterVariables map { _.shortInfo }).mkString("(", ", ", ")")

@@ -6,12 +6,12 @@ import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate, Sort, Variable}
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 
 /**
- * represents a generic domain update.
- *
- * This is an empty marker trait
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * represents a generic domain update.
+  *
+  * This is an empty marker trait
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 trait DomainUpdate {}
 
 case class AddTask(newTasks: Seq[Task]) extends DomainUpdate {}
@@ -30,20 +30,22 @@ object AddLiteralsToGoal {
   def apply(literals: Seq[Literal], variableConstraints: Seq[VariableConstraint]): AddLiteralsToInitAndGoal = AddLiteralsToInitAndGoal(Nil, literals, variableConstraints)
 }
 
-case class AddPredicate(newPredicates: Seq[Predicate]) extends DomainUpdate {}
+case class AddPredicate(newPredicates: Seq[Predicate]) extends DomainUpdate
 
-case class AddVariables(newVariables: Seq[Variable]) extends DomainUpdate {}
+case class AddVariables(newVariables: Seq[Variable]) extends DomainUpdate
 
-case class ExchangePlanStep(oldPlanStep: PlanStep, newPlanStep: PlanStep) extends DomainUpdate {}
+case class ExchangePlanStep(oldPlanStep: PlanStep, newPlanStep: PlanStep) extends DomainUpdate
 
-case class ExchangeSorts(exchangeMap: Map[Sort, Sort]) extends DomainUpdate {}
+case class ExchangeSorts(exchangeMap: Map[Sort, Sort]) extends DomainUpdate
 
-case class ExchangeTask(exchange: Map[Task, Task]) extends DomainUpdate {}
+case class ExchangeTask(exchange: Map[Task, Task]) extends DomainUpdate
 
-case class ExchangeTaskSchemaInMethods(exchange: Map[Task, Task]) extends DomainUpdate {}
+case class ExchangeTaskSchemaInMethods(exchange: Map[Task, Task]) extends DomainUpdate
 
-case class ReduceFormula() extends DomainUpdate {}
+case class ReduceFormula() extends DomainUpdate
 
-case class ReduceTasks() extends DomainUpdate {}
+case class ReduceTasks() extends DomainUpdate
 
-case class ExchangeVariable(oldVariable: Variable, newVariable: Variable) extends DomainUpdate {}
+case class ExchangeVariable(oldVariable: Variable, newVariable: Variable) extends DomainUpdate
+
+case class ExchangeLiteralsByPredicate(replacement: Map[Predicate, (Predicate, Predicate)], invertedTreatment: Boolean) extends DomainUpdate
