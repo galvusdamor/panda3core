@@ -40,6 +40,11 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     _.effect.conjuncts exists { _.predicate == pred }
   })
   }).toMap
+  lazy val consumersOf              : Map[Predicate, Seq[ReducedTask]] = (predicates map { pred => (pred, tasks collect { case t: ReducedTask => t } filter {
+    _.precondition.conjuncts exists { _.predicate == pred }
+  })
+  }).toMap
+
 
   lazy val primitiveTasks: Seq[Task] = tasks filter { _.isPrimitive }
   lazy val abstractTasks : Seq[Task] = tasks filterNot { _.isPrimitive }
@@ -112,13 +117,16 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   }
 
   override def update(domainUpdate: DomainUpdate): Domain = domainUpdate match {
-    case AddMethod(newMethods)            => Domain(sorts, predicates, tasks, decompositionMethods ++ newMethods, decompositionAxioms)
-    case AddPredicate(newPredicates)      => Domain(sorts, predicates ++ newPredicates, tasks, decompositionMethods, decompositionAxioms)
-    case AddTask(newTasks)                => Domain(sorts, predicates, tasks ++ newTasks, decompositionMethods, decompositionAxioms)
-    case ExchangeTaskSchemaInMethods(map) => Domain(sorts, predicates, tasks, decompositionMethods map { _.update(ExchangeTask(map)) }, decompositionAxioms)
-    case _                                => Domain(sorts map { _.update(domainUpdate) }, predicates map { _.update(domainUpdate) }, tasks map { _.update(domainUpdate) },
-                                                    decompositionMethods map { _.update(domainUpdate) },
-                                                    decompositionAxioms)
+    case AddMethod(newMethods)               => Domain(sorts, predicates, tasks, decompositionMethods ++ newMethods, decompositionAxioms)
+    case AddPredicate(newPredicates)         => Domain(sorts, predicates ++ newPredicates, tasks, decompositionMethods, decompositionAxioms)
+    case AddTask(newTasks)                   => Domain(sorts, predicates, tasks ++ newTasks, decompositionMethods, decompositionAxioms)
+    case ExchangeTaskSchemaInMethods(map)    => Domain(sorts, predicates, tasks, decompositionMethods map { _.update(ExchangeTask(map)) }, decompositionAxioms)
+    case ExchangeLiteralsByPredicate(map, _) =>
+      val newPredicates = map.values flatMap { case (a, b) => a :: b :: Nil }
+      Domain(sorts, newPredicates.toSeq, tasks map { _.update(domainUpdate) }, decompositionMethods map { _.update(domainUpdate) }, decompositionAxioms)
+    case _                                   => Domain(sorts map { _.update(domainUpdate) }, predicates map { _.update(domainUpdate) }, tasks map { _.update(domainUpdate) },
+                                                       decompositionMethods map { _.update(domainUpdate) },
+                                                       decompositionAxioms)
   }
 
   lazy val statistics      : Map[String, Any] = Map(

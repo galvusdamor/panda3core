@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.domain
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.updates.{ReduceTasks, DomainUpdate, ExchangeTask}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeLiteralsByPredicate, ReduceTasks, DomainUpdate, ExchangeTask}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.util.HashMemo
@@ -36,8 +36,8 @@ trait Task extends DomainUpdatable with PrettyPrintable {
 
 
   override def update(domainUpdate: DomainUpdate): Task = domainUpdate match {
-    case ExchangeTask(map) => if (map.contains(this)) map(this) else this
-    case ReduceTasks()     =>
+    case ExchangeTask(map)                                => if (map.contains(this)) map(this) else this
+    case ReduceTasks()                                    =>
       val wrappedPrecondition: Formula = precondition match {case l: Literal => And[Literal](l :: Nil); case x => x}
       val wrappedEffect: Formula = effect match {case l: Literal => And[Literal](l :: Nil); case x => x}
       (wrappedPrecondition, wrappedEffect) match {
@@ -49,6 +49,30 @@ trait Task extends DomainUpdatable with PrettyPrintable {
             this
           }
         case _                                             => this
+      }
+    case ExchangeLiteralsByPredicate(exchangeMap, invert) =>
+      this match {
+        case ReducedTask(_, _, _, _, preconditionAnd, effectAnd) =>
+          val newPositivePrecondition = preconditionAnd.conjuncts map { _ update domainUpdate }
+          val newNegativePrecondition = preconditionAnd.conjuncts map { _.negate update domainUpdate } map { _.negate }
+          val newPositiveEffects = effectAnd.conjuncts map { _ update domainUpdate }
+          val newNegativeEffects = effectAnd.conjuncts map { _.negate update domainUpdate } map { _.negate }
+
+          val newPrecondition = newPositivePrecondition ++ (if (invert) newNegativePrecondition else Nil)
+          val newEffects = newPositiveEffects ++ (if (invert) Nil else newNegativeEffects)
+
+          assert(isPrimitive || !invert)
+
+          if (!invert) {
+            assert(newEffects.length == 2 * effectAnd.conjuncts.length)
+            assert(newPrecondition.length == preconditionAnd.conjuncts.length)
+          } else {
+            assert(newEffects.length == effectAnd.conjuncts.length)
+            assert(newPrecondition.length == 2 * preconditionAnd.conjuncts.length)
+          }
+
+          ReducedTask(name, isPrimitive, parameters, parameterConstraints, And(newPrecondition), And(newEffects))
+        case _                                                   => noSupport(FORUMLASNOTSUPPORTED)
       }
 
     case _ =>

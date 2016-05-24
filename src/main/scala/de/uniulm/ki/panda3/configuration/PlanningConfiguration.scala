@@ -9,7 +9,7 @@ import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachabili
 import de.uniulm.ki.panda3.efficient.heuristic.{MinimumModificationEffortHeuristic, EfficientNumberOfPlanSteps, EfficientNumberOfFlaws, AlwaysZeroHeuristic}
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneHierarchy}
-import de.uniulm.ki.panda3.symbolic.compiler.{Grounding, ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
@@ -17,7 +17,7 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.{PlanDotOptions, Plan}
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
-import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
+import de.uniulm.ki.util.{Dot2PdfCompiler, InformationCapsule, TimeCapsule}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -254,17 +254,30 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     extra("Initial domain\n" + domain.statisticsString + "\n")
 
+
+    // removing negative preconditions
+    timeCapsule start COMPILE_NEGATIVE_PRECONFITIONS
+    val compilationResult = if (preprocessingConfiguration.compileNegativePreconditions) {
+      info("Compiling negative preconditions ... ")
+      val compiled = RemoveNegativePreconditions.transform(domain, problem, ())
+      info("done.\n")
+      extra(compiled._1.statisticsString + "\n")
+      compiled
+    } else (domain, problem)
+    timeCapsule stop COMPILE_NEGATIVE_PRECONFITIONS
+
+
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
     val liftedResult = if (preprocessingConfiguration.liftedReachability) {
       info("Lifted reachability analysis ... ")
-      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(domain, problem, emptyAnalysis)
-      val disallowedTasks = domain.primitiveTasks filterNot newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.contains
-      val pruned = PruneHierarchy.transform(domain, problem, disallowedTasks.toSet)
+      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(compilationResult._1, compilationResult._2, emptyAnalysis)
+      val disallowedTasks = compilationResult._1.primitiveTasks filterNot newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.contains
+      val pruned = PruneHierarchy.transform(compilationResult._1, compilationResult._2, disallowedTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
-    } else ((domain, problem), emptyAnalysis)
+    } else ((compilationResult._1, compilationResult._2), emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
     // grounded reachability analysis
@@ -336,6 +349,7 @@ case class ParsingConfiguration(
 
 
 case class PreprocessingConfiguration(
+                                       compileNegativePreconditions: Boolean,
                                        liftedReachability: Boolean,
                                        groundedReachability: Boolean,
                                        planningGraph: Boolean,

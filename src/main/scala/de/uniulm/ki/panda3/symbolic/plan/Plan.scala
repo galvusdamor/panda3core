@@ -242,24 +242,28 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
            orderingConstraints update exchangeInit update exchangeGoal,
            variableConstraints, newInit, goal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
     }
-    case _                                                                 => Plan(planStepsAndRemovedPlanSteps map {
-      _.update(domainUpdate)
-    },
-                                                                                   causalLinksAndRemovedCausalLinks map {
-                                                                                     _.update(domainUpdate)
-                                                                                   },
-                                                                                   orderingConstraints.update(domainUpdate),
-                                                                                   variableConstraints.update(domainUpdate), init.update(domainUpdate), goal.update(domainUpdate),
-                                                                                   isModificationAllowed, isFlawAllowed,
-                                                                                   planStepDecomposedByMethod map {
-                                                                                     case (ps, method) => (ps update domainUpdate, method update
-                                                                                       domainUpdate)
-                                                                                   },
-                                                                                   planStepParentInDecompositionTree map {
-                                                                                     case (ps, (parent, inPlan)) =>
-                                                                                       (ps update domainUpdate, (parent update domainUpdate, inPlan update domainUpdate))
-                                                                                   }
-                                                                                  )
+    case _                                                                 =>
+      val newInit = init update domainUpdate
+      val newGoal = goal update domainUpdate
+
+      val possiblyInvertedUpdate = domainUpdate match {
+        case ExchangeLiteralsByPredicate(map, _) => ExchangeLiteralsByPredicate(map, invertedTreatment = false)
+        case _                                   => domainUpdate
+      }
+
+      val newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal = planStepsAndRemovedPlanStepsWithoutInitGoal map { _ update possiblyInvertedUpdate}
+
+      val newPlanStepsAndRemovedPlanSteps = newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal :+ newInit :+ newGoal
+
+      val newCausalLinksAndRemovedCausalLinks = causalLinksAndRemovedCausalLinks map { _ update possiblyInvertedUpdate }
+      val newOrderingConstraints = orderingConstraints update possiblyInvertedUpdate
+      val newVariableConstraint = variableConstraints update possiblyInvertedUpdate
+      val newPlanStepDecomposedByMethod = planStepDecomposedByMethod map { case (ps, method) => (ps update possiblyInvertedUpdate, method update possiblyInvertedUpdate) }
+      val newPlanStepParentInDecompositionTree = planStepParentInDecompositionTree map {
+        case (ps, (parent, inPlan)) => (ps update possiblyInvertedUpdate, (parent update possiblyInvertedUpdate, inPlan update possiblyInvertedUpdate))
+      }
+      Plan(newPlanStepsAndRemovedPlanSteps, newCausalLinksAndRemovedCausalLinks, newOrderingConstraints, newVariableConstraint, newInit, newGoal, isModificationAllowed, isFlawAllowed,
+           newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree)
   }
 
   def isPresent(planStep: PlanStep): Boolean = !planStepDecomposedByMethod.contains(planStep)

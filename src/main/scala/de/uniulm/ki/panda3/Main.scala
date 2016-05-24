@@ -63,7 +63,7 @@ object Main {
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(XMLParserType),
-                                             PreprocessingConfiguration(true, true, true, true, false, true),
+                                             PreprocessingConfiguration(true, true, true, true, true, false, true),
                                              SearchConfiguration(None, true, GreedyType, Some(TDGMinimumModification), true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
@@ -72,7 +72,7 @@ object Main {
                                                                              SolutionInternalString,
                                                                              SolutionDotString)))
 
-    // System.in.read()
+    //System.in.read()
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
 

@@ -73,7 +73,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val preconditions = reducedTask.precondition.conjuncts map { computeEfficientLiteral(_, variableMap) }
     val effects = reducedTask.effect.conjuncts map { computeEfficientLiteral(_, variableMap) }
 
-    EfficientTask(isPrimitive = task.isPrimitive, parameterSorts.toArray, variableConstraints.toArray, preconditions.toArray, effects.toArray, allowedToInsert = !isInitOrGoal)
+    EfficientTask(isPrimitive = task.isPrimitive, parameterSorts.toArray, variableConstraints.toArray, preconditions.toArray, effects.toArray, allowedToInsert = !isInitOrGoal,
+                  initOrGoalTask = isInitOrGoal)
   }
 
 
