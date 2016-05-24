@@ -9,15 +9,18 @@
      (b)
      (c)
      (d)
+     (e)
   )
 
   (:action X
     :parameters ( )
     :precondition (and
         (a)
+        (not (e))
       )
     :effect (and
         (b)
+        (e)
       )
   )
 
@@ -25,6 +28,7 @@
     :parameters ( )
     :precondition (and
         (a)
+        (not (e))
       )
     :effect (and
         (c)
