@@ -36,15 +36,16 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraph[T] {
 
 
   def minSumTraversal(root: A, evaluate: (A => Double)): Double = {
-    val seen: scala.collection.mutable.Set[A] = mutable.HashSet[A]()
+    val seen: scala.collection.mutable.Map[A, Double] = mutable.HashMap[A, Double]()
 
     def mini(root: A, evaluate: (A => Double)): Double = if (!andEdges.contains(root) || andEdges(root).isEmpty) evaluate(root)
-    else if (seen.contains(root)) Double.MaxValue
+    else if (seen.contains(root)) seen(root)
     else {
-      seen.add(root) // side effect
+      seen.put(root, Double.MaxValue) // side effect
       val it = andEdges(root).iterator
       var value = Double.MaxValue
       while (it.hasNext) value = Math.min(value, 1 + sum(it.next(), evaluate))
+      seen.put(root, value) // side effect
       value
     }
 
@@ -54,7 +55,6 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraph[T] {
       while (it.hasNext) value += mini(it.next(), evaluate)
       value
     }
-
     mini(root, evaluate)
   }
 }
