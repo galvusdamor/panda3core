@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 
 import collection.mutable.{HashMap, MultiMap}
+import scala.collection.mutable
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -56,34 +57,51 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       if (newPropositions.isEmpty && previousLayer._4.size == allPropositionMutexes.size) {
         Seq(thisLayer)
       } else {
-        val delMutex = previousLayer._4 diff allPropositionMutexes
         thisLayer +: buildGraph(thisLayer, newPropositions, previousLayer._4 diff allPropositionMutexes)
       }
     }
 
-    def createActionInstances(task: ReducedTask, groundLiteral: GroundLiteral, literal: Literal, unsignedPrecons: Seq[Literal],
+    def createActionInstances(task: ReducedTask, groundLiteral: GroundLiteral, literal: Literal, unassignedPrecons: Seq[Literal],
                               mutexes: Set[(GroundLiteral, GroundLiteral)], assignMap: Map[Variable, Constant] = Map(), groundLiterals: Seq[GroundLiteral] = Seq.empty[GroundLiteral]):
                               Set[GroundTask] = {
-      val correct: Boolean = (literal.parameterVariables zip groundLiteral.parameter) forall { case (variable, constant) => assignMap.getOrElse(variable, constant) == constant }
+      val updatedPrecons: Seq[Literal] = unassignedPrecons filterNot { _ == literal }
       val updatedGroundLiterals = groundLiterals :+ groundLiteral
-      val mutexFree: Boolean = (for(x <- updatedGroundLiterals; y <- updatedGroundLiterals) yield (x,y)) exists {
-        potentialMutex => !(mutexes(potentialMutex) || mutexes(potentialMutex.swap))}
-      if(correct && mutexFree) {
-        val updatedAssignMap = assignMap ++ (literal.parameterVariables zip groundLiteral.parameter)
-        val updatedPrecons = unsignedPrecons filterNot { _ == literal }
-        if(updatedPrecons.isEmpty) {
-          /*
-           * TODO: Fix arguments for Task which have parameters that don't exists in the tasks' preconditions.
-           */
+      val assignPairs: Seq[(Variable, Constant)] = literal.parameterVariables zip groundLiteral.parameter
+      val updatedAssignMap: Map[Variable, Constant] = assignPairs.foldLeft(assignMap){ case (aMap,(variable, constant)) => aMap + (variable -> constant)}
+
+      //Check if all preconditions of the task have been assigned
+      if(updatedPrecons.isEmpty){
+        //Check if all parameters of the task have been assigned
+        if(task.parameters.size == updatedAssignMap.keys.size) {
           val arguments: Seq[Constant] = task.parameters map { variable => updatedAssignMap(variable)}
           Set(GroundTask(task, arguments))
         } else {
-          (updatedPrecons flatMap { literal => preconMap(literal.predicate) flatMap { potentialGroundLiteral =>
-            createActionInstances(task, potentialGroundLiteral, literal, updatedPrecons, mutexes, updatedAssignMap, updatedGroundLiterals) } }).toSet
+          val unassignedVariables: Seq[Variable] = task.parameters filterNot{ variable => updatedAssignMap.keySet contains variable}
+          val variablesWithPossibleSubstitutions: Seq[(Variable, Seq[Constant])] = unassignedVariables map { variable => (variable, variable.sort.elements )}
+
+          def computeSubstitutionCombinations[A](sets:Seq[Seq[A]]) : Seq[Seq[A]] = sets match { case Nil => List(Nil)
+          case s+:ss => computeSubstitutionCombinations(ss).flatMap(s2 => s.map(_ +: s2)) }
+
+          val possibleSubstitutionCombinations: Seq[Seq[Constant]] = computeSubstitutionCombinations(variablesWithPossibleSubstitutions map { case (v,c) => c})
+
+          val possibleSubstitutionCombinationsWithVariables: Seq[Seq[(Variable, Constant)]] = possibleSubstitutionCombinations map { seq => unassignedVariables.zip(seq)}
+          val allArgumentCombinations: Seq[Seq[Constant]] = possibleSubstitutionCombinationsWithVariables map { combination =>
+                                                            task.parameters map { variable => updatedAssignMap.getOrElse(variable, combination.find{case (v,c) => v == variable}.get._2)}}
+          (allArgumentCombinations map {arguments => GroundTask(task, arguments)}).toSet
+        }
+      } else {
+        val nextLiteral = updatedPrecons.head
+
+        def checkForMutexes(potentialGroundLiteral: GroundLiteral): Boolean = {
+          val allGroundLiterals = updatedGroundLiterals :+ potentialGroundLiteral
+          (for (x <- allGroundLiterals; y <- allGroundLiterals) yield (x, y)) exists { potentialMutex => !mutexes(potentialMutex) }
+        }
+        def checkCorrectAssignment(checkedLiteral: Literal, potentialGroundLiteral: GroundLiteral, assignmentMap: Map[Variable, Constant]): Boolean = {
+          (checkedLiteral.parameterVariables zip potentialGroundLiteral.parameter) forall { case (variable, constant) => assignmentMap.getOrElse(variable, constant) == constant }
         }
 
-      } else {
-        Set.empty[GroundTask]
+        (preconMap(nextLiteral.predicate) filter { gLCandidate => checkForMutexes(gLCandidate) && checkCorrectAssignment(nextLiteral, gLCandidate, updatedAssignMap)} flatMap {
+          nextGroundLiteral => createActionInstances(task, nextGroundLiteral, nextLiteral, updatedPrecons, mutexes, updatedAssignMap, updatedGroundLiterals)}).toSet
       }
     }
 
