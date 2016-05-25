@@ -26,18 +26,18 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
                    Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
       fillPreconMap(addedPropositions)
       //  Instantiate actions which become available because of new propositions and deletion of mutexes
-      val newActions1: Set[GroundTask] = addedPropositions ++ (deletedMutexes flatMap { mutex => Set(mutex._1, mutex._2) }) flatMap { groundLiteral => {
+      val newActionsFromPreconditions: Set[GroundTask] = addedPropositions ++ (deletedMutexes flatMap { mutex => Set(mutex._1, mutex._2) }) flatMap { groundLiteral => {
         domain.consumersOf(groundLiteral.predicate) flatMap { task =>
         createActionInstances(task, groundLiteral, (task.precondition.conjuncts find { literal => literal.predicate == groundLiteral.predicate }).get,
         task.precondition.conjuncts, previousLayer._4) } }
       }
 
-      val newActions2: Set[GroundTask] = firstLayer match {
+      val newActionsFromParameters: Set[GroundTask] = firstLayer match {
         case true  => createActionInstancesForTasksWithoutPreconditions(domain.tasks collect {
           case t: ReducedTask => t } filter { reducedTask => reducedTask.precondition.conjuncts.isEmpty})
         case false => Set.empty[GroundTask]
       }
-      val newActions: Set[GroundTask] = newActions1 ++ newActions2
+      val newActions: Set[GroundTask] = newActionsFromPreconditions ++ newActionsFromParameters
       val newNoOps: Set[GroundTask] = addedPropositions map { groundLiteral => createNOOP(groundLiteral)}
 
       val allActions: Set[GroundTask] = previousLayer._1 ++ newActions ++ newNoOps
