@@ -39,8 +39,6 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
     // variables for the search
     val initTime: Long = System.currentTimeMillis()
     var nodes: Int = 0 // count the nodes
-    var d: Int = 0 // the depth
-    var crap: Int = 0 // and how many dead ends we have encountered
 
     var abort = false
 

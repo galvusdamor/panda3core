@@ -49,5 +49,8 @@ class EfficientSearchNode(nodeID: Int, nodePlan: EfficientPlan, nodeParent: Effi
   /** any possible further payload */
   var payload      : Any                                 = null
 
-  override def compare(that: EfficientSearchNode): Int = Math.signum(that.heuristic - this.heuristic).toInt
+  override def compare(that: EfficientSearchNode): Int = {
+    val heuristicCompare = Math.signum(that.heuristic - this.heuristic).toInt
+    if (heuristicCompare != 0) heuristicCompare else Math.signum(that.id - this.id).toInt
+  }
 }
