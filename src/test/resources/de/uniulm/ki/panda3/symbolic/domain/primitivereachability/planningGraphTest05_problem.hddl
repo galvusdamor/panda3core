@@ -1,0 +1,19 @@
+(define (problem problem-19)
+
+  ; can be solved
+
+  (:domain domain-19)
+  (:htn
+    :tasks ( )
+    :ordering ( )
+    :constraints ( )
+  )
+
+
+  (:init
+    (and (a) (b))
+  )
+
+  (:goal (and (a) (b)))
+
+)

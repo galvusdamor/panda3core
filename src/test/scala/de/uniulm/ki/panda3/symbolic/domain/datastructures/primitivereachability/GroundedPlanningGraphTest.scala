@@ -82,4 +82,46 @@ class GroundedPlanningGraphTest extends FlatSpec {
     assert(planningGraph.reachableGroundPrimitiveActions exists { _.task.name == "v"})
   }
 
+  it must "handle sorts without objects" in {
+    val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest04_domain.hddl"
+    val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest04_problem.hddl"
+
+    val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
+    // we assume that the domain is grounded
+
+    // cwa
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, ())
+    val plainFormula = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
+    val (domain, initialPlan) = RemoveNegativePreconditions.transform(plainFormula, ())
+
+
+    val groundedInitialState = initialPlan.groundedInitialState filter {
+      _.isPositive
+    }
+    val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
+
+    assert(planningGraph.graphSize == 2)
+  }
+
+  it must "handle negative preconditions correctly" in {
+    val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest04_domain.hddl"
+    val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest04_problem.hddl"
+
+    val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
+    // we assume that the domain is grounded
+
+    // cwa
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, ())
+    val plainFormula = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
+    val (domain, initialPlan) = RemoveNegativePreconditions.transform(plainFormula, ())
+
+
+    val groundedInitialState = initialPlan.groundedInitialState filter {
+      _.isPositive
+    }
+    val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
+
+    assert(planningGraph.graphSize == 2)
+  }
+
 }

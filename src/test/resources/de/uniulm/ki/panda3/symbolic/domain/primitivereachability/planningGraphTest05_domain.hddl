@@ -1,0 +1,21 @@
+(define (domain domain-19)
+
+  ; Modification of 18 to test the planning graph and the STRIPS representation
+
+  (:predicates
+	(a) (b)
+  )
+
+  (:action make-a
+   :parameters ()
+   :precondition (not (b))
+   :effect (a)
+  )
+
+  (:action make-b
+   :parameters ()
+   :precondition (not (a))
+   :effect (b)
+  )
+
+)
