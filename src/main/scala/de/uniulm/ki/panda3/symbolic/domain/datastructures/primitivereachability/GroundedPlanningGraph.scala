@@ -6,8 +6,6 @@ import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 
-import collection.mutable.{HashMap, MultiMap}
-
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
@@ -22,10 +20,10 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
   lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
 
     def buildGraph(previousLayer: (Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)]),
-                   addedPropositions: Set[GroundLiteral], deletedMutexes: Set[(GroundLiteral, GroundLiteral)],firstLayer: Boolean):
+                   addedPropositions: Set[GroundLiteral], deletedMutexes: Set[(GroundLiteral, GroundLiteral)],firstLayer: Boolean, oldPreconMap: Map[Predicate, Set[GroundLiteral]]):
                    Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
 
-      fillPreconMap(addedPropositions)
+      val updatedPrecondMap = fillPreconMap(oldPreconMap, addedPropositions)
 
       val changedPropositions: Set[GroundLiteral] = addedPropositions ++ (deletedMutexes flatMap { mutex => Set(mutex._1, mutex._2)})
       val tasksToBeConsidered: Set[(GroundLiteral, Seq[ReducedTask])] = changedPropositions map { groundLiteral => (groundLiteral, domain.consumersOf(groundLiteral.predicate))}
@@ -35,10 +33,10 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
           Set.empty[GroundTask]
         } else {
           createActionInstances(task, groundLiteral, (task.precondition.conjuncts find { literal => literal.predicate == groundLiteral.predicate }).get,
-            task.precondition.conjuncts, previousLayer._4)
+            task.precondition.conjuncts, previousLayer._4, updatedPrecondMap)
         }
         case Left(forbiddenGroundTasks) => createActionInstances(task, groundLiteral, (task.precondition.conjuncts find { literal => literal.predicate == groundLiteral.predicate }).get,
-          task.precondition.conjuncts, previousLayer._4)
+          task.precondition.conjuncts, previousLayer._4, updatedPrecondMap)
       } } }
 
 
@@ -84,7 +82,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       if (newPropositions.isEmpty && previousLayer._4.size == propositionMutexes.size) {
         Seq(thisLayer)
       } else {
-        thisLayer +: buildGraph(thisLayer, newPropositions, previousLayer._4 diff propositionMutexes, false)
+        thisLayer +: buildGraph(thisLayer, newPropositions, previousLayer._4 diff propositionMutexes, false, updatedPrecondMap)
       }
     }
 
@@ -108,8 +106,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       computeSubstitutionCombinations(variablesWithPossibleSubstitutions map { case (v,c) => c})
     }
 
-    def createActionInstances(task: ReducedTask, groundLiteral: GroundLiteral, literal: Literal, unassignedPrecons: Seq[Literal],
-                              mutexes: Set[(GroundLiteral, GroundLiteral)], assignMap: Map[Variable, Constant] = Map(), groundLiterals: Seq[GroundLiteral] = Seq.empty[GroundLiteral]):
+    def createActionInstances(task: ReducedTask, groundLiteral: GroundLiteral, literal: Literal, unassignedPrecons: Seq[Literal], mutexes: Set[(GroundLiteral, GroundLiteral)],
+                              preconMap: Map[Predicate, Set[GroundLiteral]], assignMap: Map[Variable, Constant] = Map(), groundLiterals: Seq[GroundLiteral] = Seq.empty[GroundLiteral]):
                               Set[GroundTask] = {
 
       val updatedPrecons: Seq[Literal] = unassignedPrecons filterNot { _ == literal }
@@ -153,15 +151,15 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
           (checkedLiteral.parameterVariables zip potentialGroundLiteral.parameter) forall { case (variable, constant) => assignmentMap.getOrElse(variable, constant) == constant }
         }
 
-        (preconMap(nextLiteral.predicate) filter { gLCandidate => checkForMutexes(gLCandidate) && checkCorrectAssignment(nextLiteral, gLCandidate, updatedAssignMap)} flatMap {
-          nextGroundLiteral => createActionInstances(task, nextGroundLiteral, nextLiteral, updatedPrecons, mutexes, updatedAssignMap, updatedGroundLiterals)}).toSet
+        preconMap(nextLiteral.predicate) filter { gLCandidate => checkForMutexes(gLCandidate) && checkCorrectAssignment(nextLiteral, gLCandidate, updatedAssignMap)} flatMap {
+          nextGroundLiteral => createActionInstances(task, nextGroundLiteral, nextLiteral, updatedPrecons, mutexes, preconMap, updatedAssignMap, updatedGroundLiterals)}
       }
     }
 
-    def fillPreconMap(propositions: Set[GroundLiteral]): Unit = propositions.foreach(p => preconMap.addBinding(p.predicate, p))
+    def fillPreconMap(preconMap: Map[Predicate, Set[GroundLiteral]], propositions: Set[GroundLiteral]): Map[Predicate, Set[GroundLiteral]] = propositions.foldLeft(preconMap){
+      case (pMap, groundLiteral) => pMap + (groundLiteral.predicate -> (pMap(groundLiteral.predicate) + groundLiteral))}
 
-    buildGraph((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)]), initialState, Set.empty[(GroundLiteral, GroundLiteral)], true)
+    buildGraph((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)]), initialState, Set.empty[(GroundLiteral, GroundLiteral)], true, Map())
   }
-  private val preconMap = new HashMap[Predicate, collection.mutable.Set[GroundLiteral]] with MultiMap[Predicate, GroundLiteral]
 
 }
