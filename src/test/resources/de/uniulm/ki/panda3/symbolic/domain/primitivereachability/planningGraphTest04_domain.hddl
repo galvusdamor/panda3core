@@ -4,7 +4,7 @@
   ; the fact that there is a sort (namely B) for which there are no objects in
   ; the problem description. However, the corresponding problem is solvable!
 
-  (:requirements :typing)
+  (:requirements :typing :action-costs :hierachie )
 
   (:types
     A - Object

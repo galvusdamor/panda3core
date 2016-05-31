@@ -157,7 +157,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     }
 
     def fillPreconMap(preconMap: Map[Predicate, Set[GroundLiteral]], propositions: Set[GroundLiteral]): Map[Predicate, Set[GroundLiteral]] = propositions.foldLeft(preconMap){
-      case (pMap, groundLiteral) => pMap + (groundLiteral.predicate -> (pMap(groundLiteral.predicate) + groundLiteral))}
+      case (pMap, groundLiteral) => pMap + (groundLiteral.predicate -> (pMap.getOrElse(groundLiteral.predicate, Set.empty[GroundLiteral]) + groundLiteral))}
 
     buildGraph((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)]), initialState, Set.empty[(GroundLiteral, GroundLiteral)], true, Map())
   }
