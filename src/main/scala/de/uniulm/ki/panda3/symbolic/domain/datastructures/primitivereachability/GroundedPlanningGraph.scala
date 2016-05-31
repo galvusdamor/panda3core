@@ -74,12 +74,11 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       val propositionsAndTheirProducers: Map[GroundLiteral, Set[GroundTask]] = (allPropositions map { groundLiteral => (groundLiteral, allGroundTasks filter {
         groundTask => groundTask.substitutedAddEffects contains groundLiteral})}).toMap
       val propositionPairs: Set[(GroundLiteral, GroundLiteral)] = for (x <- allPropositions; y <- allPropositions) yield (x, y)
-      val uniquePropositionPairs: Set[(GroundLiteral, GroundLiteral)] = propositionPairs filter { pair => propositionPairs contains pair.swap }
-
+      val uniquePropositionPairs: Set[(GroundLiteral, GroundLiteral)] = propositionPairs filterNot { pair =>   pair._1 == pair._2}
       val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = computeMutexes match {
         case true => uniquePropositionPairs filter { case (groundLiteral1, groundLiteral2) =>
           (for (x <- propositionsAndTheirProducers(groundLiteral1); y <- propositionsAndTheirProducers(groundLiteral2)) yield (x, y)) forall {
-            case groundTaskPair => taskMutexes(groundTaskPair) || taskMutexes(groundTaskPair) } }
+            case groundTaskPair => (taskMutexes contains groundTaskPair) || (taskMutexes contains groundTaskPair.swap)  } }
         case false => Set.empty[(GroundLiteral, GroundLiteral)]
       }
 
@@ -148,15 +147,17 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       } else {
         val nextLiteral = updatedPrecons.head
 
-        def checkForMutexes(potentialGroundLiteral: GroundLiteral): Boolean = {
+        def isMutexFree(potentialGroundLiteral: GroundLiteral): Boolean = {
           val allGroundLiterals = updatedGroundLiterals :+ potentialGroundLiteral
-          (for (x <- allGroundLiterals; y <- allGroundLiterals) yield (x, y)) exists { potentialMutex => !mutexes(potentialMutex) }
+          val groundLiteralPairs = for (x <- allGroundLiterals; y <- allGroundLiterals) yield (x, y)
+          groundLiteralPairs forall { potentialMutex => !(mutexes contains potentialMutex)}
         }
+
         def checkCorrectAssignment(checkedLiteral: Literal, potentialGroundLiteral: GroundLiteral, assignmentMap: Map[Variable, Constant]): Boolean = {
           (checkedLiteral.parameterVariables zip potentialGroundLiteral.parameter) forall { case (variable, constant) => assignmentMap.getOrElse(variable, constant) == constant }
         }
 
-        preconMap(nextLiteral.predicate) filter { gLCandidate => checkForMutexes(gLCandidate) && checkCorrectAssignment(nextLiteral, gLCandidate, updatedAssignMap)} flatMap {
+        preconMap(nextLiteral.predicate) filter { gLCandidate => isMutexFree(gLCandidate) && checkCorrectAssignment(nextLiteral, gLCandidate, updatedAssignMap)} flatMap {
           nextGroundLiteral => createActionInstances(task, nextGroundLiteral, nextLiteral, updatedPrecons, mutexes, preconMap, updatedAssignMap, updatedGroundLiterals)}
       }
     }
