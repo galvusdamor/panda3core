@@ -75,6 +75,10 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
 
   override val isEmpty: Boolean = false
 
+  def test(groundLiteral: GroundLiteral): Boolean = {
+    (this.predicate == groundLiteral.predicate && this.parameter == groundLiteral.parameter)
+  }
+
   override def update(domainUpdate: DomainUpdate): Formula = GroundLiteral(predicate update domainUpdate, isPositive, parameter map { _ update domainUpdate })
 
   override val containedVariables: Set[Variable] = Set()
@@ -87,4 +91,5 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
 
   /** returns a detailed information about the object */
   override def longInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameter map { _.longInfo }).mkString("(", ", ", ")")
+
 }

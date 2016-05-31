@@ -31,8 +31,18 @@ class GroundedPlanningGraphTest extends FlatSpec {
 
     assert(planningGraph.graphSize == 3)
     assert(planningGraph.reachableGroundLiterals exists {
+      _.predicate.name == "a"
+    })
+    assert(planningGraph.reachableGroundLiterals exists {
+      _.predicate.name == "b"
+    })
+    assert(planningGraph.reachableGroundLiterals exists {
+      _.predicate.name == "c"
+    })
+    assert(planningGraph.reachableGroundLiterals exists {
       _.predicate.name == "d"
     })
+    //assert(planningGraph.layerWithMutexes.last._4.isEmpty)
   }
 
   it must "recognise impossible situations" in {
@@ -100,7 +110,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     }
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
 
-    assert(planningGraph.graphSize == 2)
+    assert(planningGraph.graphSize == 1)
   }
 
   it must "handle negative preconditions correctly" in {
@@ -121,7 +131,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     }
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
 
-    assert(planningGraph.graphSize == 2)
+    assert(planningGraph.graphSize == 1)
   }
 
 }

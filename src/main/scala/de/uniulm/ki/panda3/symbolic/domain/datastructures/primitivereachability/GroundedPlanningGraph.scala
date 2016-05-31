@@ -51,16 +51,21 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       val allGroundTasks: Set[GroundTask] = previousLayer._1 ++ newInstantiatedGroundTasks ++ newNoOps
       val groundTaskPairs: Set[(GroundTask, GroundTask)] = for (x <- allGroundTasks; y <- allGroundTasks) yield (x, y)
 
-      val taskMutexes: Set[(GroundTask, GroundTask)] =  computeMutexes match {
-        case true => isSerial match {
-          case true => groundTaskPairs filterNot { case (groundTask1, groundTask2) => groundTask1.task.name == "NO-OP" || groundTask2.task.name == "NO-OP" }
-          case false => groundTaskPairs filter { case (groundTask1, groundTask2) => (groundTask1.substitutedDelEffects intersect
-            (groundTask2.substitutedAddEffects union groundTask2.substitutedPreconditions)).nonEmpty ||
-            (for (x <- groundTask1.substitutedPreconditions; y <- groundTask2.substitutedPreconditions) yield (x, y)).exists(previousLayer._4.contains)
-          }
+      val taskMutexes: Set[(GroundTask, GroundTask)] = {
+        if(computeMutexes) {
+         val normalMutexes = groundTaskPairs filter { case (groundTask1, groundTask2) => (groundTask1.substitutedDelEffects exists { substitutedEffect =>
+           (groundTask2.substitutedAddEffects ++ groundTask2.substitutedPreconditions) exists { _.test(substitutedEffect)}}) ||
+           (for (x <- groundTask1.substitutedPreconditions; y <- groundTask2.substitutedPreconditions) yield (x, y)).exists(previousLayer._4.contains) }
+         if(isSerial) {
+           (groundTaskPairs filterNot { case (groundTask1, groundTask2) => groundTask1.task.name == "NO-OP" || groundTask2.task.name == "NO-OP" }) union normalMutexes
+         } else {
+           normalMutexes
+         }
+        } else {
+          Set.empty[(GroundTask, GroundTask)]
         }
-        case false => Set.empty[(GroundTask, GroundTask)]
-      }
+      } filter { case (groundTask1, groundTask2) => groundTask1 != groundTask2}
+
       val newPropositions: Set[GroundLiteral] = (newInstantiatedGroundTasks flatMap { newGroundTask => newGroundTask.substitutedAddEffects }) -- previousLayer._3
       /*
        * TODO: Think about a better way to compute proposition-mutexes.
@@ -80,7 +85,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
       val thisLayer = (allGroundTasks, taskMutexes, allPropositions, propositionMutexes)
       if (newPropositions.isEmpty && previousLayer._4.size == propositionMutexes.size) {
-        Seq(thisLayer)
+        Seq.empty[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])]
       } else {
         thisLayer +: buildGraph(thisLayer, newPropositions, previousLayer._4 diff propositionMutexes, false, updatedPrecondMap)
       }
