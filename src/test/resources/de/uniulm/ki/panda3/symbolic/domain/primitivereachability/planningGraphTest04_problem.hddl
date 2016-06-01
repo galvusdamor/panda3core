@@ -16,7 +16,7 @@
   )
 
   (:goal
-    (and (not (dummyPredicate)))
+    (not (dummyPredicate))
   )
 
 )

@@ -2,20 +2,32 @@
 
   ; Modification of 18 to test the planning graph and the STRIPS representation
 
+  (:requirements :typing :action-costs :hierachie )
+  (:types
+        dummyType - object
+  )
   (:predicates
 	(a) (b)
   )
 
-  (:action make-a
+  (:action makea
    :parameters ()
-   :precondition (not (b))
-   :effect (a)
+   :precondition (and
+    (not (b))
+   )
+   :effect (and
+    (a)
+   )
   )
 
-  (:action make-b
+  (:action makeb
    :parameters ()
-   :precondition (not (a))
-   :effect (b)
+   :precondition (and
+    (not (a))
+    )
+   :effect (and
+    (b)
+    )
   )
 
 )

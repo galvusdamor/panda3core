@@ -17,8 +17,8 @@
 
   (:action dummyAction
     :parameters ()
-    :precondition (dummyPredicate)
-    :effect (not (dummyPredicate))
+    :precondition (and (dummyPredicate))
+    :effect (and (not (dummyPredicate)))
   )
 
 )

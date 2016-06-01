@@ -39,7 +39,6 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
           task.precondition.conjuncts, previousLayer._4, updatedPrecondMap)
       } } }
 
-
       val newGroundTasksFromParameters: Set[GroundTask] = firstLayer match {
         case true  => createActionInstancesForTasksWithoutPreconditions(domain.tasks collect {
           case t: ReducedTask => t } filter { reducedTask => reducedTask.precondition.conjuncts.isEmpty})
@@ -67,9 +66,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       } filter { case (groundTask1, groundTask2) => groundTask1 != groundTask2}
 
       val newPropositions: Set[GroundLiteral] = (newInstantiatedGroundTasks flatMap { newGroundTask => newGroundTask.substitutedAddEffects }) -- previousLayer._3
-      /*
-       * TODO: Think about a better way to compute proposition-mutexes.
-       */
+
       val allPropositions: Set[GroundLiteral] = newPropositions ++ previousLayer._3
       val propositionsAndTheirProducers: Map[GroundLiteral, Set[GroundTask]] = (allPropositions map { groundLiteral => (groundLiteral, allGroundTasks filter {
         groundTask => groundTask.substitutedAddEffects contains groundLiteral})}).toMap
@@ -157,7 +154,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
           (checkedLiteral.parameterVariables zip potentialGroundLiteral.parameter) forall { case (variable, constant) => assignmentMap.getOrElse(variable, constant) == constant }
         }
 
-        preconMap(nextLiteral.predicate) filter { gLCandidate => isMutexFree(gLCandidate) && checkCorrectAssignment(nextLiteral, gLCandidate, updatedAssignMap)} flatMap {
+        preconMap.getOrElse(nextLiteral.predicate, Set.empty[GroundLiteral]) filter { gLCandidate => isMutexFree(gLCandidate) && checkCorrectAssignment(nextLiteral, gLCandidate, updatedAssignMap)} flatMap {
           nextGroundLiteral => createActionInstances(task, nextGroundLiteral, nextLiteral, updatedPrecons, mutexes, preconMap, updatedAssignMap, updatedGroundLiterals)}
       }
     }
