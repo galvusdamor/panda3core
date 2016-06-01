@@ -4,7 +4,7 @@ import java.io.FileInputStream
 
 import de.uniulm.ki.panda3.symbolic.compiler.{ClosedWorldAssumption, RemoveNegativePreconditions, ToPlainFormulaRepresentation}
 import de.uniulm.ki.panda3.symbolic.domain.ReducedTask
-import de.uniulm.ki.panda3.symbolic.logic.{Constant, Predicate, Sort}
+import de.uniulm.ki.panda3.symbolic.logic.Constant
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import org.scalatest.FlatSpec
@@ -32,7 +32,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
 
 
-    //assert(planningGraph.graphSize == 3)
+    assert(planningGraph.graphSize == 3)
     assert(planningGraph.reachableGroundLiterals exists {
       _.predicate.name == "a"
     })
