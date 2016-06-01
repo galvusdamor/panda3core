@@ -171,5 +171,37 @@ class GroundedPlanningGraphTest extends FlatSpec {
 
     assert(!(planningGraph2.layerWithMutexes.last._1 contains forbiddenGroundTasks.head ))
   }
+  it must "not compute mutexes if required" in {
+    val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest01_domain.hddl"
+    val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest01_problem.hddl"
+
+    val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
+    // we assume that the domain is grounded
+
+    // cwa
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, ())
+    val (domain, initialPlan) = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
+
+
+    val groundedInitialState = initialPlan.groundedInitialState filter {
+      _.isPositive
+    }
+    val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, false, false, Left(Nil))
+
+    assert(planningGraph.reachableGroundLiterals exists {
+      _.predicate.name == "a"
+    })
+    assert(planningGraph.reachableGroundLiterals exists {
+      _.predicate.name == "b"
+    })
+    assert(planningGraph.reachableGroundLiterals exists {
+      _.predicate.name == "c"
+    })
+    assert(planningGraph.reachableGroundLiterals exists {
+      _.predicate.name == "d"
+    })
+    assert(planningGraph.layerWithMutexes.last._2.isEmpty)
+    assert(planningGraph.layerWithMutexes.last._4.isEmpty)
+  }
 
 }
