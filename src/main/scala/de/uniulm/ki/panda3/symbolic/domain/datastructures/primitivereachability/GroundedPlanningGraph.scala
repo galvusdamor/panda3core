@@ -122,14 +122,15 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
         //Check if all parameters of the task have been assigned
         if(task.parameters.size == updatedAssignMap.keys.size) {
           val arguments: Seq[Constant] = task.parameters map { variable => updatedAssignMap(variable)}
-          val newGroundTask = Set(GroundTask(task, arguments))
+          val newGroundTask = GroundTask(task, arguments)
           disallowedTasks match {
-            case Left(disallowedGroundTasks) => if( disallowedGroundTasks contains newGroundTask) {
+            case Left(disallowedGroundTasks) =>
+                if( disallowedGroundTasks contains newGroundTask) {
                 Set.empty[GroundTask]
               } else {
-                newGroundTask
+                Set(newGroundTask)
               }
-            case Right(disallowedLiftedTasks) => newGroundTask
+            case Right(disallowedLiftedTasks) => Set(newGroundTask)
           }
         } else {
           val unassignedVariables: Seq[Variable] = task.parameters filterNot{ variable => updatedAssignMap.keySet contains variable}

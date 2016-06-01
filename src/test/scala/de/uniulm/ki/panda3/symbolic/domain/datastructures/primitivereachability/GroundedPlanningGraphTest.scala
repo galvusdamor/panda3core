@@ -4,8 +4,9 @@ import java.io.FileInputStream
 
 import de.uniulm.ki.panda3.symbolic.compiler.{ClosedWorldAssumption, RemoveNegativePreconditions, ToPlainFormulaRepresentation}
 import de.uniulm.ki.panda3.symbolic.domain.ReducedTask
-import de.uniulm.ki.panda3.symbolic.logic.{Predicate, Sort}
+import de.uniulm.ki.panda3.symbolic.logic.{Constant, Predicate, Sort}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
+import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import org.scalatest.FlatSpec
 
 /**
@@ -162,7 +163,13 @@ class GroundedPlanningGraphTest extends FlatSpec {
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, forbiddenTasks)
 
     assert(planningGraph.graphSize == 1)
-    assert(!(planningGraph.layerWithMutexes.last._1 exists { groundtask => groundtask.task.name == "Y"}))
+    assert(!(planningGraph.layerWithMutexes.last._1 exists { groundTask => groundTask.task.name == "Y"}))
+
+    val forbiddenGroundTasks: Seq[GroundTask] = Seq(GroundTask(forbiddenLiftedTasks.head,Seq.empty[Constant]))
+    val forbiddenTasks2 = Left(forbiddenGroundTasks)
+    val planningGraph2 = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, forbiddenTasks2)
+
+    assert(!(planningGraph2.layerWithMutexes.last._1 contains forbiddenGroundTasks.head ))
   }
 
 }
