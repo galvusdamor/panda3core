@@ -10,7 +10,7 @@
 	(a) (b)
   )
 
-  (:action makea
+  (:action make-a
    :parameters ()
    :precondition (and
     (not (b))
@@ -20,7 +20,7 @@
    )
   )
 
-  (:action makeb
+  (:action make-b
    :parameters ()
    :precondition (and
     (not (a))

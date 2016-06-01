@@ -10,10 +10,14 @@
   )
 
 
-  (:init
-    (and (a) (b))
+  (:init (and
+    (a) (b)
+   )
   )
 
-  (:goal (and (a) (b)))
+  (:goal (and
+    (a) (b)
+   )
+  )
 
 )
