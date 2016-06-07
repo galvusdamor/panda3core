@@ -1,17 +1,15 @@
-package de.uniulm.ki.panda3.symbolic.sat
+package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.PruneHierarchy
-import de.uniulm.ki.panda3.symbolic.compiler.{Grounding, ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.symbolic.compiler.{ClosedWorldAssumption, Grounding, SHOPMethodCompiler, ToPlainFormulaRepresentation}
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{LiftedForwardSearchReachabilityAnalysis, GroundedForwardSearchReachabilityAnalysis}
-import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.writer.hpddl.HPDDLWriter
-import de.uniulm.ki.panda3.symbolic.writer.xml.XMLWriter
 import de.uniulm.ki.util._
 
 import scala.collection.Seq

@@ -1,17 +1,17 @@
-package de.uniulm.ki.panda3.symbolic.sat
+package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import java.io.{File, FileInputStream}
 
-import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.symbolic._
+import de.uniulm.ki.panda3.symbolic.compiler.{ClosedWorldAssumption, SHOPMethodCompiler, ToPlainFormulaRepresentation}
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, OrderingConstraint}
-import scala.collection._
+import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.util._
-import de.uniulm.ki.panda3.symbolic._
 
+import scala.collection._
 import scala.io.Source
 
 /**
