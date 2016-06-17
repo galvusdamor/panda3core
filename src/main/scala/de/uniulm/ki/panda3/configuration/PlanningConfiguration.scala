@@ -11,7 +11,7 @@ import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachable, NaiveGroundedTaskDecompositionGraph}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
@@ -86,7 +86,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(())
-        runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult,domainAndPlan)
+        runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan)
       })
     } else {
       timeCapsule start COMPUTE_EFFICIENT_REPRESENTATION
@@ -148,7 +148,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     }
   }
 
-  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan], domainAndPlan: (Domain,Plan)): ResultMap =
+  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan], domainAndPlan: (Domain, Plan)): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings => timeCapsule.timeMap
       case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
@@ -309,7 +309,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     if (!preprocessingConfiguration.iterateReachabilityAnalysis || tdgResult._1._1.tasks.length == domain.tasks.length) {
       // finished reachability analysis now we have to ground
       if (preprocessingConfiguration.groundDomain) {
-        val tdg = tdgResult._2(SymbolicGroundedTaskDecompositionGraph)
+        val tdg = if (tdgResult._2.contains(SymbolicGroundedTaskDecompositionGraph)) tdgResult._2(SymbolicGroundedTaskDecompositionGraph)
+        else EverythingIsHiearchicallyReachable(tdgResult._1._1, tdgResult._1._2)
 
         info("Grounding ... ")
         timeCapsule start GROUNDING
@@ -357,7 +358,7 @@ case class PreprocessingConfiguration(
                                        iterateReachabilityAnalysis: Boolean,
                                        groundDomain: Boolean
                                      ) {
-  assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
+  // assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
 }
 
 /**

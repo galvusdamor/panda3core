@@ -50,6 +50,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val abstractTasks : Seq[Task] = tasks filterNot { _.isPrimitive }
 
   lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
+  lazy val allGroundedAbstractTasks: Seq[GroundTask] = abstractTasks flatMap { _.instantiateGround }
 
   /**
     * Determines the sort a constant originally belonged to.

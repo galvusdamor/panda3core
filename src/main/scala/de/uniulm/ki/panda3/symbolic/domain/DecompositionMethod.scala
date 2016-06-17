@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
+import de.uniulm.ki.panda3.symbolic.csp.Equal
 import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeLiteralsByPredicate, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -53,6 +54,31 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends 
     case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true))
     case _                                       => SimpleDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate))
   }
+
+
+  def groundWithAbstractTaskGrounding(groundedAbstractTask : GroundTask) : Seq[GroundedDecompositionMethod] = {
+      val bindArguments = groundedAbstractTask.task.parameters zip groundedAbstractTask.arguments map { case (v, c) => Equal(v, c) }
+      val boundCSP = subPlan.variableConstraints.addConstraints(bindArguments)
+      val unboundVariables = boundCSP.variables filter { v => boundCSP.getRepresentative(v) match {
+        case c: Constant    => false
+        case repV: Variable => repV == v
+      }
+      }
+      // try to bind all variables to their
+      val unboundVariablesWithRemainingValues: Seq[(Variable, Seq[Constant])] = (unboundVariables map { v => (v, boundCSP.reducedDomainOf(v)) }).toSeq
+      val allInstantiations = Sort allPossibleInstantiationsWithVariables unboundVariablesWithRemainingValues
+
+      val methodInstantiations: Seq[Map[Variable, Constant]] = allInstantiations map { instantiation =>
+        val additionalConstraints = instantiation map { case (v, c) => Equal(v, c) }
+        val innerCSP = boundCSP addConstraints additionalConstraints
+        if (innerCSP.isSolvable contains false) None
+        else Some((innerCSP.variables map { v => v -> innerCSP.getRepresentative(v).asInstanceOf[Constant] }).toMap)
+      } filter { _.isDefined } map { _.get }
+
+      methodInstantiations map { args => GroundedDecompositionMethod(this, args) }
+  }
+
+
 }
 
 /**

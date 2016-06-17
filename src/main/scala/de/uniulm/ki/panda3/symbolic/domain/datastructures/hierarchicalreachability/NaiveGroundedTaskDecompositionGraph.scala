@@ -44,28 +44,7 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
     // ground all methods naively
     val groundedDecompositionMethods: Map[GroundTask, Seq[GroundedDecompositionMethod]] = domain.decompositionMethods :+ topMethod flatMap {
       case method@SimpleDecompositionMethod(abstractTask, subPlan) =>
-        abstractTaskGroundings(abstractTask) map {
-          case groundTask =>
-            val bindArguments = groundTask.task.parameters zip groundTask.arguments map { case (v, c) => Equal(v, c) }
-            val boundCSP = subPlan.variableConstraints.addConstraints(bindArguments)
-            val unboundVariables = boundCSP.variables filter { v => boundCSP.getRepresentative(v) match {
-              case c: Constant    => false
-              case repV: Variable => repV == v
-            }
-            }
-            // try to bind all variables to their
-            val unboundVariablesWithRemainingValues: Seq[(Variable, Seq[Constant])] = (unboundVariables map { v => (v, boundCSP.reducedDomainOf(v)) }).toSeq
-            val allInstantiations = Sort allPossibleInstantiationsWithVariables unboundVariablesWithRemainingValues
-
-            val methodInstantiations: Seq[Map[Variable, Constant]] = allInstantiations map { instantiation =>
-              val additionalConstraints = instantiation map { case (v, c) => Equal(v, c) }
-              val innerCSP = boundCSP addConstraints additionalConstraints
-              if (innerCSP.isSolvable contains false) None
-              else Some((innerCSP.variables map { v => v -> innerCSP.getRepresentative(v).asInstanceOf[Constant] }).toMap)
-            } filter { _.isDefined } map { _.get }
-
-            (groundTask, methodInstantiations map { args => GroundedDecompositionMethod(method, args) })
-        }
+        abstractTaskGroundings(abstractTask) map { x => (x, method.groundWithAbstractTaskGrounding(x)) }
       case _                                                       => noSupport(NONSIMPLEMETHOD)
     } groupBy { _._1 } map { case (gt, s) => (gt, s flatMap { _._2 }) }
 
