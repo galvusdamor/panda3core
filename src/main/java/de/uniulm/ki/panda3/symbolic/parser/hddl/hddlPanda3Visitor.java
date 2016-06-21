@@ -104,6 +104,13 @@ public class hddlPanda3Visitor {
     }
 
     private void visitInitialTN(antlrHDDLParser.P_htnContext p_htnContext, internalTaskNetwork tn, Seq<Task> tasks, Seq<Sort> sorts) {
+        if (p_htnContext.tasknetwork_def() == null){
+            // this is only allowed if the problem is a pddl problem
+            // TODO:
+            return;
+        }
+
+
         antlrHDDLParser.Subtask_defsContext subtask = p_htnContext.tasknetwork_def().subtask_defs();
         int nextId = 0;
         int psID = 2;
@@ -597,6 +604,8 @@ public class hddlPanda3Visitor {
         }
     }
 
+    private static final String ARTIFICIAL_ROOT_SORT = "__Object";
+
     public Seq<Sort> visitTypeAndObjDef(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
 
         // Extract type hierarchy from domain file
@@ -608,7 +617,7 @@ public class hddlPanda3Visitor {
 
             antlrHDDLParser.New_typesContext newTypes = typeDef.new_types();
 
-            final String parent_type = typeDef.var_type().NAME().toString();
+            final String parent_type = typeDef.var_type() == null ? ARTIFICIAL_ROOT_SORT : typeDef.var_type().NAME().toString();
             for (int j = 0; j < newTypes.getChildCount(); j++) {
                 final String child_type = newTypes.NAME(j).toString();
                 internalSortModel.addParent(child_type, parent_type);
