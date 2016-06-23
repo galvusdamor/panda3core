@@ -37,27 +37,22 @@ import java.util.List;
  */
 public class hddlPanda3Visitor {
 
-    private final static List<Class<?>> allowedModificationsClasses = new LinkedList<>();
-    private final static List<Class<?>> allowedFlawClasses = new LinkedList<>();
+    private final static List<Class<?>> alwaysAllowedModificationsClasses = new LinkedList<>();
+    private final static List<Class<?>> alwaysAllowedFlawClasses = new LinkedList<>();
 
     static {
 
-        allowedModificationsClasses.add(AddOrdering.class);
-        allowedModificationsClasses.add(BindVariableToValue.class);
-        allowedModificationsClasses.add(DecomposePlanStep.class);
-        allowedModificationsClasses.add(InsertCausalLink.class);
-        //allowedModificationsClasses.add(InsertPlanStepWithLink.class); // TODO what to do Daniel ???
-        allowedModificationsClasses.add(MakeLiteralsUnUnifiable.class);
+        alwaysAllowedModificationsClasses.add(AddOrdering.class);
+        alwaysAllowedModificationsClasses.add(BindVariableToValue.class);
+        alwaysAllowedModificationsClasses.add(InsertCausalLink.class);
+        alwaysAllowedModificationsClasses.add(MakeLiteralsUnUnifiable.class);
 
-        allowedFlawClasses.add(AbstractPlanStep.class);
-        allowedFlawClasses.add(CausalThreat.class);
-        allowedFlawClasses.add(OpenPrecondition.class);
-        allowedFlawClasses.add(UnboundVariable.class);
-
+        alwaysAllowedFlawClasses.add(CausalThreat.class);
+        alwaysAllowedFlawClasses.add(OpenPrecondition.class);
+        alwaysAllowedFlawClasses.add(UnboundVariable.class);
     }
 
-    public final static IsModificationAllowed allowedModifications = new ModificationsByClass(JavaToScala.toScalaSeq(allowedModificationsClasses));
-    public final static IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
+
     public final static scala.collection.immutable.Map<PlanStep, DecompositionMethod> planStepsDecomposedBy =
             scala.collection.immutable.Map$.MODULE$.<PlanStep, DecompositionMethod>empty();
     public final static scala.collection.immutable.Map<PlanStep, Tuple2<PlanStep, PlanStep>> planStepsDecompositionParents =
@@ -96,6 +91,28 @@ public class hddlPanda3Visitor {
         visitInitialTN(ctxProblem.p_htn(), tn, tasks, sorts);
 
 
+        // determine problem type
+        List<Class<?>> allowedModificationsClasses = new LinkedList<Class<?>>();
+        List<Class<?>> allowedFlawClasses = new LinkedList<Class<?>>();
+        allowedModificationsClasses.addAll(alwaysAllowedModificationsClasses);
+        allowedFlawClasses.addAll(alwaysAllowedFlawClasses);
+
+        if (ctxProblem.p_htn() == null) {
+            // this is a classical PDDL file
+            allowedModificationsClasses.add(InsertPlanStepWithLink.class);
+        } else {
+            allowedModificationsClasses.add(DecomposePlanStep.class);
+            allowedFlawClasses.add(AbstractPlanStep.class);
+
+            if (ctxProblem.p_htn().children.get(1).getText() == ":htnti") {
+                allowedModificationsClasses.add(InsertPlanStepWithLink.class);
+            } else assert (ctxProblem.p_htn().children.get(1).getText() == ":htn");
+        }
+
+        IsModificationAllowed allowedModifications = new ModificationsByClass(JavaToScala.toScalaSeq(allowedModificationsClasses));
+        IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
+
+
         Plan p = new Plan(tn.planSteps(), tn.causalLinks(), tn.taskOrderings(), tn.csp(), psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy,
                 planStepsDecompositionParents);
 
@@ -104,7 +121,7 @@ public class hddlPanda3Visitor {
     }
 
     private void visitInitialTN(antlrHDDLParser.P_htnContext p_htnContext, internalTaskNetwork tn, Seq<Task> tasks, Seq<Sort> sorts) {
-        if (p_htnContext.tasknetwork_def() == null){
+        if (p_htnContext == null || p_htnContext.tasknetwork_def() == null) {
             // this is only allowed if the problem is a pddl problem
             // TODO:
             return;
