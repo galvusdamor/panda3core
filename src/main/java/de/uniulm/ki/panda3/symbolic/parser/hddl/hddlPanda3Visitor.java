@@ -172,13 +172,18 @@ public class hddlPanda3Visitor {
         seqProviderList<Variable> parameter = getVariableForEveryConst(sorts, varConstraints);
 
         seqProviderList<Literal> initEffects = new seqProviderList<>();
-        for (antlrHDDLParser.LiteralContext lc : ctx.literal()) {
-            if (lc.atomic_formula() != null) {
-                initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, true, lc.atomic_formula()));
-            } else if (lc.neg_atomic_formula() != null) {
-                initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, false, lc.atomic_formula()));
-            }
+        for (antlrHDDLParser.Init_elContext el : ctx.init_el()) {
+            if (el.literal() != null) { // normal STRIPS init
+                if (el.literal().atomic_formula() != null) {
+                    initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, true, el.literal().atomic_formula()));
+                } else if (el.literal().neg_atomic_formula() != null) {
+                    initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, false, el.literal().atomic_formula()));
+                }
+            } /*else if (el.num_init() != null) {
+                System.out.println("not implemented: numeric element");
+            }*/
         }
+
         return new ReducedTask("init", true, parameter.result(), varConstraints.result(), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(initEffects.result()));
     }
 

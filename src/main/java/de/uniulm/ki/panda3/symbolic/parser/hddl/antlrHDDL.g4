@@ -1,4 +1,4 @@
-grammar hddl;
+grammar antlrHDDL;
 
 //
 // Version Log:
@@ -21,6 +21,7 @@ domain : '(' 'define' '(' 'domain' domain_symbol ')'
              type_def?
              const_def?
              predicates_def?
+             funtions_def?
              comp_task_def*
              method_def*
              action_def* ')';
@@ -48,6 +49,7 @@ const_def : '(' ':constants' typed_obj_list ')';
 //
 // predicate definition
 //
+funtions_def : '(' ':functions' ( atomic_formula_skeleton '-' 'number' | var_type )+')';
 predicates_def : '(' ':predicates' atomic_formula_skeleton+ ')';
 atomic_formula_skeleton : '(' predicate typed_var_list ')';
 
@@ -156,7 +158,7 @@ effect_body : eff_empty | c_effect | eff_conjuntion;
 
 eff_conjuntion : '(' 'and' c_effect+ ')';
 eff_empty : '(' ')';
-c_effect : literal | forall_effect | conditional_effect;
+c_effect : p_effect | literal | forall_effect | conditional_effect;
 
 forall_effect : '(' 'forall' '(' var_or_const* ')' effect_body ')';
 conditional_effect : '(' 'when' gd cond_effect ')';
@@ -164,6 +166,18 @@ conditional_effect : '(' 'when' gd cond_effect ')';
 literal : neg_atomic_formula | atomic_formula;
 neg_atomic_formula : '(' 'not' atomic_formula ')';
 cond_effect : literal | '(' 'and' literal+ ')';
+
+p_effect : '(' assign_op f_head f_exp ')';
+
+assign_op : 'assign' | 'scale-down' | 'scale-up' | 'increase' | 'decrease';
+
+f_head : func_symbol | '(' func_symbol term* ')';
+
+f_exp : NUMBER | '(' bin_op f_exp f_exp ')' | '(' multi_op f_exp f_exp+ ')' | '(' '-' f_exp ')' | f_head;
+
+bin_op : multi_op | '-' | '/';
+
+multi_op : '+' | '*';
 
 //
 // basic definitions
@@ -187,16 +201,20 @@ new_consts : NAME;
 var_type : NAME;
 
 // "require"-statements start with a ":"-symbol
-REQUIRE_NAME : ':'NAME;
+REQUIRE_NAME : ':' NAME;
 
 // names of variables with a "?"
 var_or_const : NAME | VAR_NAME;
 VAR_NAME : '?'NAME;
 
 // basic name definition
+term : NAME | VAR_NAME | functionterm;
+functionterm : '(' func_symbol term* ')';
+func_symbol : NAME;
 NAME : [a-zA-Z][a-zA-Z0-9\-_]* ;
 COMMENT : (';' ~[\r\n]* ('\r'|'\n') ('\r'|'\n')? ) -> skip ;
 WS : [ \t\r\n]+ -> skip ;
+NUMBER : [0-9][0-9]* ;
 
 //
 //*********************************************************************************
@@ -210,13 +228,16 @@ problem : '(' 'define' '(' 'problem' NAME ')'
               '(' ':domain' NAME ')'
               require_def?
               p_object_declaration?
-              p_htn
+              p_htn?
               p_init
               p_goal?
+              metric_spec?
               ')';
 
 p_object_declaration : '(' ':objects' typed_obj_list')';
-p_init : '(' ':init' literal* ')';
+p_init : '(' ':init' init_el*')';
+init_el : literal | num_init;
+num_init : equallity f_head NUMBER ')';
 p_goal : '(' ':goal' gd ')';
 
 p_htn : '(' (':htn'|':htnti')
@@ -224,3 +245,11 @@ p_htn : '(' (':htn'|':htnti')
 //      (':tasks' subtask_defs)?
 //      (':ordering' ordering_defs)?
 //      (':constraints' constraint_defs)? ')';
+metric_spec : '(' ':metric' optimization ground_f_exp')';
+optimization : 'minimize' | 'maximize';
+ground_f_exp : '(' bin_op ground_f_exp ground_f_exp ')'
+             | ('(' '-' | '(-') ground_f_exp ')'
+             | NUMBER
+             | '(' func_symbol NAME* ')'
+             | 'total-time'
+             | func_symbol;
