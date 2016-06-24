@@ -413,7 +413,9 @@ public class hddlPanda3Visitor {
         seqProviderList<Literal> conj = new seqProviderList<>();
 
         for (antlrHDDLParser.C_effectContext eff : ctx.c_effect()) {
-            conj.add(visitConEff(parameters, constraints, sorts, predicates, eff));
+            Literal t = visitConEff(parameters, constraints, sorts, predicates, eff);
+            if (t != null) // it may be null if it uses a not yet implemented feature. This should already have been reported, so that we can skip it here
+                conj.add(t);
         }
         return new And(conj.result());
     }
