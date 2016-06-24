@@ -55,6 +55,7 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
   }*/
 
 case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends LogicalConnector with DefaultLongInfo with HashMemo {
+  assert(conjuncts forall {_ != null})
   override def update(domainUpdate: DomainUpdate): Formula = {
     val subreduced = conjuncts map {
       _ update domainUpdate
