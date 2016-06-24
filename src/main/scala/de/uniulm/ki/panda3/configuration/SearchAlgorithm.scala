@@ -16,7 +16,7 @@ import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 trait SearchAlgorithm[DomainType, PlanType, SearchNodeType] {
 
   def startSearch(domain: DomainType, initialPlan: PlanType,
-                  nodeLimit: Option[Int] = None, releaseEvery: Option[Int] = None, printSearchInfo: Boolean = false, buildSearchTree : Boolean,
+                  nodeLimit: Option[Int] = None, timeLimit: Option[Int] = None, releaseEvery: Option[Int] = None, printSearchInfo: Boolean = false, buildSearchTree: Boolean,
                   informationCapsule: InformationCapsule, timeCapsule: TimeCapsule = new TimeCapsule()):
   (SearchNodeType, Semaphore, ResultFunction[PlanType], AbortFunction)
 

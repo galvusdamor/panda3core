@@ -78,7 +78,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // now we have to decide which representation to use for the search
     if (!searchConfiguration.efficientSearch) {
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
-        case DFSType => symbolic.search.DFS.startSearch(domainAndPlan._1, domainAndPlan._2, searchConfiguration.nodeLimit, releaseSemaphoreEvery, searchConfiguration.printSearchInfo,
+        case DFSType => symbolic.search.DFS.startSearch(domainAndPlan._1, domainAndPlan._2, searchConfiguration.nodeLimit, searchConfiguration.timeLimit,
+                                                        releaseSemaphoreEvery, searchConfiguration.printSearchInfo,
                                                         postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                                         informationCapsule, timeCapsule)
         case _       => throw new UnsupportedOperationException("Any other symbolic search algorithm besides DFS is not supported.")
@@ -104,7 +105,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
         case algo => algo match {
           case BFSType                => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
-                                                                          searchConfiguration.nodeLimit, releaseSemaphoreEvery,
+                                                                          searchConfiguration.nodeLimit,searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                                                           searchConfiguration.printSearchInfo,
                                                                           postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                                                           informationCapsule, timeCapsule)
@@ -112,7 +113,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             // just use the zero heuristic
             val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, true)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
-                                        searchConfiguration.nodeLimit, releaseSemaphoreEvery,
+                                        searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
                                         postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                         informationCapsule, timeCapsule)
@@ -132,7 +133,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
             val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, useCosts)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
-                                        searchConfiguration.nodeLimit, releaseSemaphoreEvery,
+                                        searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
                                         postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                         informationCapsule, timeCapsule)
@@ -154,7 +155,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
       else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule.informationMap(Information.NUMBER_OF_NODES))
         SearchState.UNSOLVABLE
-      else SearchState.INSEARCH
+      else SearchState.INSEARCH // TODO account for the case we ran out of time
 
       case SearchResult              => result
       case SearchStatistics          => informationCapsule.informationMap
@@ -392,6 +393,7 @@ object TDGMinimumModification extends SearchHeuristic
 
 case class SearchConfiguration(
                                 nodeLimit: Option[Int],
+                                timeLimit: Option[Int],
                                 efficientSearch: Boolean,
                                 searchAlgorithm: SearchAlgorithmType,
                                 heuristic: Option[SearchHeuristic],
