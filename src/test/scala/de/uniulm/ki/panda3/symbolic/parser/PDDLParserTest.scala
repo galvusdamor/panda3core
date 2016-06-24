@@ -26,10 +26,10 @@ class PDDLParserTest extends FlatSpec {
 
       assert(domainFiles.length == 1 || domainFiles.length == problemFiles.length)
 
-      val usableDomainFiles = if (domainFiles.length == 1) List.fill(3)(domainFiles.head) else domainFiles.toList
+      val usableDomainFiles = if (domainFiles.length == 1) List.fill(problemFiles.length)(domainFiles.head) else domainFiles.toList
 
       problemFiles.sortBy(_.getName) zip usableDomainFiles.sortBy(_.getName) foreach { case (problemFile, domainFile) =>
-        println(problemFile.getName + " & " + domainFile.getName)
+        println(ipc + " " + d.getPath + " " + problemFile.getName + " & " + domainFile.getName)
         val (domain, plan) = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
 
         assert(plan.planSteps.length == 2)
