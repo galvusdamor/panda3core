@@ -49,7 +49,7 @@ const_def : '(' ':constants' typed_obj_list ')';
 //
 // predicate definition
 //
-funtions_def : '(' ':functions' ( atomic_formula_skeleton '-' 'number' | var_type )+')';
+funtions_def : '(' ':functions' ( atomic_formula_skeleton ('-' 'number' | var_type )?)+')';
 predicates_def : '(' ':predicates' atomic_formula_skeleton+ ')';
 atomic_formula_skeleton : '(' predicate typed_var_list ')';
 

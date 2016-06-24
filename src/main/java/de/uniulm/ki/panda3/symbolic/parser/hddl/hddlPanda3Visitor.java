@@ -309,9 +309,9 @@ public class hddlPanda3Visitor {
         Formula f2 = new And<Literal>(new Vector<Literal>(0, 0, 0));
 
         if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().c_effect() != null)) {
-            f2 = visitConEff(parameters, sorts, predicates, ctxTask.effect_body().c_effect());
+            f2 = visitConEff(parameters, constraints, sorts, predicates, ctxTask.effect_body().c_effect());
         } else if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().eff_conjuntion() != null)) {
-            f2 = visitConEffConj(parameters, sorts, predicates, ctxTask.effect_body().eff_conjuntion());
+            f2 = visitConEffConj(parameters, constraints, sorts, predicates, ctxTask.effect_body().eff_conjuntion());
         }
         return new GeneralTask(taskName, isPrimitive, parameters.result(), constraints.result(), f, f2);
     }
@@ -409,21 +409,21 @@ public class hddlPanda3Visitor {
         return new Tuple2<>(quantifiedVars.result(), inner);
     }
 
-    private Formula visitConEffConj(seqProviderList<Variable> parameters, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Eff_conjuntionContext ctx) {
+    private Formula visitConEffConj(seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Eff_conjuntionContext ctx) {
         seqProviderList<Literal> conj = new seqProviderList<>();
 
         for (antlrHDDLParser.C_effectContext eff : ctx.c_effect()) {
-            conj.add(visitConEff(parameters, sorts, predicates, eff));
+            conj.add(visitConEff(parameters, constraints, sorts, predicates, eff));
         }
         return new And(conj.result());
     }
 
-    private Literal visitConEff(seqProviderList<Variable> parameters, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.C_effectContext ctx) {
+    private Literal visitConEff(seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.C_effectContext ctx) {
         if (ctx.literal() != null) {
             if (ctx.literal().atomic_formula() != null) {
-                return visitAtomFormula(parameters, predicates, sorts, null, true, ctx.literal().atomic_formula());
+                return visitAtomFormula(parameters, predicates, sorts, constraints, true, ctx.literal().atomic_formula());
             } else if (ctx.literal().neg_atomic_formula() != null) {
-                return visitAtomFormula(parameters, predicates, sorts, null, false, ctx.literal().neg_atomic_formula().atomic_formula());
+                return visitAtomFormula(parameters, predicates, sorts, constraints, false, ctx.literal().neg_atomic_formula().atomic_formula());
             }
         } else if (ctx.forall_effect() != null) {
             this.report.reportForallEffect();
@@ -542,25 +542,16 @@ public class hddlPanda3Visitor {
                 }
             }
         } else {
-            // this may be (1) an object that has already been defined in s0
             String pname = param.NAME().getText();
 
-            if (constraints == null) {
-                for (int i = 0; i < parameters.size(); i++) {
-                    System.out.println(parameters.get(i).name());
-                    Variable v = parameters.get(i);
-                }
-                System.out.println();
-            }
-            // (1) const in s0, there is already a var
-            if (constraints != null) {
-                for (int i = 0; i < constraints.size(); i++) {
-                    VariableConstraint vc = constraints.get(i);
-                    if (vc instanceof Equal) {
-                        Equal e = (Equal) vc;
-                        if (((Constant) e.right()).name().equals(pname)) {
-                            var = e.left();
-                        }
+            // - this may be an object that has already been defined in s0 -> there is already a const and a var
+            // - a const in a task/method AND it is not the fist occurrence -> there is already a variable
+            for (int i = 0; i < constraints.size(); i++) {
+                VariableConstraint vc = constraints.get(i);
+                if (vc instanceof Equal) {
+                    Equal e = (Equal) vc;
+                    if (((Constant) e.right()).name().equals(pname)) {
+                        var = e.left();
                     }
                 }
             }

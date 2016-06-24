@@ -23,8 +23,8 @@ public class TestHddlVisitorParser {
             //String problemFileName = System.getProperty("user.dir") + "/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/monroe-p1.lisp";
             //String domainFileName = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/hddl-finalize/domain.lisp";
             //String problemFileName = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/hddl-finalize/problem2.lisp";
-            String domainFileName = "/home/dhoeller/Schreibtisch/temp/test-parser/d2.lisp";
-            String problemFileName = "/home/dhoeller/Schreibtisch/temp/test-parser/p2.lisp";
+            String domainFileName = "/home/dhoeller/Schreibtisch/temp/test-parser/d.lisp";
+            String problemFileName = "/home/dhoeller/Schreibtisch/temp/test-parser/p.lisp";
 
             inDomain = new FileReader(domainFileName);
             inProblem = new FileReader(problemFileName);
