@@ -58,6 +58,7 @@ public class hddlPanda3Visitor {
     public final static scala.collection.immutable.Map<PlanStep, Tuple2<PlanStep, PlanStep>> planStepsDecompositionParents =
             scala.collection.immutable.Map$.MODULE$.<PlanStep, Tuple2<PlanStep, PlanStep>>empty();
 
+    private parseReport report = new parseReport();
 
     public Tuple2<Domain, Plan> visitInstance(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
 
@@ -115,6 +116,8 @@ public class hddlPanda3Visitor {
 
         Plan p = new Plan(tn.planSteps(), tn.causalLinks(), tn.taskOrderings(), tn.csp(), psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy,
                 planStepsDecompositionParents);
+
+        report.printReport();
 
         Tuple2<Domain, Plan> initialProblem = new Tuple2<>(d, p);
         return initialProblem;
@@ -423,9 +426,11 @@ public class hddlPanda3Visitor {
                 return visitAtomFormula(parameters, predicates, sorts, null, false, ctx.literal().neg_atomic_formula().atomic_formula());
             }
         } else if (ctx.forall_effect() != null) {
-            System.out.println("ERROR: not yet implemented - forall effects.");
+            this.report.reportForallEffect();
         } else if (ctx.conditional_effect() != null) {
-            System.out.println("ERROR: not yet implemented - conditional effects.");
+            this.report.reportConditionalEffects();
+        } else if (ctx.p_effect() != null) {
+            this.report.reportNumericEffect();
         } else {
             System.out.println("ERROR: found an empty effect in action declaration.");
         }
@@ -540,13 +545,22 @@ public class hddlPanda3Visitor {
             // this may be (1) an object that has already been defined in s0
             String pname = param.NAME().getText();
 
+            if (constraints == null) {
+                for (int i = 0; i < parameters.size(); i++) {
+                    System.out.println(parameters.get(i).name());
+                    Variable v = parameters.get(i);
+                }
+                System.out.println();
+            }
             // (1) const in s0, there is already a var
-            for (int i = 0; i < constraints.size(); i++) {
-                VariableConstraint vc = constraints.get(i);
-                if (vc instanceof Equal) {
-                    Equal e = (Equal) vc;
-                    if (((Constant) e.right()).name().equals(pname)) {
-                        var = e.left();
+            if (constraints != null) {
+                for (int i = 0; i < constraints.size(); i++) {
+                    VariableConstraint vc = constraints.get(i);
+                    if (vc instanceof Equal) {
+                        Equal e = (Equal) vc;
+                        if (((Constant) e.right()).name().equals(pname)) {
+                            var = e.left();
+                        }
                     }
                 }
             }

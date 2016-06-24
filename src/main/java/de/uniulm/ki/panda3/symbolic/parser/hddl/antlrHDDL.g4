@@ -38,7 +38,7 @@ require_defs : REQUIRE_NAME+;
 // type-definition
 //
 type_def : '(' ':types' one_def+ ')';
-one_def : new_types '-' var_type;
+one_def : new_types ('-' var_type)?;
 new_types : NAME+;
 
 //
