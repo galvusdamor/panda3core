@@ -36,7 +36,7 @@ object Timings {
   val PARSER_SORT_EXPANSION  = "01 parsing:02:sort expansion"
   val PARSER_CWA             = "01 parsing:03:closed world assumption"
   val PARSER_SHOP_METHODS    = "01 parsing:04:shop methods"
-  val PARSER_FLATTEN_FORMULA = "01 parsing:05:flatten methods"
+  val PARSER_FLATTEN_FORMULA = "01 parsing:05:flatten formula"
 
 
   val PREPROCESSING                  = "02 preprocessing:00:total"

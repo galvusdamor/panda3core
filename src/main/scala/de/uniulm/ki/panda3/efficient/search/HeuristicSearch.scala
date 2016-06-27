@@ -76,7 +76,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
         minHeuristicCurrentInterval = Math.min(minHeuristicCurrentInterval, myNode.heuristic)
         maxHeuristicCurrentInterval = Math.max(maxHeuristicCurrentInterval, myNode.heuristic)
 
-        if (nodes % 30 == 0 && nodes > 0) {
+        if (nodes % 300 == 0 && nodes > 0) {
           val nTime = System.currentTimeMillis()
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
           if (printSearchInfo) println("Plans Expanded: " + nodes + " " + nps + " Queue size " + searchQueue.length + " Recently lowest Heuristic " + minHeuristicCurrentInterval +

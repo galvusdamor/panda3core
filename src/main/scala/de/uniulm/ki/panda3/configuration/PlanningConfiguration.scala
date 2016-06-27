@@ -8,7 +8,7 @@ import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.{EfficientGroundedTaskDecompositionGraph, EfficientTDGFromGroundedSymbolic}
 import de.uniulm.ki.panda3.efficient.heuristic.{MinimumModificationEffortHeuristic, EfficientNumberOfPlanSteps, EfficientNumberOfFlaws, AlwaysZeroHeuristic}
 import de.uniulm.ki.panda3.{efficient, symbolic}
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneHierarchy}
+import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachable, NaiveGroundedTaskDecompositionGraph}
@@ -105,7 +105,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
         case algo => algo match {
           case BFSType                => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
-                                                                          searchConfiguration.nodeLimit,searchConfiguration.timeLimit, releaseSemaphoreEvery,
+                                                                          searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                                                           searchConfiguration.printSearchInfo,
                                                                           postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                                                           informationCapsule, timeCapsule)
@@ -274,7 +274,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       info("Lifted reachability analysis ... ")
       val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(compilationResult._1, compilationResult._2, emptyAnalysis)
       val disallowedTasks = compilationResult._1.primitiveTasks filterNot newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.contains
-      val pruned = PruneHierarchy.transform(compilationResult._1, compilationResult._2, disallowedTasks.toSet)
+      val hierarchyPruned = PruneHierarchy.transform(compilationResult._1, compilationResult._2, disallowedTasks.toSet)
+      val pruned = PruneEffects.transform(hierarchyPruned, compilationResult._1.primitiveTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)

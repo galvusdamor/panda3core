@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.domain
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeLiteralsByPredicate, ReduceTasks, DomainUpdate, ExchangeTask}
+import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.util.HashMemo
@@ -72,6 +72,15 @@ trait Task extends DomainUpdatable with PrettyPrintable {
           }
 
           ReducedTask(name, isPrimitive, parameters, parameterConstraints, And(newPrecondition), And(newEffects))
+        case _                                                   => noSupport(FORUMLASNOTSUPPORTED)
+      }
+
+    case RemoveEffects(unnecessaryPredicates) =>
+      this match {
+        case ReducedTask(_, _, _, _, preconditionAnd, effectAnd) =>
+          val newEffects = effectAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
+
+          ReducedTask(name, isPrimitive, parameters, parameterConstraints, preconditionAnd, And(newEffects))
         case _                                                   => noSupport(FORUMLASNOTSUPPORTED)
       }
 

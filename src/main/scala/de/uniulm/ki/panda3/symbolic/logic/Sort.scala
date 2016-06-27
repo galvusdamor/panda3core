@@ -10,6 +10,7 @@ import de.uniulm.ki.util.HashMemo
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+//scalastyle:off covariant.equals
 case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo {
 
   override def update(domainUpdate: DomainUpdate): Sort = (domainUpdate match {
