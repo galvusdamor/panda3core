@@ -39,7 +39,7 @@ object ClosedWorldAssumption extends DomainTransformer[Unit] {
 
     // find predicates which never occur negatively in the domain at all ... we don't need to apply the CWA to them
     val occurringNegativePredicates = (domain.tasks ++ domain.hiddenTasks) flatMap { _.precondition.containedPredicatesWithSign }
-    val nonOccurringNegativePredicates = domain.predicates flatMap { p => (p, true) ::(p, false) :: Nil } filterNot occurringNegativePredicates.contains map {_._1}
+    val nonOccurringNegativePredicates = domain.predicates map { p => (p, false) } filterNot occurringNegativePredicates.contains map {_._1}
 
     // create the new initial plan step
     // build a set of all literals

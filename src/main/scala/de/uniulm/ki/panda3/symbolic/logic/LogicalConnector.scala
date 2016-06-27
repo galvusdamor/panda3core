@@ -33,7 +33,7 @@ case class Not(formula: Formula) extends LogicalConnector with DefaultLongInfo w
 
   lazy val containedVariables: Set[Variable] = formula.containedVariables
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = formula.containedPredicatesWithSign
+  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = formula.containedPredicatesWithSign map {case (a,b) => (a,!b)}
 
   override def longInfo: String = "!" + formula.longInfo
 
