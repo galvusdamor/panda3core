@@ -37,7 +37,8 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
         val newTaskName = name + ((constants map { _.name }) mkString("[", ",", "]"))
         // ground precondition and effect
         val preconditionLiterals = g.substitutedPreconditions map {
-          case GroundLiteral(predicate, isPositive, parameter) => Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)
+          case GroundLiteral(predicate, isPositive, parameter) =>
+            Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)
         }
         val effectLiterals = g.substitutedEffects map {
           case GroundLiteral(predicate, isPositive, parameter) => Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)

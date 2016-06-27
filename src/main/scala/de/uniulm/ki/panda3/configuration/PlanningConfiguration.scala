@@ -7,11 +7,13 @@ import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.{EfficientGroundedTaskDecompositionGraph, EfficientTDGFromGroundedSymbolic}
 import de.uniulm.ki.panda3.efficient.heuristic.{MinimumModificationEffortHeuristic, EfficientNumberOfPlanSteps, EfficientNumberOfFlaws, AlwaysZeroHeuristic}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachable, NaiveGroundedTaskDecompositionGraph}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability, EverythingIsHiearchicallyReachable,
+NaiveGroundedTaskDecompositionGraph}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
@@ -312,7 +314,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       // finished reachability analysis now we have to ground
       if (preprocessingConfiguration.groundDomain) {
         val tdg = if (tdgResult._2.contains(SymbolicGroundedTaskDecompositionGraph)) tdgResult._2(SymbolicGroundedTaskDecompositionGraph)
-        else EverythingIsHiearchicallyReachable(tdgResult._1._1, tdgResult._1._2)
+        else if (!tdgResult._2.contains(SymbolicGroundedReachability)) EverythingIsHiearchicallyReachable(tdgResult._1._1, tdgResult._1._2)
+        else {
+          val groundedReachability = tdgResult._2(SymbolicGroundedReachability)
+          EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability(tdgResult._1._1, tdgResult._1._2, groundedReachability)
+        }
 
         info("Grounding ... ")
         timeCapsule start GROUNDING
