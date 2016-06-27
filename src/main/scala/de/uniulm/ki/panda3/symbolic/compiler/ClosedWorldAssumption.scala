@@ -43,7 +43,8 @@ object ClosedWorldAssumption extends DomainTransformer[Unit] {
 
     // create the new initial plan step
     // build a set of all literals
-    val allLiterals: Seq[Literal] = (domain.predicates.toSet -- nonOccurringNegativePredicates) flatMap { _.instantiateWithVariables(variablesForConstants) } toSeq
+    //val allLiterals: Seq[Literal] = (domain.predicates.toSet -- nonOccurringNegativePredicates) flatMap { _.instantiateWithVariables(variablesForConstants) } toSeq
+    val allLiterals: Seq[Literal] = domain.predicates flatMap { _.instantiateWithVariables(variablesForConstants) } distinct
 
     // remove all literals that already occur in the initial state
     val newCSP = plan.variableConstraints.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints))
