@@ -67,7 +67,6 @@ class GroundedPlanningGraphTest extends FlatSpec {
     }
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
 
-
     assert(planningGraph.graphSize == 1) // TODO: check whether this is correct manually!
     assert(!(planningGraph.reachableGroundLiterals exists {
       _.predicate.name == "d"
@@ -79,7 +78,6 @@ class GroundedPlanningGraphTest extends FlatSpec {
   }
 
   it must "instantiate actions with parameters not contained in preconditions" in {
-
     val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest03_domain.hddl"
     val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest03_problem.hddl"
 
@@ -139,7 +137,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     }
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
 
-    assert(planningGraph.graphSize == 0)
+    assert(planningGraph.graphSize == 1)
   }
 
   it must "not instaniate forbidden tasks" in {
