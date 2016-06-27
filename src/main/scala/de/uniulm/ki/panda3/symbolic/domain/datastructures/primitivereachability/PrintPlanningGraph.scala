@@ -22,7 +22,7 @@ object PrintPlanningGraph {
     }
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
 
-    writeNow("digraph G {\n")
+    writeNow("digraph G {\n  rankdir=LR;\n")
     var i = 0
 
     for (eff <- planningGraph.initialState) {
