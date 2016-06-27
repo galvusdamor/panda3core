@@ -16,7 +16,8 @@ object SHOPMethodCompiler extends DomainTransformer[Unit] {
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
     val compiledMethods: Seq[(SimpleDecompositionMethod, Option[Task])] = domain.decompositionMethods.zipWithIndex map {
       case (sm@SimpleDecompositionMethod(_, _), _)                             => (sm, None)
-      case (SHOPDecompositionMethod(abstractTask, subPlan, precondition), idx) =>
+      case (SHOPDecompositionMethod(abstractTask, subPlan, precondition), idx) => if (precondition.isEmpty) (SimpleDecompositionMethod(abstractTask, subPlan), None)
+      else {
         // generate a new schema that represents the decomposition method
         val preconditionTaskSchema = GeneralTask("SHOP_method" + idx + "_precondition", isPrimitive = true, precondition.containedVariables.toSeq, Nil, precondition, new And[Formula](Nil))
         // instantiate
@@ -27,8 +28,9 @@ object SHOPMethodCompiler extends DomainTransformer[Unit] {
 
 
         (SimpleDecompositionMethod(abstractTask, new Plan(subPlan.planSteps :+ preconditionPlanStep, subPlan.causalLinks, newOrdering, subPlan.variableConstraints, subPlan.init,
-                                                                  subPlan.goal, subPlan.isModificationAllowed, subPlan.isFlawAllowed, subPlan.planStepDecomposedByMethod,
-                                                                  subPlan.planStepParentInDecompositionTree)), Some(preconditionTaskSchema))
+                                                          subPlan.goal, subPlan.isModificationAllowed, subPlan.isFlawAllowed, subPlan.planStepDecomposedByMethod,
+                                                          subPlan.planStepParentInDecompositionTree)), Some(preconditionTaskSchema))
+      }
     }
     (Domain(domain.sorts, domain.predicates, domain.tasks ++ (compiledMethods collect { case (_, Some(x)) => x }), compiledMethods map { _._1 }, domain.decompositionAxioms), plan)
   }

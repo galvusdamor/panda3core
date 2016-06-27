@@ -26,8 +26,9 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) extends EfficientSearchAlgorithm {
 
-  override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean, buildTree: Boolean,
-                           informationCapsule: InformationCapsule, timeCapsule: TimeCapsule): (EfficientSearchNode, Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
+  override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
+                           buildTree: Boolean, informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
+  (EfficientSearchNode, Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
     import de.uniulm.ki.panda3.configuration.Timings._
     import de.uniulm.ki.panda3.configuration.Information._
     import scala.math.Ordering.Implicits._
@@ -39,8 +40,6 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
     // variables for the search
     val initTime: Long = System.currentTimeMillis()
     var nodes: Int = 0 // count the nodes
-    var d: Int = 0 // the depth
-    var crap: Int = 0 // and how many dead ends we have encountered
 
     var abort = false
 
@@ -56,7 +55,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
     informationCapsule increment NUMBER_OF_NODES
 
     def heuristicSearch() = {
-      while (searchQueue.nonEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes) {
+      while (searchQueue.nonEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
+        initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis()) {
         val (myNode, depth) = searchQueue.dequeue()
         val plan = myNode.plan
         timeCapsule start SEARCH_FLAW_COMPUTATION

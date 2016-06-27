@@ -37,13 +37,25 @@ object ClosedWorldAssumption extends DomainTransformer[Unit] {
     // build the const->var map
     val variablesForConstants: Map[Constant, Variable] = existingVariablesForConstants ++ (newVariableConstraints map { case Equal(v, c) => c.asInstanceOf[Constant] -> v })
 
+    // find predicates which never occur negatively in the domain at all ... we don't need to apply the CWA to them
+    val occurringNegativePredicates = (domain.tasks ++ domain.hiddenTasks) flatMap { _.precondition.containedPredicatesWithSign }
+    val nonOccurringNegativePredicates = domain.predicates flatMap { p => (p, true) ::(p, false) :: Nil } filterNot occurringNegativePredicates.contains map {_._1}
+
     // create the new initial plan step
     // build a set of all literals
-    val allLiterals: Seq[Literal] = domain.predicates flatMap { _.instantiateWithVariables(variablesForConstants) }
+    val allLiterals: Seq[Literal] = (domain.predicates.toSet -- nonOccurringNegativePredicates) flatMap { _.instantiateWithVariables(variablesForConstants) } toSeq
 
     // remove all literals that already occur in the initial state
     val newCSP = plan.variableConstraints.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints))
-    val notPresentLiterals = allLiterals filterNot { groundedLiteral => oldInit.substitutedEffects exists { initEffect => (groundedLiteral =?= initEffect) (newCSP) } }
+
+    val allLiteralsWithConstantArgs = allLiterals map { l => (l, (l.predicate, l.parameterVariables map newCSP.getRepresentative)) }
+    val oldInitEffectsWithConstantArgs = oldInit.substitutedEffects map { l => (l.predicate, l.parameterVariables map newCSP.getRepresentative) } toSet
+
+    val notPresentLiterals = allLiteralsWithConstantArgs filterNot { case (_, i) => oldInitEffectsWithConstantArgs.contains(i) } map { _._1 }
+
+    //allLiterals filterNot { groundedLiteral => oldInit.substitutedEffects exists { initEffect => (groundedLiteral =?= initEffect) (newCSP) } }
+
+
     val newEffects = notPresentLiterals map { _.negate }
 
 

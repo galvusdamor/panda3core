@@ -10,6 +10,8 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.5" % "test"
 
 libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.5"
 
+libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1"
+
 scalastyleConfig := baseDirectory.value / "project" / "scalastyle_config.xml"
 
 homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/gregor-behnke.html"))

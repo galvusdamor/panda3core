@@ -22,7 +22,7 @@ object DFS extends SymbolicSearchAlgorithm {
     * The semaphore will not be released for every search node, but after a couple releaseEvery ones.
     */
   override def startSearch(domain: Domain, initialPlan: Plan,
-                           nodeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean, buildSearchTree: Boolean,
+                           nodeLimit: Option[Int], timeLimit : Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean, buildSearchTree: Boolean,
                            informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
   (SearchNode, Semaphore, ResultFunction[Plan], AbortFunction) = {
     import de.uniulm.ki.panda3.configuration.Timings._
@@ -37,6 +37,9 @@ object DFS extends SymbolicSearchAlgorithm {
     var d: Int = 0 // the depth
     var crap: Int = 0 // and how many dead ends we have encountered
 
+
+    println("GROUNDED: " + domain.allGroundedPrimitiveTasks)
+
     var abort = false
     informationCapsule increment NUMBER_OF_NODES
 
@@ -45,10 +48,12 @@ object DFS extends SymbolicSearchAlgorithm {
       val flaws = node.plan.flaws
       timeCapsule stop SEARCH_FLAW_COMPUTATION
 
+      val currentTime = System.currentTimeMillis()
+
       if (flaws.isEmpty) {
         node.dirty = false
         Some(node.plan)
-      } else if ((nodeLimit.isDefined && nodes > nodeLimit.get) || abort) None
+      } else if ((nodeLimit.isDefined && nodes > nodeLimit.get) || (timeLimit.isDefined && initTime + 1000*timeLimit.get < currentTime) || abort) None
       else {
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
         nodes = nodes + 1

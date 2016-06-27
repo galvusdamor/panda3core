@@ -49,3 +49,5 @@ case class ReduceTasks() extends DomainUpdate
 case class ExchangeVariable(oldVariable: Variable, newVariable: Variable) extends DomainUpdate
 
 case class ExchangeLiteralsByPredicate(replacement: Map[Predicate, (Predicate, Predicate)], invertedTreatment: Boolean) extends DomainUpdate
+
+case class RemoveEffects(unnecessaryEffects: Seq[(Predicate, Boolean)]) extends DomainUpdate

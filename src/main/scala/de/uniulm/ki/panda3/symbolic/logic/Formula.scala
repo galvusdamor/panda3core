@@ -16,4 +16,6 @@ trait Formula extends DomainUpdatable with PrettyPrintable{
   override def update(domainUpdate: DomainUpdate): Formula
 
   val containedVariables : Set[Variable]
+
+  def containedPredicatesWithSign : Set[(Predicate,Boolean)]
 }

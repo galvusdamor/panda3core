@@ -10,6 +10,7 @@ import de.uniulm.ki.util.HashMemo
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+//scalastyle:off covariant.equals
 case class Predicate(name: String, argumentSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo {
 
   lazy val allPossibleParameterCombinations: Seq[Seq[Constant]] = Sort allPossibleInstantiations argumentSorts
@@ -32,4 +33,12 @@ case class Predicate(name: String, argumentSorts: Seq[Sort]) extends DomainUpdat
 
   /** returns a more detailed information about the object */
   override def longInfo: String = name + (argumentSorts map { _.shortInfo }).mkString(", ")
+
+
+  override def equals(o: scala.Any): Boolean = if (!o.isInstanceOf[Predicate]) false
+  else if (this.hashCode == o.hashCode()) true
+  else {
+    val oPredicate = o.asInstanceOf[Predicate]
+    if (this.name != oPredicate.name) false else this.argumentSorts.sameElements(oPredicate.argumentSorts)
+  }
 }

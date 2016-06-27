@@ -13,8 +13,8 @@ import org.antlr.v4.runtime.{CommonTokenStream, ANTLRInputStream}
 object HDDLParser extends Parser {
 
   def parseDomainAndProblem(domainFile: InputStream, problemFile: InputStream): (Domain, Plan) = {
-    val lDomain: hddlLexer = new hddlLexer(new ANTLRInputStream(domainFile))
-    val lProblem: hddlLexer = new hddlLexer(new ANTLRInputStream(problemFile))
+    val lDomain: antlrHDDLLexer = new antlrHDDLLexer(new ANTLRInputStream(domainFile))
+    val lProblem: antlrHDDLLexer = new antlrHDDLLexer(new ANTLRInputStream(problemFile))
     val pDomain: antlrHDDLParser = new antlrHDDLParser(new CommonTokenStream(lDomain))
     val pProblem: antlrHDDLParser = new antlrHDDLParser(new CommonTokenStream(lProblem))
     new hddlPanda3Visitor().visitInstance(pDomain.domain, pProblem.problem)

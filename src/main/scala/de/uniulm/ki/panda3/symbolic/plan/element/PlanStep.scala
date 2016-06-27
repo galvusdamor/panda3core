@@ -97,18 +97,21 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
   lazy val substitutedPreconditionsSet: Set[GroundLiteral] = substitutedPreconditions.toSet
 
   /** returns a version of the effects */
-  lazy val substitutedEffects         : Seq[GroundLiteral] = task match {
+  lazy val substitutedEffects: Seq[GroundLiteral] = task match {
     case reduced: ReducedTask => reduced.effect.conjuncts map { _ ground parameterSubstitution }
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
+  lazy val substitutedDelEffects: Seq[GroundLiteral] = substitutedEffects filterNot {_.isPositive}
 
-  lazy val substitutedDelEffects: Seq[GroundLiteral] = task match {
-    case reduced: ReducedTask => reduced.effect.conjuncts filter { (l: Literal) => l.isNegative } map { _ ground parameterSubstitution}
-    case _                    => noSupport(FORUMLASNOTSUPPORTED)
-  }
+  lazy val substitutedAddEffects: Seq[GroundLiteral] = substitutedEffects filter {_.isPositive}
+}
 
-  lazy val substitutedAddEffects: Seq[GroundLiteral] = task match {
-    case reduced: ReducedTask => reduced.effect.conjuncts filter { (l: Literal) => l.isPositive} map { _ ground parameterSubstitution}
-    case _                    => noSupport(FORUMLASNOTSUPPORTED)
+
+case class PartiallyInstantiatedTask(task: Task, arguments: Map[Variable, Constant]) extends HashMemo {
+
+  lazy val allInstantiations: Seq[GroundTask] = Sort.allPossibleInstantiationsWithVariables(task.parameters filterNot  { arguments.contains } map { v => (v, v.sort.elements) }) map {
+    case newlyBoundVariables =>
+      val allVariablesMap = arguments ++ newlyBoundVariables
+      GroundTask(task, task.parameters map allVariablesMap)
   }
 }

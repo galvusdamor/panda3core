@@ -10,11 +10,14 @@ import de.uniulm.ki.util.HashMemo
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+//scalastyle:off covariant.equals
 case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo {
 
-  override def update(domainUpdate: DomainUpdate): Sort = domainUpdate match {
+  override def update(domainUpdate: DomainUpdate): Sort = (domainUpdate match {
     case ExchangeSorts(map) => if (map.contains(this)) map(this) else this
     case _                  => this
+  }) match {
+    case Sort(n, e, ss) => Sort(n, e, ss map { _ update domainUpdate })
   }
 
   /** returns a short information about the object */
@@ -25,6 +28,13 @@ case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) exte
 
   /** returns a more detailed information about the object */
   override def longInfo: String = mediumInfo + ": " + (elements map { _.shortInfo }).mkString(", ") + "; subsorts: " + (subSorts map { _.shortInfo }).mkString(", ")
+
+  override def equals(o: scala.Any): Boolean = if (!o.isInstanceOf[Sort]) false
+  else if (this.hashCode == o.hashCode()) true
+  else {
+    val oSort = o.asInstanceOf[Sort]
+    if (this.name != oSort.name) false else this.elements.sameElements(oSort.elements) && this.subSorts.sameElements(oSort.subSorts)
+  }
 }
 
 object Sort {

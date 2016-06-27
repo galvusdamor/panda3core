@@ -23,5 +23,5 @@ package de.uniulm.ki.util
   */
 trait HashMemo {
   self: Product =>
-  override final val hashCode: Int = self.productIterator.toSeq.hashCode()
+  override final lazy val hashCode: Int = self.productIterator.toSeq.hashCode()
 }
