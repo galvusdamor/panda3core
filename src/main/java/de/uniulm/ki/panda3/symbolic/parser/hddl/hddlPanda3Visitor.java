@@ -37,32 +37,28 @@ import java.util.List;
  */
 public class hddlPanda3Visitor {
 
-    private final static List<Class<?>> allowedModificationsClasses = new LinkedList<>();
-    private final static List<Class<?>> allowedFlawClasses = new LinkedList<>();
+    private final static List<Class<?>> alwaysAllowedModificationsClasses = new LinkedList<>();
+    private final static List<Class<?>> alwaysAllowedFlawClasses = new LinkedList<>();
 
     static {
 
-        allowedModificationsClasses.add(AddOrdering.class);
-        allowedModificationsClasses.add(BindVariableToValue.class);
-        allowedModificationsClasses.add(DecomposePlanStep.class);
-        allowedModificationsClasses.add(InsertCausalLink.class);
-        //allowedModificationsClasses.add(InsertPlanStepWithLink.class); // TODO what to do Daniel ???
-        allowedModificationsClasses.add(MakeLiteralsUnUnifiable.class);
+        alwaysAllowedModificationsClasses.add(AddOrdering.class);
+        alwaysAllowedModificationsClasses.add(BindVariableToValue.class);
+        alwaysAllowedModificationsClasses.add(InsertCausalLink.class);
+        alwaysAllowedModificationsClasses.add(MakeLiteralsUnUnifiable.class);
 
-        allowedFlawClasses.add(AbstractPlanStep.class);
-        allowedFlawClasses.add(CausalThreat.class);
-        allowedFlawClasses.add(OpenPrecondition.class);
-        allowedFlawClasses.add(UnboundVariable.class);
-
+        alwaysAllowedFlawClasses.add(CausalThreat.class);
+        alwaysAllowedFlawClasses.add(OpenPrecondition.class);
+        alwaysAllowedFlawClasses.add(UnboundVariable.class);
     }
 
-    public final static IsModificationAllowed allowedModifications = new ModificationsByClass(JavaToScala.toScalaSeq(allowedModificationsClasses));
-    public final static IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
+
     public final static scala.collection.immutable.Map<PlanStep, DecompositionMethod> planStepsDecomposedBy =
             scala.collection.immutable.Map$.MODULE$.<PlanStep, DecompositionMethod>empty();
     public final static scala.collection.immutable.Map<PlanStep, Tuple2<PlanStep, PlanStep>> planStepsDecompositionParents =
             scala.collection.immutable.Map$.MODULE$.<PlanStep, Tuple2<PlanStep, PlanStep>>empty();
 
+    private parseReport report = new parseReport();
 
     public Tuple2<Domain, Plan> visitInstance(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
 
@@ -96,14 +92,45 @@ public class hddlPanda3Visitor {
         visitInitialTN(ctxProblem.p_htn(), tn, tasks, sorts);
 
 
+        // determine problem type
+        List<Class<?>> allowedModificationsClasses = new LinkedList<Class<?>>();
+        List<Class<?>> allowedFlawClasses = new LinkedList<Class<?>>();
+        allowedModificationsClasses.addAll(alwaysAllowedModificationsClasses);
+        allowedFlawClasses.addAll(alwaysAllowedFlawClasses);
+
+        if (ctxProblem.p_htn() == null) {
+            // this is a classical PDDL file
+            allowedModificationsClasses.add(InsertPlanStepWithLink.class);
+        } else {
+            allowedModificationsClasses.add(DecomposePlanStep.class);
+            allowedFlawClasses.add(AbstractPlanStep.class);
+
+            if (ctxProblem.p_htn().children.get(1).getText() == ":htnti") {
+                allowedModificationsClasses.add(InsertPlanStepWithLink.class);
+            } else assert (ctxProblem.p_htn().children.get(1).getText() == ":htn");
+        }
+
+        IsModificationAllowed allowedModifications = new ModificationsByClass(JavaToScala.toScalaSeq(allowedModificationsClasses));
+        IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
+
+
         Plan p = new Plan(tn.planSteps(), tn.causalLinks(), tn.taskOrderings(), tn.csp(), psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy,
                 planStepsDecompositionParents);
+
+        report.printReport();
 
         Tuple2<Domain, Plan> initialProblem = new Tuple2<>(d, p);
         return initialProblem;
     }
 
     private void visitInitialTN(antlrHDDLParser.P_htnContext p_htnContext, internalTaskNetwork tn, Seq<Task> tasks, Seq<Sort> sorts) {
+        if (p_htnContext == null || p_htnContext.tasknetwork_def() == null) {
+            // this is only allowed if the problem is a pddl problem
+            // TODO:
+            return;
+        }
+
+
         antlrHDDLParser.Subtask_defsContext subtask = p_htnContext.tasknetwork_def().subtask_defs();
         int nextId = 0;
         int psID = 2;
@@ -165,13 +192,18 @@ public class hddlPanda3Visitor {
         seqProviderList<Variable> parameter = getVariableForEveryConst(sorts, varConstraints);
 
         seqProviderList<Literal> initEffects = new seqProviderList<>();
-        for (antlrHDDLParser.LiteralContext lc : ctx.literal()) {
-            if (lc.atomic_formula() != null) {
-                initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, true, lc.atomic_formula()));
-            } else if (lc.neg_atomic_formula() != null) {
-                initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, false, lc.atomic_formula()));
-            }
+        for (antlrHDDLParser.Init_elContext el : ctx.init_el()) {
+            if (el.literal() != null) { // normal STRIPS init
+                if (el.literal().atomic_formula() != null) {
+                    initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, true, el.literal().atomic_formula()));
+                } else if (el.literal().neg_atomic_formula() != null) {
+                    initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, false, el.literal().atomic_formula()));
+                }
+            } /*else if (el.num_init() != null) {
+                System.out.println("not implemented: numeric element");
+            }*/
         }
+
         return new ReducedTask("init", true, parameter.result(), varConstraints.result(), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(initEffects.result()));
     }
 
@@ -277,9 +309,9 @@ public class hddlPanda3Visitor {
         Formula f2 = new And<Literal>(new Vector<Literal>(0, 0, 0));
 
         if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().c_effect() != null)) {
-            f2 = visitConEff(parameters, sorts, predicates, ctxTask.effect_body().c_effect());
+            f2 = visitConEff(parameters, constraints, sorts, predicates, ctxTask.effect_body().c_effect());
         } else if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().eff_conjuntion() != null)) {
-            f2 = visitConEffConj(parameters, sorts, predicates, ctxTask.effect_body().eff_conjuntion());
+            f2 = visitConEffConj(parameters, constraints, sorts, predicates, ctxTask.effect_body().eff_conjuntion());
         }
         return new GeneralTask(taskName, isPrimitive, parameters.result(), constraints.result(), f, f2);
     }
@@ -377,26 +409,30 @@ public class hddlPanda3Visitor {
         return new Tuple2<>(quantifiedVars.result(), inner);
     }
 
-    private Formula visitConEffConj(seqProviderList<Variable> parameters, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Eff_conjuntionContext ctx) {
+    private Formula visitConEffConj(seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Eff_conjuntionContext ctx) {
         seqProviderList<Literal> conj = new seqProviderList<>();
 
         for (antlrHDDLParser.C_effectContext eff : ctx.c_effect()) {
-            conj.add(visitConEff(parameters, sorts, predicates, eff));
+            Literal t = visitConEff(parameters, constraints, sorts, predicates, eff);
+            if (t != null) // it may be null if it uses a not yet implemented feature. This should already have been reported, so that we can skip it here
+                conj.add(t);
         }
         return new And(conj.result());
     }
 
-    private Literal visitConEff(seqProviderList<Variable> parameters, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.C_effectContext ctx) {
+    private Literal visitConEff(seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.C_effectContext ctx) {
         if (ctx.literal() != null) {
             if (ctx.literal().atomic_formula() != null) {
-                return visitAtomFormula(parameters, predicates, sorts, null, true, ctx.literal().atomic_formula());
+                return visitAtomFormula(parameters, predicates, sorts, constraints, true, ctx.literal().atomic_formula());
             } else if (ctx.literal().neg_atomic_formula() != null) {
-                return visitAtomFormula(parameters, predicates, sorts, null, false, ctx.literal().neg_atomic_formula().atomic_formula());
+                return visitAtomFormula(parameters, predicates, sorts, constraints, false, ctx.literal().neg_atomic_formula().atomic_formula());
             }
         } else if (ctx.forall_effect() != null) {
-            System.out.println("ERROR: not yet implemented - forall effects.");
+            this.report.reportForallEffect();
         } else if (ctx.conditional_effect() != null) {
-            System.out.println("ERROR: not yet implemented - conditional effects.");
+            this.report.reportConditionalEffects();
+        } else if (ctx.p_effect() != null) {
+            this.report.reportNumericEffect();
         } else {
             System.out.println("ERROR: found an empty effect in action declaration.");
         }
@@ -508,10 +544,10 @@ public class hddlPanda3Visitor {
                 }
             }
         } else {
-            // this may be (1) an object that has already been defined in s0
             String pname = param.NAME().getText();
 
-            // (1) const in s0, there is already a var
+            // - this may be an object that has already been defined in s0 -> there is already a const and a var
+            // - a const in a task/method AND it is not the fist occurrence -> there is already a variable
             for (int i = 0; i < constraints.size(); i++) {
                 VariableConstraint vc = constraints.get(i);
                 if (vc instanceof Equal) {
@@ -597,6 +633,8 @@ public class hddlPanda3Visitor {
         }
     }
 
+    private static final String ARTIFICIAL_ROOT_SORT = "__Object";
+
     public Seq<Sort> visitTypeAndObjDef(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
 
         // Extract type hierarchy from domain file
@@ -608,7 +646,7 @@ public class hddlPanda3Visitor {
 
             antlrHDDLParser.New_typesContext newTypes = typeDef.new_types();
 
-            final String parent_type = typeDef.var_type().NAME().toString();
+            final String parent_type = typeDef.var_type() == null ? ARTIFICIAL_ROOT_SORT : typeDef.var_type().NAME().toString();
             for (int j = 0; j < newTypes.getChildCount(); j++) {
                 final String child_type = newTypes.NAME(j).toString();
                 internalSortModel.addParent(child_type, parent_type);

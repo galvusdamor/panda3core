@@ -10,9 +10,9 @@
   )
 
 
-  (:init (and
-    (a) (b)
-   )
+  (:init
+    (a)
+    (b)
   )
 
   (:goal (and

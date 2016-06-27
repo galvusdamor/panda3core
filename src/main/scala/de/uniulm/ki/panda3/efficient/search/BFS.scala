@@ -17,13 +17,14 @@ import scala.collection.mutable.ArrayBuffer
   */
 object BFS extends EfficientSearchAlgorithm {
 
-  override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean, buildTree: Boolean,
-                           informationCapsule: InformationCapsule, timeCapsule: TimeCapsule): (EfficientSearchNode, Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
+  override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
+                           buildTree: Boolean, informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
+  (EfficientSearchNode, Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
     import de.uniulm.ki.panda3.configuration.Timings._
     import de.uniulm.ki.panda3.configuration.Information._
 
     val semaphore: Semaphore = new Semaphore(0)
-    val root = new EfficientSearchNode(0,initialPlan, null, Double.MaxValue)
+    val root = new EfficientSearchNode(0, initialPlan, null, Double.MaxValue)
 
     // variables for the search
     val initTime: Long = System.currentTimeMillis()
@@ -45,7 +46,8 @@ object BFS extends EfficientSearchAlgorithm {
     informationCapsule increment NUMBER_OF_NODES
 
     def bfs() = {
-      while (!stack.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes) {
+      while (!stack.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
+        initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis()) {
         val (plan, myNode, depth) = stack.pop()
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
 
@@ -117,7 +119,7 @@ object BFS extends EfficientSearchAlgorithm {
               if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
                 informationCapsule increment NUMBER_OF_NODES
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
-                val searchNode = if (buildTree) new EfficientSearchNode(nodeNumber, newPlan, myNode, 0) else new EfficientSearchNode(nodeNumber,newPlan, null, 0)
+                val searchNode = if (buildTree) new EfficientSearchNode(nodeNumber, newPlan, myNode, 0) else new EfficientSearchNode(nodeNumber, newPlan, null, 0)
 
                 stack add(newPlan, searchNode, depth + 1)
                 children append ((searchNode, modNum))

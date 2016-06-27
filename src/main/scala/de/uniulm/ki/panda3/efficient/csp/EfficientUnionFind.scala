@@ -43,4 +43,18 @@ case class EfficientUnionFind(parent: Array[Int] = Array()) {
     new EfficientUnionFind(clonedParent)
   }
 
+  /**
+    * Returns the number of sets in this union find
+    */
+  def numberOfUniqueElements() : Int = {
+    var uniq = 0
+    var i = 0
+    while (i < parent.length){
+      if (parent(i) == i) uniq += 1
+      i +=1
+    }
+
+    uniq
+  }
+
 }

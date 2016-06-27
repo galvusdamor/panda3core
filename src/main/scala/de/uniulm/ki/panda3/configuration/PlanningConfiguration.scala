@@ -7,15 +7,17 @@ import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.{EfficientGroundedTaskDecompositionGraph, EfficientTDGFromGroundedSymbolic}
 import de.uniulm.ki.panda3.efficient.heuristic.{MinimumModificationEffortHeuristic, EfficientNumberOfPlanSteps, EfficientNumberOfFlaws, AlwaysZeroHeuristic}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
 import de.uniulm.ki.panda3.{efficient, symbolic}
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneHierarchy}
+import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability, EverythingIsHiearchicallyReachable,
+NaiveGroundedTaskDecompositionGraph}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
-import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.plan.{PlanDotOptions, Plan}
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util.{Dot2PdfCompiler, InformationCapsule, TimeCapsule}
 
@@ -55,7 +57,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   def runSearchHandle(domain: Domain, problem: Plan, releaseSemaphoreEvery: Option[Int], timeCapsule: TimeCapsule):
   (Domain, SearchNode, Semaphore, AbortFunction, InformationCapsule, Unit => ResultMap) = {
     // run the preprocessing step
-    val ((domainAndPlan, preprocessedAnalysisMap), _) = runPreprocessing(domain, problem, timeCapsule)
+    val (domainAndPlanFullyParsed, _) = runParsingPostProcessing(domain, problem, timeCapsule)
+    val ((domainAndPlan, preprocessedAnalysisMap), _) = runPreprocessing(domainAndPlanFullyParsed._1, domainAndPlanFullyParsed._2, timeCapsule)
 
     // !!!! ATTENTION we use side effects for the sake of simplicity
     var analysisMap = preprocessedAnalysisMap
@@ -77,7 +80,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // now we have to decide which representation to use for the search
     if (!searchConfiguration.efficientSearch) {
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
-        case DFSType => symbolic.search.DFS.startSearch(domainAndPlan._1, domainAndPlan._2, searchConfiguration.nodeLimit, releaseSemaphoreEvery, searchConfiguration.printSearchInfo,
+        case DFSType => symbolic.search.DFS.startSearch(domainAndPlan._1, domainAndPlan._2, searchConfiguration.nodeLimit, searchConfiguration.timeLimit,
+                                                        releaseSemaphoreEvery, searchConfiguration.printSearchInfo,
                                                         postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                                         informationCapsule, timeCapsule)
         case _       => throw new UnsupportedOperationException("Any other symbolic search algorithm besides DFS is not supported.")
@@ -85,7 +89,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(())
-        runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult)
+        runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan)
       })
     } else {
       timeCapsule start COMPUTE_EFFICIENT_REPRESENTATION
@@ -103,7 +107,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
         case algo => algo match {
           case BFSType                => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
-                                                                          searchConfiguration.nodeLimit, releaseSemaphoreEvery,
+                                                                          searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                                                           searchConfiguration.printSearchInfo,
                                                                           postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                                                           informationCapsule, timeCapsule)
@@ -111,7 +115,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             // just use the zero heuristic
             val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, true)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
-                                        searchConfiguration.nodeLimit, releaseSemaphoreEvery,
+                                        searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
                                         postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                         informationCapsule, timeCapsule)
@@ -131,7 +135,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
             val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, useCosts)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
-                                        searchConfiguration.nodeLimit, releaseSemaphoreEvery,
+                                        searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
                                         postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                         informationCapsule, timeCapsule)
@@ -142,24 +146,25 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val wrappedSearchTreeRoot = wrapper.wrap(searchTreeRoot)
       (domainAndPlan._1, wrappedSearchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(()) map { wrapper.wrap }
-        runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult)
+        runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan)
       })
     }
   }
 
-  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan]): ResultMap =
+  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan], domainAndPlan: (Domain, Plan)): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings => timeCapsule.timeMap
       case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
       else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule.informationMap(Information.NUMBER_OF_NODES))
         SearchState.UNSOLVABLE
-      else SearchState.INSEARCH
+      else SearchState.INSEARCH // TODO account for the case we ran out of time
 
-      case SearchResult           => result
-      case SearchStatistics       => informationCapsule.informationMap
-      case SearchSpace            => rootNode
-      case SolutionInternalString => result match {case Some(plan) => Some(plan.longInfo); case _ => None}
-      case SolutionDotString      => result match {case Some(plan) => Some(plan.dotString); case _ => None}
+      case SearchResult              => result
+      case SearchStatistics          => informationCapsule.informationMap
+      case SearchSpace               => rootNode
+      case SolutionInternalString    => result match {case Some(plan) => Some(plan.longInfo); case _ => None}
+      case SolutionDotString         => result match {case Some(plan) => Some(plan.dotString); case _ => None}
+      case PreprocessedDomainAndPlan => domainAndPlan
     })
     } toMap
              )
@@ -179,13 +184,19 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case HDDLParserType => HDDLParser.parseDomainAndProblem(domain, problem)
     }
     timeCapsule stop FILEPARSER
-    info("done.\nPreparing internal domain representation ... ")
+    info("done\n")
+    (parsedDomainAndProblem, timeCapsule)
+  }
 
+  def runParsingPostProcessing(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): ((Domain, Plan), TimeCapsule) = {
+    info("Preparing internal domain representation ... ")
+
+    timeCapsule startOrLetRun PARSING
     timeCapsule start PARSER_SORT_EXPANSION
     val sortsExpandedDomainAndProblem = if (parsingConfiguration.expandSortHierarchy) {
-      val sortExpansion = parsedDomainAndProblem._1.expandSortHierarchy()
-      (parsedDomainAndProblem._1.update(sortExpansion), parsedDomainAndProblem._2.update(sortExpansion))
-    } else parsedDomainAndProblem
+      val sortExpansion = domain.expandSortHierarchy()
+      (domain.update(sortExpansion), problem.update(sortExpansion))
+    } else (domain, problem)
     timeCapsule stop PARSER_SORT_EXPANSION
 
     timeCapsule start PARSER_CWA
@@ -265,7 +276,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       info("Lifted reachability analysis ... ")
       val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(compilationResult._1, compilationResult._2, emptyAnalysis)
       val disallowedTasks = compilationResult._1.primitiveTasks filterNot newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.contains
-      val pruned = PruneHierarchy.transform(compilationResult._1, compilationResult._2, disallowedTasks.toSet)
+      val hierarchyPruned = PruneHierarchy.transform(compilationResult._1, compilationResult._2, disallowedTasks.toSet)
+      val pruned = PruneEffects.transform(hierarchyPruned, compilationResult._1.primitiveTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
@@ -301,7 +313,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     if (!preprocessingConfiguration.iterateReachabilityAnalysis || tdgResult._1._1.tasks.length == domain.tasks.length) {
       // finished reachability analysis now we have to ground
       if (preprocessingConfiguration.groundDomain) {
-        val tdg = tdgResult._2(SymbolicGroundedTaskDecompositionGraph)
+        val tdg = if (tdgResult._2.contains(SymbolicGroundedTaskDecompositionGraph)) tdgResult._2(SymbolicGroundedTaskDecompositionGraph)
+        else if (!tdgResult._2.contains(SymbolicGroundedReachability)) EverythingIsHiearchicallyReachable(tdgResult._1._1, tdgResult._1._2)
+        else {
+          val groundedReachability = tdgResult._2(SymbolicGroundedReachability)
+          EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability(tdgResult._1._1, tdgResult._1._2, groundedReachability)
+        }
 
         info("Grounding ... ")
         timeCapsule start GROUNDING
@@ -349,7 +366,7 @@ case class PreprocessingConfiguration(
                                        iterateReachabilityAnalysis: Boolean,
                                        groundDomain: Boolean
                                      ) {
-  assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
+  // assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
 }
 
 /**
@@ -383,6 +400,7 @@ object TDGMinimumModification extends SearchHeuristic
 
 case class SearchConfiguration(
                                 nodeLimit: Option[Int],
+                                timeLimit: Option[Int],
                                 efficientSearch: Boolean,
                                 searchAlgorithm: SearchAlgorithmType,
                                 heuristic: Option[SearchHeuristic],

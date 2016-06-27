@@ -29,6 +29,10 @@ import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraph}
 case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
                   decompositionAxioms: Seq[DecompositionAxiom]) extends DomainUpdatable {
 
+  // sanity check for the sorts
+  sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
+
+
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph        = TaskSchemaTransitionGraph(this)
   lazy val constants                : Seq[Constant]                    = (sorts flatMap { _.elements }).distinct
   lazy val sortGraph                : DirectedGraph[Sort]              = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
@@ -36,8 +40,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     _.effect.conjuncts exists { _.predicate == pred }
   })
   }).toMap
-
-  lazy val consumersOf: Map[Predicate, Seq[ReducedTask]] = (predicates map { pred => (pred, tasks collect { case t: ReducedTask => t } filter {
+  lazy val consumersOf              : Map[Predicate, Seq[ReducedTask]] = (predicates map { pred => (pred, tasks collect { case t: ReducedTask => t } filter {
     _.precondition.conjuncts exists { _.predicate == pred }
   })
   }).toMap
@@ -46,6 +49,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val abstractTasks : Seq[Task] = tasks filterNot { _.isPrimitive }
 
   lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
+  lazy val allGroundedAbstractTasks: Seq[GroundTask] = abstractTasks flatMap { _.instantiateGround }
 
   /**
     * Determines the sort a constant originally belonged to.
@@ -76,6 +80,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
     update(domainUpdate)
   }
+
 
   def expandSortHierarchy(): DomainUpdate = {
     val sortTranslationMap = sortGraph.topologicalOrdering.get.foldRight[Map[Sort, Sort]](Map[Sort, Sort]())({ case (oldSort, translationMap) =>

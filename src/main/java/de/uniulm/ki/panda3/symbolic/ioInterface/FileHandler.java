@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.ioInterface;
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlLexer;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.antlrHDDLLexer;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.antlrHDDLParser;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
@@ -25,8 +25,8 @@ public class FileHandler {
         FileReader inProblem = new FileReader(problemFileName);
 
         Tuple2<Domain, Plan> planningInstance;
-        hddlLexer lDomain = new hddlLexer(new ANTLRInputStream(inDomain));
-        hddlLexer lProblem = new hddlLexer(new ANTLRInputStream(inProblem));
+        antlrHDDLLexer lDomain = new antlrHDDLLexer(new ANTLRInputStream(inDomain));
+        antlrHDDLLexer lProblem = new antlrHDDLLexer(new ANTLRInputStream(inProblem));
 
         antlrHDDLParser pDomain = new antlrHDDLParser(new CommonTokenStream(lDomain));
         antlrHDDLParser pProblem = new antlrHDDLParser(new CommonTokenStream(lProblem));
