@@ -85,7 +85,12 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
   */
 case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
   assert(task.parameters.size == arguments.size)
-  task.parameters.zipWithIndex foreach { case (p, i) => assert(p.sort.elements.contains(arguments(i))) }
+  task.parameters.zipWithIndex foreach { case (p, i) =>
+    if (!p.sort.elements.contains(arguments(i))) {
+      println(p.sort.elements)
+      println(arguments(i))
+    }
+    assert(p.sort.elements.contains(arguments(i))) }
 
   private lazy val parameterSubstitution: TotalSubstitution[Variable, Constant] = TotalSubstitution(task.parameters, arguments)
 
@@ -97,19 +102,19 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
   lazy val substitutedPreconditionsSet: Set[GroundLiteral] = substitutedPreconditions.toSet
 
   /** returns a version of the effects */
-  lazy val substitutedEffects: Seq[GroundLiteral] = task match {
+  lazy val substitutedEffects   : Seq[GroundLiteral] = task match {
     case reduced: ReducedTask => reduced.effect.conjuncts map { _ ground parameterSubstitution }
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
-  lazy val substitutedDelEffects: Seq[GroundLiteral] = substitutedEffects filterNot {_.isPositive}
+  lazy val substitutedDelEffects: Seq[GroundLiteral] = substitutedEffects filterNot { _.isPositive }
 
-  lazy val substitutedAddEffects: Seq[GroundLiteral] = substitutedEffects filter {_.isPositive}
+  lazy val substitutedAddEffects: Seq[GroundLiteral] = substitutedEffects filter { _.isPositive }
 }
 
 
 case class PartiallyInstantiatedTask(task: Task, arguments: Map[Variable, Constant]) extends HashMemo {
 
-  lazy val allInstantiations: Seq[GroundTask] = Sort.allPossibleInstantiationsWithVariables(task.parameters filterNot  { arguments.contains } map { v => (v, v.sort.elements) }) map {
+  lazy val allInstantiations: Seq[GroundTask] = Sort.allPossibleInstantiationsWithVariables(task.parameters filterNot { arguments.contains } map { v => (v, v.sort.elements) }) map {
     case newlyBoundVariables =>
       val allVariablesMap = arguments ++ newlyBoundVariables
       GroundTask(task, task.parameters map allVariablesMap)

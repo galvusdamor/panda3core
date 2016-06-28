@@ -79,9 +79,7 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
 
   override val isEmpty: Boolean = false
 
-  def test(groundLiteral: GroundLiteral): Boolean = {
-    (this.predicate == groundLiteral.predicate && this.parameter == groundLiteral.parameter)
-  }
+  def =!=(groundLiteral: GroundLiteral): Boolean = this.predicate == groundLiteral.predicate && this.parameter.sameElements(groundLiteral.parameter)
 
   override def update(domainUpdate: DomainUpdate): Formula = GroundLiteral(predicate update domainUpdate, isPositive, parameter map { _ update domainUpdate })
 
