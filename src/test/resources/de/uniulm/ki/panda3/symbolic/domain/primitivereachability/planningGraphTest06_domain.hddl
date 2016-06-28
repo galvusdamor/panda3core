@@ -1,0 +1,27 @@
+(define (domain transport)
+  (:requirements :typing :action-costs :hierachie )
+  (:types
+        thing - object
+  )
+
+  (:constants
+    aThing - thing
+    bThing - thing
+  )
+
+  (:predicates
+     (a ?var - thing)
+     (b)
+  )
+
+  (:action X
+    :parameters ( )
+    :precondition (and
+        (a aThing)
+      )
+    :effect (and
+        (b)
+      )
+  )
+
+)
