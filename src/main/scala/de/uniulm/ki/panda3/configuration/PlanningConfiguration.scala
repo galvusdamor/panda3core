@@ -14,7 +14,8 @@ import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability, EverythingIsHiearchicallyReachable,
 NaiveGroundedTaskDecompositionGraph}
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis, LiftedForwardSearchReachabilityAnalysis}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraph, EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis,
+LiftedForwardSearchReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.{PlanDotOptions, Plan}
@@ -231,6 +232,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }
 
+  private def runGroundedPlanningGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
+    val groundedInitialState = problem.groundedInitialState
+    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, computeMutexes = true, isSerial = false, Left(Nil))
+    // add analysis to map
+    analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
+  }
+
   private def runNaiveGroundedTaskDecompositionGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
     val groundedReachabilityAnalysis =
       if (analysisMap contains SymbolicGroundedReachability) analysisMap(SymbolicGroundedReachability)
@@ -285,17 +293,22 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
     // grounded reachability analysis
-    timeCapsule start GROUNDED_REACHABILITY_ANALYSIS
-    val groundedResult = if (preprocessingConfiguration.groundedReachability) {
-      info("Grounded reachability analysis ... ")
-      val newAnalysisMap = runGroundedForwardSearchReachabilityAnalysis(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
+    timeCapsule start (if (preprocessingConfiguration.groundedReachability) GROUNDED_REACHABILITY_ANALYSIS else GROUNDED_PLANNINGGRAPH_ANALYSIS)
+    val groundedResult = if (preprocessingConfiguration.groundedReachability || preprocessingConfiguration.planningGraph) {
+      if (preprocessingConfiguration.groundedReachability) info("Grounded reachability analysis ... ") else info("Grounded planning graph analysis")
+      val newAnalysisMap =
+        if (preprocessingConfiguration.groundedReachability) runGroundedForwardSearchReachabilityAnalysis(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
+        else runGroundedPlanningGraph(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
+
       val disallowedTasks = liftedResult._1._1.primitiveTasks filterNot newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.contains
       val pruned = PruneHierarchy.transform(liftedResult._1._1, liftedResult._1._2, disallowedTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
     } else liftedResult
-    timeCapsule stop GROUNDED_REACHABILITY_ANALYSIS
+    timeCapsule stop (if (preprocessingConfiguration.groundedReachability) GROUNDED_REACHABILITY_ANALYSIS else GROUNDED_PLANNINGGRAPH_ANALYSIS)
+
+
 
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
@@ -323,6 +336,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         info("Grounding ... ")
         timeCapsule start GROUNDING
         val result = Grounding.transform(tdgResult._1, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
+
+        //result._1.tasks foreach {task => println(task.name)}
+
         timeCapsule stop GROUNDING
         info("done.\n")
         extra(result._1.statisticsString + "\n")
@@ -366,7 +382,8 @@ case class PreprocessingConfiguration(
                                        iterateReachabilityAnalysis: Boolean,
                                        groundDomain: Boolean
                                      ) {
-  // assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
+  //assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
+  assert(!(planningGraph && groundedReachability), "Don't use both the naive grounded reachability and the planning graph.")
 }
 
 /**
