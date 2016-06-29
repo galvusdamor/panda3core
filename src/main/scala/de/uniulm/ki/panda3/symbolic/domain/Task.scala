@@ -110,7 +110,7 @@ trait Task extends DomainUpdatable with PrettyPrintable {
         case NotOfSort(v, s)            => !(s.elements contains constForVar(v))
       }
     }
-    allInstantiations map { params => GroundTask(this, params) }
+    allValidInstantiations map { params => GroundTask(this, params) }
   }
 
   /** returns a short information about the object */
