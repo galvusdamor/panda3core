@@ -61,10 +61,10 @@ object Main {
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p04-domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p04.pddl"
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/domain/domain.pddl"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/problems/p01.pddl"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p04-domain.pddl"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p04.pddl"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/domain/domain.pddl"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/problems/p01.pddl"
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/elevators-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/elevators-strips/problems/p01.pddl"
@@ -75,7 +75,7 @@ object Main {
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(HDDLParserType),
-                                             PreprocessingConfiguration(true, true, groundedReachability = false, planningGraph = true, false, false, groundDomain = true),
+                                             PreprocessingConfiguration(true, true, groundedReachability = true, planningGraph = false, false, false, groundDomain = true),
                                              SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
@@ -85,6 +85,10 @@ object Main {
                                                                              SolutionDotString)))
 
     //System.in.read()
+    val x = Nil
+    val y = Nil
+
+    y :+ ()
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
 

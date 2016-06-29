@@ -20,7 +20,7 @@ object PrintPlanningGraph {
     val problemFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/simple-finite-problem.lisp.strips.3.pddl"
 
     val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
-    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, ())
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem,true)
     val (domain, initialPlan) = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
     val groundedInitialState = initialPlan.groundedInitialState filter {
       _.isPositive

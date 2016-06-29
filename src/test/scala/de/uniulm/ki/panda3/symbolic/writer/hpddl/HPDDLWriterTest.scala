@@ -27,7 +27,7 @@ class HPDDLWriterTest extends FlatSpec {
     val parsedProblem = domAndInitialPlan._2.update(sortExpansion)
 
     // apply the CWA
-    val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
+    val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, true)
     val allReduced = ToPlainFormulaRepresentation.transform(cwaApplied._1, cwaApplied._2, ())
 
 
