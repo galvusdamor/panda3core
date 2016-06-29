@@ -19,7 +19,7 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 
   lazy val containedVariables: Set[Variable] = parameterVariables.toSet
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = Set((predicate,isPositive))
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = Set((predicate, isPositive))
 
   /** check whether two literals are identical given a CSP */
   def =?=(that: Literal)(csp: CSP): Boolean = this.predicate == that.predicate && this.isPositive == that.isPositive &&
@@ -74,6 +74,8 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 }
 
 case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo {
+  assert(predicate.argumentSorts.length == parameter.length)
+  predicate.argumentSorts zip parameter foreach { case (s, p) => assert(s.elements contains p) }
 
   lazy val negate = copy(isPositive = !isPositive)
 
@@ -83,7 +85,7 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
 
   override val containedVariables: Set[Variable] = Set()
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = Set((predicate,isPositive))
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = Set((predicate, isPositive))
 
   /** returns a string that can be utilized to define the object */
   override def mediumInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameter map { _.mediumInfo }).mkString("(", ", ", ")")
