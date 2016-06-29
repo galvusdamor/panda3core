@@ -32,7 +32,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
 
 
-    assert(planningGraph.graphSize == 3)
+    assert(planningGraph.graphSize == 4)
     assert(planningGraph.reachableGroundLiterals exists {
       _.predicate.name == "a"
     })
@@ -45,7 +45,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     assert(planningGraph.reachableGroundLiterals exists {
       _.predicate.name == "d"
     })
-    assert(planningGraph.layerWithMutexes.last._2.size == 14)
+    assert(planningGraph.layerWithMutexes.last._2.size == 20)
     assert(planningGraph.layerWithMutexes.last._4.size == 4)
   }
 
@@ -67,7 +67,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     }
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
 
-    assert(planningGraph.graphSize == 1) // TODO: check whether this is correct manually!
+    assert(planningGraph.graphSize == 2) // TODO: check whether this is correct manually!
     assert(!(planningGraph.reachableGroundLiterals exists {
       _.predicate.name == "d"
     }))
@@ -114,7 +114,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     val groundedInitialState = initialPlan.groundedInitialState filter { _.isPositive }
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
 
-    assert(planningGraph.graphSize == 1)
+    assert(planningGraph.graphSize == 2)
   }
 
   it must "handle negative preconditions correctly" in {
@@ -136,7 +136,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     assert(planningGraph.graphSize == 1)
   }
 
-  it must "not instaniate forbidden tasks" in {
+  it must "not instantiate forbidden tasks" in {
     val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest01_domain.hddl"
     val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest01_problem.hddl"
 
@@ -154,7 +154,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     val forbiddenTasks = Right(forbiddenLiftedTasks)
     val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, forbiddenTasks)
 
-    assert(planningGraph.graphSize == 1)
+    assert(planningGraph.graphSize == 2)
     assert(!(planningGraph.layerWithMutexes.last._1 exists { groundTask => groundTask.task.name == "Y" }))
 
     val forbiddenGroundTasks: Seq[GroundTask] = Seq(GroundTask(forbiddenLiftedTasks.head, Seq.empty[Constant]))
