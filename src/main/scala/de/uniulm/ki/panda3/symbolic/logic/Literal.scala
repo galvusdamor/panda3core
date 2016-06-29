@@ -73,7 +73,7 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
   def ground(totalSubstitution: TotalSubstitution[Variable, Constant]): GroundLiteral = GroundLiteral(predicate, isPositive, parameterVariables map totalSubstitution)
 }
 
-case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo {
+case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo with Ordered[GroundLiteral] {
 
   lazy val negate = copy(isPositive = !isPositive)
 
@@ -96,4 +96,5 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
   /** returns a detailed information about the object */
   override def longInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameter map { _.longInfo }).mkString("(", ", ", ")")
 
+  override def compare(that: GroundLiteral): Int = if((this.predicate compare that.predicate) == 0) this.isPositive compare that.isPositive else this.predicate compare that.predicate
 }

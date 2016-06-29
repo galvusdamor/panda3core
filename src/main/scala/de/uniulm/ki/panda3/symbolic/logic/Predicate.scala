@@ -11,7 +11,7 @@ import de.uniulm.ki.util.HashMemo
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 //scalastyle:off covariant.equals
-case class Predicate(name: String, argumentSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo {
+case class Predicate(name: String, argumentSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo with Ordered[Predicate] {
 
   lazy val allPossibleParameterCombinations: Seq[Seq[Constant]] = Sort allPossibleInstantiations argumentSorts
 
@@ -41,4 +41,6 @@ case class Predicate(name: String, argumentSorts: Seq[Sort]) extends DomainUpdat
     val oPredicate = o.asInstanceOf[Predicate]
     if (this.name != oPredicate.name) false else this.argumentSorts.sameElements(oPredicate.argumentSorts)
   }
+
+  override def compare(that: Predicate): Int = this.name compare that.name
 }
