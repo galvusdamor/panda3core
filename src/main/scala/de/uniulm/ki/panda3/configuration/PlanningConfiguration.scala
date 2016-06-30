@@ -6,8 +6,11 @@ import java.util.concurrent.Semaphore
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.{EfficientGroundedTaskDecompositionGraph, EfficientTDGFromGroundedSymbolic}
-import de.uniulm.ki.panda3.efficient.heuristic.{MinimumModificationEffortHeuristic, EfficientNumberOfPlanSteps, EfficientNumberOfFlaws, AlwaysZeroHeuristic}
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EfficientGroundedPlanningGraphFromSymbolic, EfficientGroundedPlanningGraph}
+import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
+import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
@@ -93,6 +96,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan)
       })
     } else {
+      // EFFICIENT SEARCH
       timeCapsule start COMPUTE_EFFICIENT_REPRESENTATION
       val wrapper = Wrapping(domainAndPlan)
       val efficientInitialPlan = wrapper.unwrap(domainAndPlan._2)
@@ -101,6 +105,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       // in some cases we need to re-do some steps of the preparation as we have to transfer them into the efficient representation
       timeCapsule start HEURISTICS_PREPARATION
       if (searchConfiguration.heuristic contains TDGMinimumModification) analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
+      if (searchConfiguration.heuristic contains ADD) {
+        // do the whole preparation, i.e. planning graph
+        val initialState = domainAndPlan._2.groundedInitialState toSet
+        val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, computeMutexes = true, isSerial = false)
+        analysisMap = analysisMap +(EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic(symbolicPlanningGraph, wrapper))
+      }
       timeCapsule stop HEURISTICS_PREPARATION
 
 
@@ -128,6 +138,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case NumberOfPlanSteps      => EfficientNumberOfPlanSteps
                 case WeightedFlaws          => ???
                 case TDGMinimumModification => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                case ADD                    =>
+                  val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
+                  val initialState = domainAndPlan._2.groundedInitialState map { case GroundLiteral(task, true, args) =>
+                    (wrapper.unwrap(task), args map wrapper.unwrap toArray)
+                  }
+                  // TODO check that we have compiled negative preconditions away
+                  AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray)
               }
               case None            => throw new UnsupportedOperationException("In order to use a heuristic search procedure, a heuristic must be defined.")
             }
@@ -201,7 +218,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop PARSER_SORT_EXPANSION
 
     timeCapsule start PARSER_CWA
-    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(sortsExpandedDomainAndProblem,true) else sortsExpandedDomainAndProblem
+    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(sortsExpandedDomainAndProblem, true) else sortsExpandedDomainAndProblem
     timeCapsule stop PARSER_CWA
 
     timeCapsule start PARSER_SHOP_METHODS
@@ -413,6 +430,8 @@ object NumberOfPlanSteps extends SearchHeuristic
 object WeightedFlaws extends SearchHeuristic
 
 object TDGMinimumModification extends SearchHeuristic
+
+object ADD extends SearchHeuristic
 
 
 case class SearchConfiguration(
