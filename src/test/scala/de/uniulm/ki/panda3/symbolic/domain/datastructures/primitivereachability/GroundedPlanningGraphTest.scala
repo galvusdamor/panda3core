@@ -4,6 +4,7 @@ import java.io.FileInputStream
 
 import de.uniulm.ki.panda3.symbolic.compiler.{ClosedWorldAssumption, RemoveNegativePreconditions, ToPlainFormulaRepresentation}
 import de.uniulm.ki.panda3.symbolic.domain.ReducedTask
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
 import de.uniulm.ki.panda3.symbolic.logic.Constant
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
@@ -203,5 +204,73 @@ class GroundedPlanningGraphTest extends FlatSpec {
 
     assert(planningGraph.graphSize == 1)
     assert(planningGraph.reachableGroundPrimitiveActions.isEmpty)
+  }
+
+  it must "produce the same result as the grounded forward search when running without mutexes" in {
+    val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p03-domain.pddl"
+    val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p03.pddl"
+
+    val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, info = true)
+    val plain = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
+    val (domain, problem) = RemoveNegativePreconditions.transform(plain, ())
+
+
+    val groundedInitialState = (problem.groundedInitialState filter { _.isPositive }) toSet
+    val forwardSearch = GroundedForwardSearchReachabilityAnalysis(domain, groundedInitialState)()
+    val planningGraph = GroundedPlanningGraph(domain, groundedInitialState, computeMutexes = false, isSerial = false)
+
+    // check whether there are no mutexes
+    planningGraph.layerWithMutexes foreach { case (_, a, _, b) =>
+      assert(a.isEmpty) // no action mutexes
+      assert(b.isEmpty) // no state mutexes
+    }
+
+
+    val forwardReacheableActions = forwardSearch.reachableGroundPrimitiveActions.size
+    val planningGraphReacheableActions = planningGraph.reachableGroundPrimitiveActions.size
+
+    val forwardButNotPG = forwardSearch.reachableGroundPrimitiveActions filterNot planningGraph.reachableGroundPrimitiveActions.contains
+    val pgButNotForward = planningGraph.reachableGroundPrimitiveActions filterNot forwardSearch.reachableGroundPrimitiveActions.contains
+
+    //println(forwardButNotPG map { g => g.task.name + (g.arguments map { _.name }).mkString("(", ",", ")") } mkString "\n")
+
+    //println(forwardButNotPG.size)
+    //println(pgButNotForward.size)
+
+    val pgLastState = planningGraph.reachableGroundLiterals toSet
+    val forwardSearchLastState = forwardSearch.reachableGroundLiterals filter { _.isPositive } toSet
+
+    // check whole graph
+    forwardSearch.layer zip planningGraph.layer foreach { case ((fActions, fState), (pgActions, pgState)) =>
+
+      val fActionCount = fActions.size
+      val pgActionCount = pgActions.size
+      val fStateCount =  fState count { _.isPositive }
+      val pgStateCount = pgState.size
+
+      println(fActionCount + " vs " + pgActionCount)
+      println(fStateCount + " vs " + pgStateCount)
+
+      //println("\n\n\n\nSTATE")
+      //println(pgState map {literal => literal.predicate.name + (literal.parameter map { _.name }).mkString("(", ",", ")")} mkString "\n")
+
+      //println("\n\n\n\nDifferentActions")
+      //println(fActions diff pgActions map { g => g.task.name + (g.arguments map { _.name }).mkString("(", ",", ")") } mkString "\n")
+
+      assert(fActionCount == pgActionCount)
+      assert(fStateCount == pgStateCount)
+    }
+
+    // check executability
+    forwardButNotPG foreach { groundTask => assert(groundTask.substitutedPreconditionsSet subsetOf pgLastState) }
+    pgButNotForward foreach { groundTask => assert(groundTask.substitutedPreconditionsSet subsetOf forwardSearchLastState) }
+
+
+
+
+    assert(pgLastState.size == forwardSearchLastState.size)
+    assert(forwardReacheableActions == planningGraphReacheableActions)
+
   }
 }

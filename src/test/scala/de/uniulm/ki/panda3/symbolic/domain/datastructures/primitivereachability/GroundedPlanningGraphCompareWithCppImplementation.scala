@@ -11,6 +11,7 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import org.scalatest.FlatSpec
 
+import scala.util.Random
 import sys.process._
 import de.uniulm.ki.util._
 
@@ -72,13 +73,14 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     val (domain, initialPlan) = Grounding.transform(negPre, EverythingIsHiearchicallyReachable(negPre._1, negPre._2))
 
     val domainString = writeDomainAndProblemToSimpleFormat(domain, initialPlan)
-    writeStringToFile(domainString, new File("__probleminput"))
+    val runID = Random.nextInt()
+    writeStringToFile(domainString, new File("__probleminput" + runID))
 
     // compile the program
     "g++ -O2 src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planninggraph.cpp" !!
 
     //"cat __probleminput" #| "./a.out" !
-    val cppPlanningGraphOutput: Seq[Seq[Int]] = ("cat __probleminput" #| "./a.out" !!) split "\n" map { _ split " " map { _.toInt } toSeq } toSeq
+    val cppPlanningGraphOutput: Seq[Seq[Int]] = (("cat __probleminput" + runID) #| "./a.out" !!) split "\n" map { _ split " " map { _.toInt } toSeq } toSeq
 
     val groundedInitialState = negPre._2.groundedInitialState filter { _.isPositive }
     val planningGraph = new GroundedPlanningGraph(negPre._1, groundedInitialState.toSet, true, false, Left(Nil))
@@ -101,7 +103,7 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
       val bs = newB.size
       val cs = c.size
       val ds = d.size
-      assert(as == cppRes(0))
+      assert(as == cppRes.head)
       //println(newB map { case (a, b) =>
       //  a.task.name + ((a.arguments map { _.name }).mkString("(", ",", ")")) + "!" + b.task.name + ((b.arguments map { _.name }).mkString("(", ",", ")"))
       //} mkString " ")
@@ -109,7 +111,7 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
       assert(cs == cppRes(2))
       assert(ds == cppRes(3))
     }
-    "rm __probleminput a.out" !!
+    "rm __probleminput" + runID + " a.out" !!
   }
 
   //
