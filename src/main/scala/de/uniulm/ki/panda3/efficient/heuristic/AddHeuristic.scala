@@ -4,6 +4,7 @@ import de.uniulm.ki.panda3.efficient.domain.{EfficientDomain, EfficientGroundTas
 import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.logic.EfficientGroundLiteral
+import de.uniulm.ki.util.BucketAccessMap
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -14,7 +15,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: EfficientDomain, initialState: Array[(Int, Array[Int])]) extends MinimisationOverGroundingsBasedHeuristic {
 
-  private val heuristicMapping: Map[EfficientGroundLiteral, Double] =
+  private val heuristicMap: Map[EfficientGroundLiteral, Double] =
     (planningGraph.actionLayer zip planningGraph.stateLayer).foldLeft(initialState map { case (predicate, args) => EfficientGroundLiteral(predicate, isPositive = true, args) -> 0.0 } toMap)(
       {
         case (initiallyComputedValues, (actions, stateFeatures)) =>
@@ -44,31 +45,53 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
 
             computedValues ++ newPredicateCosts.toArray
                                                     })
-      })
+      }) withDefault { _ => Double.MaxValue }
 
   /*heuristicMapping foreach {case (lit,v) =>
     println(lit.predicate + (lit.arguments.mkString("(",",",")")) + " -> " + v)
   }*/
 
+  private val efficientAccessMaps = domain.predicates.indices map { case p =>
+    val literals = heuristicMap filter { _._1.predicate == p }
+
+    BucketAccessMap(literals map { case (k, v) => (k.arguments, v) })
+  }
+
+  var foo = 0
+
   protected def groundingEstimator(groundTask: EfficientGroundTask, plan: EfficientPlan, planStep: Int): Double = {
     var heuristicEstimate = 0.0
+    foo += 1
     val planStepPreconditions = domain.tasks(plan.planStepTasks(planStep)).precondition
 
     var precondition = 0
+    //println("CL " + plan.causalLinks.length * planStepPreconditions.length)
     while (precondition < planStepPreconditions.length) {
       // look whether this precondition is protected by a causal link
       // TODO we should to this more efficiently by memoizing it in the plan itself
-      var supportedByCausalLink = false
-      var cl = 0
+      val supportedByCausalLink = plan.planStepSupportedPreconditions(planStep) contains precondition
+      /*var cl = 0
       while (cl < plan.causalLinks.length) {
         val link = plan.causalLinks(cl)
         if (plan.isPlanStepPresentInPlan(link.producer) && plan.isPlanStepPresentInPlan(link.consumer))
           if (link.consumer == planStep && link.conditionIndexOfConsumer == precondition)
             supportedByCausalLink = true
         cl += 1
-      }
+      }*/
 
-      if (!supportedByCausalLink) heuristicEstimate += heuristicMapping(groundTask.substitutedPrecondition(precondition, domain))
+      if (!supportedByCausalLink) {
+        // TODO extremly inefficient
+        val literal = groundTask.substitutedPrecondition(precondition, domain)
+        val h = efficientAccessMaps(literal.predicate)(literal.arguments)
+        //println("PS " + planStep + " " + h + " != " + heuristicMap(literal))
+        /*if (!(h == heuristicMap(literal))){
+          println(efficientAccessMaps(literal.predicate))
+          println(efficientAccessMaps(literal.predicate).getIndex(literal.arguments))
+          println(literal.arguments mkString "\n")
+        }*/
+        //assert(h == heuristicMap(literal))
+        heuristicEstimate += h
+      }
 
       precondition += 1
     }
@@ -78,7 +101,10 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
   override def computeHeuristic(plan: EfficientPlan): Double = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = plan.openPreconditions.length // every flaw must be addressed
-
+    foo = 0
+    //println("ACTIONS " + plan.numberOfPlanSteps)
+    //println("CLs " + plan.causalLinks.length)
+    val startTime = System.currentTimeMillis()
     var i = 2 // init doesn't have effects
     while (i < plan.numberOfAllPlanSteps) {
       if (plan.isPlanStepPresentInPlan(i)) {
@@ -88,6 +114,7 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
 
       i += 1
     }
+    //println("HEURISTIC " + heuristicValue + " took " + (System.currentTimeMillis() - startTime) + " groundings "  + foo)
     heuristicValue
   }
 }
