@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.efficient.domain
 import de.uniulm.ki.panda3.efficient.domain.datastructures.EfficientTaskSchemaTransitionGraph
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 
-import scala.collection.BitSet
+import scala.collection.{mutable, BitSet}
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -60,6 +60,17 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
     }
     (positive, negative)
   }).toArray
+
+  lazy val taskToEffectPredicates: Array[(BitSet, BitSet)] = tasks map { task =>
+    val (positiveEffects, negativeEffects) = task.effect partition { _.isPositive }
+    def literalsToPredicateBitSet(literalList: Array[EfficientLiteral]): BitSet = {
+      val bitset = mutable.BitSet()
+      literalList foreach { l => bitset add l.predicate }
+      bitset
+    }
+
+    (literalsToPredicateBitSet(positiveEffects), literalsToPredicateBitSet(negativeEffects))
+  }
 
   /** contains for each task an array containing all decomposition methods that can be applied to that task */
   lazy val taskToPossibleMethods: Map[Int, Array[(EfficientDecompositionMethod, Int)]] =

@@ -21,6 +21,8 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.search._
 import de.uniulm.ki.util.{SimpleDirectedGraph, BiMap}
 
+import scala.collection.mutable
+
 /**
   * An explicit transformator between the inefficient symbolic part of panda3 and the efficient part thereof
   *
@@ -131,6 +133,16 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
     // causal links
     val causalLinks = plan.causalLinks map { unwrap(_, plan) }
+    val supportedPreconditions = planStepTasks.indices map { ps =>
+      val bitSet = mutable.BitSet()
+      causalLinks filter { _.consumer == ps } foreach { cl => bitSet.add(cl.conditionIndexOfConsumer) }
+      bitSet
+    }
+
+    val potentialThreater = plan.causalLinks map { case CausalLink(_, _, Literal(predicate, isPositive, _)) =>
+      val threater = orderedTasks.zipWithIndex filter { _._1.substitutedEffects exists { case Literal(lPredicate, lisPositive, _) => predicate == lPredicate && isPositive != lisPositive } }
+      mutable.BitSet(threater map { _._2 }: _*)
+    }
 
     // problem configuration
     val problemConfiguration: ProblemConfiguration = (plan.isModificationAllowed, plan.isFlawAllowed) match {
@@ -144,8 +156,9 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       case _                                                                      => noSupport(UNSUPPORTEDPROBLEMTYPE)
     }
 
+
     EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, planStepDecomposedBy.toArray, planStepParentInDecompositionTree.toArray, planStepIsInstanceOfSubPlanPlanStep
-      .toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)()
+      .toArray, supportedPreconditions.toArray, potentialThreater.toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)()
   }
 
   private def newVariableFormEfficient(variableIndex: Int, sortIndex: Int): Variable = Variable(variableIndex, "variable_" + variableIndex, domainSorts.back(sortIndex))
