@@ -10,8 +10,8 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class EfficientAddOrdering(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, before: Int, after: Int) extends EfficientModification {
-  assert(plan.isPlanStepPresentInPlan(before))
-  assert(plan.isPlanStepPresentInPlan(after))
+  assert(plan == null || plan.isPlanStepPresentInPlan(before))
+  assert(plan == null || plan.isPlanStepPresentInPlan(after))
   override val nonInducedAddedOrderings: Array[(Int, Int)] = Array((before, after))
 
   def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientAddOrdering(null, severedFlaw, before, after)
