@@ -54,6 +54,7 @@ case class GroundedPlanningGraph
       val newInstantiatedGroundTasks: Set[GroundTask] = newGroundTasksFromPreconditions ++ newGroundTasksFromParameters
       val newNoOps: Set[GroundTask] = addedPropositions map { groundLiteral => createNOOP(groundLiteral) }
       val allGroundTasks: Set[GroundTask] = previousLayer._1 ++ newInstantiatedGroundTasks ++ newNoOps
+      println("Tasks " + allGroundTasks.size)
 
 
       // compute task mutexes anew
@@ -78,11 +79,13 @@ case class GroundedPlanningGraph
           Set.empty[(GroundTask, GroundTask)]
         }
       } filter { case (groundTask1, groundTask2) => groundTask1 != groundTask2 }
+      println("Mutexes " + taskMutexes.size)
 
 
       // determine new propositions
       val newPropositions: Set[GroundLiteral] = (newInstantiatedGroundTasks flatMap { newGroundTask => newGroundTask.substitutedAddEffects }) -- previousLayer._3
       val allPropositions: Set[GroundLiteral] = newPropositions ++ previousLayer._3
+      println("Literals " + allPropositions.size)
 
       // compute proposition mutexes anew
       // TODO here we could to things a lot more efficiently
@@ -100,6 +103,7 @@ case class GroundedPlanningGraph
         }
         case false => Set.empty[(GroundLiteral, GroundLiteral)]
       }
+      println("Mutexes " + propositionMutexes.size)
 
       // termination and looping checks. Loop if something has changed compared with the previous layer of the PG
       val thisLayer = (allGroundTasks, taskMutexes, allPropositions, propositionMutexes)
