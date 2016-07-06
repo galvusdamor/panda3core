@@ -19,7 +19,9 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
   override def transform(domain: Domain, plan: Plan, reachabilityAnalysis: GroundedReachabilityAnalysis): (Domain, Plan) = {
     // ----- Predicates
     val groundedPredicates: Map[Predicate, Map[Seq[Constant], Predicate]] =
-      (reachabilityAnalysis.reachableGroundLiterals map { case GroundLiteral(predicate, _, parameter) => GroundLiteral(predicate, true, parameter) }).distinct groupBy { _.predicate } map {
+      ((reachabilityAnalysis.reachableGroundLiterals ++ reachabilityAnalysis.additionalLiteralsNeededToGround) map { case GroundLiteral(predicate, _, parameter) =>
+        GroundLiteral(predicate, isPositive = true, parameter) // make all literals positive, we just want to ground the predicates
+      }).distinct groupBy { _.predicate } map {
         case (predicate, litList) =>
           val argumentMapping = litList groupBy { _.parameter } map { case (args, lits) =>
             assert(lits.length == 1)
@@ -109,12 +111,12 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
     // check whether we have to insert a new abstract task, as the initial plan might not be completely grounded
 
 
-    val initialPlan = if (reachabilityAnalysis.additionalTaskNeededToGround.isEmpty) {
+    val initialPlan = if (reachabilityAnalysis.additionalMethodsNeededToGround.isEmpty) {
       groundPlan(plan, alreadyGroundedVariableMapping)
     } else {
-      assert(reachabilityAnalysis.additionalTaskNeededToGround.size == 1)
+      assert(reachabilityAnalysis.additionalMethodsNeededToGround.size == 1)
       // ground the plan containing the inital abstract task
-      val topTask = reachabilityAnalysis.additionalTaskNeededToGround.head.task
+      val topTask = reachabilityAnalysis.additionalMethodsNeededToGround.head.groundAbstractTask.task
       val topPS = PlanStep(2, topTask, topTask.parameters)
       val planSteps: Seq[PlanStep] = plan.init :: plan.goal :: topPS :: Nil
       val ordering = TaskOrdering(OrderingConstraint.allBetween(plan.init, plan.goal, topPS), planSteps)
