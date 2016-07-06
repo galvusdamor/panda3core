@@ -25,7 +25,7 @@ object Test {
     val parsedProblem = domAndInitialPlan._2.update(sortExpansion)
 
     // apply the CWA
-    val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
+    val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem)
     val simpleMethod = SHOPMethodCompiler.transform(cwaApplied, ())
     val flattened = ToPlainFormulaRepresentation.transform(simpleMethod, ())
 

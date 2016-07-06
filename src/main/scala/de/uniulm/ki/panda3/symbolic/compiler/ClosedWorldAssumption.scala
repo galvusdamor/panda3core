@@ -13,12 +13,12 @@ import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object ClosedWorldAssumption extends DomainTransformer[Unit] {
+object ClosedWorldAssumption extends DomainTransformer[Boolean] {
 
-  def transform(inDomain: Domain, inPlan: Plan): (Domain, Plan) = transform(inDomain, inPlan, ())
+  def transform(inDomain: Domain, inPlan: Plan): (Domain, Plan) = transform(inDomain, inPlan, dontNegateUnnecessarily = true)
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
-  override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
+  override def transform(domain: Domain, plan: Plan, dontNegateUnnecessarily: Boolean): (Domain, Plan) = {
     val oldInit = plan.init
 
     // determine whether there are all variables for constants we possibly need
@@ -39,11 +39,14 @@ object ClosedWorldAssumption extends DomainTransformer[Unit] {
 
     // find predicates which never occur negatively in the domain at all ... we don't need to apply the CWA to them
     val occurringNegativePredicates = (domain.tasks ++ domain.hiddenTasks) flatMap { _.precondition.containedPredicatesWithSign }
-    val nonOccurringNegativePredicates = domain.predicates map { p => (p, false) } filterNot occurringNegativePredicates.contains map {_._1}
+    val nonOccurringNegativePredicates = domain.predicates map { p => (p, false) } filterNot occurringNegativePredicates.contains map { _._1 }
 
     // create the new initial plan step
     // build a set of all literals
-    val allLiterals: Seq[Literal] = (domain.predicates.toSet -- nonOccurringNegativePredicates) flatMap { _.instantiateWithVariables(variablesForConstants) } toSeq
+    val allLiterals: Seq[Literal] = if (dontNegateUnnecessarily)
+      (domain.predicates.toSet -- nonOccurringNegativePredicates) flatMap { _.instantiateWithVariables(variablesForConstants) } toSeq
+    else domain.predicates.distinct flatMap { _.instantiateWithVariables(variablesForConstants) }
+
 
     // remove all literals that already occur in the initial state
     val newCSP = plan.variableConstraints.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints))

@@ -201,7 +201,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop PARSER_SORT_EXPANSION
 
     timeCapsule start PARSER_CWA
-    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(sortsExpandedDomainAndProblem, ()) else sortsExpandedDomainAndProblem
+    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(sortsExpandedDomainAndProblem,true) else sortsExpandedDomainAndProblem
     timeCapsule stop PARSER_CWA
 
     timeCapsule start PARSER_SHOP_METHODS
