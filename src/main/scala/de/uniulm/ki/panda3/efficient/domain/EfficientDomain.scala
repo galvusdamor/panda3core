@@ -61,16 +61,33 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
     (positive, negative)
   }).toArray
 
+
+  private def literalsToPredicateBitSet(literalList: Array[EfficientLiteral]): BitSet = {
+    val bitset = mutable.BitSet()
+    literalList foreach { l => bitset add l.predicate }
+    bitset
+  }
+
   lazy val taskToEffectPredicates: Array[(BitSet, BitSet)] = tasks map { task =>
     val (positiveEffects, negativeEffects) = task.effect partition { _.isPositive }
-    def literalsToPredicateBitSet(literalList: Array[EfficientLiteral]): BitSet = {
-      val bitset = mutable.BitSet()
-      literalList foreach { l => bitset add l.predicate }
-      bitset
-    }
-
     (literalsToPredicateBitSet(positiveEffects), literalsToPredicateBitSet(negativeEffects))
   }
+
+  lazy val taskToPreconditionPredicates: Array[(BitSet, BitSet)] = tasks map { task =>
+    val (positivePreconditions, negativePreconditions) = task.precondition partition { _.isPositive }
+    (literalsToPredicateBitSet(positivePreconditions), literalsToPredicateBitSet(negativePreconditions))
+  }
+
+  lazy val tasksPreconditionCanBeSupportedBy: Array[Array[mutable.BitSet]] = tasks.zipWithIndex map { case (thisTask, taskID) =>
+    thisTask.precondition map { case EfficientLiteral(predicate, isPositive, _) =>
+      val bitset = mutable.BitSet()
+      tasks.indices filter { other =>
+        val otherPSEffects = taskToEffectPredicates(other)
+        if (isPositive) otherPSEffects._1 contains predicate else otherPSEffects._2 contains predicate
+      } foreach bitset.add
+      bitset
+    } toArray
+  } toArray
 
   /** contains for each task an array containing all decomposition methods that can be applied to that task */
   lazy val taskToPossibleMethods: Map[Int, Array[(EfficientDecompositionMethod, Int)]] =

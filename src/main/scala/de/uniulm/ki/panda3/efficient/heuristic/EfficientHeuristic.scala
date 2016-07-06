@@ -18,13 +18,13 @@ object AlwaysZeroHeuristic extends EfficientHeuristic {
 
 trait MinimisationOverGroundingsBasedHeuristic extends EfficientHeuristic {
 
-  protected def groundingEstimator(groundTask: EfficientGroundTask, plan: EfficientPlan, planStep: Int): Double
+  protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double
 
   protected def computeHeuristicByGrounding(planStep: Int, parameter: Array[Int], numberOfChosenParameters: Int, plan: EfficientPlan): Double =
     if (numberOfChosenParameters == parameter.length) {
-      // query the TDG
-      val groundTask = EfficientGroundTask(plan.planStepTasks(planStep), parameter)
-      groundingEstimator(groundTask, plan, planStep)
+      // query the actual heuristic
+      //val groundTask = EfficientGroundTask(plan.planStepTasks(planStep), parameter)
+      groundingEstimator(plan, planStep, parameter)
     } else {
       val psParams = plan.planStepParameters(planStep)
       val variableInQuestion = psParams(numberOfChosenParameters)

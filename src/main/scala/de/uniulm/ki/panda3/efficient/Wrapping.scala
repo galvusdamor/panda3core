@@ -144,6 +144,18 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       mutable.BitSet(threater map { _._2 }: _*)
     }
 
+    val potentialPreconditionSupporter = planStepTasks.zipWithIndex map { case (taskID, ps) =>
+      domain.tasks(taskID).precondition.indices map { precondition =>
+        val bitSet = mutable.BitSet()
+        planStepTasks.zipWithIndex foreach { case (otherTaskID, otherPS) =>
+          if (domain.tasksPreconditionCanBeSupportedBy(taskID)(precondition) contains otherTaskID)
+            bitSet add otherPS
+        }
+
+        bitSet
+      } toArray
+    }
+
     // problem configuration
     val problemConfiguration: ProblemConfiguration = (plan.isModificationAllowed, plan.isFlawAllowed) match {
       case (ModificationsByClass(modificationList@_*), FlawsByClass(flawList@_*)) =>
@@ -158,7 +170,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
 
     EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, planStepDecomposedBy.toArray, planStepParentInDecompositionTree.toArray, planStepIsInstanceOfSubPlanPlanStep
-      .toArray, supportedPreconditions.toArray, potentialThreater.toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)()
+      .toArray, supportedPreconditions.toArray, potentialPreconditionSupporter.toArray, potentialThreater.toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)()
   }
 
   private def newVariableFormEfficient(variableIndex: Int, sortIndex: Int): Variable = Variable(variableIndex, "variable_" + variableIndex, domainSorts.back(sortIndex))

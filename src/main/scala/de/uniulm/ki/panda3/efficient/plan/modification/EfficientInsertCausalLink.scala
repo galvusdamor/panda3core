@@ -26,7 +26,7 @@ case class EfficientInsertCausalLink(plan: EfficientPlan, resolvedFlaw: Efficien
 object EfficientInsertCausalLink {
 
   private def iterateThroughModificationsFromPlanStep(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int, producer: Int, consumerLiteral:
-  EfficientLiteral, consumerParameters: Array[Int], whatToDo: (Int, Array[EfficientVariableConstraint]) => Unit ): Unit = {
+  EfficientLiteral, consumerParameters: Array[Int], whatToDo: (Int, Array[EfficientVariableConstraint]) => Unit): Unit = {
     if (producer != consumer && plan.planStepDecomposedByMethod(producer) == -1 && !plan.ordering.gt(producer, consumer)) {
       val producerTask = plan.domain.tasks(plan.planStepTasks(producer))
       // and loop through all of their effects
@@ -38,8 +38,10 @@ object EfficientInsertCausalLink {
           // check whether they can be unified
           val producerParameters = producerTask.getArgumentsOfLiteral(plan.planStepParameters(producer), producerLiteral)
           val mgu = plan.variableConstraints.fastMGU(consumerParameters, producerParameters)
-          if (mgu.isDefined)
+          if (mgu.isDefined) {
+            assert(plan.potentialSupportersOfPlanStepPreconditions(consumer)(consumerIndex) contains producer)
             whatToDo(producerIndex, mgu.get)
+          }
         }
         producerIndex += 1
       }
@@ -59,12 +61,24 @@ object EfficientInsertCausalLink {
 
 
     // iterate through all plansteps in the plan to find possible producers
-    var producer = producerFrom
-    while (producer < producersTo) {
-      iterateThroughModificationsFromPlanStep(plan, resolvedFlaw, consumer, consumerIndex, producer, consumerLiteral, consumerParameters, { case (producerIndex, mgu) =>
-        buffer append EfficientInsertCausalLink(plan, resolvedFlaw, EfficientCausalLink(producer, consumer, producerIndex, consumerIndex), mgu)
-      })
-      producer += 1
+    //var producer = producerFrom
+    val potentialSupporterIterator = plan.potentialSupportersOfPlanStepPreconditions(consumer)(consumerIndex).iterator
+    while (potentialSupporterIterator.hasNext) {
+      val producer = potentialSupporterIterator.next()
+      var foundSupport = false
+
+      if (producer >= producerFrom && producer < producersTo) {
+        iterateThroughModificationsFromPlanStep(plan, resolvedFlaw, consumer, consumerIndex, producer, consumerLiteral, consumerParameters, { case (producerIndex, mgu) =>
+          buffer append EfficientInsertCausalLink(plan, resolvedFlaw, EfficientCausalLink(producer, consumer, producerIndex, consumerIndex), mgu)
+          foundSupport = true
+        })
+
+        if (!foundSupport) {
+          //println("No support")
+          plan.potentialSupportersOfPlanStepPreconditions(consumer)(consumerIndex) remove producer
+        }
+
+      }
     }
     buffer.toArray
   }
@@ -80,12 +94,27 @@ object EfficientInsertCausalLink {
     var numberOfModifications = 0
 
     // iterate through all plansteps in the plan to find possible producers
-    var producer = 0
-    while (producer < plan.planStepTasks.length) {
+    val potentialSupporterIterator  = plan.potentialSupportersOfPlanStepPreconditions(consumer)(consumerIndex).iterator
+    //println("LENGTH " + plan.potentialSupportersOfPlanStepPreconditions(consumer).size)
+
+    //var producer = 0
+    //while (producer < plan.numberOfAllPlanSteps) {
+    while (potentialSupporterIterator.hasNext) {
+      val producer = potentialSupporterIterator.next()
+      var foundSupport = false
+
+      //println("START")
       iterateThroughModificationsFromPlanStep(plan, resolvedFlaw, consumer, consumerIndex, producer, consumerLiteral, consumerParameters, { case (_, _) =>
         numberOfModifications += 1
+        foundSupport = true
+        //println("SUPPORT")
       })
-      producer += 1
+
+      if (!foundSupport) {
+        //println("No support ---")
+        plan.potentialSupportersOfPlanStepPreconditions(consumer)(consumerIndex) remove producer
+      }
+      //producer += 1
     }
     numberOfModifications
   }
