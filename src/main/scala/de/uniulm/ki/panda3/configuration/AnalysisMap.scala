@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientGroundedTaskDecompositionGraph
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, GroundedReachabilityAnalysis, PrimitiveReachabilityAnalysis}
 
@@ -19,6 +20,7 @@ object SymbolicGroundedTaskDecompositionGraph extends AnalysisType {type ResultT
 
 object EfficientGroundedTDG extends AnalysisType {type ResultType = EfficientGroundedTaskDecompositionGraph}
 
+object EfficientGroundedPlanningGraph extends AnalysisType {type ResultType = EfficientGroundedPlanningGraph}
 
 case class AnalysisMap(map: Map[AnalysisType, Any]) extends (AnalysisType => Any) {
   map foreach { case (anaType, elem) => assert(elem.isInstanceOf[anaType.ResultType]) }
