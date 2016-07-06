@@ -429,10 +429,20 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     })
   }
 
+  lazy val groundedInitialStateOnlyPositive : Seq[GroundLiteral] = groundedInitialState filter {_.isPositive}
+
+  lazy val groundedGoalState: Seq[GroundLiteral] = goal.substitutedPreconditions map { case Literal(predicate, isPositive, parameters) =>
+    GroundLiteral(predicate, isPositive, parameters map { v =>
+      val value = variableConstraints.getRepresentative(v)
+      assert(value.isInstanceOf[Constant])
+      value.asInstanceOf[Constant]
+    })
+  }
+
   lazy val groundedGoalTask: GroundTask = {
     val arguments = goal.arguments map variableConstraints.getRepresentative map {
       case c: Constant => c
-      case _           => noSupport(LIFTEDGOAL)
+      case _ => noSupport(LIFTEDGOAL)
     }
     GroundTask(goal.schema, arguments)
   }
