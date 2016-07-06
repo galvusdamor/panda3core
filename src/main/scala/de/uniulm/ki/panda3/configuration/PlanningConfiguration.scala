@@ -34,6 +34,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                  searchConfiguration: SearchConfiguration,
                                  postprocessingConfiguration: PostprocessingConfiguration) {
 
+  assert(!(searchConfiguration.heuristic contains ADD) || preprocessingConfiguration.planningGraph)
+
   import Timings._
 
   /**
