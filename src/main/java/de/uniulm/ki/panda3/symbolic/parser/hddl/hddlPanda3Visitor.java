@@ -105,9 +105,9 @@ public class hddlPanda3Visitor {
             allowedModificationsClasses.add(DecomposePlanStep.class);
             allowedFlawClasses.add(AbstractPlanStep.class);
 
-            if (ctxProblem.p_htn().children.get(1).getText() == ":htnti") {
+            if (ctxProblem.p_htn().children.get(1).getText().equals(":htnti")) {
                 allowedModificationsClasses.add(InsertPlanStepWithLink.class);
-            } else assert (ctxProblem.p_htn().children.get(1).getText() == ":htn");
+            } else assert (ctxProblem.p_htn().children.get(1).getText().equals(":htn"));
         }
 
         IsModificationAllowed allowedModifications = new ModificationsByClass(JavaToScala.toScalaSeq(allowedModificationsClasses));
