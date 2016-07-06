@@ -10,6 +10,8 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
   */
 object RemoveNegativePreconditions extends DomainTransformer[Unit] {
 
+  def transform(domain: Domain, plan : Plan) : (Domain,Plan) = transform(domain,plan,())
+
   /** takes a domain, an initial plan and some additional Information and transforms them */
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
     val predicateTranslationMap = domain.predicates map { case op@Predicate(name, args) => op ->(Predicate("+" + name, args), Predicate("-" + name, args)) } toMap
