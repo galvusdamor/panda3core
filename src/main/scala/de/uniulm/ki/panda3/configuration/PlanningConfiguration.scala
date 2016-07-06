@@ -109,7 +109,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       if (searchConfiguration.heuristic contains TDGMinimumModification) analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
       if (searchConfiguration.heuristic contains ADD) {
         // do the whole preparation, i.e. planning graph
-        val initialState = domainAndPlan._2.groundedInitialState toSet
+        val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
         val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, computeMutexes = true, isSerial = false)
         analysisMap = analysisMap +(EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic(symbolicPlanningGraph, wrapper))
       }
@@ -142,7 +142,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case TDGMinimumModification => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
                 case ADD                    =>
                   val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
-                  val initialState = domainAndPlan._2.groundedInitialState map { case GroundLiteral(task, true, args) =>
+                  val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
                     (wrapper.unwrap(task), args map wrapper.unwrap toArray)
                   }
                   // TODO check that we have compiled negative preconditions away
