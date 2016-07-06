@@ -24,7 +24,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) extends EfficientSearchAlgorithm {
+case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: Boolean, addDepth: Boolean) extends EfficientSearchAlgorithm {
 
   override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
                            buildTree: Boolean, informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
@@ -139,7 +139,10 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
                 informationCapsule increment NUMBER_OF_NODES
 
                 timeCapsule start SEARCH_COMPUTE_HEURISTIC
-                val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
+                //val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
+                val distanceValue = (if (addNumberOfPlanSteps) newPlan.numberOfPlanSteps else 0) + (if (addDepth) depth + 1 else 0)
+                val h = heuristic.computeHeuristic(newPlan)
+                val heuristicValue = distanceValue + h
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
                 //println("HEURISTIC " + heuristicValue)
@@ -149,7 +152,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
                 val searchNode = if (buildTree) new EfficientSearchNode(nodeNumber, newPlan, myNode, heuristicValue) else new EfficientSearchNode(nodeNumber, newPlan, null, heuristicValue)
 
-                searchQueue enqueue ((searchNode, depth + 1))
+                if (h < Double.MaxValue)
+                  searchQueue enqueue ((searchNode, depth + 1))
                 children append ((searchNode, modNum))
               }
               modNum += 1

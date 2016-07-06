@@ -126,13 +126,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                           informationCapsule, timeCapsule)
           case DijkstraType           =>
             // just use the zero heuristic
-            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, true)
+            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, true, false)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                         searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
                                         postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                         informationCapsule, timeCapsule)
-          case AStarType | GreedyType =>
+          case AStarActionsType | AStarDepthType | GreedyType =>
             // prepare the heuristic
             val heuristicInstance = searchConfiguration.heuristic match {
               case Some(heuristic) => heuristic match {
@@ -151,9 +151,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               case None            => throw new UnsupportedOperationException("In order to use a heuristic search procedure, a heuristic must be defined.")
             }
 
-            val useCosts = algo match {case AStarType => true; case _ => false}
+            val useDepthCosts = algo match {case AStarDepthType => true; case _ => false}
+            val useActionCosts = algo match {case AStarActionsType => true; case _ => false}
 
-            val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, useCosts)
+            val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                         searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
@@ -414,7 +415,9 @@ object BFSType extends SearchAlgorithmType
 
 object DFSType extends SearchAlgorithmType
 
-object AStarType extends SearchAlgorithmType
+object AStarActionsType extends SearchAlgorithmType
+
+object AStarDepthType extends SearchAlgorithmType
 
 object GreedyType extends SearchAlgorithmType
 
