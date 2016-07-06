@@ -31,7 +31,7 @@ case class EverythingIsHiearchicallyReachable(domain: Domain, initialPlan: Plan)
 case class EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability(domain: Domain, initialPlan: Plan, primitiveReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis)
   extends GroundedReachabilityAnalysis {
   override val reachableGroundedTasks         : Seq[GroundTask]                  = primitiveReachabilityAnalysis.reachableGroundPrimitiveActions ++ domain.allGroundedAbstractTasks
-  override val additionalTaskNeededToGround   : Seq[GroundTask]                  = initialPlan.goal.schema.instantiateGround
+  override val additionalTaskNeededToGround   : Seq[GroundTask]                  = initialPlan.groundedGoalTask :: Nil
   override val reachableGroundMethods         : Seq[GroundedDecompositionMethod] = domain.decompositionMethods flatMap {
     case method@SimpleDecompositionMethod(abstractTask, _) => reachableGroundedTasks filter { _.task == abstractTask } flatMap method.groundWithAbstractTaskGrounding
     case _                                                 => noSupport(NONSIMPLEMETHOD)

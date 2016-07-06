@@ -97,6 +97,6 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
   override lazy val reachableGroundedTasks         : Seq[GroundTask]                  = taskDecompositionGraph._1.andVertices.toSeq
   override lazy val reachableGroundMethods         : Seq[GroundedDecompositionMethod] = taskDecompositionGraph._1.orVertices.toSeq
   override lazy val reachableGroundLiterals        : Seq[GroundLiteral]               = groundedReachabilityAnalysis.reachableGroundLiterals
-  override      val additionalTaskNeededToGround   : Seq[GroundTask]                  = taskDecompositionGraph._2 ++ initialPlan.goal.schema.instantiateGround
+  override      val additionalTaskNeededToGround   : Seq[GroundTask]                  = taskDecompositionGraph._2 :+ initialPlan.groundedGoalTask
   override      val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod] = taskDecompositionGraph._3
 }
