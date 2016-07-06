@@ -168,18 +168,19 @@ public class planningInstance {
                 System.out.println(n + " " + proPrinter.actionToStr(IndexToAction[a]));
                 n++;
             }
-            //time = System.currentTimeMillis();
-            //System.out.println("\nInferring least constraining causal links");
-            //inferCausalLinks(s0._1(), solution);
-            //System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");
+            time = System.currentTimeMillis();
+            System.out.println("\nInferring least constraining causal links");
+            inferCausalLinks(s0._1(), solution);
+            System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");
         } else System.out.println("Problem unsolvable.");
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
     }
 
     private void inferCausalLinks(BitSet s0, List<Integer> solution) {
-        List<Integer> sol = new LinkedList<>();
+        List<Integer> sol = new LinkedList<>(); // copy array to keep changes local to the function
         sol.addAll(solution);
         sol.add(0, -1); // add dummy to simplify index-magic
+
         for (int consumerI = 1; consumerI < sol.size(); consumerI++) {
             int consumer = sol.get(consumerI);
             int fact = prec[consumer].nextSetBit(0);
@@ -220,7 +221,7 @@ public class planningInstance {
                         }
                         break;
                     } else
-                        offset = relevantDels.get(supporterI + 1, consumerI - 1).nextSetBit(0) + 1;
+                        offset = relevantDels.nextSetBit(supporterI + 1) + 1;
                 }
                 fact = prec[consumer].nextSetBit(fact + 1);
             }
