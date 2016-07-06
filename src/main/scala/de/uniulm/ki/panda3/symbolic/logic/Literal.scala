@@ -96,5 +96,13 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
   /** returns a detailed information about the object */
   override def longInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameter map { _.longInfo }).mkString("(", ", ", ")")
 
-  override def compare(that: GroundLiteral): Int = if((this.predicate compare that.predicate) == 0) this.isPositive compare that.isPositive else this.predicate compare that.predicate
+  override def compare(that: GroundLiteral): Int = {
+    this.predicate compare that.predicate match {
+      case 0 => this.isPositive compare that.isPositive match {
+        case 0 => ((this.parameter zip that.parameter) map { case (x,y) => x compare y}).foldLeft(0){ case (a: Int,b: Int) => a + b}
+        case _ => this.isPositive compare that.isPositive
+      }
+      case _ => this.predicate compare that.predicate
+    }
+  }
 }
