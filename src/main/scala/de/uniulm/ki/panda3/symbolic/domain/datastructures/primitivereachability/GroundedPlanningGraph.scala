@@ -7,22 +7,28 @@ import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 
 /**
-	* @author Gregor Behnke (gregor.behnke@uni-ulm.de)
-	*/
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 case class GroundedPlanningGraph
 (domain: Domain, initialState: Set[GroundLiteral], computeMutexes: Boolean, isSerial: Boolean, disallowedTasks: Either[Seq[GroundTask], Seq[Task]] = Left(Nil))
 	extends LayeredGroundedPrimitiveReachabilityAnalysis {
 
-	lazy          val graphSize       : Int                                                                                                            = layerWithMutexes.size
-	lazy          val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
+  initialState foreach { f => assert(f.isPositive)}
+
+  lazy val graphSize: Int = layerWithMutexes.size
+  // This function should compute the actual planning graph
+  override lazy val layer: Seq[(Set[GroundTask], Set[GroundLiteral])] = layerWithMutexes map { case (groundTasks, groundTaskMutexes, groundLiterals, groundLiteralMutexes) =>
+    (groundTasks filterNot {
+      _.task.name.startsWith("NO-OP")
+    }, groundLiterals)
+  }
+
+  layer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive)}}
+
+	lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
 
 		buildGraph((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)]),
 		           initialState, Set.empty[(GroundLiteral, GroundLiteral)], firstLayer = true, Map())
-	}
-	// This function should compute the actual planning graph
-	override lazy val layer           : Seq[(Set[GroundTask], Set[GroundLiteral])]                                                                     = layerWithMutexes map {
-		case (groundTasks, groundTaskMutexes, groundLiterals, groundLiteralMutexes) =>
-			(groundTasks filterNot { _.task.name.startsWith("NO-OP") }, groundLiterals)
 	}
 
 	def buildGraph(previousLayer: (Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)]),
@@ -136,16 +142,16 @@ case class GroundedPlanningGraph
       assignPairs foreach { case (v, c) => assert(v.sort.elements contains c) }
       val updatedAssignMap: Map[Variable, Constant] = assignPairs.foldLeft(assignMap) { case (aMap, (variable, constant)) => aMap + (variable -> constant) }
 
-      // check whether we might have violated parameter constraints
-      val taskConstraintsOK = task.parameterConstraints forall {
-        case Equal(var1, var2: Variable)     => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) == updatedAssignMap(var2) else true
-        case Equal(var1, const: Constant)    => if (updatedAssignMap contains var1) updatedAssignMap(var1) == const else true
-        case NotEqual(var1, var2: Variable)  => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) != updatedAssignMap(var2) else true
-        case NotEqual(var1, const: Constant) => if (updatedAssignMap contains var1) updatedAssignMap(var1) != const else true
-        case OfSort(vari, sort)              => if (updatedAssignMap contains vari) sort.elements contains updatedAssignMap(vari) else true
-        case NotOfSort(vari, sort)           => if (updatedAssignMap contains vari) !(sort.elements contains updatedAssignMap(vari)) else true
-      }
-      if (taskConstraintsOK) {
+        // check whether we might have violated parameter constraints
+        val taskConstraintsOK = task.parameterConstraints forall {
+          case Equal(var1, var2: Variable) => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) == updatedAssignMap(var2) else true
+          case Equal(var1, const: Constant) => if (updatedAssignMap contains var1) updatedAssignMap(var1) == const else true
+          case NotEqual(var1, var2: Variable) => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) != updatedAssignMap(var2) else true
+          case NotEqual(var1, const: Constant) => if (updatedAssignMap contains var1) updatedAssignMap(var1) != const else true
+          case OfSort(vari, sort) => if (updatedAssignMap contains vari) sort.elements contains updatedAssignMap(vari) else true
+          case NotOfSort(vari, sort) => if (updatedAssignMap contains vari) !(sort.elements contains updatedAssignMap(vari)) else true
+        }
+        if (taskConstraintsOK) {
 
         //Check if all preconditions of the task have been assigned
         if (updatedPrecons.isEmpty) {
@@ -220,5 +226,11 @@ case class GroundedPlanningGraph
 		                                    isPrimitive = true, parameters, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
 		GroundTask(task, groundLiteral.parameter)
 	}
+
+}
+
+object GroundedPlanningGraph {
+  def apply(domain: Domain, initialState: Seq[GroundLiteral], computeMutexes: Boolean, isSerial: Boolean): GroundedPlanningGraph =
+    GroundedPlanningGraph(domain, initialState toSet, computeMutexes, isSerial, Left(Nil))
 
 }

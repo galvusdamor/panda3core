@@ -39,7 +39,9 @@ trait GroundedReachabilityAnalysis extends ReachabilityAnalysis with GroundedPri
   lazy val reachableLiftedAbstractActions: Seq[Task]                = reachableGroundAbstractActions map { _.task } distinct
   lazy val reachableLiftedMethods        : Seq[DecompositionMethod] = reachableGroundMethods map { _.decompositionMethod } distinct
 
-  val additionalTaskNeededToGround   : Seq[GroundTask]
+  val additionalTaskNeededToGround: Seq[GroundTask]
+  final lazy val additionalLiteralsNeededToGround: Seq[GroundLiteral] = (additionalTaskNeededToGround flatMap { gt => gt.substitutedPreconditions ++ gt.substitutedEffects } filterNot
+    reachableGroundLiterals.contains) distinct
   val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod]
 }
 

@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.logic._
-import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
@@ -251,7 +251,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
         case _                                   => domainUpdate
       }
 
-      val newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal = planStepsAndRemovedPlanStepsWithoutInitGoal map { _ update possiblyInvertedUpdate}
+      val newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal = planStepsAndRemovedPlanStepsWithoutInitGoal map { _ update possiblyInvertedUpdate }
 
       val newPlanStepsAndRemovedPlanSteps = newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal :+ newInit :+ newGoal
 
@@ -427,6 +427,24 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       assert(value.isInstanceOf[Constant])
       value.asInstanceOf[Constant]
     })
+  }
+
+  lazy val groundedInitialStateOnlyPositive : Seq[GroundLiteral] = groundedInitialState filter {_.isPositive}
+
+  lazy val groundedGoalState: Seq[GroundLiteral] = goal.substitutedPreconditions map { case Literal(predicate, isPositive, parameters) =>
+    GroundLiteral(predicate, isPositive, parameters map { v =>
+      val value = variableConstraints.getRepresentative(v)
+      assert(value.isInstanceOf[Constant])
+      value.asInstanceOf[Constant]
+    })
+  }
+
+  lazy val groundedGoalTask: GroundTask = {
+    val arguments = goal.arguments map variableConstraints.getRepresentative map {
+      case c: Constant => c
+      case _ => noSupport(LIFTEDGOAL)
+    }
+    GroundTask(goal.schema, arguments)
   }
 
   override lazy val dotString: String = dotString(PlanDotOptions())

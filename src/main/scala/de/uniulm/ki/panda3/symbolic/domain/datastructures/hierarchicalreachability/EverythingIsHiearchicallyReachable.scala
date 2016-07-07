@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachabil
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.domain.{SimpleDecompositionMethod, GroundedDecompositionMethod, Domain}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedReachabilityAnalysis, GroundedPrimitiveReachabilityAnalysis}
-import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
+import de.uniulm.ki.panda3.symbolic.logic.{Constant, GroundLiteral}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 
@@ -31,12 +31,13 @@ case class EverythingIsHiearchicallyReachable(domain: Domain, initialPlan: Plan)
 case class EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability(domain: Domain, initialPlan: Plan, primitiveReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis)
   extends GroundedReachabilityAnalysis {
   override val reachableGroundedTasks         : Seq[GroundTask]                  = primitiveReachabilityAnalysis.reachableGroundPrimitiveActions ++ domain.allGroundedAbstractTasks
-  override val additionalTaskNeededToGround   : Seq[GroundTask]                  = Nil
+  override val additionalTaskNeededToGround   : Seq[GroundTask]                  = initialPlan.groundedGoalTask :: Nil
   override val reachableGroundMethods         : Seq[GroundedDecompositionMethod] = domain.decompositionMethods flatMap {
     case method@SimpleDecompositionMethod(abstractTask, _) => reachableGroundedTasks filter { _.task == abstractTask } flatMap method.groundWithAbstractTaskGrounding
     case _                                                 => noSupport(NONSIMPLEMETHOD)
 
   }
   override val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod] = Nil
-  override val reachableGroundLiterals        : Seq[GroundLiteral]               = (reachableGroundedTasks flatMap { _.substitutedEffects.toSet }) ++ initialPlan.groundedInitialState
+  override val reachableGroundLiterals        : Seq[GroundLiteral]               =
+    ((reachableGroundedTasks flatMap { _.substitutedEffects.toSet }) ++ initialPlan.groundedInitialState) distinct
 }

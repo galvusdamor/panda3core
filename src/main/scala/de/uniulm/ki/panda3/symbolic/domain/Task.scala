@@ -104,9 +104,9 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task]{
       def constForVar(v: Variable): Constant = params(parameters indexOf v)
       parameterConstraints forall {
         case Equal(v1, c: Constant)     => constForVar(v1) == c
-        case Equal(v1, v2: Variable)    => constForVar(v2) == constForVar(v2)
+        case Equal(v1, v2: Variable)    => constForVar(v1) == constForVar(v2)
         case NotEqual(v1, c: Constant)  => constForVar(v1) != c
-        case NotEqual(v1, v2: Variable) => constForVar(v2) != constForVar(v2)
+        case NotEqual(v1, v2: Variable) => constForVar(v1) != constForVar(v2)
         case OfSort(v, s)               => s.elements contains constForVar(v)
         case NotOfSort(v, s)            => !(s.elements contains constForVar(v))
       }

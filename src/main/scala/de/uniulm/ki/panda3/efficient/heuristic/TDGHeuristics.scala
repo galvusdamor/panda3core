@@ -25,8 +25,10 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
   } toMap
 
 
-  protected def groundingEstimator(groundTask: EfficientGroundTask, plan: EfficientPlan, planStep: Int): Double =
+  protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double = {
+    val groundTask = EfficientGroundTask(plan.planStepTasks(planStep),arguments)
     if (!modificationEfforts.contains(groundTask)) Double.MaxValue else modificationEfforts(groundTask)
+  }
 
   override def computeHeuristic(plan: EfficientPlan): Double = {
     // accumulate for all actions in the plan

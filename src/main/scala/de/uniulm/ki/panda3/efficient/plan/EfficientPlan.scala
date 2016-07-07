@@ -26,13 +26,16 @@ import scala.collection.mutable.ArrayBuffer
   */
 // TODO there is no place to save the mapping, which planstep one is in their HTN parent's applied method subplan
 case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStepParameters: Array[Array[Int]], planStepDecomposedByMethod: Array[Int],
-                         planStepParentInDecompositionTree: Array[Int], planStepIsInstanceOfSubPlanPlanStep: Array[Int], variableConstraints: EfficientCSP, ordering: EfficientOrdering,
-                         causalLinks: Array[EfficientCausalLink], problemConfiguration: ProblemConfiguration)() {
+                         planStepParentInDecompositionTree: Array[Int], planStepIsInstanceOfSubPlanPlanStep: Array[Int], planStepSupportedPreconditions: Array[mutable.BitSet],
+                         potentialSupportersOfPlanStepPreconditions: Array[Array[mutable.BitSet]], causalLinksPotentialThreater: Array[mutable.BitSet],
+                         variableConstraints: EfficientCSP, ordering: EfficientOrdering, causalLinks: Array[EfficientCausalLink], problemConfiguration: ProblemConfiguration)() {
 
   assert(planStepTasks.length == planStepParameters.length)
   assert(planStepTasks.length == planStepDecomposedByMethod.length)
   assert(planStepTasks.length == planStepParentInDecompositionTree.length)
   assert(planStepTasks.length == planStepIsInstanceOfSubPlanPlanStep.length)
+  assert(planStepTasks.length == planStepSupportedPreconditions.length)
+  assert(planStepTasks.length == potentialSupportersOfPlanStepPreconditions.length)
   planStepTasks.indices foreach {
     ps =>
       /*println("PS " + ps)
@@ -46,6 +49,8 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
         planStepParameters(ps)(arg) < firstFreeVariableID
       }
   }
+
+  assert(causalLinksPotentialThreater.length == causalLinks.length)
 
   //assert(possibleSupportersByDecompositionPerLiteral.length == 2 * domain.predicates.length)
 
@@ -110,13 +115,14 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       var precondition = 0
       while (precondition < domain.tasks(planStepTasks(planStep)).precondition.length) {
         // check for a causal link
+        val foundSupporter = planStepSupportedPreconditions(planStep) contains precondition
+        /*var foundSupporter = false
         var causalLink = 0
-        var foundSupporter = false
         while (causalLink < causalLinks.length) {
           // checking whether this is the correct causal-link
           if (causalLinks(causalLink).consumer == planStep && causalLinks(causalLink).conditionIndexOfConsumer == precondition) foundSupporter = true
           causalLink += 1
-        }
+        }*/
 
         if (!foundSupporter) buffer append new EfficientOpenPrecondition(this, planStep, precondition)
 
@@ -174,6 +180,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       val causalLink = causalLinks(causalLinkNumber)
 
       // check whether the link is still present
+      assert(causalLink != null)
       if (planStepDecomposedByMethod(causalLink.producer) == -1 && planStepDecomposedByMethod(causalLink.consumer) == -1) {
 
         val producer = domain.tasks(planStepTasks(causalLink.producer))
@@ -183,8 +190,42 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
         val linkType = producerLiteral.isPositive
         val linkArguments = producer.getArgumentsOfLiteral(planStepParameters(causalLink.producer), producerLiteral)
 
+        // only iterate over potential threater
+        val potentialThreaterList = causalLinksPotentialThreater(causalLinkNumber)
+        val threaterIterator = potentialThreaterList.iterator
 
-        var planStepNumber = 2 // init and goal can nether threat a link
+        while (threaterIterator.hasNext) {
+          val potentialThreater = threaterIterator.next()
+
+          var isThreating = false
+          if (planStepDecomposedByMethod(potentialThreater) == -1) {
+            var effectNumber = 0
+            val planStep = domain.tasks(planStepTasks(potentialThreater))
+
+            // check whether it can before
+            if (!ordering.lteq(potentialThreater, causalLink.producer) && !ordering.lteq(causalLink.consumer, potentialThreater)) {
+
+              while (effectNumber < planStep.effect.length) {
+                val effect = planStep.effect(effectNumber)
+                if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
+                  // check whether unification is possible
+                  val mgu = variableConstraints.computeMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(potentialThreater), effect))
+                  if (mgu.isDefined) {
+                    flawBuffer append EfficientCausalThreat(this, causalLink, potentialThreater, effectNumber, mgu.get)
+                    isThreating = true
+                  }
+                }
+                effectNumber += 1
+              }
+            }
+          }
+
+          if (!isThreating)
+            potentialThreaterList remove potentialThreater
+        }
+
+
+        /*var planStepNumber = 2 // init and goal can never threat a link
         while (planStepNumber < planStepTasks.length) {
           if (planStepDecomposedByMethod(planStepNumber) == -1) {
             var effectNumber = 0
@@ -198,14 +239,18 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
                 if (effect.predicate == linkpredicate && effect.isPositive != linkType) {
                   // check whether unification is possible
                   val mgu = variableConstraints.computeMGU(linkArguments, planStep.getArgumentsOfLiteral(planStepParameters(planStepNumber), effect))
-                  if (mgu.isDefined) flawBuffer append EfficientCausalThreat(this, causalLink, planStepNumber, effectNumber, mgu.get)
+                  if (mgu.isDefined) {
+                    assert(causalLinksPotentialThreater(causalLinkNumber) contains planStepNumber)
+                    //println("THREAT")
+                    flawBuffer append EfficientCausalThreat(this, causalLink, planStepNumber, effectNumber, mgu.get)
+                  }
                 }
                 effectNumber += 1
               }
             }
           }
           planStepNumber += 1
-        }
+        }*/
       }
       causalLinkNumber += 1
     }
@@ -246,14 +291,28 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
     // apply the modification
 
-    // 1. new plan steps and the init -> ps -> goal orderings
-    val numberOfNewPlanSteps = firstFreePlanStepID + modification.addedPlanSteps.length
-    val newPlanStepTasks = new Array[Int](numberOfNewPlanSteps)
-    val newPlanStepParameters = new Array[Array[Int]](numberOfNewPlanSteps)
-    val newPlanStepDecomposedByMethod = new Array[Int](numberOfNewPlanSteps)
-    val newPlanStepParentInDecompositionTree = new Array[Int](numberOfNewPlanSteps)
-    val newPlanStepIsInstanceOfSubPlanPlanStep = new Array[Int](numberOfNewPlanSteps)
+    val numberOfPlanStepsInNewPlan = firstFreePlanStepID + modification.addedPlanSteps.length
+    val newPlanStepTasks = new Array[Int](numberOfPlanStepsInNewPlan)
+    val newPlanStepParameters = new Array[Array[Int]](numberOfPlanStepsInNewPlan)
+    val newPlanStepDecomposedByMethod = new Array[Int](numberOfPlanStepsInNewPlan)
+    val newPlanStepParentInDecompositionTree = new Array[Int](numberOfPlanStepsInNewPlan)
+    val newPlanStepIsInstanceOfSubPlanPlanStep = new Array[Int](numberOfPlanStepsInNewPlan)
+    val newPlanStepSupportedPreconditions = new Array[mutable.BitSet](numberOfPlanStepsInNewPlan)
+    val newPotentialSupportersOfPlanStepPreconditions = new Array[Array[mutable.BitSet]](numberOfPlanStepsInNewPlan)
+    val newCausalLinksPotentialThreater = new Array[mutable.BitSet](causalLinks.length + modification.addedCausalLinks.length)
+    // initialise threater table
+    var causalLinkIndex = 0
+    while (causalLinkIndex < newCausalLinksPotentialThreater.length) {
+      if (causalLinkIndex < causalLinks.length)
+        newCausalLinksPotentialThreater(causalLinkIndex) = causalLinksPotentialThreater(causalLinkIndex).clone()
+      else
+        newCausalLinksPotentialThreater(causalLinkIndex) = mutable.BitSet()
 
+      causalLinkIndex += 1
+    }
+
+
+    // 1. new plan steps and the init -> ps -> goal orderings
     var oldPS = 0
     while (oldPS < firstFreePlanStepID) {
       newPlanStepTasks(oldPS) = planStepTasks(oldPS)
@@ -261,6 +320,16 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       newPlanStepDecomposedByMethod(oldPS) = planStepDecomposedByMethod(oldPS)
       newPlanStepParentInDecompositionTree(oldPS) = planStepParentInDecompositionTree(oldPS)
       newPlanStepIsInstanceOfSubPlanPlanStep(oldPS) = planStepIsInstanceOfSubPlanPlanStep(oldPS)
+      newPlanStepSupportedPreconditions(oldPS) = planStepSupportedPreconditions(oldPS).clone()
+
+      var preconditionNumber = 0
+      val numberOfPreconditions = potentialSupportersOfPlanStepPreconditions(oldPS).length
+      newPotentialSupportersOfPlanStepPreconditions(oldPS) = new Array[mutable.BitSet](numberOfPreconditions)
+      while (preconditionNumber < numberOfPreconditions) {
+        if (!(newPlanStepSupportedPreconditions(oldPS) contains preconditionNumber))
+          newPotentialSupportersOfPlanStepPreconditions(oldPS)(preconditionNumber) = potentialSupportersOfPlanStepPreconditions(oldPS)(preconditionNumber).clone()
+        preconditionNumber += 1
+      }
       oldPS += 1
     }
 
@@ -272,21 +341,103 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       newPlanStepDecomposedByMethod(newPSIndex) = modification.addedPlanSteps(newPS)._3
       newPlanStepParentInDecompositionTree(newPSIndex) = modification.addedPlanSteps(newPS)._4
       newPlanStepIsInstanceOfSubPlanPlanStep(newPSIndex) = modification.addedPlanSteps(newPS)._5
+      newPlanStepSupportedPreconditions(newPSIndex) = mutable.BitSet()
+
+      // get the task schema
+      val numberOfPreconditions = domain.tasks(newPlanStepTasks(newPSIndex)).precondition.length
+      newPotentialSupportersOfPlanStepPreconditions(newPSIndex) = new Array[mutable.BitSet](numberOfPreconditions)
+
+      var precondition = 0
+      while (precondition < numberOfPreconditions) {
+        newPotentialSupportersOfPlanStepPreconditions(newPSIndex)(precondition) = mutable.BitSet()
+        precondition += 1
+      }
+
       // new plan steps are between init and goal
-      newOrdering.addOrderingConstraint(0, firstFreePlanStepID + newPS) // init < ps
-      newOrdering.addOrderingConstraint(firstFreePlanStepID + newPS, 1) // ps < goal
+      newOrdering.addOrderingConstraint(0, newPSIndex) // init < ps
+      newOrdering.addOrderingConstraint(newPSIndex, 1) // ps < goal
+
+      // check whether they threat old causal links
+      var oldCausalLinkIndex = 0
+      while (oldCausalLinkIndex < causalLinks.length) {
+        val producer = domain.tasks(newPlanStepTasks(causalLinks(oldCausalLinkIndex).producer))
+        val producerLiteral = producer.effect(causalLinks(oldCausalLinkIndex).conditionIndexOfProducer)
+        val linkpredicate = producerLiteral.predicate
+        val linkIsPositive = producerLiteral.isPositive
+
+        val possibleEffects = domain.taskToEffectPredicates(newPlanStepTasks(newPSIndex))
+        // positive link is threated by negative effect
+        val opposedEffect = if (linkIsPositive) possibleEffects._2 else possibleEffects._1
+        if (opposedEffect contains linkpredicate) newCausalLinksPotentialThreater(oldCausalLinkIndex).add(newPSIndex)
+
+        oldCausalLinkIndex += 1
+      }
+      newPS += 1
+    }
+
+    // update the potential supporter table
+    newPS = 0
+    while (newPS < modification.addedPlanSteps.length) {
+      val newPSIndex = firstFreePlanStepID + newPS
+      val thisPSTaskID = newPlanStepTasks(newPSIndex)
+      val newPSSupporter = domain.tasksPreconditionCanBeSupportedBy(thisPSTaskID)
+
+      var otherPlanStep = 0
+      while (otherPlanStep < numberOfPlanStepsInNewPlan) {
+        val otherPSTaskID = newPlanStepTasks(otherPlanStep)
+
+        // newPS supporters
+        var precondition = 0
+        while (precondition < newPSSupporter.length) {
+          if (!(newPlanStepSupportedPreconditions(newPSIndex) contains precondition) && (newPSSupporter(precondition) contains otherPSTaskID))
+            newPotentialSupportersOfPlanStepPreconditions(newPSIndex)(precondition) add otherPlanStep
+          precondition += 1
+        }
+
+        val otherPSSupporter = domain.tasksPreconditionCanBeSupportedBy(otherPSTaskID)
+        precondition = 0
+        while (precondition < otherPSSupporter.length) {
+          if (!(newPlanStepSupportedPreconditions(otherPlanStep) contains precondition) && (otherPSSupporter(precondition) contains thisPSTaskID))
+            newPotentialSupportersOfPlanStepPreconditions(otherPlanStep)(precondition) add newPSIndex
+          precondition += 1
+        }
+
+        otherPlanStep += 1
+      }
       newPS += 1
     }
 
     // 2. new causal links
     val newCausalLinks = new Array[EfficientCausalLink](causalLinks.length + modification.addedCausalLinks.length)
-    var causalLinkIndex = 0
+    causalLinkIndex = 0
     while (causalLinkIndex < newCausalLinks.length) {
       if (causalLinkIndex < causalLinks.length)
         newCausalLinks(causalLinkIndex) = causalLinks(causalLinkIndex)
-      else
+      else {
+        // this is a new causal link
         newCausalLinks(causalLinkIndex) = modification.addedCausalLinks(causalLinkIndex - causalLinks.length)
+        // closes an open precondition
+        newPlanStepSupportedPreconditions(newCausalLinks(causalLinkIndex).consumer) add newCausalLinks(causalLinkIndex).conditionIndexOfConsumer
 
+        val producer = domain.tasks(newPlanStepTasks(newCausalLinks(causalLinkIndex).producer))
+        val producerLiteral = producer.effect(newCausalLinks(causalLinkIndex).conditionIndexOfProducer)
+        val linkpredicate = producerLiteral.predicate
+        val linkIsPositive = producerLiteral.isPositive
+
+        // iterate over all actions and check whether they might threat us
+        var planStep = 2
+        while (planStep < numberOfPlanStepsInNewPlan) {
+          if (planStep >= numberOfAllPlanSteps || isPlanStepPresentInPlan(planStep)) {
+            val possibleEffects = domain.taskToEffectPredicates(newPlanStepTasks(planStep))
+            // positive link is threated by negative effect
+            val opposedEffect = if (linkIsPositive) possibleEffects._2 else possibleEffects._1
+
+            if (opposedEffect contains linkpredicate)
+              newCausalLinksPotentialThreater(causalLinkIndex).add(planStep)
+          }
+          planStep += 1
+        }
+      }
       causalLinkIndex += 1
     }
 
@@ -305,7 +456,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     }
 
 
-    // 5. mark all decomposed planteps as decomposed
+    // 5. mark all decomposed plansteps as decomposed
     var decomposedPS = 0
     while (decomposedPS < modification.decomposedPlanStepsByMethod.length) {
       val decompositionInformation = modification.decomposedPlanStepsByMethod(decomposedPS)
@@ -314,7 +465,8 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     }
 
     val newPlan = EfficientPlan(domain, newPlanStepTasks, newPlanStepParameters, newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree,
-                                newPlanStepIsInstanceOfSubPlanPlanStep, newVariableConstraints, newOrdering, newCausalLinks, problemConfiguration)()
+                                newPlanStepIsInstanceOfSubPlanPlanStep, newPlanStepSupportedPreconditions, newPotentialSupportersOfPlanStepPreconditions, newCausalLinksPotentialThreater,
+                                newVariableConstraints, newOrdering, newCausalLinks, problemConfiguration)()
 
     //newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)
 

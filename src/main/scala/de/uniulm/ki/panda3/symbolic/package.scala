@@ -8,6 +8,7 @@ package object symbolic {
   val NONSIMPLEMETHOD: String  = "non-simple decomposition methods"
   val REINSTANTIATINGPLANSINOUTSIDEMETHODS = "re-instantiating plan that are not part of methods"
   val UNSUPPORTEDPROBLEMTYPE = "any problem type apart from non-hierachical, pure-hierarchical and hybrid domains"
+  val LIFTEDGOAL = "a lifted goal description"
 
   def noSupport(message: String): Nothing = throw new UnsupportedOperationException("The current version of PANDA3 does not support " + message)
 }

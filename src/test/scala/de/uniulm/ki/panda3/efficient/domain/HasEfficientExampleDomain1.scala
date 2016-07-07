@@ -6,6 +6,8 @@ import de.uniulm.ki.panda3.efficient.plan.{ProblemConfiguration, EfficientPlan}
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
 
+import scala.collection.mutable
+
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
@@ -50,8 +52,11 @@ trait HasEfficientExampleDomain1 {
     ordering.addOrderingConstraint(5, 3)
     val causalLink = EfficientCausalLink(3, 4, 0, 0)
     EfficientPlan(domain, Array(0, 1, 4, 2, 3, 4, 4, 4), Array(Array(), Array(), Array(0, 2), Array(1), Array(3), Array(4, 4), Array(5, 5), Array(5, 5)),
-                  Array(-1, -1, -1, -1, -1, -1, -1, 1), Array(-1, -1, -1, -1, -1, -1, -1, -1), Array(-1, -1, -1, -1, -1, -1, -1, -1), csp, ordering, Array(causalLink),
-                  problemConfiguration)()
+                  Array(-1, -1, -1, -1, -1, -1, -1, 1), Array(-1, -1, -1, -1, -1, -1, -1, -1), Array(-1, -1, -1, -1, -1, -1, -1, -1),
+                  Array(mutable.BitSet(), mutable.BitSet(), mutable.BitSet(), mutable.BitSet(), mutable.BitSet(0), mutable.BitSet(), mutable.BitSet(), mutable.BitSet()),
+                  Array(Array(), Array(mutable.BitSet(0,2,3,4,5,6,7)), Array(mutable.BitSet(0,1,3,4,5,6,7)), Array(mutable.BitSet(0,1,2,4,5,6,7)), Array(mutable.BitSet(0,1,2,3,5,6,7)),
+                        Array(mutable.BitSet(0,1,2,3,4,6,7)), Array(mutable.BitSet(0,1,2,3,4,5,7)), Array(mutable.BitSet(0,1,2,3,4,5,6))), Array(mutable.BitSet(0,1,2,3,4,5,6,7)),
+                  csp, ordering, Array(causalLink), problemConfiguration)()
   }
 
 
@@ -78,7 +83,9 @@ trait HasEfficientExampleDomain1 {
     ordering.addOrderingConstraint(3, 1)
     ordering.addOrderingConstraint(2, 1)
 
-    EfficientPlan(domain, Array(0, 1, 6, 4), Array(Array(), Array(), Array(0), Array(0, 0)), Array(-1, -1, -1, -1), Array(-1, -1, -1, -1), Array(-1, -1, -1, -1), csp, ordering, Array(),
-                  problemConfiguration)()
+    EfficientPlan(domain, Array(0, 1, 6, 4), Array(Array(), Array(), Array(0), Array(0, 0)), Array(-1, -1, -1, -1), Array(-1, -1, -1, -1), Array(-1, -1, -1, -1),
+                  Array(mutable.BitSet(), mutable.BitSet(), mutable.BitSet(), mutable.BitSet()),
+                  Array(Array(), Array(mutable.BitSet(0,2,3)), Array(mutable.BitSet(0,1,3)), Array(mutable.BitSet(0,1,2))),
+                  Array(), csp, ordering, Array(), problemConfiguration)()
   }
 }

@@ -30,14 +30,16 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
       possibleProducer += 1
     }*/
 
-    val precondition = plan.domain.tasks(plan.planStepTasks(planStep)).precondition(preconditionIndex)
-    val literalIndex = 2 * precondition.predicate + (if (precondition.isPositive) 0 else 1)
-    val possibleProducer = plan.possibleSupportersByDecompositionPerLiteral(literalIndex)
-    var indexOnPossibleProducer = 0
-    while (indexOnPossibleProducer < possibleProducer.length) {
-      if (!plan.ordering.gt(possibleProducer(indexOnPossibleProducer), planStep)) // don't decompose plan steps that cannot possibly support the precondition
-        numberOfResolvers += EfficientDecomposePlanStep.estimate(plan, this, possibleProducer(indexOnPossibleProducer), precondition.predicate, precondition.isPositive)
-      indexOnPossibleProducer += 1
+    if (plan.problemConfiguration.decompositionAllowed) {
+      val precondition = plan.domain.tasks(plan.planStepTasks(planStep)).precondition(preconditionIndex)
+      val literalIndex = 2 * precondition.predicate + (if (precondition.isPositive) 0 else 1)
+      val possibleProducer = plan.possibleSupportersByDecompositionPerLiteral(literalIndex)
+      var indexOnPossibleProducer = 0
+      while (indexOnPossibleProducer < possibleProducer.length) {
+        if (!plan.ordering.gt(possibleProducer(indexOnPossibleProducer), planStep)) // don't decompose plan steps that cannot possibly support the precondition
+          numberOfResolvers += EfficientDecomposePlanStep.estimate(plan, this, possibleProducer(indexOnPossibleProducer), precondition.predicate, precondition.isPositive)
+        indexOnPossibleProducer += 1
+      }
     }
 
     numberOfResolvers
@@ -50,15 +52,17 @@ case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, precond
     buffer appendAll EfficientInsertCausalLink(plan, this, planStep, preconditionIndex)
     buffer appendAll EfficientInsertPlanStepWithLink(plan, this, planStep, preconditionIndex)
 
-    // TODO decompose only those plan steps that can lead to the necessary effect
-    val precondition = plan.domain.tasks(plan.planStepTasks(planStep)).precondition(preconditionIndex)
-    val literalIndex = 2 * precondition.predicate + (if (precondition.isPositive) 0 else 1)
-    val possibleProducer = plan.possibleSupportersByDecompositionPerLiteral(literalIndex)
-    var indexOnPossibleProducer = 0
-    while (indexOnPossibleProducer < possibleProducer.length) {
-      if (!plan.ordering.gt(possibleProducer(indexOnPossibleProducer), planStep)) // don't decompose plan steps that cannot possibly support the precondition
-        buffer appendAll EfficientDecomposePlanStep(plan, this, possibleProducer(indexOnPossibleProducer), precondition.predicate, precondition.isPositive)
-      indexOnPossibleProducer += 1
+    if (plan.problemConfiguration.decompositionAllowed) {
+      // TODO decompose only those plan steps that can lead to the necessary effect
+      val precondition = plan.domain.tasks(plan.planStepTasks(planStep)).precondition(preconditionIndex)
+      val literalIndex = 2 * precondition.predicate + (if (precondition.isPositive) 0 else 1)
+      val possibleProducer = plan.possibleSupportersByDecompositionPerLiteral(literalIndex)
+      var indexOnPossibleProducer = 0
+      while (indexOnPossibleProducer < possibleProducer.length) {
+        if (!plan.ordering.gt(possibleProducer(indexOnPossibleProducer), planStep)) // don't decompose plan steps that cannot possibly support the precondition
+          buffer appendAll EfficientDecomposePlanStep(plan, this, possibleProducer(indexOnPossibleProducer), precondition.predicate, precondition.isPositive)
+        indexOnPossibleProducer += 1
+      }
     }
     buffer.toArray
   }
