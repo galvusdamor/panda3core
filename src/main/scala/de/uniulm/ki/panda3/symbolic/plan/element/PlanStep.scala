@@ -83,7 +83,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
 /**
   * A ground task is basically a planstep without an id.
   */
-case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
+case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo with PrettyPrintable{
   assert(task.parameters.size == arguments.size)
   task.parameters.zipWithIndex foreach { case (p, i) => assert(p.sort.elements.contains(arguments(i))) }
 
@@ -101,6 +101,15 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
     case reduced: ReducedTask => reduced.effect.conjuncts map { _ ground parameterSubstitution }
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = task.name
+
+  /** returns a string that can be utilized to define the object */
+  override def mediumInfo: String = shortInfo + (arguments map {_.name}).mkString("(",",",")")
+
+  /** returns a detailed information about the object */
+  override def longInfo: String = mediumInfo
 }
 
 
