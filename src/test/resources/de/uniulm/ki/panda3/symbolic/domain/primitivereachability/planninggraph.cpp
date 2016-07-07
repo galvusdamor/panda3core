@@ -270,7 +270,7 @@ int buildGraph(){
 		lastAction = sz(appli) + sz(oldState.pos);
 		lastStateMutex = sz(sMutex);
 		lastActionMutex = sz(aMutex) + noopMutexCount;
-		cout << lastAction  << " " << lastActionMutex/2 << " " << lastState << " " << lastStateMutex << endl;
+		cout << lastAction  << " " << lastActionMutex/2 << " " << lastState << " " << lastStateMutex/2 << endl;
 
 		sLayer.push_back(st);
 	}
