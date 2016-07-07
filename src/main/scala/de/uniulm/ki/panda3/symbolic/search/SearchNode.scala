@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.symbolic.search
 
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
+import de.uniulm.ki.util.DotPrintable
 
 import scala.concurrent.Promise
 import scala.util.Success
@@ -14,7 +15,7 @@ import scala.util.Success
   * @param nodeParent the computed heuristic of this node. This might be -1 if the search procedure does not use a heuristic
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class SearchNode(nodeId: Int, nodePlan: Unit => Plan, nodeParent: SearchNode, nodeHeuristic: Double) {
+class SearchNode(nodeId: Int, nodePlan: Unit => Plan, nodeParent: SearchNode, nodeHeuristic: Double) extends DotPrintable[Unit] {
 
   val id: Int = nodeId
   lazy val plan: Plan = nodePlan()
@@ -122,5 +123,25 @@ class SearchNode(nodeId: Int, nodePlan: Unit => Plan, nodeParent: SearchNode, no
       }
     }
     memoryPayload.orNull
+  }
+
+  override lazy val dotString: String = dotString(())
+
+  /** The DOT representation of the object with options */
+  override def dotString(options: Unit): String = {
+    val builder = new StringBuilder
+    builder append "digraph somePlan{\n"
+
+    // enumerate by dfs
+    def dfs(currentNode: SearchNode): Unit = currentNode.children foreach { case (child, position) =>
+      builder append "\tn" + currentNode.id + " -> t" + child.id + ";\n"
+      dfs(child)
+    }
+
+    dfs(this)
+
+    builder append "}"
+    // retrun the graph
+    builder.toString
   }
 }
