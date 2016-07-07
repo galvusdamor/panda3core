@@ -11,116 +11,118 @@ import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
   */
 case class GroundedPlanningGraph
 (domain: Domain, initialState: Set[GroundLiteral], computeMutexes: Boolean, isSerial: Boolean, disallowedTasks: Either[Seq[GroundTask], Seq[Task]] = Left(Nil))
-	extends LayeredGroundedPrimitiveReachabilityAnalysis {
+  extends LayeredGroundedPrimitiveReachabilityAnalysis {
 
-  initialState foreach { f => assert(f.isPositive)}
+  initialState foreach { f => assert(f.isPositive) }
 
-  lazy val graphSize: Int = layerWithMutexes.size
+  lazy          val graphSize: Int                                        = layerWithMutexes.size
   // This function should compute the actual planning graph
-  override lazy val layer: Seq[(Set[GroundTask], Set[GroundLiteral])] = layerWithMutexes map { case (groundTasks, groundTaskMutexes, groundLiterals, groundLiteralMutexes) =>
+  override lazy val layer    : Seq[(Set[GroundTask], Set[GroundLiteral])] = layerWithMutexes map { case (groundTasks, groundTaskMutexes, groundLiterals, groundLiteralMutexes) =>
     (groundTasks filterNot {
       _.task.name.startsWith("NO-OP")
     }, groundLiterals)
   }
 
-  layer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive)}}
+  layer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
 
-	lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
+  lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
 
-		buildGraph((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)]),
-		           initialState, Set.empty[(GroundLiteral, GroundLiteral)], firstLayer = true, Map())
-	}
+    buildGraph((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)]),
+               initialState, Set.empty[(GroundLiteral, GroundLiteral)], firstLayer = true, Map())
+  }
 
-	def buildGraph(previousLayer: (Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)]),
-	               addedPropositions: Set[GroundLiteral], deletedMutexes: Set[(GroundLiteral, GroundLiteral)], firstLayer: Boolean, oldPreconMap: Map[Predicate, Set[GroundLiteral]]):
-	Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
+  def buildGraph(previousLayer: (Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)]),
+                 addedPropositions: Set[GroundLiteral], deletedMutexes: Set[(GroundLiteral, GroundLiteral)], firstLayer: Boolean, oldPreconMap: Map[Predicate, Set[GroundLiteral]]):
+  Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
 
-		val updatedPrecondMap = fillPreconMap(oldPreconMap, addedPropositions)
+    val updatedPrecondMap = fillPreconMap(oldPreconMap, addedPropositions)
 
-		// determine which grounded literals in the last state layer may cause new grounded actions to be applicable
-		val changedPropositions: Set[GroundLiteral] = addedPropositions ++ (deletedMutexes flatMap { mutex => Set(mutex._1, mutex._2) })
-		val tasksToBeConsidered: Set[(GroundLiteral, Seq[ReducedTask])] = changedPropositions map { groundLiteral => (groundLiteral, domain.consumersOf(groundLiteral.predicate)) }
-
-
-		// create the newly applicable grounded actions
-		val newGroundTasksFromPreconditions: Set[GroundTask] = tasksToBeConsidered flatMap { case (groundLiteral, tasks) => tasks flatMap { task => disallowedTasks match {
-			case Right(forbiddenLiftedTasks) if forbiddenLiftedTasks contains task => Set.empty[GroundTask]
-			case _                                                                 =>
-				task.precondition.conjuncts filter { literal => literal.predicate == groundLiteral.predicate } flatMap { startLiteral =>
-					createActionInstances(task, groundLiteral, startLiteral, task.precondition.conjuncts, previousLayer._4, updatedPrecondMap)
-				}
-		}
-		}
-		}
-		// special treatment for tasks without preconditions. the are always applicable in the first action layer
-		val newGroundTasksFromParameters: Set[GroundTask] = firstLayer match {
-			case true  => createActionInstancesForTasksWithoutPreconditions(domain.tasks collect {
-				case t: ReducedTask => t
-			} filter { reducedTask => reducedTask.precondition.conjuncts.isEmpty })
-			case false => Set.empty[GroundTask]
-		}
-		// round up
-		val newInstantiatedGroundTasks: Set[GroundTask] = newGroundTasksFromPreconditions ++ newGroundTasksFromParameters
-		val newNoOps: Set[GroundTask] = addedPropositions map { groundLiteral => createNOOP(groundLiteral) }
-		val allGroundTasks: Set[GroundTask] = previousLayer._1 ++ newInstantiatedGroundTasks ++ newNoOps
+    // determine which grounded literals in the last state layer may cause new grounded actions to be applicable
+    val changedPropositions: Set[GroundLiteral] = addedPropositions ++ (deletedMutexes flatMap { mutex => Set(mutex._1, mutex._2) })
+    val tasksToBeConsidered: Set[(GroundLiteral, Seq[ReducedTask])] = changedPropositions map { groundLiteral => (groundLiteral, domain.consumersOf(groundLiteral.predicate)) }
 
 
-		// compute task mutexes anew
-		// TODO here we could to things a lot more efficiently
-		val groundTaskPairs: Set[(GroundTask, GroundTask)] = for (x <- allGroundTasks; y <- allGroundTasks; if (x compare y) > 0) yield (x, y)
-		val taskMutexes: Set[(GroundTask, GroundTask)] = {
-			if (computeMutexes) {
-				val normalMutexes = groundTaskPairs filter { case (groundTask1, groundTask2) =>
-					(groundTask1.substitutedDelEffects exists { substitutedEffect =>
-						(groundTask2.substitutedAddEffects ++ groundTask2.substitutedPreconditions) exists {
-							_.=!=(substitutedEffect)
-						}
-					}) ||
-						(for (x <- groundTask1.substitutedPreconditions; y <- groundTask2.substitutedPreconditions) yield (x, y)).exists(previousLayer._4.contains)
-				}
-				if (isSerial) {
-					(groundTaskPairs filterNot { case (groundTask1, groundTask2) =>
-						groundTask1.task.name.startsWith("NO-OP") || groundTask2.task.name.startsWith("NO-OP") }) union normalMutexes
-				} else {
-					normalMutexes
-				}
-			} else {
-				Set.empty[(GroundTask, GroundTask)]
-			}
-		} filter { case (groundTask1, groundTask2) => groundTask1 != groundTask2 }
+    // create the newly applicable grounded actions
+    val newGroundTasksFromPreconditions: Set[GroundTask] = tasksToBeConsidered flatMap { case (groundLiteral, tasks) => tasks flatMap { task => disallowedTasks match {
+      case Right(forbiddenLiftedTasks) if forbiddenLiftedTasks contains task => Set.empty[GroundTask]
+      case _                                                                 =>
+        task.precondition.conjuncts filter { literal => literal.predicate == groundLiteral.predicate } flatMap { startLiteral =>
+          createActionInstances(task, groundLiteral, startLiteral, task.precondition.conjuncts, previousLayer._4, updatedPrecondMap)
+        }
+    }
+    }
+    }
+    // special treatment for tasks without preconditions. the are always applicable in the first action layer
+    val newGroundTasksFromParameters: Set[GroundTask] = firstLayer match {
+      case true  => createActionInstancesForTasksWithoutPreconditions(domain.tasks collect {
+        case t: ReducedTask => t
+      } filter { reducedTask => reducedTask.precondition.conjuncts.isEmpty })
+      case false => Set.empty[GroundTask]
+    }
+    // round up
+    val newInstantiatedGroundTasks: Set[GroundTask] = newGroundTasksFromPreconditions ++ newGroundTasksFromParameters
+    val newNoOps: Set[GroundTask] = addedPropositions map { groundLiteral => createNOOP(groundLiteral) }
+    val allGroundTasks: Set[GroundTask] = previousLayer._1 ++ newInstantiatedGroundTasks ++ newNoOps
 
 
-		// determine new propositions
-		val newPropositions: Set[GroundLiteral] = (newInstantiatedGroundTasks flatMap { newGroundTask => newGroundTask.substitutedAddEffects }) -- previousLayer._3
-		val allPropositions: Set[GroundLiteral] = newPropositions ++ previousLayer._3
+    // compute task mutexes anew
+    // TODO here we could to things a lot more efficiently
+    val groundTaskPairs: Set[(GroundTask, GroundTask)] = for (x <- allGroundTasks; y <- allGroundTasks; if (x compare y) > 0) yield (x, y)
+    val taskMutexes: Set[(GroundTask, GroundTask)] = {
+      if (computeMutexes) {
+        val normalMutexes = groundTaskPairs filter { case (groundTask1, groundTask2) =>
+          (groundTask1.substitutedDelEffects exists { substitutedEffect =>
+            (groundTask2.substitutedAddEffects ++ groundTask2.substitutedPreconditions) exists {
+              _.=!=(substitutedEffect)
+            }
+          }) ||
+            (for (x <- groundTask1.substitutedPreconditions; y <- groundTask2.substitutedPreconditions) yield if ((x compare y) > 0) (x, y) else (y, x)).
+              exists(previousLayer._4.contains)
+        }
+        if (isSerial) {
+          (groundTaskPairs filterNot { case (groundTask1, groundTask2) =>
+            groundTask1.task.name.startsWith("NO-OP") || groundTask2.task.name.startsWith("NO-OP")
+          }) union normalMutexes
+        } else {
+          normalMutexes
+        }
+      } else {
+        Set.empty[(GroundTask, GroundTask)]
+      }
+    } filter { case (groundTask1, groundTask2) => groundTask1 != groundTask2 }
 
-		// compute proposition mutexes anew
-		// TODO here we could to things a lot more efficiently
-		val propositionsAndTheirProducers: Map[GroundLiteral, Set[GroundTask]] = (allPropositions map { groundLiteral => (groundLiteral, allGroundTasks filter {
-			groundTask => groundTask.substitutedAddEffects contains groundLiteral
-		})
-		}).toMap
-		val propositionPairs: Set[(GroundLiteral, GroundLiteral)] = for (x <- allPropositions; y <- allPropositions; if(x compare y) > 0) yield (x, y)
-		val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = computeMutexes match {
-			case true  => propositionPairs filter { case (groundLiteral1, groundLiteral2) =>
-				(for (x <- propositionsAndTheirProducers(groundLiteral1); y <- propositionsAndTheirProducers(groundLiteral2); if(x compare y ) > 0) yield (x, y)) forall {
-					case groundTaskPair => taskMutexes contains groundTaskPair
-				}
-			}
-			case false => Set.empty[(GroundLiteral, GroundLiteral)]
-		}
 
-		// termination and looping checks. Loop if something has changed compared with the previous layer of the PG
-		val thisLayer = (allGroundTasks, taskMutexes, allPropositions, propositionMutexes)
-		if (newPropositions.isEmpty && previousLayer._4.size == propositionMutexes.size) {
-			if (previousLayer._1.size != allGroundTasks.size || previousLayer._2.size != taskMutexes.size || (previousLayer._3 == initialState && previousLayer._4.isEmpty))
-				thisLayer :: Nil
-			else
-				Seq.empty[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])]
-		} else {
-			thisLayer +: buildGraph(thisLayer, newPropositions, previousLayer._4 diff propositionMutexes, firstLayer = false, updatedPrecondMap)
-		}
-	}
+    // determine new propositions
+    val newPropositions: Set[GroundLiteral] = (newInstantiatedGroundTasks flatMap { newGroundTask => newGroundTask.substitutedAddEffects }) -- previousLayer._3
+    val allPropositions: Set[GroundLiteral] = newPropositions ++ previousLayer._3
+
+    // compute proposition mutexes anew
+    // TODO here we could to things a lot more efficiently
+    val propositionsAndTheirProducers: Map[GroundLiteral, Set[GroundTask]] = (allPropositions map { groundLiteral => (groundLiteral, allGroundTasks filter {
+      groundTask => groundTask.substitutedAddEffects contains groundLiteral
+    })
+    }).toMap
+    val propositionPairs: Set[(GroundLiteral, GroundLiteral)] = for (x <- allPropositions; y <- allPropositions; if (x compare y) > 0) yield (x, y)
+    val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = computeMutexes match {
+      case true  => propositionPairs filter { case (groundLiteral1, groundLiteral2) =>
+        (for (x <- propositionsAndTheirProducers(groundLiteral1); y <- propositionsAndTheirProducers(groundLiteral2)) yield if ((x compare y) > 0) (x, y) else (y, x)) forall {
+          case groundTaskPair => taskMutexes contains groundTaskPair
+        }
+      }
+      case false => Set.empty[(GroundLiteral, GroundLiteral)]
+    }
+
+    // termination and looping checks. Loop if something has changed compared with the previous layer of the PG
+    val thisLayer = (allGroundTasks, taskMutexes, allPropositions, propositionMutexes)
+    if (newPropositions.isEmpty && previousLayer._4.size == propositionMutexes.size) {
+      if (previousLayer._1.size != allGroundTasks.size || previousLayer._2.size != taskMutexes.size || (previousLayer._3 == initialState && previousLayer._4.isEmpty))
+        thisLayer :: Nil
+      else
+        Seq.empty[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])]
+    } else {
+      thisLayer +: buildGraph(thisLayer, newPropositions, previousLayer._4 diff propositionMutexes, firstLayer = false, updatedPrecondMap)
+    }
+  }
 
   /**
     * Does the actual instantiation magic, iterals over pairs of preconditions (the current one is the argument literal) and a matching ground literal (currently groundLiteral).
@@ -142,16 +144,16 @@ case class GroundedPlanningGraph
       assignPairs foreach { case (v, c) => assert(v.sort.elements contains c) }
       val updatedAssignMap: Map[Variable, Constant] = assignPairs.foldLeft(assignMap) { case (aMap, (variable, constant)) => aMap + (variable -> constant) }
 
-        // check whether we might have violated parameter constraints
-        val taskConstraintsOK = task.parameterConstraints forall {
-          case Equal(var1, var2: Variable) => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) == updatedAssignMap(var2) else true
-          case Equal(var1, const: Constant) => if (updatedAssignMap contains var1) updatedAssignMap(var1) == const else true
-          case NotEqual(var1, var2: Variable) => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) != updatedAssignMap(var2) else true
-          case NotEqual(var1, const: Constant) => if (updatedAssignMap contains var1) updatedAssignMap(var1) != const else true
-          case OfSort(vari, sort) => if (updatedAssignMap contains vari) sort.elements contains updatedAssignMap(vari) else true
-          case NotOfSort(vari, sort) => if (updatedAssignMap contains vari) !(sort.elements contains updatedAssignMap(vari)) else true
-        }
-        if (taskConstraintsOK) {
+      // check whether we might have violated parameter constraints
+      val taskConstraintsOK = task.parameterConstraints forall {
+        case Equal(var1, var2: Variable)     => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) == updatedAssignMap(var2) else true
+        case Equal(var1, const: Constant)    => if (updatedAssignMap contains var1) updatedAssignMap(var1) == const else true
+        case NotEqual(var1, var2: Variable)  => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) != updatedAssignMap(var2) else true
+        case NotEqual(var1, const: Constant) => if (updatedAssignMap contains var1) updatedAssignMap(var1) != const else true
+        case OfSort(vari, sort)              => if (updatedAssignMap contains vari) sort.elements contains updatedAssignMap(vari) else true
+        case NotOfSort(vari, sort)           => if (updatedAssignMap contains vari) !(sort.elements contains updatedAssignMap(vari)) else true
+      }
+      if (taskConstraintsOK) {
 
         //Check if all preconditions of the task have been assigned
         if (updatedPrecons.isEmpty) {
@@ -189,19 +191,19 @@ case class GroundedPlanningGraph
       } else Set()
     }
 
-	def fillPreconMap(preconMap: Map[Predicate, Set[GroundLiteral]], propositions: Set[GroundLiteral]): Map[Predicate, Set[GroundLiteral]] =
-		propositions
-			.foldLeft(preconMap) { case (pMap, groundLiteral) => pMap + (groundLiteral.predicate -> (pMap.getOrElse(groundLiteral.predicate, Set.empty[GroundLiteral]) + groundLiteral)) }
+  def fillPreconMap(preconMap: Map[Predicate, Set[GroundLiteral]], propositions: Set[GroundLiteral]): Map[Predicate, Set[GroundLiteral]] =
+    propositions
+      .foldLeft(preconMap) { case (pMap, groundLiteral) => pMap + (groundLiteral.predicate -> (pMap.getOrElse(groundLiteral.predicate, Set.empty[GroundLiteral]) + groundLiteral)) }
 
-	def checkCorrectAssignment(checkedLiteral: Literal, potentialGroundLiteral: GroundLiteral, assignmentMap: Map[Variable, Constant]): Boolean = {
-		(checkedLiteral.parameterVariables zip potentialGroundLiteral.parameter) forall { case (variable, constant) => assignmentMap.getOrElse(variable, constant) == constant }
-	}
+  def checkCorrectAssignment(checkedLiteral: Literal, potentialGroundLiteral: GroundLiteral, assignmentMap: Map[Variable, Constant]): Boolean = {
+    (checkedLiteral.parameterVariables zip potentialGroundLiteral.parameter) forall { case (variable, constant) => assignmentMap.getOrElse(variable, constant) == constant }
+  }
 
-	def isMutexFree(groundLiterals: Seq[GroundLiteral], mutexes: Set[(GroundLiteral, GroundLiteral)], potentialGroundLiteral: GroundLiteral): Boolean = {
-		val allGroundLiterals = groundLiterals :+ potentialGroundLiteral
-		val groundLiteralPairs = for (x <- allGroundLiterals; y <- allGroundLiterals; if(x compare y) > 0) yield (x, y)
-		groundLiteralPairs forall { potentialMutex => !(mutexes contains potentialMutex) }
-	}
+  def isMutexFree(groundLiterals: Seq[GroundLiteral], mutexes: Set[(GroundLiteral, GroundLiteral)], potentialGroundLiteral: GroundLiteral): Boolean = {
+    val allGroundLiterals = groundLiterals :+ potentialGroundLiteral
+    val groundLiteralPairs = for (x <- allGroundLiterals; y <- allGroundLiterals; if (x compare y) > 0) yield (x, y)
+    groundLiteralPairs forall { potentialMutex => !(mutexes contains potentialMutex) }
+  }
 
   //TODO: can be improved, somewhere in Gregor's code is the solution
   def computeAllPossibleSubstitutionCombinations(variables: Seq[Variable]): Seq[Seq[Constant]] = {
@@ -213,19 +215,19 @@ case class GroundedPlanningGraph
     computeSubstitutionCombinations(variablesWithPossibleSubstitutions map { case (v, c) => c })
   }
 
-	def createActionInstancesForTasksWithoutPreconditions(tasks: Seq[ReducedTask]): Set[GroundTask] = {
-		(tasks flatMap { task => computeAllPossibleSubstitutionCombinations(task.parameters) map { combination => GroundTask(task, combination) } }).toSet
-	}
+  def createActionInstancesForTasksWithoutPreconditions(tasks: Seq[ReducedTask]): Set[GroundTask] = {
+    (tasks flatMap { task => computeAllPossibleSubstitutionCombinations(task.parameters) map { combination => GroundTask(task, combination) } }).toSet
+  }
 
-	def createNOOP(groundLiteral: GroundLiteral): GroundTask = {
-		val parameters: Seq[Variable] = groundLiteral.parameter.zipWithIndex map { case (constant, id) => Variable(id, "no-op",
-		                                                                                                           (domain.sorts find { sort => sort.elements contains constant }).get)
-		}
-		val literal: Literal = Literal(groundLiteral.predicate, isPositive = true, parameters)
-		val task: ReducedTask = ReducedTask("NO-OP[" + groundLiteral.predicate.name + "]",
-		                                    isPrimitive = true, parameters, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
-		GroundTask(task, groundLiteral.parameter)
-	}
+  def createNOOP(groundLiteral: GroundLiteral): GroundTask = {
+    val parameters: Seq[Variable] = groundLiteral.parameter.zipWithIndex map { case (constant, id) => Variable(id, "no-op",
+                                                                                                               (domain.sorts find { sort => sort.elements contains constant }).get)
+    }
+    val literal: Literal = Literal(groundLiteral.predicate, isPositive = true, parameters)
+    val task: ReducedTask = ReducedTask("NO-OP[" + groundLiteral.predicate.name + "]",
+                                        isPrimitive = true, parameters, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
+    GroundTask(task, groundLiteral.parameter)
+  }
 
 }
 
