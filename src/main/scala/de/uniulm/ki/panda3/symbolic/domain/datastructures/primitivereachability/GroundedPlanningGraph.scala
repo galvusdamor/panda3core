@@ -85,7 +85,7 @@ case class GroundedPlanningGraph
 			          _.=!=(substitutedEffect)
 		          }
 	          }) ||
-            (for (x <- groundTask1.substitutedPreconditions; y <- groundTask2.substitutedPreconditions) yield if ((x compare y) < 0) (x, y) else (y, x)).
+            (for (x <- groundTask1.substitutedPreconditions; y <- groundTask2.substitutedPreconditions; if (x compare y) < 0) yield (x, y) ).
               exists(previousLayer._4.contains)
         }
         if (isSerial) {
