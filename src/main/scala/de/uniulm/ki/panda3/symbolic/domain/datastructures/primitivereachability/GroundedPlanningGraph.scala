@@ -97,8 +97,8 @@ case class GroundedPlanningGraph
 		val propositionPairs: Set[(GroundLiteral, GroundLiteral)] = for (x <- allPropositions; y <- allPropositions; if(x compare y) > 0) yield (x, y)
 		val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = computeMutexes match {
 			case true  => propositionPairs filter { case (groundLiteral1, groundLiteral2) =>
-				(for (x <- propositionsAndTheirProducers(groundLiteral1); y <- propositionsAndTheirProducers(groundLiteral2)) yield (x, y)) forall {
-					case groundTaskPair => (taskMutexes contains groundTaskPair) || (taskMutexes contains groundTaskPair.swap)
+				(for (x <- propositionsAndTheirProducers(groundLiteral1); y <- propositionsAndTheirProducers(groundLiteral2); if(x compare y ) > 0) yield (x, y)) forall {
+					case groundTaskPair => taskMutexes contains groundTaskPair
 				}
 			}
 			case false => Set.empty[(GroundLiteral, GroundLiteral)]
@@ -193,7 +193,7 @@ case class GroundedPlanningGraph
 
 	def isMutexFree(groundLiterals: Seq[GroundLiteral], mutexes: Set[(GroundLiteral, GroundLiteral)], potentialGroundLiteral: GroundLiteral): Boolean = {
 		val allGroundLiterals = groundLiterals :+ potentialGroundLiteral
-		val groundLiteralPairs = for (x <- allGroundLiterals; y <- allGroundLiterals) yield (x, y)
+		val groundLiteralPairs = for (x <- allGroundLiterals; y <- allGroundLiterals; if(x compare y) > 0) yield (x, y)
 		groundLiteralPairs forall { potentialMutex => !(mutexes contains potentialMutex) }
 	}
 
