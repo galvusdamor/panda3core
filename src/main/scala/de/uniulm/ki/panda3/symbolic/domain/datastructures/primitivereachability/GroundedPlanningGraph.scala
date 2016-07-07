@@ -67,7 +67,9 @@ case class GroundedPlanningGraph
 
     // compute task mutexes anew
     // TODO here we could to things a lot more efficiently
-    val groundTaskPairs: Set[(GroundTask, GroundTask)] = for (x <- allGroundTasks; y <- allGroundTasks; if (x compare y) > 0) yield (x, y)
+	  val sortedGroundTaskPairs = allGroundTasks.toVector.sorted
+    val groundTaskPairs: Set[(GroundTask, GroundTask)] = (for (x <- 0 until sortedGroundTaskPairs.size - 1; y <- x + 1 until sortedGroundTaskPairs.size) yield (sortedGroundTaskPairs(x),
+	    sortedGroundTaskPairs(y))).toSet
     val taskMutexes: Set[(GroundTask, GroundTask)] = {
       if (computeMutexes) {
         val normalMutexes = groundTaskPairs filter { case (groundTask1, groundTask2) =>
@@ -102,7 +104,9 @@ case class GroundedPlanningGraph
       groundTask => groundTask.substitutedAddEffects contains groundLiteral
     })
     }).toMap
-    val propositionPairs: Set[(GroundLiteral, GroundLiteral)] = for (x <- allPropositions; y <- allPropositions; if (x compare y) > 0) yield (x, y)
+	  val sortedPropositions: Vector[GroundLiteral] = allPropositions.toVector.sorted
+    val propositionPairs: Set[(GroundLiteral, GroundLiteral)] = (for (x <- 0 until sortedPropositions.size - 1; y <- x + 1 until sortedPropositions.size) yield (sortedPropositions(x),
+	    sortedPropositions(y))).toSet
     val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = computeMutexes match {
       case true  => propositionPairs filter { case (groundLiteral1, groundLiteral2) =>
         (for (x <- propositionsAndTheirProducers(groundLiteral1); y <- propositionsAndTheirProducers(groundLiteral2)) yield
