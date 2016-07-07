@@ -105,9 +105,9 @@ case class GroundedPlanningGraph
     val propositionPairs: Set[(GroundLiteral, GroundLiteral)] = for (x <- allPropositions; y <- allPropositions; if (x compare y) > 0) yield (x, y)
     val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = computeMutexes match {
       case true  => propositionPairs filter { case (groundLiteral1, groundLiteral2) =>
-        (for (x <- propositionsAndTheirProducers(groundLiteral1); y <- propositionsAndTheirProducers(groundLiteral2)) yield if ((x compare y) > 0) (x, y) else (y, x)) forall {
-          case groundTaskPair => taskMutexes contains groundTaskPair
-        }
+        (for (x <- propositionsAndTheirProducers(groundLiteral1); y <- propositionsAndTheirProducers(groundLiteral2)) yield
+          if ((x compare y) > 0) (x, y) else (y, x)) forall taskMutexes.contains
+
       }
       case false => Set.empty[(GroundLiteral, GroundLiteral)]
     }
