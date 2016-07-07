@@ -16,6 +16,9 @@ import org.scalatest.FlatSpec
 class GroundedPlanningGraphTest extends FlatSpec {
 
   "The grounded planning graph" must "be computable" in {
+	  println("===============")
+	  println("TEST 1")
+	  println("===============")
     val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest01_domain.hddl"
     val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest01_problem.hddl"
 
@@ -52,7 +55,9 @@ class GroundedPlanningGraphTest extends FlatSpec {
   }
 
   it must "recognise impossible situations" in {
-    println("problematic Test")
+	  println("===============")
+	  println("TEST 2")
+	  println("===============")
     val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
     val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
 

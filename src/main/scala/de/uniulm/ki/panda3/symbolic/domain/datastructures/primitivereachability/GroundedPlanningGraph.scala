@@ -125,6 +125,7 @@ case class GroundedPlanningGraph
 
     // termination and looping checks. Loop if something has changed compared with the previous layer of the PG
     val thisLayer = (allGroundTasks, taskMutexes, allPropositions, propositionMutexes)
+	  println("==== layer ====")
 	  println("tasks: " + allGroundTasks.size)
 	  for(x <- allGroundTasks) {
 		  println(x.task.name)
