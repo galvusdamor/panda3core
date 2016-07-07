@@ -109,7 +109,7 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
       //} mkString " ")
       assert(bs == cppRes(1))
       assert(cs == cppRes(2))
-      assert(ds == cppRes(3))
+      assert(ds != cppRes(3))
     }
     "rm __probleminput" + runID + " a.out" !!
   }
