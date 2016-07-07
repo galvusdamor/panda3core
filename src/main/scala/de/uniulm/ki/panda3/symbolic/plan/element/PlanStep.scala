@@ -83,7 +83,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
 /**
   * A ground task is basically a planstep without an id.
   */
-case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
+case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo with Ordered[GroundTask]{
   assert(task.parameters.size == arguments.size)
   task.parameters.zipWithIndex foreach { case (p, i) =>
     if (!p.sort.elements.contains(arguments(i))) {
@@ -109,6 +109,13 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo {
   lazy val substitutedDelEffects: Seq[GroundLiteral] = substitutedEffects filterNot { _.isPositive }
 
   lazy val substitutedAddEffects: Seq[GroundLiteral] = substitutedEffects filter { _.isPositive }
+
+  override def compare(that: GroundTask): Int = {
+    this.task compare that.task match {
+	    case 0 => ((this.arguments zip that.arguments) map { case (x,y) => x compare y}) find ((i: Int) => i!= 0) getOrElse(0)
+	    case _ => this.task compare that.task
+    }
+  }
 }
 
 

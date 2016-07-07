@@ -99,7 +99,7 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
   override def compare(that: GroundLiteral): Int = {
     this.predicate compare that.predicate match {
       case 0 => this.isPositive compare that.isPositive match {
-        case 0 => ((this.parameter zip that.parameter) map { case (x,y) => x compare y}).foldLeft(0){ case (a: Int,b: Int) => a + b}
+        case 0 => ((this.parameter zip that.parameter) map { case (x,y) => x compare y}) find ((i: Int) => i!= 0) getOrElse(0)
         case _ => this.isPositive compare that.isPositive
       }
       case _ => this.predicate compare that.predicate
