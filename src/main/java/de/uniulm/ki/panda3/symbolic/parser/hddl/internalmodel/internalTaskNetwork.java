@@ -140,6 +140,11 @@ public class internalTaskNetwork {
                 String psName = psCtx.task_symbol().NAME().toString();
                 Task schema = parserUtil.taskByName(psName, tasks);
 
+                if (schema == null) {
+                    System.out.println("Task schema undefined: " + psName);
+                    continue;
+                }
+
                 // check if the schema needs additional parameters
                 for (int parameter = 0; parameter < schema.parameters().length(); parameter++) {
                     Variable v = schema.parameters().apply(parameter);
@@ -152,10 +157,6 @@ public class internalTaskNetwork {
                 }
 
                 Seq<Variable> psVarsSeq = psVars.result();
-                if (schema == null) {
-                    System.out.println("Task schema undefined: " + psName);
-                    continue;
-                }
 
                 if (schema.parameters().size() != psVarsSeq.size()) {
                     System.out.println("The task schema " + schema.name() + " is defined with " + schema.parameters().size() + " but used with " + psVarsSeq.size() + " parameters.");
