@@ -7,6 +7,14 @@ import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic._
+import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
+import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.{EfficientGroundedTaskDecompositionGraph, EfficientTDGFromGroundedSymbolic}
+import de.uniulm.ki.panda3.efficient.heuristic.{MinimumModificationEffortHeuristic, EfficientNumberOfPlanSteps, EfficientNumberOfFlaws, AlwaysZeroHeuristic}
+import de.uniulm.ki.panda3.efficient.search.EfficientSearchNode
+import de.uniulm.ki.panda3.efficient.search.flawSelector.{EfficientFlawSelector, AbstractFirstWithDeferred, LeastCostFlawRepair}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
+import de.uniulm.ki.panda3.{efficient, symbolic}
+import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
@@ -144,6 +152,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       timeCapsule stop HEURISTICS_PREPARATION
 
 
+      val flawSelector = searchConfiguration.flawSelector match {
+        case LCFR => LeastCostFlawRepair
+      }
 
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
         case algo => algo match {
@@ -154,10 +165,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                                                   informationCapsule, timeCapsule)
           case DijkstraType | DFSType                         =>
             // just use the zero heuristic
-
-            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, addNumberOfPlanSteps = true, addDepth = false,
+            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, flawSelector, addNumberOfPlanSteps = true, addDepth = false,
                                                                    continueOnSolution = searchConfiguration.continueOnSolution,
                                                                    invertCosts = searchConfiguration.searchAlgorithm == DFSType)
+
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                         searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
@@ -206,7 +217,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             val useDepthCosts = algo match {case AStarDepthType => true; case _ => false}
             val useActionCosts = algo match {case AStarActionsType => true; case _ => false}
 
-            val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts,
+            val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, flawSelector, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts,
                                                                    continueOnSolution = searchConfiguration.continueOnSolution)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                         searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
@@ -570,6 +581,12 @@ object ADDReusing extends SearchHeuristic
 
 object Relax extends SearchHeuristic
 
+/**
+  * all available flaw selectors
+  */
+sealed trait SearchFlawSelector {}
+
+object LCFR extends SearchFlawSelector
 
 case class SearchConfiguration(
                                 nodeLimit: Option[Int],
@@ -577,6 +594,7 @@ case class SearchConfiguration(
                                 efficientSearch: Boolean,
                                 searchAlgorithm: SearchAlgorithmType,
                                 heuristic: Option[SearchHeuristic],
+                                flawSelector: SearchFlawSelector,
                                 continueOnSolution: Boolean,
                                 printSearchInfo: Boolean
                               ) {}

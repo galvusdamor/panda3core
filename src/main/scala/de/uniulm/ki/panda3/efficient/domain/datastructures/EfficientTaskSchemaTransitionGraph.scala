@@ -25,13 +25,9 @@ case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends D
 
   lazy val taskCanSupportByDecomposition: Map[Int, Array[(Int, Boolean)]] = {
     val startT = System.currentTimeMillis()
-    val x = (vertices map { task =>
+    (vertices map { task =>
       val buffer = new ArrayBuffer[(Int, Boolean)]()
       val reach = reachable(task) filterNot { _ == task }
-      //println("REACHABLE" + reach.size)
-
-      if (task % 1000 == 0)
-        println("EFF " + task + "/" + vertices.length)
 
       reach foreach { subTask => domain.tasks(subTask).effect foreach { eff => buffer append ((eff.predicate, eff.isPositive)) } }
 
@@ -39,7 +35,5 @@ case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends D
       //println("EFF " + arr.length)
       (task, arr)
     }).toMap
-    println("DONE " + (System.currentTimeMillis() - startT))
-    x
   }
 }

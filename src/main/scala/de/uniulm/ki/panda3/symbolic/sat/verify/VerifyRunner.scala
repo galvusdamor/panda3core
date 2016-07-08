@@ -25,13 +25,13 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val probInputStream = new FileInputStream(probFile)
 
     val (searchConfig, usePlanningGraph) = configNumber match {
-      case x if x < 0 => (SearchConfiguration(Some(0), Some(0), efficientSearch = false, DFSType, None, false, printSearchInfo = true), false)
-      case 1          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), false, printSearchInfo = true), true)
-      case 2          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, false, printSearchInfo = true), true)
-      case 3          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumAction), false, printSearchInfo = true), true)
-      case 4          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), false, printSearchInfo = true), false)
-      case 5          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, false, printSearchInfo = true), false)
-      case 6          => (SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), false, printSearchInfo = true), false)
+      case x if x < 0 => (SearchConfiguration(Some(0), Some(0), efficientSearch = false, DFSType, None, LCFR, false, printSearchInfo = true), false)
+      case 1          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), LCFR, false, printSearchInfo = true), true)
+      case 2          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, LCFR, false, printSearchInfo = true), true)
+      case 3          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumAction), LCFR, false, printSearchInfo = true), true)
+      case 4          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), LCFR, false, printSearchInfo = true), false)
+      case 5          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, LCFR, false, printSearchInfo = true), false)
+      case 6          => (SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), LCFR, false, printSearchInfo = true), false)
     }
 
     // create the configuration
