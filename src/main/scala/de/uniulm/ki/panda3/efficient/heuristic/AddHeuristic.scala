@@ -13,7 +13,8 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: EfficientDomain, initialState: Array[(Int, Array[Int])]) extends MinimisationOverGroundingsBasedHeuristic {
+case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: EfficientDomain, initialState: Array[(Int, Array[Int])],
+                        resuingAsVHPOP: Boolean) extends MinimisationOverGroundingsBasedHeuristic {
 
   private val heuristicMap: Map[EfficientGroundLiteral, Double] =
     (planningGraph.actionLayer zip planningGraph.stateLayer).foldLeft(initialState map { case (predicate, args) => EfficientGroundLiteral(predicate, isPositive = true, args) -> 0.0 } toMap)(
@@ -72,9 +73,20 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
       val supportedByCausalLink = plan.planStepSupportedPreconditions(planStep) contains precondition
 
       if (!supportedByCausalLink) {
-        val literalArguments = planStepTask.getArgumentsOfLiteral(arguments, planStepPreconditions(precondition))
-        val h = efficientAccessMaps(planStepPreconditions(precondition).predicate)(literalArguments)
-        heuristicEstimate += h
+        // if resuing include only if we can't support it
+        // TODO this is only correct if we are grounded
+        val possibleSupporter = plan.potentialSupportersOfPlanStepPreconditions(planStep)(precondition).iterator
+        var potentialSupporterFound = false
+        while (possibleSupporter.hasNext) {
+          val supporter = possibleSupporter.next()
+          if (!plan.ordering.gt(supporter, planStep))
+            potentialSupporterFound = true
+        }
+        if (!resuingAsVHPOP || !potentialSupporterFound) {
+          val literalArguments = planStepTask.getArgumentsOfLiteral(arguments, planStepPreconditions(precondition))
+          val h = efficientAccessMaps(planStepPreconditions(precondition).predicate)(literalArguments)
+          heuristicEstimate += h
+        }
       }
 
       precondition += 1

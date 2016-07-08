@@ -107,7 +107,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       // in some cases we need to re-do some steps of the preparation as we have to transfer them into the efficient representation
       timeCapsule start HEURISTICS_PREPARATION
       if (searchConfiguration.heuristic contains TDGMinimumModification) analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
-      if (searchConfiguration.heuristic contains ADD) {
+      if ((searchConfiguration.heuristic contains ADD) || (searchConfiguration.heuristic contains ADDReusing)) {
         // do the whole preparation, i.e. planning graph
         val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
         val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, computeMutexes = true, isSerial = false)
@@ -119,12 +119,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
         case algo => algo match {
-          case BFSType                => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
-                                                                          searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
-                                                                          searchConfiguration.printSearchInfo,
-                                                                          postprocessingConfiguration.resultsToProduce contains SearchSpace,
-                                                                          informationCapsule, timeCapsule)
-          case DijkstraType           =>
+          case BFSType                                        => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
+                                                                                                  searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
+                                                                                                  searchConfiguration.printSearchInfo,
+                                                                                                  postprocessingConfiguration.resultsToProduce contains SearchSpace,
+                                                                                                  informationCapsule, timeCapsule)
+          case DijkstraType                                   =>
             // just use the zero heuristic
             val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, true, false)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
@@ -140,13 +140,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case NumberOfPlanSteps      => EfficientNumberOfPlanSteps
                 case WeightedFlaws          => ???
                 case TDGMinimumModification => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
-                case ADD                    =>
+                case ADD | ADDReusing       =>
                   val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
                   val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
                     (wrapper.unwrap(task), args map wrapper.unwrap toArray)
                   }
+                  val reusing = if (heuristic == ADDReusing) true else false
                   // TODO check that we have compiled negative preconditions away
-                  AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray)
+                  AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray, reusing)
               }
               case None            => throw new UnsupportedOperationException("In order to use a heuristic search procedure, a heuristic must be defined.")
             }
@@ -160,7 +161,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                         searchConfiguration.printSearchInfo,
                                         postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                         informationCapsule, timeCapsule)
-          case _                      => throw new UnsupportedOperationException("Any other efficient search algorithm besides BFS is not supported.")
+          case _                                              => throw new UnsupportedOperationException("Any other efficient search algorithm besides BFS is not supported.")
         }
       }
 
@@ -437,6 +438,8 @@ object WeightedFlaws extends SearchHeuristic
 object TDGMinimumModification extends SearchHeuristic
 
 object ADD extends SearchHeuristic
+
+object ADDReusing extends SearchHeuristic
 
 
 case class SearchConfiguration(
