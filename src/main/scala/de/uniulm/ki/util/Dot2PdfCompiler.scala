@@ -24,7 +24,7 @@ object Dot2PdfCompiler {
 
       de.uniulm.ki.util.writeStringToFile(dotString, tempFile)
 
-      ("dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
+      ("cmd.exe /c dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
 
   }
 }

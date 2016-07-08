@@ -15,6 +15,13 @@ import de.uniulm.ki.util._
   */
 object Main {
   def main(args: Array[String]) {
+
+
+	  val graph = SimpleDirectedGraph(1::2::3::4::Nil, (2,3)::(2,4)::(1,2)::Nil)
+
+	  Dot2PdfCompiler.writeDotToFile(graph, "test.pdf")
+	  System exit 0
+
     /*println("This is Panda3")
 
     if (args.length != 3) {
