@@ -55,6 +55,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends 
     case _                                       => SimpleDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate))
   }
 
+
   def groundWithAbstractTaskGrounding(groundedAbstractTask : GroundTask) : Seq[GroundedDecompositionMethod] = {
       val bindArguments = groundedAbstractTask.task.parameters zip groundedAbstractTask.arguments map { case (v, c) => Equal(v, c) }
       val boundCSP = subPlan.variableConstraints.addConstraints(bindArguments)
@@ -75,6 +76,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends 
       } filter { _.isDefined } map { _.get }
 
       methodInstantiations map { args => GroundedDecompositionMethod(this, args) }
+
   }
 }
 
@@ -91,9 +93,18 @@ case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrec
   }
 }
 
-case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends HashMemo {
+case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends HashMemo with PrettyPrintable {
   val groundAbstractTask                    : GroundTask      = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
   val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map { case PlanStep(_, schema, arguments) =>
     GroundTask(schema, arguments map variableBinding)
   }
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo: String = "method-" + decompositionMethod.abstractTask.name
+
+  /** returns a string that can be utilized to define the object */
+  override def mediumInfo: String = ???
+
+  /** returns a detailed information about the object */
+  override def longInfo: String = ???
 }

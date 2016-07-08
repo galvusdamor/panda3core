@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
 
 import de.uniulm.ki.panda3.symbolic.csp.*;
+import de.uniulm.ki.panda3.symbolic.domain.GeneralTask;
 import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.*;
@@ -17,6 +18,7 @@ import scala.collection.Seq;
 import scala.collection.immutable.Set;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
+import scala.runtime.AbstractFunction1;
 
 import java.util.HashMap;
 import java.util.List;
@@ -114,9 +116,8 @@ public class internalTaskNetwork {
 
     public Plan readTaskNetwork(antlrHDDLParser.Tasknetwork_defContext tnCtx, Seq<Variable> parameters, Task abstractTask, Seq<Task> tasks, Seq<Sort> sorts) {
 
-        ReducedTask initSchema = new ReducedTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(new Vector<Literal>(0, 0, 0)));
-        ReducedTask goalSchema = new ReducedTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new
-                And<Literal>(new Vector<Literal>(0, 0, 0)));
+        GeneralTask initSchema = new GeneralTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), abstractTask.precondition());
+        GeneralTask goalSchema = new GeneralTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), abstractTask.effect(), new And<Literal>(new Vector<Literal>(0, 0, 0)));
 
         PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters());
         PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters());
@@ -125,6 +126,8 @@ public class internalTaskNetwork {
         this.taskOderings = this.taskOderings.addPlanStep(psInit).addPlanStep(psGoal);
 
         HashMap<String, PlanStep> idMap = new HashMap<>(); // used to define ordering constraints
+
+        VectorBuilder<Variable> allVariables = new VectorBuilder<>();
 
         // read tasks
         if (tnCtx.subtask_defs() != null) {
@@ -137,19 +140,32 @@ public class internalTaskNetwork {
                 String psName = psCtx.task_symbol().NAME().toString();
                 Task schema = parserUtil.taskByName(psName, tasks);
 
-                Seq<Variable> psVarsSeq = psVars.result();
                 if (schema == null) {
                     System.out.println("Task schema undefined: " + psName);
                     continue;
                 }
 
+                // check if the schema needs additional parameters
+                for (int parameter = 0; parameter < schema.parameters().length(); parameter++) {
+                    Variable v = schema.parameters().apply(parameter);
+                    // TODO hacky!!! --- and even wrong (we should not reuse variables)
+                    if (v.name().startsWith("varToConst")) {
+                        psVars.$plus$eq(v);
+                        if (!this.csp.variables().contains(v))
+                            this.csp = this.csp.addVariable(v);
+                    }
+                }
+
+                Seq<Variable> psVarsSeq = psVars.result();
+
                 if (schema.parameters().size() != psVarsSeq.size()) {
-                    System.out.println("The task schema " + schema.name() + " is defined with " + schema.parameters().size() + " but used with " + psVarsSeq.size()+" parameters.");
+                    System.out.println("The task schema " + schema.name() + " is defined with " + schema.parameters().size() + " but used with " + psVarsSeq.size() + " parameters.");
+                    System.out.println(schema.parameters());
                     continue;
                 }
 
                 PlanStep ps = new PlanStep(i, schema, psVarsSeq);
-                this.taskOderings = this.taskOderings.addPlanStep(ps).addOrdering(OrderingConstraint.apply(psInit,ps)).addOrdering(OrderingConstraint.apply(ps,psGoal));
+                this.taskOderings = this.taskOderings.addPlanStep(ps).addOrdering(OrderingConstraint.apply(psInit, ps)).addOrdering(OrderingConstraint.apply(ps, psGoal));
                 if (psCtx.subtask_id() != null) {
                     String id = psCtx.subtask_id().NAME().toString();
                     idMap.put(id, ps);
@@ -161,9 +177,8 @@ public class internalTaskNetwork {
         // read variable constraints
         if (tnCtx.constraint_defs() != null) {
             for (antlrHDDLParser.Constraint_defContext constraint : tnCtx.constraint_defs().constraint_def()) {
-                VectorBuilder<Variable> vars = new VectorBuilder<>();
-                readTaskParamsAndMatchToMethodParams(constraint.var_or_const(), vars, parameters, sorts);
-                Seq<Variable> v = vars.result();
+                readTaskParamsAndMatchToMethodParams(constraint.var_or_const(), allVariables, parameters, sorts);
+                Seq<Variable> v = allVariables.result();
                 VariableConstraint vc;
                 //System.out.println(constraint.getRuleIndex());
                 if (constraint.children.get(1).toString().equals("not")) { // this is an unequal constraint
@@ -179,8 +194,8 @@ public class internalTaskNetwork {
         // read ordering
         String orderingMode = tnCtx.children.get(0).toString();
         if ((orderingMode.equals(":ordered-subtasks")) || (orderingMode.equals(":ordered-tasks"))) {
-            for (int i = 2; i < ps.size()-1; i++) {
-                this.taskOderings = this.taskOderings.addOrdering(ps.apply(i), ps.apply(i+1));
+            for (int i = 2; i < ps.size() - 1; i++) {
+                this.taskOderings = this.taskOderings.addOrdering(ps.apply(i), ps.apply(i + 1));
             }
         } else { // i.e. :tasks or :subtasks
             if ((tnCtx.ordering_defs() != null) && (tnCtx.ordering_defs().ordering_def() != null)) {
@@ -200,7 +215,7 @@ public class internalTaskNetwork {
             }
         }
         Seq<CausalLink> causalLinks = (new VectorBuilder<CausalLink>()).result();
-        Plan subPlan = new Plan(ps, causalLinks, this.taskOderings, this.csp, psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$,hddlPanda3Visitor.planStepsDecomposedBy,
+        Plan subPlan = new Plan(ps, causalLinks, this.taskOderings, this.csp, psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,
                 hddlPanda3Visitor.planStepsDecompositionParents);
         return subPlan;
     }
