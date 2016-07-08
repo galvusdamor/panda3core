@@ -11,3 +11,4 @@
 /doc/*.aux
 /doc/*.log
 *.class
+*.pdf
