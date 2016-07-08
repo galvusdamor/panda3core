@@ -68,6 +68,7 @@ case class GroundedPlanningGraph
     // compute task mutexes anew
     // TODO here we could to things a lot more efficiently
     val sortedGroundTasks = allGroundTasks.toVector.sorted
+    //println("TASKS " + sortedGroundTasks.length)
 
     val groundTaskPairs: Set[(GroundTask, GroundTask)] = (for (x <- 0 until sortedGroundTasks.size - 1; y <- x + 1 until sortedGroundTasks.size) yield (sortedGroundTasks(x),
       sortedGroundTasks(y))).toSet
@@ -85,13 +86,10 @@ case class GroundedPlanningGraph
                 _.=!=(substitutedEffect)
               }
             }) ||
-            (for (x <- groundTask1.substitutedPreconditions; y <- groundTask2.substitutedPreconditions) yield if ((x compare y) < 0) (x, y) else (y, x)).
-              exists(previousLayer._4.contains)
+            (for (x <- groundTask1.substitutedPreconditions; y <- groundTask2.substitutedPreconditions) yield if ((x compare y) < 0) (x, y) else (y, x)).exists(previousLayer._4.contains)
         }
         if (isSerial) {
-          (groundTaskPairs filterNot { case (groundTask1, groundTask2) =>
-            groundTask1.task.name.startsWith("NO-OP") || groundTask2.task.name.startsWith("NO-OP")
-          }) union normalMutexes
+          (groundTaskPairs filterNot { case (groundTask1, groundTask2) => groundTask1.task.name.startsWith("NO-OP") || groundTask2.task.name.startsWith("NO-OP") }) union normalMutexes
         } else {
           normalMutexes
         }
@@ -99,11 +97,13 @@ case class GroundedPlanningGraph
         Set.empty[(GroundTask, GroundTask)]
       }
     } filter { case (groundTask1, groundTask2) => groundTask1 != groundTask2 }
+    //println("TASKSMUTEXE " + taskMutexes.size)
 
 
     // determine new propositions
     val newPropositions: Set[GroundLiteral] = (newInstantiatedGroundTasks flatMap { newGroundTask => newGroundTask.substitutedAddEffects }) -- previousLayer._3
     val allPropositions: Set[GroundLiteral] = newPropositions ++ previousLayer._3
+    //println("PROPOS " + allPropositions.size)
 
     // compute proposition mutexes anew
     // TODO here we could to things a lot more efficiently
@@ -122,6 +122,7 @@ case class GroundedPlanningGraph
       }
       case false => Set.empty[(GroundLiteral, GroundLiteral)]
     }
+    //println("PROPO MUTEX " + propositionMutexes.size)
 
     // termination and looping checks. Loop if something has changed compared with the previous layer of the PG
     val thisLayer = (allGroundTasks, taskMutexes, allPropositions, propositionMutexes)
