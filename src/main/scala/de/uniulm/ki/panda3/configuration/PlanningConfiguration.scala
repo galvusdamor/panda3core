@@ -23,7 +23,7 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.{PlanDotOptions, Plan}
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
-import de.uniulm.ki.util.{Dot2PdfCompiler, InformationCapsule, TimeCapsule}
+import de.uniulm.ki.util.{TimeCapsule, Dot2PdfCompiler, InformationCapsule}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -278,45 +278,27 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
 
-  def runPreprocessing(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
-    // start the timer
-    timeCapsule startOrLetRun PREPROCESSING
-
+  private def runReachabilityAnalyses(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     val emptyAnalysis = AnalysisMap(Map())
-
-    extra("Initial domain\n" + domain.statisticsString + "\n")
-
-
-    // removing negative preconditions
-    timeCapsule start COMPILE_NEGATIVE_PRECONFITIONS
-    val compilationResult = if (preprocessingConfiguration.compileNegativePreconditions) {
-      info("Compiling negative preconditions ... ")
-      val compiled = RemoveNegativePreconditions.transform(domain, problem, ())
-      info("done.\n")
-      extra(compiled._1.statisticsString + "\n")
-      compiled
-    } else (domain, problem)
-    timeCapsule stop COMPILE_NEGATIVE_PRECONFITIONS
-
 
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
     val liftedResult = if (preprocessingConfiguration.liftedReachability) {
       info("Lifted reachability analysis ... ")
-      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(compilationResult._1, compilationResult._2, emptyAnalysis)
-      val disallowedTasks = compilationResult._1.primitiveTasks filterNot newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.contains
-      val hierarchyPruned = PruneHierarchy.transform(compilationResult._1, compilationResult._2, disallowedTasks.toSet)
-      val pruned = PruneEffects.transform(hierarchyPruned, compilationResult._1.primitiveTasks.toSet)
+      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(domain, problem, emptyAnalysis)
+      val disallowedTasks = domain.primitiveTasks filterNot newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.contains
+      val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
+      val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
-    } else ((compilationResult._1, compilationResult._2), emptyAnalysis)
+    } else ((domain, problem), emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
     // grounded reachability analysis
     timeCapsule start (if (preprocessingConfiguration.groundedReachability) GROUNDED_REACHABILITY_ANALYSIS else GROUNDED_PLANNINGGRAPH_ANALYSIS)
     val groundedResult = if (preprocessingConfiguration.groundedReachability || preprocessingConfiguration.planningGraph) {
-      if (preprocessingConfiguration.groundedReachability) info("Grounded reachability analysis ... ") else info("Grounded planning graph analysis")
+      if (preprocessingConfiguration.groundedReachability) info("Grounded reachability analysis ... ") else info("Grounded planning graph analysis ... ")
       val newAnalysisMap =
         if (preprocessingConfiguration.groundedReachability) runGroundedForwardSearchReachabilityAnalysis(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
         else runGroundedPlanningGraph(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
@@ -328,8 +310,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       (pruned, newAnalysisMap)
     } else liftedResult
     timeCapsule stop (if (preprocessingConfiguration.groundedReachability) GROUNDED_REACHABILITY_ANALYSIS else GROUNDED_PLANNINGGRAPH_ANALYSIS)
-
-
 
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
@@ -344,36 +324,60 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
-    if (!preprocessingConfiguration.iterateReachabilityAnalysis || tdgResult._1._1.tasks.length == domain.tasks.length) {
-      // finished reachability analysis now we have to ground
-      if (preprocessingConfiguration.groundDomain) {
-        val tdg = if (tdgResult._2.contains(SymbolicGroundedTaskDecompositionGraph)) tdgResult._2(SymbolicGroundedTaskDecompositionGraph)
-        else if (!tdgResult._2.contains(SymbolicGroundedReachability)) EverythingIsHiearchicallyReachable(tdgResult._1._1, tdgResult._1._2)
-        else {
-          val groundedReachability = tdgResult._2(SymbolicGroundedReachability)
-          EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability(tdgResult._1._1, tdgResult._1._2, groundedReachability)
-        }
-
-        info("Grounding ... ")
-        timeCapsule start GROUNDING
-        val result = Grounding.transform(tdgResult._1, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
-
-        //result._1.tasks foreach {task => println(task.name)}
-
-        timeCapsule stop GROUNDING
-        info("done.\n")
-        extra(result._1.statisticsString + "\n")
-        timeCapsule stop PREPROCESSING
-        ((result, emptyAnalysis), timeCapsule)
-      } else (tdgResult, timeCapsule)
-    } else runPreprocessing(tdgResult._1._1, tdgResult._1._2, timeCapsule)
+    if (!preprocessingConfiguration.iterateReachabilityAnalysis || tdgResult._1._1.tasks.length == domain.tasks.length) (tdgResult, timeCapsule)
+    else runReachabilityAnalyses(tdgResult._1._1, tdgResult._1._2, timeCapsule)
   }
 
+
+  def runPreprocessing(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
+    // start the timer
+    timeCapsule start PREPROCESSING
+    extra("Initial domain\n" + domain.statisticsString + "\n")
+
+    // removing negative preconditions
+    timeCapsule start COMPILE_NEGATIVE_PRECONFITIONS
+    val compilationResult = if (preprocessingConfiguration.compileNegativePreconditions) {
+      info("Compiling negative preconditions ... ")
+      val compiled = RemoveNegativePreconditions.transform(domain, problem, ())
+      info("done.\n")
+      extra(compiled._1.statisticsString + "\n")
+      compiled
+    } else (domain, problem)
+    timeCapsule stop COMPILE_NEGATIVE_PRECONFITIONS
+
+    // initial run of the reachability analysis on the domain, until it has converged
+    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compilationResult._1, compilationResult._2, timeCapsule)
+
+    // finished reachability analysis now we have to ground
+    if (preprocessingConfiguration.groundDomain) {
+      val tdg = if (analysisMap.contains(SymbolicGroundedTaskDecompositionGraph)) analysisMap(SymbolicGroundedTaskDecompositionGraph)
+      else if (!analysisMap.contains(SymbolicGroundedReachability)) EverythingIsHiearchicallyReachable(domainAndPlan._1, domainAndPlan._2)
+      else {
+        val groundedReachability = analysisMap(SymbolicGroundedReachability)
+        EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability(domainAndPlan._1, domainAndPlan._2, groundedReachability)
+      }
+
+      info("Grounding ... ")
+      timeCapsule start GROUNDING
+      val result = Grounding.transform(domainAndPlan, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
+
+      timeCapsule stop GROUNDING
+      info("done.\n")
+      extra(result._1.statisticsString + "\n")
+
+      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(result._1, result._2, timeCapsule)
+
+      timeCapsule stop PREPROCESSING
+      ((groundedDomainAndPlan, groundedAnalysisMap), timeCapsule)
+    } else {
+      timeCapsule stop PREPROCESSING
+      ((domainAndPlan, analysisMap), timeCapsule)
+    }
+  }
 
   private def info(s: String): Unit = if (printGeneralInformation) print(s)
 
   private def extra(s: String): Unit = if (printAdditionalData) print(s)
-
 }
 
 /**
