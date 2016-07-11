@@ -8,9 +8,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object SHOPMethodCompiler extends DomainTransformer[Unit] {
-
-  def transform(domainAndPlan: (Domain, Plan)): (Domain, Plan) = transform(domainAndPlan, ())
+object SHOPMethodCompiler extends DomainTransformerWithOutInformation {
 
   /** transforms all SHOP2 style methods into ordinary methods */
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
