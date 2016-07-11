@@ -96,8 +96,8 @@ case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrec
 }
 
 case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends HashMemo with PrettyPrintable {
-  val groundAbstractTask                    : GroundTask      = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
-  val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map { case PlanStep(_, schema, arguments) =>
+  val groundAbstractTask: GroundTask = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
+  lazy val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map { case PlanStep(_, schema, arguments) =>
     GroundTask(schema, arguments map variableBinding)
   }
 
