@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.progression.proSearch;
 
+import de.uniulm.ki.panda3.progression.bottomUpTDG.htnBottomUpGrounder;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.efficientRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
@@ -56,9 +57,13 @@ public class planningInstance {
 
     public void plan(Domain d, Plan p) {
         boolean verbose = false;
-        boolean relaxFirstGraph = false;
-
+        boolean relaxFirstGraph = true;
+        boolean isHtn = d.abstractTasks().size() > 0;
         long totaltime = System.currentTimeMillis();
+
+        //
+        // Get reachable grounded actions and environment facts
+        //
         long time = System.currentTimeMillis();
         Set<GroundLiteral> allLiterals;
         Set<GroundTask> allActions;
@@ -83,7 +88,6 @@ public class planningInstance {
             while (iterAllActions.hasNext())
                 allActions.add(iterAllActions.next());
         }
-
         System.out.println("(" + (System.currentTimeMillis() - time) + " ms)");
         time = System.currentTimeMillis();
 
@@ -91,6 +95,16 @@ public class planningInstance {
         numActions = allActions.size();
         System.out.println("Graph contains " + numActions + " ground actions");
         System.out.println("Graph contains " + numStateFeatures + " environment facts");
+
+        //
+        // Get reachable grounded abstract tasks and methods
+        //
+        htnBottomUpGrounder tdg;
+        if (isHtn) {
+            //symbolicHtnRPG htnRPG = new symbolicHtnRPG();
+            //htnRPG.build(d, p);
+            tdg = new htnBottomUpGrounder(d, p, allActions);
+        }
 
         System.out.println("\nPreprocessing planning instance");
         ToCompactRepresentation(allLiterals, allActions);
@@ -134,11 +148,20 @@ public class planningInstance {
                 solution = n.tasks;
                 break;
             }
+            actionloop:
             for (Integer a : n.getApplicableActions()) {
-                temp = (BitSet) n.state.clone();
-                temp.and(prec[a]);
-                if (!temp.equals(prec[a]))
-                    continue;
+                // test via nextSetBit
+                int pre = prec[a].nextSetBit(0);
+                while (pre > -1) {
+                    if (!n.state.get(pre))
+                        continue actionloop;
+                    pre = prec[a].nextSetBit(pre + 1);
+                }
+                // test via logical AND
+                //temp = (BitSet) n.state.clone();
+                //temp.and(prec[a]);
+                //if (!temp.equals(prec[a]))
+                //continue;
 
                 temp = (BitSet) n.state.clone();
                 temp.andNot(del[a]);
@@ -169,9 +192,9 @@ public class planningInstance {
                 n++;
             }
             time = System.currentTimeMillis();
-            System.out.println("\nInferring least constraining causal links");
-            inferCausalLinks(s0._1(), solution);
-            System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");
+            //System.out.println("\nInferring least constraining causal links");
+            //inferCausalLinks(s0._1(), solution);
+            //System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");
         } else System.out.println("Problem unsolvable.");
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
     }
