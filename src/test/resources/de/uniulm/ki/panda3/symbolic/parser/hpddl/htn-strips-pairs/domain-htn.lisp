@@ -43,16 +43,16 @@
   
   (:method m-drive-to
     :parameters (?v - vehicle ?l1 ?l2 - location)
-    :task (get-to  ?v ?l2)
+    :task (get-to ?v ?l2)
     :subtasks (and
         (drive ?v ?l1 ?l2))
   )
 
   (:method m-drive-to-via
-    :parameters (?v - vehicle ?l1 ?l2 ?l3 - location)
+    :parameters (?v - vehicle ?l2 ?l3 - location)
     :task (get-to  ?v ?l3)
     :ordered-subtasks (and
-        (get-to ?v ?2)
+        (get-to ?v ?l2)
         (drive ?v ?l2 ?l3))
   )
 
