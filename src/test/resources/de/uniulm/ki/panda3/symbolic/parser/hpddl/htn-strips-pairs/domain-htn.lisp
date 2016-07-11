@@ -52,7 +52,7 @@
     :parameters (?v - vehicle ?l1 ?l2 ?l3 - location)
     :task (get-to  ?v ?l3)
     :ordered-subtasks (and
-        (get-to ?v ?2)
+        (get-to ?v ?l2)
         (drive ?v ?l2 ?l3))
   )
 
