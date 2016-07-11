@@ -20,7 +20,6 @@ trait DecompositionMethod extends DomainUpdatable {
   val subPlan     : Plan
   val name        : String
 
-
   assert(!abstractTask.isPrimitive)
   (abstractTask, subPlan.init.schema) match {
     case (reducedAbstractTask: ReducedTask, _: ReducedTask) =>
