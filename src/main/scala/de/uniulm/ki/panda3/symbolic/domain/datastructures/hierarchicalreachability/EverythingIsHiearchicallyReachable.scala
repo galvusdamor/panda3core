@@ -20,8 +20,10 @@ case class EverythingIsHiearchicallyReachable(domain: Domain, initialPlan: Plan)
 
   override val additionalTaskNeededToGround   : Seq[GroundTask]                  = Nil
   override val reachableGroundMethods         : Seq[GroundedDecompositionMethod] = domain.decompositionMethods flatMap {
-    case method@SimpleDecompositionMethod(abstractTask, _,_) => reachableGroundedTasks filter { _.task == abstractTask } flatMap method.groundWithAbstractTaskGrounding
-    case _                                                 => noSupport(NONSIMPLEMETHOD)
+    case method@SimpleDecompositionMethod(abstractTask, _, _) => reachableGroundedTasks filter { _.task == abstractTask } flatMap method.groundWithAbstractTaskGrounding filter {
+      _.subPlanGroundedTasksWithoutInitAndGoal forall reachableGroundedTasks.contains
+    }
+    case _                                                    => noSupport(NONSIMPLEMETHOD)
 
   }
   override val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod] = Nil
@@ -34,8 +36,10 @@ case class EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability(domain
   override val additionalTaskNeededToGround   : Seq[GroundTask]                  = initialPlan.groundedGoalTask :: Nil
   // TODO this is not correct!!
   override val reachableGroundMethods         : Seq[GroundedDecompositionMethod] = domain.decompositionMethods flatMap {
-    case method@SimpleDecompositionMethod(abstractTask, _,_) => reachableGroundedTasks filter { _.task == abstractTask } flatMap method.groundWithAbstractTaskGrounding
-    case _                                                 => noSupport(NONSIMPLEMETHOD)
+    case method@SimpleDecompositionMethod(abstractTask, _, _) => reachableGroundedTasks filter { _.task == abstractTask } flatMap method.groundWithAbstractTaskGrounding filter {
+      _.subPlanGroundedTasksWithoutInitAndGoal forall reachableGroundedTasks.contains
+    }
+    case _                                                    => noSupport(NONSIMPLEMETHOD)
 
   }
   override val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod] = Nil

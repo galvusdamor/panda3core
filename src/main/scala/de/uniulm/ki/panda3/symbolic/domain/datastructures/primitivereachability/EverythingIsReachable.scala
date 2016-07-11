@@ -13,7 +13,7 @@ case class EverythingIsReachable(domain: Domain, initialState: Set[GroundLiteral
 
   override protected val layer: Seq[(Set[GroundTask], Set[GroundLiteral])] = {
     val allGroundTasks = domain.allGroundedPrimitiveTasks.toSet
-    val reachableLiterals = (allGroundTasks flatMap { _.substitutedEffects.toSet }) ++ initialState
+    val reachableLiterals = (allGroundTasks flatMap { t => t.substitutedPreconditionsSet ++ t.substitutedEffects }) ++ initialState
     (allGroundTasks, reachableLiterals) :: Nil
   }
 }
