@@ -1,7 +1,7 @@
 PANDA3 Core
 ===============
 
-This contains the core of the PANDA3 planner
+This contains the core of the PANDA3 planner ... and PANDA3pro
 
 
 
