@@ -20,7 +20,7 @@ case class EverythingIsHiearchicallyReachable(domain: Domain, initialPlan: Plan)
 
   override val additionalTaskNeededToGround   : Seq[GroundTask]                  = Nil
   override val reachableGroundMethods         : Seq[GroundedDecompositionMethod] = domain.decompositionMethods flatMap {
-    case method@SimpleDecompositionMethod(abstractTask, _) => reachableGroundedTasks filter { _.task == abstractTask } flatMap method.groundWithAbstractTaskGrounding
+    case method@SimpleDecompositionMethod(abstractTask, _,_) => reachableGroundedTasks filter { _.task == abstractTask } flatMap method.groundWithAbstractTaskGrounding
     case _                                                 => noSupport(NONSIMPLEMETHOD)
 
   }
@@ -32,8 +32,9 @@ case class EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability(domain
   extends GroundedReachabilityAnalysis {
   override val reachableGroundedTasks         : Seq[GroundTask]                  = primitiveReachabilityAnalysis.reachableGroundPrimitiveActions ++ domain.allGroundedAbstractTasks
   override val additionalTaskNeededToGround   : Seq[GroundTask]                  = initialPlan.groundedGoalTask :: Nil
+  // TODO this is not correct!!
   override val reachableGroundMethods         : Seq[GroundedDecompositionMethod] = domain.decompositionMethods flatMap {
-    case method@SimpleDecompositionMethod(abstractTask, _) => reachableGroundedTasks filter { _.task == abstractTask } flatMap method.groundWithAbstractTaskGrounding
+    case method@SimpleDecompositionMethod(abstractTask, _,_) => reachableGroundedTasks filter { _.task == abstractTask } flatMap method.groundWithAbstractTaskGrounding
     case _                                                 => noSupport(NONSIMPLEMETHOD)
 
   }

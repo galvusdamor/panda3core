@@ -321,7 +321,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
                     internalTN.csp().addVariables(psO.arguments()), psInit, psGoal, domPlan._2().isModificationAllowed(),
                     domPlan._2().isFlawAllowed(), domPlan._2().planStepDecomposedByMethod(), domPlan._2().planStepParentInDecompositionTree());
 
-            DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(compoundTask, subPlan);
+            DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(compoundTask, subPlan, "new method");
             newMethods.add(decompositionMethod);
         }
 
@@ -372,7 +372,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
                         psInit, psGoal,NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,hddlPanda3Visitor.planStepsDecompositionParents);
             }
 
-            DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(correspondingCompoundTask, tempSubPlan);
+            DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(correspondingCompoundTask, tempSubPlan, "some method");
             newMethods.add(decompositionMethod);
         }
 

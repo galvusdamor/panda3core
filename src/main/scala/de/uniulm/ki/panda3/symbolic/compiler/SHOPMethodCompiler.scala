@@ -15,8 +15,8 @@ object SHOPMethodCompiler extends DomainTransformer[Unit] {
   /** transforms all SHOP2 style methods into ordinary methods */
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
     val compiledMethods: Seq[(SimpleDecompositionMethod, Option[Task])] = domain.decompositionMethods.zipWithIndex map {
-      case (sm@SimpleDecompositionMethod(_, _), _)                             => (sm, None)
-      case (SHOPDecompositionMethod(abstractTask, subPlan, precondition), idx) => if (precondition.isEmpty) (SimpleDecompositionMethod(abstractTask, subPlan), None)
+      case (sm@SimpleDecompositionMethod(_, _,_), _)                             => (sm, None)
+      case (SHOPDecompositionMethod(abstractTask, subPlan, precondition,name), idx) => if (precondition.isEmpty) (SimpleDecompositionMethod(abstractTask, subPlan, name), None)
       else {
         // generate a new schema that represents the decomposition method
         val preconditionTaskSchema = GeneralTask("SHOP_method" + idx + "_precondition", isPrimitive = true, precondition.containedVariables.toSeq, Nil, precondition, new And[Formula](Nil))
@@ -29,7 +29,7 @@ object SHOPMethodCompiler extends DomainTransformer[Unit] {
 
         (SimpleDecompositionMethod(abstractTask, new Plan(subPlan.planSteps :+ preconditionPlanStep, subPlan.causalLinks, newOrdering, subPlan.variableConstraints, subPlan.init,
                                                           subPlan.goal, subPlan.isModificationAllowed, subPlan.isFlawAllowed, subPlan.planStepDecomposedByMethod,
-                                                          subPlan.planStepParentInDecompositionTree)), Some(preconditionTaskSchema))
+                                                          subPlan.planStepParentInDecompositionTree), name), Some(preconditionTaskSchema))
       }
     }
     (Domain(domain.sorts, domain.predicates, domain.tasks ++ (compiledMethods collect { case (_, Some(x)) => x }), compiledMethods map { _._1 }, domain.decompositionAxioms), plan)

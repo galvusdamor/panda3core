@@ -270,9 +270,9 @@ public class hddlPanda3Visitor {
 
             DecompositionMethod method;
             if (hasPrecondition) {
-                method = new SHOPDecompositionMethod(abstractTask, subPlan, precFormula);
+                method = new SHOPDecompositionMethod(abstractTask, subPlan, precFormula, m.method_symbol().getText());
             } else {
-                method = new SimpleDecompositionMethod(abstractTask, subPlan);
+                method = new SimpleDecompositionMethod(abstractTask, subPlan, m.method_symbol().getText());
             }
             methods.$plus$eq(method);
         }

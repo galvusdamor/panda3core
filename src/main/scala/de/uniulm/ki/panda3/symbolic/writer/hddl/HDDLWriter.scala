@@ -300,7 +300,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         builder.append(")\n")
 
         val methodPrecondition = m match {
-          case SHOPDecompositionMethod(_, _, f) => f
+          case SHOPDecompositionMethod(_, _, f,_) => f
           case _                                => And[Formula](Nil)
         }
 

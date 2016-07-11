@@ -195,8 +195,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     domain.tasks = (domainTasks.fromMap.toSeq.sortBy({ _._1 }) map { case (_, t) => domainTasksObjects(t) }).toArray
 
     domain.decompositionMethods = (symbolicDomain.decompositionMethods map {
-      case SimpleDecompositionMethod(task, subplan) => EfficientDecompositionMethod(domainTasks(task), computeEfficientPlan(subplan, domain, task.parameters))
-      case SHOPDecompositionMethod(_, _, _)         => noSupport(NONSIMPLEMETHOD)
+      case SimpleDecompositionMethod(task, subplan,_) => EfficientDecompositionMethod(domainTasks(task), computeEfficientPlan(subplan, domain, task.parameters))
+      case SHOPDecompositionMethod(_, _, _,_)         => noSupport(NONSIMPLEMETHOD)
     }).toArray
 
     domain

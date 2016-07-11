@@ -170,7 +170,7 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
   private def methodMustHaveChildren(layer: Int, fatherPosition: Int): Seq[Clause] = {
     domain.decompositionMethods flatMap {
-      case m@SimpleDecompositionMethod(_, subPlan) =>
+      case m@SimpleDecompositionMethod(_, subPlan,_) =>
         // those selected
         val presentChildren: Seq[Clause] = subPlan.planStepsWithoutInitGoal.zipWithIndex flatMap {
           case (ps, childNumber) =>

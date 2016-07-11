@@ -145,7 +145,7 @@ object XMLParser extends StepwiseParser {
 
       SimpleDecompositionMethod(abstractTaskSchema,
                                 buildPlanFrom(xmlMethod, init, goal, variables, xmlConstantToScalaConstant, xmlPredicateToScalaPredicate, xmlSortsToScalaSorts, xmlTaskToScalaTask,
-                                              abstractTaskSchema.parameterConstraints))
+                                              abstractTaskSchema.parameterConstraints), xmlMethod.name)
     }
 
     // already done:

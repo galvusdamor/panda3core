@@ -18,6 +18,7 @@ trait DecompositionMethod extends DomainUpdatable {
 
   val abstractTask: Task
   val subPlan     : Plan
+  val name        : String
 
   assert(!abstractTask.isPrimitive)
   (abstractTask, subPlan.init.schema) match {
@@ -49,33 +50,34 @@ trait DecompositionMethod extends DomainUpdatable {
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends DecompositionMethod with HashMemo {
+case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: String) extends DecompositionMethod with HashMemo {
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = domainUpdate match {
-    case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true))
-    case _                                       => SimpleDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate))
+    case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
+                                                                              name)
+    case _                                       => SimpleDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate), name)
   }
 
 
-  def groundWithAbstractTaskGrounding(groundedAbstractTask : GroundTask) : Seq[GroundedDecompositionMethod] = {
-      val bindArguments = groundedAbstractTask.task.parameters zip groundedAbstractTask.arguments map { case (v, c) => Equal(v, c) }
-      val boundCSP = subPlan.variableConstraints.addConstraints(bindArguments)
-      val unboundVariables = boundCSP.variables filter { v => boundCSP.getRepresentative(v) match {
-        case c: Constant    => false
-        case repV: Variable => repV == v
-      }
-      }
-      // try to bind all variables to their
-      val unboundVariablesWithRemainingValues: Seq[(Variable, Seq[Constant])] = (unboundVariables map { v => (v, boundCSP.reducedDomainOf(v)) }).toSeq
-      val allInstantiations = Sort allPossibleInstantiationsWithVariables unboundVariablesWithRemainingValues
+  def groundWithAbstractTaskGrounding(groundedAbstractTask: GroundTask): Seq[GroundedDecompositionMethod] = {
+    val bindArguments = groundedAbstractTask.task.parameters zip groundedAbstractTask.arguments map { case (v, c) => Equal(v, c) }
+    val boundCSP = subPlan.variableConstraints.addConstraints(bindArguments)
+    val unboundVariables = boundCSP.variables filter { v => boundCSP.getRepresentative(v) match {
+      case c: Constant    => false
+      case repV: Variable => repV == v
+    }
+    }
+    // try to bind all variables to their
+    val unboundVariablesWithRemainingValues: Seq[(Variable, Seq[Constant])] = (unboundVariables map { v => (v, boundCSP.reducedDomainOf(v)) }).toSeq
+    val allInstantiations = Sort allPossibleInstantiationsWithVariables unboundVariablesWithRemainingValues
 
-      val methodInstantiations: Seq[Map[Variable, Constant]] = allInstantiations map { instantiation =>
-        val additionalConstraints = instantiation map { case (v, c) => Equal(v, c) }
-        val innerCSP = boundCSP addConstraints additionalConstraints
-        if (innerCSP.isSolvable contains false) None
-        else Some((innerCSP.variables map { v => v -> innerCSP.getRepresentative(v).asInstanceOf[Constant] }).toMap)
-      } filter { _.isDefined } map { _.get }
+    val methodInstantiations: Seq[Map[Variable, Constant]] = allInstantiations map { instantiation =>
+      val additionalConstraints = instantiation map { case (v, c) => Equal(v, c) }
+      val innerCSP = boundCSP addConstraints additionalConstraints
+      if (innerCSP.isSolvable contains false) None
+      else Some((innerCSP.variables map { v => v -> innerCSP.getRepresentative(v).asInstanceOf[Constant] }).toMap)
+    } filter { _.isDefined } map { _.get }
 
-      methodInstantiations map { args => GroundedDecompositionMethod(this, args) }
+    methodInstantiations map { args => GroundedDecompositionMethod(this, args) }
 
   }
 }
@@ -85,11 +87,11 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends 
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula) extends DecompositionMethod with HashMemo {
+case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula, name: String) extends DecompositionMethod with HashMemo {
   override def update(domainUpdate: DomainUpdate): SHOPDecompositionMethod = domainUpdate match {
     case ExchangeLiteralsByPredicate(map, false) =>
-      SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true), methodPrecondition update domainUpdate)
-    case _                                       => SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update domainUpdate, methodPrecondition update domainUpdate)
+      SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true), methodPrecondition update domainUpdate, name)
+    case _                                       => SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update domainUpdate, methodPrecondition update domainUpdate, name)
   }
 }
 
@@ -100,11 +102,11 @@ case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod,
   }
 
   /** returns a string by which this object may be referenced */
-  override def shortInfo: String = "method-" + decompositionMethod.abstractTask.name
+  override def shortInfo: String = "method-" + decompositionMethod.name
 
   /** returns a string that can be utilized to define the object */
-  override def mediumInfo: String = ???
+  override def mediumInfo: String = shortInfo + " of " + decompositionMethod.abstractTask.name
 
   /** returns a detailed information about the object */
-  override def longInfo: String = ???
+  override def longInfo: String = mediumInfo
 }

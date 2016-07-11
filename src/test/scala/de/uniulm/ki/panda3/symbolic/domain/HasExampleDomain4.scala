@@ -55,7 +55,7 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
                                                                            cspOfPlanOfDecompositionMethod3, initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3,
                                                                            AllModifications, AllFlaws, Map(), Map())
   /** a decomposition method without causal links */
-  val decompositionMethod3      : SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask2, planOfDecompositionMethod3)
+  val decompositionMethod3      : SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask2, planOfDecompositionMethod3, "some method")
 
   /** an empty decomposition method */
   val decompositionMethodEpsilon: SimpleDecompositionMethod =
@@ -63,7 +63,7 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
                                                   TaskOrdering(OrderingConstraint.allBetween(initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3),
                                                                                initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil),
                                                   CSP(Set(variableSort1(7)), Nil), initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3, AllModifications,
-                                                          AllFlaws, Map(), Map()))
+                                                          AllFlaws, Map(), Map()), "some method")
 
   val init4: ReducedTask = ReducedTask("init", isPrimitive = true, variableSort1(3) :: Nil, Nil, precondition = And[Literal](Nil), effect =
     And[Literal](Literal(predicate1, isPositive = true, variableSort1(3) :: Nil) :: Literal(predicate2, isPositive = true, variableSort1(3) :: Nil) :: Nil))

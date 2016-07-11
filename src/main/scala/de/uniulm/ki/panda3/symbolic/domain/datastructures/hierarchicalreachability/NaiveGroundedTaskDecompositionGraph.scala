@@ -30,7 +30,7 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
 
     // create an artificial method
     val topTask = ReducedTask("__grounding__top", isPrimitive = false, alreadyGroundedVariableMapping.keys.toSeq, Nil, initSchema.effect, goalSchema.precondition)
-    val topMethod = SimpleDecompositionMethod(topTask, initialPlan)
+    val topMethod = SimpleDecompositionMethod(topTask, initialPlan, "__top")
 
     // compute groundings of abstract tasks naively
     val abstractTaskGroundings: Map[Task, Set[GroundTask]] = (domain.abstractTasks map { abstractTask =>
@@ -43,7 +43,7 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
 
     // ground all methods naively
     val groundedDecompositionMethods: Map[GroundTask, Seq[GroundedDecompositionMethod]] = domain.decompositionMethods :+ topMethod flatMap {
-      case method@SimpleDecompositionMethod(abstractTask, subPlan) =>
+      case method@SimpleDecompositionMethod(abstractTask, subPlan,_) =>
         abstractTaskGroundings(abstractTask) map { x => (x, method.groundWithAbstractTaskGrounding(x)) }
       case _                                                       => noSupport(NONSIMPLEMETHOD)
     } groupBy { _._1 } map { case (gt, s) => (gt, s flatMap { _._2 }) }
