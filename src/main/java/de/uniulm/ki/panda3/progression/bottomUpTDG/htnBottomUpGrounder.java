@@ -21,10 +21,9 @@ import java.util.*;
 
 /**
  * Created by dhoeller on 07.07.16.
- *
+ * <p/>
  * Not implemented yet:
  * - Variable constraints other than equal and unequal
- * - Full grounding of unconstraint variables (for both first and next parameters)
  * - Epsilon-methods
  */
 public class htnBottomUpGrounder {
@@ -125,7 +124,6 @@ public class htnBottomUpGrounder {
         List<List<Tuple2>> res = new ArrayList<>();
         Set<GroundTask> psGroundings = groundingsByTask.get(ps.schema());
 
-        currentBindingLoop:
         for (List<Tuple2> current : currentBindings) {
 
             psGroundingLoop:
@@ -272,18 +270,49 @@ public class htnBottomUpGrounder {
     private Set<GroundedDecompositionMethod> groundMethod(List<List<Tuple2>> partialGrounding, DecompositionMethod m) {
         Set<GroundedDecompositionMethod> res = new HashSet<>();
         for (List<Tuple2> varConstMapping : partialGrounding) {
-            scala.collection.immutable.Map<Variable, Constant> set = new scala.collection.immutable.HashMap<>();
             List<Variable> unsetVars = getUnsetVars(varConstMapping, m);
-            if (unsetVars.size() > 0) {
-                System.out.println("Error while grounding");
+            if (unsetVars.size() > 0) { // partially grounded
+                // need to ground unconstraint variables
+                List<List<Tuple2>> all = new ArrayList<>();
+                all.add(varConstMapping);
+
+                for (Variable v : unsetVars) {
+                    all = getFullGrounding(all, v, m.subPlan().variableConstraints().constraints());
+                }
+                for (List<Tuple2> elem : all) {
+                    res.add(new GroundedDecompositionMethod(m, toScalaSet(elem)));
+                }
+            } else { // totally grounded
+                res.add(new GroundedDecompositionMethod(m, toScalaSet(varConstMapping)));
             }
-            for (Tuple2 b : varConstMapping) {
-                set = set.$plus(new Tuple2<Variable, Constant>((Variable) b._1(), (Constant) b._2()));
-            }
-            GroundedDecompositionMethod gm = new GroundedDecompositionMethod(m, set);
-            res.add(gm);
         }
         return res;
+    }
+
+    // The following method is somehow equal to the 'combine'-method, but somehow not
+    private List<List<Tuple2>> getFullGrounding(List<List<Tuple2>> partialGroundings, Variable v, Seq<VariableConstraint> constraints) {
+        List<List<Tuple2>> all = new ArrayList<>();
+        for (List<Tuple2> varConstMapping : partialGroundings) {
+            for (int i = 0; i < v.sort().elements().size(); i++) {
+                Constant c = v.sort().elements().apply(i);
+                List<Tuple2> newMapping = new ArrayList<>();
+                newMapping.addAll(varConstMapping);
+                newMapping.add(new Tuple2(v, c));
+                newMapping.addAll(propagateEquality(constraints, v, c));
+                if (constraintsFine(constraints, newMapping)) {
+                    all.add(newMapping);
+                }
+            }
+        }
+        return all;
+    }
+
+    private scala.collection.immutable.Map<Variable, Constant> toScalaSet(List<Tuple2> varConstMapping) {
+        scala.collection.immutable.Map<Variable, Constant> set = new scala.collection.immutable.HashMap<>();
+        for (Tuple2 b : varConstMapping) {
+            set = set.$plus(new Tuple2<Variable, Constant>((Variable) b._1(), (Constant) b._2()));
+        }
+        return set;
     }
 
     private List<Variable> getUnsetVars(List<Tuple2> varConstMapping, DecompositionMethod m) {
@@ -309,21 +338,29 @@ public class htnBottomUpGrounder {
         Set<GroundTask> res = new HashSet<>();
         Task t = m.abstractTask();
         for (List<Tuple2> varConstMapping : partialGrounding) {
-            seqProviderList<Constant> paramList = new seqProviderList<>();
-            List<Integer> notIncluded = new ArrayList<>();
+            List<Variable> notIncluded = new ArrayList<>();
             for (int i = 0; i < t.parameters().size(); i++) {
                 Variable taskPar = t.parameters().apply(i);
                 Constant c = getConst(taskPar, varConstMapping);
-                if (c != null) {
-                    paramList.add(c);
-                } else {
-                    notIncluded.add(i);
+                if (c == null) {
+                    notIncluded.add(taskPar);
                 }
             }
-            if (notIncluded.size() == 0) {
+            List<List<Tuple2>> all = new ArrayList<>();
+            all.add(varConstMapping);
+
+            for (Variable v : notIncluded) {
+                all = getFullGrounding(all, v, m.subPlan().variableConstraints().constraints());
+            }
+
+            for (List<Tuple2> elem : all) {
+                seqProviderList<Constant> paramList = new seqProviderList<>();
+                for (int i = 0; i < t.parameters().size(); i++) {
+                    Variable taskPar = t.parameters().apply(i);
+                    Constant c = getConst(taskPar, elem);
+                    paramList.add(c);
+                }
                 res.add(new GroundTask(t, paramList.result()));
-            } else {
-                System.out.println("Error while grounding");
             }
         }
         return res;
