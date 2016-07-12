@@ -21,6 +21,11 @@ import java.util.*;
 
 /**
  * Created by dhoeller on 07.07.16.
+ *
+ * Not implemented yet:
+ * - Variable constraints other than equal and unequal
+ * - Full grounding of unconstraint variables (for both first and next parameters)
+ * - Epsilon-methods
  */
 public class htnBottomUpGrounder {
     Set<Task> reachableTasks = new HashSet<>();
@@ -31,7 +36,7 @@ public class htnBottomUpGrounder {
     public htnBottomUpGrounder(Domain d, Plan p, Set<GroundTask> groundActions) {
         // get reachable task symbols
         long time = System.currentTimeMillis();
-        System.out.print("Inferring task symbols reachable from initial tn");
+        System.out.print("Inferring task symbols reachable from initial tn ");
         getReachableTaskSymbols(d, p);
         System.out.println("(" + (System.currentTimeMillis() - time) + " ms)");
         System.out.println("Number of reachable task symbols: " + reachableTasks.size());
@@ -43,6 +48,12 @@ public class htnBottomUpGrounder {
         // generate lookup table
         actionsToLookupTable(groundActions);
 
+        Set<Task> deltedByEpsilonMethods = getEpsilonMethods(d);
+        if (deltedByEpsilonMethods.size() > 0) {
+            System.out.println("Found " + deltedByEpsilonMethods.size() + " tasks that might be deleted by psilon-methods.");
+            System.out.println("Don't know what to do with them");
+        }
+        int numTasks = 0;
         mainloop:
         while (!todoList.isEmpty()) {
             DecompositionMethod m = todoList.removeFirst();
@@ -68,10 +79,10 @@ public class htnBottomUpGrounder {
                     partialGroundings = combine(partialGroundings, ps, m.subPlan().variableConstraints().constraints());
                 }
             }
+
             /* at this point, every element of partialGroundings contains a partial binding that is in line with all
              * sub-tasks. It might not cover all variables of the method nor the abstract task.
              */
-
             Set<GroundTask> currentGrounding = groundAbstractTask(partialGroundings, m);
             Set<GroundTask> existingGroundings;
             if (groundingsByTask.containsKey(m.abstractTask())) {
@@ -85,6 +96,7 @@ public class htnBottomUpGrounder {
 
             if ((oldCount < existingGroundings.size()) // has something been added?
                     && (needToReGround.containsKey(m.abstractTask()))) {
+                numTasks += (existingGroundings.size() - oldCount);
                 Set<DecompositionMethod> reGround = needToReGround.get(m.abstractTask());
                 for (DecompositionMethod dm : reGround) {
                     if (!todoList.contains(dm))
@@ -93,9 +105,20 @@ public class htnBottomUpGrounder {
             }
             Set<GroundedDecompositionMethod> lMs = groundMethod(partialGroundings, m);
             groundMethods.addAll(lMs);
-            System.out.println("Increased number of grounded methods to " + groundMethods.size());
         }
-        System.out.println("Grounding took a total of " + (System.currentTimeMillis() - time) + " ms");
+        System.out.println("Grounded " + groundMethods.size() + " methods and " + numTasks + " abstract tasks ("
+                + (System.currentTimeMillis() - time) + " ms)");
+    }
+
+    private Set<Task> getEpsilonMethods(Domain d) {
+        Set<Task> result = new HashSet<>();
+        for (int i = 0; i < d.decompositionMethods().size(); i++) {
+            DecompositionMethod m = d.decompositionMethods().apply(i);
+            if (m.subPlan().planSteps().size() == 2) {
+                result.add(m.abstractTask());
+            }
+        }
+        return result;
     }
 
     private List<List<Tuple2>> combine(List<List<Tuple2>> currentBindings, PlanStep ps, Seq<VariableConstraint> constraints) {
@@ -114,8 +137,8 @@ public class htnBottomUpGrounder {
                     Variable v = ps.arguments().apply(parNo);
                     Constant c = psGrounding.arguments().apply(parNo);
                     for (Tuple2 b : current) {
-                        if (b._1() == v) {
-                            if (b._2() != c)
+                        if (b._1().equals(v)) {
+                            if (!(b._2().equals(c)))
                                 // inconsistent bindings -> stop current grounding of ps
                                 continue psGroundingLoop;
                             else {
@@ -181,30 +204,30 @@ public class htnBottomUpGrounder {
                     Constant c2 = getValue(partialGrounding, (Variable) ((Equal) vc).left());
                     if ((c1 == null) || (c2 == null))
                         continue;
-                    if (c1 != c2) {
+                    if (!c1.equals(c2)) {
                         return false;
                     }
                 } else if (((Equal) vc).right() instanceof Constant) {
                     Constant c = getValue(partialGrounding, (Variable) ((Equal) vc).left());
                     if (c == null)
                         continue;
-                    if (c != ((Equal) vc).right())
+                    if (!c.equals(((Equal) vc).right()))
                         return false;
                 }
             } else if (vc instanceof NotEqual) {
                 if (((Equal) vc).right() instanceof Variable) {
                     Constant c1 = getValue(partialGrounding, (Variable) ((Equal) vc).right());
-                    Constant c2 = getValue(partialGrounding, (Variable) ((Equal) vc).left());
+                    Constant c2 = getValue(partialGrounding, ((Equal) vc).left());
                     if ((c1 == null) || (c2 == null))
                         continue;
-                    if (c1 == c2) {
+                    if (c1.equals(c2)) {
                         return false;
                     }
                 } else if (((Equal) vc).right() instanceof Constant) {
                     Constant c = getValue(partialGrounding, (Variable) ((Equal) vc).left());
                     if (c == null)
                         continue;
-                    if (c == ((Equal) vc).right())
+                    if (c.equals(((Equal) vc).right()))
                         return false;
                 }
             } else
