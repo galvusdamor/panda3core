@@ -24,6 +24,7 @@ case class GroundedPlanningGraph
   }
 
   layer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
+  layer foreach { case (_, b) => assert(initialState forall b.contains) }
 
   lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
 

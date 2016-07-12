@@ -18,7 +18,7 @@ import de.uniulm.ki.util.HashMemo
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // TODO: check, whether the parameter constraints of a task schema are always observed correctly
-trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task]{
+trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
   val name                : String
   val isPrimitive         : Boolean
   val parameters          : Seq[Variable]
@@ -34,7 +34,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task]{
     Literal(literal.predicate, literal.isPositive, literal.parameterVariables map sub)
   }
 
-	override def compare(that: Task): Int = this.name compare that.name
+  override def compare(that: Task): Int = this.name compare that.name
 
   override def update(domainUpdate: DomainUpdate): Task = domainUpdate match {
     case ExchangeTask(map)                                => if (map.contains(this)) map(this) else this
@@ -75,12 +75,14 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task]{
           ReducedTask(name, isPrimitive, parameters, parameterConstraints, And(newPrecondition), And(newEffects))
         case _                                                   => noSupport(FORUMLASNOTSUPPORTED)
       }
-    case RemoveEffects(unnecessaryPredicates) =>
+    case RemoveEffects(unnecessaryPredicates, invert)     =>
       this match {
         case ReducedTask(_, _, _, _, preconditionAnd, effectAnd) =>
           val newEffects = effectAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
+          val newPreconditions = preconditionAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
 
-          ReducedTask(name, isPrimitive, parameters, parameterConstraints, preconditionAnd, And(newEffects))
+          if (!invert) ReducedTask(name, isPrimitive, parameters, parameterConstraints, preconditionAnd, And(newEffects))
+          else ReducedTask(name, isPrimitive, parameters, parameterConstraints, And(newPreconditions), effectAnd)
         case _                                                   => noSupport(FORUMLASNOTSUPPORTED)
       }
 
@@ -139,7 +141,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task]{
 }
 
 case class GeneralTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], precondition: Formula, effect: Formula)
-  extends Task with HashMemo{
+  extends Task with HashMemo {
 
   override lazy val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)] = noSupport(FORUMLASNOTSUPPORTED)
   override lazy val effectsAsPredicateBool      : Seq[(Predicate, Boolean)] = noSupport(FORUMLASNOTSUPPORTED)
@@ -147,7 +149,7 @@ case class GeneralTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 }
 
 case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], parameterConstraints: Seq[VariableConstraint], precondition: And[Literal], effect: And[Literal])
-  extends Task with HashMemo{
+  extends Task with HashMemo {
   /*if (!((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })){
     (precondition.conjuncts ++ effect.conjuncts) foreach {l => l.parameterVariables foreach { v =>
       println("VARIABLE " + v)

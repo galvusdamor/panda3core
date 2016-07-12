@@ -19,8 +19,9 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
   override def transform(domain: Domain, plan: Plan, reachabilityAnalysis: GroundedReachabilityAnalysis): (Domain, Plan) = {
     // ----- Predicates
     val groundedPredicates: Map[Predicate, Map[Seq[Constant], Predicate]] =
-      ((reachabilityAnalysis.reachableGroundLiterals ++ reachabilityAnalysis.additionalLiteralsNeededToGround) map { case GroundLiteral(predicate, _, parameter) =>
-        GroundLiteral(predicate, isPositive = true, parameter) // make all literals positive, we just want to ground the predicates
+      ((reachabilityAnalysis.reachableGroundLiterals ++ reachabilityAnalysis.additionalLiteralsNeededToGround ++ plan.groundedInitialState) map {
+        case GroundLiteral(predicate, _, parameter) =>
+          GroundLiteral(predicate, isPositive = true, parameter) // make all literals positive, we just want to ground the predicates
       }).distinct groupBy { _.predicate } map {
         case (predicate, litList) =>
           val argumentMapping = litList groupBy { _.parameter } map { case (args, lits) =>
@@ -105,7 +106,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
       case GroundedDecompositionMethod(liftedMethod, variableBinding) =>
         // ground the abstract actions
         val groundedAbstractTask = groundTaskToGroundedTask(GroundTask(liftedMethod.abstractTask, liftedMethod.abstractTask.parameters map variableBinding))
-        SimpleDecompositionMethod(groundedAbstractTask, groundPlan(liftedMethod.subPlan, variableBinding),liftedMethod.name)
+        SimpleDecompositionMethod(groundedAbstractTask, groundPlan(liftedMethod.subPlan, variableBinding), liftedMethod.name)
     }
 
     // check whether we have to insert a new abstract task, as the initial plan might not be completely grounded

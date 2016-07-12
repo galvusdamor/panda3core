@@ -99,4 +99,13 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
   override lazy val reachableGroundLiterals        : Seq[GroundLiteral]               = groundedReachabilityAnalysis.reachableGroundLiterals
   override      val additionalTaskNeededToGround   : Seq[GroundTask]                  = taskDecompositionGraph._2 :+ initialPlan.groundedGoalTask
   override      val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod] = taskDecompositionGraph._3
+
+  reachableGroundPrimitiveActions foreach { gt =>
+    gt.substitutedEffects foreach {e => assert(reachableGroundLiterals contains e) }
+    gt.substitutedPreconditions foreach {e => assert(reachableGroundLiterals contains e) }
+  }
+  reachableGroundAbstractActions foreach { gt =>
+    gt.substitutedEffects foreach {e => assert(reachableGroundLiterals contains e) }
+    gt.substitutedPreconditions foreach {e => assert(reachableGroundLiterals contains e) }
+  }
 }
