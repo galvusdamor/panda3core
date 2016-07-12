@@ -244,7 +244,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
     //println(forwardButNotPG.size)
     //println(pgButNotForward.size)
 
-    val pgLastState = planningGraph.reachableGroundLiterals toSet
+    val pgLastState = planningGraph.reachableGroundLiterals filter { _.isPositive } toSet
     val forwardSearchLastState = forwardSearch.reachableGroundLiterals filter { _.isPositive } toSet
 
     // check whole graph
