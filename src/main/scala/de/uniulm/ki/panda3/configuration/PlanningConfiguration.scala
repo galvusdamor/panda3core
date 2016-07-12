@@ -106,8 +106,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       // in some cases we need to re-do some steps of the preparation as we have to transfer them into the efficient representation
       timeCapsule start HEURISTICS_PREPARATION
-      if (searchConfiguration.heuristic contains TDGMinimumModification) analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
-      if ((searchConfiguration.heuristic contains ADD) || (searchConfiguration.heuristic contains ADDReusing)) {
+      if ((searchConfiguration.heuristic contains TDGMinimumModification) || (searchConfiguration.heuristic contains TDGMinimumADD))
+        analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
+      if ((searchConfiguration.heuristic contains ADD) || (searchConfiguration.heuristic contains ADDReusing) || (searchConfiguration.heuristic contains TDGMinimumADD)) {
         // do the whole preparation, i.e. planning graph
         val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
         val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, computeMutexes = true, isSerial = false)
@@ -140,7 +141,19 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case NumberOfPlanSteps      => EfficientNumberOfPlanSteps
                 case WeightedFlaws          => ???
                 case TDGMinimumModification => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
-                case ADD | ADDReusing       =>
+                case TDGMinimumADD          =>
+                  // TODO experimental
+                  val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
+                  val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
+                    (wrapper.unwrap(task), args map wrapper.unwrap toArray)
+                  }
+                  val reusing = if (heuristic == ADDReusing) true else false
+                  // TODO check that we have compiled negative preconditions away
+                  MinimumADDHeuristic(analysisMap(EfficientGroundedTDG), AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray, reusing), wrapper
+                    .efficientDomain)
+
+
+                case ADD | ADDReusing =>
                   val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
                   val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
                     (wrapper.unwrap(task), args map wrapper.unwrap toArray)
@@ -440,6 +453,8 @@ object NumberOfPlanSteps extends SearchHeuristic
 object WeightedFlaws extends SearchHeuristic
 
 object TDGMinimumModification extends SearchHeuristic
+
+object TDGMinimumADD extends SearchHeuristic
 
 object ADD extends SearchHeuristic
 

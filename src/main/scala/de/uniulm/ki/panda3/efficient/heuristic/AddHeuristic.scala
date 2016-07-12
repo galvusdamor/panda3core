@@ -52,7 +52,8 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
     println(lit.predicate + (lit.arguments.mkString("(",",",")")) + " -> " + v)
   }*/
 
-  private val efficientAccessMaps = domain.predicates.indices map { case p =>
+  // TODO used to be pricate
+  val efficientAccessMaps = domain.predicates.indices map { case p =>
     val literals = heuristicMap filter { _._1.predicate == p }
 
     BucketAccessMap(literals map { case (k, v) => (k.arguments, v) })
