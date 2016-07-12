@@ -248,6 +248,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       val possiblyInvertedUpdate = domainUpdate match {
         case ExchangeLiteralsByPredicate(map, _) => ExchangeLiteralsByPredicate(map, invertedTreatment = false)
+        case RemoveEffects(toRemove, _)          => RemoveEffects(toRemove, invertedTreatment = false)
         case _                                   => domainUpdate
       }
 
@@ -429,7 +430,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     })
   }
 
-  lazy val groundedInitialStateOnlyPositive : Seq[GroundLiteral] = groundedInitialState filter {_.isPositive}
+  lazy val groundedInitialStateOnlyPositive: Seq[GroundLiteral] = groundedInitialState filter { _.isPositive }
 
   lazy val groundedGoalState: Seq[GroundLiteral] = goal.substitutedPreconditions map { case Literal(predicate, isPositive, parameters) =>
     GroundLiteral(predicate, isPositive, parameters map { v =>
@@ -442,7 +443,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   lazy val groundedGoalTask: GroundTask = {
     val arguments = goal.arguments map variableConstraints.getRepresentative map {
       case c: Constant => c
-      case _ => noSupport(LIFTEDGOAL)
+      case _           => noSupport(LIFTEDGOAL)
     }
     GroundTask(goal.schema, arguments)
   }

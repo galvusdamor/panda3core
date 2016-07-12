@@ -254,7 +254,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
   private def runGroundedPlanningGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
-    val groundedInitialState = problem.groundedInitialState
+    val groundedInitialState = problem.groundedInitialState filter { _.isPositive }
     val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, computeMutexes = true, isSerial = false, Left(Nil))
     // add analysis to map
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)

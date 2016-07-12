@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
 import de.uniulm.ki.panda3.symbolic.csp.Equal
-import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeLiteralsByPredicate, DomainUpdate}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{RemoveEffects, ExchangeLiteralsByPredicate, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 
@@ -54,6 +54,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = domainUpdate match {
     case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
                                                                               name)
+    case RemoveEffects(toRemove, false)          => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update RemoveEffects(toRemove, invertedTreatment = true), name)
     case _                                       => SimpleDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate), name)
   }
 

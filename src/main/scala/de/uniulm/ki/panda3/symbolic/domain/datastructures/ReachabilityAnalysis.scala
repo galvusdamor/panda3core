@@ -55,9 +55,11 @@ trait LayeredLiftedPrimitiveReachabilityAnalysis extends PrimitiveReachabilityAn
 }
 
 trait LayeredGroundedPrimitiveReachabilityAnalysis extends GroundedPrimitiveReachabilityAnalysis {
-  override lazy val reachableGroundLiterals: Seq[GroundLiteral] = layer.last._2.toSeq
-
   override lazy val reachableGroundPrimitiveActions: Seq[GroundTask] = layer.last._1.toSeq
+
+  //override lazy val reachableGroundLiterals: Seq[GroundLiteral] = layer.last._2.toSeq
+  override lazy val reachableGroundLiterals: Seq[GroundLiteral] =
+    ((reachableGroundPrimitiveActions flatMap { _.substitutedEffects }) ++ layer.last._2.toSeq) distinct
 
   protected val layer: Seq[(Set[GroundTask], Set[GroundLiteral])]
 }
