@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.progression.proSearch;
 
-import de.uniulm.ki.panda3.progression.bottomUpTDG.htnBottomUpGrounder;
+import de.uniulm.ki.panda3.progression.bottomUpGrounder.htnBottomUpGrounder;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.efficientRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
@@ -67,8 +67,33 @@ public class planningInstance {
         long time = System.currentTimeMillis();
         Set<GroundLiteral> allLiterals;
         Set<GroundTask> allActions;
-        if (relaxFirstGraph) {
-            System.out.print("Building initial relaxed planning graph");
+        htnBottomUpGrounder gr = null;
+        if (isHtn) {
+            boolean converged = false;
+            symbolicRPG rpg = null;
+            while (!converged) {
+                System.out.print("Building relaxed planning graph");
+                long time2 = System.currentTimeMillis();
+                rpg = new symbolicRPG();
+                if (gr == null)
+                    rpg.build(d, p);
+                else
+                    rpg.build(d, p, gr.groundingsByTask);
+                System.out.println(" (" + (System.currentTimeMillis() - time2) + " ms).");
+
+                System.out.println(" - Graph contains " + rpg.actions.get(rpg.actions.size() - 1).size() + " ground actions.");
+                System.out.println(" - Graph contains " + rpg.facts.get(rpg.facts.size() - 1).size() + " environment facts.");
+
+                gr = new htnBottomUpGrounder(d, p, rpg.actions.get(rpg.actions.size() - 1));
+                converged = !gr.deletedActions;
+                if (gr.deletedActions) {
+                    System.out.println("Restart grounding ...");
+                }
+            }
+            allLiterals = rpg.facts.get(rpg.facts.size() - 1);
+            allActions = rpg.actions.get(rpg.actions.size() - 1);
+        } else if (relaxFirstGraph) {
+            System.out.println("Building initial relaxed planning graph.");
             symbolicRPG rpg = new symbolicRPG();
             rpg.build(d, p);
             allLiterals = rpg.facts.get(rpg.facts.size() - 1);
@@ -76,7 +101,7 @@ public class planningInstance {
         } else {
             allLiterals = new HashSet<>();
             allActions = new HashSet<>();
-            System.out.print("Building initial (non-relaxed) planning graph");
+            System.out.println("Building initial (non-relaxed) planning graph.");
             GroundedPlanningGraph gpg = GroundedPlanningGraph.apply(d, p.groundedInitialStateOnlyPositive(), true, false);
 
             scala.collection.Iterator<GroundLiteral> iterAllFacts = gpg.reachableGroundLiterals().iterator();
@@ -88,24 +113,17 @@ public class planningInstance {
             while (iterAllActions.hasNext())
                 allActions.add(iterAllActions.next());
         }
-        System.out.println("(" + (System.currentTimeMillis() - time) + " ms)");
+        System.out.println("Grounding completed in " + (System.currentTimeMillis() - time) + " ms.");
         time = System.currentTimeMillis();
 
         numStateFeatures = allLiterals.size();
         numActions = allActions.size();
-        System.out.println("Graph contains " + numActions + " ground actions");
-        System.out.println("Graph contains " + numStateFeatures + " environment facts");
-
-        //
-        // Get reachable grounded abstract tasks and methods
-        //
-        htnBottomUpGrounder tdg;
         if (isHtn) {
-            //symbolicHtnRPG htnRPG = new symbolicHtnRPG();
-            //htnRPG.build(d, p);
-            tdg = new htnBottomUpGrounder(d, p, allActions);
+            System.out.println(" - Found " + gr.abstTaskCount + " reachable abstract tasks.");
+            System.out.println(" - Found " + gr.methodCount + " reachable ground methods.");
         }
-
+        System.out.println(" - Found " + numActions + " reachable ground actions.");
+        System.out.println(" - Found " + numStateFeatures + " reachable environment facts.");
         System.out.println("\nPreprocessing planning instance");
         ToCompactRepresentation(allLiterals, allActions);
 
@@ -149,13 +167,13 @@ public class planningInstance {
                 break;
             }
             actionloop:
-            for (Integer a : n.getApplicableActions()) {
+            for (Integer nextAction : n.getApplicableActions()) {
                 // test via nextSetBit
-                int pre = prec[a].nextSetBit(0);
+                int pre = prec[nextAction].nextSetBit(0);
                 while (pre > -1) {
                     if (!n.state.get(pre))
                         continue actionloop;
-                    pre = prec[a].nextSetBit(pre + 1);
+                    pre = prec[nextAction].nextSetBit(pre + 1);
                 }
                 // test via logical AND
                 //temp = (BitSet) n.state.clone();
@@ -164,10 +182,10 @@ public class planningInstance {
                 //continue;
 
                 temp = (BitSet) n.state.clone();
-                temp.andNot(del[a]);
-                temp.or(add[a]);
+                temp.andNot(del[nextAction]);
+                temp.or(add[nextAction]);
 
-                searchNode node = new searchNode(temp, n.tasks, a);
+                searchNode node = new searchNode(temp, n.tasks, nextAction);
                 if (node.rpg.goalRelaxedReachable) {
                     fringe.add(node);
                     if (node.metric < bestMetric) {

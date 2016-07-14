@@ -34,8 +34,8 @@ public class PANDApro {
         // String problemFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/lifted-htn/p00-strips.lisp";
 
         // HTN
-        String domainFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/domain-htn.lisp";
-        String problemFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/p00-htn.lisp";
+        String domainFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp";
+        String problemFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p01-htn.lisp";
 
         Tuple2<Domain, Plan> instance = FileHandler.loadHDDLFromFile(domainFile, problemFile);
 

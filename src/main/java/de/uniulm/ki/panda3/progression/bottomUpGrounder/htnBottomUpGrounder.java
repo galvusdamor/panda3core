@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.progression.bottomUpTDG;
+package de.uniulm.ki.panda3.progression.bottomUpGrounder;
 
 import de.uniulm.ki.panda3.symbolic.csp.Equal;
 import de.uniulm.ki.panda3.symbolic.csp.NotEqual;
@@ -27,20 +27,24 @@ import java.util.*;
  * - Epsilon-methods
  */
 public class htnBottomUpGrounder {
-    HashMap<Task, Set<GroundTask>> groundingsByTask = new HashMap<>();
-    HashMap<Task, Set<GroundedDecompositionMethod>> methodsByTask = new HashMap<>();
+    public final int methodCount;
+    public final int abstTaskCount;
+    public final int primTaskCount;
+
+    public HashMap<Task, Set<GroundTask>> groundingsByTask = new HashMap<>();
+    public HashMap<Task, Set<GroundedDecompositionMethod>> methodsByTask = new HashMap<>();
+    public boolean deletedActions = false;
 
     public htnBottomUpGrounder(Domain d, Plan p, Set<GroundTask> groundActions) {
         // get reachable task symbols
+        System.out.println("Grounding HTN ...");
         long time = System.currentTimeMillis();
 
         HashMap<Task, Set<DecompositionMethod>> needToReGround = new HashMap<>();
         Set<Task> reachableTasks = getReachableTaskSymbols(d, p, needToReGround);
-        System.out.println("Inferred task symbols reachable from initial task network in " + (System.currentTimeMillis() - time) +
-                " ms. " + reachableTasks.size() + " task symbols are reachable.");
+        System.out.println(" - Found " + reachableTasks.size() + " task symbols reachable from the initial task network.");
 
         // get reachable ground methods and abstract tasks
-        time = System.currentTimeMillis();
         LinkedList<DecompositionMethod> todoList = getMethodsWithSolelyPrimSubtasks(d);
 
         // generate lookup table
@@ -114,7 +118,7 @@ public class htnBottomUpGrounder {
             methCount += tasks.size();
         }
 
-        System.out.println("Grounded bottom-up in " + (System.currentTimeMillis() - time) + " ms. " + methCount
+        System.out.println(" - Grounded bottom-up in " + (System.currentTimeMillis() - time) + " ms. " + methCount
                 + " methods and " + taskCount + " tasks are reachable.");
 
         time = System.currentTimeMillis();
@@ -125,40 +129,55 @@ public class htnBottomUpGrounder {
         tdReachableTasks = getGroundInitialTN(p);
 
         // iterate over methods
-        boolean changed = true;
-        while (changed) {
-            Set<GroundTask> newTasks = new HashSet<>();
-            for (GroundTask gt : tdReachableTasks) {
-                if (gt.task().isPrimitive())
-                    continue;
-                for (GroundedDecompositionMethod m : methodsByTask.get(gt.task())) {
-                    if (m.groundAbstractTask().equals(gt)) {
+        int oldSize = 0;
+        while (oldSize != tdReachableTasks.size()) {
+            oldSize = tdReachableTasks.size();
+            for (Set<GroundedDecompositionMethod> classes : methodsByTask.values()) {
+                for (GroundedDecompositionMethod m : classes) {
+                    if (tdReachableTasks.contains(m.groundAbstractTask())) {
                         tdReachableMethods.add(m);
                         Iterator<GroundTask> iter2 = m.subPlanGroundedTasksWithoutInitAndGoal().iterator();
                         while (iter2.hasNext()) {
-                            GroundTask subtask = iter2.next();
-                            newTasks.add(subtask);
+                            tdReachableTasks.add(iter2.next());
                         }
                     }
                 }
             }
-            int oldSize = tdReachableTasks.size();
-            tdReachableTasks.addAll(newTasks);
-            changed = (tdReachableTasks.size() > oldSize);
         }
 
-        taskCount = 0;
-        for (Set<GroundTask> tasks : groundingsByTask.values()) {
+        int deletedActions = 0;
+        int absTaskCount = 0;
+        int primTaskCount = 0;
+
+        for (Task key : groundingsByTask.keySet()) {
+            int oldNum = 0;
+            Set<GroundTask> tasks = groundingsByTask.get(key);
+            if (key.isPrimitive()) {
+                oldNum = tasks.size();
+            }
             tasks.retainAll(tdReachableTasks);
-            taskCount += tasks.size();
+            if (key.isPrimitive()) {
+                deletedActions += (oldNum - tasks.size());
+                primTaskCount += tasks.size();
+            } else {
+                absTaskCount += tasks.size();
+            }
         }
         methCount = 0;
         for (Set<GroundedDecompositionMethod> tasks : methodsByTask.values()) {
             tasks.retainAll(tdReachableMethods);
             methCount += tasks.size();
         }
-        System.out.println("Grounded top-down in " + (System.currentTimeMillis() - time) + " ms. " + methCount
-                + " methods and " + taskCount + " tasks are reachable.");
+        System.out.println(" - Grounded top-down in " + (System.currentTimeMillis() - time) + " ms. " + methCount
+                + " methods, " + absTaskCount + " abstract and " + primTaskCount + " primitive tasks are reachable.");
+        if (deletedActions > 0) {
+            System.out.println(" - Deleted " + deletedActions + " ground actions.");
+            this.deletedActions = true;
+        }
+
+        this.methodCount = methCount;
+        this.abstTaskCount = absTaskCount;
+        this.primTaskCount = primTaskCount;
     }
 
     private Set<GroundTask> getGroundInitialTN(Plan p) {

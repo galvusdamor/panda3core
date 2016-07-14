@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.progression.relaxedPlanningGraph;
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
@@ -17,6 +18,15 @@ public class symbolicRPG {
     public List<Set<GroundTask>> actions = new ArrayList<>();
     public List<Set<GroundLiteral>> facts = new ArrayList<>();
     public List<Set<GroundLiteral>> Gt = new ArrayList<>();
+
+    boolean restrictToGivenActions = false;
+    private HashMap<Task, Set<GroundTask>> allowedActions = null;
+
+    public void build(Domain d, Plan p, HashMap<Task, Set<GroundTask>> onlyUse) {
+        restrictToGivenActions = true;
+        this.allowedActions = onlyUse;
+        build(d, p);
+    }
 
     public void build(Domain d, Plan p) {
         // init first fact layer
@@ -119,6 +129,8 @@ public class symbolicRPG {
             ReducedTask t = (ReducedTask) d.primitiveTasks().apply(i);
             for (int j = 0; j < t.instantiateGround().size(); j++) {
                 GroundTask groundT = t.instantiateGround().apply(j);
+                if (restrictToGivenActions && !allowedActions.get(groundT.task()).contains(groundT))
+                    continue;
 
                 boolean fulfilled = true;
                 for (int k = 0; k < groundT.substitutedPreconditions().size(); k++) {
