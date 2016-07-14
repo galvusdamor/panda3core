@@ -23,19 +23,22 @@ case class GroundedPlanningGraph
     }, groundLiterals)
   }
 
-  layer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
-  layer foreach { case (_, b) => assert(initialState forall b.contains) }
+  //layer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
+  //layer foreach { case (_, b) => assert(initialState forall b.contains) }
 
-  lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
-
-    buildGraph((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)]),
+  lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] =
+    buildGraph(Seq.empty[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])],
       initialState, Set.empty[(GroundLiteral, GroundLiteral)], firstLayer = true, Map())
-  }
 
-  def buildGraph(previousLayer: (Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)]),
+  def buildGraph(graph: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])],
                  addedPropositions: Set[GroundLiteral], deletedMutexes: Set[(GroundLiteral, GroundLiteral)], firstLayer: Boolean, oldPreconMap: Map[Predicate, Set[GroundLiteral]]):
   Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
 
+    val previousLayer = if(firstLayer){
+      (Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)])
+    } else {
+      graph.last
+    }
     val updatedPrecondMap = fillPreconMap(oldPreconMap, addedPropositions)
 
     // determine which grounded literals in the last state layer may cause new grounded actions to be applicable
@@ -64,7 +67,7 @@ case class GroundedPlanningGraph
     val newInstantiatedGroundTasks: Set[GroundTask] = newGroundTasksFromPreconditions ++ newGroundTasksFromParameters
     val newNoOps: Set[GroundTask] = addedPropositions map { groundLiteral => createNOOP(groundLiteral) }
     val newTasks: Set[GroundTask] = newInstantiatedGroundTasks ++ newNoOps
-    val allGroundTasks: Set[GroundTask] = previousLayer._1 ++newTasks
+    val allGroundTasks: Set[GroundTask] = previousLayer._1 ++ newTasks
 
 
     // compute task mutexes anew
@@ -145,12 +148,52 @@ case class GroundedPlanningGraph
     // termination and looping checks. Loop if something has changed compared with the previous layer of the PG
     val thisLayer = (allGroundTasks, iallTaskMutexes, allPropositions, propositionMutexes)
     if (newPropositions.isEmpty && previousLayer._4.size == propositionMutexes.size) {
-      if (previousLayer._1.size != allGroundTasks.size || previousLayer._2.size != iallTaskMutexes.size || (previousLayer._3 == initialState && previousLayer._4.isEmpty))
-        thisLayer :: Nil
-      else
-        Seq.empty[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])]
+      if (previousLayer._1.size != allGroundTasks.size || previousLayer._2.size != iallTaskMutexes.size || (previousLayer._3 == initialState && previousLayer._4.isEmpty)) {
+        for(x <- graph) {
+          println("Layer:")
+          println("Tasks: ")
+          for(a <- x._1) {
+            println(a.task.name)
+          }
+          println("TaskMutex:")
+          for(a <- x._2) {
+            println("[" + a._1.task.name + "|" + a._2.task.name + "]")
+          }
+          println("Literals:")
+          for(a <- x._3) {
+            println(a.predicate.name)
+          }
+          println("LiteralMutexes")
+          for(a <- x._4) {
+            println("[" + a._1.predicate.name + "|" + a._2.predicate.name + "]")
+          }
+        }
+        graph :+ thisLayer
+      }else {
+        for(x <- graph) {
+          println("Layer:")
+          println("Tasks: ")
+          for(a <- x._1) {
+            println(a.task.name)
+          }
+          println("TaskMutex:")
+          for(a <- x._2) {
+            println("[" + a._1.task.name + "|" + a._2.task.name + "]")
+          }
+          println("Literals:")
+          for(a <- x._3) {
+            println(a.predicate.name)
+          }
+          println("LiteralMutexes")
+          for(a <- x._4) {
+            println("[" + a._1.predicate.name + "|" + a._2.predicate.name + "]")
+          }
+        }
+        graph
+      }
     } else {
-      thisLayer +: buildGraph(thisLayer, newPropositions, previousLayer._4 diff propositionMutexes, firstLayer = false, updatedPrecondMap)
+      val newGraph = graph :+ thisLayer
+      buildGraph(newGraph, newPropositions, previousLayer._4 diff propositionMutexes, firstLayer = false, updatedPrecondMap)
     }
   }
 
