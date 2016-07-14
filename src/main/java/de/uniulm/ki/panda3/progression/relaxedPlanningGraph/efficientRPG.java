@@ -151,17 +151,17 @@ public class efficientRPG {
         return res;
     }
 
-    private int getProducer(int layer, int factum) {
+    private int getProducer(int layer, int fact) {
         for (int maybeProducer : actionDelta.get(layer)) {
             for (int i = 0; i < addList[maybeProducer].length; i++) {
-                if (addList[maybeProducer][i] == factum) {
+                if (addList[maybeProducer][i] == fact) {
                     // todo: DH says: there could be more than one - any strategy on which one to choose?
                     return maybeProducer;
                 }
             }
         }
         // this should never happen
-        System.out.println("ERROR: Found no producing action of fact " + factum + " in action-layer " + layer);
+        System.out.println("ERROR: Found no producing action of fact " + fact + " in action-layer " + layer);
         return -1;
     }
 }

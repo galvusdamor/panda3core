@@ -27,37 +27,30 @@ import java.util.*;
  * - Epsilon-methods
  */
 public class htnBottomUpGrounder {
-    Set<Task> reachableTasks = new HashSet<>();
-    HashMap<Task, Set<DecompositionMethod>> needToReGround = new HashMap<>();
-    Set<GroundedDecompositionMethod> groundMethods = new HashSet<>();
     HashMap<Task, Set<GroundTask>> groundingsByTask = new HashMap<>();
+    HashMap<Task, Set<GroundedDecompositionMethod>> methodsByTask = new HashMap<>();
 
     public htnBottomUpGrounder(Domain d, Plan p, Set<GroundTask> groundActions) {
         // get reachable task symbols
         long time = System.currentTimeMillis();
-        System.out.print("Inferring task symbols reachable from initial tn ");
-        getReachableTaskSymbols(d, p);
-        System.out.println("(" + (System.currentTimeMillis() - time) + " ms)");
-        System.out.println("Number of reachable task symbols: " + reachableTasks.size());
+
+        HashMap<Task, Set<DecompositionMethod>> needToReGround = new HashMap<>();
+        Set<Task> reachableTasks = getReachableTaskSymbols(d, p, needToReGround);
+        System.out.println("Inferred task symbols reachable from initial task network in " + (System.currentTimeMillis() - time) +
+                " ms. " + reachableTasks.size() + " task symbols are reachable.");
 
         // get reachable ground methods and abstract tasks
         time = System.currentTimeMillis();
         LinkedList<DecompositionMethod> todoList = getMethodsWithSolelyPrimSubtasks(d);
 
         // generate lookup table
-        actionsToLookupTable(groundActions);
+        addActionsToTaskSet(groundActions);
 
-        Set<Task> deltedByEpsilonMethods = getEpsilonMethods(d);
-        if (deltedByEpsilonMethods.size() > 0) {
-            System.out.println("Found " + deltedByEpsilonMethods.size() + " tasks that might be deleted by psilon-methods.");
-            System.out.println("Don't know what to do with them");
-        }
-        int numTasks = 0;
         mainloop:
         while (!todoList.isEmpty()) {
             DecompositionMethod m = todoList.removeFirst();
 
-            // only if subtask is primitive or seeded
+            // only if subtask is primitive or already generated
             for (int i = 0; i < m.subPlan().planSteps().size(); i++) {
                 PlanStep ps = m.subPlan().planSteps().apply(i);
                 if ((ps.id() > 0) && (!groundingsByTask.containsKey(ps.schema())))
@@ -82,42 +75,118 @@ public class htnBottomUpGrounder {
             /* at this point, every element of partialGroundings contains a partial binding that is in line with all
              * sub-tasks. It might not cover all variables of the method nor the abstract task.
              */
-            Set<GroundTask> currentGrounding = groundAbstractTask(partialGroundings, m);
-            Set<GroundTask> existingGroundings;
+            Set<GroundTask> existingTaskGroundings;
             if (groundingsByTask.containsKey(m.abstractTask())) {
-                existingGroundings = groundingsByTask.get(m.abstractTask());
+                existingTaskGroundings = groundingsByTask.get(m.abstractTask());
             } else {
-                existingGroundings = new HashSet<>();
-                groundingsByTask.put(m.abstractTask(), existingGroundings);
+                existingTaskGroundings = new HashSet<>();
+                groundingsByTask.put(m.abstractTask(), existingTaskGroundings);
             }
-            int oldCount = existingGroundings.size();
-            existingGroundings.addAll(currentGrounding);
+            int oldCount = existingTaskGroundings.size();
+            existingTaskGroundings.addAll(groundTask(partialGroundings, m.abstractTask(),
+                    m.subPlan().variableConstraints().constraints()));
 
-            if ((oldCount < existingGroundings.size()) // has something been added?
+            if ((oldCount < existingTaskGroundings.size()) // has something been added?
                     && (needToReGround.containsKey(m.abstractTask()))) {
-                numTasks += (existingGroundings.size() - oldCount);
                 Set<DecompositionMethod> reGround = needToReGround.get(m.abstractTask());
                 for (DecompositionMethod dm : reGround) {
                     if (!todoList.contains(dm))
                         todoList.add(dm);
                 }
             }
-            Set<GroundedDecompositionMethod> lMs = groundMethod(partialGroundings, m);
-            groundMethods.addAll(lMs);
+
+            Set<GroundedDecompositionMethod> existingMethodGroundings;
+            if (methodsByTask.containsKey(m.abstractTask())) {
+                existingMethodGroundings = methodsByTask.get(m.abstractTask());
+            } else {
+                existingMethodGroundings = new HashSet<>();
+                methodsByTask.put(m.abstractTask(), existingMethodGroundings);
+            }
+            existingMethodGroundings.addAll(groundMethod(partialGroundings, m));
         }
-        System.out.println("Grounded " + groundMethods.size() + " methods and " + numTasks + " abstract tasks ("
-                + (System.currentTimeMillis() - time) + " ms)");
+
+        int taskCount = 0;
+        for (Set<GroundTask> tasks : groundingsByTask.values()) {
+            taskCount += tasks.size();
+        }
+        int methCount = 0;
+        for (Set<GroundedDecompositionMethod> tasks : methodsByTask.values()) {
+            methCount += tasks.size();
+        }
+
+        System.out.println("Grounded bottom-up in " + (System.currentTimeMillis() - time) + " ms. " + methCount
+                + " methods and " + taskCount + " tasks are reachable.");
+
+        time = System.currentTimeMillis();
+        Set<GroundedDecompositionMethod> tdReachableMethods = new HashSet<>();
+        Set<GroundTask> tdReachableTasks;
+
+        // try to eliminate further tasks by additional top-down-grounding
+        tdReachableTasks = getGroundInitialTN(p);
+
+        // iterate over methods
+        boolean changed = true;
+        while (changed) {
+            Set<GroundTask> newTasks = new HashSet<>();
+            for (GroundTask gt : tdReachableTasks) {
+                if (gt.task().isPrimitive())
+                    continue;
+                for (GroundedDecompositionMethod m : methodsByTask.get(gt.task())) {
+                    if (m.groundAbstractTask().equals(gt)) {
+                        tdReachableMethods.add(m);
+                        Iterator<GroundTask> iter2 = m.subPlanGroundedTasksWithoutInitAndGoal().iterator();
+                        while (iter2.hasNext()) {
+                            GroundTask subtask = iter2.next();
+                            newTasks.add(subtask);
+                        }
+                    }
+                }
+            }
+            int oldSize = tdReachableTasks.size();
+            tdReachableTasks.addAll(newTasks);
+            changed = (tdReachableTasks.size() > oldSize);
+        }
+
+        taskCount = 0;
+        for (Set<GroundTask> tasks : groundingsByTask.values()) {
+            tasks.retainAll(tdReachableTasks);
+            taskCount += tasks.size();
+        }
+        methCount = 0;
+        for (Set<GroundedDecompositionMethod> tasks : methodsByTask.values()) {
+            tasks.retainAll(tdReachableMethods);
+            methCount += tasks.size();
+        }
+        System.out.println("Grounded top-down in " + (System.currentTimeMillis() - time) + " ms. " + methCount
+                + " methods and " + taskCount + " tasks are reachable.");
     }
 
-    private Set<Task> getEpsilonMethods(Domain d) {
-        Set<Task> result = new HashSet<>();
-        for (int i = 0; i < d.decompositionMethods().size(); i++) {
-            DecompositionMethod m = d.decompositionMethods().apply(i);
-            if (m.subPlan().planSteps().size() == 2) {
-                result.add(m.abstractTask());
+    private Set<GroundTask> getGroundInitialTN(Plan p) {
+        Set<GroundTask> tdReachableTasks = new HashSet<>();
+        for (int i = 0; i < p.planStepsWithoutInitGoal().size(); i++) {
+            PlanStep ps = p.planStepsWithoutInitGoal().apply(i);
+            Iterator<Variable> iter = ps.arguments().iterator();
+            seqProviderList<Constant> parameter = new seqProviderList<>();
+            while (iter.hasNext()) {
+                Variable v = iter.next();
+                Constant c = null;
+                for (int j = 0; j < p.variableConstraints().constraints().size(); j++) {
+                    VariableConstraint vc = p.variableConstraints().constraints().apply(j);
+                    if ((vc instanceof Equal)
+                            && (((Equal) vc).left().equals(v))
+                            && (((Equal) vc).right() instanceof Constant)) {
+                        c = (Constant) ((Equal) vc).right();
+                        break;
+                    }
+                }
+                if (c == null) {
+                    System.out.println("Error while grounding the initial TN");
+                }
+                parameter.add(c);
             }
+            tdReachableTasks.add(new GroundTask(ps.schema(), parameter.result()));
         }
-        return result;
+        return tdReachableTasks;
     }
 
     private List<List<Tuple2>> combine(List<List<Tuple2>> currentBindings, PlanStep ps, Seq<VariableConstraint> constraints) {
@@ -241,7 +310,7 @@ public class htnBottomUpGrounder {
         return null;
     }
 
-    private void actionsToLookupTable(Set<GroundTask> groundActions) {
+    private void addActionsToTaskSet(Set<GroundTask> groundActions) {
         java.util.Iterator<GroundTask> iter = groundActions.iterator();
         while (iter.hasNext()) {
             GroundTask gt = iter.next();
@@ -291,6 +360,11 @@ public class htnBottomUpGrounder {
 
     // The following method is somehow equal to the 'combine'-method, but somehow not
     private List<List<Tuple2>> getFullGrounding(List<List<Tuple2>> partialGroundings, Variable v, Seq<VariableConstraint> constraints) {
+        if (partialGroundings.size() == 0) {
+            // need to return a full grounding, e.g. for initial task network. To reach inner loop, this loop needs to be non-empty
+            partialGroundings = new ArrayList<>(); // keep changes local
+            partialGroundings.add(new ArrayList<Tuple2>());
+        }
         List<List<Tuple2>> all = new ArrayList<>();
         for (List<Tuple2> varConstMapping : partialGroundings) {
             for (int i = 0; i < v.sort().elements().size(); i++) {
@@ -310,7 +384,7 @@ public class htnBottomUpGrounder {
     private scala.collection.immutable.Map<Variable, Constant> toScalaSet(List<Tuple2> varConstMapping) {
         scala.collection.immutable.Map<Variable, Constant> set = new scala.collection.immutable.HashMap<>();
         for (Tuple2 b : varConstMapping) {
-            set = set.$plus(new Tuple2<Variable, Constant>((Variable) b._1(), (Constant) b._2()));
+            set = set.$plus(new Tuple2<>((Variable) b._1(), (Constant) b._2()));
         }
         return set;
     }
@@ -334,9 +408,8 @@ public class htnBottomUpGrounder {
         return notFound;
     }
 
-    private Set<GroundTask> groundAbstractTask(List<List<Tuple2>> partialGrounding, DecompositionMethod m) {
+    private Set<GroundTask> groundTask(List<List<Tuple2>> partialGrounding, Task t, Seq<VariableConstraint> constraints) {
         Set<GroundTask> res = new HashSet<>();
-        Task t = m.abstractTask();
         for (List<Tuple2> varConstMapping : partialGrounding) {
             List<Variable> notIncluded = new ArrayList<>();
             for (int i = 0; i < t.parameters().size(); i++) {
@@ -350,7 +423,7 @@ public class htnBottomUpGrounder {
             all.add(varConstMapping);
 
             for (Variable v : notIncluded) {
-                all = getFullGrounding(all, v, m.subPlan().variableConstraints().constraints());
+                all = getFullGrounding(all, v, constraints);
             }
 
             for (List<Tuple2> elem : all) {
@@ -374,7 +447,8 @@ public class htnBottomUpGrounder {
         return null;
     }
 
-    private void getReachableTaskSymbols(Domain d, Plan p) {
+    private Set<Task> getReachableTaskSymbols(Domain d, Plan p, HashMap<Task, Set<DecompositionMethod>> needToReGround) {
+        Set<Task> reachableTasks = new HashSet<>();
         // initial task network
         for (int j = 0; j < p.planSteps().size(); j++) {
             PlanStep subtask = p.planSteps().apply(j);
@@ -405,5 +479,6 @@ public class htnBottomUpGrounder {
                 }
             }
         }
+        return reachableTasks;
     }
 }
