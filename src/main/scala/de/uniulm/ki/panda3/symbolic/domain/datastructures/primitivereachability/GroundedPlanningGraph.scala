@@ -39,7 +39,7 @@ case class GroundedPlanningGraph
 
     // determine which grounded literals in the last state layer may cause new grounded actions to be applicable
     val changedPropositions: Set[GroundLiteral] = addedPropositions ++ (deletedMutexes flatMap { mutex => Set(mutex._1, mutex._2) })
-    val tasksToBeConsidered: Set[(GroundLiteral, Seq[ReducedTask])] = changedPropositions map { groundLiteral => (groundLiteral, domain.consumersOf(groundLiteral.predicate)) }
+    val tasksToBeConsidered: Set[(GroundLiteral, Seq[ReducedTask])] = changedPropositions map { groundLiteral => (groundLiteral, domain.consumersOf(groundLiteral.predicate) filter {_.isPrimitive}) }
 
 
     // create the newly applicable grounded actions
@@ -54,7 +54,7 @@ case class GroundedPlanningGraph
     }
     // special treatment for tasks without preconditions. the are always applicable in the first action layer
     val newGroundTasksFromParameters: Set[GroundTask] = firstLayer match {
-      case true  => createActionInstancesForTasksWithoutPreconditions(domain.tasks collect {
+      case true  => createActionInstancesForTasksWithoutPreconditions(domain.primitiveTasks collect {
         case t: ReducedTask => t
       } filter { reducedTask => reducedTask.precondition.conjuncts.isEmpty })
       case false => Set.empty[GroundTask]
