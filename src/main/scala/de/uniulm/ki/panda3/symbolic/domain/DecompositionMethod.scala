@@ -42,6 +42,9 @@ trait DecompositionMethod extends DomainUpdatable {
   } flatMap { _.effect.conjuncts map { _.predicate } }
 
   override def update(domainUpdate: DomainUpdate): DecompositionMethod
+
+  def containsTask(task: Task): Boolean =
+    task == abstractTask || (subPlan.planSteps exists { _.schema == task })
 }
 
 
@@ -51,6 +54,29 @@ trait DecompositionMethod extends DomainUpdatable {
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: String) extends DecompositionMethod with HashMemo {
+
+  abstractTask match {
+    case ReducedTask(_, _, _, _, prec, eff) =>
+      // check preconditions
+      prec.conjuncts foreach { case Literal(pred, isPos, _) =>
+        val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
+          case ReducedTask(_, _, _, _, tPre, _) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
+          case _                                => false
+        }
+        assert(canBeInherited)
+      }
+
+      // check effects
+      eff.conjuncts foreach { case Literal(pred, isPos, _) =>
+        val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
+          case ReducedTask(_, _, _, _, _, tEff) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
+          case _                                => false
+        }
+        assert(canBeInherited)
+      }
+    case _                                  =>
+  }
+
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = domainUpdate match {
     case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
                                                                               name)
