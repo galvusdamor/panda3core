@@ -104,8 +104,16 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
       else Some((innerCSP.variables map { v => v -> innerCSP.getRepresentative(v).asInstanceOf[Constant] }).toMap)
     } filter { _.isDefined } map { _.get }
 
-    methodInstantiations map { args => GroundedDecompositionMethod(this, args) }
+    // only take those methods that inherit correctly
+    methodInstantiations map { args => GroundedDecompositionMethod(this, args) } filter { gm =>
+      val groundedAbstractTask = gm.groundAbstractTask
+      val groundedSubtasks = gm.subPlanGroundedTasksWithoutInitAndGoal
 
+      val inheritPreconditions = groundedAbstractTask.substitutedPreconditions forall { prec => groundedSubtasks exists { sub => sub.substitutedPreconditionsSet contains prec } }
+      val inheritEffects = groundedAbstractTask.substitutedEffects forall { eff => groundedSubtasks exists { sub => sub.substitutedEffectSet contains eff } }
+
+      inheritPreconditions && inheritEffects
+    }
   }
 }
 

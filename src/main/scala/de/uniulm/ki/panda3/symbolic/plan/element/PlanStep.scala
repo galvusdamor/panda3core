@@ -90,7 +90,8 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
       println(p.sort.elements)
       println(arguments(i))
     }
-    assert(p.sort.elements.contains(arguments(i))) }
+    assert(p.sort.elements.contains(arguments(i)))
+  }
 
   private lazy val parameterSubstitution: TotalSubstitution[Variable, Constant] = TotalSubstitution(task.parameters, arguments)
 
@@ -100,9 +101,10 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
   }
 
   lazy val substitutedPreconditionsSet: Set[GroundLiteral] = substitutedPreconditions.toSet
+  lazy val substitutedEffectSet       : Set[GroundLiteral] = substitutedEffects.toSet
 
   /** returns a version of the effects */
-  lazy val substitutedEffects   : Seq[GroundLiteral] = task match {
+  lazy val substitutedEffects: Seq[GroundLiteral] = task match {
     case reduced: ReducedTask => reduced.effect.conjuncts map { _ ground parameterSubstitution }
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
@@ -113,8 +115,8 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
 
   override def compare(that: GroundTask): Int = {
     this.task compare that.task match {
-	    case 0 => ((this.arguments zip that.arguments) map { case (x,y) => x compare y}) find ((i: Int) => i!= 0) getOrElse(0)
-	    case _ => this.task compare that.task
+      case 0 => ((this.arguments zip that.arguments) map { case (x, y) => x compare y }) find ((i: Int) => i != 0) getOrElse (0)
+      case _ => this.task compare that.task
     }
   }
 
@@ -122,7 +124,7 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
   override def shortInfo: String = task.name
 
   /** returns a string that can be utilized to define the object */
-  override def mediumInfo: String = shortInfo + (arguments map {_.name}).mkString("(",",",")")
+  override def mediumInfo: String = shortInfo + (arguments map { _.name }).mkString("(", ",", ")")
 
   /** returns a detailed information about the object */
   override def longInfo: String = mediumInfo

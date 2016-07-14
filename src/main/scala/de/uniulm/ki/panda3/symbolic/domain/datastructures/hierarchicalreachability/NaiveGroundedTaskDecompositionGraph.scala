@@ -4,9 +4,10 @@ import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.csp.Equal
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{ReachabilityAnalysis, GroundedPrimitiveReachabilityAnalysis, GroundedReachabilityAnalysis}
-import de.uniulm.ki.panda3.symbolic.logic.{GroundLiteral, Constant, Sort, Variable}
+import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, GroundTask, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.util.{AndOrGraph, SimpleAndOrGraph}
 
 /**
@@ -21,21 +22,36 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
       case (v, c: Constant) => (v, c)
     } toMap
 
+
     // just to be safe, we create a new initial abstract task, and ensure that it is fully grounded
     // create a new virtual abstract task
     assert(initialPlan.init.schema.isInstanceOf[ReducedTask])
     assert(initialPlan.goal.schema.isInstanceOf[ReducedTask])
-    val initSchema = initialPlan.init.schema.asInstanceOf[ReducedTask]
-    val goalSchema = initialPlan.goal.schema.asInstanceOf[ReducedTask]
+
+    // TODO we cant handle this case (yet)
+    assert(!(initialPlan.causalLinks exists { _.containsOne(initialPlan.initAndGoal: _*) }))
+
+    val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, And(Nil), And(Nil))
+    val topInit = PlanStep(initialPlan.init.id, initAndGoalNOOP, Nil)
+    val topGoal = PlanStep(initialPlan.goal.id, initAndGoalNOOP, Nil)
+
+    val topPlanTasks = initialPlan.planStepsAndRemovedPlanStepsWithoutInitGoal :+ topInit :+ topGoal
+    val initialPlanInternalOrderings = initialPlan.orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(initialPlan.initAndGoal: _*) }
+    val topOrdering = TaskOrdering(initialPlanInternalOrderings ++ OrderingConstraint.allBetween(topInit, topGoal, initialPlan.planStepsAndRemovedPlanStepsWithoutInitGoal: _*), topPlanTasks)
+    val initialPlanWithout = Plan(topPlanTasks, initialPlan.causalLinksAndRemovedCausalLinks, topOrdering, initialPlan.variableConstraints, topInit, topGoal,
+                                  initialPlan.isModificationAllowed,
+                                  initialPlan.isFlawAllowed, initialPlan.planStepDecomposedByMethod, initialPlan.planStepParentInDecompositionTree)
 
     // create an artificial method
-    val topTask = ReducedTask("__grounding__top", isPrimitive = false, alreadyGroundedVariableMapping.keys.toSeq, Nil, initSchema.effect, goalSchema.precondition)
-    val topMethod = SimpleDecompositionMethod(topTask, initialPlan, "__top")
+    val topTask = ReducedTask("__grounding__top", isPrimitive = false, alreadyGroundedVariableMapping.keys.toSeq, Nil, And(Nil), And(Nil))
+    val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top")
 
     // compute groundings of abstract tasks naively
+    val primitiveReachabilityAnalysisReachableLiterals = groundedReachabilityAnalysis.reachableGroundLiterals.toSet
     val abstractTaskGroundings: Map[Task, Set[GroundTask]] = (domain.abstractTasks map { abstractTask =>
       val groundedTasks = (Sort.allPossibleInstantiations(abstractTask.parameters map { _.sort }) filter abstractTask.areParametersAllowed map { GroundTask(abstractTask, _) }).toSet
-      (abstractTask, groundedTasks)
+      val reachableGroundedTasks = groundedTasks filter { gt => (gt.substitutedPreconditionsSet ++ gt.substitutedEffects) subsetOf primitiveReachabilityAnalysisReachableLiterals }
+      (abstractTask, reachableGroundedTasks)
     }).toMap + (topTask -> Set(GroundTask(topTask, topTask.parameters map alreadyGroundedVariableMapping)))
 
     assert(abstractTaskGroundings(topTask).size == 1)
@@ -43,9 +59,9 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
 
     // ground all methods naively
     val groundedDecompositionMethods: Map[GroundTask, Seq[GroundedDecompositionMethod]] = domain.decompositionMethods :+ topMethod flatMap {
-      case method@SimpleDecompositionMethod(abstractTask, subPlan,_) =>
+      case method@SimpleDecompositionMethod(abstractTask, subPlan, _) =>
         abstractTaskGroundings(abstractTask) map { x => (x, method.groundWithAbstractTaskGrounding(x)) }
-      case _                                                       => noSupport(NONSIMPLEMETHOD)
+      case _                                                          => noSupport(NONSIMPLEMETHOD)
     } groupBy { _._1 } map { case (gt, s) => (gt, s flatMap { _._2 }) }
 
     /**
@@ -66,11 +82,14 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
         val stillSupportedPrimitiveGroundTasks: Set[GroundTask] =
           if (prunePrimitive) stillSupportedMethods flatMap { _.subPlanGroundedTasksWithoutInitAndGoal filter { _.task.isPrimitive } } else remainingGroundTasks filter { _.task.isPrimitive }
 
-        if (stillSupportedAbstractGroundTasks.size + stillSupportedPrimitiveGroundTasks.size == remainingGroundTasks.size)
+        val stillSupportedTasks = stillSupportedAbstractGroundTasks ++ stillSupportedPrimitiveGroundTasks
+
+        if (stillSupportedTasks.size == remainingGroundTasks.size)
           (remainingGroundTasks, stillSupportedMethods) // no tasks have been pruned so stop
-        else pruneMethodsAndTasksIfPossible(stillSupportedAbstractGroundTasks ++ stillSupportedPrimitiveGroundTasks, stillSupportedMethods)
+        else pruneMethodsAndTasksIfPossible(stillSupportedTasks, stillSupportedMethods)
       }
     }
+
 
     val allGroundedActions: Set[GroundTask] = (abstractTaskGroundings.values.flatten ++ groundedReachabilityAnalysis.reachableGroundPrimitiveActions).toSet
     val (remainingGroundTasks, remainingGroundMethods) = pruneMethodsAndTasksIfPossible(allGroundedActions, groundedDecompositionMethods.values.flatten.toSet)
@@ -83,7 +102,7 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
                                                                                             prunedMethodToTaskEdges.toMap)
     // reachability analysis
     //System.in.read()
-    val allReachable = firstAndOrGraph.reachable(topGrounded)
+    val allReachable = firstAndOrGraph.reachableFrom(topGrounded)
     val rechableWithoutTop = allReachable partition {
       case GroundedDecompositionMethod(m, _) => m.abstractTask == topTask
       case GroundTask(task, _)               => task == topTask
@@ -91,7 +110,8 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
 
     val topMethods = rechableWithoutTop._1 collect { case x: GroundedDecompositionMethod => x }
 
-    (firstAndOrGraph pruneToEntities rechableWithoutTop._2, if (isInitialPlanGround) Nil else (topGrounded :: Nil), if (isInitialPlanGround) Nil else topMethods.toSeq)
+    (firstAndOrGraph pruneToEntities rechableWithoutTop._2, if (isInitialPlanGround) Nil else topGrounded :: GroundTask(initAndGoalNOOP, Nil) :: Nil,
+      if (isInitialPlanGround) Nil else topMethods.toSeq)
   }
 
   override lazy val reachableGroundedTasks         : Seq[GroundTask]                  = taskDecompositionGraph._1.andVertices.toSeq
@@ -101,11 +121,11 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
   override      val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod] = taskDecompositionGraph._3
 
   reachableGroundPrimitiveActions foreach { gt =>
-    gt.substitutedEffects foreach {e => assert(reachableGroundLiterals contains e) }
-    gt.substitutedPreconditions foreach {e => assert(reachableGroundLiterals contains e) }
+    gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e) }
+    gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e) }
   }
   reachableGroundAbstractActions foreach { gt =>
-    gt.substitutedEffects foreach {e => assert(reachableGroundLiterals contains e) }
-    gt.substitutedPreconditions foreach {e => assert(reachableGroundLiterals contains e) }
+    gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e) }
+    gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e) }
   }
 }

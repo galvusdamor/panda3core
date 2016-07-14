@@ -39,7 +39,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   private val domainPredicates          : BiMap[Predicate, Int]           = BiMap(symbolicDomain.predicates.zipWithIndex)
   private val domainTasksObjects        : BiMap[Task, EfficientTask]      = {
     val ordinaryTaskSchemes = symbolicDomain.tasks map { (_, false) }
-    val hiddenTaskSchemes = (symbolicDomain.hiddenTasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).distinct map { (_, true) }
+    val hiddenTaskSchemes = ((symbolicDomain.hiddenTasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).distinct map { (_, true) }).distinct
     val allTaskSchemes = ordinaryTaskSchemes ++ hiddenTaskSchemes
     BiMap(allTaskSchemes map { case (t, isInitOrGoal) => (t, computeEfficientTask(t, isInitOrGoal)) })
   }

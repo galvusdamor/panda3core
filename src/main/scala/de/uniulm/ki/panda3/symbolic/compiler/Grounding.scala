@@ -66,8 +66,9 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
       }
       (t, taskMap)
     }
+    val additionalHiddenTasks = reachabilityAnalysis.additionalMethodsNeededToGround flatMap  {_.decompositionMethod.subPlan.initAndGoal} map {_.schema} distinct
     val allGroundedTasks = groundedTasks flatMap { _._2.values } collect {
-      case (task, groundTask) if !(domain.hiddenTasks contains groundTask.task) && !(initAndGoalInitialTask contains groundTask) => task
+      case (task, groundTask) if !((domain.hiddenTasks ++ additionalHiddenTasks) contains groundTask.task) && !(initAndGoalInitialTask contains groundTask) => task
     }
 
 
@@ -115,7 +116,6 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
     val initialPlan = if (reachabilityAnalysis.additionalMethodsNeededToGround.isEmpty) {
       groundPlan(plan, alreadyGroundedVariableMapping)
     } else {
-      assert(reachabilityAnalysis.additionalMethodsNeededToGround.size == 1)
       // ground the plan containing the initial abstract task
       val topTask = reachabilityAnalysis.additionalMethodsNeededToGround.head.groundAbstractTask.task
       val topPS = PlanStep(2, topTask, topTask.parameters)
