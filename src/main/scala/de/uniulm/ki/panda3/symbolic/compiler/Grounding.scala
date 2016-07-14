@@ -116,7 +116,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
       groundPlan(plan, alreadyGroundedVariableMapping)
     } else {
       assert(reachabilityAnalysis.additionalMethodsNeededToGround.size == 1)
-      // ground the plan containing the inital abstract task
+      // ground the plan containing the initial abstract task
       val topTask = reachabilityAnalysis.additionalMethodsNeededToGround.head.groundAbstractTask.task
       val topPS = PlanStep(2, topTask, topTask.parameters)
       val planSteps: Seq[PlanStep] = plan.init :: plan.goal :: topPS :: Nil
