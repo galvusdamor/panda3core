@@ -94,7 +94,7 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
 
   lazy val getComponentOf: Map[T, Set[T]] = {
     val x = (stronglyConnectedComponents flatMap { scc => scc map { elem => (elem, scc) } }).toMap
-      assert(x.size == vertices.length)
+    assert(x.size == vertices.length)
     x
   }
 
@@ -132,9 +132,20 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
     reachabilityMap.toMap
   }
 
+  def reachableFrom(root: T): Set[T] = {
+    val visited = mutable.Set[T]()
+
+    def dfs(node: T): Unit = if (!(visited contains node)) {
+      visited add node
+      edges(node) foreach dfs
+    }
+
+    dfs(root)
+
+    visited.toSet[T]
+  }
 
   lazy val transitiveClosure = SimpleDirectedGraph(vertices, reachable map { case (a, b) => (a, b.toSeq) })
-
 
   /**
     * Compute a topological ordering of the graph.
