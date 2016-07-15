@@ -105,7 +105,7 @@ case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPla
 
 
     val allVariableConstraints = isEqualToConstant ++ necessaryEqualConstraints ++ restrictPossibleValues.flatten ++ unequalConstraints
-    EfficientExtractedMethodPlan(planSteps, newVariableSorts, allVariableConstraints.toArray, innerCausalLinks, orderings, ingoingSupporters, outgoingSupporters)
+    EfficientExtractedMethodPlan(planSteps, newVariableSorts, allVariableConstraints.toArray, innerCausalLinks, orderings, ingoingSupporters, outgoingSupporters, this)
   }
 
 }
@@ -119,7 +119,8 @@ case class EfficientExtractedMethodPlan(addedPlanSteps: Array[(Int, Array[Int])]
                                         addedCausalLinks: Array[EfficientCausalLink],
                                         innerOrdering: Array[Array[Byte]],
                                         ingoingSupporters: Array[Array[PotentialLinkSupporter]],
-                                        outgoingSupporters: Array[Array[PotentialLinkSupporter]]) {
+                                        outgoingSupporters: Array[Array[PotentialLinkSupporter]],
+                                        originalMethod : EfficientDecompositionMethod) {
   val ingoingSupportersContainNecessary : Array[Boolean] = ingoingSupporters map { arr => arr exists { _.isNecessary } }
   val outgoingSupportersContainNecessary: Array[Boolean] = outgoingSupporters map { arr => arr exists { _.isNecessary } }
 }
