@@ -7,10 +7,10 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 // scalastyle:off magic.number
 trait HasExampleProblem4 extends HasExampleDomain4 {
 
@@ -26,14 +26,22 @@ trait HasExampleProblem4 extends HasExampleDomain4 {
 
   // create a plan  init| -> a1 -> |goal (with one causal link)
   val plan2WithoutLink = Plan(planPlanSteps2, Nil, TaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2),
-                              CSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
+                              CSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws, Map(), Map())
 
   // create a plan  init| -> a1 -> |goal (with one causal link)
   val plan2WithOneLink = Plan(planPlanSteps2, causalLinkInit2Abstract2P1 :: Nil, TaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2),
-                              CSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
+                              CSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws, Map(), Map())
 
   // create a plan  init| -> a1 -> |goal (without causal links)
   val plan2WithTwoLinks = Plan(planPlanSteps2, causalLinkInit2Abstract2P1 :: causalLinkInit2Abstract2P2 :: Nil,
                                TaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract2), planPlanSteps2), CSP(Set(instance_variableSort1(1)), Nil),
-                                       psInit2, psGoal2, AllModifications, AllFlaws,Map(),Map())
+                               psInit2, psGoal2, AllModifications, AllFlaws, Map(), Map())
+
+  val psAbstract3                    = PlanStep(2, abstractTask3, Nil)
+  // create a plan  init| -> a3 -> |goal (with one causal link)
+  val plan2WithoutLinkAndEpsilonTask = Plan(psInit2 :: psGoal2 :: psAbstract3 :: Nil, Nil,
+                                            TaskOrdering(OrderingConstraint.allBetween(psInit2, psGoal2, psAbstract3), psInit2 :: psGoal2 :: psAbstract3 :: Nil),
+                                            CSP(Set(instance_variableSort1(1)), Nil), psInit2, psGoal2, AllModifications, AllFlaws, Map(), Map())
+
+
 }

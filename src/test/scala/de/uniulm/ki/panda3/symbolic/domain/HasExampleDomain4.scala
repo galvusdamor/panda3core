@@ -15,6 +15,7 @@ import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 // scalastyle:off magic.number
 trait HasExampleDomain4 extends HasExampleDomain2 {
 
+
   val task3: ReducedTask = ReducedTask("task3", isPrimitive = true, variableSort1(2) :: Nil, Nil,
                                        precondition = And[Literal](Literal(predicate1, isPositive = true, variableSort1(2) :: Nil) :: Nil), effect = And[Literal](Nil))
   val task4: ReducedTask = ReducedTask("task4", isPrimitive = false, variableSort1(3) :: Nil, Nil,
@@ -28,6 +29,7 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
   val abstractTask2: ReducedTask = ReducedTask("abstractTask_2", isPrimitive = false, variableSort1(7) :: Nil, Nil,
                                                precondition = And[Literal](Literal(predicate1, isPositive = true, variableSort1(7) :: Nil) ::
                                                                              Literal(predicate2, isPositive = true, variableSort1(7) :: Nil) :: Nil), effect = And[Literal](Nil))
+  val abstractTask3: ReducedTask = ReducedTask("abstractTask_3", isPrimitive = false, Nil, Nil, precondition = And[Literal](Nil), effect = And[Literal](Nil))
 
 
   // decomposition method 3, with two tasks
@@ -44,32 +46,33 @@ trait HasExampleDomain4 extends HasExampleDomain2 {
   val planStepsOfPlanOfDecompositionMethod3                     = initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: actualPlanStep1OfPlanOfDecompositionMethod3 ::
     actualPlanStep2OfPlanOfDecompositionMethod3 :: actualPlanStep3OfPlanOfDecompositionMethod3 :: actualPlanStep4OfPlanOfDecompositionMethod3 :: Nil
   val taskOrderingOfPlanOfDecompositionMethod3   : TaskOrdering = TaskOrdering(OrderingConstraint.allBetween(initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3,
-                                                                                                                     actualPlanStep1OfPlanOfDecompositionMethod3,
-                                                                                                                     actualPlanStep2OfPlanOfDecompositionMethod3,
-                                                                                                                     actualPlanStep3OfPlanOfDecompositionMethod3,
-                                                                                                                     actualPlanStep4OfPlanOfDecompositionMethod3),
-                                                                                       planStepsOfPlanOfDecompositionMethod3)
+                                                                                                             actualPlanStep1OfPlanOfDecompositionMethod3,
+                                                                                                             actualPlanStep2OfPlanOfDecompositionMethod3,
+                                                                                                             actualPlanStep3OfPlanOfDecompositionMethod3,
+                                                                                                             actualPlanStep4OfPlanOfDecompositionMethod3),
+                                                                               planStepsOfPlanOfDecompositionMethod3)
   val cspOfPlanOfDecompositionMethod3            : CSP          = CSP(Set(variableSort1(7), variableSort1(8), variableSort1(9), variableSort1(10), variableSort1(11)), Nil)
 
   val planOfDecompositionMethod3: Plan                      = Plan(planStepsOfPlanOfDecompositionMethod3, Nil, taskOrderingOfPlanOfDecompositionMethod3,
-                                                                           cspOfPlanOfDecompositionMethod3, initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3,
-                                                                           AllModifications, AllFlaws, Map(), Map())
+                                                                   cspOfPlanOfDecompositionMethod3, initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3,
+                                                                   AllModifications, AllFlaws, Map(), Map())
   /** a decomposition method without causal links */
   val decompositionMethod3      : SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask2, planOfDecompositionMethod3, "some method")
 
   /** an empty decomposition method */
+  val noop                      : ReducedTask               = ReducedTask("__noop", isPrimitive = true, Nil,Nil, And[Literal](Nil), And[Literal](Nil))
+  val epsilonInit                                           = PlanStep(0, noop, Nil)
+  val epsilonGoal                                           = PlanStep(1, noop, Nil)
   val decompositionMethodEpsilon: SimpleDecompositionMethod =
-    SimpleDecompositionMethod(abstractTask2, Plan(initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil, Nil,
-                                                  TaskOrdering(OrderingConstraint.allBetween(initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3),
-                                                                               initOfPlanOfDecompositionMethod3 :: goalOfPlanOfDecompositionMethod3 :: Nil),
-                                                  CSP(Set(variableSort1(7)), Nil), initOfPlanOfDecompositionMethod3, goalOfPlanOfDecompositionMethod3, AllModifications,
-                                                          AllFlaws, Map(), Map()), "some method")
+    SimpleDecompositionMethod(abstractTask3,
+                              Plan(epsilonInit :: epsilonGoal :: Nil, Nil, TaskOrdering(OrderingConstraint.allBetween(epsilonInit, epsilonGoal), epsilonInit :: epsilonGoal :: Nil),
+                                   CSP(Set(), Nil), epsilonInit, epsilonGoal, AllModifications, AllFlaws, Map(), Map()), "some method")
 
   val init4: ReducedTask = ReducedTask("init", isPrimitive = true, variableSort1(3) :: Nil, Nil, precondition = And[Literal](Nil), effect =
     And[Literal](Literal(predicate1, isPositive = true, variableSort1(3) :: Nil) :: Literal(predicate2, isPositive = true, variableSort1(3) :: Nil) :: Nil))
   val goal4: ReducedTask = ReducedTask("goal", isPrimitive = true, Nil, Nil, precondition = And[Literal](Nil), effect = And[Literal](Nil))
 
 
-  val domain4 = Domain(sort1 :: Nil, predicate1 :: predicate2 :: Nil, task1 :: task2 :: task3 :: task4 :: task5 :: task6 :: abstractTask2 :: Nil, decompositionMethod3 ::
+  val domain4 = Domain(sort1 :: Nil, predicate1 :: predicate2 :: Nil, task1 :: task2 :: task3 :: task4 :: task5 :: task6 :: abstractTask2 :: abstractTask3 :: Nil, decompositionMethod3 ::
     decompositionMethodEpsilon :: Nil, Nil)
 }
