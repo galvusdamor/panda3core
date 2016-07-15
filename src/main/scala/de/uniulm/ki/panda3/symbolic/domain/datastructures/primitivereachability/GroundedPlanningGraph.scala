@@ -66,13 +66,14 @@ case class GroundedPlanningGraph
     // round up
     val newInstantiatedGroundTasks: Set[GroundTask] = newGroundTasksFromPreconditions ++ newGroundTasksFromParameters
     val newNoOps: Set[GroundTask] = addedPropositions map { groundLiteral => createNOOP(groundLiteral) }
-    val newTasks: Set[GroundTask] = newInstantiatedGroundTasks ++ newNoOps
+    val newTasks: Set[GroundTask] = (newInstantiatedGroundTasks ++ newNoOps) -- previousLayer._1
     val allGroundTasks: Set[GroundTask] = previousLayer._1 ++ newTasks
+    //println("DUP: " + previousLayer._1.size + " + " + newTasks.size + " = " + (previousLayer._1.size + newTasks.size) + " vs " + allGroundTasks.size)
 
 
     // compute task mutexes anew
     // TODO here we could to things a lot more efficiently
-    //println("TASKS " + sortedGroundTasks.length)
+    //println("TASKS " + allGroundTasks.size)
 
     val groundTaskPairs: Set[(GroundTask, GroundTask)] = (for (x <- newTasks; y <- allGroundTasks) yield
       if ((x compare y) < 0) (x, y) else (y, x)) filter { case (a, b) => a != b }
@@ -120,6 +121,7 @@ case class GroundedPlanningGraph
       }
     }
     val allTaskMutexes = newTaskMutexes ++ remainingOldMutexes
+    //println("TASK MUTEXES: " + allTaskMutexes.size)
 
     // determine new propositions
     val newPropositions: Set[GroundLiteral] = (newInstantiatedGroundTasks flatMap { newGroundTask => newGroundTask.substitutedAddEffects }) -- previousLayer._3
