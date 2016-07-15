@@ -12,7 +12,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * - Sorts are numbered 0..sz(subSortsForSort)-1
   * - Constants are numbered
-  * - Predicates are numbered 0..sz(predicates)-1 and the contents of that array are the predicates parameters
+  * - Predicates are numbered 0..sz(predicates)-1 and the contents of that array are the predicates parameters (the number of their sorts)
   * - Tasks are numbered 0..sz(tasks)-1
   * - the list of tasks _must_ include all task schemes for init and goal tasks throughout the domain
   *
