@@ -7,7 +7,7 @@ import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
 import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.domain.updates.ExchangeVariable;
 import de.uniulm.ki.panda3.symbolic.logic.*;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.seqProviderList;
+import de.uniulm.ki.panda3.util.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import scala.Tuple2;
 import scala.Tuple3;

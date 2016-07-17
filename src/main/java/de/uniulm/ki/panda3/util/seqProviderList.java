@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
+package de.uniulm.ki.panda3.util;
 
 import scala.collection.Iterator;
 import scala.collection.Seq;
