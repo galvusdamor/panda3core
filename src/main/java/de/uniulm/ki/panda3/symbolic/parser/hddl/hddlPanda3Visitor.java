@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl;
 
+import de.uniulm.ki.panda3.symbolic.csp.CSP;
 import de.uniulm.ki.panda3.symbolic.csp.Equal;
 import de.uniulm.ki.panda3.symbolic.csp.NotEqual;
 import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
@@ -10,25 +11,27 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalTaskNetwor
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.parserUtil;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
+import de.uniulm.ki.panda3.symbolic.plan.element.CausalLink;
+import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.panda3.symbolic.plan.flaw.AbstractPlanStep;
 import de.uniulm.ki.panda3.symbolic.plan.flaw.CausalThreat;
 import de.uniulm.ki.panda3.symbolic.plan.flaw.OpenPrecondition;
 import de.uniulm.ki.panda3.symbolic.plan.flaw.UnboundVariable;
 import de.uniulm.ki.panda3.symbolic.plan.modification.*;
-import de.uniulm.ki.panda3.symbolic.search.FlawsByClass;
-import de.uniulm.ki.panda3.symbolic.search.IsFlawAllowed;
-import de.uniulm.ki.panda3.symbolic.search.IsModificationAllowed;
-import de.uniulm.ki.panda3.symbolic.search.ModificationsByClass;
+import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering;
+import de.uniulm.ki.panda3.symbolic.search.*;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import scala.Tuple2;
 import scala.collection.Seq;
+import scala.collection.immutable.Map;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
-import scala.runtime.AbstractFunction1;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -79,18 +82,20 @@ public class hddlPanda3Visitor {
 
         Seq<Variable> goalArguments = goal.parameters();
         PlanStep psGoal = new PlanStep(1, goal, goalArguments);
+        assert (init.parameters().equals(goal.parameters()));
 
         // initial plan
+/*
         internalTaskNetwork tn = new internalTaskNetwork();
+        tn.addCspVariables(init.parameters());
+
         tn.addPlanStep(psInit);
         tn.addPlanStep(psGoal);
         tn.addOrdering(psInit, psGoal);
-        tn.addCspVariables(init.parameters());
-        assert (init.parameters().equals(goal.parameters()));
         tn.addCspConstraints(init.parameterConstraints());
 
         visitInitialTN(ctxProblem.p_htn(), tn, tasks, sorts);
-
+*/
 
         // determine problem type
         List<Class<?>> allowedModificationsClasses = new LinkedList<Class<?>>();
@@ -114,8 +119,19 @@ public class hddlPanda3Visitor {
         IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
 
 
-        Plan p = new Plan(tn.planSteps(), tn.causalLinks(), tn.taskOrderings(), tn.csp(), psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy,
-                planStepsDecompositionParents);
+        seqProviderList<Variable> tniVars = new seqProviderList<>();
+        tniVars.add(init.parameters());
+
+        seqProviderList<VariableConstraint> tniConstr = new seqProviderList<>();
+        tniConstr.add(init.parameterConstraints());
+        tniConstr.add(goal.parameterConstraints());
+
+        Plan p = visitTaskNetwork(ctxProblem.p_htn().tasknetwork_def(), tniVars, tniConstr, psInit, psGoal, tasks, predicates, sorts,
+                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+
+
+//        Plan p = new Plan(tn.planSteps(), tn.causalLinks(), tn.taskOrderings(), tn.csp(), psInit, psGoal,
+//                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
 
         report.printReport();
 
@@ -123,60 +139,214 @@ public class hddlPanda3Visitor {
         return initialProblem;
     }
 
-    private void visitInitialTN(antlrHDDLParser.P_htnContext p_htnContext, internalTaskNetwork tn, Seq<Task> tasks, Seq<Sort> sorts) {
-        if (p_htnContext == null || p_htnContext.tasknetwork_def() == null) {
-            // this is only allowed if the problem is a pddl problem
-            // TODO:
-            return;
+    private Plan visitTaskNetwork(
+            antlrHDDLParser.Tasknetwork_defContext tnCtx,
+            seqProviderList<Variable> variables,
+            seqProviderList<VariableConstraint> constraints,
+            PlanStep psInit,
+            PlanStep psGoal,
+            Seq<Task> tasks,
+            Seq<Predicate> predicates, Seq<Sort> sorts,
+            IsModificationAllowed allowedModifications,
+            IsFlawAllowed allowedFlaws,
+            Map<PlanStep, DecompositionMethod> planStepsDecomposedBy,
+            Map<PlanStep, Tuple2<PlanStep, PlanStep>> planStepsDecompositionParents) {
+        HashMap<String, PlanStep> idMap = new HashMap<>(); // used to define ordering constraints and causal links
+        TaskOrdering taskOrderings = new TaskOrdering(new VectorBuilder<OrderingConstraint>().result(), new VectorBuilder<PlanStep>().result());
+        seqProviderList<PlanStep> planSteps = new seqProviderList<>();
+
+        if (tnCtx.subtask_defs() != null) {
+            for (int i = 0; i < tnCtx.subtask_defs().subtask_def().size(); i++) {
+                antlrHDDLParser.Subtask_defContext psCtx = tnCtx.subtask_defs().subtask_def().get(i);
+
+                // get task schema definition
+                String psName = psCtx.task_symbol().NAME().toString();
+                Task schema = parserUtil.taskByName(psName, tasks);
+                if (schema == null) {
+                    System.out.println("Task schema undefined: " + psName);
+                    continue;
+                }
+
+                // get variables that are passed from the method to the subtask
+                seqProviderList<Variable> psVars = new seqProviderList<>();
+                for (antlrHDDLParser.Var_or_constContext vName : psCtx.var_or_const()) {
+                    Variable v = getVariable(vName, variables, constraints, sorts);
+                    psVars.add(v);
+                }
+
+                // while reading task schemata, constants that are included can cause new parameters that are added
+                // to the schema. These new parameters have to be added to the plan steps.
+
+                // todo: wtf -- why is that part of a parser? This should be part of a constructor!
+                for (int parameter = 0; parameter < schema.parameters().length(); parameter++) {
+                    Variable v = schema.parameters().apply(parameter);
+                    for (int j = 0; j < schema.parameterConstraints().size(); j++) {
+                        VariableConstraint vc = schema.parameterConstraints().apply(j);
+                        if ((vc instanceof Equal)
+                                && (((Equal) vc).left().equals(v))
+                                && ((Equal) vc).right() instanceof Constant) {
+                            psVars.add(v);
+                            if (!variables.contains(v)) {
+                                psVars.add(v);
+                            }
+                            Constant c = (Constant) ((Equal) vc).right();
+                            // todo: there is no constraint added, is that right? what to do with other constraints?
+                        }
+                    }
+                }
+
+                Seq<Variable> psVarsSeq = psVars.result();
+
+                if (schema.parameters().size() != psVarsSeq.size()) {
+                    System.out.println("The task schema " + schema.name() + " is defined with " + schema.parameters().size() + " but used with " + psVarsSeq.size() + " parameters.");
+                    System.out.println(schema.parameters());
+                    continue;
+                }
+
+                PlanStep ps = new PlanStep(i, schema, psVarsSeq);
+                taskOrderings = taskOrderings.addPlanStep(ps).addOrdering(OrderingConstraint.apply(psInit, ps)).addOrdering(OrderingConstraint.apply(ps, psGoal));
+                if (psCtx.subtask_id() != null) {
+                    String id = psCtx.subtask_id().NAME().toString();
+                    idMap.put(id, ps);
+                }
+                planSteps.add(ps);
+            }
         }
 
+        // read variable constraints
+        if (tnCtx.constraint_defs() != null) {
+            for (antlrHDDLParser.Constraint_defContext constraint : tnCtx.constraint_defs().constraint_def()) {
 
-        antlrHDDLParser.Subtask_defsContext subtask = p_htnContext.tasknetwork_def().subtask_defs();
-        int nextId = 0;
-        int psID = 2;
+                List<Variable> constrainedVars = new ArrayList<>();
+                for (antlrHDDLParser.Var_or_constContext vName : constraint.var_or_const()) {
+                    Variable v = getVariable(vName, variables, constraints, sorts);
+                    constrainedVars.add(v);
+                }
+                assert (constrainedVars.size() == 2);
 
-        for (antlrHDDLParser.Subtask_defContext oneST : subtask.subtask_def()) {
-            Task schema = parserUtil.taskByName(oneST.task_symbol().getText(), tasks);
-            VectorBuilder<Variable> parameters = new VectorBuilder<>();
-
-            for (final antlrHDDLParser.Var_or_constContext constant : oneST.var_or_const()) {
-                assert (constant.VAR_NAME() == null); // must not be a variable
-                assert (constant.NAME() != null); // must actually be a constant
-
-                Variable v = tn.csp().constraints().find(new AbstractFunction1<VariableConstraint, Object>() {
-                    @Override
-                    public Object apply(VariableConstraint v1) {
-                        if (v1 instanceof Equal) {
-                            Equal eq = (Equal) v1;
-                            if (eq.right() instanceof Constant) {
-                                Constant c = (Constant) eq.right();
-                                if (c.name().equals(constant.getText()))
-                                    return java.lang.Boolean.TRUE;
-                            }
-                        }
-                        return java.lang.Boolean.FALSE;
-                    }
-                }).get().getVariables().head();
-
-                parameters.$plus$eq(v);
+                VariableConstraint vc;
+                if (constraint.children.get(1).toString().equals("not")) { // this is an unequal constraint
+                    vc = new NotEqual(constrainedVars.get(0), constrainedVars.get(1));
+                } else {// this is an equal constraint
+                    vc = new Equal(constrainedVars.get(0), constrainedVars.get(1));
+                }
+                constraints.add(vc);
             }
+        }
 
-            PlanStep psNew = new PlanStep(psID++, schema, parameters.result());
-            tn.addPlanStep(psNew);
-            for (int i = 0; i < tn.planSteps().size(); i++) {
-                PlanStep ps = tn.planSteps().apply(i);
-                if (ps.id() == 0) {
-                    tn.addOrdering(ps, psNew);
-                } else if (ps.id() == 1) {
-                    tn.addOrdering(psNew, ps);
+        // read ordering
+        String orderingMode = tnCtx.children.get(0).toString();
+        if ((orderingMode.equals(":ordered-subtasks")) || (orderingMode.equals(":ordered-tasks"))) {
+            for (int i = 2; i < planSteps.size() - 1; i++) {
+                taskOrderings.addOrdering(planSteps.get(i), planSteps.get(i + 1));
+            }
+        } else { // i.e. :tasks or :subtasks
+            if ((tnCtx.ordering_defs() != null) && (tnCtx.ordering_defs().ordering_def() != null)) {
+                for (antlrHDDLParser.Ordering_defContext o : tnCtx.ordering_defs().ordering_def()) {
+                    String idLeft = o.subtask_id(0).NAME().toString();
+                    String idRight = o.subtask_id(1).NAME().toString();
+                    if (!idMap.containsKey(idLeft)) {
+                        System.out.println("ERROR: The ID \"" + idLeft + "\" is not a subtask ID, but used in the ordering constraints.");
+                    } else if (!idMap.containsKey(idRight)) {
+                        System.out.println("ERROR: The ID \"" + idRight + "\" is not a subtask ID, but used in the ordering constraints.");
+                    } else {
+                        PlanStep left = idMap.get(idLeft);
+                        PlanStep right = idMap.get(idRight);
+                        taskOrderings.addOrdering(left, right);
+                    }
                 }
             }
         }
 
-        // TODO: ordering!!
-        return;
+        seqProviderList<CausalLink> causalLinks = new seqProviderList<>();
+        if (tnCtx.causallink_defs() != null) {
+            for (antlrHDDLParser.Causallink_defContext cl : tnCtx.causallink_defs().causallink_def()) {
+                assert (cl.subtask_id().size() == 2);
+                String producerID = cl.subtask_id().get(0).getText();
+                String consumerID = cl.subtask_id().get(1).getText();
+                if (idMap.containsKey(producerID)) {
+                    System.out.println("The task id " + producerID + " is used in causal link definition, but no task is definied with this id.");
+                    continue;
+                }
+                if (idMap.containsKey(consumerID)) {
+                    System.out.println("The task id " + consumerID + " is used in causal link definition, but no task is definied with this id.");
+                    continue;
+                }
+
+                PlanStep producer = idMap.get(producerID);
+                PlanStep consumer = idMap.get(consumerID);
+
+                Literal literal;
+
+                if (cl.literal().atomic_formula() != null) {
+                    literal = visitAtomFormula(variables, predicates, sorts, constraints, true, cl.literal().atomic_formula());
+                } else { // negative literal
+                    literal = visitAtomFormula(variables, predicates, sorts, constraints, false, cl.literal().atomic_formula());
+                }
+                causalLinks.add(new CausalLink(producer, consumer, literal));
+            }
+        }
+
+        CSP csp = new CSP(JavaToScala.toScalaSet(variables.getList()), constraints.result());
+        Plan subPlan = new Plan(planSteps.result(), causalLinks.result(), taskOrderings, csp, psInit, psGoal,
+                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+        return subPlan;
     }
 
+    /*
+        private void visitInitialTN(antlrHDDLParser.P_htnContext p_htnContext, internalTaskNetwork tn, Seq<Task> tasks, Seq<Sort> sorts) {
+            if (p_htnContext == null || p_htnContext.tasknetwork_def() == null) {
+                // this is only allowed if the problem is a pddl problem
+                // TODO:
+                return;
+            }
+
+
+            antlrHDDLParser.Subtask_defsContext subtask = p_htnContext.tasknetwork_def().subtask_defs();
+            int psID = 2;
+
+            for (antlrHDDLParser.Subtask_defContext oneST : subtask.subtask_def()) {
+                Task schema = parserUtil.taskByName(oneST.task_symbol().getText(), tasks);
+                VectorBuilder<Variable> parameters = new VectorBuilder<>();
+
+                for (final antlrHDDLParser.Var_or_constContext constant : oneST.var_or_const()) {
+                    assert (constant.VAR_NAME() == null); // must not be a variable
+                    assert (constant.NAME() != null); // must actually be a constant
+
+                    Variable v = tn.csp().constraints().find(new AbstractFunction1<VariableConstraint, Object>() {
+                        @Override
+                        public Object apply(VariableConstraint v1) {
+                            if (v1 instanceof Equal) {
+                                Equal eq = (Equal) v1;
+                                if (eq.right() instanceof Constant) {
+                                    Constant c = (Constant) eq.right();
+                                    if (c.name().equals(constant.getText()))
+                                        return java.lang.Boolean.TRUE;
+                                }
+                            }
+                            return java.lang.Boolean.FALSE;
+                        }
+                    }).get().getVariables().head();
+
+                    parameters.$plus$eq(v);
+                }
+
+                PlanStep psNew = new PlanStep(psID++, schema, parameters.result());
+                tn.addPlanStep(psNew);
+                for (int i = 0; i < tn.planSteps().size(); i++) {
+                    PlanStep ps = tn.planSteps().apply(i);
+                    if (ps.id() == 0) {
+                        tn.addOrdering(ps, psNew);
+                    } else if (ps.id() == 1) {
+                        tn.addOrdering(psNew, ps);
+                    }
+                }
+            }
+
+            // TODO: ordering!!
+            return;
+        }
+    */
     private Task visitGoalState(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_goalContext ctx) {
         seqProviderList<VariableConstraint> parameterConstraints = new seqProviderList<VariableConstraint>();
         seqProviderList<Variable> taskParameters = getVariableForEveryConst(sorts, parameterConstraints);
@@ -199,9 +369,7 @@ public class hddlPanda3Visitor {
                 } else if (el.literal().neg_atomic_formula() != null) {
                     initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, false, el.literal().atomic_formula()));
                 }
-            } /*else if (el.num_init() != null) {
-                System.out.println("not implemented: numeric element");
-            }*/
+            }
         }
 
         return new ReducedTask("init", true, parameter.result(), varConstraints.result(), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(initEffects.result()));
@@ -270,9 +438,9 @@ public class hddlPanda3Visitor {
 
             DecompositionMethod method;
             if (hasPrecondition) {
-                method = new SHOPDecompositionMethod(abstractTask, subPlan, precFormula, m.method_symbol().getText());
+                method = new SHOPDecompositionMethod(abstractTask, subPlan, precFormula, nameStr);
             } else {
-                method = new SimpleDecompositionMethod(abstractTask, subPlan, m.method_symbol().getText());
+                method = new SimpleDecompositionMethod(abstractTask, subPlan, nameStr);
             }
             methods.$plus$eq(method);
         }

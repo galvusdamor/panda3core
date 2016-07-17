@@ -4,13 +4,19 @@ import scala.collection.Iterator;
 import scala.collection.Seq;
 import scala.collection.immutable.Set;
 import scala.collection.immutable.VectorBuilder;
+
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by dhoeller on 05.03.16.
  */
 public class seqProviderList<T> {
     private final ArrayList<T> list;
+
+    public List<T> getList() {
+        return list;
+    }
 
     public seqProviderList() {
         this.list = new ArrayList<T>();
@@ -38,7 +44,7 @@ public class seqProviderList<T> {
 
     public void add(Set<T> someSet) {
         Iterator<T> iter = someSet.iterator();
-        while(iter.hasNext()){
+        while (iter.hasNext()) {
             this.add(iter.next());
         }
     }
@@ -62,5 +68,9 @@ public class seqProviderList<T> {
     public Set<T> resultSet() {
         Seq<T> res = this.result();
         return res.toSet();
+    }
+
+    public boolean contains(T t) {
+        return this.contains(t);
     }
 }

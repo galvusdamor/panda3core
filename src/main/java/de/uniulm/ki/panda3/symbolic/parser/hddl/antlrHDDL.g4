@@ -8,7 +8,6 @@ grammar antlrHDDL;
 //   - pure PDDL rules are taken from Fox and Long's PDDL 2.1 definition
 //
 // MISSING FEATURES:
-//   - causal links
 //   - decomposition axioms
 
 hddl_file : domain | problem;
@@ -89,7 +88,9 @@ method_def :
 tasknetwork_def :
       ((':subtasks' | ':tasks' | ':ordered-subtasks'| ':ordered-tasks') subtask_defs)?
       ((':ordering' | ':order') ordering_defs)?
-      (':constraints' constraint_defs)? ')';
+      (':constraints' constraint_defs)?
+      ((':causal-links' | ':causallinks') causallink_defs)?
+      ')';
 
 method_symbol : NAME;
 
@@ -112,7 +113,6 @@ subtask_id : NAME;
 //   (t1 < t2)
 //
 // TODO: define EBNF for TR
-// TODO: addParent "totalorder"-tag as syntactic sugar
 //
 ordering_defs : '(' ')' | ordering_def | '(' 'and' ordering_def+ ')';
 ordering_def : '(' subtask_id '<' subtask_id ')';
@@ -125,10 +125,12 @@ ordering_def : '(' subtask_id '<' subtask_id ')';
 //   (not (= ?v3 ?v4)))
 //
 // TODO: define EBNF for TR
-// TODO: prefix or infix?
 //
 constraint_defs : '(' ')' | constraint_def | '(' 'and' constraint_def+ ')';
 constraint_def : '(' ')' | '(' 'not' equallity var_or_const var_or_const')' ')' | equallity var_or_const var_or_const ')';
+
+causallink_defs : '(' ')' | causallink_def | '(' 'and' causallink_def+ ')';
+causallink_def : '(' subtask_id literal subtask_id ')';
 
 //
 // action definition
@@ -222,7 +224,6 @@ NUMBER : [0-9][0-9]* ;
 // Problem Definition
 //
 // TODO: define EBNF for TR
-// TODO: Metric makes no sense without functions
 
 problem : '(' 'define' '(' 'problem' NAME ')'
               '(' ':domain' NAME ')'
