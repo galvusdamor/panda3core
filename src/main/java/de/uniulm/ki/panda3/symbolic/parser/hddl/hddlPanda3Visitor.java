@@ -111,9 +111,22 @@ public class hddlPanda3Visitor {
         tniConstr.add(init.parameterConstraints());
         tniConstr.add(goal.parameterConstraints());
 
-        Plan p = visitTaskNetwork(ctxProblem.p_htn().tasknetwork_def(), tniVars, tniConstr, psInit, psGoal, tasks, predicates, sorts,
-                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+        antlrHDDLParser.Tasknetwork_defContext tnCtx = null;
 
+        Plan p;
+        if (ctxProblem.p_htn() != null) {
+            p = visitTaskNetwork(ctxProblem.p_htn().tasknetwork_def(), tniVars, tniConstr, psInit, psGoal, tasks, predicates, sorts,
+                    allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+        } else {
+            CSP csp = new CSP(JavaToScala.toScalaSet(tniVars.getList()), tniConstr.result());
+            seqProviderList<PlanStep> planSteps = new seqProviderList<>();
+            planSteps.add(psInit);
+            planSteps.add(psGoal);
+            TaskOrdering taskOrderings = new TaskOrdering(new VectorBuilder<OrderingConstraint>().result(), new VectorBuilder<PlanStep>().result());
+            taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal);
+            p = new Plan(planSteps.result(), new seqProviderList<CausalLink>().result(), taskOrderings, csp, psInit, psGoal,
+                    allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+        }
         report.printReport();
 
         Tuple2<Domain, Plan> initialProblem = new Tuple2<>(d, p);
@@ -129,8 +142,11 @@ public class hddlPanda3Visitor {
         HashMap<String, PlanStep> idMap = new HashMap<>(); // used to define ordering constraints and causal links
         TaskOrdering taskOrderings = new TaskOrdering(new VectorBuilder<OrderingConstraint>().result(), new VectorBuilder<PlanStep>().result());
         seqProviderList<PlanStep> planSteps = new seqProviderList<>();
+        planSteps.add(psInit);
+        planSteps.add(psGoal);
+        taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal);
 
-        if (tnCtx.subtask_defs() != null) {
+        if ((tnCtx != null) && (tnCtx.subtask_defs() != null)) {
             for (int i = 0; i < tnCtx.subtask_defs().subtask_def().size(); i++) {
                 antlrHDDLParser.Subtask_defContext psCtx = tnCtx.subtask_defs().subtask_def().get(i);
 
