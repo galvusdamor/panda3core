@@ -243,9 +243,7 @@ p_goal : '(' ':goal' gd ')';
 
 p_htn : '(' (':htn'|':htnti')
         tasknetwork_def;
-//      (':tasks' subtask_defs)?
-//      (':ordering' ordering_defs)?
-//      (':constraints' constraint_defs)? ')';
+
 metric_spec : '(' ':metric' optimization ground_f_exp')';
 optimization : 'minimize' | 'maximize';
 ground_f_exp : '(' bin_op ground_f_exp ground_f_exp ')'

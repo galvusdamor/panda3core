@@ -7,7 +7,6 @@ import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
 import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalSortsAndConsts;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalTaskNetwork;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.parserUtil;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
@@ -84,19 +83,6 @@ public class hddlPanda3Visitor {
         PlanStep psGoal = new PlanStep(1, goal, goalArguments);
         assert (init.parameters().equals(goal.parameters()));
 
-        // initial plan
-/*
-        internalTaskNetwork tn = new internalTaskNetwork();
-        tn.addCspVariables(init.parameters());
-
-        tn.addPlanStep(psInit);
-        tn.addPlanStep(psGoal);
-        tn.addOrdering(psInit, psGoal);
-        tn.addCspConstraints(init.parameterConstraints());
-
-        visitInitialTN(ctxProblem.p_htn(), tn, tasks, sorts);
-*/
-
         // determine problem type
         List<Class<?>> allowedModificationsClasses = new LinkedList<Class<?>>();
         List<Class<?>> allowedFlawClasses = new LinkedList<Class<?>>();
@@ -118,7 +104,6 @@ public class hddlPanda3Visitor {
         IsModificationAllowed allowedModifications = new ModificationsByClass(JavaToScala.toScalaSeq(allowedModificationsClasses));
         IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
 
-
         seqProviderList<Variable> tniVars = new seqProviderList<>();
         tniVars.add(init.parameters());
 
@@ -129,28 +114,18 @@ public class hddlPanda3Visitor {
         Plan p = visitTaskNetwork(ctxProblem.p_htn().tasknetwork_def(), tniVars, tniConstr, psInit, psGoal, tasks, predicates, sorts,
                 allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
 
-
-//        Plan p = new Plan(tn.planSteps(), tn.causalLinks(), tn.taskOrderings(), tn.csp(), psInit, psGoal,
-//                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
-
         report.printReport();
 
         Tuple2<Domain, Plan> initialProblem = new Tuple2<>(d, p);
         return initialProblem;
     }
 
-    private Plan visitTaskNetwork(
-            antlrHDDLParser.Tasknetwork_defContext tnCtx,
-            seqProviderList<Variable> variables,
-            seqProviderList<VariableConstraint> constraints,
-            PlanStep psInit,
-            PlanStep psGoal,
-            Seq<Task> tasks,
-            Seq<Predicate> predicates, Seq<Sort> sorts,
-            IsModificationAllowed allowedModifications,
-            IsFlawAllowed allowedFlaws,
-            Map<PlanStep, DecompositionMethod> planStepsDecomposedBy,
-            Map<PlanStep, Tuple2<PlanStep, PlanStep>> planStepsDecompositionParents) {
+    private Plan visitTaskNetwork(antlrHDDLParser.Tasknetwork_defContext tnCtx, seqProviderList<Variable> variables,
+                                  seqProviderList<VariableConstraint> constraints, PlanStep psInit, PlanStep psGoal,
+                                  Seq<Task> tasks, Seq<Predicate> predicates, Seq<Sort> sorts,
+                                  IsModificationAllowed allowedModifications, IsFlawAllowed allowedFlaws,
+                                  Map<PlanStep, DecompositionMethod> planStepsDecomposedBy,
+                                  Map<PlanStep, Tuple2<PlanStep, PlanStep>> planStepsDecompositionParents) {
         HashMap<String, PlanStep> idMap = new HashMap<>(); // used to define ordering constraints and causal links
         TaskOrdering taskOrderings = new TaskOrdering(new VectorBuilder<OrderingConstraint>().result(), new VectorBuilder<PlanStep>().result());
         seqProviderList<PlanStep> planSteps = new seqProviderList<>();
@@ -189,8 +164,8 @@ public class hddlPanda3Visitor {
                             if (!variables.contains(v)) {
                                 psVars.add(v);
                             }
-                            Constant c = (Constant) ((Equal) vc).right();
                             // todo: there is no constraint added, is that right? what to do with other constraints?
+                            //Constant c = (Constant) ((Equal) vc).right();
                         }
                     }
                 }
@@ -293,60 +268,6 @@ public class hddlPanda3Visitor {
         return subPlan;
     }
 
-    /*
-        private void visitInitialTN(antlrHDDLParser.P_htnContext p_htnContext, internalTaskNetwork tn, Seq<Task> tasks, Seq<Sort> sorts) {
-            if (p_htnContext == null || p_htnContext.tasknetwork_def() == null) {
-                // this is only allowed if the problem is a pddl problem
-                // TODO:
-                return;
-            }
-
-
-            antlrHDDLParser.Subtask_defsContext subtask = p_htnContext.tasknetwork_def().subtask_defs();
-            int psID = 2;
-
-            for (antlrHDDLParser.Subtask_defContext oneST : subtask.subtask_def()) {
-                Task schema = parserUtil.taskByName(oneST.task_symbol().getText(), tasks);
-                VectorBuilder<Variable> parameters = new VectorBuilder<>();
-
-                for (final antlrHDDLParser.Var_or_constContext constant : oneST.var_or_const()) {
-                    assert (constant.VAR_NAME() == null); // must not be a variable
-                    assert (constant.NAME() != null); // must actually be a constant
-
-                    Variable v = tn.csp().constraints().find(new AbstractFunction1<VariableConstraint, Object>() {
-                        @Override
-                        public Object apply(VariableConstraint v1) {
-                            if (v1 instanceof Equal) {
-                                Equal eq = (Equal) v1;
-                                if (eq.right() instanceof Constant) {
-                                    Constant c = (Constant) eq.right();
-                                    if (c.name().equals(constant.getText()))
-                                        return java.lang.Boolean.TRUE;
-                                }
-                            }
-                            return java.lang.Boolean.FALSE;
-                        }
-                    }).get().getVariables().head();
-
-                    parameters.$plus$eq(v);
-                }
-
-                PlanStep psNew = new PlanStep(psID++, schema, parameters.result());
-                tn.addPlanStep(psNew);
-                for (int i = 0; i < tn.planSteps().size(); i++) {
-                    PlanStep ps = tn.planSteps().apply(i);
-                    if (ps.id() == 0) {
-                        tn.addOrdering(ps, psNew);
-                    } else if (ps.id() == 1) {
-                        tn.addOrdering(psNew, ps);
-                    }
-                }
-            }
-
-            // TODO: ordering!!
-            return;
-        }
-    */
     private Task visitGoalState(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_goalContext ctx) {
         seqProviderList<VariableConstraint> parameterConstraints = new seqProviderList<VariableConstraint>();
         seqProviderList<Variable> taskParameters = getVariableForEveryConst(sorts, parameterConstraints);
@@ -393,7 +314,7 @@ public class hddlPanda3Visitor {
     }
 
     private Seq<DecompositionMethod> visitMethodDef(List<antlrHDDLParser.Method_defContext> ctx, Seq<Sort> sorts, Seq<Predicate> predicates, Seq<Task> tasks) {
-        VectorBuilder<DecompositionMethod> methods = new VectorBuilder<>();
+        seqProviderList<DecompositionMethod> methods = new seqProviderList<>();
         for (antlrHDDLParser.Method_defContext m : ctx) {
             // Read abstract task
             String taskname = m.task_symbol().NAME().toString();
@@ -411,12 +332,13 @@ public class hddlPanda3Visitor {
             String nameStr = m.method_symbol().NAME().toString();
             seqProviderList<Variable> methodParams = typedParamsToVars(sorts, abstractTask.parameters().size(), m.typed_var_list().typed_vars());
 
-            internalTaskNetwork subNetwork = new internalTaskNetwork();
-            subNetwork.addCspVariables(methodParams);
-            subNetwork.addCspVariables(abstractTask.parameters());
+            seqProviderList<Variable> tnVars = new seqProviderList<>();
+            seqProviderList<VariableConstraint> tnConstraints = new seqProviderList<>();
+            tnVars.add(methodParams.result());
+            tnVars.add(abstractTask.parameters());
 
             // Read task's parameters and connect them to method's parameters
-            boolean paramsOk = subNetwork.connectMethVarsAndTaskVars(methodParams.result(), abstractTask, m.var_or_const());
+            boolean paramsOk = this.connectMethVarsAndTaskVars(methodParams.result(), tnConstraints, abstractTask, m.var_or_const());
             if (!paramsOk) {
                 continue;
             }
@@ -427,14 +349,21 @@ public class hddlPanda3Visitor {
             if (m.gd() != null) {
                 seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
                 precFormula = visitGoalConditions(predicates, methodParams, sorts, constraints, m.gd());
-                subNetwork.addCspConstraints(constraints.result());
+                tnConstraints.add(constraints.result());
                 hasPrecondition = true;
             } else {
                 hasPrecondition = false;
             }
 
             // Create subplan, method and add it to method list
-            Plan subPlan = subNetwork.readTaskNetwork(m.tasknetwork_def(), methodParams.result(), abstractTask, tasks, sorts);
+            GeneralTask initSchema = new GeneralTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), abstractTask.precondition());
+            GeneralTask goalSchema = new GeneralTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), abstractTask.effect(), new And<Literal>(new Vector<Literal>(0, 0, 0)));
+
+            PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters());
+            PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters());
+
+            Plan subPlan = visitTaskNetwork(m.tasknetwork_def(), tnVars, tnConstraints, psInit, psGoal, tasks, predicates, sorts,
+                    NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy, hddlPanda3Visitor.planStepsDecompositionParents);
 
             DecompositionMethod method;
             if (hasPrecondition) {
@@ -442,9 +371,32 @@ public class hddlPanda3Visitor {
             } else {
                 method = new SimpleDecompositionMethod(abstractTask, subPlan, nameStr);
             }
-            methods.$plus$eq(method);
+            methods.add(method);
         }
         return methods.result();
+    }
+
+    public boolean connectMethVarsAndTaskVars(Seq<Variable> methodParams, seqProviderList<VariableConstraint> tnConstraints, Task abstractTask, List<antlrHDDLParser.Var_or_constContext> givenParamsCtx) {
+        boolean paramsOk = true;
+        for (int i = 0; i < givenParamsCtx.size(); i++) {
+
+            antlrHDDLParser.Var_or_constContext param = givenParamsCtx.get(i);
+
+            if (param.NAME() != null) { // this is a consts
+                System.out.println("ERROR: not yet implemented - a const is used in task definition");
+            }
+
+            Variable methodVar = parserUtil.getVarByName(methodParams, param.VAR_NAME().toString());
+            if (methodVar == null) {
+                System.out.println("ERROR: parameter used in method definition has not been found in method's parameter definition.");
+                paramsOk = false;
+                break;
+            }
+            Variable taskVar = abstractTask.parameters().apply(i);
+            VariableConstraint vc = new Equal(taskVar, methodVar);
+            tnConstraints.add(vc);
+        }
+        return paramsOk;
     }
 
     private Seq<Task> visitTaskDefs(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.DomainContext ctxDomain) {
