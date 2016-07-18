@@ -135,7 +135,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
     /**
      * O_x is the set of new actions that represent the elements in the prefix. p is the process that is added in plan repair.
-     * <p>
+     * <p/>
      * todo: Daniel says: do not really know why the alpha is in the title.
      */
     private Tuple2<Domain, Plan> transformStep_O_x_und_p_mit_alpha(Tuple2<Domain, Plan> domPlan) throws addPrefixException {
@@ -162,7 +162,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
                 newPrimVarConstraints.add(new Equal(relatedTask.parameters().apply(b), tempConstant));
             }
 
-            Task newPrimitiveTask = new GeneralTask(newTaskName, true, relatedTask.parameters(),
+            Task newPrimitiveTask = new GeneralTask(newTaskName, true, relatedTask.parameters(), relatedTask.artificialParametersRepresentingConstants(),
                     JavaToScala.concatJavaListToScalaSeq(relatedTask.parameterConstraints(), newPrimVarConstraints),
                     new And<Formula>(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(relatedTask.precondition()), precLiteralList)),
                     new And<Formula>(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(relatedTask.effect()), effectLiteralList)));
@@ -211,7 +211,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
                 effektLiteralList.add(tempProcessLiteral);
             }
 
-            processTaskSchema = new ReducedTask(name, true, JavaToScala.toScalaSeq(processVariables), JavaToScala.toScalaSeq(processVariableConstraints),
+            processTaskSchema = new ReducedTask(name, true, JavaToScala.toScalaSeq(processVariables), JavaToScala.<Variable>nil(), JavaToScala.toScalaSeq(processVariableConstraints),
                     new And<Literal>(JavaToScala.toScalaSeq(precLiteralList)), new And<Literal>(JavaToScala.toScalaSeq(effektLiteralList)));
         }
         AddTask updateObject = new AddTask(newPrimitiveTasks.result());
@@ -229,7 +229,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
         for (String oName : getPrimitivesFromPrefixDistinct()) {
             String tName = uniqueStringPrefix + prefixExtension + oName;
             Task relatedTask = getTaskFromDomainByName(domPlan._1(), oName);
-            Task newCompoundTask = new GeneralTask(tName, false, relatedTask.parameters(), relatedTask.parameterConstraints(),
+            Task newCompoundTask = new GeneralTask(tName, false, relatedTask.parameters(), relatedTask.artificialParametersRepresentingConstants(), relatedTask.parameterConstraints(),
                     relatedTask.precondition(), relatedTask.effect());
             newCompoundTasks.add(newCompoundTask);
             map_M_t.put(relatedTask, newCompoundTask);
@@ -259,8 +259,8 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             } else if (currentTask.name().startsWith(uniqueStringPrefix + prefixExtension)) {
                 continue;
             } else {
-                Task tempNewPrimitiveTask = new GeneralTask(currentTask.name(), currentTask.isPrimitive(), currentTask.parameters(), currentTask.parameterConstraints(),
-                        new And(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(currentTask.precondition()), precLiteralList)), currentTask.effect());
+                Task tempNewPrimitiveTask = new GeneralTask(currentTask.name(), currentTask.isPrimitive(), currentTask.parameters(), currentTask.artificialParametersRepresentingConstants(),
+                        currentTask.parameterConstraints(), new And(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(currentTask.precondition()), precLiteralList)), currentTask.effect());
                 tempMap.put(currentTask, tempNewPrimitiveTask);
             }
         }
@@ -360,14 +360,14 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
                 tempSubPlan = new Plan(subnetwork.planSteps(), subnetwork.causalLinks(), subnetwork.taskOrderings(),
                         subnetwork.csp().addVariables(tempPlanStep_O.arguments()).addVariables(psProcess.arguments()),
-                        psInit, psGoal,NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,hddlPanda3Visitor.planStepsDecompositionParents);
+                        psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy, hddlPanda3Visitor.planStepsDecompositionParents);
 
             } else {
                 subnetwork.addOrdering(tempPlanStep_O, psGoal);
 
                 tempSubPlan = new Plan(subnetwork.planSteps(), subnetwork.causalLinks(), subnetwork.taskOrderings(),
                         subnetwork.csp().addVariables(tempPlanStep_O.arguments()),
-                        psInit, psGoal,NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,hddlPanda3Visitor.planStepsDecompositionParents);
+                        psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy, hddlPanda3Visitor.planStepsDecompositionParents);
             }
 
             DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(correspondingCompoundTask, tempSubPlan, "some method");
@@ -394,7 +394,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
         String prefixExtension = "[GENERIC]";
 
         String tempName = uniqueStringPrefix + prefixExtension + "[" + java.util.UUID.randomUUID() + "]";
-        Task tempEmptyTask = new GeneralTask(tempName, true, variablesOfprecsAndEffects, JavaToScala.<VariableConstraint>nil(), precondition, effect);
+        Task tempEmptyTask = new GeneralTask(tempName, true, variablesOfprecsAndEffects, JavaToScala.<Variable>nil(), JavaToScala.<VariableConstraint>nil(), precondition, effect);
         return new PlanStep(id, tempEmptyTask, variablesOfprecsAndEffects);
     }
 

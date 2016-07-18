@@ -29,7 +29,7 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
     val goalSchema = initialPlan.goal.schema.asInstanceOf[ReducedTask]
 
     // create an artificial method
-    val topTask = ReducedTask("__grounding__top", isPrimitive = false, alreadyGroundedVariableMapping.keys.toSeq, Nil, initSchema.effect, goalSchema.precondition)
+    val topTask = ReducedTask("__grounding__top", isPrimitive = false, alreadyGroundedVariableMapping.keys.toSeq, Nil, Nil, initSchema.effect, goalSchema.precondition)
     val topMethod = SimpleDecompositionMethod(topTask, initialPlan, "__top")
 
     // compute groundings of abstract tasks naively

@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
 import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.domain.updates.ExchangeVariable;
 import de.uniulm.ki.panda3.symbolic.logic.*;
+import de.uniulm.ki.panda3.util.JavaToScala;
 import de.uniulm.ki.panda3.util.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import scala.Tuple2;
@@ -71,7 +72,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
             } else {
                 Set<Variable> inVars = t.parameters().toSet();
                 Tuple3<Set<Variable>, Seq<VariableConstraint>, Formula> updatedPrec = updatePrec(inVars, t.parameterConstraints(), t.precondition(), sorts);
-                GeneralTask updatedT = new GeneralTask(t.name(), t.isPrimitive(), updatedPrec._1().toSeq(), updatedPrec._2(), updatedPrec._3(), t.effect());
+                GeneralTask updatedT = new GeneralTask(t.name(), t.isPrimitive(), updatedPrec._1().toSeq(), JavaToScala.<Variable>nil(), updatedPrec._2(), updatedPrec._3(), t.effect());
                 updatedTasks.add(updatedT);
             }
         }

@@ -42,7 +42,7 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     builder.append("\n")
 
     // actions
-    domain.tasks foreach { case ReducedTask(name, true, Nil, _, precondition, effect) =>
+    domain.tasks foreach { case ReducedTask(name, true, Nil, _, _, precondition, effect) =>
       builder.append(name.replace(',', '!') + ";")
 
       // precon

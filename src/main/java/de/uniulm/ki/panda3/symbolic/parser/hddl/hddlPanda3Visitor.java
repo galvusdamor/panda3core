@@ -114,7 +114,7 @@ public class hddlPanda3Visitor {
         antlrHDDLParser.Tasknetwork_defContext tnCtx = null;
 
         Plan p;
-        if (ctxProblem.p_htn() != null) {
+        if (ctxProblem.p_htn() != null) { // HTN or TIHTN
             p = visitTaskNetwork(ctxProblem.p_htn().tasknetwork_def(), tniVars, tniConstr, psInit, psGoal, tasks, predicates, sorts,
                     allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
         } else {
@@ -146,7 +146,7 @@ public class hddlPanda3Visitor {
         planSteps.add(psGoal);
         taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal);
 
-        if ((tnCtx != null) && (tnCtx.subtask_defs() != null)) {
+        if (tnCtx.subtask_defs() != null) {
             for (int i = 0; i < tnCtx.subtask_defs().subtask_def().size(); i++) {
                 antlrHDDLParser.Subtask_defContext psCtx = tnCtx.subtask_defs().subtask_def().get(i);
 
@@ -155,6 +155,7 @@ public class hddlPanda3Visitor {
                 Task schema = parserUtil.taskByName(psName, tasks);
                 if (schema == null) {
                     System.out.println("Task schema undefined: " + psName);
+                    report.reportSkippedMethods();
                     continue;
                 }
 
@@ -168,29 +169,20 @@ public class hddlPanda3Visitor {
                 // while reading task schemata, constants that are included can cause new parameters that are added
                 // to the schema. These new parameters have to be added to the plan steps.
 
-                // todo: wtf -- why is that part of a parser? This should be part of a constructor!
-                for (int parameter = 0; parameter < schema.parameters().length(); parameter++) {
+                // todo: store the original number of parameters and check whether the user gave the correct number here
+
+                for (int parameter = psVars.size(); parameter < schema.parameters().length(); parameter++) {
                     Variable v = schema.parameters().apply(parameter);
-                    for (int j = 0; j < schema.parameterConstraints().size(); j++) {
-                        VariableConstraint vc = schema.parameterConstraints().apply(j);
-                        if ((vc instanceof Equal)
-                                && (((Equal) vc).left().equals(v))
-                                && ((Equal) vc).right() instanceof Constant) {
-                            psVars.add(v);
-                            if (!variables.contains(v)) {
-                                psVars.add(v);
-                            }
-                            // todo: there is no constraint added, is that right? what to do with other constraints?
-                            //Constant c = (Constant) ((Equal) vc).right();
-                        }
-                    }
+                    Variable newVar = new Variable(parameter, psName + v.name(), v.sort());
+                    psVars.add(newVar);
+                    // the constraints will be added by the plan
                 }
 
                 Seq<Variable> psVarsSeq = psVars.result();
-
                 if (schema.parameters().size() != psVarsSeq.size()) {
                     System.out.println("The task schema " + schema.name() + " is defined with " + schema.parameters().size() + " but used with " + psVarsSeq.size() + " parameters.");
                     System.out.println(schema.parameters());
+                    report.reportSkippedMethods();
                     continue;
                 }
 
@@ -243,7 +235,7 @@ public class hddlPanda3Visitor {
                     } else {
                         PlanStep left = idMap.get(idLeft);
                         PlanStep right = idMap.get(idRight);
-                        taskOrderings.addOrdering(left, right);
+                        taskOrderings = taskOrderings.addOrdering(left, right);
                     }
                 }
             }
@@ -257,10 +249,12 @@ public class hddlPanda3Visitor {
                 String consumerID = cl.subtask_id().get(1).getText();
                 if (idMap.containsKey(producerID)) {
                     System.out.println("The task id " + producerID + " is used in causal link definition, but no task is definied with this id.");
+                    report.reportSkippedMethods();
                     continue;
                 }
                 if (idMap.containsKey(consumerID)) {
                     System.out.println("The task id " + consumerID + " is used in causal link definition, but no task is definied with this id.");
+                    report.reportSkippedMethods();
                     continue;
                 }
 
@@ -291,7 +285,7 @@ public class hddlPanda3Visitor {
         if (ctx != null) {
             f = visitGoalConditions(predicates, taskParameters, sorts, parameterConstraints, ctx.gd());
         }
-        return new GeneralTask("goal", true, taskParameters.result(), parameterConstraints.result(), f, new And<Literal>(new Vector<Literal>(0, 0, 0)));
+        return new GeneralTask("goal", true, taskParameters.result(), taskParameters.result(), parameterConstraints.result(), f, new And<Literal>(new Vector<Literal>(0, 0, 0)));
     }
 
     private Task visitInitialState(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_initContext ctx) {
@@ -309,7 +303,7 @@ public class hddlPanda3Visitor {
             }
         }
 
-        return new ReducedTask("init", true, parameter.result(), varConstraints.result(), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(initEffects.result()));
+        return new ReducedTask("init", true, parameter.result(), parameter.result(), varConstraints.result(), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(initEffects.result()));
     }
 
     private seqProviderList<Variable> getVariableForEveryConst(Seq<Sort> sorts, seqProviderList<VariableConstraint> varConstraints) {
@@ -364,7 +358,7 @@ public class hddlPanda3Visitor {
             boolean hasPrecondition;
             if (m.gd() != null) {
                 seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
-                precFormula = visitGoalConditions(predicates, methodParams, sorts, constraints, m.gd());
+                precFormula = visitGoalConditions(predicates, tnVars, sorts, constraints, m.gd());
                 tnConstraints.add(constraints.result());
                 hasPrecondition = true;
             } else {
@@ -372,8 +366,8 @@ public class hddlPanda3Visitor {
             }
 
             // Create subplan, method and add it to method list
-            GeneralTask initSchema = new GeneralTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), abstractTask.precondition());
-            GeneralTask goalSchema = new GeneralTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), abstractTask.effect(), new And<Literal>(new Vector<Literal>(0, 0, 0)));
+            GeneralTask initSchema = new GeneralTask("init", true, abstractTask.parameters(), abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), abstractTask.precondition());
+            GeneralTask goalSchema = new GeneralTask("goal", true, abstractTask.parameters(), abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), abstractTask.effect(), new And<Literal>(new Vector<Literal>(0, 0, 0)));
 
             PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters());
             PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters());
@@ -433,6 +427,9 @@ public class hddlPanda3Visitor {
         seqProviderList<Variable> parameters = typedParamsToVars(sorts, 0, ctxTask.typed_var_list().typed_vars());
         seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
 
+        // due to constants in the definition, this may increase. However, we want to know the original count.
+        int numOfParams = parameters.size();
+
         // build preconditions
         Formula f = new And<Literal>(new Vector<Literal>(0, 0, 0));
         if (ctxTask.gd() != null) {
@@ -449,7 +446,7 @@ public class hddlPanda3Visitor {
         } else if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().eff_conjuntion() != null)) {
             f2 = visitConEffConj(parameters, constraints, sorts, predicates, ctxTask.effect_body().eff_conjuntion());
         }
-        return new GeneralTask(taskName, isPrimitive, parameters.result(), constraints.result(), f, f2);
+        return new GeneralTask(taskName, isPrimitive, parameters.result(), parameters.result(numOfParams), constraints.result(), f, f2);
     }
 
     private seqProviderList<Variable> typedParamsToVars(Seq<Sort> sorts, int startId, List<antlrHDDLParser.Typed_varsContext> vars) {

@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.antlrHDDLParser;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.parserUtil;
+import de.uniulm.ki.panda3.util.JavaToScala;
 import de.uniulm.ki.panda3.util.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.CausalLink;
@@ -115,8 +116,8 @@ public class internalTaskNetwork {
 
     public Plan readTaskNetwork(antlrHDDLParser.Tasknetwork_defContext tnCtx, Seq<Variable> parameters, Task abstractTask, Seq<Task> tasks, Seq<Sort> sorts) {
 
-        GeneralTask initSchema = new GeneralTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), abstractTask.precondition());
-        GeneralTask goalSchema = new GeneralTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), abstractTask.effect(), new And<Literal>(new Vector<Literal>(0, 0, 0)));
+        GeneralTask initSchema = new GeneralTask("init", true, abstractTask.parameters(), JavaToScala.<Variable>nil(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), abstractTask.precondition());
+        GeneralTask goalSchema = new GeneralTask("goal", true, abstractTask.parameters(), JavaToScala.<Variable>nil(), new Vector<VariableConstraint>(0, 0, 0), abstractTask.effect(), new And<Literal>(new Vector<Literal>(0, 0, 0)));
 
         PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters());
         PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters());

@@ -65,6 +65,20 @@ public class seqProviderList<T> {
         return res.result();
     }
 
+    /**
+     * returns the elements starting by the given index
+     * @param startIndex the first element that is returned
+     * @return
+     */
+    public Seq<T> result(int startIndex) {
+        VectorBuilder<T> res = new VectorBuilder<T>();
+        for (int i = 0; i < list.size(); i++) {
+            T o = this.list.get(i);
+            res.$plus$eq(o);
+        }
+        return res.result();
+    }
+
     public Set<T> resultSet() {
         Seq<T> res = this.result();
         return res.toSet();

@@ -243,7 +243,7 @@ case class GroundedPlanningGraph
     }
     val literal: Literal = Literal(groundLiteral.predicate, isPositive = true, parameters)
     val task: ReducedTask = ReducedTask("NO-OP[" + groundLiteral.predicate.name + "]",
-                                        isPrimitive = true, parameters, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
+                                        isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
     GroundTask(task, groundLiteral.parameter)
   }
 
