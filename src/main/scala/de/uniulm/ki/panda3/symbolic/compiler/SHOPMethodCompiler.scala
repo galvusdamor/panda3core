@@ -19,7 +19,7 @@ object SHOPMethodCompiler extends DomainTransformer[Unit] {
       case (SHOPDecompositionMethod(abstractTask, subPlan, precondition,name), idx) => if (precondition.isEmpty) (SimpleDecompositionMethod(abstractTask, subPlan, name), None)
       else {
         // generate a new schema that represents the decomposition method
-        val preconditionTaskSchema = GeneralTask("SHOP_method" + idx + "_precondition", isPrimitive = true, precondition.containedVariables.toSeq, Nil, precondition, new And[Formula](Nil))
+        val preconditionTaskSchema = GeneralTask("SHOP_method" + idx + "_precondition", isPrimitive = true, precondition.containedVariables.toSeq, Nil, Nil, precondition, new And[Formula](Nil))
         // instantiate
         val preconditionPlanStep = new PlanStep(subPlan.getFirstFreePlanStepID, preconditionTaskSchema, preconditionTaskSchema.parameters)
         // make this plan step the first actual task in the method

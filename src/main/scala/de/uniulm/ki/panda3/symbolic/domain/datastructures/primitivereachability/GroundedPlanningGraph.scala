@@ -52,7 +52,7 @@ case class GroundedPlanningGraph
     // determine which grounded literals in the last state layer may cause new grounded actions to be applicable
     //TODO: tasks that will be considered because of deleted mutexes should contain both grounded literals as preconditions, otherwise it can happen that the same action gets initialised twice.
     val changedPropositions: Set[GroundLiteral] = addedPropositions ++ (deletedMutexes flatMap { mutex => Set(mutex._1, mutex._2) })
-    val tasksToBeConsidered: Set[(GroundLiteral, Seq[ReducedTask])] = changedPropositions map { groundLiteral => (groundLiteral, domain.consumersOf(groundLiteral.predicate)) }
+    val tasksToBeConsidered: Set[(GroundLiteral, Seq[ReducedTask])] = changedPropositions map { groundLiteral => (groundLiteral, domain.consumersOf(groundLiteral.predicate) filter {_.isPrimitive}) }
 
 
     // create the newly applicable grounded actions
@@ -67,7 +67,7 @@ case class GroundedPlanningGraph
     }
     // special treatment for tasks without preconditions. the are always applicable in the first action layer
     val newGroundTasksFromParameters: Set[GroundTask] = firstLayer match {
-      case true => createActionInstancesForTasksWithoutPreconditions(domain.tasks collect {
+      case true  => createActionInstancesForTasksWithoutPreconditions(domain.primitiveTasks collect {
         case t: ReducedTask => t
       } filter { reducedTask => reducedTask.precondition.conjuncts.isEmpty })
       case false => Set.empty[GroundTask]
@@ -290,7 +290,7 @@ case class GroundedPlanningGraph
     }
     val literal: Literal = Literal(groundLiteral.predicate, isPositive = true, parameters)
     val task: ReducedTask = ReducedTask("NO-OP[" + groundLiteral.predicate.name + "]",
-      isPrimitive = true, parameters, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
+                                        isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
     GroundTask(task, groundLiteral.parameter)
   }
 

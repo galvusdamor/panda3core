@@ -31,7 +31,7 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
     // TODO we cant handle this case (yet)
     assert(!(initialPlan.causalLinks exists { _.containsOne(initialPlan.initAndGoal: _*) }))
 
-    val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, And(Nil), And(Nil))
+    val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
     val topInit = PlanStep(initialPlan.init.id, initAndGoalNOOP, Nil)
     val topGoal = PlanStep(initialPlan.goal.id, initAndGoalNOOP, Nil)
 
@@ -43,7 +43,7 @@ case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan
                                   initialPlan.isFlawAllowed, initialPlan.planStepDecomposedByMethod, initialPlan.planStepParentInDecompositionTree)
 
     // create an artificial method
-    val topTask = ReducedTask("__grounding__top", isPrimitive = false, alreadyGroundedVariableMapping.keys.toSeq, Nil, And(Nil), And(Nil))
+    val topTask = ReducedTask("__grounding__top", isPrimitive = false, alreadyGroundedVariableMapping.keys.toSeq, Nil, Nil, And(Nil), And(Nil))
     val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top")
 
     // compute groundings of abstract tasks naively
