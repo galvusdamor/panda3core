@@ -1,7 +1,6 @@
 package de.uniulm.ki.panda3.progression.proSearch;
 
 import de.uniulm.ki.panda3.progression.bottomUpGrounder.htnBottomUpGrounder;
-import de.uniulm.ki.panda3.progression.bottomUpGrounder.pHtnBottomUpGrounder;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.efficientRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
