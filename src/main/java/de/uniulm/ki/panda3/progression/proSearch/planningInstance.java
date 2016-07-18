@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.progression.proSearch;
 
 import de.uniulm.ki.panda3.progression.bottomUpGrounder.htnBottomUpGrounder;
+import de.uniulm.ki.panda3.progression.bottomUpGrounder.pHtnBottomUpGrounder;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.efficientRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
@@ -15,6 +16,7 @@ import scala.collection.Seq;
 import java.util.*;
 import java.util.BitSet;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Created by dhoeller on 01.07.16.
@@ -55,14 +57,14 @@ public class planningInstance {
     BitSet goal;
     int[] goalList;
 
-    public void plan(Domain d, Plan p) {
+    public void plan(Domain d, Plan p) throws ExecutionException, InterruptedException {
         boolean verbose = false;
         boolean relaxFirstGraph = true;
         boolean isHtn = d.abstractTasks().size() > 0;
         long totaltime = System.currentTimeMillis();
 
         //
-        // Get reachable grounded actions and environment facts
+        // Get reachable groundings
         //
         long time = System.currentTimeMillis();
         Set<GroundLiteral> allLiterals;
@@ -119,7 +121,7 @@ public class planningInstance {
         numStateFeatures = allLiterals.size();
         numActions = allActions.size();
         if (isHtn) {
-            System.out.println(" - Found " + gr.abstTaskCount + " reachable abstract tasks.");
+            System.out.println(" - Found " + gr.abstTaskCount + " reachable ground abstract tasks.");
             System.out.println(" - Found " + gr.methodCount + " reachable ground methods.");
         }
         System.out.println(" - Found " + numActions + " reachable ground actions.");
@@ -209,7 +211,7 @@ public class planningInstance {
                 System.out.println(n + " " + proPrinter.actionToStr(IndexToAction[a]));
                 n++;
             }
-            time = System.currentTimeMillis();
+            //time = System.currentTimeMillis();
             //System.out.println("\nInferring least constraining causal links");
             //inferCausalLinks(s0._1(), solution);
             //System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");

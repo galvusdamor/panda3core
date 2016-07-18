@@ -9,7 +9,7 @@ import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.Constant;
 import de.uniulm.ki.panda3.symbolic.logic.Variable;
-import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.seqProviderList;
+import de.uniulm.ki.panda3.util.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;

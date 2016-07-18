@@ -13,15 +13,14 @@ import scala.Tuple2;
 /**
  * Created by dhoeller on 28.06.16.
  * <p/>
- * - Bug: Result changes when erasing reconditions
  * - Feature (nice-to-have): One should implement enforced-hill-climbing
  * - Feature (nice-to-have): One should implement helpful actions
  * - Feature (necessary): One need to implement different strategies to include methods in action layers:
- * -- Implement a first version that simulates Ron's adl-representation one-to-one as a base for
- * further relaxations
+ * -- Implement a first version that simulates Ron's adl-representation one-to-one as a base for further relaxations
  */
 public class PANDApro {
     public static void main(String[] str) throws Exception {
+        System.out.println("This is PANDApro - An hierarchical planning system that plans via heuristic progression search.");
         //String domainFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/simple-finite-domain-2.lisp";
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/simple-finite-problem-2.lisp";
         //String domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest01_domain.hddl";
@@ -30,12 +29,12 @@ public class PANDApro {
         //String problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p25.pddl";
 
         // STRIPS
-        // String domainFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/lifted-htn/domain-strips.lisp";
-        // String problemFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/lifted-htn/p00-strips.lisp";
+         String domainFile = "/home/dhoeller/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/domain/domain.pddl";
+        String problemFile = "/home/dhoeller/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/problems/p01.pddl";
 
         // HTN
-        String domainFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp";
-        String problemFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p01-htn.lisp";
+        //String domainFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp";
+        //String problemFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p01-htn.lisp";
 
         Tuple2<Domain, Plan> instance = FileHandler.loadHDDLFromFile(domainFile, problemFile);
 

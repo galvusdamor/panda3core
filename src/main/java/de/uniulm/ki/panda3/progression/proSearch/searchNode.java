@@ -24,31 +24,20 @@ public class searchNode implements Comparable<searchNode> {
         rpg.build(state);
         //this.metric = rpg.getFF() + tasks.size();
         this.metric = rpg.getFF();
-        //this.metric =0;
-    }
-
-    public searchNode(BitSet state, EfficientPlan htn) {
-        this.state = state;
-        this.htn = htn;
-        rpg.build(state);
-        //this.metric = rpg.getFF() + tasks.size();
-        this.metric = rpg.getFF();
-        //this.metric =0;
     }
 
     public searchNode(BitSet state, List<Integer> as, int a) {
-        this(state);
         this.tasks.addAll(as);
         this.tasks.add(a);
+
+        this.state = state;
+        rpg.build(state);
+        //this.metric = rpg.getFF() + tasks.size();
+        this.metric = rpg.getFF();
     }
 
     public List<Integer> getApplicableActions() {
         return rpg.actionDelta.get(1);
-    }
-
-    public List<GroundedDecompositionMethod> getApplicableMethods() {
-        // todo
-        return new LinkedList<>();
     }
 
     @Override

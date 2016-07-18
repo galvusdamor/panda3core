@@ -50,7 +50,6 @@ public class efficientRPG {
 
     public Boolean goalRelaxedReachable = null;
 
-
     public void build(BitSet s0) {
         this.build(s0, null);
     }
