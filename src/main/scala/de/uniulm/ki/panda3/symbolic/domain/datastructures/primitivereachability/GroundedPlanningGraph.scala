@@ -40,14 +40,14 @@ case class GroundedPlanningGraph
       graph.last
     }
     val updatedPrecondMap = fillPreconMap(oldPreconMap, addedPropositions)
-    println("addedPropositions:")
+    /*println("addedPropositions:")
     for (x <- addedPropositions) {
       println("gl: " + x.predicate.name + ", parameter: " + x.parameter.toString())
     }
     println("deletedMutexes:")
     for (x <- deletedMutexes) {
       println("gl: " + x._1.predicate.name + ", parameter: " + x._1.parameter.toString() + "||" + "gl: " + x._2.predicate.name + ", parameter: " + x._2.parameter.toString())
-    }
+    }*/
 
     // determine which grounded literals in the last state layer may cause new grounded actions to be applicable
     //TODO: tasks that will be considered because of deleted mutexes should contain both grounded literals as preconditions, otherwise it can happen that the same action gets initialised twice.
@@ -75,17 +75,17 @@ case class GroundedPlanningGraph
     // round up
     val newInstantiatedGroundTasks: Set[GroundTask] = newGroundTasksFromPreconditions ++ newGroundTasksFromParameters
     val newNoOps: Set[GroundTask] = addedPropositions map { groundLiteral => createNOOP(groundLiteral) }
-    val newTasks: Set[GroundTask] = (newInstantiatedGroundTasks ++ newNoOps) //-- previousLayer._1
+    val newTasks: Set[GroundTask] = (newInstantiatedGroundTasks ++ newNoOps) -- previousLayer._1
     val allGroundTasks: Set[GroundTask] = previousLayer._1 ++ newTasks
-    println("DUP: " + previousLayer._1.size + " + " + newTasks.size + " = " + (previousLayer._1.size + newTasks.size) + " vs " + allGroundTasks.size)
-    println("previous")
+    //println("DUP: " + previousLayer._1.size + " + " + newTasks.size + " = " + (previousLayer._1.size + newTasks.size) + " vs " + allGroundTasks.size)
+    /*println("previous")
     for (x <- previousLayer._1) {
       println("Task: " + x.task.name + ",Parameter: " + x.arguments.toString)
     }
     println("new")
     for (x <- newTasks) {
       println("Task: " + x.task.name + ",Parameter: " + x.arguments.toString)
-    }
+    }*/
 
     // compute task mutexes anew
     // TODO here we could to things a lot more efficiently
@@ -94,6 +94,7 @@ case class GroundedPlanningGraph
     val groundTaskPairs: Set[(GroundTask, GroundTask)] = (for (x <- 0 until orderedNewTasks.size - 1; y <- x until orderedNewTasks.size) yield
       (orderedNewTasks(x), orderedNewTasks(y))) ++
       (for (x <- newTasks; y <- previousLayer._1) yield if ((x compare y) < 0) (x, y) else (y, x)) filter { case (a, b) => a != b } toSet
+
     val newTaskMutexes: Set[(GroundTask, GroundTask)] = {
       if (computeMutexes) {
         val normalMutexes = groundTaskPairs filter { case (groundTask1, groundTask2) =>
@@ -118,6 +119,7 @@ case class GroundedPlanningGraph
         Set.empty[(GroundTask, GroundTask)]
       }
     }
+
     val remainingOldMutexes: Set[(GroundTask, GroundTask)] = {
       if (computeMutexes) {
         previousLayer._2 filter { case (groundTask1, groundTask2) =>
@@ -154,10 +156,12 @@ case class GroundedPlanningGraph
     val sortedPropositions: Vector[GroundLiteral] = newPropositions.toVector.sorted
 
     val propositionPairs: Set[(GroundLiteral, GroundLiteral)] = (for (x <- 0 until sortedPropositions.size - 1; y <- x + 1 until sortedPropositions.size) yield (sortedPropositions(x),
-      sortedPropositions(y))) ++ (for (x <- previousLayer._3; y <- allPropositions) yield if ((x compare y) < 0) (x, y) else (y, x)) toSet
+      sortedPropositions(y))) ++ (for (x <- previousLayer._3; y <- sortedPropositions) yield if ((x compare y) < 0) (x, y) else (y, x)) toSet
+
+    //println("TO CHECK: " + propositionPairs.size + " DUP " + sortedPropositions.size + " vs " + (allPropositions.size - previousLayer._3.size))
 
     val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = computeMutexes match {
-      case true => propositionPairs filter { case (groundLiteral1, groundLiteral2) =>
+      case true => (propositionPairs ++ previousLayer._4) filter { case (groundLiteral1, groundLiteral2) =>
         (for (x <- propositionProducers(groundLiteral1); y <- propositionProducers(groundLiteral2)) yield if ((x compare y) < 0) (x, y) else (y, x)) forall allTaskMutexes.contains
       }
       case false => Set.empty[(GroundLiteral, GroundLiteral)]
