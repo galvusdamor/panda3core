@@ -266,7 +266,7 @@ public class hddlPanda3Visitor {
                 if (cl.literal().atomic_formula() != null) {
                     literal = visitAtomFormula(variables, predicates, sorts, constraints, true, cl.literal().atomic_formula());
                 } else { // negative literal
-                    literal = visitAtomFormula(variables, predicates, sorts, constraints, false, cl.literal().atomic_formula());
+                    literal = visitAtomFormula(variables, predicates, sorts, constraints, false, cl.literal().neg_atomic_formula().atomic_formula());
                 }
                 causalLinks.add(new CausalLink(producer, consumer, literal));
             }
