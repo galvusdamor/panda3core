@@ -20,7 +20,8 @@ import de.uniulm.ki.panda3.symbolic.writer._
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemovedCausalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering,@Deprecated parameterVariableConstraints: CSP,
+case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemovedCausalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering,
+                @Deprecated parameterVariableConstraints: CSP,
                 init: PlanStep, goal: PlanStep, isModificationAllowed: IsModificationAllowed, isFlawAllowed: IsFlawAllowed,
                 planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)]) extends
   DomainUpdatable with PrettyPrintable with HashMemo with DotPrintable[PlanDotOptions] {
@@ -214,11 +215,12 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       })
       // build a new schema for init
       val initTask = init.schema match {
-        case reduced: ReducedTask => ReducedTask(reduced.name, isPrimitive = true, reduced.parameters, reduced.artificialParametersRepresentingConstants, reduced.parameterConstraints ++ constraints,
-          reduced.precondition, And[Literal](reduced.effect.conjuncts ++ literalsInit))
+        case reduced: ReducedTask => ReducedTask(reduced.name, isPrimitive = true, reduced.parameters, reduced.artificialParametersRepresentingConstants,
+                                                 reduced.parameterConstraints ++ constraints,
+                                                 reduced.precondition, And[Literal](reduced.effect.conjuncts ++ literalsInit))
         case general: GeneralTask =>
           GeneralTask(general.name, isPrimitive = true, general.parameters, general.artificialParametersRepresentingConstants, general.parameterConstraints ++ constraints,
-            general.precondition, And[Formula](literalsInit :+ general.effect))
+                      general.precondition, And[Formula](literalsInit :+ general.effect))
       }
       val newInit = PlanStep(init.id, initTask, init.arguments)
 
@@ -226,10 +228,10 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       val goalTask = goal.schema match {
         case reduced: ReducedTask =>
           ReducedTask(reduced.name, isPrimitive = true, reduced.parameters, reduced.artificialParametersRepresentingConstants,
-            reduced.parameterConstraints ++ constraints, And[Literal](reduced.precondition.conjuncts ++ literalsGoal),                      reduced.effect)
+                      reduced.parameterConstraints ++ constraints, And[Literal](reduced.precondition.conjuncts ++ literalsGoal), reduced.effect)
         case general: GeneralTask =>
           GeneralTask(general.name, isPrimitive = true, general.parameters, general.artificialParametersRepresentingConstants,
-            general.parameterConstraints ++ constraints, And[Formula](literalsGoal :+ general.precondition), general.effect)
+                      general.parameterConstraints ++ constraints, And[Formula](literalsGoal :+ general.precondition), general.effect)
       }
       val newGoal = PlanStep(goal.id, goalTask, goal.arguments)
 
@@ -274,6 +276,9 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   /* convenience methods to determine usable IDs */
   lazy val getFirstFreePlanStepID: Int = 1 + (planSteps foldLeft 0) { case (m, ps: PlanStep) => math.max(m, ps.id) }
   lazy val getFirstFreeVariableID: Int = 1 + (variableConstraints.variables foldLeft 0) { case (m, v: Variable) => math.max(m, v.id) }
+
+  def isLastPlanStep(planStep: PlanStep): Boolean = planStepsWithoutInitGoal filter { _ != planStep } forall { other => orderingConstraints.lt(other, planStep) }
+
 
   /** returns a short information about the object */
   override def shortInfo: String = (planSteps map { "PS " + _.mediumInfo }).mkString("\n") + "\n" + orderingConstraints.shortInfo + "\n" + (causalLinks map { _.longInfo }).mkString("\n") +
