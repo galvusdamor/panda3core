@@ -186,7 +186,7 @@ public class hddlPanda3Visitor {
                     continue;
                 }
 
-                PlanStep ps = new PlanStep(i, schema, psVarsSeq);
+                PlanStep ps = new PlanStep(i + 2, schema, psVarsSeq);
                 taskOrderings = taskOrderings.addPlanStep(ps).addOrdering(OrderingConstraint.apply(psInit, ps)).addOrdering(OrderingConstraint.apply(ps, psGoal));
                 if (psCtx.subtask_id() != null) {
                     String id = psCtx.subtask_id().NAME().toString();
