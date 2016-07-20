@@ -10,10 +10,10 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask}
 import de.uniulm.ki.util.HashMemo
 
 /**
- * The general view onto a decomposition method: it takes an abstract task and maps it to a plan, by which this task can be replaced
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  * The general view onto a decomposition method: it takes an abstract task and maps it to a plan, by which this task can be replaced
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 trait DecompositionMethod extends DomainUpdatable {
 
   val abstractTask: Task
@@ -30,9 +30,9 @@ trait DecompositionMethod extends DomainUpdatable {
         println("SIZE " + a.size + "!=" + b.size)
       }
       assert(reducedAbstractTask.effect.conjuncts.size == subPlan.goal.substitutedPreconditions.size)
-      assert((reducedAbstractTask.precondition.conjuncts zip subPlan.init.substitutedEffects) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative})
-      assert((reducedAbstractTask.effect.conjuncts zip subPlan.init.substitutedPreconditions) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative})
-    case _ => () // I cannot check anything
+      assert((reducedAbstractTask.precondition.conjuncts zip subPlan.init.substitutedEffects) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
+      assert((reducedAbstractTask.effect.conjuncts zip subPlan.init.substitutedPreconditions) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
+    case _                                                  => () // I cannot check anything
   }
   assert(abstractTask.parameters forall subPlan.variableConstraints.variables.contains)
 
@@ -40,7 +40,7 @@ trait DecompositionMethod extends DomainUpdatable {
     _.schema
   } map {
     case reduced: ReducedTask => reduced
-    case _ => noSupport(FORUMLASNOTSUPPORTED)
+    case _                    => noSupport(FORUMLASNOTSUPPORTED)
   } flatMap {
     _.effect.conjuncts map {
       _.predicate
@@ -67,7 +67,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
       prec.conjuncts foreach { case Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
           case ReducedTask(_, _, _, _, _, tPre, _) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
-          case _                                => false
+          case _                                   => false
         }
         assert(canBeInherited)
       }
@@ -76,11 +76,11 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
       eff.conjuncts foreach { case Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
           case ReducedTask(_, _, _, _, _, _, tEff) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
-          case _                                => false
+          case _                                   => false
         }
         assert(canBeInherited)
       }
-    case _                                  =>
+    case _                                     =>
   }
 
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = domainUpdate match {
@@ -138,9 +138,13 @@ case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrec
 
 case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends HashMemo with PrettyPrintable {
   val groundAbstractTask: GroundTask = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
-  lazy val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map { case PlanStep(_, schema, arguments) =>
-    GroundTask(schema, arguments map variableBinding)
-  }
+
+  lazy val subPlanPlanStepsToGrounded: Map[PlanStep, GroundTask] = decompositionMethod.subPlan.planSteps map { case ps@PlanStep(_, schema, arguments) =>
+    ps -> GroundTask(schema, arguments map variableBinding)
+  } toMap
+
+  lazy val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map subPlanPlanStepsToGrounded
+
 
   /** returns a string by which this object may be referenced */
   override def shortInfo: String = "method-" + decompositionMethod.name

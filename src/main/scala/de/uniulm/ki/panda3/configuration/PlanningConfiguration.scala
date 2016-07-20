@@ -14,7 +14,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
-import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.domain.{DomainPropertyAnalyser, Domain}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability, EverythingIsHiearchicallyReachable,
 NaiveGroundedTaskDecompositionGraph}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraph, EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis,
@@ -68,6 +68,19 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     // !!!! ATTENTION we use side effects for the sake of simplicity
     var analysisMap = preprocessedAnalysisMap
+
+    // if the map contains a tdg we will print the domain analysis statistic
+    if (analysisMap contains SymbolicGroundedTaskDecompositionGraph) {
+      val tdg = analysisMap(SymbolicGroundedTaskDecompositionGraph)
+      val domainStructureAnalysis = DomainPropertyAnalyser(domainAndPlan._1, tdg)
+
+      extra("Domain is acyclic: " + domainStructureAnalysis.isAcyclic + "\n")
+      extra("Domain is mostly acyclic: " + domainStructureAnalysis.isMostlyAcyclic + "\n")
+      extra("Domain is regular: " + domainStructureAnalysis.isRegular + "\n")
+      extra("Domain is tail recursive: " + domainStructureAnalysis.isTailRecursive + "\n")
+
+    }
+
 
     // some heuristics need additional preprocessing, e.g. to build datastructures they need
     timeCapsule start HEURISTICS_PREPARATION

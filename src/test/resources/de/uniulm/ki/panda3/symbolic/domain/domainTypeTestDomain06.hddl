@@ -1,0 +1,62 @@
+(define (domain transport)
+  (:requirements :typing :action-costs :hierachie )
+  (:types
+        typeA - object
+  )
+
+  (:predicates
+     (predA ?v ?w - typeA)
+     (predB ?v ?w - typeA)
+     (bef ?v ?w - typeA)
+  )
+
+  (:task abstractA
+    :parameters (?v ?w - typeA)
+    :precondition ( )
+    :effect ( )
+  )
+
+  (:task abstractB
+    :parameters (?v ?w - typeA)
+    :precondition ( )
+    :effect ( )
+  )
+
+  (:method mname
+    :parameters (?v ?w - typeA)
+    :task (abstractA ?v ?w)
+    :subtasks (and
+      (t1 (abstractB ?v ?w))
+      (t2 (abstractA ?v ?w))
+    )
+  )
+
+
+  ;;;;; methods allowing for primitive decomposition
+
+  (:method mname
+    :parameters (?v ?w - typeA)
+    :task (abstractA ?v ?w)
+    :subtasks (and
+      (t1 (primitive ?v ?w))
+    )
+  )
+
+  (:method mname
+    :parameters (?v ?w - typeA)
+    :task (abstractB ?v ?w)
+    :subtasks (and
+      (t1 (primitive ?v ?w))
+    )
+  )
+
+  (:action primitive
+    :parameters (?v ?w - typeA)
+    :precondition (and
+        (predA ?v ?w)
+      )
+    :effect (and
+        (predB ?w ?v)
+      )
+  )
+)

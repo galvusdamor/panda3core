@@ -1,0 +1,23 @@
+(define (problem transport1)
+ (:domain transport)
+ (:objects
+  objectA objectB - typeA
+ )
+ (:htn
+  :tasks (and
+    (t1 (abstractA objectA objectB))
+    )
+  :ordering ( )
+  :constraints ( )
+ )
+ (:init
+    (predA objectA objectA)
+    (predA objectA objectB)
+    (predA objectB objectA)
+    (predA objectB objectB)
+    (bef objectA objectB)
+  )
+ (:goal (and
+  (predB objectA objectA)
+ ))
+)
