@@ -247,19 +247,28 @@ public class hddlPanda3Visitor {
                 assert (cl.subtask_id().size() == 2);
                 String producerID = cl.subtask_id().get(0).getText();
                 String consumerID = cl.subtask_id().get(1).getText();
-                if (idMap.containsKey(producerID)) {
+                PlanStep producer;
+                PlanStep consumer;
+
+                if (producerID.toLowerCase().equals("init")) {
+                    producer = psInit;
+                } else if (idMap.containsKey(producerID)) {
                     System.out.println("The task id " + producerID + " is used in causal link definition, but no task is definied with this id.");
                     report.reportSkippedMethods();
                     continue;
+                } else {
+                    producer = idMap.get(producerID);
                 }
-                if (idMap.containsKey(consumerID)) {
+
+                if (consumerID.toLowerCase().equals("goal")) {
+                    consumer = psGoal;
+                } else if (idMap.containsKey(consumerID)) {
                     System.out.println("The task id " + consumerID + " is used in causal link definition, but no task is definied with this id.");
                     report.reportSkippedMethods();
                     continue;
+                } else {
+                    consumer = idMap.get(consumerID);
                 }
-
-                PlanStep producer = idMap.get(producerID);
-                PlanStep consumer = idMap.get(consumerID);
 
                 Literal literal;
 
