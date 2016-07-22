@@ -221,7 +221,7 @@ public class hddlPanda3Visitor {
         String orderingMode = tnCtx.children.get(0).toString();
         if ((orderingMode.equals(":ordered-subtasks")) || (orderingMode.equals(":ordered-tasks"))) {
             for (int i = 2; i < planSteps.size() - 1; i++) {
-                taskOrderings.addOrdering(planSteps.get(i), planSteps.get(i + 1));
+                taskOrderings = taskOrderings.addOrdering(planSteps.get(i), planSteps.get(i + 1));
             }
         } else { // i.e. :tasks or :subtasks
             if ((tnCtx.ordering_defs() != null) && (tnCtx.ordering_defs().ordering_def() != null)) {
