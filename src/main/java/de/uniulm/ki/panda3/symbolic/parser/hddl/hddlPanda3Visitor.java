@@ -252,7 +252,7 @@ public class hddlPanda3Visitor {
 
                 if (producerID.toLowerCase().equals("init")) {
                     producer = psInit;
-                } else if (idMap.containsKey(producerID)) {
+                } else if (!idMap.containsKey(producerID)) {
                     System.out.println("The task id " + producerID + " is used in causal link definition, but no task is definied with this id.");
                     report.reportSkippedMethods();
                     continue;
@@ -262,7 +262,7 @@ public class hddlPanda3Visitor {
 
                 if (consumerID.toLowerCase().equals("goal")) {
                     consumer = psGoal;
-                } else if (idMap.containsKey(consumerID)) {
+                } else if (!idMap.containsKey(consumerID)) {
                     System.out.println("The task id " + consumerID + " is used in causal link definition, but no task is definied with this id.");
                     report.reportSkippedMethods();
                     continue;
