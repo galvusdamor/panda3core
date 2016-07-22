@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
 import de.uniulm.ki.panda3.symbolic.csp.Equal
-import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeLiteralsByPredicate, DomainUpdate}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{RemoveEffects, ExchangeLiteralsByPredicate, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 
@@ -52,6 +52,7 @@ trait DecompositionMethod extends DomainUpdatable {
 case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends DecompositionMethod with HashMemo {
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = domainUpdate match {
     case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true))
+    case RemoveEffects(effToRemove, false)       => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update RemoveEffects(effToRemove, invertedTreatment = true))
     case _                                       => SimpleDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate))
   }
 

@@ -50,4 +50,4 @@ case class ExchangeVariable(oldVariable: Variable, newVariable: Variable) extend
 
 case class ExchangeLiteralsByPredicate(replacement: Map[Predicate, (Predicate, Predicate)], invertedTreatment: Boolean) extends DomainUpdate
 
-case class RemoveEffects(unnecessaryEffects: Seq[(Predicate, Boolean)]) extends DomainUpdate
+case class RemoveEffects(unnecessaryEffects: Seq[(Predicate, Boolean)], invertedTreatment : Boolean) extends DomainUpdate

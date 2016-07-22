@@ -248,10 +248,11 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       val possiblyInvertedUpdate = domainUpdate match {
         case ExchangeLiteralsByPredicate(map, _) => ExchangeLiteralsByPredicate(map, invertedTreatment = false)
+        case RemoveEffects(map, _)               => RemoveEffects(map, invertedTreatment = false)
         case _                                   => domainUpdate
       }
 
-      val newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal = planStepsAndRemovedPlanStepsWithoutInitGoal map { _ update possiblyInvertedUpdate}
+      val newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal = planStepsAndRemovedPlanStepsWithoutInitGoal map { _ update possiblyInvertedUpdate }
 
       val newPlanStepsAndRemovedPlanSteps = newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal :+ newInit :+ newGoal
 
