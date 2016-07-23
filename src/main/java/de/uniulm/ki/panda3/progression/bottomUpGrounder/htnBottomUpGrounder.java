@@ -64,10 +64,8 @@ public class htnBottomUpGrounder {
             // get partial groundings
             List<List<Tuple2>> partialGroundings = null;
             boolean firstPS = true;
-            for (int i = 0; i < m.subPlan().planSteps().size(); i++) {
-                PlanStep ps = m.subPlan().planSteps().apply(i);
-                if (ps.id() < 0) // init and goal
-                    continue;
+            for (int i = 0; i < m.subPlan().planStepsWithoutInitGoal().size(); i++) {
+                PlanStep ps = m.subPlan().planStepsWithoutInitGoal().apply(i);
                 if (firstPS) { // there is no list to combine
                     firstPS = false;
                     partialGroundings = getMappingOfFirstPS(ps, m.subPlan().variableConstraints().constraints());
@@ -126,7 +124,7 @@ public class htnBottomUpGrounder {
         Set<GroundTask> tdReachableTasks;
 
         // try to eliminate further tasks by additional top-down-grounding
-        tdReachableTasks = getGroundInitialTN(p);
+        tdReachableTasks = groundingUtil.getFullyGroundTN(p);
 
         // iterate over methods
         int oldSize = 0;
@@ -178,34 +176,6 @@ public class htnBottomUpGrounder {
         this.methodCount = methCount;
         this.abstTaskCount = absTaskCount;
         this.primTaskCount = primTaskCount;
-    }
-
-    private Set<GroundTask> getGroundInitialTN(Plan p) {
-        Set<GroundTask> tdReachableTasks = new HashSet<>();
-        for (int i = 0; i < p.planStepsWithoutInitGoal().size(); i++) {
-            PlanStep ps = p.planStepsWithoutInitGoal().apply(i);
-            Iterator<Variable> iter = ps.arguments().iterator();
-            seqProviderList<Constant> parameter = new seqProviderList<>();
-            while (iter.hasNext()) {
-                Variable v = iter.next();
-                Constant c = null;
-                for (int j = 0; j < p.variableConstraints().constraints().size(); j++) {
-                    VariableConstraint vc = p.variableConstraints().constraints().apply(j);
-                    if ((vc instanceof Equal)
-                            && (((Equal) vc).left().equals(v))
-                            && (((Equal) vc).right() instanceof Constant)) {
-                        c = (Constant) ((Equal) vc).right();
-                        break;
-                    }
-                }
-                if (c == null) {
-                    System.out.println("Error while grounding the initial TN");
-                }
-                parameter.add(c);
-            }
-            tdReachableTasks.add(new GroundTask(ps.schema(), parameter.result()));
-        }
-        return tdReachableTasks;
     }
 
     private List<List<Tuple2>> combine(List<List<Tuple2>> currentBindings, PlanStep ps, Seq<VariableConstraint> constraints) {
@@ -301,9 +271,9 @@ public class htnBottomUpGrounder {
                         return false;
                 }
             } else if (vc instanceof NotEqual) {
-                if (((Equal) vc).right() instanceof Variable) {
-                    Constant c1 = getValue(partialGrounding, (Variable) ((Equal) vc).right());
-                    Constant c2 = getValue(partialGrounding, ((Equal) vc).left());
+                if (((NotEqual) vc).right() instanceof Variable) {
+                    Constant c1 = getValue(partialGrounding, (Variable) ((NotEqual) vc).right());
+                    Constant c2 = getValue(partialGrounding, ((NotEqual) vc).left());
                     if ((c1 == null) || (c2 == null))
                         continue;
                     if (c1.equals(c2)) {

@@ -1,7 +1,5 @@
 package de.uniulm.ki.panda3.progression.relaxedPlanningGraph;
 
-import de.uniulm.ki.panda3.efficient.plan.EfficientPlan;
-
 import java.util.*;
 
 /**
@@ -51,10 +49,6 @@ public class efficientRPG {
     public Boolean goalRelaxedReachable = null;
 
     public void build(BitSet s0) {
-        this.build(s0, null);
-    }
-
-    public void build(BitSet s0, EfficientPlan htn) {
 
         // init the field "firstLayerWithFact"
         firstLayerWithFact = new int[numStateFeatures];

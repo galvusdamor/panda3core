@@ -158,4 +158,12 @@ public class symbolicRPG {
         }
         return res;
     }
+
+    public Set<GroundTask> getApplicableActions() {
+        return this.actions.get(this.actions.size() - 1);
+    }
+
+    public Set<GroundLiteral> getReachableFacts() {
+        return this.facts.get(this.facts.size() - 1);
+    }
 }

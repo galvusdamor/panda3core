@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.progression.proSearch;
+package de.uniulm.ki.panda3.progression.strips;
 
 import de.uniulm.ki.panda3.progression.bottomUpGrounder.htnBottomUpGrounder;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
@@ -56,10 +56,10 @@ public class planningInstance {
     BitSet goal;
     int[] goalList;
 
+    final boolean verbose = false;
+
     public void plan(Domain d, Plan p) throws ExecutionException, InterruptedException {
-        boolean verbose = false;
-        boolean relaxFirstGraph = true;
-        boolean isHtn = d.abstractTasks().size() > 0;
+        boolean relaxFirstGraph = false;
         long totaltime = System.currentTimeMillis();
 
         //
@@ -69,31 +69,7 @@ public class planningInstance {
         Set<GroundLiteral> allLiterals;
         Set<GroundTask> allActions;
         htnBottomUpGrounder gr = null;
-        if (isHtn) {
-            boolean converged = false;
-            symbolicRPG rpg = null;
-            while (!converged) {
-                System.out.print("Building relaxed planning graph");
-                long time2 = System.currentTimeMillis();
-                rpg = new symbolicRPG();
-                if (gr == null)
-                    rpg.build(d, p);
-                else
-                    rpg.build(d, p, gr.groundingsByTask);
-                System.out.println(" (" + (System.currentTimeMillis() - time2) + " ms).");
-
-                System.out.println(" - Graph contains " + rpg.actions.get(rpg.actions.size() - 1).size() + " ground actions.");
-                System.out.println(" - Graph contains " + rpg.facts.get(rpg.facts.size() - 1).size() + " environment facts.");
-
-                gr = new htnBottomUpGrounder(d, p, rpg.actions.get(rpg.actions.size() - 1));
-                converged = !gr.deletedActions;
-                if (gr.deletedActions) {
-                    System.out.println("Restart grounding ...");
-                }
-            }
-            allLiterals = rpg.facts.get(rpg.facts.size() - 1);
-            allActions = rpg.actions.get(rpg.actions.size() - 1);
-        } else if (relaxFirstGraph) {
+        if (relaxFirstGraph) {
             System.out.println("Building initial relaxed planning graph.");
             symbolicRPG rpg = new symbolicRPG();
             rpg.build(d, p);
@@ -107,7 +83,9 @@ public class planningInstance {
 
             scala.collection.Iterator<GroundLiteral> iterAllFacts = gpg.reachableGroundLiterals().iterator();
             while (iterAllFacts.hasNext()) {
-                allLiterals.add(iterAllFacts.next());
+                GroundLiteral next = iterAllFacts.next();
+                if (next.isPositive())
+                    allLiterals.add(next);
             }
 
             scala.collection.Iterator<GroundTask> iterAllActions = gpg.reachableGroundPrimitiveActions().iterator();
@@ -119,10 +97,6 @@ public class planningInstance {
 
         numStateFeatures = allLiterals.size();
         numActions = allActions.size();
-        if (isHtn) {
-            System.out.println(" - Found " + gr.abstTaskCount + " reachable ground abstract tasks.");
-            System.out.println(" - Found " + gr.methodCount + " reachable ground methods.");
-        }
         System.out.println(" - Found " + numActions + " reachable ground actions.");
         System.out.println(" - Found " + numStateFeatures + " reachable environment facts.");
         System.out.println("\nPreprocessing planning instance");
@@ -158,15 +132,9 @@ public class planningInstance {
         fringe.add(new searchNode(s0._1()));
         int bestMetric = Integer.MAX_VALUE;
 
+        planningloop:
         while (!fringe.isEmpty()) {
             searchNode n = fringe.poll();
-
-            BitSet temp = (BitSet) n.state.clone();
-            temp.and(goal);
-            if (temp.equals(goal)) {
-                solution = n.tasks;
-                break;
-            }
             actionloop:
             for (Integer nextAction : n.getApplicableActions()) {
                 // test via nextSetBit
@@ -176,18 +144,23 @@ public class planningInstance {
                         continue actionloop;
                     pre = prec[nextAction].nextSetBit(pre + 1);
                 }
-                // test via logical AND
-                //temp = (BitSet) n.state.clone();
-                //temp.and(prec[a]);
-                //if (!temp.equals(prec[a]))
-                //continue;
 
-                temp = (BitSet) n.state.clone();
+                BitSet temp = (BitSet) n.state.clone();
                 temp.andNot(del[nextAction]);
                 temp.or(add[nextAction]);
 
                 searchNode node = new searchNode(temp, n.tasks, nextAction);
+
                 if (node.rpg.goalRelaxedReachable) {
+
+                    // early goal test - NON-OPTIMAL
+                    temp = (BitSet) node.state.clone();
+                    temp.and(goal);
+                    if (temp.equals(goal)) {
+                        solution = node.tasks;
+                        break planningloop;
+                    }
+
                     fringe.add(node);
                     if (node.metric < bestMetric) {
                         bestMetric = node.metric;
@@ -195,7 +168,7 @@ public class planningInstance {
                     }
                 }
                 searchnodes++;
-                if ((searchnodes % 1000) == 0)
+                if ((searchnodes % 2500) == 0)
                     System.out.println("generated nodes: " + searchnodes + " - fringe size: " + fringe.size() + " - best heuristic: " + bestMetric + " - current heuristic: " + n.metric);
             }
         }
@@ -210,10 +183,11 @@ public class planningInstance {
                 System.out.println(n + " " + proPrinter.actionToStr(IndexToAction[a]));
                 n++;
             }
-            //time = System.currentTimeMillis();
-            //System.out.println("\nInferring least constraining causal links");
-            //inferCausalLinks(s0._1(), solution);
-            //System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");
+            /*
+            time = System.currentTimeMillis();
+            System.out.println("\nInferring least constraining causal links");
+            inferCausalLinks(s0._1(), solution);
+            System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");*/
         } else System.out.println("Problem unsolvable.");
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
     }
@@ -364,18 +338,20 @@ public class planningInstance {
 
             // deleted delete-effects
             if (deletedEffects.size() > 0) {
-                StringBuilder sb = new StringBuilder();
-                sb.append("Pruned the following delete-effects from action \'");
-                sb.append(proPrinter.actionToStr(action));
-                sb.append("\' because this facts will constantly be false: ");
-                for (int j = 0; j < deletedEffects.size(); j++) {
-                    sb.append("\'");
-                    sb.append(proPrinter.literalToStr(deletedEffects.get(j)));
-                    sb.append("\'");
-                    if (j < (deletedEffects.size() - 1))
-                        sb.append(", ");
+                if (verbose) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("Pruned the following delete-effects from action \'");
+                    sb.append(proPrinter.actionToStr(action));
+                    sb.append("\' because this facts will constantly be false: ");
+                    for (int j = 0; j < deletedEffects.size(); j++) {
+                        sb.append("\'");
+                        sb.append(proPrinter.literalToStr(deletedEffects.get(j)));
+                        sb.append("\'");
+                        if (j < (deletedEffects.size() - 1))
+                            sb.append(", ");
+                    }
+                    System.out.println(sb.toString());
                 }
-                System.out.println(sb.toString());
                 deletedEffects.clear();
             }
         }
