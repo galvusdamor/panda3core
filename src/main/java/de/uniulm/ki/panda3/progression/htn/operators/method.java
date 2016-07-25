@@ -14,11 +14,12 @@ import java.util.*;
  */
 public class method {
 
-    public final GroundedDecompositionMethod m;
+    public final GroundedDecompositionMethod m; // this is the original method that is saved for printing the solution
     GroundTask[] tasks;
+
+    // these are the modifications for the SUB-tasks
     int[] actionID;
     List<method>[] methods;
-    // todo: instead of the action array, here should be the list of modifications
 
     List<int[]> orderings;
     HashSet<Integer> firsts;
