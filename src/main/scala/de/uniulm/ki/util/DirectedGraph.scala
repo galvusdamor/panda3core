@@ -190,6 +190,27 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
                                                  })
   }
 
+  // Only implemented for acyclic graphs. Therefore Option[Int] as return type
+  // For cyclic graphs the problem becomes NP-comlete instead of P for acyclic graphs
+  lazy val longestPathLength : Option[Int] = {
+    // check if graph is acyclic
+    topologicalOrdering match {
+      case (None) => None
+      case Some(topologicalOrdering) => {
+        var nodeLongestPathMap = Map(topologicalOrdering.head -> 0)
+        for (i <- 0 until topologicalOrdering.size) {
+          if(nodeLongestPathMap.get(topologicalOrdering(i)).isEmpty)
+            nodeLongestPathMap += topologicalOrdering(i) -> 0
+          edges(topologicalOrdering(i)) foreach (destination =>
+            if(nodeLongestPathMap.get(destination).isEmpty || nodeLongestPathMap(topologicalOrdering(i)) >= nodeLongestPathMap(destination))
+              nodeLongestPathMap += destination -> (nodeLongestPathMap(topologicalOrdering(i)) + 1))
+        }
+
+        Some(nodeLongestPathMap.valuesIterator.max)
+      }
+    }
+  }
+
   override lazy val dotString: String = {
     val dotStringBuilder = new StringBuilder()
 
