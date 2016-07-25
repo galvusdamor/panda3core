@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.progression.htn.search.proPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.progressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.efficientHtnRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
@@ -108,31 +109,15 @@ public class htnPlanningInstance {
         }
 
         System.out.println("\nStarting search");
+
         int searchnodes = 1;
+        int bestMetric = Integer.MAX_VALUE;
+        List<Object> solution = null;
 
         PriorityQueue<progressionNetwork> fringe = new PriorityQueue<>();
-
         // todo: this will only work with ground initial tn and without any ordering
-        Set<GroundTask> initialGroundings = groundingUtil.getFullyGroundTN(p);
-        assert (initialGroundings.size() == p.planStepsWithoutInitGoal().size());
+        fringe.addAll(getInitialNodes(p, s0));
 
-        Iterator<GroundTask> iter = initialGroundings.iterator();
-        List<proPlanStep> x = new LinkedList<>();
-        while (iter.hasNext()) {
-            GroundTask n = iter.next();
-            proPlanStep ps = new proPlanStep(n);
-            if (ps.isPrimitive) {
-                ps.action = operators.ActionToIndex.get(ps.getTask());
-            } else {
-                ps.methods = operators.methods.get(ps.getTask().task()).get(ps.getTask());
-            }
-            x.add(ps);
-        }
-
-        fringe.add(new progressionNetwork(s0._1(), x));
-        int bestMetric = Integer.MAX_VALUE;
-
-        List<Object> solution = null;
         planningloop:
         while (!fringe.isEmpty()) {
             progressionNetwork n = fringe.poll();
@@ -147,7 +132,7 @@ public class htnPlanningInstance {
                     }
 
                     progressionNetwork node = n.apply(ps);
-                    if (node.goalRelaxedReachable()) {
+                    if (node.heuristic.goalRelaxedReachable()) {
                         // early goal test - NON-OPTIMAL
                         if (node.isGoal()) {
                             solution = node.solution;
@@ -157,14 +142,18 @@ public class htnPlanningInstance {
                         fringe.add(node);
                         if (node.metric < bestMetric) {
                             bestMetric = node.metric;
-                            System.out.println(getInfoStr(searchnodes, fringe, bestMetric, n));
+                            System.out.println(getInfoStr(searchnodes, fringe, bestMetric, n, time));
                         }
                     }
+                    searchnodes++;
+                    if ((searchnodes % 2500) == 0)
+                        System.out.println(getInfoStr(searchnodes, fringe, bestMetric, n, time));
                 } else { // is an abstract task
                     for (method m : ps.methods) {
                         progressionNetwork node = n.decompose(ps, m);
 
-                        if (node.goalRelaxedReachable()) {
+                        if (node.heuristic.goalRelaxedReachable()) {
+
                             if (node.isGoal()) {
                                 solution = node.solution;
                                 break planningloop;
@@ -173,15 +162,14 @@ public class htnPlanningInstance {
                             fringe.add(node);
                             if (node.metric < bestMetric) {
                                 bestMetric = node.metric;
-                                System.out.println(getInfoStr(searchnodes, fringe, bestMetric, n));
+                                System.out.println(getInfoStr(searchnodes, fringe, bestMetric, n, time));
                             }
                         }
+                        searchnodes++;
+                        if ((searchnodes % 2500) == 0)
+                            System.out.println(getInfoStr(searchnodes, fringe, bestMetric, n, time));
                     }
-
                 }
-                searchnodes++;
-                if ((searchnodes % 10000) == 0)
-                    System.out.println(getInfoStr(searchnodes, fringe, bestMetric, n));
             }
         }
 
@@ -207,8 +195,36 @@ public class htnPlanningInstance {
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
     }
 
-    private String getInfoStr(int searchnodes, PriorityQueue<progressionNetwork> fringe, int bestMetric, progressionNetwork n) {
-        return "generated nodes: " + searchnodes + " - fringe size: " + fringe.size() + " - best heuristic: " + bestMetric + " - current heuristic: " + n.metric;
+    private List<progressionNetwork> getInitialNodes(Plan p, Tuple2<BitSet, int[]> s0) {
+        List<progressionNetwork> res = new LinkedList<>();
+
+        Set<GroundTask> initialGroundings = groundingUtil.getFullyGroundTN(p);
+        assert (initialGroundings.size() == p.planStepsWithoutInitGoal().size());
+
+        Iterator<GroundTask> iter = initialGroundings.iterator();
+        List<proPlanStep> initialTasks = new LinkedList<>();
+        while (iter.hasNext()) {
+            GroundTask n = iter.next();
+            proPlanStep ps = new proPlanStep(n);
+            if (ps.isPrimitive) {
+                ps.action = operators.ActionToIndex.get(ps.getTask());
+            } else {
+                ps.methods = operators.methods.get(ps.getTask().task()).get(ps.getTask());
+            }
+            initialTasks.add(ps);
+        }
+        progressionNetwork progressionNetwork = new de.uniulm.ki.panda3.progression.htn.search.progressionNetwork(s0._1(), initialTasks);
+
+        // todo: change heuristic here
+        progressionNetwork.heuristic = new efficientHtnRPG();
+        progressionNetwork.heuristic.build(progressionNetwork);
+
+        res.add(progressionNetwork);
+        return res;
+    }
+
+    private String getInfoStr(int searchnodes, PriorityQueue<progressionNetwork> fringe, int bestMetric, progressionNetwork n, long searchtime) {
+        return "nodes/sec: " + Math.round(searchnodes / ((System.currentTimeMillis() - searchtime) / 1000.0)) + " - generated nodes: " + searchnodes + " - fringe size: " + fringe.size() + " - best heuristic: " + bestMetric + " - current heuristic: " + n.metric;
     }
 
     private HashMap<Task, HashMap<GroundTask, List<method>>> getEfficientMethodRep(HashMap<Task, Set<GroundedDecompositionMethod>> methodsByTask) {

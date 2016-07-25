@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.progression.htn.search;
 
 import de.uniulm.ki.panda3.progression.htn.operators.*;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.htnGroundedProgressionHeuristic;
 
 import java.util.*;
 
@@ -14,7 +15,7 @@ import java.util.*;
  */
 public class progressionNetwork implements Comparable<progressionNetwork>, Cloneable {
     /* todo
-     * - does this work for empty task networks? I don't think so
+     * - does this work for empty task networks? I don't think so. Could one compile these methods in something other?
      */
 
     // this is state that has to be cloned
@@ -22,13 +23,15 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
     List<proPlanStep> unconstraintTasks;
     public LinkedList<Object> solution;
 
+    public htnGroundedProgressionHeuristic heuristic;
+
     public int metric = 0;
 
     private progressionNetwork() {
     }
 
     public progressionNetwork(BitSet state, List<proPlanStep> ps) {
-        this.unconstraintTasks = new ArrayList<>();
+        this.unconstraintTasks = new LinkedList<>();
         this.unconstraintTasks.addAll(ps);
         this.solution = new LinkedList<>();
         this.state = state;
@@ -61,7 +64,8 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
         res.unconstraintTasks.addAll(tn.getFirstNodes());
 
         // todo: change metric here
-        res.metric = res.solution.size();
+        res.heuristic = this.heuristic.update(res, ps, m);
+        res.metric = res.solution.size() + res.heuristic.getHeuristic();
         return res;
     }
 
@@ -100,7 +104,8 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
         res.unconstraintTasks.addAll(potentialFirst);
 
         // todo: change metric here
-        res.metric = res.solution.size();
+        res.heuristic = this.heuristic.update(res, ps);
+        res.metric = res.solution.size() + res.heuristic.getHeuristic();
         return res;
     }
 
@@ -113,14 +118,10 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
         return temp.equals(operators.goal);
     }
 
-    public boolean goalRelaxedReachable() {
-        return true;
-    }
-
     @Override
     protected progressionNetwork clone() {
         progressionNetwork res = new progressionNetwork();
-        res.unconstraintTasks = new ArrayList<>(); // todo: array or linkedList?
+        res.unconstraintTasks = new LinkedList<>(); // todo: array or linkedList?
         res.unconstraintTasks.addAll(this.unconstraintTasks);
         res.solution = new LinkedList<>();
         res.solution.addAll(this.solution);
