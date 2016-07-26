@@ -15,7 +15,7 @@ import java.util.*;
 public class method {
 
     public final GroundedDecompositionMethod m; // this is the original method that is saved for printing the solution
-    GroundTask[] tasks;
+    public GroundTask[] tasks;
 
     // these are the modifications for the SUB-tasks
     int[] actionID;

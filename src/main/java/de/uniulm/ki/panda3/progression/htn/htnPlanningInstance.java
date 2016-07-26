@@ -7,7 +7,7 @@ import de.uniulm.ki.panda3.progression.htn.search.proPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.progressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.efficientHtnRPG;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.simpleCompositionRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
@@ -72,6 +72,7 @@ public class htnPlanningInstance {
                 System.out.println("Restart grounding ...");
             }
         }
+
         allLiterals = rpg.getReachableFacts();
         allActions = rpg.getApplicableActions();
         operators.numStateFeatures = allLiterals.size();
@@ -116,7 +117,7 @@ public class htnPlanningInstance {
 
         PriorityQueue<progressionNetwork> fringe = new PriorityQueue<>();
         // todo: this will only work with ground initial tn and without any ordering
-        fringe.addAll(getInitialNodes(p, s0));
+        fringe.addAll(getInitialNodes(p, s0, allActions));
 
         planningloop:
         while (!fringe.isEmpty()) {
@@ -146,7 +147,7 @@ public class htnPlanningInstance {
                         }
                     }
                     searchnodes++;
-                    if ((searchnodes % 2500) == 0)
+                    if ((searchnodes % 10000) == 0)
                         System.out.println(getInfoStr(searchnodes, fringe, bestMetric, n, time));
                 } else { // is an abstract task
                     for (method m : ps.methods) {
@@ -166,7 +167,7 @@ public class htnPlanningInstance {
                             }
                         }
                         searchnodes++;
-                        if ((searchnodes % 2500) == 0)
+                        if ((searchnodes % 10000) == 0)
                             System.out.println(getInfoStr(searchnodes, fringe, bestMetric, n, time));
                     }
                 }
@@ -195,7 +196,7 @@ public class htnPlanningInstance {
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
     }
 
-    private List<progressionNetwork> getInitialNodes(Plan p, Tuple2<BitSet, int[]> s0) {
+    private List<progressionNetwork> getInitialNodes(Plan p, Tuple2<BitSet, int[]> s0, Set<GroundTask> allActions) {
         List<progressionNetwork> res = new LinkedList<>();
 
         Set<GroundTask> initialGroundings = groundingUtil.getFullyGroundTN(p);
@@ -216,7 +217,7 @@ public class htnPlanningInstance {
         progressionNetwork progressionNetwork = new de.uniulm.ki.panda3.progression.htn.search.progressionNetwork(s0._1(), initialTasks);
 
         // todo: change heuristic here
-        progressionNetwork.heuristic = new efficientHtnRPG();
+        progressionNetwork.heuristic = new simpleCompositionRPG(operators.methods, allActions);
         progressionNetwork.heuristic.build(progressionNetwork);
 
         res.add(progressionNetwork);
