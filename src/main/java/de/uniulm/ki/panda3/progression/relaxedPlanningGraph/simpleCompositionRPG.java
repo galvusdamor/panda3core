@@ -44,6 +44,8 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
      */
     List<List<Integer>> goalDelta = new ArrayList<>();
 
+    int[] actionDifficulty;
+
     private boolean goalRelaxedReachable;
 
     // these represent reachable tasks
@@ -144,7 +146,8 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
     }
 
     public void build(progressionNetwork tn) {
-        // init the field "firstLayerWithFact"
+        actionDifficulty = new int[simpleCompositionRPG.numOperators];
+
         firstLayerWithFact = new int[simpleCompositionRPG.numHtnStateFeatures];
         for (int i = 0; i < operators.numStateFeatures; i++) {
             if (tn.state.get(i))
@@ -215,6 +218,11 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
                 }
 
                 if (isApplicable) {
+                    actionDifficulty[action] = 0;
+                    for (int precI : simpleCompositionRPG.prec[action]) {
+                        actionDifficulty[action] += firstLayerWithFact[precI];
+                    }
+
                     for (Integer addFact : simpleCompositionRPG.add[action]) {
                         if (firstLayerWithFact[addFact] == -1)
                             firstLayerWithFact[addFact] = i;
@@ -250,7 +258,8 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
         }
     }
 
-    public int getHeuristic() {
+
+    public int getHeuristic2() {
         int res = 0;
         for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
             for (int goalFact : goalDelta.get(layer)) {
@@ -263,6 +272,102 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
             }
         }
         return res;
+    }
+
+    private int getProducer(int layer, int fact) {
+        for (int maybeProducer : operatorDelta.get(layer)) {
+            if (simpleCompositionRPG.add[maybeProducer].contains(fact)) {
+                // todo: DH says: there could be more than one - any strategy on which one to choose?
+                return maybeProducer;
+            }
+        }
+        // this should never happen
+        System.out.println("ERROR: Found no producing action of fact " + fact + " in action-layer " + layer);
+        return -1;
+    }
+
+
+    // This is the version given by Jörg Hoffmann in this 2001 JAIR
+    public int getHeuristic3() {
+        int numactions = 0;
+        List<Set<Integer>> markedTrue = new ArrayList<>();
+        for (int i = 0; i < goalDelta.size(); i++) {
+            markedTrue.add(new HashSet<Integer>());
+        }
+
+        for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
+            for (int goalFact : goalDelta.get(layer)) {
+                if (markedTrue.get(layer).contains(goalFact))
+                    continue;
+
+                int bestDifficulty = Integer.MAX_VALUE;
+                int producer = -1;
+
+                for (int maybeProducer : operatorDelta.get(layer)) {
+                    if ((simpleCompositionRPG.add[maybeProducer].contains(goalFact))
+                            && (actionDifficulty[maybeProducer] < bestDifficulty)) {
+                        bestDifficulty = actionDifficulty[maybeProducer];
+                        producer = maybeProducer;
+                    }
+                }
+                numactions++;
+
+                for (Integer aPrec : simpleCompositionRPG.prec[producer]) {
+                    int fl = firstLayerWithFact[aPrec];
+                    if ((fl > 0) && (!markedTrue.get(layer - 1).contains(aPrec)))
+                        goalDelta.get(fl).add(aPrec);
+                }
+                Set<Integer> thislayer = markedTrue.get(layer);
+                Set<Integer> lastLayer = markedTrue.get(layer - 1);
+                for (Integer aAdd : simpleCompositionRPG.add[producer]) {
+                    thislayer.add(aAdd);
+                    lastLayer.add(aAdd);
+                }
+            }
+        }
+        return numactions;
+    }
+
+    // This is the version given by Jörg Hoffmann in this 2001 JAIR
+    public int getHeuristic() {
+        int numactions = 0;
+        /*List<Set<Integer>> markedTrue = new ArrayList<>();
+        for (int i = 0; i < goalDelta.size(); i++) {
+            markedTrue.add(new HashSet<Integer>());
+        }*/
+
+        for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
+            for (int goalFact : goalDelta.get(layer)) {
+                //if (markedTrue.get(layer).contains(goalFact))
+                //    continue;
+
+                int bestDifficulty = Integer.MAX_VALUE;
+                int producer = -1;
+
+                for (int maybeProducer : operatorDelta.get(layer)) {
+                    if ((simpleCompositionRPG.add[maybeProducer].contains(goalFact))
+                            && (actionDifficulty[maybeProducer] < bestDifficulty)) {
+                        bestDifficulty = actionDifficulty[maybeProducer];
+                        producer = maybeProducer;
+                    }
+                }
+                numactions++;
+
+                for (Integer aPrec : simpleCompositionRPG.prec[producer]) {
+                    int fl = firstLayerWithFact[aPrec];
+//                    if ((fl > 0) && (!markedTrue.get(layer - 1).contains(aPrec)))
+                    if (fl > 0)
+                        goalDelta.get(fl).add(aPrec);
+                }/*
+                Set<Integer> thislayer = markedTrue.get(layer);
+                Set<Integer> lastLayer = markedTrue.get(layer - 1);
+                for (Integer aAdd : simpleCompositionRPG.add[producer]) {
+                    thislayer.add(aAdd);
+                    lastLayer.add(aAdd);
+                }*/
+            }
+        }
+        return numactions;
     }
 
     @Override
@@ -282,17 +387,5 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
         simpleCompositionRPG simpleCompositionRPG = new simpleCompositionRPG();
         simpleCompositionRPG.build(tn);
         return simpleCompositionRPG;
-    }
-
-    private int getProducer(int layer, int fact) {
-        for (int maybeProducer : operatorDelta.get(layer)) {
-            if (simpleCompositionRPG.add[maybeProducer].contains(fact)) {
-                // todo: DH says: there could be more than one - any strategy on which one to choose?
-                return maybeProducer;
-            }
-        }
-        // this should never happen
-        System.out.println("ERROR: Found no producing action of fact " + fact + " in action-layer " + layer);
-        return -1;
     }
 }

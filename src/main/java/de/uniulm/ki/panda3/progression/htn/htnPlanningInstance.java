@@ -381,7 +381,8 @@ public class htnPlanningInstance {
     }
 
     private String getInfoStr(int searchnodes, int fringesize, int bestMetric, progressionNetwork n, long searchtime) {
-        return "nodes/sec: " + Math.round(searchnodes / ((System.currentTimeMillis() - searchtime) / 1000.0)) + " - generated nodes: " + searchnodes + " - fringe size: " + fringesize + " - best heuristic: " + bestMetric + " - current heuristic: " + n.metric;
+        return "nodes/sec: " + Math.round(searchnodes / ((System.currentTimeMillis() - searchtime) / 1000.0)) + " - generated nodes: " + searchnodes + " - fringe size: " + fringesize + " - best heuristic: " + bestMetric
+                + " - current heuristic: " + n.solution.size() + " + " + (n.metric - n.solution.size()) + " = " + n.metric;
     }
 
     private HashMap<Task, HashMap<GroundTask, List<method>>> getEfficientMethodRep(HashMap<Task, Set<GroundedDecompositionMethod>> methodsByTask) {
