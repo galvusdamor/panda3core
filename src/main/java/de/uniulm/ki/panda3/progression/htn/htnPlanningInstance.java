@@ -111,13 +111,56 @@ public class htnPlanningInstance {
 
         System.out.println("\nStarting search");
 
+        // todo: this will only work with ground initial tn and without any ordering
+        Set<GroundTask> initialGroundings = groundingUtil.getFullyGroundTN(p);
+        assert (initialGroundings.size() == p.planStepsWithoutInitGoal().size());
+
+        Iterator<GroundTask> iter = initialGroundings.iterator();
+        List<proPlanStep> initialTasks = new LinkedList<>();
+        while (iter.hasNext()) {
+            GroundTask n = iter.next();
+            proPlanStep ps = new proPlanStep(n);
+            if (ps.isPrimitive) {
+                ps.action = operators.ActionToIndex.get(ps.getTask());
+            } else {
+                ps.methods = operators.methods.get(ps.getTask().task()).get(ps.getTask());
+            }
+            initialTasks.add(ps);
+        }
+        progressionNetwork progressionNetwork = new de.uniulm.ki.panda3.progression.htn.search.progressionNetwork(s0._1(), initialTasks);
+
+        // todo: change heuristic here
+        progressionNetwork.heuristic = new simpleCompositionRPG(operators.methods, allActions);
+        progressionNetwork.heuristic.build(progressionNetwork);
+
+        List<Object> solution = priorityQueueSearch(progressionNetwork);
+
+        int n = 1;
+        if (solution != null) {
+            System.out.println("\nFound a solution:");
+            for (Object a : solution) {
+                if (a instanceof Integer)
+                    System.out.println(n + " " + proPrinter.actionToStr(operators.IndexToAction[(Integer) a]));
+                else
+                    System.out.println(n + " " + ((GroundedDecompositionMethod) a).mediumInfo());
+                n++;
+            }
+            /*
+            time = System.currentTimeMillis();
+            System.out.println("\nInferring least constraining causal links");
+            inferCausalLinks(s0._1(), solution);
+            System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");*/
+        } else System.out.println("Problem unsolvable.");
+        System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
+    }
+
+    private List<Object> priorityQueueSearch(progressionNetwork firstSearchNode) {
         int searchnodes = 1;
         int bestMetric = Integer.MAX_VALUE;
         List<Object> solution = null;
-
+        long time = System.currentTimeMillis();
         PriorityQueue<progressionNetwork> fringe = new PriorityQueue<>();
-        // todo: this will only work with ground initial tn and without any ordering
-        fringe.addAll(getInitialNodes(p, s0, allActions));
+        fringe.add(firstSearchNode);
 
         planningloop:
         while (!fringe.isEmpty()) {
@@ -176,52 +219,7 @@ public class htnPlanningInstance {
 
         System.out.println("Generated search nodes (total): " + searchnodes);
         System.out.println("Search time: " + (System.currentTimeMillis() - time) + " ms");
-
-        int n = 1;
-        if (solution != null) {
-            System.out.println("\nFound a solution:");
-            for (Object a : solution) {
-                if (a instanceof Integer)
-                    System.out.println(n + " " + proPrinter.actionToStr(operators.IndexToAction[(Integer) a]));
-                else
-                    System.out.println(n + " " + ((GroundedDecompositionMethod) a).mediumInfo());
-                n++;
-            }
-            /*
-            time = System.currentTimeMillis();
-            System.out.println("\nInferring least constraining causal links");
-            inferCausalLinks(s0._1(), solution);
-            System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");*/
-        } else System.out.println("Problem unsolvable.");
-        System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
-    }
-
-    private List<progressionNetwork> getInitialNodes(Plan p, Tuple2<BitSet, int[]> s0, Set<GroundTask> allActions) {
-        List<progressionNetwork> res = new LinkedList<>();
-
-        Set<GroundTask> initialGroundings = groundingUtil.getFullyGroundTN(p);
-        assert (initialGroundings.size() == p.planStepsWithoutInitGoal().size());
-
-        Iterator<GroundTask> iter = initialGroundings.iterator();
-        List<proPlanStep> initialTasks = new LinkedList<>();
-        while (iter.hasNext()) {
-            GroundTask n = iter.next();
-            proPlanStep ps = new proPlanStep(n);
-            if (ps.isPrimitive) {
-                ps.action = operators.ActionToIndex.get(ps.getTask());
-            } else {
-                ps.methods = operators.methods.get(ps.getTask().task()).get(ps.getTask());
-            }
-            initialTasks.add(ps);
-        }
-        progressionNetwork progressionNetwork = new de.uniulm.ki.panda3.progression.htn.search.progressionNetwork(s0._1(), initialTasks);
-
-        // todo: change heuristic here
-        progressionNetwork.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        progressionNetwork.heuristic.build(progressionNetwork);
-
-        res.add(progressionNetwork);
-        return res;
+        return solution;
     }
 
     private String getInfoStr(int searchnodes, PriorityQueue<progressionNetwork> fringe, int bestMetric, progressionNetwork n, long searchtime) {
