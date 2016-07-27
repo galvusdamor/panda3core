@@ -42,7 +42,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
      * for the *first time*, i.e. it is the delta of fulfilled goal conditions. Be aware that
      * goalDelta is *changed* during heuristic calculation.
      */
-    List<List<Integer>> goalDelta = new ArrayList<>();
+    List<Collection<Integer>> goalDelta = new ArrayList<>();
 
     int[] actionDifficulty;
 
@@ -179,7 +179,11 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
         operatorDelta.add(new LinkedList<Integer>()); // dummyTaskList
 
         LinkedList<Integer> unfulfilledGoals = new LinkedList<>();
+        // todo !evaluate!: this might be a set or a list
         List<Integer> newGoals = new ArrayList<>();
+        //Set<Integer> newGoals = new HashSet<>();
+
+
         goalDelta.add(newGoals);
         for (int goalFact : htnGoal) {
             if (firstLayerWithFact[goalFact] == 0) {
@@ -234,7 +238,10 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
             }
 
             if (!unfulfilledGoals.isEmpty()) {
+                // todo !evaluate!: this might be a set or a list
                 newGoals = new ArrayList<>();
+                //newGoals = new HashSet<>();
+
                 goalDelta.add(newGoals);
                 int maxJ2 = unfulfilledGoals.size();
                 for (int j = 0; j < maxJ2; j++) {
@@ -258,7 +265,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
         }
     }
 
-
+/*
     public int getHeuristic2() {
         int res = 0;
         for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
@@ -284,7 +291,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
         // this should never happen
         System.out.println("ERROR: Found no producing action of fact " + fact + " in action-layer " + layer);
         return -1;
-    }
+    }*/
 
 
     // This is the version given by Jörg Hoffmann in this 2001 JAIR
@@ -328,18 +335,11 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
         return numactions;
     }
 
-    // This is the version given by Jörg Hoffmann in this 2001 JAIR
+    // This is a MODIFIED version of Jörg Hoffmann's 2001 JAIR
     public int getHeuristic() {
         int numactions = 0;
-        /*List<Set<Integer>> markedTrue = new ArrayList<>();
-        for (int i = 0; i < goalDelta.size(); i++) {
-            markedTrue.add(new HashSet<Integer>());
-        }*/
-
         for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
             for (int goalFact : goalDelta.get(layer)) {
-                //if (markedTrue.get(layer).contains(goalFact))
-                //    continue;
 
                 int bestDifficulty = Integer.MAX_VALUE;
                 int producer = -1;
@@ -355,16 +355,9 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
 
                 for (Integer aPrec : simpleCompositionRPG.prec[producer]) {
                     int fl = firstLayerWithFact[aPrec];
-//                    if ((fl > 0) && (!markedTrue.get(layer - 1).contains(aPrec)))
                     if (fl > 0)
                         goalDelta.get(fl).add(aPrec);
-                }/*
-                Set<Integer> thislayer = markedTrue.get(layer);
-                Set<Integer> lastLayer = markedTrue.get(layer - 1);
-                for (Integer aAdd : simpleCompositionRPG.add[producer]) {
-                    thislayer.add(aAdd);
-                    lastLayer.add(aAdd);
-                }*/
+                }
             }
         }
         return numactions;
