@@ -66,6 +66,7 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
         // todo: change metric here
         res.heuristic = this.heuristic.update(res, ps, m);
         res.metric = res.solution.size() + res.heuristic.getHeuristic();
+        //res.metric = res.solution.size() + (res.heuristic.getHeuristic() / 2);
         //res.metric = res.heuristic.getHeuristic();
         return res;
     }
@@ -107,6 +108,7 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
         // todo: change metric here
         res.heuristic = this.heuristic.update(res, ps);
         res.metric = res.solution.size() + res.heuristic.getHeuristic();
+        //res.metric = res.solution.size() + (res.heuristic.getHeuristic() / 2);
         //res.metric = res.heuristic.getHeuristic();
         return res;
     }
