@@ -10,32 +10,38 @@ grammar antlrHDDL;
 // MISSING FEATURES:
 //   - decomposition axioms
 
+// @IGNORE
 hddl_file : domain | problem;
 
 //
 // general structure of a domain definition
 //
+// @MODIFIED
+// @LABEL {The domain definition is extended by definitions for compound tasks and methods.}
 domain : '(' 'define' '(' 'domain' domain_symbol ')'
              require_def?
              type_def?
              const_def?
              predicates_def?
              funtions_def?
-             comp_task_def*
-             method_def*
+             comp_task_def* // @HIGHLIGHT
+             method_def* // @HIGHLIGHT
              action_def* ')';
 
+// @PDDL
 domain_symbol : NAME;
 
 //
 // requirement statement
 //
+// @PDDL
 require_def : '(' ':requirements' require_defs ')';
 require_defs : REQUIRE_NAME+;
 
 //
 // type-definition
 //
+// @PDDL
 type_def : '(' ':types' one_def+ ')';
 one_def : new_types ('-' var_type)?;
 new_types : NAME+;
@@ -43,23 +49,28 @@ new_types : NAME+;
 //
 // domain constant definition
 //
+// @PDDL
 const_def : '(' ':constants' typed_obj_list ')';
 
 //
 // predicate definition
 //
-funtions_def : '(' ':functions' ( atomic_formula_skeleton ('-' 'number' | var_type )?)+')';
+// @PDDL
 predicates_def : '(' ':predicates' atomic_formula_skeleton+ ')';
 atomic_formula_skeleton : '(' predicate typed_var_list ')';
 
 //
+// function definition
+//
+// @PDDL
+funtions_def : '(' ':functions' ( atomic_formula_skeleton ('-' 'number' | var_type )?)+')';
+
+//
 // task definition
 //
-// - not present in PDDL
-// - please be aware that prec and effects are both optional
-//
-// TODO: define EBNF for TR
-//
+// @HDDL
+// @LABEL {Abstract tasks are defined similar to actions in PDDL. To use preconditions and effects in the definition,
+//         please add the requirement definition :htn-abstract-actions}
 comp_task_def :
    '(' ':task' task_def;
 
@@ -73,11 +84,11 @@ task_symbol : NAME;
 //
 // method definition
 //
-// - not present in PDDL
-// - please be aware that subtasks and especially prec and effects are optional
-//
-// TODO: define EBNF for TR
-//
+// @HDDL
+// @LABEL {In a pure HTN setting, methods consist of the definition of the abstract task they may decompose as well as the
+//         resulting task network. The parameters of a method are supposed to include all parameters of the abstract task
+//         that it decomposes as well as the tasks in its network of subtasks. By setting the :htn-method-preconditions
+//         requirement, one might use method preconditions similar to the ones used in SHOP.}
 method_def :
    '(' ':method' method_symbol
       ':parameters' '(' typed_var_list ')'
@@ -85,8 +96,17 @@ method_def :
       (':precondition' gd)?
       tasknetwork_def;
 
+// @HDDL
+// @LABEL {The following definition of a task network is used in method definitions as well as in the problem definition
+//         to define the intial task network. It contains the definition of a number of tasks as well sets of ordering
+//         constraints, variable constraints between any method parameters. Please use the requirement :htn-causal-links
+//         to include causal links into the model. When the keys :ordered-subtasks or :ordered-tasks are used, the
+//         network is regarded to be totally ordered. In the other cases, ordering relations may be defined in the
+//         respective section. To do so, the task definition includes an id for every task that can be referenced here.
+//         They are also used to define causal links. Two dedicated ids "init" and "goal" can be used in link definition
+//         to reference the initial state and the goal definition.}
 tasknetwork_def :
-      ((':subtasks' | ':tasks' | ':ordered-subtasks'| ':ordered-tasks') subtask_defs)?
+      ((':subtasks' | ':tasks' | ':ordered-subtasks' | ':ordered-tasks') subtask_defs)?
       ((':ordering' | ':order') ordering_defs)?
       (':constraints' constraint_defs)?
       ((':causal-links' | ':causallinks') causallink_defs)?
@@ -97,11 +117,11 @@ method_symbol : NAME;
 //
 // subtasks
 //
-// - start with an id that is used in ordering definition:
-//   (t1 (tname ?v1 ?v2))
-//
-// TODO: define EBNF for TR
-//
+// @HDDL
+// @LABEL {The subtask definition may contain one or more subtasks. The tasks consist of a task symbol as well as a
+//         list of parameters. In case of a method's subnetwork, these parameters have to be included in the method's
+//         parameters, in case of the initial task network, they have to be defined in s0. The tasks may start with the
+//         of an id that can be used to define ordering constraints and causal links.}
 subtask_defs : '(' ')' | subtask_def | '(' 'and' subtask_def+ ')';
 subtask_def : ('(' task_symbol var_or_const* ')' | '(' subtask_id '(' task_symbol var_or_const* ')' ')');
 subtask_id : NAME;
@@ -109,32 +129,34 @@ subtask_id : NAME;
 //
 // ordering
 //
-// - refers the ids given in subtask definition:
-//   (t1 < t2)
-//
-// TODO: define EBNF for TR
-//
+// @HDDL
+// @LABEL {The ordering constraints are defined via the task ids. They have to induce a partial order.}
 ordering_defs : '(' ')' | ordering_def | '(' 'and' ordering_def+ ')';
 ordering_def : '(' subtask_id '<' subtask_id ')';
 
 //
 // variable constraits
 //
-// - enables to codesignate or non-codesignate variables
-//   (= ?v1 ?v2))
-//   (not (= ?v3 ?v4)))
-//
-// TODO: define EBNF for TR
-//
+// @HDDL
+// @LABEL {The variable constraints enable to codesignate or non-codesignate variables.}
+// @EXAMPLE {(= ?v1 ?v2)), (not (= ?v3 ?v4)))}
 constraint_defs : '(' ')' | constraint_def | '(' 'and' constraint_def+ ')';
 constraint_def : '(' ')' | '(' 'not' equallity var_or_const var_or_const')' ')' | equallity var_or_const var_or_const ')';
 
+//
+// causal links
+//
+// @HDDL
+// @LABEL {Causal links in the model enables it to predefine which action support a certain precondition. They reference
+//         the tasks by the ids that are also used in the definition of ordering constraints.}
 causallink_defs : '(' ')' | causallink_def | '(' 'and' causallink_def+ ')';
 causallink_def : '(' subtask_id literal subtask_id ')';
 
 //
 // action definition
 //
+// @MODIFIED
+// @LABEL {The original action definition of PDDL has been split up to reuse its body in the task definition.}
 action_def :
    '(' ':action' task_def;
 
@@ -142,6 +164,7 @@ action_def :
 // goal description
 // - gd ^= goal description and is used in goals and preconditions
 //
+// @PDDL
 gd : gd_empty | atomic_formula | gd_negation | gd_conjuction | gd_disjuction | gd_existential | gd_univeral | gd_equality_constraint;
 
 gd_empty : '(' ')';
@@ -150,7 +173,11 @@ gd_disjuction : '(' 'or' gd+ ')';
 gd_negation : '(' 'not' gd ')';
 gd_existential : '(exists' '(' typed_var_list ')' gd ')';
 gd_univeral : '(forall' '(' typed_var_list ')' gd ')';
+
+// todo: ???
+//
 gd_equality_constraint : equallity var_or_const var_or_const ')';
+
 //
 // effects
 //
