@@ -4,8 +4,13 @@ import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.proPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.progressionNetwork;
+import de.uniulm.ki.panda3.progression.proUtil.dotNode;
+import de.uniulm.ki.panda3.progression.proUtil.dotit;
+import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
+import scala.Tuple2;
+import scala.Tuple3;
 
 import java.util.*;
 
@@ -42,7 +47,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
      * for the *first time*, i.e. it is the delta of fulfilled goal conditions. Be aware that
      * goalDelta is *changed* during heuristic calculation.
      */
-    List<Collection<Integer>> goalDelta = new ArrayList<>();
+    List<List<Integer>> goalDelta = new ArrayList<>();
 
     int[] actionDifficulty;
 
@@ -295,6 +300,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
 
 
     // This is the version given by Jörg Hoffmann in this 2001 JAIR
+    // Be careful to use sets above for the goaldelta
     public int getHeuristic3() {
         int numactions = 0;
         List<Set<Integer>> markedTrue = new ArrayList<>();
@@ -336,7 +342,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
     }
 
     // This is a MODIFIED version of Jörg Hoffmann's 2001 JAIR
-    public int getHeuristic() {
+    public int getHeuristic4() {
         int numactions = 0;
         for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
             for (int goalFact : goalDelta.get(layer)) {
@@ -361,6 +367,165 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
             }
         }
         return numactions;
+    }
+
+    // This is a MODIFIED version of Jörg Hoffmann's 2001 JAIR that dots its output
+    public int getHeuristic() {
+        List<List<dotNode>> operatorlayer = new ArrayList<>();
+        for (int i = 0; i < goalDelta.size(); i++) {
+            operatorlayer.add(new ArrayList<dotNode>());
+        }
+        List<List<dotNode>> literallayer = new ArrayList<>();
+        for (int i = 0; i < goalDelta.size(); i++) {
+            literallayer.add(new ArrayList<dotNode>());
+        }
+
+        List<Tuple3<dotNode, dotNode, Integer>> arcs = new ArrayList<>();
+
+        int numactions = 0;
+        for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
+            for (int goalFact : goalDelta.get(layer)) {
+
+                dotNode lit;
+                if (goalFact < operators.numStateFeatures)
+                    lit = new dotNode(goalFact, operators.IndexToLiteral[goalFact].shortInfo());
+                else
+                    lit = new dotNode(goalFact, simpleCompositionRPG.IndexToTaskLiteral.get(goalFact).shortInfo());
+
+                literallayer.get(layer).add(lit);
+
+                int bestDifficulty = Integer.MAX_VALUE;
+                int producer = -1;
+
+                for (int maybeProducer : operatorDelta.get(layer)) {
+                    if ((simpleCompositionRPG.add[maybeProducer].contains(goalFact))
+                            && (actionDifficulty[maybeProducer] < bestDifficulty)) {
+                        bestDifficulty = actionDifficulty[maybeProducer];
+                        producer = maybeProducer;
+                    }
+                }
+                numactions++;
+
+                dotNode op;
+                if (producer < operators.numActions) {
+                    op = new dotNode(producer, operators.IndexToAction[producer].shortInfo());
+                } else
+                    op = new dotNode(producer, simpleCompositionRPG.IndexToMethod.get(producer).m.shortInfo());
+                operatorlayer.get(layer).add(op);
+
+                arcs.add(new Tuple3<dotNode, dotNode, Integer>(lit, op, bestDifficulty));
+
+                for (Integer aPrec : simpleCompositionRPG.prec[producer]) {
+                    int fl = firstLayerWithFact[aPrec];
+                    if (fl > 0)
+                        goalDelta.get(fl).add(aPrec);
+                }
+
+            }
+        }
+        Tuple2<List<List<dotNode>>, List<Tuple2<dotNode, dotNode>>> dot = getDot();
+        String s1 = dotit.dotit2(dot._1(), dot._2());
+
+        List<List<dotNode>> cluster = new ArrayList<>();
+        for (int i = 0; i < operatorlayer.size(); i++) {
+            cluster.add(literallayer.get(i));
+            cluster.add(operatorlayer.get(i));
+        }
+
+        String s2 = dotit.dotit3(cluster, arcs);
+        return numactions;
+    }
+
+    private Tuple2<List<List<dotNode>>, List<Tuple2<dotNode, dotNode>>> getDot() {
+        List<List<Integer>> actionlayer = new ArrayList<>();
+        List<List<Integer>> methodlayer = new ArrayList<>();
+        List<List<Integer>> literallayer = new ArrayList<>();
+        for (int i = 0; i < operatorDelta.size() - 1; i++) {
+            List<Integer> actions = new ArrayList<>();
+            List<Integer> methods = new ArrayList<>();
+            methodlayer.add(methods);
+            actionlayer.add(actions);
+//            for (int j = i; j <= i; j++) {
+            for (int j = 0; j <= i; j++) {
+                for (int op : operatorDelta.get(j)) {
+                    if (op < operators.numActions) {
+                        actions.add(op);
+                    } else {
+                        methods.add(op);
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < firstLayerWithFact.length; i++) {
+            while (literallayer.size() <= firstLayerWithFact[i]) {
+                literallayer.add(new ArrayList<Integer>());
+            }
+            literallayer.get(firstLayerWithFact[i]).add(i);
+        }
+        for (int i = 1; i < literallayer.size(); i++) {
+            literallayer.get(i).addAll(literallayer.get(i - 1));
+        }
+        List<Tuple2<dotNode, dotNode>> arcs = new ArrayList<>();
+        List<List<dotNode>> cluster = new ArrayList<>();
+        List<dotNode> initialState = new ArrayList<>();
+        cluster.add(initialState);
+        for (int literalI : literallayer.get(0)) {
+            if (operators.IndexToLiteral.length > literalI)
+                initialState.add(new dotNode(literalI, operators.IndexToLiteral[literalI].shortInfo()));
+            else
+                initialState.add(new dotNode(literalI, simpleCompositionRPG.IndexToTaskLiteral.get(literalI).shortInfo()));
+        }
+
+        List<dotNode> lastState = initialState;
+        for (int layer = 1; layer < operatorDelta.size() - 1; layer++) {
+            List<dotNode> state = new ArrayList<>();
+            for (int literalI : literallayer.get(layer)) {
+                if (operators.IndexToLiteral.length > literalI)
+                    state.add(new dotNode(literalI, operators.IndexToLiteral[literalI].shortInfo()));
+                else
+                    state.add(new dotNode(literalI, simpleCompositionRPG.IndexToTaskLiteral.get(literalI).shortInfo()));
+            }
+
+            List<dotNode> ops = new ArrayList<>();
+            cluster.add(ops);
+            cluster.add(state);
+
+            dotOperators(actionlayer.get(layer), arcs, lastState, state, ops, operators.IndexToAction, null, "action");
+            dotOperators(methodlayer.get(layer), arcs, lastState, state, ops, null, simpleCompositionRPG.IndexToMethod, "method");
+            lastState = state;
+        }
+        return new Tuple2<>(cluster, arcs);
+    }
+
+    private void dotOperators(List<Integer> operatorlayer, List<Tuple2<dotNode, dotNode>> arcs, List<dotNode> lastState, List<dotNode> state, List<dotNode> ops, GroundTask[] indexToAction, HashMap<Integer, method> indexToMethod, String style) {
+        for (int operatorI : operatorlayer) {
+            String name;
+            if (indexToAction != null)
+                name = indexToAction[operatorI].shortInfo();
+            else {
+                method method = indexToMethod.get(operatorI);
+                GroundedDecompositionMethod m = method.m;
+                name = m.shortInfo();
+            }
+            dotNode op = new dotNode(operatorI, name);
+            ops.add(op);
+            for (int i = 0; i < simpleCompositionRPG.prec[operatorI].size(); i++) {
+                for (dotNode l : lastState) {
+                    if (l.id == simpleCompositionRPG.prec[operatorI].get(i)) {
+                        arcs.add(new Tuple2<dotNode, dotNode>(l, op));
+                        break;
+                    }
+                }
+            }
+            for (int i = 0; i < simpleCompositionRPG.add[operatorI].size(); i++) {
+                for (dotNode l : state) {
+                    if (l.id == simpleCompositionRPG.add[operatorI].get(i)) {
+                        arcs.add(new Tuple2<dotNode, dotNode>(op, l));
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     @Override
