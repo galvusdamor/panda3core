@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.progression.htn.search.proPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.progressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.cRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.simpleCompositionRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
@@ -128,7 +129,8 @@ public class htnPlanningInstance {
         progressionNetwork initialNode = new de.uniulm.ki.panda3.progression.htn.search.progressionNetwork(s0._1(), initialTasks);
 
         // todo: change heuristic here
-        initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
+        //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
+        initialNode.heuristic = new cRPG(gr.abstTaskCount, operators.methods, allActions);
         initialNode.heuristic.build(initialNode);
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
@@ -179,7 +181,7 @@ public class htnPlanningInstance {
                     }
 
                     progressionNetwork node = n.apply(ps);
-                    if (node.heuristic.goalRelaxedReachable()) {
+                    if (node.goalRelaxedReachable) {
                         // early goal test - NON-OPTIMAL
                         if (node.isGoal()) {
                             solution = node.solution;
@@ -199,7 +201,7 @@ public class htnPlanningInstance {
                     for (method m : ps.methods) {
                         progressionNetwork node = n.decompose(ps, m);
 
-                        if (node.heuristic.goalRelaxedReachable()) {
+                        if (node.goalRelaxedReachable) {
 
                             if (node.isGoal()) {
                                 solution = node.solution;

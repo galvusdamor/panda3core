@@ -342,7 +342,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
     }
 
     // This is a MODIFIED version of Jörg Hoffmann's 2001 JAIR
-    public int getHeuristic4() {
+    public int getHeuristic() {
         int numactions = 0;
         for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
             for (int goalFact : goalDelta.get(layer)) {
@@ -370,7 +370,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
     }
 
     // This is a MODIFIED version of Jörg Hoffmann's 2001 JAIR that dots its output
-    public int getHeuristic() {
+    public int getHeuristic7() {
         List<List<dotNode>> operatorlayer = new ArrayList<>();
         for (int i = 0; i < goalDelta.size(); i++) {
             operatorlayer.add(new ArrayList<dotNode>());
