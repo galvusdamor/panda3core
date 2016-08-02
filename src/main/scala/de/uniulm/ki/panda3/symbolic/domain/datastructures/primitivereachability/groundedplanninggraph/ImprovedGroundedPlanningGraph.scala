@@ -517,7 +517,7 @@ case class ImprovedGroundedPlanningGraph
     val literal: Literal = Literal(proposition.predicate, isPositive = true, parameters)
     // Create a lifted task that has the literal as precondition and add-effect.
     val task: ReducedTask = ReducedTask("NO-OP[" + proposition.predicate.name + "]",
-      isPrimitive = true, parameters, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
+      isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
     // Instantiate an action based on the lifted task and return it.
     GroundTask(task, proposition.parameter)
   }
