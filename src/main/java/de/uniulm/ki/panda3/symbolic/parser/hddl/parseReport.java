@@ -28,4 +28,8 @@ public class parseReport {
     public void reportForallEffect() {
 
     }
+
+    public void reportSkippedMethods() {
+
+    }
 }

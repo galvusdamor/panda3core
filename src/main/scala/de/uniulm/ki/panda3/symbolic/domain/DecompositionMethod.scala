@@ -36,10 +36,16 @@ trait DecompositionMethod extends DomainUpdatable {
   }
   assert(abstractTask.parameters forall subPlan.variableConstraints.variables.contains)
 
-  lazy val canGenerate: Seq[Predicate] = subPlan.planStepsWithoutInitGoal map { _.schema } map {
+  lazy val canGenerate: Seq[Predicate] = subPlan.planStepsWithoutInitGoal map {
+    _.schema
+  } map {
     case reduced: ReducedTask => reduced
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
-  } flatMap { _.effect.conjuncts map { _.predicate } }
+  } flatMap {
+    _.effect.conjuncts map {
+      _.predicate
+    }
+  }
 
   override def update(domainUpdate: DomainUpdate): DecompositionMethod
 
@@ -56,12 +62,12 @@ trait DecompositionMethod extends DomainUpdatable {
 case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: String) extends DecompositionMethod with HashMemo {
 
   abstractTask match {
-    case ReducedTask(_, _, _, _, prec, eff) =>
+    case ReducedTask(_, _, _, _, _, prec, eff) =>
       // check preconditions
       prec.conjuncts foreach { case Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
-          case ReducedTask(_, _, _, _, tPre, _) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
-          case _                                => false
+          case ReducedTask(_, _, _, _, _, tPre, _) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
+          case _                                   => false
         }
         assert(canBeInherited)
       }
@@ -69,12 +75,12 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
       // check effects
       eff.conjuncts foreach { case Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
-          case ReducedTask(_, _, _, _, _, tEff) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
-          case _                                => false
+          case ReducedTask(_, _, _, _, _, _, tEff) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
+          case _                                   => false
         }
         assert(canBeInherited)
       }
-    case _                                  =>
+    case _                                     =>
   }
 
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = domainUpdate match {
@@ -132,9 +138,13 @@ case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrec
 
 case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends HashMemo with PrettyPrintable {
   val groundAbstractTask: GroundTask = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
-  lazy val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map { case PlanStep(_, schema, arguments) =>
-    GroundTask(schema, arguments map variableBinding)
-  }
+
+  lazy val subPlanPlanStepsToGrounded: Map[PlanStep, GroundTask] = decompositionMethod.subPlan.planSteps map { case ps@PlanStep(_, schema, arguments) =>
+    ps -> GroundTask(schema, arguments map variableBinding)
+  } toMap
+
+  lazy val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map subPlanPlanStepsToGrounded
+
 
   /** returns a string by which this object may be referenced */
   override def shortInfo: String = "method-" + decompositionMethod.name

@@ -1,12 +1,14 @@
-package de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel;
+package de.uniulm.ki.panda3.symbolic.compiler.prefix;
 
 import de.uniulm.ki.panda3.symbolic.csp.*;
 import de.uniulm.ki.panda3.symbolic.domain.GeneralTask;
-import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.antlrHDDLParser;
+import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.parserUtil;
+import de.uniulm.ki.panda3.util.JavaToScala;
+import de.uniulm.ki.panda3.util.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.CausalLink;
 import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint;
@@ -18,7 +20,6 @@ import scala.collection.Seq;
 import scala.collection.immutable.Set;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
-import scala.runtime.AbstractFunction1;
 
 import java.util.HashMap;
 import java.util.List;
@@ -28,15 +29,14 @@ import java.util.List;
  */
 public class internalTaskNetwork {
     seqProviderList<PlanStep> planStepBuilder = new seqProviderList<>();
-    Seq<PlanStep> planStepSeq = null;
-    TaskOrdering taskOderings;
+    TaskOrdering taskOrderings;
     CSP csp;
     int nextId = 0;
 
     public internalTaskNetwork() {
         Seq<OrderingConstraint> leerCO = new VectorBuilder<OrderingConstraint>().result();
         Seq<PlanStep> leerPS = new VectorBuilder<PlanStep>().result();
-        taskOderings = new TaskOrdering(leerCO, leerPS);
+        taskOrderings = new TaskOrdering(leerCO, leerPS);
         Set<Variable> pVariables = new VectorBuilder<Variable>().result().toSet();
         Seq<VariableConstraint> pVC = new VectorBuilder<VariableConstraint>().result();
         csp = new CSP(pVariables, pVC);
@@ -52,7 +52,7 @@ public class internalTaskNetwork {
     }
 
     public TaskOrdering taskOrderings() {
-        return taskOderings;
+        return taskOrderings;
     }
 
     public CSP csp() {
@@ -61,11 +61,11 @@ public class internalTaskNetwork {
 
     public void addPlanStep(PlanStep ps) {
         this.planStepBuilder.add(ps);
-        this.taskOderings = this.taskOderings.addPlanStep(ps);
+        this.taskOrderings = this.taskOrderings.addPlanStep(ps);
     }
 
     public void addOrdering(PlanStep ps1, PlanStep ps2) {
-        this.taskOderings = this.taskOderings.addOrdering(ps1, ps2);
+        this.taskOrderings = this.taskOrderings.addOrdering(ps1, ps2);
     }
 
     public void addCspVariables(Seq<Variable> vars) {
@@ -116,20 +116,21 @@ public class internalTaskNetwork {
 
     public Plan readTaskNetwork(antlrHDDLParser.Tasknetwork_defContext tnCtx, Seq<Variable> parameters, Task abstractTask, Seq<Task> tasks, Seq<Sort> sorts) {
 
-        GeneralTask initSchema = new GeneralTask("init", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), abstractTask.precondition());
-        GeneralTask goalSchema = new GeneralTask("goal", true, abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), abstractTask.effect(), new And<Literal>(new Vector<Literal>(0, 0, 0)));
+        GeneralTask initSchema = new GeneralTask("init", true, abstractTask.parameters(), JavaToScala.<Variable>nil(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), abstractTask.precondition());
+        GeneralTask goalSchema = new GeneralTask("goal", true, abstractTask.parameters(), JavaToScala.<Variable>nil(), new Vector<VariableConstraint>(0, 0, 0), abstractTask.effect(), new And<Literal>(new Vector<Literal>(0, 0, 0)));
 
         PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters());
         PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters());
         this.planStepBuilder.add(psInit);
         this.planStepBuilder.add(psGoal);
-        this.taskOderings = this.taskOderings.addPlanStep(psInit).addPlanStep(psGoal);
+        this.taskOrderings = this.taskOrderings.addPlanStep(psInit).addPlanStep(psGoal);
 
-        HashMap<String, PlanStep> idMap = new HashMap<>(); // used to define ordering constraints
+        HashMap<String, PlanStep> idMap = new HashMap<>(); // used to define ordering constraints and causal links
 
         VectorBuilder<Variable> allVariables = new VectorBuilder<>();
 
         // read tasks
+
         if (tnCtx.subtask_defs() != null) {
             for (int i = 0; i < tnCtx.subtask_defs().subtask_def().size(); i++) {
                 antlrHDDLParser.Subtask_defContext psCtx = tnCtx.subtask_defs().subtask_def().get(i);
@@ -165,7 +166,7 @@ public class internalTaskNetwork {
                 }
 
                 PlanStep ps = new PlanStep(i, schema, psVarsSeq);
-                this.taskOderings = this.taskOderings.addPlanStep(ps).addOrdering(OrderingConstraint.apply(psInit, ps)).addOrdering(OrderingConstraint.apply(ps, psGoal));
+                this.taskOrderings = this.taskOrderings.addPlanStep(ps).addOrdering(OrderingConstraint.apply(psInit, ps)).addOrdering(OrderingConstraint.apply(ps, psGoal));
                 if (psCtx.subtask_id() != null) {
                     String id = psCtx.subtask_id().NAME().toString();
                     idMap.put(id, ps);
@@ -173,7 +174,6 @@ public class internalTaskNetwork {
                 this.planStepBuilder.add(ps);
             }
         }
-
         // read variable constraints
         if (tnCtx.constraint_defs() != null) {
             for (antlrHDDLParser.Constraint_defContext constraint : tnCtx.constraint_defs().constraint_def()) {
@@ -195,7 +195,7 @@ public class internalTaskNetwork {
         String orderingMode = tnCtx.children.get(0).toString();
         if ((orderingMode.equals(":ordered-subtasks")) || (orderingMode.equals(":ordered-tasks"))) {
             for (int i = 2; i < ps.size() - 1; i++) {
-                this.taskOderings = this.taskOderings.addOrdering(ps.apply(i), ps.apply(i + 1));
+                this.taskOrderings = this.taskOrderings.addOrdering(ps.apply(i), ps.apply(i + 1));
             }
         } else { // i.e. :tasks or :subtasks
             if ((tnCtx.ordering_defs() != null) && (tnCtx.ordering_defs().ordering_def() != null)) {
@@ -209,13 +209,20 @@ public class internalTaskNetwork {
                     } else {
                         PlanStep left = idMap.get(idLeft);
                         PlanStep right = idMap.get(idRight);
-                        this.taskOderings = this.taskOderings.addOrdering(left, right);
+                        this.taskOrderings = this.taskOrderings.addOrdering(left, right);
                     }
                 }
             }
         }
-        Seq<CausalLink> causalLinks = (new VectorBuilder<CausalLink>()).result();
-        Plan subPlan = new Plan(ps, causalLinks, this.taskOderings, this.csp, psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,
+
+        seqProviderList<CausalLink> causalLinks = new seqProviderList<>();
+
+        if (tnCtx.causallink_defs() != null) {
+
+        }
+
+        Plan subPlan = new Plan(ps, causalLinks.result(), this.taskOrderings, this.csp, psInit, psGoal,
+                NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,
                 hddlPanda3Visitor.planStepsDecompositionParents);
         return subPlan;
     }

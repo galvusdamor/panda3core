@@ -8,6 +8,8 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
   */
 object ExpandSortHierarchy extends DomainTransformer[Unit]{
 
+  def transform(domain: Domain, plan: Plan) : (Domain,Plan) = transform(domain,plan,())
+
   /** expands the sort hierarchy */
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
     val update = domain.expandSortHierarchy()

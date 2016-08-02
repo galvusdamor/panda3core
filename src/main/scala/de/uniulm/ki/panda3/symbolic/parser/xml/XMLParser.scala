@@ -113,7 +113,9 @@ object XMLParser extends StepwiseParser {
       val preconditions = extractLiteralList(splitContent._2.head, varDeclToVariable, xmlConstantToScalaConstant, xmlPredicateToScalaPredicate, xmlSortsToScalaSorts)
       val effects = extractLiteralList(splitContent._2(1), varDeclToVariable, xmlConstantToScalaConstant, xmlPredicateToScalaPredicate, xmlSortsToScalaSorts)
       val variableConstraints = preconditions._2 ++ effects._2
-      ReducedTask(taskSchema.getName, taskSchema.getType == "primitive", variables ++ (variableConstraints map { case Equal(vari, _) => vari }), variableConstraints,
+      val artificialVariables = variableConstraints map { case Equal(vari, _) => vari } distinct
+
+      ReducedTask(taskSchema.getName, taskSchema.getType == "primitive", variables ++ artificialVariables, artificialVariables, variableConstraints,
                   logic.And[Literal](preconditions._1), logic.And[Literal](effects._1))
     }
     val xmlTaskToScalaTask: Map[TaskSchemaDeclaration, Task] = (JavaConversions.asScalaBuffer(dom.getTaskSchemaDeclaration) zip tasks).toMap
@@ -137,9 +139,9 @@ object XMLParser extends StepwiseParser {
 
       val abstractTaskParameterVariables = (JavaConversions.asScalaBuffer(xmlMethod.getVariableDeclaration) ++ additionalParameterList) map variables
 
-      val init: PlanStep = PlanStep(0, GeneralTask("method_init", isPrimitive = true, abstractTaskSchema.parameters, Nil, logic.And[Literal](Nil), abstractTaskSchema.precondition),
+      val init: PlanStep = PlanStep(0, GeneralTask("method_init", isPrimitive = true, abstractTaskSchema.parameters,Nil, Nil, logic.And[Literal](Nil), abstractTaskSchema.precondition),
                                     abstractTaskParameterVariables)
-      val goal: PlanStep = PlanStep(1, GeneralTask("method_goal", isPrimitive = true, abstractTaskSchema.parameters, Nil, abstractTaskSchema.effect, logic.And[Literal](Nil)),
+      val goal: PlanStep = PlanStep(1, GeneralTask("method_goal", isPrimitive = true, abstractTaskSchema.parameters, Nil, Nil, abstractTaskSchema.effect, logic.And[Literal](Nil)),
                                     abstractTaskParameterVariables)
 
 
@@ -325,7 +327,7 @@ object XMLParser extends StepwiseParser {
 
 
     // build init
-    val initTask: ReducedTask = ReducedTask("init", isPrimitive = true, variablesForConstants, variableConstraintsForConstants, logic.And[Literal](Nil),
+    val initTask: ReducedTask = ReducedTask("init", isPrimitive = true, variablesForConstants, variablesForConstants,variableConstraintsForConstants, logic.And[Literal](Nil),
                                             logic.And[Literal](JavaConversions.asScalaBuffer(problem.getInitialState.getFact)
                                                                  map { factToLiteral(_, domain, nameToVariablesForConstants, isPositive = true) }))
 
@@ -338,7 +340,7 @@ object XMLParser extends StepwiseParser {
     else JavaConversions.asScalaBuffer(problem.getGoals.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExistsOrPreference) flatMap { goalLiteral =>
       extractProblemLiterals(goalLiteral, domain, nameToVariablesForConstants, Map())
     }
-    val goalTask: Task = ReducedTask("goal", isPrimitive = true, variablesForConstants, variableConstraintsForConstants, logic.And[Literal](goalLiterals), logic.And[Literal](Nil))
+    val goalTask: Task = ReducedTask("goal", isPrimitive = true, variablesForConstants,variablesForConstants, variableConstraintsForConstants, logic.And[Literal](goalLiterals), logic.And[Literal](Nil))
     val goal: PlanStep = PlanStep(1, goalTask, variablesForConstants)
 
     // variables declared in the plan steps

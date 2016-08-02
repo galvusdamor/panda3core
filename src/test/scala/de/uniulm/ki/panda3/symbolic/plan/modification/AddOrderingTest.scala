@@ -60,7 +60,7 @@ trait AddOrderingTestData extends HasExampleDomain2 {
   val promotionDemotionPlanPS3    = PlanStep(3, task2, instance_variableSort1(3) :: Nil)
   val promotionDemotionPlanCL     = CausalLink(promotionDemotionPlanPS2, psgoal, psgoal.substitutedPreconditions.head)
   val promotionDemotionPlan: Plan = {
-    val psRealGoal = PlanStep(4, ReducedTask("realgoal", true, Nil, Nil, And(Nil), And(Nil)), Nil)
+    val psRealGoal = PlanStep(4, ReducedTask("realgoal", true, Nil, Nil, Nil, And(Nil), And(Nil)), Nil)
     val cl = CausalLink(promotionDemotionPlanPS2, psgoal, psgoal.substitutedPreconditions.head)
 
     // hacky as we use psgoal as a real action
