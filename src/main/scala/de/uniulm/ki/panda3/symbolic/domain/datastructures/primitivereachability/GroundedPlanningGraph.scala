@@ -289,7 +289,6 @@ case class GroundedPlanningGraph
       isPrimitive = true, parameters, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
     GroundTask(task, groundLiteral.parameter)
   }
-
 }
 
 object GroundedPlanningGraph {
