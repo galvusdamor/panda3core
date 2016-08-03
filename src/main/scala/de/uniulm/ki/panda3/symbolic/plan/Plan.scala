@@ -60,6 +60,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
   lazy val planStepsAndRemovedWithInitAndGoalFirst = (init :: goal :: Nil) ++ planStepsAndRemovedPlanStepsWithoutInitGoal
 
+  lazy val orderingConstraintsWithoutRemovedPlanSteps = orderingConstraints.removePlanSteps(planStepsAndRemovedPlanSteps diff planSteps)
+
   // TODO: this is extremely inefficient
   // add all constraints inherited from tasks to the CSP
   val variableConstraints = planSteps.foldLeft(parameterVariableConstraints)(
