@@ -290,9 +290,9 @@ object Main {
       //println(solution.planSteps.length)
       // write output
       if (outputPDF.endsWith("dot")) {
-        writeStringToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), new File(outputPDF))
+        writeStringToFile(solution.dotString(PlanDotOptions(showHierarchy = false)), new File(outputPDF))
       } else {
-        Dot2PdfCompiler.writeDotToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), outputPDF)
+        Dot2PdfCompiler.writeDotToFile(solution.dotString(PlanDotOptions(showHierarchy = false)), outputPDF)
       }
     }
 

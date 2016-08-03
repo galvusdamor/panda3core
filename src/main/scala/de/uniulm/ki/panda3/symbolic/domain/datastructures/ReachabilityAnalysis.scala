@@ -24,7 +24,7 @@ trait ReachabilityAnalysis extends PrimitiveReachabilityAnalysis{
   val reachableLiftedAbstractActions: Seq[Task]
   val reachableLiftedMethods        : Seq[DecompositionMethod]
 
-  val reachableLiftedActions: Seq[Task] = reachableLiftedAbstractActions ++ reachableLiftedPrimitiveActions
+  lazy val reachableLiftedActions: Seq[Task] = reachableLiftedAbstractActions ++ reachableLiftedPrimitiveActions
 }
 
 trait GroundedReachabilityAnalysis extends ReachabilityAnalysis with GroundedPrimitiveReachabilityAnalysis {
