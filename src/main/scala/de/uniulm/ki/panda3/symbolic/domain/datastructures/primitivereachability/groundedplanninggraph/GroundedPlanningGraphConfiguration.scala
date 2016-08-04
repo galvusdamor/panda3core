@@ -13,12 +13,14 @@ import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
   * @param isSerial               If True the GroundedPlanningGraph will compute additional mutexes making actions mutex with each other.
   * @param forbiddenLiftedTasks   Set of lifted tasks the GroundedPlanningGraph is forbid to instantiate.
   * @param forbiddenGroundedTasks Set of grounded tasks the GroundedPlanningGraph is forbid to instantiate.
+  * @param buckets                Determines if buckets will be used for mutex computation.
   * @param debuggingMode          Determines what will be printed during the computation of the graph.
   */
 case class GroundedPlanningGraphConfiguration(computeMutexes: Boolean = true,
                                               isSerial: Boolean = false,
                                               forbiddenLiftedTasks: Set[Task] = Set.empty[Task],
                                               forbiddenGroundedTasks: Set[GroundTask] = Set.empty[GroundTask],
+                                              buckets: Boolean = false,
                                               debuggingMode: DebuggingMode = DebuggingMode.Disabled) {
 }
 

@@ -63,25 +63,30 @@ case class ImprovedGroundedPlanningGraph
     val newActions: Set[GroundTask] = computeNewActions(domain, configuration, metaData.firstLayer, metaData.addedPropositions,
       metaData.deletedPropositionMutexes, updatedPredicateMap, previousLayer._4)
 
+    val (updatedPreBuckets, updatedAddBuckets, updatedDelBuckets) = updateBuckets(metaData.preconditionBuckets, metaData.addBuckets, metaData.deleteBuckets, newActions, configuration)
     val allActions: Set[GroundTask] = previousLayer._1 ++ newActions
 
-    val (interferenceMutexes, competingNeedsMutexes) = if (configuration.computeMutexes) {
-      computeActionMutexes(configuration, newActions, previousLayer._1, metaData.previousInterferenceMutexes, metaData.previousCompetingNeedsMutexes, previousLayer._4)
-    } else {
-      (Set.empty[(GroundTask, GroundTask)], Set.empty[(GroundTask, GroundTask)])
+    val (interferenceMutexes, competingNeedsMutexes) = configuration.computeMutexes match {
+      case true => configuration.buckets match {
+        case true => computeActionMutexesWBuckets(configuration, newActions, metaData.previousInterferenceMutexes, previousLayer._4, updatedPreBuckets, updatedAddBuckets, updatedDelBuckets)
+        case false => computeActionMutexes(configuration, newActions, previousLayer._1, metaData.previousInterferenceMutexes, metaData.previousCompetingNeedsMutexes, previousLayer._4)
+      }
+      case false => (Set.empty[(GroundTask, GroundTask)], Set.empty[(GroundTask, GroundTask)])
     }
-
-    val allActionMutexes = interferenceMutexes ++ competingNeedsMutexes
+    val serialMutexes = configuration.isSerial match {
+      case true => computeSerialMutexes(newActions, allActions)
+      case false => Set.empty[(GroundTask, GroundTask)]
+    }
+    val allActionMutexes = serialMutexes ++ interferenceMutexes ++ competingNeedsMutexes
 
     // New propositions that were made available through the newly instantiated actions.
     //TODO: Check if -- previousLayer._3 is okay, especially regarding the computation of proposition mutexes.
     val newPropositions: Set[GroundLiteral] = (newActions flatMap { action => action.substitutedAddEffects }) -- previousLayer._3
 
     val allPropositions: Set[GroundLiteral] = newPropositions ++ previousLayer._3
-    val updatedProducerMap = updateProducerMap(metaData.producerMap, newActions)
 
     val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = configuration.computeMutexes match {
-      case true => computePropositionMutexes(configuration, newPropositions, previousLayer._3, allPropositions, allActionMutexes, updatedProducerMap)
+      case true => computePropositionMutexes(configuration, newPropositions, previousLayer._3, allPropositions, allActionMutexes, updatedAddBuckets)
       case false => Set.empty[(GroundLiteral, GroundLiteral)]
     }
 
@@ -108,8 +113,8 @@ case class ImprovedGroundedPlanningGraph
         deletedPropositionMutexes = previousLayer._4 diff propositionMutexes,
         previousInterferenceMutexes = interferenceMutexes,
         previousCompetingNeedsMutexes = competingNeedsMutexes,
-        predicateMap = updatedPredicateMap,
-        producerMap = updatedProducerMap)
+        predicateMap = updatedPredicateMap
+      )
 
       // Start the computation of the next layer of the graph.
       buildGraph(graph :+ thisLayer, newMetaData)
@@ -229,7 +234,45 @@ case class ImprovedGroundedPlanningGraph
   }
 
   /**
-    * Compute the action mutexes.
+    * Compute action mutexes with buckets.
+    * There are two types of action mutexes:
+    * - interference mutexes: Two actions are mutex if either of the actions deletes a precondition or Add-Effect of the other.
+    * - competing needs mutexes: If there is a precondition of action a and a precondition of action b that
+    * are marked as mutually exclusive of each other in the previous proposition level.
+    *
+    * @param configuration          The configuration used for the graph.
+    * @param newActions             All actions instantiated in the current layer.
+    * @param oldInterferenceMutexes Interference mutexes of the previous layer.
+    * @param propositionMutexes     Proposition mutexes of the previous layer.
+    * @param preconditionBuckets    Map mapping propositions to all actions that have the corresponding proposition as a precondition.
+    * @param addBuckets             Map mapping propositions to all actions that have the corresponding proposition as an add-effect.
+    * @param deleteBuckets          Map mapping propositions to all actions that have the corresponding proposition as an delete-effect.
+    * @return Returns two sets, interference and competing needs mutexes represented as pairs of actions.
+    */
+  private def computeActionMutexesWBuckets(configuration: GroundedPlanningGraphConfiguration,
+                                           newActions: Set[GroundTask],
+                                           oldInterferenceMutexes: Set[(GroundTask, GroundTask)],
+                                           propositionMutexes: Set[(GroundLiteral, GroundLiteral)],
+                                           preconditionBuckets: Map[GroundLiteral, Set[GroundTask]],
+                                           addBuckets: Map[GroundLiteral, Set[GroundTask]],
+                                           deleteBuckets: Map[GroundLiteral, Set[GroundTask]]):
+  (Set[(GroundTask, GroundTask)], Set[(GroundTask, GroundTask)]) = {
+    val (preconditions, addEffects, deleteEffects) =
+      newActions.foldLeft((Set.empty[GroundLiteral], Set.empty[GroundLiteral], Set.empty[GroundLiteral])) {
+        case (tuple, action) => (tuple._1 ++ action.substitutedPreconditions, tuple._2 ++ action.substitutedAddEffects, tuple._3 ++ action.substitutedDelEffects)
+      }
+    val interferenceMutexes: Set[(GroundTask, GroundTask)] = ((preconditions ++ addEffects ++ deleteEffects) flatMap { proposition =>
+      for (x <- preconditionBuckets(proposition) ++ addBuckets(proposition); y <- deleteBuckets(proposition))
+        yield if ((x compare y) < 0 && x != y) (x, y) else (y, x)
+    }) ++ oldInterferenceMutexes
+    val competingNeedsMutexes: Set[(GroundTask, GroundTask)] = propositionMutexes flatMap { case (proposition1, proposition2) =>
+      for (x <- preconditionBuckets(proposition1); y <- preconditionBuckets(proposition2)) yield if ((x compare y) < 0 && x != y) (x, y) else (y, x)
+    }
+    (interferenceMutexes, competingNeedsMutexes)
+  }
+
+  /**
+    * Compute action mutexes.
     * There are two types of action mutexes:
     * - interference mutexes: Two actions are mutex if either of the actions deletes a precondition or Add-Effect of the other.
     * - competing needs mutexes: If there is a precondition of action a and a precondition of action b that
@@ -283,6 +326,13 @@ case class ImprovedGroundedPlanningGraph
       (for (x <- action1.substitutedPreconditions; y <- action2.substitutedPreconditions) yield if ((x compare y) < 0) (x, y) else (y, x)).exists(propositionMutexes.contains)
     }
     (interferenceMutexes.toSet, competingNeedsMutexes.toSet)
+  }
+
+  def computeSerialMutexes(newActions: Set[GroundTask], allActions: Set[GroundTask]): Set[(GroundTask, GroundTask)] = {
+    val filteredNewActions = (newActions filterNot { action => action.task.name.startsWith("NO-OP")}).toVector.sorted
+    val filteredAllActions = allActions filterNot { action => action.task.name.startsWith("NO-OP")}
+    ((for (x <- 0 until filteredNewActions.size - 1; y <- x until filteredNewActions.size) yield (filteredNewActions(x), filteredNewActions(y))) ++
+      (for (x <- filteredNewActions; y <- filteredAllActions) yield if ((x compare y) < 0 && x != y) (x, y) else (y, x))) toSet
   }
 
   /**
@@ -365,19 +415,33 @@ case class ImprovedGroundedPlanningGraph
     }
   }
 
-  /**
-    * Updates the producer map with new actions.
-    *
-    * @param producerMap Map to be updated.
-    * @param newActions  Actions to be added.
-    * @return Returns the updated map.
-    */
-  private def updateProducerMap(producerMap: Map[GroundLiteral, Set[GroundTask]], newActions: Set[GroundTask]): Map[GroundLiteral, Set[GroundTask]] = {
-    newActions.foldLeft(producerMap) { case (pMap, action) => action.substitutedAddEffects.foldLeft(pMap) { case (pMap2, proposition) =>
+  private def updateBuckets(preconditionBuckets: Map[GroundLiteral, Set[GroundTask]],
+                            addBuckets: Map[GroundLiteral, Set[GroundTask]],
+                            deleteBuckets: Map[GroundLiteral, Set[GroundTask]],
+                            newActions: Set[GroundTask],
+                            configuration: GroundedPlanningGraphConfiguration):
+  (Map[GroundLiteral, Set[GroundTask]], Map[GroundLiteral, Set[GroundTask]], Map[GroundLiteral, Set[GroundTask]]) = {
+    val updatedPreBucket = configuration.buckets match {
+      case true => newActions.foldLeft(preconditionBuckets) { case (pMap, action) => action.substitutedPreconditions.foldLeft(pMap) { case (pMap2, proposition) =>
+        pMap2 + (proposition -> (pMap2.getOrElse(proposition, Set.empty[GroundTask]) + action))
+      }
+      }
+      case false => Map.empty[GroundLiteral, Set[GroundTask]]
+    }
+    val updatedAddBucket = newActions.foldLeft(addBuckets) { case (pMap, action) => action.substitutedAddEffects.foldLeft(pMap) { case (pMap2, proposition) =>
       pMap2 + (proposition -> (pMap2.getOrElse(proposition, Set.empty[GroundTask]) + action))
     }
     }
+    val updatedDelBucket = configuration.buckets match {
+      case true => newActions.foldLeft(deleteBuckets) { case (pMap, action) => action.substitutedDelEffects.foldLeft(pMap) { case (pMap2, proposition) =>
+        pMap2 + (proposition -> (pMap2.getOrElse(proposition, Set.empty[GroundTask]) + action))
+      }
+      }
+      case false => Map.empty[GroundLiteral, Set[GroundTask]]
+    }
+    (updatedPreBucket, updatedAddBucket, updatedPreBucket)
   }
+
 
   /**
     * Instantiates new actions based on the given task with the literal pairs parameter.
