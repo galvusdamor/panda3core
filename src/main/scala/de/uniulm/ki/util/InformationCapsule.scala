@@ -4,9 +4,13 @@ import scala.collection.mutable
 
 
 class Distribution() {
-  private val innerDistribution: mutable.Map[Int, Int] = ???
+  private val innerDistribution: mutable.Map[Double, Int] = new mutable.HashMap[Double, Int]().withDefaultValue(0)
 
-  def add(value: Int): Unit = ???
+  def add(value: Double): Unit = innerDistribution.put(value, innerDistribution(value) + 1)
+
+  def numberOfSamples(): Int = innerDistribution.values sum
+
+  def mean(): Double = (innerDistribution map { case (a, b) => a * b } sum) / numberOfSamples()
 }
 
 
@@ -39,8 +43,12 @@ class InformationCapsule {
 
 
   // add item to distribution
-  def addToDistribution(key: String, value: Int): Unit = internalInformationDistribution(key) add value
+  def addToDistribution(key: String, value: Double): Unit = {
+    val distribution = internalInformationDistribution(key)
+    distribution add value
+    internalInformationDistribution.put(key, distribution)
+  }
 
   // access through immutable datastructures
-  def informationMap: Map[String, Int] = internalInformation.toMap
+  def informationMap: Map[String, Int] = internalInformation.toMap ++ (internalInformationDistribution map { case (a, b) => (a, b.mean().round.toInt) } toMap)
 }

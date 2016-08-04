@@ -66,6 +66,8 @@ object Information {
   val NUMBER_OF_NODES           = "10 search nodes:00:total"
   val NUMBER_OF_EXPANDED_NODES  = "10 search nodes:01:expanded"
   val NUMBER_OF_DISCARDED_NODES = "10 search nodes:02:discarded nodes"
+
+  val PLAN_SIZE = "20 search plans:01:number of plansteps"
 }
 
 case class ResultMap(map: Map[ResultType, Any]) extends (ResultType => Any) {

@@ -53,6 +53,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
     var maxHeuristicCurrentInterval = -Double.MaxValue
 
     informationCapsule increment NUMBER_OF_NODES
+    informationCapsule.addToDistribution(PLAN_SIZE, initialPlan.numberOfPlanSteps)
 
     def heuristicSearch() = {
       while (searchQueue.nonEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
@@ -133,6 +134,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addCosts: Boolean) ext
 
               if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
                 informationCapsule increment NUMBER_OF_NODES
+                informationCapsule.addToDistribution(PLAN_SIZE, newPlan.numberOfPlanSteps)
 
                 timeCapsule start SEARCH_COMPUTE_HEURISTIC
                 val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)

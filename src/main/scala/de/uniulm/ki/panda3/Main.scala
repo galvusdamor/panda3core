@@ -78,8 +78,8 @@ object Main {
                                                                         liftedReachability = true, groundedReachability = false, planningGraph = true,
                                                                         naiveGroundedTaskDecompositionGraph = false,
                                                                         iterateReachabilityAnalysis = false, groundDomain = true),
-                                             //SearchConfiguration(Some(50000), None, efficientSearch = true, AStarType, Some(NumberOfFlaws), true), //Some(TDGMinimumModification)
-                                             SearchConfiguration(None, None, efficientSearch = false, BFSType, None, true), //Some(TDGMinimumModification)
+                                             SearchConfiguration(Some(50000), None, efficientSearch = true, AStarType, Some(NumberOfFlaws), true), //Some(TDGMinimumModification)
+                                             //SearchConfiguration(None, None, efficientSearch = false, BFSType, None, true), //Some(TDGMinimumModification)
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
                                                                              SearchStatistics,
@@ -91,6 +91,7 @@ object Main {
 
     println("Panda says: " + results(SearchStatus))
     printInformationByCategory(results(SearchStatistics).informationMap)
+    println("----------------- TIMINGS -----------------")
     printInformationByCategory(results(ProcessingTimings).timeMap)
 
 
