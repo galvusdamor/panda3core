@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.configuration
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
+import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 
 /**
@@ -13,13 +14,13 @@ sealed trait ResultType {
 }
 
 /** Timings are measured in milliseconds */
-object ProcessingTimings extends ResultType {type ResultType = Map[String, Long]}
+object ProcessingTimings extends ResultType {type ResultType = TimeCapsule}
 
 object SearchStatus extends ResultType {type ResultType = SearchState}
 
 object SearchResult extends ResultType {type ResultType = Option[Plan]}
 
-object SearchStatistics extends ResultType {type ResultType = Map[String, Int]}
+object SearchStatistics extends ResultType {type ResultType = InformationCapsule}
 
 object SearchSpace extends ResultType {type ResultType = SearchNode}
 

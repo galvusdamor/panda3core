@@ -59,8 +59,10 @@ object Main {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
 
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
+    val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/domain/stripsSat.pddl"
+    val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/problems/pfile1"
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/elevators-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/elevators-strips/problems/p01.pddl"
@@ -72,8 +74,12 @@ object Main {
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(HDDLParserType),
-                                             PreprocessingConfiguration(false, true, true, true, false, false, groundDomain = false),
-                                             SearchConfiguration(Some(50000), None, efficientSearch = true, AStarType, Some(NumberOfFlaws), true), //Some(TDGMinimumModification)
+                                             PreprocessingConfiguration(compileNegativePreconditions = true,
+                                                                        liftedReachability = true, groundedReachability = false, planningGraph = true,
+                                                                        naiveGroundedTaskDecompositionGraph = false,
+                                                                        iterateReachabilityAnalysis = false, groundDomain = true),
+                                             //SearchConfiguration(Some(50000), None, efficientSearch = true, AStarType, Some(NumberOfFlaws), true), //Some(TDGMinimumModification)
+                                             SearchConfiguration(None, None, efficientSearch = false, BFSType, None, true), //Some(TDGMinimumModification)
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
                                                                              SearchStatistics,
@@ -81,13 +87,12 @@ object Main {
                                                                              SolutionInternalString,
                                                                              SolutionDotString)))
 
-    System.in.read()
-
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
 
     println("Panda says: " + results(SearchStatus))
-    printInformationByCategory(results(SearchStatistics))
-    printInformationByCategory(results(ProcessingTimings))
+    printInformationByCategory(results(SearchStatistics).informationMap)
+    printInformationByCategory(results(ProcessingTimings).timeMap)
+
 
     if (results(SearchStatus) == SearchState.SOLUTION) {
 
@@ -124,10 +129,7 @@ object Main {
       val reducedNames = reducedNamesWithPrefix.sortBy({ _._1 }) map { case (info, value) => info.substring(3) -> value }
       val maxLen = reducedNames.map { _._1.length } max
 
-      reducedNames foreach { case (info, value) =>
-        printf("%-" + maxLen + "s = %d\n", info, value)
-      }
-
+      reducedNames foreach { case (info, value) => printf("%-" + maxLen + "s = %d\n", info, value) }
     }
   }
 
