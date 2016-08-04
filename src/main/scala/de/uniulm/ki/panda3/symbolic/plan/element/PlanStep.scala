@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.plan.element
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
-import de.uniulm.ki.panda3.symbolic.csp.{CSP, PartialSubstitution, TotalSubstitution}
+import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, DomainUpdatable, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
@@ -92,6 +92,9 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
     }
     assert(p.sort.elements.contains(arguments(i)))
   }
+
+  // the arguments must be allowed
+  assert(task.areParametersAllowed(arguments))
 
   private lazy val parameterSubstitution: TotalSubstitution[Variable, Constant] = TotalSubstitution(task.parameters, arguments)
 

@@ -504,7 +504,7 @@ case class ImprovedGroundedPlanningGraph
             val allArgumentCombinations: Seq[Seq[Constant]] = possibleSubstitutionCombinationsWithVariables map { combination =>
               task.parameters map { variable => updatedAssignmentMap.getOrElse(variable, combination.find { case (v, c) => v == variable }.get._2) }
             }
-            (allArgumentCombinations map { arguments => GroundTask(task, arguments) }).toSet
+            (allArgumentCombinations collect { case arguments if task areParametersAllowed arguments=> GroundTask(task, arguments) }).toSet
           }
         } else {
           if (remainingLiteralPairs.isEmpty) {

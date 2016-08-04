@@ -15,9 +15,9 @@ case class GroundedPlanningGraph
 
   initialState foreach { f => assert(f.isPositive) }
 
-  lazy val graphSize: Int = layerWithMutexes.size
+  lazy          val graphSize: Int                                        = layerWithMutexes.size
   // This function should compute the actual planning graph
-  override lazy val layer: Seq[(Set[GroundTask], Set[GroundLiteral])] = layerWithMutexes map { case (groundTasks, groundTaskMutexes, groundLiterals, groundLiteralMutexes) =>
+  override lazy val layer    : Seq[(Set[GroundTask], Set[GroundLiteral])] = layerWithMutexes map { case (groundTasks, groundTaskMutexes, groundLiterals, groundLiteralMutexes) =>
     (groundTasks filterNot {
       _.task.name.startsWith("NO-OP")
     }, groundLiterals)
@@ -28,7 +28,7 @@ case class GroundedPlanningGraph
 
   lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] =
     buildGraph(Seq.empty[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])],
-      initialState, Set.empty[(GroundLiteral, GroundLiteral)], firstLayer = true, Map())
+               initialState, Set.empty[(GroundLiteral, GroundLiteral)], firstLayer = true, Map())
 
   def buildGraph(graph: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])],
                  addedPropositions: Set[GroundLiteral], deletedMutexes: Set[(GroundLiteral, GroundLiteral)], firstLayer: Boolean, oldPreconMap: Map[Predicate, Set[GroundLiteral]]):
@@ -50,15 +50,19 @@ case class GroundedPlanningGraph
     }*/
 
     // determine which grounded literals in the last state layer may cause new grounded actions to be applicable
-    //TODO: tasks that will be considered because of deleted mutexes should contain both grounded literals as preconditions, otherwise it can happen that the same action gets initialised twice.
+    //TODO: tasks that will be considered because of deleted mutexes should contain both grounded literals as preconditions, otherwise it can happen that the same action gets initialised
+    // twice.
     val changedPropositions: Set[GroundLiteral] = addedPropositions ++ (deletedMutexes flatMap { mutex => Set(mutex._1, mutex._2) })
-    val tasksToBeConsidered: Set[(GroundLiteral, Seq[ReducedTask])] = changedPropositions map { groundLiteral => (groundLiteral, domain.consumersOf(groundLiteral.predicate) filter {_.isPrimitive}) }
+    val tasksToBeConsidered: Set[(GroundLiteral, Seq[ReducedTask])] = changedPropositions map { groundLiteral => (groundLiteral, domain.consumersOf(groundLiteral.predicate) filter { _
+      .isPrimitive
+    })
+    }
 
 
     // create the newly applicable grounded actions
     val newGroundTasksFromPreconditions: Set[GroundTask] = tasksToBeConsidered flatMap { case (groundLiteral, tasks) => tasks flatMap { task => disallowedTasks match {
       case Right(forbiddenLiftedTasks) if forbiddenLiftedTasks contains task => Set.empty[GroundTask]
-      case _ =>
+      case _                                                                 =>
         task.precondition.conjuncts filter { literal => literal.predicate == groundLiteral.predicate } flatMap { startLiteral =>
           createActionInstances(task, groundLiteral, startLiteral, task.precondition.conjuncts, previousLayer._4, updatedPrecondMap)
         }
@@ -161,7 +165,7 @@ case class GroundedPlanningGraph
     //println("TO CHECK: " + propositionPairs.size + " DUP " + sortedPropositions.size + " vs " + (allPropositions.size - previousLayer._3.size))
 
     val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = computeMutexes match {
-      case true => (propositionPairs ++ previousLayer._4) filter { case (groundLiteral1, groundLiteral2) =>
+      case true  => (propositionPairs ++ previousLayer._4) filter { case (groundLiteral1, groundLiteral2) =>
         (for (x <- propositionProducers(groundLiteral1); y <- propositionProducers(groundLiteral2)) yield if ((x compare y) < 0) (x, y) else (y, x)) forall allTaskMutexes.contains
       }
       case false => Set.empty[(GroundLiteral, GroundLiteral)]
@@ -189,68 +193,68 @@ case class GroundedPlanningGraph
                             preconMap: Map[Predicate, Set[GroundLiteral]], assignMap: Map[Variable, Constant] = Map(), groundLiterals: Seq[GroundLiteral] = Seq.empty[GroundLiteral]):
   Set[GroundTask] =
 
-  if (groundLiteral.parameter zip literal.parameterVariables exists { case (c, v) => !(v.sort.elements contains c) }) {
-    Set()
-  }
-  else {
-    assignMap foreach { case (v, c) => assert(v.sort.elements contains c) }
-
-    val updatedPrecons: Seq[Literal] = unassignedPrecons filterNot {
-      _ == literal
+    if (groundLiteral.parameter zip literal.parameterVariables exists { case (c, v) => !(v.sort.elements contains c) }) {
+      Set()
     }
-    val updatedGroundLiterals = groundLiterals :+ groundLiteral
-    val assignPairs: Seq[(Variable, Constant)] = literal.parameterVariables zip groundLiteral.parameter
-    assignPairs foreach { case (v, c) => assert(v.sort.elements contains c) }
-    val updatedAssignMap: Map[Variable, Constant] = assignPairs.foldLeft(assignMap) { case (aMap, (variable, constant)) => aMap + (variable -> constant) }
+    else {
+      assignMap foreach { case (v, c) => assert(v.sort.elements contains c) }
 
-    // check whether we might have violated parameter constraints
-    val taskConstraintsOK = task.parameterConstraints forall {
-      case Equal(var1, var2: Variable) => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) == updatedAssignMap(var2) else true
-      case Equal(var1, const: Constant) => if (updatedAssignMap contains var1) updatedAssignMap(var1) == const else true
-      case NotEqual(var1, var2: Variable) => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) != updatedAssignMap(var2) else true
-      case NotEqual(var1, const: Constant) => if (updatedAssignMap contains var1) updatedAssignMap(var1) != const else true
-      case OfSort(vari, sort) => if (updatedAssignMap contains vari) sort.elements contains updatedAssignMap(vari) else true
-      case NotOfSort(vari, sort) => if (updatedAssignMap contains vari) !(sort.elements contains updatedAssignMap(vari)) else true
-    }
-    if (taskConstraintsOK) {
+      val updatedPrecons: Seq[Literal] = unassignedPrecons filterNot {
+        _ == literal
+      }
+      val updatedGroundLiterals = groundLiterals :+ groundLiteral
+      val assignPairs: Seq[(Variable, Constant)] = literal.parameterVariables zip groundLiteral.parameter
+      assignPairs foreach { case (v, c) => assert(v.sort.elements contains c) }
+      val updatedAssignMap: Map[Variable, Constant] = assignPairs.foldLeft(assignMap) { case (aMap, (variable, constant)) => aMap + (variable -> constant) }
 
-      //Check if all preconditions of the task have been assigned
-      //println("CAI: TASK NAME:" + task.name)
-      if (updatedPrecons.isEmpty) {
+      // check whether we might have violated parameter constraints
+      val taskConstraintsOK = task.parameterConstraints forall {
+        case Equal(var1, var2: Variable)     => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) == updatedAssignMap(var2) else true
+        case Equal(var1, const: Constant)    => if (updatedAssignMap contains var1) updatedAssignMap(var1) == const else true
+        case NotEqual(var1, var2: Variable)  => if ((updatedAssignMap contains var1) && (updatedAssignMap contains var2)) updatedAssignMap(var1) != updatedAssignMap(var2) else true
+        case NotEqual(var1, const: Constant) => if (updatedAssignMap contains var1) updatedAssignMap(var1) != const else true
+        case OfSort(vari, sort)              => if (updatedAssignMap contains vari) sort.elements contains updatedAssignMap(vari) else true
+        case NotOfSort(vari, sort)           => if (updatedAssignMap contains vari) !(sort.elements contains updatedAssignMap(vari)) else true
+      }
+      if (taskConstraintsOK) {
 
-        //Check if all parameters of the task have been assigned
-        if (task.parameters.size == updatedAssignMap.keys.size) {
-          //println("Created!")
-          val arguments: Seq[Constant] = task.parameters map { variable => updatedAssignMap(variable) }
-          val newGroundTask = GroundTask(task, arguments)
-          disallowedTasks match {
-            case Left(disallowedGroundTasks) => if (disallowedGroundTasks contains newGroundTask) Set.empty[GroundTask] else Set(newGroundTask)
-            case Right(disallowedLiftedTasks) => Set(newGroundTask)
+        //Check if all preconditions of the task have been assigned
+        //println("CAI: TASK NAME:" + task.name)
+        if (updatedPrecons.isEmpty) {
+
+          //Check if all parameters of the task have been assigned
+          if (task.parameters.size == updatedAssignMap.keys.size) {
+            //println("Created!")
+            val arguments: Seq[Constant] = task.parameters map { variable => updatedAssignMap(variable) }
+            val newGroundTask = GroundTask(task, arguments)
+            disallowedTasks match {
+              case Left(disallowedGroundTasks)  => if (disallowedGroundTasks contains newGroundTask) Set.empty[GroundTask] else Set(newGroundTask)
+              case Right(disallowedLiftedTasks) => Set(newGroundTask)
+            }
+          } else {
+            val unassignedVariables: Seq[Variable] = task.parameters filterNot { variable => updatedAssignMap.keySet contains variable }
+
+            val possibleSubstitutionCombinations: Seq[Seq[Constant]] = computeAllPossibleSubstitutionCombinations(unassignedVariables)
+
+            val possibleSubstitutionCombinationsWithVariables: Seq[Seq[(Variable, Constant)]] = possibleSubstitutionCombinations map { seq => unassignedVariables.zip(seq) }
+            val allArgumentCombinations: Seq[Seq[Constant]] = possibleSubstitutionCombinationsWithVariables map { combination =>
+              task.parameters map { variable => updatedAssignMap.getOrElse(variable, combination.find { case (v, c) => v == variable }.get._2) }
+            }
+            (allArgumentCombinations collect { case arguments if task areParametersAllowed arguments => GroundTask(task, arguments) }).toSet
           }
         } else {
-          val unassignedVariables: Seq[Variable] = task.parameters filterNot { variable => updatedAssignMap.keySet contains variable }
+          val nextLiteral = updatedPrecons.head
 
-          val possibleSubstitutionCombinations: Seq[Seq[Constant]] = computeAllPossibleSubstitutionCombinations(unassignedVariables)
-
-          val possibleSubstitutionCombinationsWithVariables: Seq[Seq[(Variable, Constant)]] = possibleSubstitutionCombinations map { seq => unassignedVariables.zip(seq) }
-          val allArgumentCombinations: Seq[Seq[Constant]] = possibleSubstitutionCombinationsWithVariables map { combination =>
-            task.parameters map { variable => updatedAssignMap.getOrElse(variable, combination.find { case (v, c) => v == variable }.get._2) }
+          val possiblePrecs = preconMap.getOrElse(nextLiteral.predicate, Set.empty[GroundLiteral]) filter { gLCandidate => isMutexFree(updatedGroundLiterals, mutexes, gLCandidate) &&
+            checkCorrectAssignment(nextLiteral, gLCandidate, updatedAssignMap)
           }
-          (allArgumentCombinations map { arguments => GroundTask(task, arguments) }).toSet
-        }
-      } else {
-        val nextLiteral = updatedPrecons.head
 
-        val possiblePrecs = preconMap.getOrElse(nextLiteral.predicate, Set.empty[GroundLiteral]) filter { gLCandidate => isMutexFree(updatedGroundLiterals, mutexes, gLCandidate) &&
-          checkCorrectAssignment(nextLiteral, gLCandidate, updatedAssignMap)
+          possiblePrecs flatMap {
+            nextGroundLiteral => createActionInstances(task, nextGroundLiteral, nextLiteral, updatedPrecons, mutexes, preconMap, updatedAssignMap, updatedGroundLiterals)
+          }
         }
-
-        possiblePrecs flatMap {
-          nextGroundLiteral => createActionInstances(task, nextGroundLiteral, nextLiteral, updatedPrecons, mutexes, preconMap, updatedAssignMap, updatedGroundLiterals)
-        }
-      }
-    } else Set()
-  }
+      } else Set()
+    }
 
   def fillPreconMap(preconMap: Map[Predicate, Set[GroundLiteral]], propositions: Set[GroundLiteral]): Map[Predicate, Set[GroundLiteral]] =
     propositions
@@ -274,7 +278,7 @@ case class GroundedPlanningGraph
   def computeAllPossibleSubstitutionCombinations(variables: Seq[Variable]): Seq[Seq[Constant]] = {
     val variablesWithPossibleSubstitutions: Seq[(Variable, Seq[Constant])] = variables map { variable => (variable, variable.sort.elements) }
     def computeSubstitutionCombinations[A](sets: Seq[Seq[A]]): Seq[Seq[A]] = sets match {
-      case Nil => List(Nil)
+      case Nil     => List(Nil)
       case s +: ss => computeSubstitutionCombinations(ss).flatMap(s2 => s.map(_ +: s2))
     }
     computeSubstitutionCombinations(variablesWithPossibleSubstitutions map { case (v, c) => c })
@@ -286,7 +290,7 @@ case class GroundedPlanningGraph
 
   def createNOOP(groundLiteral: GroundLiteral): GroundTask = {
     val parameters: Seq[Variable] = groundLiteral.parameter.zipWithIndex map { case (constant, id) => Variable(id, "no-op",
-      (domain.sorts find { sort => sort.elements contains constant }).get)
+                                                                                                               (domain.sorts find { sort => sort.elements contains constant }).get)
     }
     val literal: Literal = Literal(groundLiteral.predicate, isPositive = true, parameters)
     val task: ReducedTask = ReducedTask("NO-OP[" + groundLiteral.predicate.name + "]",
