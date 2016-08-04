@@ -90,9 +90,9 @@ object Main {
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
 
     println("Panda says: " + results(SearchStatus))
-    printInformationByCategory(results(SearchStatistics).informationMap)
+    println(results(SearchStatistics).shortInfo)
     println("----------------- TIMINGS -----------------")
-    printInformationByCategory(results(ProcessingTimings).timeMap)
+    println(results(ProcessingTimings).shortInfo)
 
 
     if (results(SearchStatus) == SearchState.SOLUTION) {
@@ -123,15 +123,6 @@ object Main {
   }
 
 
-  def printInformationByCategory(information: Map[String, _]): Unit = {
-    (information groupBy { _._1.split(":").head }).toSeq sortBy { _._1 } map { case (g, r) => (g.substring(3), r) } foreach { case (group, inner) =>
-      println("============ " + group + " ============")
-      val reducedNamesWithPrefix = inner map { case (info, value) => info.substring(group.length + 4) -> value } toSeq
-      val reducedNames = reducedNamesWithPrefix.sortBy({ _._1 }) map { case (info, value) => info.substring(3) -> value }
-      val maxLen = reducedNames.map { _._1.length } max
 
-      reducedNames foreach { case (info, value) => printf("%-" + maxLen + "s = %d\n", info, value) }
-    }
-  }
 
 }
