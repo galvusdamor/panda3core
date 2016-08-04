@@ -23,7 +23,7 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.BitS
                   (lastKVariablesAreNew: Int = variableSorts.length) {
   // first propagate then check for consistency
   propagateNewVariablesIfSingleton(lastKVariablesAreNew)
-  assert(isCSPInternallyConsistent())
+  //assert(isCSPInternallyConsistent())
 
   val numberOfVariables = remainingDomains.length
 
