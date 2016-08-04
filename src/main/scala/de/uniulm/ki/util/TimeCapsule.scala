@@ -5,7 +5,7 @@ import scala.collection.mutable
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class TimeCapsule {
+class TimeCapsule extends DataCapsule {
 
   private val currentAccumulatedTime: scala.collection.mutable.Map[String, Long] = new mutable.HashMap[String, Long]().withDefaultValue(0)
 
@@ -33,5 +33,7 @@ class TimeCapsule {
   /**
     * returns an immutable copy of the internally accumulated time
     */
-  def timeMap: Map[String, Long] = currentAccumulatedTime.toMap
+  override def integralDataMap(): Map[String, Long] = currentAccumulatedTime.toMap
+
+  override def floatingDataMap(): Map[String, Double] = integralDataMap() map { case (a, b) => (a, b.toDouble) }
 }

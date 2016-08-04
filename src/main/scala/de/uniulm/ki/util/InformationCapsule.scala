@@ -17,7 +17,7 @@ class Distribution() {
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class InformationCapsule {
+class InformationCapsule extends DataCapsule {
   private val internalInformation            : mutable.Map[String, Int]          = new mutable.HashMap[String, Int]().withDefaultValue(0)
   private val internalInformationDistribution: mutable.Map[String, Distribution] = new mutable.HashMap[String, Distribution]().withDefaultValue(new Distribution())
 
@@ -50,5 +50,8 @@ class InformationCapsule {
   }
 
   // access through immutable datastructures
-  def informationMap: Map[String, Int] = internalInformation.toMap ++ (internalInformationDistribution map { case (a, b) => (a, b.mean().round.toInt) } toMap)
+  override def floatingDataMap(): Map[String, Double] =
+    (internalInformation.toMap map { case (a, b) => (a, b.toDouble) }) ++ (internalInformationDistribution map { case (a, b) => (a, b.mean()) } toMap)
+
+  override def integralDataMap(): Map[String, Long] = floatingDataMap map { case (a, b) => (a, b.round) }
 }

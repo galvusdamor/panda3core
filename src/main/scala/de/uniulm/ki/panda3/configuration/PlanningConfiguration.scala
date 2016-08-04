@@ -161,7 +161,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings => timeCapsule
       case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
-      else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule.informationMap(Information.NUMBER_OF_NODES))
+      else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
         SearchState.UNSOLVABLE
       else SearchState.INSEARCH // TODO account for the case we ran out of time
 
