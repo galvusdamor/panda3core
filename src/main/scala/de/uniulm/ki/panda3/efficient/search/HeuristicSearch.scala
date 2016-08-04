@@ -42,6 +42,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
     val initTime: Long = System.currentTimeMillis()
     var lastReportTime: Long = System.currentTimeMillis()
     var nodes: Int = 0 // count the nodes
+    var recentNodes: Int = 0 // count the nodes
 
     var abort = false
 
@@ -81,16 +82,19 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
 
         //if (nodes % 300 == 0 && nodes > 0) {
         if (lastReportTime + 333 < System.currentTimeMillis()) {
-          lastReportTime = System.currentTimeMillis()
           val nTime = System.currentTimeMillis()
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
-          if (printSearchInfo) println("Plans Expanded: " + nodes + " node/sec " + nps.toInt + " Queue size " + searchQueue.length + " Recently lowest Heuristic " +
-                                         minHeuristicCurrentInterval +
-                                         " Recently highest Heuristic " + maxHeuristicCurrentInterval)
+          val npsRecent = recentNodes.asInstanceOf[Double] / (nTime - lastReportTime) * 1000
+          if (printSearchInfo) println("Plans Expanded: " + nodes + " node/sec avg: " + nps.toInt + " recent: " + npsRecent.toInt + " Queue size " + searchQueue.length + " Recently lowest" +
+                                         " " +
+                                         "Heuristic " + minHeuristicCurrentInterval + " Recently highest Heuristic " + maxHeuristicCurrentInterval)
           minHeuristicCurrentInterval = Double.MaxValue
           maxHeuristicCurrentInterval = -Double.MaxValue
+          lastReportTime = nTime
+          recentNodes = 0
         }
         nodes += 1
+        recentNodes += 1
 
 
         if (flaws.length == 0) {
