@@ -120,7 +120,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
     // New actions whose instantiation was made possible by added propositions and deleted proposition-mutexes of the previous layer.
     val newActions: Set[GroundTask] = computeNewActions(domain, configuration, metaData.firstLayer, metaData.addedPropositions,
-                                                        metaData.deletedPropositionMutexes, updatedPredicateMap, previousLayer._4)
+                                                        metaData.deletedPropositionMutexes, updatedPredicateMap, previousLayer._4) diff previousLayer._1
 
     val (updatedPreBuckets, updatedAddBuckets, updatedDelBuckets) = updateBuckets(metaData.preconditionBuckets, metaData.addBuckets, metaData.deleteBuckets, newActions, configuration)
     val allActions: Set[GroundTask] = previousLayer._1 ++ newActions
@@ -145,7 +145,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     val allPropositions: Set[GroundLiteral] = newPropositions ++ previousLayer._3
 
     val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = configuration.computeMutexes match {
-      case true  => computePropositionMutexes(configuration, newPropositions, previousLayer._3, allPropositions, allActionMutexes, updatedAddBuckets)
+      case true  => computePropositionMutexes(configuration, newPropositions, previousLayer._3, allPropositions, allActionMutexes, updatedAddBuckets, previousLayer._4)
       case false => Set.empty[(GroundLiteral, GroundLiteral)]
     }
 
@@ -270,10 +270,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     */
   private def computePropositionMutexes(configuration: GroundedPlanningGraphConfiguration,
                                         newPropositions: Set[GroundLiteral], oldPropositions: Set[GroundLiteral], allPropositions: Set[GroundLiteral],
-                                        actionMutexes: Set[(GroundTask, GroundTask)], producerMap: Map[GroundLiteral, Set[GroundTask]]): Set[(GroundLiteral, GroundLiteral)] = {
-    /*
-     * TODO: The pair generation can eventually be improved, because not every (old, all) pairs probably needs to be considered for mutexes.
-     */
+                                        actionMutexes: Set[(GroundTask, GroundTask)], producerMap: Map[GroundLiteral, Set[GroundTask]],
+                                        oldPropositionMutexes: Set[(GroundLiteral, GroundLiteral)]): Set[(GroundLiteral, GroundLiteral)] = {
     val sortedNewPropositions: Vector[GroundLiteral] = newPropositions.toVector.sorted
     /*
       * Compute all possible pairs of propositions. First we compute the pairs containing two new propositions. This is accomplished by iteration with two generators.
@@ -285,7 +283,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       */
     val propositionPairs: Set[(GroundLiteral, GroundLiteral)] = (for (x <- 0 until sortedNewPropositions.size - 1; y <- x + 1 until sortedNewPropositions.size) yield
       (sortedNewPropositions(x), sortedNewPropositions(y))) ++
-      (for (x <- oldPropositions; y <- allPropositions if x != y) yield if ((x compare y) < 0) (x, y) else (y, x)) toSet
+      (for (x <- oldPropositions; y <- sortedNewPropositions if x != y) yield if ((x compare y) < 0) (x, y) else (y, x)) ++ oldPropositionMutexes toSet
 
     // Compute all proposition mutexes by checking if all producers of each element of a pair are pairwise mutex or not.
     val propositionMutexes = propositionPairs filter { case (proposition1, proposition2) =>
@@ -321,7 +319,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     val (preconditions, addEffects, deleteEffects) =
       newActions.foldLeft((Set.empty[GroundLiteral], Set.empty[GroundLiteral], Set.empty[GroundLiteral]))(
         { case (tuple, action) =>
-          (tuple._1 ++ action.substitutedPreconditions, tuple._2 ++ action.substitutedAddEffects, tuple._3 ++ (action.substitutedDelEffects map {_.copy(isPositive = true)}))
+          (tuple._1 ++ action.substitutedPreconditions, tuple._2 ++ action.substitutedAddEffects, tuple._3 ++ (action.substitutedDelEffects map { _.copy(isPositive = true) }))
         })
     val interferenceMutexes: Set[(GroundTask, GroundTask)] = ((preconditions ++ addEffects ++ deleteEffects) flatMap { proposition =>
       for (x <- preconditionBuckets(proposition) ++ addBuckets(proposition); y <- deleteBuckets(proposition) if x != y)
@@ -369,16 +367,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
      * The old mutexes can be just added because interference mutexes never disappear.
      */
     val interferenceMutexes = ((newActionsPairs ++ oldNewActionPairs) filter { case (action1, action2) =>
-      (action1.substitutedDelEffects exists { substitutedEffect =>
-        (action2.substitutedAddEffects ++ action2.substitutedPreconditions) exists {
-          _.=!=(substitutedEffect)
-        }
-      }) ||
-        (action2.substitutedDelEffects exists { substitutedEffect =>
-          (action1.substitutedAddEffects ++ action1.substitutedPreconditions) exists {
-            _.=!=(substitutedEffect)
-          }
-        })
+      (action1.substitutedDelEffects exists { substitutedEffect => (action2.substitutedAddEffects ++ action2.substitutedPreconditions) exists { _.=!=(substitutedEffect) } }) ||
+        (action2.substitutedDelEffects exists { substitutedEffect => (action1.substitutedAddEffects ++ action1.substitutedPreconditions) exists { _.=!=(substitutedEffect) } })
     }) ++ oldInterferenceMutexes
     /*
      * Search for competing needs mutexes in pairs containing two new actions or one new and one old action and
@@ -431,9 +421,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     // TODO: I'm not really sure what this is supposed to do?
     val tasksWithLiteralPairs = tasksToConsider flatMap { case (propositions, tasks) => tasks flatMap { task => findLiteralPairs(task, propositions) } }
 
-    val newActions: Set[GroundTask] = tasksWithLiteralPairs flatMap { case (task, literalPairs) => literalPairs flatMap { literalPair =>
-      instantiateActions(task, literalPair :: Nil, configuration.forbiddenGroundedTasks, task.precondition.conjuncts, predicateMap, propositionMutexes)
-    }
+    val newActions: Set[GroundTask] = tasksWithLiteralPairs flatMap { case (task, literalPairs) =>
+      instantiateActions(task, literalPairs, configuration.forbiddenGroundedTasks, task.precondition.conjuncts, predicateMap, propositionMutexes)
     }
 
     // special treatment for tasks without preconditions. the are always applicable in the first action layer
@@ -454,17 +443,21 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     * @param groundLiterals Set of grounded literals that will be paired with the literals.
     * @return Returns a Set of tuple with a lifted task and a number of literal pairs.
     */
-  private def findLiteralPairs(task: ReducedTask, groundLiterals: Set[GroundLiteral]): Set[(ReducedTask, Seq[(GroundLiteral, Literal)])] = {
+  private def findLiteralPairs(task: ReducedTask, groundLiterals: Set[GroundLiteral]): Seq[(ReducedTask, Seq[(GroundLiteral, Literal)])] = {
     val potentialLiterals: Set[(GroundLiteral, Set[Literal])] = groundLiterals map { proposition =>
       (proposition, Set(task.precondition.conjuncts filter { literal => literal.predicate == proposition.predicate }) flatten)
     }
-    val literalPairs: Set[Seq[(GroundLiteral, Literal)]] =
+    // TODO here too
+    /*val literalPairs: Set[Seq[(GroundLiteral, Literal)]] =
       potentialLiterals.foldLeft[Set[Seq[(GroundLiteral, Literal)]]](Set(Nil))(
         { case (setOfPairs, (proposition, literals)) =>
           setOfPairs map { pairs: Seq[(GroundLiteral, Literal)] => pairs ++ (literals map { literal: Literal => (proposition, literal) })
           }
         })
-    literalPairs map { setOfPairs => (task, setOfPairs) }
+    literalPairs map { setOfPairs => (task, setOfPairs) }*/
+
+    potentialLiterals.foldLeft[Seq[(ReducedTask, Seq[(GroundLiteral, Literal)])]](Nil)(
+      { case (old, (groundLiteral, preconditions)) => old ++ (preconditions map { prec => (task, (groundLiteral, prec) :: Nil) }) })
   }
 
   /**

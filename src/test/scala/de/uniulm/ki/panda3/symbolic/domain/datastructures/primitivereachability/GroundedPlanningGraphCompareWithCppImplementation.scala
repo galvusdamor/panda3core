@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 import java.io.FileInputStream
 import java.io.File
 
-import de.uniulm.ki.panda3.symbolic.compiler.{RemoveNegativePreconditions, Grounding, ToPlainFormulaRepresentation, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Domain}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.EverythingIsHiearchicallyReachable
 import de.uniulm.ki.panda3.symbolic.logic.Literal
@@ -63,11 +63,12 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
 
   def runComparisonWithDomain(domainFile: String, problemFile: String, useBuckets : Boolean): Unit = {
 
-    val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
     // we assume that the domain is grounded
+    val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
+    val sortsExpanded = ExpandSortHierarchy.transform(parsedDomainAndProblem, ())
 
     // cwa
-    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, info = true)
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(sortsExpanded, info = true)
     val plain = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
     val negPre = RemoveNegativePreconditions.transform(plain, ())
     val (domain, initialPlan) = Grounding.transform(negPre, EverythingIsHiearchicallyReachable(negPre._1, negPre._2))
