@@ -61,7 +61,7 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     builder.toString()
   }
 
-  def runComparionWithDomain(domainFile: String, problemFile: String): Unit = {
+  def runComparisonWithDomain(domainFile: String, problemFile: String): Unit = {
 
     val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
     // we assume that the domain is grounded
@@ -83,9 +83,9 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     val cppPlanningGraphOutput: Seq[Seq[Int]] = (("cat __probleminput" + runID) #| "./a.out" !!) split "\n" map { _ split " " map { _.toInt } toSeq } toSeq
 
     val groundedInitialState = negPre._2.groundedInitialState filter { _.isPositive }
-    val planningGraph = new GroundedPlanningGraph(negPre._1, groundedInitialState.toSet, true, false, Left(Nil))
+    val planningGraph = new GroundedPlanningGraph(negPre._1, groundedInitialState.toSet, GroundedPlanningGraphConfiguration())
 
-    planningGraph.layerWithMutexes zip cppPlanningGraphOutput foreach { case ((a, b, c, d), cppRes) =>
+    planningGraph.layerWithMutexes.drop(1) zip cppPlanningGraphOutput foreach { case ((a, b, c, d), cppRes) =>
       val newB = (b map { case (a, b) => if (a.task.name != b.task.name) {
         if (a.task.name < b.task.name) (a, b) else (b, a)
       }
@@ -98,7 +98,7 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
       }
       }).toSeq.distinct
       println(a.size + " " + newB.size + " " + c.size + " " + d.size + " vs " + (cppRes mkString " "))
-      // println(a map {_.task.name} mkString " ")
+      //println(b map {case (x,y) => x.task.name + "," + y.task.name} mkString " ")
       val as = a.size
       val bs = newB.size
       val cs = c.size
@@ -120,7 +120,7 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     "The grounded planning graph" must "produce the same result as Gregor's C++ implementation in TC " + problemID in {
       val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest" + problemID + "_domain.hddl"
       val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest" + problemID + "_problem.hddl"
-      runComparionWithDomain(domainFile, problemFile)
+      runComparisonWithDomain(domainFile, problemFile)
     }
   }
 
@@ -130,7 +130,7 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     it must "produce the same result in PEGSOL " + id in {
       val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p" + id + "-domain.pddl"
       val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p" + id + ".pddl"
-      runComparionWithDomain(domFile, probFile)
+      runComparisonWithDomain(domFile, probFile)
     }
   }
 }

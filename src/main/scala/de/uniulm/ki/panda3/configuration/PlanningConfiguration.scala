@@ -4,26 +4,23 @@ import java.io.InputStream
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
-import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.{EfficientGroundedTaskDecompositionGraph, EfficientTDGFromGroundedSymbolic}
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EfficientGroundedPlanningGraphFromSymbolic, EfficientGroundedPlanningGraph}
+import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic._
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
-import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
-import de.uniulm.ki.panda3.{efficient, symbolic}
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
-import de.uniulm.ki.panda3.symbolic.domain.{DomainPropertyAnalyser, Domain}
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability, EverythingIsHiearchicallyReachable,
+import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachable, EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability,
 NaiveGroundedTaskDecompositionGraph}
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraph, EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis,
-LiftedForwardSearchReachabilityAnalysis}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, DomainPropertyAnalyser}
+import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
-import de.uniulm.ki.panda3.symbolic.plan.{PlanDotOptions, Plan}
+import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
-import de.uniulm.ki.util.{TimeCapsule, Dot2PdfCompiler, InformationCapsule}
+import de.uniulm.ki.panda3.{efficient, symbolic}
+import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -123,7 +120,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       if ((searchConfiguration.heuristic contains ADD) || (searchConfiguration.heuristic contains ADDReusing)) {
         // do the whole preparation, i.e. planning graph
         val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
-        val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, computeMutexes = true, isSerial = false)
+        val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, GroundedPlanningGraphConfiguration())
         analysisMap = analysisMap +(EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic(symbolicPlanningGraph, wrapper))
       }
       timeCapsule stop HEURISTICS_PREPARATION
@@ -268,7 +265,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   private def runGroundedPlanningGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
     val groundedInitialState = problem.groundedInitialState filter { _.isPositive }
-    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, computeMutexes = true, isSerial = false, Left(Nil))
+    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet,GroundedPlanningGraphConfiguration())
     // add analysis to map
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }

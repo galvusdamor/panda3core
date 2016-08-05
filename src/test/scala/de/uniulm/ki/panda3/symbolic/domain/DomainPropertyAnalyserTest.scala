@@ -4,7 +4,7 @@ import java.io.FileInputStream
 
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.GroundedPlanningGraph
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraphConfiguration, GroundedPlanningGraph}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import org.scalatest.FlatSpec
 
@@ -24,7 +24,7 @@ class DomainPropertyAnalyserTest extends FlatSpec {
     val (domain, plan) = RemoveNegativePreconditions(plainFormula, ())
 
     val initialState = plan.groundedInitialStateOnlyPositive
-    val planningGraph = GroundedPlanningGraph(domain, initialState, computeMutexes = true, isSerial = true)
+    val planningGraph = GroundedPlanningGraph(domain, initialState toSet, GroundedPlanningGraphConfiguration(isSerial = true))
     val tdg = NaiveGroundedTaskDecompositionGraph(domain, plan, planningGraph, prunePrimitive = true)
 
     DomainPropertyAnalyser(domain, tdg)
