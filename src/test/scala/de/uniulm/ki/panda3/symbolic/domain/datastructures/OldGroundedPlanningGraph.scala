@@ -16,14 +16,19 @@ case class OldGroundedPlanningGraph(domain: Domain, initialState: Set[GroundLite
 
   lazy          val graphSize: Int                                        = layerWithMutexes.size
   // This function should compute the actual planning graph
-  override lazy val layer    : Seq[(Set[GroundTask], Set[GroundLiteral])] = layerWithMutexes map { case (groundTasks, groundTaskMutexes, groundLiterals, groundLiteralMutexes) =>
-    (groundTasks filterNot {
-      _.task.name.startsWith("NO-OP")
-    }, groundLiterals)
+  override lazy val layer    : Seq[(Set[GroundTask], Set[GroundLiteral])] = {
+    val computedLayer = layerWithMutexes map { case (groundTasks, groundTaskMutexes, groundLiterals, groundLiteralMutexes) =>
+      (groundTasks filterNot {
+        _.task.name.startsWith("NO-OP")
+      }, groundLiterals)
+    }
+    // check assertions only when computing the layers
+    computedLayer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
+    computedLayer foreach { case (_, b) => assert(initialState forall b.contains) }
+
+    computedLayer
   }
 
-  layer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
-  layer foreach { case (_, b) => assert(initialState forall b.contains) }
 
   lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] =
     buildGraph(Seq.empty[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])],

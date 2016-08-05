@@ -264,8 +264,8 @@ class GroundedPlanningGraphTest extends FlatSpec {
         //println("\n\n\n\nSTATE")
         //println(pgState map {literal => literal.predicate.name + (literal.parameter map { _.name }).mkString("(", ",", ")")} mkString "\n")
 
-        println("\n\n\n\nDifferentActions")
-        println(fActions diff pgActions map { g => g.task.name + (g.arguments map { _.name }).mkString("(", ",", ")") } mkString "\n")
+        //println("\n\n\n\nDifferentActions")
+        //println(fActions diff pgActions map { g => g.task.name + (g.arguments map { _.name }).mkString("(", ",", ")") } mkString "\n")
 
         assert(fActionCount == pgActionCount)
         assert(fStateCount == pgStateCount)
