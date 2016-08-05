@@ -324,9 +324,6 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
           (tuple._1 ++ action.substitutedPreconditions, tuple._2 ++ action.substitutedAddEffects, tuple._3 ++ (action.substitutedDelEffects map {_.copy(isPositive = true)}))
         })
     val interferenceMutexes: Set[(GroundTask, GroundTask)] = ((preconditions ++ addEffects ++ deleteEffects) flatMap { proposition =>
-      println("PREPO " + proposition)
-      println("X " + (preconditionBuckets(proposition) ++ addBuckets(proposition)))
-      println("Y " + deleteBuckets(proposition))
       for (x <- preconditionBuckets(proposition) ++ addBuckets(proposition); y <- deleteBuckets(proposition) if x != y)
         yield if ((x compare y) < 0) (x, y) else (y, x)
     }) ++ oldInterferenceMutexes
@@ -502,7 +499,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     val updatedDelBucket = configuration.buckets match {
       case true  => newActions.foldLeft(deleteBuckets) { case (pMap, action) =>
         action.substitutedDelEffects.foldLeft(pMap) { case (pMap2, proposition) => pMap2 + (proposition.copy(isPositive = true) ->
-          (pMap2.getOrElse(proposition, Set.empty[GroundTask]) + action))
+          (pMap2.getOrElse(proposition.copy(isPositive = true), Set.empty[GroundTask]) + action))
                                                     }
                                                        }
       case false => Map.empty[GroundLiteral, Set[GroundTask]]
