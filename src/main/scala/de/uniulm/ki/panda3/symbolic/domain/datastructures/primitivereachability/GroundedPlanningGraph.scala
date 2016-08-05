@@ -383,8 +383,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
   def computeSerialMutexes(newActions: Set[GroundTask], allActions: Set[GroundTask]): Set[(GroundTask, GroundTask)] = {
     val filteredNewActions = (newActions filterNot { action => action.task.name.startsWith("NO-OP") }).toVector.sorted
     val filteredAllActions = allActions filterNot { action => action.task.name.startsWith("NO-OP") }
-    ((for (x <- 0 until filteredNewActions.size - 1; y <- x until filteredNewActions.size) yield (filteredNewActions(x), filteredNewActions(y))) ++
-      (for (x <- filteredNewActions; y <- filteredAllActions) yield if ((x compare y) < 0 && x != y) (x, y) else (y, x))) toSet
+    ((for (x <- 0 until filteredNewActions.size - 1; y <- x + 1 until filteredNewActions.size) yield (filteredNewActions(x), filteredNewActions(y))) ++
+      (for (x <- filteredNewActions; y <- filteredAllActions if x != y) yield if ((x compare y) < 0 && x != y) (x, y) else (y, x))) toSet
   }
 
   /**
@@ -404,7 +404,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
                                 propositionMutexes: Set[(GroundLiteral, GroundLiteral)]): Set[GroundTask] = {
 
     /*
-     * Find all tasks that could be up for instantiation because either atleast one of their preconditions were added in the previous layer or
+     * Find all tasks that could be up for instantiation because either at least one of their preconditions were added in the previous layer or
      * two of its preconditions were contained in a now deleted mutex.
      */
     val tasksFromAddedPropositions: Set[(Set[GroundLiteral], Seq[ReducedTask])] = addedPropositions map { proposition => (Set(proposition), domain.consumersOf(proposition.predicate)) }
