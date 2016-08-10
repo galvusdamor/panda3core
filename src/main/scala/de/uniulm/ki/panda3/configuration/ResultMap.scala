@@ -32,6 +32,8 @@ object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain,P
 
 
 object Timings {
+  val TOTAL_TIME = "00 total:00:total"
+
   val PARSING                = "01 parsing:00:total"
   val FILEPARSER             = "01 parsing:01:file parser"
   val PARSER_SORT_EXPANSION  = "01 parsing:02:sort expansion"

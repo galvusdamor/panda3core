@@ -105,7 +105,7 @@ object Main {
                                                                         liftedReachability = true, groundedReachability = false, planningGraph = true,
                                                                         naiveGroundedTaskDecompositionGraph = true,
                                                                         iterateReachabilityAnalysis = true, groundDomain = true),
-                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
+                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumADD), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
                                              //SearchConfiguration(Some(500000), None, efficientSearch = true, BFSType, None, printSearchInfo = true),

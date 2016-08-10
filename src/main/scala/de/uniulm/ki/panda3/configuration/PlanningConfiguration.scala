@@ -50,6 +50,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     */
   def runSearchHandle(domain: InputStream, problem: InputStream, releaseSemaphoreEvery: Option[Int], timeCapsule: TimeCapsule = new TimeCapsule()):
   (Domain, SearchNode, Semaphore, AbortFunction, InformationCapsule, Unit => ResultMap) = {
+    timeCapsule startOrLetRun TOTAL_TIME
     val parsedDomainAndProblem = runParsing(domain, problem, timeCapsule)
     runSearchHandle(parsedDomainAndProblem._1._1, parsedDomainAndProblem._1._2, releaseSemaphoreEvery, parsedDomainAndProblem._2)
   }
@@ -59,6 +60,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     */
   def runSearchHandle(domain: Domain, problem: Plan, releaseSemaphoreEvery: Option[Int], timeCapsule: TimeCapsule):
   (Domain, SearchNode, Semaphore, AbortFunction, InformationCapsule, Unit => ResultMap) = {
+    timeCapsule startOrLetRun TOTAL_TIME
     // run the preprocessing step
     val (domainAndPlanFullyParsed, _) = runParsingPostProcessing(domain, problem, timeCapsule)
     val ((domainAndPlan, preprocessedAnalysisMap), _) = runPreprocessing(domainAndPlanFullyParsed._1, domainAndPlanFullyParsed._2, timeCapsule)
@@ -111,6 +113,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(())
+        timeCapsule stop TOTAL_TIME
         runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan)
       })
     } else {
@@ -198,6 +201,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val wrappedSearchTreeRoot = wrapper.wrap(searchTreeRoot)
       (domainAndPlan._1, wrappedSearchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(()) map { wrapper.wrap }
+        timeCapsule stop TOTAL_TIME
         runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan)
       })
     }
