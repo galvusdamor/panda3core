@@ -1,0 +1,26 @@
+(define
+ (problem pfile_06_005)
+ (:domain blocks)
+ (:objects arm1 arm2 arm3 arm4 arm5 arm6 - ARM
+           b1 b2 b3 b4 b5 - BLOCK)
+ (:init
+  (hand-empty arm1)
+  (hand-empty arm2)
+  (hand-empty arm3)
+  (hand-empty arm4)
+  (hand-empty arm5)
+  (hand-empty arm6)
+  (clear b2)
+  (on-table b4)
+  (on b2 b1)
+  (on b1 b3)
+  (on b3 b5)
+  (on b5 b4))
+ (:goal (and
+         (clear b1)
+         (on-table b5)
+         (on b1 b5)
+         (clear b2)
+         (on-table b4)
+         (on b2 b3)
+         (on b3 b4))))
