@@ -25,7 +25,7 @@ object PrintPlanningGraph {
     val groundedInitialState = initialPlan.groundedInitialState filter {
       _.isPositive
     }
-    val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, true, false, Left(Nil))
+    val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, GroundedPlanningGraphConfiguration())
     println("LAYER " + planningGraph.layerWithMutexes.length)
 
     planningGraph.layerWithMutexes foreach { case (a, b, c, d) =>

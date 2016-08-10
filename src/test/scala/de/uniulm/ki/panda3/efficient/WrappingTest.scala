@@ -57,7 +57,7 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     efficientDomainExample4.predicates foreach { arr => assert(arr.length == 1); assert(arr(0) == 0) }
 
 
-    assert(efficientDomainExample4.tasks.length == 11)
+    assert(efficientDomainExample4.tasks.length == 13)
     val expectedTasks: Seq[Task] = (exampleDomain2.tasks :+ initTaskOfPlanOfDecompositionMethod3 :+ goalTaskOfPlanOfDecompositionMethod3) ++ (plan2WithTwoLinks.initAndGoal map { _.schema })
     expectedTasks map { t => (t, wrapperExample4.unwrap(t)) } foreach { case (t, i) =>
       val efficientTask = efficientDomainExample4.tasks(i)

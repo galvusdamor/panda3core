@@ -12,3 +12,4 @@
 /doc/*.log
 *.class
 *.pdf
+*.iml

@@ -53,10 +53,11 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
   else (this.parameterVariables zip that.parameterVariables) collect { case (v1, v2) if csp.getRepresentative(v1) != csp.getRepresentative(v2) => NotEqual(v1, v2) }
 
   override def update(domainUpdate: DomainUpdate): Literal = domainUpdate match {
-    case ExchangeLiteralsByPredicate(exchangeMap, _) =>
+    case ExchangeLiteralsByPredicate(exchangeMap, _) if exchangeMap contains predicate =>
       val newPredicate = if (isPositive) exchangeMap(predicate)._1 else exchangeMap(predicate)._2
       Literal(newPredicate, true, parameterVariables)
-    case _                                           => Literal(predicate.update(domainUpdate), isPositive, parameterVariables map { _.update(domainUpdate) })
+    case _                                                                             => Literal(predicate.update(domainUpdate), isPositive,
+                                                                                                  parameterVariables map { _.update(domainUpdate) })
   }
 
   /** returns a short information about the object */
@@ -75,7 +76,7 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 
 case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo with Ordered[GroundLiteral] {
   assert(predicate.argumentSorts.length == parameter.length)
-  predicate.argumentSorts zip parameter foreach { case (s, p) => assert(s.elements contains p) }
+  predicate.argumentSorts.zipWithIndex zip parameter foreach { case ((s,i), p) => assert(s.elements contains p, "Predicate " + predicate.name + " argument " + i + " value " + p.name) }
 
   lazy val negate = copy(isPositive = !isPositive)
 
@@ -101,7 +102,7 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
   override def compare(that: GroundLiteral): Int = {
     this.predicate compare that.predicate match {
       case 0 => this.isPositive compare that.isPositive match {
-        case 0 => ((this.parameter zip that.parameter) map { case (x,y) => x compare y}) find ((i: Int) => i!= 0) getOrElse 0
+        case 0 => ((this.parameter zip that.parameter) map { case (x, y) => x compare y }) find ((i: Int) => i != 0) getOrElse 0
         case _ => this.isPositive compare that.isPositive
       }
       case _ => this.predicate compare that.predicate

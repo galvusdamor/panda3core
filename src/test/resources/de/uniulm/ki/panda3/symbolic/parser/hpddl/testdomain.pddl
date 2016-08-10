@@ -36,6 +36,9 @@
     :constraints (and
       (not (= ?l1 ?l2))
       (= ?v ?l2))
+    :causal-links (and
+      (t1 (at ?v ?l2) t2)
+    )
   )
 
   (:action drive ; This is a comment!

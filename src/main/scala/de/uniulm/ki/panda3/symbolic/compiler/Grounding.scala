@@ -36,7 +36,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
 
     // ----- Tasks
     def groundTaskToGroundedTask(groundTask: GroundTask): Task = groundTask match {
-      case g@GroundTask(ReducedTask(name, isPrimitive, _, _, _, _), constants) =>
+      case g@GroundTask(ReducedTask(name, isPrimitive, _, _,_, _, _), constants) =>
         val newTaskName = name + ((constants map { _.name }) mkString("[", ",", "]"))
         // ground precondition and effect
         val preconditionLiterals = g.substitutedPreconditions map {
@@ -48,7 +48,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
         }
 
         // TODO: here we assume that the grounding we get always fulfills the parameter constraints ... we have to assert this at some point
-        ReducedTask(newTaskName, isPrimitive, Nil, Nil, And(preconditionLiterals), And(effectLiterals))
+        ReducedTask(newTaskName, isPrimitive, Nil, Nil,Nil, And(preconditionLiterals), And(effectLiterals))
       case _                                                                   => noSupport(FORUMLASNOTSUPPORTED)
     }
 
@@ -66,8 +66,9 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
       }
       (t, taskMap)
     }
+    val additionalHiddenTasks = reachabilityAnalysis.additionalMethodsNeededToGround flatMap  {_.decompositionMethod.subPlan.initAndGoal} map {_.schema} distinct
     val allGroundedTasks = groundedTasks flatMap { _._2.values } collect {
-      case (task, groundTask) if !(domain.hiddenTasks contains groundTask.task) && !(initAndGoalInitialTask contains groundTask) => task
+      case (task, groundTask) if !((domain.hiddenTasks ++ additionalHiddenTasks) contains groundTask.task) && !(initAndGoalInitialTask contains groundTask) => task
     }
 
 
@@ -76,7 +77,10 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
 
     def groundPlan(plan: Plan, mapVariable: Variable => Constant): Plan = {
       // check whether it is possible to ground the method
-      plan.planSteps foreach { ps => assert(groundedTasks(ps.schema) contains (ps.arguments map mapVariable)) }
+      plan.planSteps foreach { ps =>
+        if (!(groundedTasks(ps.schema) contains (ps.arguments map mapVariable)))
+          println("PFUI")
+        assert(groundedTasks(ps.schema) contains (ps.arguments map mapVariable)) }
 
       // create the inner plan
       val groundedPlanStepMapping = (plan.planSteps map { ps => (ps, groundPS(ps, mapVariable)) }).toMap
@@ -115,8 +119,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
     val initialPlan = if (reachabilityAnalysis.additionalMethodsNeededToGround.isEmpty) {
       groundPlan(plan, alreadyGroundedVariableMapping)
     } else {
-      assert(reachabilityAnalysis.additionalMethodsNeededToGround.size == 1)
-      // ground the plan containing the inital abstract task
+      // ground the plan containing the initial abstract task
       val topTask = reachabilityAnalysis.additionalMethodsNeededToGround.head.groundAbstractTask.task
       val topPS = PlanStep(2, topTask, topTask.parameters)
       val planSteps: Seq[PlanStep] = plan.init :: plan.goal :: topPS :: Nil

@@ -15,12 +15,12 @@ trait HasExampleDomain1 {
   // predicates
   val predicate1    : Predicate   = Predicate("predicate1", sort1 :: Nil)
   // tasks
-  val task1         : ReducedTask = ReducedTask("task1", isPrimitive = true, variableSort1(2) :: Nil, Nil,
+  val task1         : ReducedTask = ReducedTask("task1", isPrimitive = true, variableSort1(2) :: Nil, Nil,Nil,
                                                 precondition = And[Literal](Literal(predicate1, isPositive = false, variableSort1(2) :: Nil) :: Nil),
                                                 effect = And[Literal](Literal(predicate1, isPositive = true, variableSort1(2) :: Nil) :: Nil))
-  val init          : ReducedTask = ReducedTask("init", isPrimitive = true, variableSort1(3) :: Nil, Nil, precondition = And[Literal](Nil),
+  val init          : ReducedTask = ReducedTask("init", isPrimitive = true, variableSort1(3) :: Nil, Nil, Nil,precondition = And[Literal](Nil),
                                                 effect = And[Literal](Literal(predicate1, isPositive = false, variableSort1(3) :: Nil) :: Nil))
-  val goal1         : ReducedTask = ReducedTask("goal", isPrimitive = true, variableSort1(4) :: Nil, Nil,
+  val goal1         : ReducedTask = ReducedTask("goal", isPrimitive = true, variableSort1(4) :: Nil, Nil,Nil,
                                                 precondition = And[Literal](Literal(predicate1, isPositive = true, variableSort1(4) :: Nil) :: Nil), effect = And[Literal](Nil))
   ////////////////////////////
   // the actual domain

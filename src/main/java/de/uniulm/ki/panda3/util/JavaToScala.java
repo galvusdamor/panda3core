@@ -1,10 +1,12 @@
 package de.uniulm.ki.panda3.util;
 
+import de.uniulm.ki.panda3.symbolic.logic.Constant;
+import de.uniulm.ki.panda3.symbolic.logic.Variable;
+import scala.Tuple2;
 import scala.collection.JavaConversions;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
-import scala.collection.mutable.Buffer;
-import scala.collection.mutable.WrappedArray;
+import scala.collection.immutable.Set;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +15,24 @@ import java.util.List;
  * Created by dhoeller on 22.04.15.
  */
 public class JavaToScala {
+
+
+    public static scala.collection.immutable.Map<Variable, Constant> toScalaMap(List<Tuple2> varConstMapping) {
+        scala.collection.immutable.Map<Variable, Constant> set = new scala.collection.immutable.HashMap<>();
+        for (Tuple2 b : varConstMapping) {
+            set = set.$plus(new Tuple2<>((Variable) b._1(), (Constant) b._2()));
+        }
+        return set;
+    }
+
+    public static <T> Set<T> toScalaSet(List<T> l) {
+        scala.collection.immutable.HashSet<T> s = new scala.collection.immutable.HashSet<>();
+        for (T t : l) {
+            s = s.$plus(t);
+        }
+        return s;
+    }
+
     public static <T> Seq<T> toScalaSeq(List<T> javaList) {
         return JavaConversions.asScalaBuffer(javaList);
 
@@ -47,7 +67,7 @@ public class JavaToScala {
     }
 
     public static <K, V> scala.collection.immutable.Map<K, V> toScalaMap(java.util.Map<K, V> javaMap) {
-        return JavaConverters.mapAsScalaMapConverter(javaMap).asScala().toMap( scala.Predef$.MODULE$.<scala.Tuple2<K, V>>conforms());
+        return JavaConverters.mapAsScalaMapConverter(javaMap).asScala().toMap(scala.Predef$.MODULE$.<scala.Tuple2<K, V>>conforms());
     }
 
     public static <T> ArrayList<T> concatJavaLists(List<T> javaList1, List<T> javaList2) {

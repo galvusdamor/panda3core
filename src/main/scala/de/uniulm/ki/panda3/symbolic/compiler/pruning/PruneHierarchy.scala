@@ -36,7 +36,12 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
       if (withoutAbstractTasks._1 == curDomain) curDomain else propagateInHierarchy(withoutAbstractTasks._1)
     }
 
-    (propagateInHierarchy(initialPruning._1), plan)
+    val propagated = propagateInHierarchy(initialPruning._1)
+
+    // all abstract tasks should have at least one method
+    assert(propagated.abstractTasks forall { at => propagated.decompositionMethods exists { _.abstractTask == at } })
+
+    (propagated, plan)
   }
 }
 

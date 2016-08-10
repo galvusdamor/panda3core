@@ -147,14 +147,9 @@ class DecomposePlanStepTest extends FlatSpec with HasExampleProblem3 with HasExa
       })
   }
 
-  it must "be found if none is possible" in {
-    val possibleDecompositions = DecomposePlanStep(plan2WithTwoLinks, psAbstract2, decompositionMethodEpsilon)
-
-    assert(possibleDecompositions.isEmpty)
-  }
 
   "Epsilon methods" must "be handled correctly" in {
-    val possibleDecompositions = DecomposePlanStep(plan2WithoutLink, psAbstract2, decompositionMethodEpsilon)
+    val possibleDecompositions = DecomposePlanStep(plan2WithoutLinkAndEpsilonTask, psAbstract3, decompositionMethodEpsilon)
 
     assert(possibleDecompositions.size == 1)
 

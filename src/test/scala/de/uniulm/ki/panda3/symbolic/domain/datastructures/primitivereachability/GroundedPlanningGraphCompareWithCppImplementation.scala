@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 import java.io.FileInputStream
 import java.io.File
 
-import de.uniulm.ki.panda3.symbolic.compiler.{RemoveNegativePreconditions, Grounding, ToPlainFormulaRepresentation, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Domain}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.EverythingIsHiearchicallyReachable
 import de.uniulm.ki.panda3.symbolic.logic.Literal
@@ -42,7 +42,7 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     builder.append("\n")
 
     // actions
-    domain.tasks foreach { case ReducedTask(name, true, Nil, _, precondition, effect) =>
+    domain.tasks foreach { case ReducedTask(name, true, Nil, _, _, precondition, effect) =>
       builder.append(name.replace(',', '!') + ";")
 
       // precon
@@ -61,13 +61,14 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     builder.toString()
   }
 
-  def runComparionWithDomain(domainFile: String, problemFile: String): Unit = {
+  def runComparisonWithDomain(domainFile: String, problemFile: String, useBuckets : Boolean): Unit = {
 
-    val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
     // we assume that the domain is grounded
+    val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
+    val sortsExpanded = ExpandSortHierarchy.transform(parsedDomainAndProblem, ())
 
     // cwa
-    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, info = true)
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(sortsExpanded, info = true)
     val plain = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
     val negPre = RemoveNegativePreconditions.transform(plain, ())
     val (domain, initialPlan) = Grounding.transform(negPre, EverythingIsHiearchicallyReachable(negPre._1, negPre._2))
@@ -83,9 +84,9 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     val cppPlanningGraphOutput: Seq[Seq[Int]] = (("cat __probleminput" + runID) #| "./a.out" !!) split "\n" map { _ split " " map { _.toInt } toSeq } toSeq
 
     val groundedInitialState = negPre._2.groundedInitialState filter { _.isPositive }
-    val planningGraph = new GroundedPlanningGraph(negPre._1, groundedInitialState.toSet, true, false, Left(Nil))
+    val planningGraph = new GroundedPlanningGraph(negPre._1, groundedInitialState.toSet, GroundedPlanningGraphConfiguration(buckets = useBuckets))
 
-    planningGraph.layerWithMutexes zip cppPlanningGraphOutput foreach { case ((a, b, c, d), cppRes) =>
+    planningGraph.layerWithMutexes.drop(1) zip cppPlanningGraphOutput foreach { case ((a, b, c, d), cppRes) =>
       val newB = (b map { case (a, b) => if (a.task.name != b.task.name) {
         if (a.task.name < b.task.name) (a, b) else (b, a)
       }
@@ -98,7 +99,9 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
       }
       }).toSeq.distinct
       println(a.size + " " + newB.size + " " + c.size + " " + d.size + " vs " + (cppRes mkString " "))
-      // println(a map {_.task.name} mkString " ")
+      println(a map {x => x.task.name + (x.arguments map { _.name }).mkString("(", ",", ")")} mkString "\n")
+      println(newB.toSeq map {case (x,y) => x.task.name + (x.arguments map { _.name }).mkString("(", ",", ")") + "," + y.task.name + (y.arguments map { _.name }).mkString("(", ",", ")")}
+                mkString "\n")
       val as = a.size
       val bs = newB.size
       val cs = c.size
@@ -114,23 +117,26 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     "rm __probleminput" + runID + " a.out" !!
   }
 
-  //
-  "01" :: "02" :: "03" :: "04" :: "05" :: "06" :: Nil foreach { problemID =>
-    //"03" :: Nil foreach { problemID =>
-    "The grounded planning graph" must "produce the same result as Gregor's C++ implementation in TC " + problemID in {
-      val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest" + problemID + "_domain.hddl"
-      val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest" + problemID + "_problem.hddl"
-      runComparionWithDomain(domainFile, problemFile)
-    }
-  }
+  false :: true :: Nil foreach { useBuckets =>
 
-  // doing all 4 tests takes a very long time (~ 30 min, but they worked just after commit d99e80690007695f282e007dbde21e27384b491f)
-  //"01" :: "02" :: "03" :: "04" :: Nil foreach { id =>
-  "01" :: Nil foreach { id =>
-    it must "produce the same result in PEGSOL " + id in {
-      val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p" + id + "-domain.pddl"
-      val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p" + id + ".pddl"
-      runComparionWithDomain(domFile, probFile)
+    //
+    "01" :: "02" :: "03" :: "04" :: "05" :: "06" :: Nil foreach { problemID =>
+      //"03" :: Nil foreach { problemID =>
+      "The grounded planning graph" + (if (useBuckets) " with buckets") must "produce the same result as Gregor's C++ implementation in TC " + problemID in {
+        val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest" + problemID + "_domain.hddl"
+        val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest" + problemID + "_problem.hddl"
+        runComparisonWithDomain(domainFile, problemFile, useBuckets)
+      }
+    }
+
+    // doing all 4 tests takes a very long time (~ 30 min, but they worked just after commit d99e80690007695f282e007dbde21e27384b491f)
+    //"01" :: "02" :: "03" :: "04" :: Nil foreach { id =>
+    "01" :: Nil foreach { id =>
+      it must "produce the same result in PEGSOL " + id in {
+        val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p" + id + "-domain.pddl"
+        val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p" + id + ".pddl"
+        runComparisonWithDomain(domFile, probFile, useBuckets)
+      }
     }
   }
 }

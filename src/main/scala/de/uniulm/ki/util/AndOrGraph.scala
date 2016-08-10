@@ -57,6 +57,8 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraph[T] {
     }
     mini(root, evaluate)
   }
+
+  override def reachableFrom(node: T): Set[T] = super.reachableFrom(node)
 }
 
 

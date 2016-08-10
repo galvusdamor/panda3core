@@ -31,6 +31,10 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   // sanity check for the sorts
   sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
+  decompositionMethods foreach { dm =>
+    assert(tasks contains dm.abstractTask)
+    dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task => assert(tasks contains task) }
+  }
 
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph        = TaskSchemaTransitionGraph(this)

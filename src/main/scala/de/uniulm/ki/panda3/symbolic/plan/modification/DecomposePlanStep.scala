@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.plan.modification
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.{SimpleDecompositionMethod, DecompositionMethod, Domain}
-import de.uniulm.ki.panda3.symbolic.logic.Variable
+import de.uniulm.ki.panda3.symbolic.logic.{Constant, Variable}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 
@@ -56,7 +56,7 @@ object DecomposePlanStep {
     apply(plan, decomposedPS, method.asInstanceOf[SimpleDecompositionMethod])
   }
 
-  def apply(currentPlan: Plan, decomposedPS: PlanStep, method: SimpleDecompositionMethod): Seq[DecomposePlanStep] =
+  def apply(currentPlan: Plan, decomposedPS: PlanStep, method: SimpleDecompositionMethod, givenVariableBinding: Map[Variable, Constant] = Map()): Seq[DecomposePlanStep] =
     if (decomposedPS.schema != method.abstractTask) Nil
     else {
       // create a new instance of the just decomposed planstep
@@ -68,11 +68,15 @@ object DecomposePlanStep {
       val decomposedAbstractTasksParameterSubstitution = PartialSubstitution(method.abstractTask.parameters, decomposedPS.arguments)
 
       // copy the plan to get new variable and plan step ids
-      val (copiedPlan, _, planStepMapping) = method.subPlan.newInstance(firstFreePlanStepID, firstFreeVariableID, decomposedAbstractTasksParameterSubstitution, nonPresentDecomposedPS)
+      val (copiedPlan, subPlanVariableSubstitution, planStepMapping) = method.subPlan.newInstance(firstFreePlanStepID, firstFreeVariableID, decomposedAbstractTasksParameterSubstitution,
+                                                                                                  nonPresentDecomposedPS)
+
+      // instantiate given VariableBinding
+      val constraintsForGivenBinding = givenVariableBinding map { case (v, c) => Equal(subPlanVariableSubstitution(v), c) } toSeq
 
       // compute the first version of the CSP of the new plan
       val joinedCSP: CSP = currentPlan.variableConstraints.addVariables((copiedPlan.variableConstraints.variables -- decomposedPS.arguments).toSeq)
-        .addConstraints(copiedPlan.variableConstraints.constraints)
+        .addConstraints(copiedPlan.variableConstraints.constraints).addConstraints(constraintsForGivenBinding)
 
       // the joinedCSP does not take constraints into account which are imposed by the parameter types of the plans tasks
       if (joinedCSP.isSolvable.contains(false) || method.subPlan.variableConstraints.isSolvable.contains(false)) Nil

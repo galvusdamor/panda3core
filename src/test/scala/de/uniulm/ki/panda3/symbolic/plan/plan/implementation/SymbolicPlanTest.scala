@@ -19,8 +19,8 @@ class SymbolicPlanTest extends FlatSpec {
 
   val sort1     : Sort      = Sort("sort1", Vector() :+ Constant("a") :+ Constant("b"), Nil)
   val predicate1: Predicate = Predicate("predicate1", sort1 :: sort1 :: Nil)
-  val psInit                = PlanStep(0, ReducedTask("init", true, Nil, Nil, And(Nil), And(Nil)), Nil)
-  val psGoal                = PlanStep(1, ReducedTask("goal", true, Nil, Nil, And(Nil), And(Nil)), Nil)
+  val psInit                = PlanStep(0, ReducedTask("init", true, Nil, Nil, Nil, And(Nil), And(Nil)), Nil)
+  val psGoal                = PlanStep(1, ReducedTask("goal", true, Nil, Nil, Nil, And(Nil), And(Nil)), Nil)
 
 
   val d_v1 = Variable(1, "d_v1", sort1)
@@ -36,11 +36,11 @@ class SymbolicPlanTest extends FlatSpec {
   val p_v4 = Variable(6, "p_v2", sort1)
 
 
-  val schemaProd : ReducedTask = ReducedTask("task_prod", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, And[Literal](Nil), And[Literal](Literal(predicate1, isPositive = true, d_v1 :: d_v2 ::
+  val schemaProd : ReducedTask = ReducedTask("task_prod", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, Nil, And[Literal](Nil), And[Literal](Literal(predicate1, isPositive = true, d_v1 :: d_v2 ::
     Nil) :: Nil))
-  val schemaCons : ReducedTask = ReducedTask("task_cons", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, And[Literal](Literal(predicate1, isPositive = true, d_v1 :: d_v2 :: Nil) :: Nil),
+  val schemaCons : ReducedTask = ReducedTask("task_cons", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, Nil, And[Literal](Literal(predicate1, isPositive = true, d_v1 :: d_v2 :: Nil) :: Nil),
                                              And[Literal](Nil))
-  val schemaDestr: ReducedTask = ReducedTask("task_destr", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, And[Literal](Nil),
+  val schemaDestr: ReducedTask = ReducedTask("task_destr", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, Nil, And[Literal](Nil),
                                              And[Literal](Literal(predicate1, isPositive = false, d_v1 :: d_v2 :: Nil) ::
                                                             Nil))
 

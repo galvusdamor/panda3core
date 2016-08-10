@@ -4,26 +4,23 @@ import java.io.InputStream
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
-import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.{EfficientGroundedTaskDecompositionGraph, EfficientTDGFromGroundedSymbolic}
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EfficientGroundedPlanningGraphFromSymbolic, EfficientGroundedPlanningGraph}
+import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic._
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
-import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
-import de.uniulm.ki.panda3.{efficient, symbolic}
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
-import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability, EverythingIsHiearchicallyReachable,
+import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachable, EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability,
 NaiveGroundedTaskDecompositionGraph}
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraph, EverythingIsReachable, GroundedForwardSearchReachabilityAnalysis,
-LiftedForwardSearchReachabilityAnalysis}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, DomainPropertyAnalyser}
+import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
-import de.uniulm.ki.panda3.symbolic.plan.{PlanDotOptions, Plan}
+import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
-import de.uniulm.ki.util.{TimeCapsule, Dot2PdfCompiler, InformationCapsule}
+import de.uniulm.ki.panda3.{efficient, symbolic}
+import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -69,6 +66,19 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // !!!! ATTENTION we use side effects for the sake of simplicity
     var analysisMap = preprocessedAnalysisMap
 
+    // if the map contains a tdg we will print the domain analysis statistic
+    if (analysisMap contains SymbolicGroundedTaskDecompositionGraph) {
+      val tdg = analysisMap(SymbolicGroundedTaskDecompositionGraph)
+      val domainStructureAnalysis = DomainPropertyAnalyser(domainAndPlan._1, tdg)
+
+      extra("Domain is acyclic: " + domainStructureAnalysis.isAcyclic + "\n")
+      extra("Domain is mostly acyclic: " + domainStructureAnalysis.isMostlyAcyclic + "\n")
+      extra("Domain is regular: " + domainStructureAnalysis.isRegular + "\n")
+      extra("Domain is tail recursive: " + domainStructureAnalysis.isTailRecursive + "\n")
+
+    }
+
+
     // some heuristics need additional preprocessing, e.g. to build datastructures they need
     timeCapsule start HEURISTICS_PREPARATION
     // TDG based heuristics need the TDG
@@ -86,11 +96,17 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // now we have to decide which representation to use for the search
     if (!searchConfiguration.efficientSearch) {
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
-        case DFSType => symbolic.search.DFS.startSearch(domainAndPlan._1, domainAndPlan._2, searchConfiguration.nodeLimit, searchConfiguration.timeLimit,
-                                                        releaseSemaphoreEvery, searchConfiguration.printSearchInfo,
-                                                        postprocessingConfiguration.resultsToProduce contains SearchSpace,
-                                                        informationCapsule, timeCapsule)
-        case _       => throw new UnsupportedOperationException("Any other symbolic search algorithm besides DFS is not supported.")
+        case DFSType | BFSType =>
+          val searchObject = searchConfiguration.searchAlgorithm match {
+            case DFSType => symbolic.search.DFS
+            case BFSType => symbolic.search.BFS
+          }
+
+          searchObject.startSearch(domainAndPlan._1, domainAndPlan._2, searchConfiguration.nodeLimit, searchConfiguration.timeLimit,
+                                   releaseSemaphoreEvery, searchConfiguration.printSearchInfo,
+                                   postprocessingConfiguration.resultsToProduce contains SearchSpace,
+                                   informationCapsule, timeCapsule)
+        case _                 => throw new UnsupportedOperationException("Any other symbolic search algorithm besides DFS is not supported.")
       }
 
       (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
@@ -111,7 +127,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       if ((searchConfiguration.heuristic contains ADD) || (searchConfiguration.heuristic contains ADDReusing) || (searchConfiguration.heuristic contains TDGMinimumADD)) {
         // do the whole preparation, i.e. planning graph
         val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
-        val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, computeMutexes = true, isSerial = false)
+        val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, GroundedPlanningGraphConfiguration())
         analysisMap = analysisMap +(EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic(symbolicPlanningGraph, wrapper))
       }
       timeCapsule stop HEURISTICS_PREPARATION
@@ -125,9 +141,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                                                   searchConfiguration.printSearchInfo,
                                                                                                   postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                                                                                   informationCapsule, timeCapsule)
-          case DijkstraType                                   =>
+          case DijkstraType | DFSType                         =>
             // just use the zero heuristic
-            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, true, false)
+            val (heuristic,costs) = searchConfiguration.searchAlgorithm match {
+              case DijkstraType => (AlwaysZeroHeuristic,true)
+              case DFSType
+            }
+
+
+            val heuristicSearch = efficient.search.HeuristicSearch(heuristic, costs, false)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                         searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
@@ -188,14 +210,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan], domainAndPlan: (Domain, Plan)): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
-      case ProcessingTimings => timeCapsule.timeMap
+      case ProcessingTimings => timeCapsule
       case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
-      else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule.informationMap(Information.NUMBER_OF_NODES))
+      else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
         SearchState.UNSOLVABLE
       else SearchState.INSEARCH // TODO account for the case we ran out of time
 
       case SearchResult              => result
-      case SearchStatistics          => informationCapsule.informationMap
+      case SearchStatistics          => informationCapsule
       case SearchSpace               => rootNode
       case SolutionInternalString    => result match {case Some(plan) => Some(plan.longInfo); case _ => None}
       case SolutionDotString         => result match {case Some(plan) => Some(plan.dotString); case _ => None}
@@ -268,7 +290,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   private def runGroundedPlanningGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
     val groundedInitialState = problem.groundedInitialState filter { _.isPositive }
-    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, computeMutexes = true, isSerial = false, Left(Nil))
+    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, GroundedPlanningGraphConfiguration())
     // add analysis to map
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }

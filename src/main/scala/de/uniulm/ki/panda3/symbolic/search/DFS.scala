@@ -38,8 +38,6 @@ object DFS extends SymbolicSearchAlgorithm {
     var crap: Int = 0 // and how many dead ends we have encountered
 
 
-    println("GROUNDED: " + domain.allGroundedPrimitiveTasks)
-
     var abort = false
     informationCapsule increment NUMBER_OF_NODES
 

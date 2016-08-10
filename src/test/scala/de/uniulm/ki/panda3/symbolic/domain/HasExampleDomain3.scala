@@ -23,15 +23,15 @@ import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 // scalastyle:off magic.number
 trait HasExampleDomain3 extends HasExampleDomain2 {
 
-  val abstractTask1: ReducedTask = ReducedTask("abstractTask_1", isPrimitive = false, variableSort1(7) :: Nil, Nil,
+  val abstractTask1: ReducedTask = ReducedTask("abstractTask_1", isPrimitive = false, variableSort1(7) :: Nil, Nil, Nil,
                                                precondition = And[Literal](Literal(predicate1, isPositive = false, variableSort1(7)
                                                  :: Nil) :: Nil), effect = And[Literal](Literal(predicate1, isPositive = true, variableSort1(7) :: Nil) :: Nil))
 
 
   // decomposition method 1 -- the one without causal links
-  val initTaskOfPlanOfDecompositionMethod1: ReducedTask = ReducedTask("initM1", isPrimitive = true, variableSort1(8) :: Nil, Nil, precondition = And[Literal](Nil),
+  val initTaskOfPlanOfDecompositionMethod1: ReducedTask = ReducedTask("initM1", isPrimitive = true, variableSort1(8) :: Nil, Nil, Nil, precondition = And[Literal](Nil),
                                                                       effect = And[Literal](Literal(predicate1, isPositive = false, variableSort1(8) :: Nil) :: Nil))
-  val goalTaskOfPlanOfDecompositionMethod1: ReducedTask = ReducedTask("goalM1", isPrimitive = true, variableSort1(9) :: Nil, Nil,
+  val goalTaskOfPlanOfDecompositionMethod1: ReducedTask = ReducedTask("goalM1", isPrimitive = true, variableSort1(9) :: Nil, Nil, Nil,
                                                                       precondition = And[Literal](Literal(predicate1, isPositive = true, variableSort1(9) :: Nil) :: Nil),
                                                                       effect = And[Literal](Nil))
 

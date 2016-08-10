@@ -39,7 +39,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   private val domainPredicates          : BiMap[Predicate, Int]           = BiMap(symbolicDomain.predicates.zipWithIndex)
   private val domainTasksObjects        : BiMap[Task, EfficientTask]      = {
     val ordinaryTaskSchemes = symbolicDomain.tasks map { (_, false) }
-    val hiddenTaskSchemes = (symbolicDomain.hiddenTasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).distinct map { (_, true) }
+    val hiddenTaskSchemes = ((symbolicDomain.hiddenTasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).distinct map { (_, true) }).distinct
     val allTaskSchemes = ordinaryTaskSchemes ++ hiddenTaskSchemes
     BiMap(allTaskSchemes map { case (t, isInitOrGoal) => (t, computeEfficientTask(t, isInitOrGoal)) })
   }
@@ -513,8 +513,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val (innerLinks, inheritedLinks) = allCausalLinks partition { link => (insertedPlanSteps contains link.producer) && (insertedPlanSteps contains link.consumer) }
 
       // inserted subplan
-      val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
-      val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
+      val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
+      val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
       val subPlanPlanSteps = insertedPlanSteps :+ init :+ goal
       val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) } filter {
         case OrderingConstraint(before, after) => subPlanPlanSteps.contains(before) && subPlanPlanSteps.contains(after)
