@@ -143,13 +143,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                                                   informationCapsule, timeCapsule)
           case DijkstraType | DFSType                         =>
             // just use the zero heuristic
-            val (heuristic,costs) = searchConfiguration.searchAlgorithm match {
-              case DijkstraType => (AlwaysZeroHeuristic,true)
-              case DFSType
-            }
 
-
-            val heuristicSearch = efficient.search.HeuristicSearch(heuristic, costs, false)
+            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, true, false, invertCosts = searchConfiguration.searchAlgorithm == DFSType)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                         searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,

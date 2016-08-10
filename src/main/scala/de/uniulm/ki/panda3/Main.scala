@@ -45,6 +45,7 @@ object Main {
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
     //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
@@ -53,7 +54,8 @@ object Main {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
 
     val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--1--3.xml"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
@@ -103,14 +105,15 @@ object Main {
                                                                         liftedReachability = true, groundedReachability = false, planningGraph = true,
                                                                         naiveGroundedTaskDecompositionGraph = true,
                                                                         iterateReachabilityAnalysis = true, groundDomain = true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumADD), true),
+                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
-                                             SearchConfiguration(None, None, efficientSearch = true, DFSType, None, printSearchInfo = true),
+                                             //SearchConfiguration(Some(500000), None, efficientSearch = true, BFSType, None, printSearchInfo = true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
                                                                              SearchStatistics,
                                                                              //SearchSpace,
+                                                                             PreprocessedDomainAndPlan,
                                                                              SolutionInternalString,
                                                                              SolutionDotString)))
 
@@ -125,13 +128,15 @@ object Main {
     println(results(ProcessingTimings).shortInfo)
 
 
-    if (results(SearchStatus) == SearchState.SOLUTION) {
 
+    if (results(SearchStatus) == SearchState.SOLUTION) {
+      val solution = results(SearchResult).get
+      println(solution.planSteps.length)
       // write output
       if (outputPDF.endsWith("dot")) {
-        writeStringToFile(results(SolutionDotString).get, new File(outputPDF))
+        writeStringToFile(solution.dotString, new File(outputPDF))
       } else {
-        Dot2PdfCompiler.writeDotToFile(results(SolutionDotString).get, outputPDF)
+        Dot2PdfCompiler.writeDotToFile(solution, outputPDF)
       }
     }
     var doneCounter = 0
@@ -151,8 +156,6 @@ object Main {
       dfs(results(SearchSpace))
     }
   }
-
-
 
 
 }
