@@ -76,14 +76,15 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
           ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPrecondition), And(newEffects))
         case _                                                   => noSupport(FORUMLASNOTSUPPORTED)
       }
-    case RemoveEffects(unnecessaryPredicates, invert)     =>
+    case RemoveEffects(unnecessaryPredicates, isInverted) =>
       this match {
         case ReducedTask(_, _, _, _,_, preconditionAnd, effectAnd) =>
           val newEffects = effectAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
           val newPreconditions = preconditionAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
 
-          if (!invert) ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, preconditionAnd, And(newEffects))
+          if (!isInverted) ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, preconditionAnd, And(newEffects))
           else ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), effectAnd)
+
         case _                                                   => noSupport(FORUMLASNOTSUPPORTED)
       }
 

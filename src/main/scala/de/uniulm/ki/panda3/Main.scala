@@ -64,6 +64,7 @@ object Main {
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
+<<<<<<< HEAD
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p05.pddl"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/domain/driverlog.pddl"
@@ -93,6 +94,7 @@ object Main {
     //val domFile = "../panda3core_with_planning_graph/testDomain1.pddl"
     //val probFile = "../panda3core_with_planning_graph/testProblem1.pddl"
 
+
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
@@ -115,11 +117,14 @@ object Main {
 
     //System.in.read()
 
+
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
 
     println("Panda says: " + results(SearchStatus))
-    printInformationByCategory(results(SearchStatistics))
-    printInformationByCategory(results(ProcessingTimings))
+    println(results(SearchStatistics).shortInfo)
+    println("----------------- TIMINGS -----------------")
+    println(results(ProcessingTimings).shortInfo)
+
 
     if (results(SearchStatus) == SearchState.SOLUTION) {
 
@@ -149,18 +154,6 @@ object Main {
   }
 
 
-  def printInformationByCategory(information: Map[String, _]): Unit = {
-    (information groupBy { _._1.split(":").head }).toSeq sortBy { _._1 } map { case (g, r) => (g.substring(3), r) } foreach { case (group, inner) =>
-      println("============ " + group + " ============")
-      val reducedNamesWithPrefix = inner map { case (info, value) => info.substring(group.length + 4) -> value } toSeq
-      val reducedNames = reducedNamesWithPrefix.sortBy({ _._1 }) map { case (info, value) => info.substring(3) -> value }
-      val maxLen = reducedNames.map { _._1.length } max
 
-      reducedNames foreach { case (info, value) =>
-        printf("%-" + maxLen + "s = %d\n", info, value)
-      }
-
-    }
-  }
 
 }

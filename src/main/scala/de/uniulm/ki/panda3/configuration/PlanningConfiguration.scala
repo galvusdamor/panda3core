@@ -96,11 +96,17 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // now we have to decide which representation to use for the search
     if (!searchConfiguration.efficientSearch) {
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
-        case DFSType => symbolic.search.DFS.startSearch(domainAndPlan._1, domainAndPlan._2, searchConfiguration.nodeLimit, searchConfiguration.timeLimit,
-                                                        releaseSemaphoreEvery, searchConfiguration.printSearchInfo,
-                                                        postprocessingConfiguration.resultsToProduce contains SearchSpace,
-                                                        informationCapsule, timeCapsule)
-        case _       => throw new UnsupportedOperationException("Any other symbolic search algorithm besides DFS is not supported.")
+        case DFSType | BFSType =>
+          val searchObject = searchConfiguration.searchAlgorithm match {
+            case DFSType => symbolic.search.DFS
+            case BFSType => symbolic.search.BFS
+          }
+
+          searchObject.startSearch(domainAndPlan._1, domainAndPlan._2, searchConfiguration.nodeLimit, searchConfiguration.timeLimit,
+                                   releaseSemaphoreEvery, searchConfiguration.printSearchInfo,
+                                   postprocessingConfiguration.resultsToProduce contains SearchSpace,
+                                   informationCapsule, timeCapsule)
+        case _                 => throw new UnsupportedOperationException("Any other symbolic search algorithm besides DFS is not supported.")
       }
 
       (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
@@ -185,14 +191,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan], domainAndPlan: (Domain, Plan)): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
-      case ProcessingTimings => timeCapsule.timeMap
+      case ProcessingTimings => timeCapsule
       case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
-      else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule.informationMap(Information.NUMBER_OF_NODES))
+      else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
         SearchState.UNSOLVABLE
       else SearchState.INSEARCH // TODO account for the case we ran out of time
 
       case SearchResult              => result
-      case SearchStatistics          => informationCapsule.informationMap
+      case SearchStatistics          => informationCapsule
       case SearchSpace               => rootNode
       case SolutionInternalString    => result match {case Some(plan) => Some(plan.longInfo); case _ => None}
       case SolutionDotString         => result match {case Some(plan) => Some(plan.dotString); case _ => None}
