@@ -1,3 +1,7 @@
+  (:tasks (task0 (achieve-goals arm1)))
+  (:tasks (task1 (achieve-goals arm2)))
+  (:tasks (task2 (achieve-goals arm3)))
+  (:tasks (task3 (achieve-goals arm4)))
 (define
  (problem pfile_04_015)
  (:domain blocks)
@@ -43,4 +47,9 @@
          (on b1 b14)
          (on b14 b2)
          (on b2 b13)
-         (on b13 b9))))
+         (on b13 b9)))
+           (:tasks (task0 (achieve-goals arm1)))
+           (:tasks (task1 (achieve-goals arm2)))
+           (:tasks (task2 (achieve-goals arm3)))
+           (:tasks (task3 (achieve-goals arm4)))
+)

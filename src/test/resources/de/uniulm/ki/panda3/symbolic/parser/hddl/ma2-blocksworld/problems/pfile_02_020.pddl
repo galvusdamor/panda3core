@@ -75,4 +75,7 @@
          (on b14 b16)
          (on b16 b1)
          (on b1 b6)
-         (on b6 b3))))
+         (on b6 b3)))
+                      (:tasks (task0 (achieve-goals arm1)))
+                      (:tasks (task1 (achieve-goals arm2)))
+)

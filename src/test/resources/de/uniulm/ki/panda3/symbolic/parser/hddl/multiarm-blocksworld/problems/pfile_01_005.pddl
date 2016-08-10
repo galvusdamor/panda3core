@@ -17,4 +17,6 @@
          (clear b5)
          (on-table b2)
          (on b5 b3)
-         (on b3 b2))))
+         (on b3 b2)))
+                    (:tasks (task0 (achieve-goals arm1)))
+)

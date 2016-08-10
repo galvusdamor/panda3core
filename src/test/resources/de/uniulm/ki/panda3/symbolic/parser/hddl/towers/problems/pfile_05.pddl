@@ -41,4 +41,6 @@
          (on r2 r3)
          (on r3 r4)
          (on r4 r5)
-         (on r5 t3))))
+         (on r5 t3)))
+              (:tasks (task0 (shiftTower t1 t2 t3)))
+)

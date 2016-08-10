@@ -133,4 +133,6 @@
          (on r9 r10)
          (on r10 r11)
          (on r11 r12)
-         (on r12 t3))))
+         (on r12 t3)))
+              (:tasks (task0 (shiftTower t1 t2 t3)))
+)

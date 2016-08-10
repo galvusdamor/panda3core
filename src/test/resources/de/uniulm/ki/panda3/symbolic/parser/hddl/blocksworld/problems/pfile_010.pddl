@@ -29,4 +29,6 @@
          (on b5 b2)
          (on b2 b10)
          (on b10 b9)
-         (on b9 b1))))
+         (on b9 b1)))
+             (:tasks (task0 (achieve-goals)))
+)

@@ -213,4 +213,6 @@
          (in o37 r3)
          (in o38 r18)
          (in o39 r12)
-         (in o40 r1))))
+         (in o40 r1)))
+             (:tasks (task0 (achieve-goals)))
+)

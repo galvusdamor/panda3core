@@ -245,4 +245,6 @@
          (on b47 b44)
          (on b44 b17)
          (on b17 b2)
-         (on b2 b14))))
+         (on b2 b14)))
+             (:tasks (task0 (achieve-goals)))
+)

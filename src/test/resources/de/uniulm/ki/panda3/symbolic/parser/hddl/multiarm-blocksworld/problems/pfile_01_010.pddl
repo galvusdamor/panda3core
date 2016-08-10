@@ -30,4 +30,6 @@
          (on b9 b6)
          (on b6 b10)
          (on b10 b7)
-         (on b7 b1))))
+         (on b7 b1)))
+                             (:tasks (task0 (achieve-goals arm1)))
+)

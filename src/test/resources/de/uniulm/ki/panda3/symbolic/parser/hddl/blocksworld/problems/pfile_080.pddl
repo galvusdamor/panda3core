@@ -264,4 +264,6 @@
          (on b25 b17)
          (on b17 b65)
          (on b65 b2)
-         (on b2 b9))))
+         (on b2 b9)))
+             (:tasks (task0 (achieve-goals)))
+)

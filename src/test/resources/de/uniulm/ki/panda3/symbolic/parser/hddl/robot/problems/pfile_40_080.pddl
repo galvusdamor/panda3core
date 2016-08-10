@@ -426,4 +426,6 @@
          (in o77 r18)
          (in o78 r14)
          (in o79 r31)
-         (in o80 r39))))
+         (in o80 r39)))
+             (:tasks (task0 (achieve-goals)))
+)

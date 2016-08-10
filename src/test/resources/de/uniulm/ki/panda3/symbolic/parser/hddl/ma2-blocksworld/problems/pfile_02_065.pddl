@@ -219,4 +219,7 @@
          (on b29 b31)
          (on b31 b17)
          (on b17 b19)
-         (on b19 b2))))
+         (on b19 b2)))
+                               (:tasks (task0 (achieve-goals arm1)))
+                               (:tasks (task1 (achieve-goals arm2)))
+)

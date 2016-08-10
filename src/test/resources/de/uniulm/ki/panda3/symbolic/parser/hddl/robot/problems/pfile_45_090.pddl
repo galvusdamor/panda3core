@@ -477,4 +477,6 @@
          (in o87 r2)
          (in o88 r39)
          (in o89 r21)
-         (in o90 r1))))
+         (in o90 r1)))
+             (:tasks (task0 (achieve-goals)))
+)

@@ -288,4 +288,6 @@
          (on b58 b62)
          (clear b70)
          (on-table b18)
-         (on b70 b18))))
+         (on b70 b18)))
+             (:tasks (task0 (achieve-goals)))
+)

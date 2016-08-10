@@ -39,4 +39,6 @@
          (in o7 r4)
          (in o8 r5)
          (in o9 r4)
-         (in o10 r5))))
+         (in o10 r5)))
+             (:tasks (task0 (achieve-goals)))
+)

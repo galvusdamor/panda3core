@@ -104,4 +104,7 @@
          (clear b6)
          (on-table b11)
          (on b6 b22)
-         (on b22 b11))))
+         (on b22 b11)))
+                      (:tasks (task0 (achieve-goals arm1)))
+                      (:tasks (task1 (achieve-goals arm2)))
+)

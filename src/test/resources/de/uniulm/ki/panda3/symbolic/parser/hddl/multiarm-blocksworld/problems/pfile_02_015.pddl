@@ -43,4 +43,7 @@
          (on-table b1)
          (on b5 b3)
          (on b3 b9)
-         (on b9 b1))))
+         (on b9 b1)))
+                             (:tasks (task0 (achieve-goals arm1)))
+                             (:tasks (task1 (achieve-goals arm2)))
+)
