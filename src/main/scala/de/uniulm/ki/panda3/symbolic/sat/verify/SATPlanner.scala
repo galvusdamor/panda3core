@@ -123,7 +123,7 @@ object SATPlanner {
     println("K " + encoder.K + " DELTA " + encoder.DELTA)
 
     val startTime = System.currentTimeMillis()
-    val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialAndGoalState ++ encoder.noAbstractsFormula //++ encoder.givenActionsFormula
+    val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialState ++ encoder.goalState ++ encoder.noAbstractsFormula //++ encoder.givenActionsFormula
     val formulaTime = System.currentTimeMillis()
     println("Variables : " + encoder.atoms.length + " Constraints: " + encoder.decompositionFormula.length)
     println("Time needed to compute the formula: " + (formulaTime - startTime) + "ms")

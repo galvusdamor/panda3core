@@ -340,20 +340,23 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
     primitivesApplicable(K - 1, position) ++ stateChange(K - 1, position) ++ maintainState(K - 1, position)
   }
 
-  lazy val initialAndGoalState: Seq[Clause] = {
+  lazy val initialState: Seq[Clause] = {
     val initiallyTruePredicates = initialPlan.init.substitutedEffects collect { case Literal(pred, true, _) => pred }
 
     val initTrue = initiallyTruePredicates map { pred => Clause((statePredicate(K - 1, 0, pred), true)) }
     val initFalse = domain.predicates diff initiallyTruePredicates map { pred => Clause((statePredicate(K - 1, 0, pred), false)) }
 
-    val goal = initialPlan.goal.substitutedPreconditions map {
-      case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, numberOfActionsPerLayer, pred), isPos))
-    }
-
-    initTrue ++ initFalse ++ goal
+    initTrue ++ initFalse
   }
 
-  lazy val atoms      : Seq[String]      = ((decompositionFormula ++ givenActionsFormula ++ stateTransitionFormula ++ initialAndGoalState) flatMap { _.disjuncts map { _._1 } }).distinct
+  lazy val goalState: Seq[Clause] = {
+    initialPlan.goal.substitutedPreconditions map {
+      case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, numberOfActionsPerLayer, pred), isPos))
+    }
+  }
+
+  lazy val atoms: Seq[String] = ((decompositionFormula ++ givenActionsFormula ++ stateTransitionFormula ++ initialState ++ goalState) flatMap { _.disjuncts map { _._1 } }).distinct
+
   lazy val atomIndices: Map[String, Int] = atoms.zipWithIndex.toMap
 
 
@@ -379,11 +382,11 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
 object VerifyEncoding {
 
-  def computeICAPSK(domain: Domain, plan: Plan, taskSequence: Seq[Task]) = 2 * taskSequence.length * (domain.abstractTasks.length + 1)
+  def computeICAPSK(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int = 2 * taskSequence.length * (domain.abstractTasks.length + 1)
 
-  def computeTSTGK(domain: Domain, plan: Plan, taskSequence: Seq[Task]) = domain.taskSchemaTransitionGraph.longestPathLength match {case Some(x) => x; case _ => Integer.MAX_VALUE }
+  def computeTSTGK(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int = domain.taskSchemaTransitionGraph.longestPathLength match {case Some(x) => x; case _ => Integer.MAX_VALUE }
 
-  def computeMethodSize(domain: Domain, plan: Plan, taskSequence: Seq[Task]) =
+  def computeMethodSize(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int =
     if (domain.minimumMethodSize >= 2) Math.ceil(Math.log(taskSequence.length) / Math.log(domain.minimumMethodSize)).toInt else Integer.MAX_VALUE
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int = {

@@ -4,7 +4,7 @@ import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
-import de.uniulm.ki.panda3.symbolic.domain.Task
+import de.uniulm.ki.panda3.symbolic.domain.{RandomPlanGenerator, Task}
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
 import de.uniulm.ki.util._
 
@@ -57,22 +57,52 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int) {
     val ordering = solution.orderingConstraintsWithoutRemovedPlanSteps.graph.topologicalOrdering.get map { _.schema }
 
     // check whether we actually got a solution
-    val groundTasks = ordering map { task => GroundTask(task, Nil) }
-    val finalState = groundTasks.foldLeft(processedInitialPlan.groundedInitialState)(
-      { case (state, action) =>
-        action.substitutedPreconditions foreach { prec => assert(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
-
-        (state diff action.substitutedDelEffects) ++ action.substitutedAddEffects
-      })
-
-    processedInitialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => assert(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
 
 
     // return the solution and the domain
     (ordering, processedDomain, processedInitialPlan, results(ProcessingTimings).integralDataMap()(Timings.TOTAL_TIME))
   }
 
-  def run(sequenceToVerify: Seq[Task]): (Boolean, TimeCapsule, InformationCapsule) = {
+  def runWithTimeLimit(sequenceToVerify: Seq[Task], timelimit: Long, includeGoal: Boolean = true): (Boolean, Boolean, TimeCapsule, InformationCapsule) = {
+    val runner = new Runnable {
+      var result: Option[(Boolean, TimeCapsule, InformationCapsule)] = None
+
+      override def run(): Unit = {
+        result = Some(VerifyRunner.this.run(sequenceToVerify, includeGoal))
+      }
+    }
+    // start thread
+    val thread = new Thread(runner)
+    thread.start()
+
+    // wait
+    val startTime = System.currentTimeMillis()
+    while (System.currentTimeMillis() - startTime <= timelimit && runner.result.isEmpty) Thread.sleep(10)
+    thread.stop()
+
+    if (runner.result.isEmpty) (false, false, new TimeCapsule, new InformationCapsule) else (runner.result.get._1, true, runner.result.get._2, runner.result.get._3)
+  }
+
+
+  def run(sequenceToVerify: Seq[Task], includeGoal: Boolean = true): (Boolean, TimeCapsule, InformationCapsule) = {
+    println("PANDA is given the following sequence")
+    println(sequenceToVerify map { _.name } mkString "\n")
+
+
+    // check whether the given sequence is executable ...
+    val groundTasks = sequenceToVerify map { task => GroundTask(task, Nil) }
+    val finalState = groundTasks.foldLeft(initialPlan.groundedInitialState)(
+      { case (state, action) =>
+        action.substitutedPreconditions foreach { prec => assert(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
+
+        (state diff action.substitutedDelEffects) ++ action.substitutedAddEffects
+      })
+
+    if (includeGoal) initialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => assert(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
+
+
+
+
     val timeCapsule = new TimeCapsule
     val informationCapsule = new InformationCapsule
 
@@ -80,8 +110,6 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int) {
 
     //val ordering = Range(0, 8) map { _ => domain.tasks.head }
 
-    println("PANDA found the following solution")
-    println(sequenceToVerify map { _.name } mkString "\n")
 
     // start verification
     val encoder = VerifyEncoding(domain, initialPlan, sequenceToVerify)() // use theoretical value //(3)
@@ -89,13 +117,13 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int) {
     informationCapsule.set(VerifyRunner.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, sequenceToVerify))
     informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify))
     informationCapsule.set(VerifyRunner.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, sequenceToVerify))
-
+    println(informationCapsule.longInfo)
 
 
 
     timeCapsule start VerifyRunner.VERIFY_TOTAL
     timeCapsule start VerifyRunner.GENERATE_FORMULA
-    val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialAndGoalState ++ encoder.givenActionsFormula
+    val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialState ++ encoder.givenActionsFormula ++ (if (includeGoal) encoder.goalState else Nil)
     //val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialAndGoalState ++ encoder.noAbstractsFormula
     timeCapsule stop VerifyRunner.GENERATE_FORMULA
 
@@ -104,8 +132,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int) {
     writeStringToFile(cnfString, new File("__cnfString"))
     timeCapsule stop VerifyRunner.WRITE_FORMULA
 
-    informationCapsule.set(VerifyRunner.NUMBER_OF_VARIABLES,(usedFormula flatMap {_.disjuncts map {_._1}} distinct).size)
-    informationCapsule.set(VerifyRunner.NUMBER_OF_CLAUSES,usedFormula.length)
+    informationCapsule.set(VerifyRunner.NUMBER_OF_VARIABLES, (usedFormula flatMap { _.disjuncts map { _._1 } } distinct).size)
+    informationCapsule.set(VerifyRunner.NUMBER_OF_CLAUSES, usedFormula.length)
 
     //writeStringToFile(usedFormula mkString "\n", new File("__formulaString"))
 
@@ -200,13 +228,53 @@ object VerifyRunner {
   val LOG_K               = "99 verify:11:K LOG"
   val TSTG_K              = "99 verify:12:K task schema transition graph"
 
+
+  // domains to test
+  val prefix = "/home/gregor/Workspace/panda2-system/domains/XML/"
+  //val prefix = ""
+
+  val problemsToVerify: Seq[(String, Seq[(String, Int)])] =
+    ("UM-Translog/domains/UMTranslog.xml",
+      ("UM-Translog/problems/UMTranslog-P-1-Airplane.xml", 1) ::
+        //("UM-Translog/problems/UMTranslog-P-1-AirplanesHub.xml", 1) ::
+        //("UM-Translog/problems/UMTranslog-P-1-ArmoredRegularTruck.xml", 1) ::
+        Nil) ::
+      ("Satellite/domains/satellite2.xml",
+        ("Satellite/problems/sat-C.xml", 1) ::
+          ("Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml", 1) ::
+          ("Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml", 1) ::
+          Nil) ::
+      Nil
+
+  val timeLimit: Long = 10*60*1000
+
+  def writeSingleRun(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, preprocessTime: Long, isSolution: Boolean, satResult: Boolean, completed: Boolean,
+                     domain: String, problem: String): String = {
+    val builder = new StringBuilder
+    builder append (domain.split("/").last.replaceAll(".xml", "") + ",")
+    builder append (problem.split("/").last.replaceAll(".xml", "") + ",")
+    builder append (isSolution + ",")
+    builder append (satResult + ",")
+    builder append (completed + ",")
+
+    // problem statistics
+    (informationCapsule.integralDataMap() toSeq) sortBy { _._1 } foreach { case (_, v) => builder append (v + ",") }
+    // actual data
+    builder append (preprocessTime + ",")
+    // time
+    (timeCapsule.integralDataMap() toSeq) sortBy { _._1 } foreach { case (_, v) => builder append (v + ",") }
+
+    val line = builder.toString()
+    line.substring(0, line.length - 1)
+  }
+
   def main(args: Array[String]) {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p01-hierarchical-socs.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant1-hierarchical.xml"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
@@ -222,14 +290,42 @@ object VerifyRunner {
     //val domFile = args(0)
     //val probFile = args(1)
 
-    val runner = VerifyRunner(domFile, probFile, 1)
 
-    val (isPlan,time,information) = runner.run(runner.solutionPlan)
+    val result = problemsToVerify flatMap { case (domainFile, problems) => problems flatMap { case (problemFile, config) =>
+      println("RUN " + domainFile + " " + problemFile)
 
-    println("PANDA says: " + (if (isPlan) "it is a solution" else "it is not a solution"))
-    println("Preprocess " + runner.preprocessTime)
-    println(time.longInfo)
-    println(information.longInfo)
+      val runner = VerifyRunner(prefix + domainFile, prefix + problemFile, config)
 
+      val solutionLine = {
+        val (isPlan, completed, time, information) = runner.runWithTimeLimit(runner.solutionPlan, timeLimit)
+
+        println("PANDA says: " + (if (isPlan) "it is a solution" else "it is not a solution"))
+        println("Preprocess " + runner.preprocessTime)
+        println(time.longInfo)
+        println(information.longInfo)
+
+        writeSingleRun(time, information, runner.preprocessTime, isSolution = true, satResult = isPlan, completed = completed, domainFile, problemFile)
+      }
+
+      val nonSolutionLines = Range(0, 1) map { randomSeed =>
+        val randomPlanGenerator = RandomPlanGenerator(runner.domain, runner.initialPlan)
+        val randomPlan = randomPlanGenerator.randomExecutablePlan(runner.solutionPlan.length, randomSeed)
+
+        val (isPlan, completed, time, information) = runner.runWithTimeLimit(randomPlan, timeLimit, includeGoal = false)
+
+        println("PANDA says: " + (if (isPlan) "it is a solution" else "it is not a solution"))
+        println("Preprocess " + runner.preprocessTime)
+        println(time.longInfo)
+        println(information.longInfo)
+
+        writeSingleRun(time, information, runner.preprocessTime, isSolution = false, satResult = isPlan, completed = completed, domainFile, problemFile)
+      }
+      nonSolutionLines :+ solutionLine
+    }
+    } mkString "\n"
+
+
+    writeStringToFile(result, "result.csv")
   }
+
 }
