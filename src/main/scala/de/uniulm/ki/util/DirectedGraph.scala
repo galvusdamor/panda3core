@@ -257,3 +257,11 @@ object SimpleDirectedGraph {
     SimpleDirectedGraph(nodes, (nodes zip (nodes map { n => edges.filter({ _._1 == n }).map({ _._2 }) })).toMap)
   }
 }
+
+case class SimpleGraphNode(id : String, name : String) extends PrettyPrintable {
+  override def shortInfo: String = name
+
+  override def mediumInfo: String = name
+
+  override def longInfo: String = name
+}
