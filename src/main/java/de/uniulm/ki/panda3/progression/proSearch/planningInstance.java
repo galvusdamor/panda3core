@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.efficientRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.GroundedPlanningGraph;
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.GroundedPlanningGraphConfiguration;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
@@ -103,7 +104,13 @@ public class planningInstance {
             allLiterals = new HashSet<>();
             allActions = new HashSet<>();
             System.out.println("Building initial (non-relaxed) planning graph.");
-            GroundedPlanningGraph gpg = GroundedPlanningGraph.apply(d, p.groundedInitialStateOnlyPositive(), true, false);
+            GroundedPlanningGraph gpg = GroundedPlanningGraph.apply(d, p.groundedInitialStateOnlyPositive().toSet(),
+                    GroundedPlanningGraphConfiguration.apply(GroundedPlanningGraphConfiguration.apply$default$1(),
+                            GroundedPlanningGraphConfiguration.apply$default$2(),
+                            GroundedPlanningGraphConfiguration.apply$default$3(),
+                            GroundedPlanningGraphConfiguration.apply$default$4(),
+                            GroundedPlanningGraphConfiguration.apply$default$5(),
+                            GroundedPlanningGraphConfiguration.apply$default$6()));
 
             scala.collection.Iterator<GroundLiteral> iterAllFacts = gpg.reachableGroundLiterals().iterator();
             while (iterAllFacts.hasNext()) {

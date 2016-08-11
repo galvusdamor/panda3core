@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
+import de.uniulm.ki.panda3.efficient.heuristic.AlwaysZeroHeuristic
 import de.uniulm.ki.panda3.efficient.search.HeuristicSearch
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util._
@@ -44,6 +45,7 @@ object Main {
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
     //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
@@ -51,7 +53,9 @@ object Main {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--1--3.xml"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
@@ -61,10 +65,8 @@ object Main {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
 
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p08.pddl"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p05.pddl"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/domain/driverlog.pddl"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problems/pfile1"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/domain/zenotravelStrips.pddl"
@@ -78,8 +80,8 @@ object Main {
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/pegsol/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/tidybot/domain/domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/tidybot/problems/p01.pddl"
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/domain/domain.pddl"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/problems/p01.pddl"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/domain/domain.pddl"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/problems/p01.pddl"
 
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/domain-htn.lisp"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/p01-htn.lisp"
@@ -89,41 +91,52 @@ object Main {
 
     //val domFile = "gripperDomain.pddl"
     //val probFile = "easyGripperProblem.pddl"
+    //val domFile = "../panda3core_with_planning_graph/testDomain1.pddl"
+    //val probFile = "../panda3core_with_planning_graph/testProblem1.pddl"
+
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                             ParsingConfiguration(HDDLParserType),
+                                             ParsingConfiguration(XMLParserType),
                                              PreprocessingConfiguration(compileNegativePreconditions = true,
                                                                         liftedReachability = true, groundedReachability = false, planningGraph = true,
-                                                                        naiveGroundedTaskDecompositionGraph = false,
-                                                                        iterateReachabilityAnalysis = false, groundDomain = true),
-                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
+                                                                        naiveGroundedTaskDecompositionGraph = true,
+                                                                        iterateReachabilityAnalysis = true, groundDomain = true),
+                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumADD), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
+                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
+                                             //SearchConfiguration(Some(500000), None, efficientSearch = true, BFSType, None, printSearchInfo = true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
                                                                              SearchStatistics,
                                                                              //SearchSpace,
+                                                                             PreprocessedDomainAndPlan,
                                                                              SolutionInternalString,
                                                                              SolutionDotString)))
 
     //System.in.read()
 
+
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
 
     println("Panda says: " + results(SearchStatus))
-    printInformationByCategory(results(SearchStatistics))
-    printInformationByCategory(results(ProcessingTimings))
+    println(results(SearchStatistics).shortInfo)
+    println("----------------- TIMINGS -----------------")
+    println(results(ProcessingTimings).shortInfo)
+
+
 
     if (results(SearchStatus) == SearchState.SOLUTION) {
-
+      val solution = results(SearchResult).get
+      println(solution.planSteps.length)
       // write output
       if (outputPDF.endsWith("dot")) {
-        writeStringToFile(results(SolutionDotString).get, new File(outputPDF))
+        writeStringToFile(solution.dotString, new File(outputPDF))
       } else {
-        Dot2PdfCompiler.writeDotToFile(results(SolutionDotString).get, outputPDF)
+        Dot2PdfCompiler.writeDotToFile(solution, outputPDF)
       }
     }
     var doneCounter = 0
@@ -144,19 +157,5 @@ object Main {
     }
   }
 
-
-  def printInformationByCategory(information: Map[String, _]): Unit = {
-    (information groupBy { _._1.split(":").head }).toSeq sortBy { _._1 } map { case (g, r) => (g.substring(3), r) } foreach { case (group, inner) =>
-      println("============ " + group + " ============")
-      val reducedNamesWithPrefix = inner map { case (info, value) => info.substring(group.length + 4) -> value } toSeq
-      val reducedNames = reducedNamesWithPrefix.sortBy({ _._1 }) map { case (info, value) => info.substring(3) -> value }
-      val maxLen = reducedNames.map { _._1.length } max
-
-      reducedNames foreach { case (info, value) =>
-        printf("%-" + maxLen + "s = %d\n", info, value)
-      }
-
-    }
-  }
 
 }

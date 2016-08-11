@@ -76,7 +76,7 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 
 case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo with Ordered[GroundLiteral] {
   assert(predicate.argumentSorts.length == parameter.length)
-  predicate.argumentSorts zip parameter foreach { case (s, p) => assert(s.elements contains p) }
+  predicate.argumentSorts.zipWithIndex zip parameter foreach { case ((s,i), p) => assert(s.elements contains p, "Predicate " + predicate.name + " argument " + i + " value " + p.name) }
 
   lazy val negate = copy(isPositive = !isPositive)
 

@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.configuration
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
+import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 
 /**
@@ -13,13 +14,13 @@ sealed trait ResultType {
 }
 
 /** Timings are measured in milliseconds */
-object ProcessingTimings extends ResultType {type ResultType = Map[String, Long]}
+object ProcessingTimings extends ResultType {type ResultType = TimeCapsule}
 
 object SearchStatus extends ResultType {type ResultType = SearchState}
 
 object SearchResult extends ResultType {type ResultType = Option[Plan]}
 
-object SearchStatistics extends ResultType {type ResultType = Map[String, Int]}
+object SearchStatistics extends ResultType {type ResultType = InformationCapsule}
 
 object SearchSpace extends ResultType {type ResultType = SearchNode}
 
@@ -31,6 +32,8 @@ object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain,P
 
 
 object Timings {
+  val TOTAL_TIME = "00 total:00:total"
+
   val PARSING                = "01 parsing:00:total"
   val FILEPARSER             = "01 parsing:01:file parser"
   val PARSER_SORT_EXPANSION  = "01 parsing:02:sort expansion"
@@ -66,6 +69,8 @@ object Information {
   val NUMBER_OF_NODES           = "10 search nodes:00:total"
   val NUMBER_OF_EXPANDED_NODES  = "10 search nodes:01:expanded"
   val NUMBER_OF_DISCARDED_NODES = "10 search nodes:02:discarded nodes"
+
+  val PLAN_SIZE = "20 search plans:01:number of plansteps"
 }
 
 case class ResultMap(map: Map[ResultType, Any]) extends (ResultType => Any) {
