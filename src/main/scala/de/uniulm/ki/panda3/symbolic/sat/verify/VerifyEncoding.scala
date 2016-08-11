@@ -341,14 +341,16 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   }
 
   lazy val initialAndGoalState: Seq[Clause] = {
-    val init = initialPlan.init.substitutedEffects map {
-      case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, 0, pred), isPos))
-    }
+    val initiallyTruePredicates = initialPlan.init.substitutedEffects collect { case Literal(pred, true, _) => pred }
+
+    val initTrue = initiallyTruePredicates map {pred => Clause((statePredicate(K - 1, 0, pred), true))}
+    val initFalse = domain.predicates diff initiallyTruePredicates map {pred => Clause((statePredicate(K - 1, 0, pred), false))}
+
     val goal = initialPlan.goal.substitutedPreconditions map {
       case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, numberOfActionsPerLayer, pred), isPos))
     }
 
-    init ++ goal
+    initTrue ++ initFalse ++ goal
   }
 
   lazy val atoms      : Seq[String]      = ((decompositionFormula ++ givenActionsFormula ++ stateTransitionFormula ++ initialAndGoalState) flatMap { _.disjuncts map { _._1 } }).distinct
