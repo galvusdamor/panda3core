@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
-import de.uniulm.ki.util.HashMemo
+import de.uniulm.ki.util.{SimpleDirectedGraph, DirectedGraph, HashMemo}
 
 /**
   *
@@ -292,6 +292,14 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
     (for (t1 <- tasks; t2 <- tasks) yield (t1, t2))
       collect { case (t1, t2) if lt(t1, t2) => "\t" + t1.shortInfo + " -> " + t2.shortInfo }).mkString("\n")
 
+  lazy val graph: DirectedGraph[PlanStep] = {
+    val tasksWithoutInitAndGoal = tasks filterNot  {t => tasks forall {ot => lteq(t,ot) }} filterNot  {t => tasks forall {ot => gteq(t,ot) }}
+    val edges = minimalOrderingConstraints() map { case OrderingConstraint(before, after) => (before, after) } filter {
+      case (a,b) => (tasksWithoutInitAndGoal contains a) && (tasksWithoutInitAndGoal contains b)
+    }
+
+    SimpleDirectedGraph(tasksWithoutInitAndGoal,edges)
+  }
 }
 
 object TaskOrdering {
