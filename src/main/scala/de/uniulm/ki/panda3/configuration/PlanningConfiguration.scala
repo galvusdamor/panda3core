@@ -16,6 +16,7 @@ import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, DomainPropertyAnalyser}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
+import de.uniulm.ki.panda3.symbolic.parser.hpddl.HPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
@@ -238,6 +239,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     val parsedDomainAndProblem = parsingConfiguration.parserType match {
       case XMLParserType  => XMLParser.asParser.parseDomainAndProblem(domain, problem)
       case HDDLParserType => HDDLParser.parseDomainAndProblem(domain, problem)
+      case HPDDLParserType => HPDDLParser.parseDomainAndProblem(domain, problem)
     }
     timeCapsule stop FILEPARSER
     info("done\n")
@@ -422,6 +424,7 @@ sealed trait ParserType
 object XMLParserType extends ParserType
 
 object HDDLParserType extends ParserType
+object HPDDLParserType extends ParserType
 
 case class ParsingConfiguration(
                                  parserType: ParserType,
