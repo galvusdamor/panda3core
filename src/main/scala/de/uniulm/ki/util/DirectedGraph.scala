@@ -20,7 +20,8 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
   def edges: Map[T, Seq[T]]
 
   /** adjacency list of the graph */
-  private lazy val edgesSet: Map[T, Set[T]] = edges map { case (a, b) => (a, b.toSet) }
+  private lazy val edgesSet        : Map[T, Set[T]] = edges map { case (a, b) => (a, b.toSet) }
+  private lazy val reversedEdgesSet: Map[T, Set[T]] = vertices map { v => v -> (vertices filter { v2 => edgesSet(v2) contains v } toSet) } toMap
 
   // TODO: add this as a delayed intializer
   //require(edges.size == vertices.size)
@@ -196,14 +197,14 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
     // check if graph is acyclic
     topologicalOrdering match {
       case (None) => None
-      case Some(topologicalOrdering) => {
-        var nodeLongestPathMap = Map(topologicalOrdering.head -> 0)
-        for (i <- 0 until topologicalOrdering.size) {
-          if(nodeLongestPathMap.get(topologicalOrdering(i)).isEmpty)
-            nodeLongestPathMap += topologicalOrdering(i) -> 0
-          edges(topologicalOrdering(i)) foreach (destination =>
-            if(nodeLongestPathMap.get(destination).isEmpty || nodeLongestPathMap(topologicalOrdering(i)) >= nodeLongestPathMap(destination))
-              nodeLongestPathMap += destination -> (nodeLongestPathMap(topologicalOrdering(i)) + 1))
+      case Some(topOrd) => {
+        var nodeLongestPathMap = Map(topOrd.head -> 0)
+        for (i <- topOrd.indices) {
+          if(nodeLongestPathMap.get(topOrd(i)).isEmpty)
+            nodeLongestPathMap += topOrd(i) -> 0
+          edges(topOrd(i)) foreach (destination =>
+            if(nodeLongestPathMap.get(destination).isEmpty || nodeLongestPathMap(topOrd(i)) >= nodeLongestPathMap(destination))
+              nodeLongestPathMap += destination -> (nodeLongestPathMap(topOrd(i)) + 1))
         }
 
         Some(nodeLongestPathMap.valuesIterator.max)
@@ -226,6 +227,23 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
     dotStringBuilder.toString
   }
 
+  /**
+    * This is not a fast implementation^^
+    */
+  lazy val allTotalOrderings: Option[Seq[Seq[T]]] = {
+
+    def dfs(processedNodes: Set[T]): Option[Seq[Seq[T]]] = if (processedNodes.size == vertices.size) Some(Nil :: Nil)
+    else {
+      val potentiallyFirstNodes = vertices filterNot processedNodes.contains filter { v => reversedEdgesSet(v) forall processedNodes.contains }
+
+      val possibleOrderings = potentiallyFirstNodes map { first => dfs(processedNodes + first) map { _ map { s => first +: s } } } collect { case Some(x) => x } flatten
+
+      if (possibleOrderings.length == 0) None else Some(possibleOrderings)
+    }
+
+    dfs(Set())
+  }
+
   /** The DOT representation of the object with options */
   override def dotString(options: Unit): String = dotString
 }
@@ -234,5 +252,8 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
 case class SimpleDirectedGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraph[T] {}
 
 object SimpleDirectedGraph {
-  def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): SimpleDirectedGraph[T] = SimpleDirectedGraph(nodes, (nodes zip (nodes map { n => edges.filter({ _._1 == n }).map({ _._2 }) })).toMap)
+  def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): SimpleDirectedGraph[T] = {
+    edges flatMap { case (a, b) => a :: b :: Nil } foreach { n => assert(nodes contains n) }
+    SimpleDirectedGraph(nodes, (nodes zip (nodes map { n => edges.filter({ _._1 == n }).map({ _._2 }) })).toMap)
+  }
 }
