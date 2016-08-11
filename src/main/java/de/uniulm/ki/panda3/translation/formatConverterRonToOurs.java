@@ -5,7 +5,9 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,7 +38,7 @@ public class formatConverterRonToOurs {
         }
     }
 
-    private static void processProblem(String problemOut, String txtFile) throws Exception {
+    public static void processProblem(String problemOut, String txtFile) throws Exception {
         FileWriter fw = new FileWriter(problemOut);
         BufferedWriter bw = new BufferedWriter(fw);
         bw.write("(");
@@ -96,13 +98,26 @@ public class formatConverterRonToOurs {
         return res.toString();
     }
 
-    private static void processDomain(String domainOut, String txtFile) throws Exception {
+    public static void processDomain(String domainOut, String txtFile) throws Exception {
         FileWriter fw = new FileWriter(domainOut);
         BufferedWriter bw = new BufferedWriter(fw);
         bw.write("(");
         List<String> definitions = parsePlan(txtFile);
         List<String> methods = new ArrayList<>();
+        List<String> newMethods = new ArrayList<>();
         List<String> actions = new ArrayList<>();
+
+        for (String def : definitions)
+            if (def.trim().startsWith("(:action"))
+                actions.add(def);
+
+        Map<String, String> taskReplacementMap = new HashMap<>();
+        // add new methods
+        for (String def : actions) {
+            newMethods.add(addNewMethods(def, taskReplacementMap));
+        }
+
+
         for (String def : definitions) {
             if (def.trim().startsWith("define")) {
                 bw.write(def + "\n");
@@ -113,25 +128,24 @@ public class formatConverterRonToOurs {
             } else if (def.trim().startsWith("(:predicates")) {
                 bw.write(def + "\n");
             } else if (def.trim().startsWith("(:tasks")) {
-                bw.write(transformTasks(def) + "\n");
+                bw.write(transformTasks(def, taskReplacementMap) + "\n");
             } else if (def.trim().startsWith("(:method")) {
                 methods.add(def);
             } else if (def.trim().startsWith("(:action")) {
-                actions.add(def);
+                // we already did this
             } else {
                 System.out.println("Error, definition type not found: " + def);
             }
         }
 
-        // add new methods
-        for (String def : actions) {
-            methods.add(addNewMethods(def));
-        }
 
         // write rest of domain
         for (String def : methods) {
-            bw.write(transformMethods(def) + "\n");
+            bw.write(transformMethods(def, taskReplacementMap) + "\n");
         }
+        // write the newly created methods without doing anything
+        for (String m : newMethods)
+            bw.write(m);
         for (String def : actions) {
             bw.write(transformActions(def) + "\n");
         }
@@ -146,7 +160,7 @@ public class formatConverterRonToOurs {
     static Pattern pActionName = Pattern.compile(acNameRegEx);
     static Pattern pTaskName = Pattern.compile(meNameRegEx);
 
-    private static String addNewMethods(String def) {
+    private static String addNewMethods(String def, Map<String, String> taskReplacementMap) {
         Matcher mAction = pActionName.matcher(def);
         if (!mAction.find()) {
             System.out.println("Error: could not find action name");
@@ -159,10 +173,20 @@ public class formatConverterRonToOurs {
             System.out.println("Error: could not find task name");
             return null;
         }
-        String taskName = mTask.group(1);
+        String task = mTask.group(1);
+        String taskName = task.split(" ")[0];
+        String replacementTaskName = taskName + "_abstract";
+        String parameters = task.substring(taskName.length());
+        // TODO this does not always work
+        String parameterType = "";
+        if (parameters.length() != 0)
+            parameterType = " - OBJ";
+
+        taskReplacementMap.put(taskName, replacementTaskName);
         return "(:method newMethod" + (newMethodID++) + "\n" +
-                "    :task (" + taskName + ")\n" +
-                "    :tasks ((" + actionName + ")))";
+                "    :parameters (" + parameters + " " + parameterType + ")\n" +
+                "    :task (" + replacementTaskName + parameters + ")\n" +
+                "    :tasks (" + actionName + parameters + "))";
     }
 
     static String delTaskLineRegEx = "[\\s]*:task \\([^)]*\\)";
@@ -171,37 +195,49 @@ public class formatConverterRonToOurs {
         return def.replaceAll(delTaskLineRegEx, "");
     }
 
-    private static String transformMethods(String def) {
+    private static String transformMethods(String def, Map<String, String> taskReplacementMap) {
         int paramPos = def.indexOf(":parameters");
         int taskPos = def.indexOf(":task");
-        if (taskPos < paramPos) {
-            int endLineParam = def.indexOf("\n", paramPos);
-            int endLineTask = def.indexOf("\n", taskPos);
 
-            String parameters = def.substring(paramPos, endLineParam);
-            String task = def.substring(taskPos, endLineTask);
+        if (paramPos != -1) {
+            if (taskPos < paramPos) {
+                int endLineParam = def.indexOf("\n", paramPos);
+                int endLineTask = def.indexOf("\n", taskPos);
 
-            String newDef = def.substring(0, taskPos);
-            newDef += parameters;
-            newDef += def.substring(endLineTask, paramPos);
-            newDef += task;
-            newDef += def.substring(endLineParam);
-            assert (newDef.length() == def.length());
-            def = newDef;
+                String parameters = def.substring(paramPos, endLineParam);
+                String task = def.substring(taskPos, endLineTask);
+
+                String newDef = def.substring(0, taskPos);
+                newDef += parameters;
+                newDef += def.substring(endLineTask, paramPos);
+                newDef += task;
+                newDef += def.substring(endLineParam);
+                assert (newDef.length() == def.length());
+                def = newDef;
+            }
+        } else {
+            def = def.substring(0, taskPos) + "    :parameters ()\n" + def.substring(taskPos);
         }
+
+        for (Map.Entry<String, String> x : taskReplacementMap.entrySet())
+            def = def.replaceAll(x.getKey(), x.getValue());
+
         return def.replaceAll("\\:tasks \\(\\(", ":tasks (and (");
     }
 
     static String taskDefRegEx = "\\(([a-zA-Z0-9_-]+)( [^)]+)?";
     static Pattern pTask = Pattern.compile(taskDefRegEx);
 
-    private static String transformTasks(String def) {
+    private static String transformTasks(String def, Map<String, String> taskReplacementMap) {
         StringBuilder res = new StringBuilder();
         Matcher mTasks = pTask.matcher(def);
         int offset = 0;
         while (mTasks.find(offset)) {
             res.append("  (:task ");
-            res.append(mTasks.group(1));
+            if (taskReplacementMap.containsKey(mTasks.group(1)))
+                res.append(taskReplacementMap.get(mTasks.group(1)));
+            else
+                res.append(mTasks.group(1));
             res.append(" :parameters (");
             String paramStr = mTasks.group(2);
             if (paramStr != null) {
