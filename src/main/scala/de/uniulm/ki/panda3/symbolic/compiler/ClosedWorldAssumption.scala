@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.compiler
 
 import de.uniulm.ki.panda3.symbolic.csp.Equal
-import de.uniulm.ki.panda3.symbolic.domain.updates.{AddVariableConstraints, AddVariables, ExchangePlanStep}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{AddVariableConstraints, AddVariables, ExchangePlanSteps}
 import de.uniulm.ki.panda3.symbolic.domain.{GeneralTask, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -68,6 +68,6 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
                                                  And[Formula](newEffects :+ oldInit.schema.effect))
     val newInit: PlanStep = PlanStep(oldInit.id, newInitSchema, oldInit.arguments ++ newVariables)
 
-    (domain, plan.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints)).update(ExchangePlanStep(oldInit, newInit)))
+    (domain, plan.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints)).update(ExchangePlanSteps(oldInit,newInit)))
   }
 }

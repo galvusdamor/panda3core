@@ -33,4 +33,6 @@ package object util {
     }
     found
   }
+
+  def allSubsets[A](seq: Seq[A]): Seq[Seq[A]] = seq.toSet.subsets() map { _.toSeq } toSeq
 }

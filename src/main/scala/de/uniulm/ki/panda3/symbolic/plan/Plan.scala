@@ -237,8 +237,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       }
       val newGoal = PlanStep(goal.id, goalTask, goal.arguments)
 
-      val exchangeInit = ExchangePlanStep(init, newInit)
-      val exchangeGoal = ExchangePlanStep(goal, newGoal)
+      val exchangeInit = ExchangePlanSteps(init, newInit)
+      val exchangeGoal = ExchangePlanSteps(goal, newGoal)
 
       Plan(planStepsAndRemovedPlanSteps map {
         _ update exchangeInit update exchangeGoal

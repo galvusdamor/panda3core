@@ -386,8 +386,19 @@ object VerifyEncoding {
 
   def computeTSTGK(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int = domain.taskSchemaTransitionGraph.longestPathLength match {case Some(x) => x; case _ => Integer.MAX_VALUE }
 
-  def computeMethodSize(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int =
-    if (domain.minimumMethodSize >= 2) Math.ceil(Math.log(taskSequence.length) / Math.log(domain.minimumMethodSize)).toInt else Integer.MAX_VALUE
+  def computeMethodSize(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int = {
+    // recognize the case where only top has a unit method
+    val (minMethodSize, heightIncrease) = if (plan.planStepsWithoutInitGoal.size == 1) {
+      val (topFromMethods, otherMethods) = domain.decompositionMethods partition { _.abstractTask == plan.planStepsWithoutInitGoal.head.schema }
+      val topToMethods = domain.decompositionMethods filter { _.subPlan.planStepsWithoutInitGoal exists { _.schema == plan.planStepsWithoutInitGoal.head.schema } }
+
+
+      if (topFromMethods.size == 1 && topToMethods.isEmpty) (otherMethods map { _.subPlan.planStepsWithoutInitGoal.length } min, 1) else (domain.minimumMethodSize, 0)
+    } else (domain.minimumMethodSize, 0)
+
+
+    if (minMethodSize >= 2) Math.ceil(Math.log(taskSequence.length) / Math.log(domain.minimumMethodSize)).toInt + heightIncrease else Integer.MAX_VALUE
+  }
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int = {
     val icapsPaperLimit = computeICAPSK(domain, plan, taskSequence)

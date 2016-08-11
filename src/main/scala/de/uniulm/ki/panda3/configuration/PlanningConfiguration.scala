@@ -21,7 +21,7 @@ import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.{efficient, symbolic}
-import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
+import de.uniulm.ki.util.{Dot2PdfCompiler, InformationCapsule, TimeCapsule}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -372,7 +372,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     // removing negative preconditions
     timeCapsule start COMPILE_NEGATIVE_PRECONFITIONS
-    val compilationResult = if (preprocessingConfiguration.compileNegativePreconditions) {
+    val negativePreconditionsCompiled = if (preprocessingConfiguration.compileNegativePreconditions) {
       info("Compiling negative preconditions ... ")
       val compiled = RemoveNegativePreconditions.transform(domain, problem, ())
       info("done.\n")
@@ -382,7 +382,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop COMPILE_NEGATIVE_PRECONFITIONS
 
     // initial run of the reachability analysis on the domain, until it has converged
-    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compilationResult._1, compilationResult._2, timeCapsule)
+    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(negativePreconditionsCompiled._1, negativePreconditionsCompiled._2, timeCapsule)
 
     // finished reachability analysis now we have to ground
     if (preprocessingConfiguration.groundDomain) {
@@ -401,7 +401,22 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       info("done.\n")
       extra(result._1.statisticsString + "\n")
 
-      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(result._1, result._2, timeCapsule)
+      // removing negative preconditions
+      timeCapsule start COMPILE_UNIT_METHODS
+      val unitMethodsCompiled = if (preprocessingConfiguration.compileUnitMethods) {
+        info("Compiling unit methods ... ")
+        val compiled = RemoveUnitMethods.transform(result._1, result._2, ())
+        Dot2PdfCompiler.writeDotToFile(result._1.taskSchemaTransitionGraph,"before.pdf")
+        Dot2PdfCompiler.writeDotToFile(compiled._1.taskSchemaTransitionGraph,"after.pdf")
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        compiled
+      } else (result._1, result._2)
+      timeCapsule stop COMPILE_UNIT_METHODS
+
+
+
+      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, timeCapsule)
 
       timeCapsule stop PREPROCESSING
       ((groundedDomainAndPlan, groundedAnalysisMap), timeCapsule)
@@ -437,6 +452,7 @@ case class ParsingConfiguration(
 
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
+                                       compileUnitMethods: Boolean,
                                        liftedReachability: Boolean,
                                        groundedReachability: Boolean,
                                        planningGraph: Boolean,

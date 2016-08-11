@@ -55,8 +55,9 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
   lazy val allGroundedAbstractTasks : Seq[GroundTask] = abstractTasks flatMap { _.instantiateGround }
 
-  lazy val minimumMethodSize = decompositionMethods map {_.subPlan.planStepsWithoutInitGoal.length} min
-  lazy val maximumMethodSize = decompositionMethods map {_.subPlan.planStepsWithoutInitGoal.length} max
+  lazy val minimumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min
+  lazy val maximumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
+  lazy val isGround         : Boolean = predicates forall { _.argumentSorts.isEmpty }
 
   /**
     * Determines the sort a constant originally belonged to.

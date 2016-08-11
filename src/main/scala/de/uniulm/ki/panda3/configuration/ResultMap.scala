@@ -28,7 +28,7 @@ object SolutionInternalString extends ResultType {type ResultType = Option[Strin
 
 object SolutionDotString extends ResultType {type ResultType = Option[String]}
 
-object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain,Plan)}
+object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain, Plan)}
 
 
 object Timings {
@@ -44,6 +44,7 @@ object Timings {
 
   val PREPROCESSING                   = "02 preprocessing:00:total"
   val COMPILE_NEGATIVE_PRECONFITIONS  = "02 preprocessing:01:compile negative preconditions"
+  val COMPILE_UNIT_METHODS            = "02 preprocessing:02:compile unit methods"
   val LIFTED_REACHABILITY_ANALYSIS    = "02 preprocessing:11:lifted reachabiltiy analysis"
   val GROUNDED_REACHABILITY_ANALYSIS  = "02 preprocessing:12:grounded reachabiltiy analysis"
   val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:13:grounded planning graph analysis"

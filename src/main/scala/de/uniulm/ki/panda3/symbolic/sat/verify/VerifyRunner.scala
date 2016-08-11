@@ -30,7 +30,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int) {
     // create the configuration
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(XMLParserType),
-                                               PreprocessingConfiguration(compileNegativePreconditions = true,
+                                               PreprocessingConfiguration(compileNegativePreconditions = true,  compileUnitMethods = true,
                                                                           liftedReachability = true, groundedReachability = false, planningGraph = true,
                                                                           naiveGroundedTaskDecompositionGraph = true,
                                                                           iterateReachabilityAnalysis = false, groundDomain = true),
@@ -234,14 +234,14 @@ object VerifyRunner {
   //val prefix = ""
 
   val problemsToVerify: Seq[(String, Seq[(String, Int)])] =
-    ("UM-Translog/domains/UMTranslog.xml",
-      ("UM-Translog/problems/UMTranslog-P-1-Airplane.xml", 1) ::
+    //("UM-Translog/domains/UMTranslog.xml",
+      //("UM-Translog/problems/UMTranslog-P-1-Airplane.xml", 1) ::
         //("UM-Translog/problems/UMTranslog-P-1-AirplanesHub.xml", 1) ::
         //("UM-Translog/problems/UMTranslog-P-1-ArmoredRegularTruck.xml", 1) ::
-        Nil) ::
+        //   Nil) ::
       ("Satellite/domains/satellite2.xml",
-        ("Satellite/problems/sat-C.xml", 1) ::
-          ("Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml", 1) ::
+      //  ("Satellite/problems/sat-C.xml", 1) ::
+        //  ("Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml", 1) ::
           ("Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml", 1) ::
           Nil) ::
       Nil
