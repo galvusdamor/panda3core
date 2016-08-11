@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
+import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
 import de.uniulm.ki.util._
 
@@ -27,8 +28,9 @@ case class VerifyRunner(domFile: String, probFile: String) {
                                                                         liftedReachability = true, groundedReachability = false, planningGraph = true,
                                                                         naiveGroundedTaskDecompositionGraph = true,
                                                                         iterateReachabilityAnalysis = false, groundDomain = true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true),
-                                             SearchConfiguration(Some(1), None, efficientSearch = true, DijkstraType, None, printSearchInfo = true),
+                                             //SearchConfiguration(Some(1), None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true),
+                                             SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true),
+                                             //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
                                                                              SearchStatistics,
@@ -41,7 +43,7 @@ case class VerifyRunner(domFile: String, probFile: String) {
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
 
-    //val solutionPlan = results(SearchResult).get
+    val solutionPlan = results(SearchResult).get
     val (domain, initialPlan) = results(PreprocessedDomainAndPlan)
 
     println(results(ProcessingTimings).longInfo)
@@ -58,8 +60,8 @@ case class VerifyRunner(domFile: String, probFile: String) {
 
     //println(allOrderings map {ord => ord map {_.schema.name} mkString " "} mkString "\n")
 
-    //val ordering = solutionPlan.orderingConstraintsWithoutRemovedPlanSteps.graph.topologicalOrdering.get map { _.schema }
-    val ordering = Range(0,11) map { _ => domain.tasks.head}
+    val ordering = solutionPlan.orderingConstraintsWithoutRemovedPlanSteps.graph.topologicalOrdering.get map { _.schema }
+    //val ordering = Range(0, 15) map { _ => domain.tasks.head }
 
     val groundTasks = ordering map { task => GroundTask(task, Nil) }
     /*val finalState = groundTasks.foldLeft(initialPlan.groundedInitialState)(
@@ -76,11 +78,11 @@ case class VerifyRunner(domFile: String, probFile: String) {
     println(ordering map { _.name } mkString "\n")
 
     // start verification
-    val encoder = VerifyEncoding(domain, initialPlan, ordering)(6)
+    val encoder = VerifyEncoding(domain, initialPlan, ordering)(3)
     println("K " + encoder.K + " DELTA " + encoder.DELTA)
     println("Theoretical K " + VerifyEncoding.computeTheoreticalK(domain, initialPlan, ordering))
 
-    Dot2PdfCompiler.writeDotToFile(domain.taskSchemaTransitionGraph, "/home/gregor/tstg.pdf")
+    //Dot2PdfCompiler.writeDotToFile(domain.taskSchemaTransitionGraph, "/home/gregor/tstg.pdf")
 
     val startTime = System.currentTimeMillis()
     //val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialAndGoalState ++ encoder.givenActionsFormula
@@ -88,7 +90,7 @@ case class VerifyRunner(domFile: String, probFile: String) {
     val formulaTime = System.currentTimeMillis()
     val cnfString = encoder.miniSATString(usedFormula)
     writeStringToFile(cnfString, new File("__cnfString"))
-    writeStringToFile(usedFormula.toString(), new File("__formulaString"))
+    //writeStringToFile(usedFormula mkString "\n", new File("__formulaString"))
     val cnfStringTime = System.currentTimeMillis()
 
 
@@ -145,13 +147,37 @@ case class VerifyRunner(domFile: String, probFile: String) {
       }
       }
 
-      val decompGraph = SimpleDirectedGraph(nodes, edges)
-      Dot2PdfCompiler.writeDotToFile(decompGraph, "/home/gregor/decomp.pdf")
+      case class Foo(id : String, name : String) extends PrettyPrintable {
+        override def shortInfo: String = name
 
+        override def mediumInfo: String = name
+
+        override def longInfo: String = name
+      }
+
+      def changeSATNameToActionName(satName: String): Foo = {
+        val actionID = satName.split(",")(1).toInt
+        if (actionID >= 0) Foo(satName, domain.tasks(actionID).name) else Foo(satName,satName)
+      }
+
+      val decompGraphNames = SimpleDirectedGraph(nodes map changeSATNameToActionName, edges map { case (a, b) => (changeSATNameToActionName(a), changeSATNameToActionName(b)) })
+      val decompGraph = SimpleDirectedGraph(nodes, edges)
+      Dot2PdfCompiler.writeDotToFile(decompGraph, "decomp.pdf")
+      Dot2PdfCompiler.writeDotToFile(decompGraphNames, "decompName.pdf")
 
       val allTrueAtoms = encoder.atoms.zipWithIndex filter { case (atom, index) => literals contains (index + 1) } map { _._1 }
 
-      writeStringToFile(allTrueAtoms mkString "\n", new File("/home/gregor/true.txt"))
+      writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+
+      // extract the state trace
+      val layerPredicates = allTrueAtoms filter {_ startsWith "predicate"} map {p =>
+        val split = p.split(",")
+        val layer = split.head.split("_")(1).toInt
+
+        (layer,domain.predicates(split(1).toInt).name)
+      } sorted
+
+      //println(layerPredicates mkString "\n")
     }
 
     // print action mapping to numbers:
@@ -174,12 +200,16 @@ object VerifyRunner {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
 
     val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/sat-C.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/sat-C.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
+
+    //val domFile = args(0)
+    //val probFile = args(1)
 
     val runner = VerifyRunner(domFile, probFile)
 
