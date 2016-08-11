@@ -41,6 +41,6 @@ case class RandomPlanGenerator(domain: Domain, plan: Plan) {
         })
     }
 
-    randomWalk(plan.init.substitutedEffects map { _.predicate } toSet, length).get
+    randomWalk(plan.init.substitutedEffects collect { case l if l.isPositive => l.predicate } toSet, length).get
   }
 }
