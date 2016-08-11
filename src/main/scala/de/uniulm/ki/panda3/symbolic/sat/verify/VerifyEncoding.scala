@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.panda3.symbolic.compiler.{ClosedWorldAssumption, SHOPMethodCompiler, ToPlainFormulaRepresentation}
+import de.uniulm.ki.panda3.symbolic.compiler.{ExpandSortHierarchy, ClosedWorldAssumption, SHOPMethodCompiler, ToPlainFormulaRepresentation}
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
@@ -20,18 +20,19 @@ import scala.io.Source
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 //scalastyle:off number.of.methods
-case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[Task])(val K: Int = 2 * taskSequence.length * (domain.abstractTasks.length + 1)) {
+case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[Task])(val K: Int = VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequence)) {
 
   domain.tasks foreach { t => assert(t.parameters.isEmpty) }
   domain.predicates foreach { p => assert(p.argumentSorts.isEmpty) }
-  assert(initialPlan.init.substitutedEffects.length == domain.predicates.length)
+  //assert(initialPlan.init.substitutedEffects.length == domain.predicates.length)
 
-  val DELTA = domain.decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
+  val DELTA = domain.maximumMethodSize
   lazy val numberOfLayers          = K
   lazy val numberOfActionsPerLayer = taskSequence.length
 
 
-  private val taskIndices          : Map[Task, Int]                = domain.tasks.zipWithIndex.toMap.withDefaultValue(-1) // TODO hack!!
+  private val taskIndices          : Map[Task, Int]                = domain.tasks.zipWithIndex.toMap.withDefaultValue(-1)
+  // TODO hack!!
   private val predicateIndices     : Map[Predicate, Int]           = domain.predicates.zipWithIndex.toMap
   private val methodIndices        : Map[DecompositionMethod, Int] = domain.decompositionMethods.zipWithIndex.toMap
   private val methodPlanStepIndices: Map[Plan, Map[PlanStep, Int]] = (domain.decompositionMethods map { _.subPlan } map { plan =>
@@ -170,7 +171,7 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
   private def methodMustHaveChildren(layer: Int, fatherPosition: Int): Seq[Clause] = {
     domain.decompositionMethods flatMap {
-      case m@SimpleDecompositionMethod(_, subPlan,_) =>
+      case m@SimpleDecompositionMethod(_, subPlan, _) =>
         // those selected
         val presentChildren: Seq[Clause] = subPlan.planStepsWithoutInitGoal.zipWithIndex flatMap {
           case (ps, childNumber) =>
@@ -191,7 +192,7 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
         val childrenOrder: Seq[Clause] = minimalOrdering flatMap {
           case OrderingConstraint(beforePS, afterPS) =>
             val beforePos: Int = methodPlanStepIndices(subPlan)(beforePS) //subPlan.planStepsWithoutInitGoal indexOf beforePS
-            val afterPos: Int = methodPlanStepIndices(subPlan)(afterPS) // subPlan.planStepsWithoutInitGoal indexOf afterPS
+          val afterPos: Int = methodPlanStepIndices(subPlan)(afterPS) // subPlan.planStepsWithoutInitGoal indexOf afterPS
             Range(0, numberOfActionsPerLayer) flatMap {
               childBeforePos => Range(0, numberOfActionsPerLayer) flatMap {
                 childAfterPos =>
@@ -242,8 +243,10 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
   private def stateChange(layer: Int, position: Int): Seq[Clause] = domain.primitiveTasks flatMap {
     case task: ReducedTask =>
-      task.effect.conjuncts map {
-        case Literal(pred, isPositive, _) => // there won't be any parameters
+      task.effect.conjuncts collect {
+        // negated effect is also contained, ignore this one if it is negative
+        case Literal(pred, isPositive, _) if !((task.effect.conjuncts exists { l => l.predicate == pred && l.isNegative == isPositive }) && !isPositive) =>
+          // there won't be any parameters
           if (isPositive)
             impliesSingle(action(layer, position, task), statePredicate(layer, position + 1, pred))
           else
@@ -253,6 +256,7 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   }
 
   // maintains the state only if all actions are actually executed
+  // TODO deal with actions that have both (add p) and (del p) as effects
   private def weakMaintainState(layer: Int, position: Int): Seq[Clause] = domain.predicates flatMap {
     predicate =>
       true :: false :: Nil flatMap {
@@ -277,8 +281,13 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
       true :: false :: Nil map {
         makeItPositive =>
           val changingActions: Seq[Task] = domain.primitiveTasks filter {
-            case task: ReducedTask => task.effect.conjuncts exists {
-              l => l.predicate == predicate && l.isPositive == makeItPositive
+            case task: ReducedTask => task.effect.conjuncts exists { l =>
+              val matching = l.predicate == predicate && l.isPositive == makeItPositive
+
+              if ((task.effect.conjuncts exists { l => l.predicate == predicate && l.isNegative == makeItPositive }) && !makeItPositive)
+                false
+              else matching
+
             }
             case _                 => noSupport(FORUMLASNOTSUPPORTED)
           }
@@ -366,122 +375,22 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   }
 }
 
+object VerifyEncoding {
+  def computeTheoreticalK(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int = {
+    val icapsPaperLimit = 2 * taskSequence.length * (domain.abstractTasks.length + 1)
+    val TSTGPath = domain.taskSchemaTransitionGraph.longestPathLength
+    val minimumMethodSize = domain.minimumMethodSize
+
+    println("PATH: " + TSTGPath)
+    println("min \\Delta:" + minimumMethodSize)
+    icapsPaperLimit
+  }
+}
+
 case class Clause(disjuncts: Seq[(String, Boolean)]) {}
 
 object Clause {
   def apply(atom: String): Clause = Clause((atom, true) :: Nil)
 
   def apply(literal: (String, Boolean)): Clause = Clause(literal :: Nil)
-}
-
-object VerifyEncoding {
-
-  import sys.process._
-
-  def main(args: Array[String]) {
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/sat/simpleDomain.hddl"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/sat/simpleProblem.hddl"
-    val domAndInitialPlan: (Domain, Plan) = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
-
-    val sortExpansion = domAndInitialPlan._1.expandSortHierarchy()
-
-    val parsedDom = domAndInitialPlan._1.update(sortExpansion)
-    val parsedProblem = domAndInitialPlan._2.update(sortExpansion)
-
-    // apply the CWA
-    val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem)
-    val simpleMethod = SHOPMethodCompiler.transform(cwaApplied, ())
-    val flattened = ToPlainFormulaRepresentation.transform(simpleMethod, ())
-
-    val (dom, iniPlan) = flattened
-
-    println(dom.statisticsString)
-    val p1 = dom.primitiveTasks.find({ _.name == "p1" }).get
-    val p2 = dom.primitiveTasks.find({ _.name == "p2" }).get
-    val p3 = dom.primitiveTasks.find({ _.name == "p3" }).get
-
-    val verifySeq = p2 :: p2 :: p2 :: p2 :: p2 :: p1 :: p3 :: p3 :: Nil
-
-    val encoder = VerifyEncoding(dom, iniPlan, verifySeq)(10)
-
-    println("K " + encoder.K + " DELTA " + encoder.DELTA)
-
-
-    System.in.read()
-    val startTime = System.currentTimeMillis()
-
-    val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialAndGoalState //++ encoder.givenActionsFormula
-    val formulaTime = System.currentTimeMillis()
-    val encodedString = encoder.miniSATString(usedFormula)
-
-    println("Variables : " + encoder.atoms.length + " Constraints: " + encoder.decompositionFormula.length)
-    println("Time needed to compute the formula: " + (formulaTime - startTime) + "ms")
-    println("Time needed to convert the formula into a string: " + (System.currentTimeMillis() - formulaTime) + "ms")
-
-    System.exit(0)
-
-
-    writeStringToFile(usedFormula mkString "\n", new File("/home/gregor/formula"))
-    writeStringToFile(encodedString, new File("/home/gregor/foo"))
-
-    try {
-      println("Starting minisat")
-      "minisat /home/gregor/foo /home/gregor/res.txt" !
-    } catch {
-      case rt: RuntimeException => println("Minisat exitcode problem ...")
-    }
-    val minisatOutput = Source.fromFile("/home/gregor/res.txt").mkString
-    val minisatResult = minisatOutput.split("\n")(0)
-    println("MiniSAT says: " + minisatResult)
-    if (minisatResult == "SAT") {
-      val minisatAssignment = minisatOutput.split("\n")(1)
-      val literals = (minisatAssignment.split(" ") filter { _ != 0 } map { _.toInt }).toSet
-
-      // iterate through layers
-      val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, encoder.numberOfActionsPerLayer) map { pos =>
-        dom.tasks map { task =>
-          val actionString = encoder.action(layer, pos, task)
-          val isPres = if (encoder.atoms contains actionString) literals contains (1 + (encoder.atoms indexOf actionString)) else false
-          (actionString, isPres)
-        } find { _._2 }
-      } filter { _.isDefined } map { _.get._1 }
-      }
-
-      val edges: Seq[(String, String)] = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, encoder.numberOfActionsPerLayer) flatMap { pos => Range(0, encoder
-        .numberOfActionsPerLayer) flatMap {
-        father =>
-          Range(0, encoder.DELTA) flatMap { childIndex =>
-            val childString = encoder.childWithIndex(layer, pos, father, childIndex)
-            if ((encoder.atoms contains childString) && (literals contains (1 + (encoder.atoms indexOf childString)))) {
-              // find parent and myself
-              val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
-              assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
-              val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
-              assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
-              (fatherStringOption.get, childStringOption.get) :: Nil
-            } else Nil
-            //literals contains (1 + (encoder.atoms indexOf actionString)) else false
-            //(actionString, isPres)
-          }
-      }
-      }
-      }
-
-      val decompGraph = SimpleDirectedGraph(nodes, edges)
-      Dot2PdfCompiler.writeDotToFile(decompGraph, "/home/gregor/decomp.pdf")
-
-
-      val allTrueAtoms = encoder.atoms.zipWithIndex filter { case (atom, index) => literals contains (index + 1) } map { _._1 }
-
-      writeStringToFile(allTrueAtoms mkString "\n", new File("/home/gregor/true.txt"))
-    }
-
-    // print action mapping to numbers:
-    println(dom.tasks map { t => t.name + " -> " + encoder.taskIndex(t) } mkString "\n")
-    println(dom.predicates map { t => t.name + " -> " + encoder.predicateIndex(t) } mkString "\n")
-
-    //println(encoder.atoms mkString "\n")
-
-    //println(encodedString)
-  }
 }
