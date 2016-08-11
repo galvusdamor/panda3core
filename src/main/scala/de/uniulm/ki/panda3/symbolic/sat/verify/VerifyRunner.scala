@@ -4,6 +4,7 @@ import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
+import de.uniulm.ki.panda3.symbolic.domain.Task
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
 import de.uniulm.ki.util._
 
@@ -13,104 +14,115 @@ import scala.io.Source
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class VerifyRunner(domFile: String, probFile: String) {
+case class VerifyRunner(domFile: String, probFile: String, configNumber: Int) {
 
   import sys.process._
 
-  def run(): Unit = {
+  lazy val (solutionPlan, domain, initialPlan, preprocessTime) = {
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
+    val searchConfig = configNumber match {
+      case 1 => SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true)
+      case 2 => SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true)
+    }
+
     // create the configuration
-    val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                             ParsingConfiguration(XMLParserType),
-                                             PreprocessingConfiguration(compileNegativePreconditions = true,
-                                                                        liftedReachability = true, groundedReachability = false, planningGraph = true,
-                                                                        naiveGroundedTaskDecompositionGraph = true,
-                                                                        iterateReachabilityAnalysis = false, groundDomain = true),
-                                             //SearchConfiguration(Some(1), None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true),
-                                             SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true),
-                                             PostprocessingConfiguration(Set(ProcessingTimings,
-                                                                             SearchStatus, SearchResult,
-                                                                             SearchStatistics,
-                                                                             //SearchSpace,
-                                                                             SolutionInternalString,
-                                                                             SolutionDotString,
-                                                                             PreprocessedDomainAndPlan)))
+    val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
+                                               ParsingConfiguration(XMLParserType),
+                                               PreprocessingConfiguration(compileNegativePreconditions = true,
+                                                                          liftedReachability = true, groundedReachability = false, planningGraph = true,
+                                                                          naiveGroundedTaskDecompositionGraph = true,
+                                                                          iterateReachabilityAnalysis = false, groundDomain = true),
+                                               searchConfig,
+                                               PostprocessingConfiguration(Set(ProcessingTimings,
+                                                                               SearchStatus, SearchResult,
+                                                                               SearchStatistics,
+                                                                               //SearchSpace,
+                                                                               SolutionInternalString,
+                                                                               SolutionDotString,
+                                                                               PreprocessedDomainAndPlan)))
 
-    //System.in.read()
+    val results: ResultMap = planningConfig.runResultSearch(domInputStream, probInputStream)
 
-    val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
+    val solution = results(SearchResult).get
+    val (processedDomain, processedInitialPlan) = results(PreprocessedDomainAndPlan)
 
-    val solutionPlan = results(SearchResult).get
-    val (domain, initialPlan) = results(PreprocessedDomainAndPlan)
-
+    // convenience output
+    Dot2PdfCompiler.writeDotToFile(solution.dotString, "/home/gregor/solution.pdf")
     println(results(ProcessingTimings).longInfo)
     println(results(SearchStatistics).longInfo)
 
-
-    //Dot2PdfCompiler.writeDotToFile(solutionPlan.dotString, "/home/gregor/solution.pdf")
-
-    //println(solutionPlan.orderingConstraintsWithoutRemovedPlanSteps.isTotalOrder())
-    //println(solutionPlan.planSteps.length)
-
-    //println(solutionPlan.orderingConstraintsWithoutRemovedPlanSteps.graph.dotString)
     //val allOrderings = solutionPlan.orderingConstraintsWithoutRemovedPlanSteps.graph.allTotalOrderings.get
+    val ordering = solution.orderingConstraintsWithoutRemovedPlanSteps.graph.topologicalOrdering.get map { _.schema }
 
-    //println(allOrderings map {ord => ord map {_.schema.name} mkString " "} mkString "\n")
-
-    val ordering = solutionPlan.orderingConstraintsWithoutRemovedPlanSteps.graph.topologicalOrdering.get map { _.schema }
-    //val ordering = Range(0, 15) map { _ => domain.tasks.head }
-
+    // check whether we actually got a solution
     val groundTasks = ordering map { task => GroundTask(task, Nil) }
-    /*val finalState = groundTasks.foldLeft(initialPlan.groundedInitialState)(
+    val finalState = groundTasks.foldLeft(processedInitialPlan.groundedInitialState)(
       { case (state, action) =>
-        action.substitutedPreconditions foreach {prec => assert(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
+        action.substitutedPreconditions foreach { prec => assert(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
 
         (state diff action.substitutedDelEffects) ++ action.substitutedAddEffects
       })
 
-    initialPlan.groundedGoalTask.substitutedPreconditions foreach {goalLiteral => assert(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name)}
-    */
+    processedInitialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => assert(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
+
+
+    // return the solution and the domain
+    (ordering, processedDomain, processedInitialPlan, results(ProcessingTimings).integralDataMap()(Timings.TOTAL_TIME))
+  }
+
+  def run(sequenceToVerify: Seq[Task]): (Boolean, TimeCapsule, InformationCapsule) = {
+    val timeCapsule = new TimeCapsule
+    val informationCapsule = new InformationCapsule
+
+    informationCapsule.set(VerifyRunner.PLAN_LENGTH, sequenceToVerify.length)
+
+    //val ordering = Range(0, 8) map { _ => domain.tasks.head }
 
     println("PANDA found the following solution")
-    println(ordering map { _.name } mkString "\n")
+    println(sequenceToVerify map { _.name } mkString "\n")
 
     // start verification
-    val encoder = VerifyEncoding(domain, initialPlan, ordering)(3)
-    println("K " + encoder.K + " DELTA " + encoder.DELTA)
-    println("Theoretical K " + VerifyEncoding.computeTheoreticalK(domain, initialPlan, ordering))
+    val encoder = VerifyEncoding(domain, initialPlan, sequenceToVerify)() // use theoretical value //(3)
+    println("K " + encoder.K)
+    informationCapsule.set(VerifyRunner.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, sequenceToVerify))
+    informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify))
+    informationCapsule.set(VerifyRunner.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, sequenceToVerify))
 
-    //Dot2PdfCompiler.writeDotToFile(domain.taskSchemaTransitionGraph, "/home/gregor/tstg.pdf")
 
-    val startTime = System.currentTimeMillis()
-    //val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialAndGoalState ++ encoder.givenActionsFormula
-    val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialAndGoalState ++ encoder.noAbstractsFormula
-    val formulaTime = System.currentTimeMillis()
+
+
+    timeCapsule start VerifyRunner.VERIFY_TOTAL
+    timeCapsule start VerifyRunner.GENERATE_FORMULA
+    val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialAndGoalState ++ encoder.givenActionsFormula
+    //val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialAndGoalState ++ encoder.noAbstractsFormula
+    timeCapsule stop VerifyRunner.GENERATE_FORMULA
+
+    timeCapsule start VerifyRunner.WRITE_FORMULA
     val cnfString = encoder.miniSATString(usedFormula)
     writeStringToFile(cnfString, new File("__cnfString"))
+    timeCapsule stop VerifyRunner.WRITE_FORMULA
+
+    informationCapsule.set(VerifyRunner.NUMBER_OF_VARIABLES,(usedFormula flatMap {_.disjuncts map {_._1}} distinct).size)
+    informationCapsule.set(VerifyRunner.NUMBER_OF_CLAUSES,usedFormula.length)
+
     //writeStringToFile(usedFormula mkString "\n", new File("__formulaString"))
-    val cnfStringTime = System.currentTimeMillis()
 
-
-
-
+    timeCapsule start VerifyRunner.SAT_SOLVER
     try {
       println("Starting minisat")
       "minisat __cnfString __res.txt" !
     } catch {
       case rt: RuntimeException => println("Minisat exitcode problem ...")
     }
-    val satSolverTime = System.currentTimeMillis()
-    println("Variables : " + encoder.atoms.length + " Constraints: " + encoder.decompositionFormula.length)
-    println("Time needed to compute the formula: " + (formulaTime - startTime) + "ms")
-    println("Time needed to convert the formula into a string: " + (cnfStringTime - formulaTime) + "ms")
-    println("Time needed to solve the SAT instance: " + (satSolverTime - cnfStringTime) + "ms")
-    println("Total Time: " + (satSolverTime - startTime) + "ms")
+    timeCapsule stop VerifyRunner.SAT_SOLVER
+    timeCapsule stop VerifyRunner.VERIFY_TOTAL
+
+    // postprocessing
 
     val minisatOutput = Source.fromFile("__res.txt").mkString
-    //"rm __cnfString __res.txt" !
+    "rm __cnfString __res.txt" !
     val minisatResult = minisatOutput.split("\n")(0)
     println("MiniSAT says: " + minisatResult)
     if (minisatResult == "SAT") {
@@ -140,24 +152,14 @@ case class VerifyRunner(domFile: String, probFile: String) {
               assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
               (fatherStringOption.get, childStringOption.get) :: Nil
             } else Nil
-            //literals contains (1 + (encoder.atoms indexOf actionString)) else false
-            //(actionString, isPres)
           }
       }
       }
       }
 
-      case class Foo(id : String, name : String) extends PrettyPrintable {
-        override def shortInfo: String = name
-
-        override def mediumInfo: String = name
-
-        override def longInfo: String = name
-      }
-
-      def changeSATNameToActionName(satName: String): Foo = {
+      def changeSATNameToActionName(satName: String): SimpleGraphNode = {
         val actionID = satName.split(",")(1).toInt
-        if (actionID >= 0) Foo(satName, domain.tasks(actionID).name) else Foo(satName,satName)
+        if (actionID >= 0) SimpleGraphNode(satName, domain.tasks(actionID).name) else SimpleGraphNode(satName, satName)
       }
 
       val decompGraphNames = SimpleDirectedGraph(nodes map changeSATNameToActionName, edges map { case (a, b) => (changeSATNameToActionName(a), changeSATNameToActionName(b)) })
@@ -170,32 +172,41 @@ case class VerifyRunner(domFile: String, probFile: String) {
       writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
       // extract the state trace
-      val layerPredicates = allTrueAtoms filter {_ startsWith "predicate"} map {p =>
+      val layerPredicates = allTrueAtoms filter { _ startsWith "predicate" } map { p =>
         val split = p.split(",")
         val layer = split.head.split("_")(1).toInt
 
-        (layer,domain.predicates(split(1).toInt).name)
+        (layer, domain.predicates(split(1).toInt).name)
       } sorted
 
       //println(layerPredicates mkString "\n")
     }
 
-    // print action mapping to numbers:
-    //println(domain.tasks map { t => t.name + " -> " + encoder.taskIndex(t) } mkString "\n")
-    //println(domain.predicates map { t => t.name + " -> " + encoder.predicateIndex(t) } mkString "\n")
-
-
+    (minisatResult == "SAT", timeCapsule, informationCapsule)
   }
 }
 
 object VerifyRunner {
+
+  val VERIFY_TOTAL     = "99 verify:00:total"
+  val GENERATE_FORMULA = "99 verify:10:generate formula"
+  val WRITE_FORMULA    = "99 verify:20:write formula"
+  val SAT_SOLVER       = "99 verify:30:SAT solver"
+
+  val PLAN_LENGTH         = "99 verify:00:plan length"
+  val NUMBER_OF_VARIABLES = "99 verify:01:number of variables"
+  val NUMBER_OF_CLAUSES   = "99 verify:02:number of clauses"
+  val ICAPS_K             = "99 verify:10:K ICAPS"
+  val LOG_K               = "99 verify:11:K LOG"
+  val TSTG_K              = "99 verify:12:K task schema transition graph"
+
   def main(args: Array[String]) {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p01-hierarchical-socs.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant1-hierarchical.xml"
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
@@ -203,16 +214,22 @@ object VerifyRunner {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/sat-C.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
 
     //val domFile = args(0)
     //val probFile = args(1)
 
-    val runner = VerifyRunner(domFile, probFile)
+    val runner = VerifyRunner(domFile, probFile, 1)
 
-    runner.run()
+    val (isPlan,time,information) = runner.run(runner.solutionPlan)
+
+    println("PANDA says: " + (if (isPlan) "it is a solution" else "it is not a solution"))
+    println("Preprocess " + runner.preprocessTime)
+    println(time.longInfo)
+    println(information.longInfo)
+
   }
 }

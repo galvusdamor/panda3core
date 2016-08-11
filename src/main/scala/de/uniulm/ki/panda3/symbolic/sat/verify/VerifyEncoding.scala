@@ -343,8 +343,8 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   lazy val initialAndGoalState: Seq[Clause] = {
     val initiallyTruePredicates = initialPlan.init.substitutedEffects collect { case Literal(pred, true, _) => pred }
 
-    val initTrue = initiallyTruePredicates map {pred => Clause((statePredicate(K - 1, 0, pred), true))}
-    val initFalse = domain.predicates diff initiallyTruePredicates map {pred => Clause((statePredicate(K - 1, 0, pred), false))}
+    val initTrue = initiallyTruePredicates map { pred => Clause((statePredicate(K - 1, 0, pred), true)) }
+    val initFalse = domain.predicates diff initiallyTruePredicates map { pred => Clause((statePredicate(K - 1, 0, pred), false)) }
 
     val goal = initialPlan.goal.substitutedPreconditions map {
       case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, numberOfActionsPerLayer, pred), isPos))
@@ -378,14 +378,20 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 }
 
 object VerifyEncoding {
-  def computeTheoreticalK(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int = {
-    val icapsPaperLimit = 2 * taskSequence.length * (domain.abstractTasks.length + 1)
-    val TSTGPath = domain.taskSchemaTransitionGraph.longestPathLength
-    val minimumMethodSize = domain.minimumMethodSize
 
-    println("PATH: " + TSTGPath)
-    println("min \\Delta:" + minimumMethodSize)
-    icapsPaperLimit
+  def computeICAPSK(domain: Domain, plan: Plan, taskSequence: Seq[Task]) = 2 * taskSequence.length * (domain.abstractTasks.length + 1)
+
+  def computeTSTGK(domain: Domain, plan: Plan, taskSequence: Seq[Task]) = domain.taskSchemaTransitionGraph.longestPathLength match {case Some(x) => x; case _ => Integer.MAX_VALUE }
+
+  def computeMethodSize(domain: Domain, plan: Plan, taskSequence: Seq[Task]) =
+    if (domain.minimumMethodSize >= 2) Math.ceil(Math.log(taskSequence.length) / Math.log(domain.minimumMethodSize)).toInt else Integer.MAX_VALUE
+
+  def computeTheoreticalK(domain: Domain, plan: Plan, taskSequence: Seq[Task]): Int = {
+    val icapsPaperLimit = computeICAPSK(domain, plan, taskSequence)
+    val TSTGPath = computeTSTGK(domain, plan, taskSequence)
+    val minimumMethodSize = computeMethodSize(domain, plan, taskSequence)
+
+    Math.min(icapsPaperLimit, Math.min(TSTGPath, minimumMethodSize))
   }
 }
 
