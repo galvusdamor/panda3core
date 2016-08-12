@@ -126,8 +126,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       // in some cases we need to re-do some steps of the preparation as we have to transfer them into the efficient representation
       timeCapsule start HEURISTICS_PREPARATION
-      if ((searchConfiguration.heuristic contains TDGMinimumModification) || (searchConfiguration.heuristic contains TDGMinimumADD))
+      // compute the efficient TDG if needed during search
+      if ((searchConfiguration.heuristic contains TDGMinimumModification) || (searchConfiguration.heuristic contains TDGMinimumADD) ||
+        (searchConfiguration.heuristic contains TDGMinimumAction))
         analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
+
       if ((searchConfiguration.heuristic contains ADD) || (searchConfiguration.heuristic contains ADDReusing) || (searchConfiguration.heuristic contains TDGMinimumADD)) {
         // do the whole preparation, i.e. planning graph
         val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
@@ -162,6 +165,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case NumberOfPlanSteps      => EfficientNumberOfPlanSteps
                 case WeightedFlaws          => ???
                 case TDGMinimumModification => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                case TDGMinimumAction       => MinimumActionCount(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
                 case TDGMinimumADD          =>
                   // TODO experimental
                   val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
@@ -237,8 +241,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     info("Parsing domain ... ")
     timeCapsule start FILEPARSER
     val parsedDomainAndProblem = parsingConfiguration.parserType match {
-      case XMLParserType  => XMLParser.asParser.parseDomainAndProblem(domain, problem)
-      case HDDLParserType => HDDLParser.parseDomainAndProblem(domain, problem)
+      case XMLParserType   => XMLParser.asParser.parseDomainAndProblem(domain, problem)
+      case HDDLParserType  => HDDLParser.parseDomainAndProblem(domain, problem)
       case HPDDLParserType => HPDDLParser.parseDomainAndProblem(domain, problem)
     }
     timeCapsule stop FILEPARSER
@@ -406,8 +410,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val unitMethodsCompiled = if (preprocessingConfiguration.compileUnitMethods) {
         info("Compiling unit methods ... ")
         val compiled = RemoveUnitMethods.transform(result._1, result._2, ())
-        Dot2PdfCompiler.writeDotToFile(result._1.taskSchemaTransitionGraph,"before.pdf")
-        Dot2PdfCompiler.writeDotToFile(compiled._1.taskSchemaTransitionGraph,"after.pdf")
+        Dot2PdfCompiler.writeDotToFile(result._1.taskSchemaTransitionGraph, "before.pdf")
+        Dot2PdfCompiler.writeDotToFile(compiled._1.taskSchemaTransitionGraph, "after.pdf")
         info("done.\n")
         extra(compiled._1.statisticsString + "\n")
         compiled
@@ -439,6 +443,7 @@ sealed trait ParserType
 object XMLParserType extends ParserType
 
 object HDDLParserType extends ParserType
+
 object HPDDLParserType extends ParserType
 
 case class ParsingConfiguration(
@@ -495,6 +500,8 @@ object WeightedFlaws extends SearchHeuristic
 object TDGMinimumModification extends SearchHeuristic
 
 object TDGMinimumADD extends SearchHeuristic
+
+object TDGMinimumAction extends SearchHeuristic
 
 object ADD extends SearchHeuristic
 
