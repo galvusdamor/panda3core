@@ -44,4 +44,5 @@ case class DomainPropertyAnalyser(domain: Domain, tdg: TaskDecompositionGraph) {
     nonLastPlanSteps forall { ps => !(groundedAbstractTaskComponent contains groundMethod.subPlanPlanStepsToGrounded(ps)) }
   }
 
+  val isTotallyOrdered : Boolean = domain.decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
 }
