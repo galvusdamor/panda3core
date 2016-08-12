@@ -53,15 +53,19 @@ object Main {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-AirplanesHub.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RegularTruck-4Locations.xml"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--1--3.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/5--5--5.xml"
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p01-hierarchical-socs.xml"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p01-hierarchical-socs.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant1-hierarchical.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant2-hierarchical.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant3-hierarchical.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant4-hierarchical.xml"
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
@@ -104,15 +108,18 @@ object Main {
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
+    val doit = true
+
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(XMLParserType),
-                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = true,
-                                                                        liftedReachability = true, groundedReachability = false, planningGraph = true,
-                                                                        naiveGroundedTaskDecompositionGraph = true,
-                                                                        iterateReachabilityAnalysis = true, groundDomain = true),
-                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumADD), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
+                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                                        liftedReachability = true, groundedReachability = false, planningGraph = doit,
+                                                                        groundedTaskDecompositionGraph = Some(TopDownTDG),
+                                                                        iterateReachabilityAnalysis = false, groundDomain = doit),
+                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
+                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumAction), true),
+                                             SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
                                              //SearchConfiguration(None, None, efficientSearch = true, BFSType, None, printSearchInfo = true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,

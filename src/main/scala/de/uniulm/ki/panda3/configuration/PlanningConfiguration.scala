@@ -10,8 +10,8 @@ import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachable, EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability,
-NaiveGroundedTaskDecompositionGraph}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{TopDownTaskDecompositionGraph, EverythingIsHiearchicallyReachable,
+EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability, NaiveGroundedTaskDecompositionGraph}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, DomainPropertyAnalyser}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
@@ -87,7 +87,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // TDG based heuristics need the TDG
     if (searchConfiguration.heuristic contains TDGMinimumModification) if (!(analysisMap contains SymbolicGroundedTaskDecompositionGraph)) {
       timeCapsule start GROUNDED_TDG_ANALYSIS
-      analysisMap = runNaiveGroundedTaskDecompositionGraph(domainAndPlan._1, domainAndPlan._2, analysisMap)
+      analysisMap = runGroundedTaskDecompositionGraph(domainAndPlan._1, domainAndPlan._2, analysisMap, preprocessingConfiguration.groundedTaskDecompositionGraph.get)
       timeCapsule stop GROUNDED_TDG_ANALYSIS
     }
     timeCapsule stop HEURISTICS_PREPARATION
@@ -300,12 +300,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }
 
-  private def runNaiveGroundedTaskDecompositionGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
+  private def runGroundedTaskDecompositionGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap, tdgType: TDGGeneration): AnalysisMap = {
     val groundedReachabilityAnalysis =
       if (analysisMap contains SymbolicGroundedReachability) analysisMap(SymbolicGroundedReachability)
       else EverythingIsReachable(domain, problem.groundedInitialState.toSet)
 
-    val tdg = NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+    val tdg = tdgType match {
+      case NaiveTDG   => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case TopDownTDG => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+    }
 
     analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg)
   }
@@ -353,10 +356,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
-    val tdgResult = if (preprocessingConfiguration.naiveGroundedTaskDecompositionGraph) {
+    val tdgResult = if (preprocessingConfiguration.groundedTaskDecompositionGraph.isDefined) {
       info("Naive TDG ... ")
       // get the reachability analysis, if there is none, just use the trivial one
-      val newAnalysisMap = runNaiveGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2)
+      val newAnalysisMap = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, preprocessingConfiguration.groundedTaskDecompositionGraph.get)
       val pruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
@@ -454,6 +457,11 @@ case class ParsingConfiguration(
                                  toPlainFormulaRepresentation: Boolean = true
                                ) {}
 
+sealed trait TDGGeneration
+
+object NaiveTDG extends TDGGeneration
+
+object TopDownTDG extends TDGGeneration
 
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
@@ -461,7 +469,7 @@ case class PreprocessingConfiguration(
                                        liftedReachability: Boolean,
                                        groundedReachability: Boolean,
                                        planningGraph: Boolean,
-                                       naiveGroundedTaskDecompositionGraph: Boolean,
+                                       groundedTaskDecompositionGraph: Option[TDGGeneration],
                                        iterateReachabilityAnalysis: Boolean,
                                        groundDomain: Boolean
                                      ) {
