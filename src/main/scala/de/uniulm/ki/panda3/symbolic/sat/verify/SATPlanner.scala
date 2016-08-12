@@ -20,7 +20,7 @@ import scala.io.Source
   */
 object SATPlanner {
 
-  def main(args: Array[String]) {
+ /* def main(args: Array[String]) {
     import sys.process._
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/sat/simpleDomain.hddl"
@@ -118,7 +118,7 @@ object SATPlanner {
     // TODO still coded very badly
     val verifySeq = Range(0, 14) map { _ => null }
 
-    val encoder = VerifyEncoding(dom, iniPlan, verifySeq)(7)
+    val encoder = VerifyEncoding(dom, iniPlan, verifySeq,0)
 
     println("K " + encoder.K + " DELTA " + encoder.DELTA)
 
@@ -204,5 +204,5 @@ object SATPlanner {
     //println(encoder.atoms mkString "\n")
 
     //println(encodedString)
-  }
+  }*/
 }

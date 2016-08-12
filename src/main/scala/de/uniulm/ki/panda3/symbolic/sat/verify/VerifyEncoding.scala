@@ -20,7 +20,9 @@ import scala.io.Source
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 //scalastyle:off number.of.methods
-case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[Task])(val K: Int = VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequence)) {
+case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[Task], offsetToK: Int) {
+
+  val K: Int = VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequence) + offsetToK
 
   domain.tasks foreach { t => assert(t.parameters.isEmpty) }
   domain.predicates foreach { p => assert(p.argumentSorts.isEmpty) }
@@ -35,8 +37,8 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   // TODO hack!!
   private val predicateIndices     : Map[Predicate, Int]           = domain.predicates.zipWithIndex.toMap
   private val methodIndices        : Map[DecompositionMethod, Int] = domain.decompositionMethods.zipWithIndex.toMap
-  private val methodPlanStepIndices: Map[Plan, Map[PlanStep, Int]] = (domain.decompositionMethods map { _.subPlan } map { plan =>
-    (plan, plan.planStepsWithoutInitGoal.zipWithIndex.toMap)
+  private val methodPlanStepIndices: Map[Int, Map[PlanStep, Int]]  = (domain.decompositionMethods map { method =>
+    (methodIndices(method), method.subPlan.planStepsWithoutInitGoal.zipWithIndex.toMap)
   }).toMap
 
   def taskIndex(task: Task): Int = taskIndices(task)
@@ -47,21 +49,25 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
   def predicateIndex(predicate: Predicate): Int = predicateIndices(predicate)
 
-  def action(layer: Int, position: Int, task: Task): String = "action^" + layer + "_" + position + "," + taskIndex(task)
+  ///////////////////////////
+  // STRING GENERATORS
+  ///////////////////////////
 
-  private def actionUsed(layer: Int, position: Int): String = "actionUsed^" + layer + "_" + position
+  val action: ((Int, Int, Task)) => String = memoise[(Int, Int, Task), String]({ case (l, p, t) => "action^" + l + "_" + p + "," + taskIndex(t) })
 
-  private def actionAbstract(layer: Int, position: Int): String = "actionAbstract^" + layer + "_" + position
+  private val actionUsed: ((Int, Int)) => String = memoise[(Int, Int), String]({ case (l, p) => "actionUsed^" + l + "_" + p })
 
-  def childWithIndex(layer: Int, position: Int, father: Int, indexOnMethod: Int): String = "child^" + layer + "_" + position + "," + father + "," + indexOnMethod
+  private val actionAbstract: ((Int, Int)) => String = memoise[(Int, Int), String]({ case (l, p) => "actionAbstract^" + l + "_" + p })
 
-  private def childOf(layer: Int, position: Int, father: Int): String = "childof^" + layer + "_" + position + "," + father
+  val childWithIndex: ((Int, Int, Int, Int)) => String = memoise[(Int, Int, Int, Int), String]({ case (l, p, f, idx) => "child^" + l + "_" + p + "," + f + "," + idx })
 
-  private def before(layer: Int, beforeIndex: Int, afterIndex: Int): String = "before^" + layer + "," + beforeIndex + "," + afterIndex
+  private val childOf: ((Int, Int, Int)) => String = memoise[(Int, Int, Int), String]({ case (l, p, f) => "childof^" + l + "_" + p + "," + f })
 
-  private def method(layer: Int, position: Int, method: DecompositionMethod): String = "method^" + layer + "_" + position + "," + methodIndex(method)
+  private val before: ((Int, Int, Int)) => String = memoise[(Int, Int, Int), String]({ case (l, before, after) => "before^" + l + "," + before + "," + after })
 
-  private def statePredicate(layer: Int, position: Int, predicate: Predicate): String = "predicate^" + layer + "_" + position + "," + predicateIndex(predicate)
+  private val method: ((Int, Int, Int)) => String = memoise[(Int, Int, Int), String]({ case (l, pos, methodIdx) => "method^" + l + "_" + pos + "," + methodIdx })
+
+  private val statePredicate: ((Int, Int, Predicate)) => String = memoise[(Int, Int, Predicate), String]({ case (l, pos, pred) => "predicate^" + l + "_" + pos + "," + predicateIndex(pred) })
 
 
   // LOGICALS ABBREVIATIONS
@@ -118,15 +124,15 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
   // the method applied _to_ the layer
   private def applyMethod(layer: Int, position: Int): Seq[Clause] = {
-    val methodRestrictsAT = domain.decompositionMethods map { decompositionMethod =>
-      impliesSingle(method(layer, position, decompositionMethod), action(layer, position, decompositionMethod.abstractTask))
+    val methodRestrictsAT = domain.decompositionMethods.zipWithIndex map { case (decompositionMethod, methodIdx) =>
+      impliesSingle(method(layer, position, methodIdx), action(layer, position, decompositionMethod.abstractTask))
     }
-    val methodMustBeApplied = impliesRightOr(actionAbstract(layer, position) :: Nil, domain.decompositionMethods map { m => method(layer, position, m) })
+    val methodMustBeApplied = impliesRightOr(actionAbstract(layer, position) :: Nil, domain.decompositionMethods.zipWithIndex map { case (m, mIdx) => method(layer, position, mIdx) })
 
     methodRestrictsAT :+ methodMustBeApplied
   }
 
-  private def notTwoMethods(layer: Int, position: Int): Seq[Clause] = atMostOneOf(domain.decompositionMethods map { method(layer, position, _) })
+  private def notTwoMethods(layer: Int, position: Int): Seq[Clause] = atMostOneOf(domain.decompositionMethods.zipWithIndex map { case (_, mIdx) => method(layer, position, mIdx) })
 
   private def childImpliesChildOf(layer: Int, position: Int): Seq[Clause] = {
     Range(0, numberOfActionsPerLayer) flatMap { father =>
@@ -170,17 +176,18 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   }
 
   private def methodMustHaveChildren(layer: Int, fatherPosition: Int): Seq[Clause] = {
-    domain.decompositionMethods flatMap {
-      case m@SimpleDecompositionMethod(_, subPlan, _) =>
+    domain.decompositionMethods.zipWithIndex flatMap {
+      case (m@SimpleDecompositionMethod(_, subPlan, _), methodIdx) =>
         // those selected
         val presentChildren: Seq[Clause] = subPlan.planStepsWithoutInitGoal.zipWithIndex flatMap {
           case (ps, childNumber) =>
-            val mustChildren: Clause = impliesRightOr(method(layer, fatherPosition, m) :: Nil,
+            val mustChildren: Clause = impliesRightOr(method(layer, fatherPosition, methodIdx) :: Nil,
                                                       Range(0, numberOfActionsPerLayer) map { childPos => childWithIndex(layer + 1, childPos, fatherPosition, childNumber) })
             // types of the children
             val childrenType: Seq[Clause] = Range(0, numberOfActionsPerLayer) flatMap {
               childPos =>
-                impliesRightAnd(childWithIndex(layer + 1, childPos, fatherPosition, childNumber) :: method(layer, fatherPosition, m) :: Nil, action(layer + 1, childPos, ps.schema) :: Nil)
+                impliesRightAnd(childWithIndex(layer + 1, childPos, fatherPosition, childNumber) :: method(layer, fatherPosition, methodIdx) :: Nil,
+                                action(layer + 1, childPos, ps.schema) :: Nil)
             }
             childrenType :+ mustChildren
         }
@@ -189,21 +196,23 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
         val minimalOrdering = subPlan.orderingConstraints.minimalOrderingConstraints() filterNot {
           _.containsAny(m.subPlan.initAndGoal: _*)
         }
+
         val childrenOrder: Seq[Clause] = minimalOrdering flatMap {
           case OrderingConstraint(beforePS, afterPS) =>
-            val beforePos: Int = methodPlanStepIndices(subPlan)(beforePS) //subPlan.planStepsWithoutInitGoal indexOf beforePS
-          val afterPos: Int = methodPlanStepIndices(subPlan)(afterPS) // subPlan.planStepsWithoutInitGoal indexOf afterPS
+            val beforePos: Int = methodPlanStepIndices(methodIdx)(beforePS) //subPlan.planStepsWithoutInitGoal indexOf beforePS
+
+            val afterPos: Int = methodPlanStepIndices(methodIdx)(afterPS) // subPlan.planStepsWithoutInitGoal indexOf afterPS
             Range(0, numberOfActionsPerLayer) flatMap {
               childBeforePos => Range(0, numberOfActionsPerLayer) flatMap {
                 childAfterPos =>
-                  impliesRightAnd(method(layer, fatherPosition, m) :: childWithIndex(layer + 1, childBeforePos, fatherPosition, beforePos) ::
+                  impliesRightAnd(method(layer, fatherPosition, methodIdx) :: childWithIndex(layer + 1, childBeforePos, fatherPosition, beforePos) ::
                                     childWithIndex(layer + 1, childAfterPos, fatherPosition, afterPos) :: Nil, before(layer + 1, childBeforePos, childAfterPos) :: Nil)
               }
             }
         }
         val nonPresentChildren: Seq[Clause] = Range(subPlan.planStepsWithoutInitGoal.length, DELTA) flatMap {
           childNumber =>
-            impliesAllNot(method(layer, fatherPosition, m), Range(0, numberOfActionsPerLayer) map {
+            impliesAllNot(method(layer, fatherPosition, methodIdx), Range(0, numberOfActionsPerLayer) map {
               childPos => childWithIndex(layer + 1, childPos, fatherPosition, childNumber)
             })
         }
@@ -355,28 +364,50 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
     }
   }
 
-  lazy val atoms: Seq[String] = ((decompositionFormula ++ givenActionsFormula ++ stateTransitionFormula ++ initialState ++ goalState) flatMap { _.disjuncts map { _._1 } }).distinct
+  //lazy val atoms: Seq[String] = ((decompositionFormula ++ givenActionsFormula ++ stateTransitionFormula ++ initialState ++ goalState) flatMap { _.disjuncts map { _._1 } }).distinct
 
-  lazy val atomIndices: Map[String, Int] = atoms.zipWithIndex.toMap
+  //lazy val atomIndices: Map[String, Int] = atoms.zipWithIndex.toMap
 
+  def miniSATString(formulasSeq: Seq[Clause]): String = {
+    val formulas = formulasSeq.toArray
 
-  def miniSATString(formulas: Seq[Clause]*): String = {
-    val flatFormulas = formulas.flatten
-    val header = "p cnf " + atoms.length + " " + flatFormulas.length + "\n"
-
-    val stringBuffer = new StringBuffer()
-
-    flatFormulas foreach {
-      case Clause(lits) =>
-        lits foreach { case (atom, isPos) =>
-          val atomInt = (atomIndices(atom) + 1) * (if (isPos) 1 else -1)
-          stringBuffer append atomInt
-          stringBuffer append ' '
-        }
-        stringBuffer append "0\n"
+    // generate the atoms to int map
+    val atomIndices = new mutable.HashMap[String, Int]()
+    var i = 0
+    while (i < formulas.length) {
+      val lits = formulas(i).disjuncts
+      var j = 0
+      while (j < lits.length) {
+        val l = lits(j)._1
+        if (!(atomIndices contains l))
+          atomIndices(l) = atomIndices.size
+        j += 1
+      }
+      i += 1
     }
 
-    header + stringBuffer.toString
+    // generate the DIMACS string
+
+    val header = "p cnf " + atomIndices.size + " " + formulas.length + "\n"
+
+    val stringBuffer = new StringBuffer()
+    stringBuffer append header
+
+    i = 0
+    while (i < formulas.length) {
+      val lits = formulas(i).disjuncts
+      var j = 0
+      while (j < lits.length) {
+        val atomInt = (atomIndices(lits(j)._1) + 1) * (if (lits(j)._2) 1 else -1)
+        stringBuffer append atomInt
+        stringBuffer append ' '
+        j += 1
+      }
+      stringBuffer append "0\n"
+      i += 1
+    }
+
+    stringBuffer.toString
   }
 }
 
