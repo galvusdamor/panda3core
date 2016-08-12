@@ -18,7 +18,7 @@ case class RandomPlanGenerator(domain: Domain, plan: Plan) {
     def randomWalk(state: Set[Predicate], length: Int): Option[Seq[Task]] = if (length == 0) Some(Nil)
     else {
       // all applicable tasks
-      val applicableTasks = domain.tasks filter {
+      val applicableTasks = domain.primitiveTasks filter {
         case rt: ReducedTask => rt.precondition.conjuncts forall { case Literal(predicate, isPositive, _) => (state contains predicate) == isPositive }
         case _               => false
       } sortBy { _ => r.nextInt() }
