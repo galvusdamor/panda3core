@@ -49,6 +49,8 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   })
   }).toMap
 
+  lazy val primitiveConsumerOf: Map[Predicate, Seq[ReducedTask]] = consumersOf map { case (pred, cons) => pred -> cons.filter { _.isPrimitive } }
+
   lazy val primitiveTasks: Seq[Task] = tasks filter { _.isPrimitive }
   lazy val abstractTasks : Seq[Task] = tasks filterNot { _.isPrimitive }
 

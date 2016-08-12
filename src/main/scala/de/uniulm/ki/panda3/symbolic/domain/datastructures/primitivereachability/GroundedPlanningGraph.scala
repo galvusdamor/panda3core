@@ -59,8 +59,6 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       (groundTasks filterNot { _.task.name.startsWith("NO-OP") }, groundLiterals)
     }
     // check assertions
-    computedLayer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
-    computedLayer foreach { case (_, b) => assert(initialState forall b.contains) }
 
     // return the graph
     computedLayer
@@ -92,15 +90,15 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
   }
 
-  layer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
-  layer foreach { case (_, b) => assert(initialState forall b.contains) }
-
   // Layers of the planning graph containing also the mutexes
   lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
     val originalLayers = buildGraph(graph = Seq((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)])),
                                     metaData = GroundedPlanningGraphMetaData(addedPropositions = initialState, firstLayer = true))
 
+    originalLayers map { _._1 } foreach { _ foreach { gt => assert(gt.task.isPrimitive) } }
     originalLayers map { _._2 } foreach { _ foreach { case (action1, action2) => assert(action1 != action2) } }
+    originalLayers map { _._3 } foreach { _ foreach { gl => assert(gl.isPositive) } }
+    originalLayers map { _._3 } foreach { b => assert(initialState forall b.contains) }
     originalLayers map { _._4 } foreach { _ foreach { case (predicate1, predicate2) => assert(predicate1 != predicate2) } }
 
     originalLayers
@@ -409,10 +407,11 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
      * Find all tasks that could be up for instantiation because either at least one of their preconditions were added in the previous layer or
      * two of its preconditions were contained in a now deleted mutex.
      */
-    val tasksFromAddedPropositions: Set[(Set[GroundLiteral], Seq[ReducedTask])] = addedPropositions map { proposition => (Set(proposition), domain.consumersOf(proposition.predicate)) }
+    val tasksFromAddedPropositions: Set[(Set[GroundLiteral], Seq[ReducedTask])] =
+      addedPropositions map { proposition => (Set(proposition), domain.primitiveConsumerOf(proposition.predicate)) }
     val tasksFromDeletedMutexes: Set[(Set[GroundLiteral], Seq[ReducedTask])] =
       deletedMutexes map { case (proposition1, proposition2) =>
-        (Set(proposition1, proposition2), domain.consumersOf(proposition1.predicate) intersect domain.consumersOf(proposition2.predicate))
+        (Set(proposition1, proposition2), domain.primitiveConsumerOf(proposition1.predicate) intersect domain.primitiveConsumerOf(proposition2.predicate))
       }
 
     // Merge the sets of tasks that could be up for instantiation and filter them for forbidden lifted tasks, since they are not allowed to be instantiated.
@@ -429,7 +428,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
     // special treatment for tasks without preconditions. the are always applicable in the first action layer
     val newActionsFromParameters: Set[GroundTask] = firstLayer match {
-      case true  => domain.tasks filter { case task: ReducedTask =>
+      case true  => domain.primitiveTasks filter { case task: ReducedTask =>
         task.precondition.isEmpty && !(configuration.forbiddenLiftedTasks contains task)
       } flatMap { case task: ReducedTask => createActionInstancesForTasksWithoutPreconditions(task) } toSet
       case false => Set.empty[GroundTask]
