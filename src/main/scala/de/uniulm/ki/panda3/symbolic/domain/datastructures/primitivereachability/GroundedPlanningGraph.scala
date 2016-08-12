@@ -519,6 +519,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
   /**
     * Updates the buckets with new actions.
+    * Add-buckets need always to be updated, preconditions- and delete- buckets only if the bucket flag is set in the graph configuration.
     * @param preconditionBuckets Bucket to be updated.
     * @param addBuckets Bucket to be updated.
     * @param deleteBuckets Bucket to be updated.
@@ -532,6 +533,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
                             newActions: Set[GroundTask],
                             configuration: GroundedPlanningGraphConfiguration):
   (Map[GroundLiteral, Set[GroundTask]], Map[GroundLiteral, Set[GroundTask]], Map[GroundLiteral, Set[GroundTask]]) = {
+
     val (updatedPreBucket, updatedAddBucket, updatedDelBucket) = newActions.foldLeft((preconditionBuckets, addBuckets, deleteBuckets)) { case(buckets, action) =>
         (configuration.buckets match {
           case true => action.substitutedPreconditions.foldLeft(buckets._1) { case(pBuckets, proposition) =>
