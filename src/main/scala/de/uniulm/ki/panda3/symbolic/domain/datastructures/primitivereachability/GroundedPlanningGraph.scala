@@ -532,23 +532,17 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
                             newActions: Set[GroundTask],
                             configuration: GroundedPlanningGraphConfiguration):
   (Map[GroundLiteral, Set[GroundTask]], Map[GroundLiteral, Set[GroundTask]], Map[GroundLiteral, Set[GroundTask]]) = {
-    val updatedPreBucket = configuration.buckets match {
-      case true => newActions.foldLeft(preconditionBuckets) { case (pMap, action) =>
-        action.substitutedPreconditions.foldLeft(pMap) { case (pMap2, proposition) => pMap2 + (proposition -> (pMap2.getOrElse(proposition, Set.empty[GroundTask]) + action)) }
-      }
-      case false => Map.empty[GroundLiteral, Set[GroundTask]]
-    }
-    val updatedAddBucket = newActions.foldLeft(addBuckets) { case (pMap, action) =>
-      action.substitutedAddEffects.foldLeft(pMap) { case (pMap2, proposition) => pMap2 + (proposition -> (pMap2.getOrElse(proposition, Set.empty[GroundTask]) + action))
-      }
-    }
-    val updatedDelBucket = configuration.buckets match {
-      case true => newActions.foldLeft(deleteBuckets) { case (pMap, action) =>
-        action.substitutedDelEffects.foldLeft(pMap) { case (pMap2, proposition) => pMap2 + (proposition.copy(isPositive = true) ->
-          (pMap2.getOrElse(proposition.copy(isPositive = true), Set.empty[GroundTask]) + action))
-        }
-      }
-      case false => Map.empty[GroundLiteral, Set[GroundTask]]
+    val (updatedPreBucket, updatedAddBucket, updatedDelBucket) = newActions.foldLeft((preconditionBuckets, addBuckets, deleteBuckets)) { case(buckets, action) =>
+        (configuration.buckets match {
+          case true => action.substitutedPreconditions.foldLeft(buckets._1) { case(pBuckets, proposition) =>
+          pBuckets + (proposition -> (pBuckets.getOrElse(proposition, Set.empty[GroundTask]) + action))}
+          case false => Map.empty[GroundLiteral, Set[GroundTask]]},
+          action.substitutedAddEffects.foldLeft(buckets._2) { case(aBuckets, proposition) =>
+            aBuckets + (proposition -> (aBuckets.getOrElse(proposition, Set.empty[GroundTask]) + action))},
+          configuration.buckets match {
+            case true => action.substitutedDelEffects.foldLeft(buckets._3) { case(dBuckets, proposition) =>
+            dBuckets + (proposition.copy(isPositive = true) -> (dBuckets.getOrElse(proposition.copy(isPositive = true), Set.empty[GroundTask]) + action))}
+            case false => Map.empty[GroundLiteral, Set[GroundTask]]})
     }
     (updatedPreBucket, updatedAddBucket, updatedDelBucket)
   }
@@ -616,19 +610,16 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
             // If there are unassigned variables we need to find them.
             val unassignedVariables: Seq[Variable] = task.parameters filterNot { variable => updatedAssignmentMap.keySet contains variable }
 
-            // TODO: The two following vals can be merged, and should be.
             // Find all possible variable substitution to be able to instantiate all possible actions later.
-            val possibleSubstitutionCombinations: Seq[Seq[Constant]] =
-              unassignedVariables.foldLeft[Seq[Seq[Constant]]](Nil :: Nil)({ case (args, variable) => variable.sort.elements flatMap { c => args map {
-                _ :+ c
+            val possibleSubstitutionCombinations: Seq[Seq[(Variable,Constant)]] =
+            unassignedVariables.foldLeft[Seq[Seq[(Variable, Constant)]]](Nil :: Nil)({ case (args, variable) => variable.sort.elements flatMap { c => args map {
+                _ :+ (variable, c)
               }
               }
               })
 
-
-            val possibleSubstitutionCombinationsWithVariables: Seq[Seq[(Variable, Constant)]] = possibleSubstitutionCombinations map { seq => unassignedVariables.zip(seq) }
             // Compute all argument combinations and initiate a new action for each of them.
-            val allArgumentCombinations: Seq[Seq[Constant]] = possibleSubstitutionCombinationsWithVariables map { combination =>
+            val allArgumentCombinations: Seq[Seq[Constant]] = possibleSubstitutionCombinations map { combination =>
               task.parameters map { variable => updatedAssignmentMap.getOrElse(variable, combination.find { case (v, c) => v == variable }.get._2) }
             }
             (allArgumentCombinations collect { case arguments if task areParametersAllowed arguments => GroundTask(task, arguments) }).toSet
@@ -691,7 +682,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       _ :+ c
     }
     }
-    }) map { case arguments => GroundTask(task, arguments) } toSet
+    }) map { arguments => GroundTask(task, arguments) } toSet
   }
 
   /**
