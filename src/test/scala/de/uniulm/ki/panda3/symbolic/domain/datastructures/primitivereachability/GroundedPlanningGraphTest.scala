@@ -17,9 +17,6 @@ class GroundedPlanningGraphTest extends FlatSpec {
 
   false :: true :: Nil foreach { useBuckets =>
     ("The grounded planning graph" + (if (useBuckets) " with buckets")) must "be computable" in {
-      println("===============")
-      println("TEST 1")
-      println("===============")
       val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest01_domain.hddl"
       val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest01_problem.hddl"
 
@@ -39,27 +36,59 @@ class GroundedPlanningGraphTest extends FlatSpec {
       planningGraph.graphSize
 
       assert(planningGraph.graphSize == 5)
-      assert(planningGraph.reachableGroundLiterals exists {
-        _.predicate.name == "a"
-      })
-      assert(planningGraph.reachableGroundLiterals exists {
-        _.predicate.name == "b"
-      })
-      assert(planningGraph.reachableGroundLiterals exists {
-        _.predicate.name == "c"
-      })
-      assert(planningGraph.reachableGroundLiterals exists {
-        _.predicate.name == "d"
-      })
-      //TODO: compute the sizes by hand
-      //assert(planningGraph.layerWithMutexes.last._2.size == 20)
-      //assert(planningGraph.layerWithMutexes.last._4.size == 4)
+      // first layer
+      assert(planningGraph.layerWithMutexes(0)._3 exists { _.predicate.name == "a"})
+      assert(planningGraph.layerWithMutexes(0)._3.size == 1)
+      // second layer
+      assert(planningGraph.layerWithMutexes(1)._1 exists { _.task.name == "X"})
+      assert(planningGraph.layerWithMutexes(1)._1 exists { _.task.name == "Y"})
+      assert(planningGraph.layerWithMutexes(1)._1 exists { _.task.name == "NO-OP[a]"})
+      assert(planningGraph.layerWithMutexes(1)._2 exists { case (t1,t2) => (t1.task.name == "X") && (t2.task.name == "Y")})
+      assert(planningGraph.layerWithMutexes(1)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[a]") && (t2.task.name == "Y")})
+      assert(planningGraph.layerWithMutexes(1)._3 exists { _.predicate.name == "b"})
+      assert(planningGraph.layerWithMutexes(1)._3 exists { _.predicate.name == "c"})
+      assert(planningGraph.layerWithMutexes(1)._4 exists { case (p1,p2) => (p1.predicate.name == "a") && (p2.predicate.name == "c")})
+      assert(planningGraph.layerWithMutexes(1)._4 exists { case (p1,p2) => (p1.predicate.name == "b") && (p2.predicate.name == "c")})
+      assert(planningGraph.layerWithMutexes(1)._1.size == 3)
+      assert(planningGraph.layerWithMutexes(1)._2.size == 2)
+      assert(planningGraph.layerWithMutexes(1)._3.size == 3)
+      assert(planningGraph.layerWithMutexes(1)._4.size == 2)
+      // third layer
+      assert(planningGraph.layerWithMutexes(2)._1 exists { _.task.name == "NO-OP[b]"})
+      assert(planningGraph.layerWithMutexes(2)._1 exists { _.task.name == "NO-OP[c]"})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[b]") && (t2.task.name == "NO-OP[c]")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[a]") && (t2.task.name == "NO-OP[c]")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[c]") && (t2.task.name == "Y")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[c]") && (t2.task.name == "X")})
+      assert(planningGraph.layerWithMutexes(2)._1.size == 5)
+      assert(planningGraph.layerWithMutexes(2)._2.size == 6)
+      assert(planningGraph.layerWithMutexes(2)._3.size == 3)
+      assert(planningGraph.layerWithMutexes(2)._4.size == 1)
+      //fourth layer
+      assert(planningGraph.layerWithMutexes(3)._1 exists { _.task.name == "Z"})
+      assert(planningGraph.layerWithMutexes(3)._2 exists { case (t1,t2) => (t1.task.name == "X") && (t2.task.name == "Z")})
+      assert(planningGraph.layerWithMutexes(3)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[a]") && (t2.task.name == "Z")})
+      assert(planningGraph.layerWithMutexes(3)._2 exists { case (t1,t2) => (t1.task.name == "Y") && (t2.task.name == "Z")})
+      assert(planningGraph.layerWithMutexes(3)._3 exists { _.predicate.name == "d"})
+      assert(planningGraph.layerWithMutexes(3)._4 exists { case (p1,p2) => (p1.predicate.name == "a") && (p2.predicate.name == "d")})
+      assert(planningGraph.layerWithMutexes(3)._1.size == 6)
+      assert(planningGraph.layerWithMutexes(3)._2.size == 8)
+      assert(planningGraph.layerWithMutexes(3)._3.size == 4)
+      assert(planningGraph.layerWithMutexes(3)._4.size == 2)
+      //fifth layer
+      assert(planningGraph.layerWithMutexes(4)._1 exists { _.task.name == "NO-OP[d]"})
+      assert(planningGraph.layerWithMutexes(4)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[d]") && (t2.task.name == "X")})
+      assert(planningGraph.layerWithMutexes(4)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[d]") && (t2.task.name == "Y")})
+      assert(planningGraph.layerWithMutexes(4)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[a]") && (t2.task.name == "NO-OP[d]")})
+      assert(planningGraph.layerWithMutexes(4)._1.size == 7)
+      assert(planningGraph.layerWithMutexes(4)._2.size == 11)
+      assert(planningGraph.layerWithMutexes(4)._3.size == 4)
+      assert(planningGraph.layerWithMutexes(4)._4.size == 2)
+
     }
 
     it must "recognise impossible situations" in {
-      println("===============")
-      println("TEST 2")
-      println("===============")
+
       val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
       val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
 
@@ -77,13 +106,63 @@ class GroundedPlanningGraphTest extends FlatSpec {
       }
       val planningGraph = new GroundedPlanningGraph(domain, groundedInitialState.toSet, GroundedPlanningGraphConfiguration(buckets = useBuckets))
 
-      assert(planningGraph.graphSize == 3) // TODO: check whether this is correct manually!
+      assert(planningGraph.graphSize == 3)
       assert(!(planningGraph.reachableGroundLiterals exists {
         _.predicate.name == "d"
       }))
-      println("mutexes: ")
-      planningGraph.layerWithMutexes.last._4 foreach { case (gl1, gl2) => println(gl1.predicate.name + ", " + gl2.predicate.name) }
-
+      // first layer
+      assert(planningGraph.layerWithMutexes(0)._3 exists { _.predicate.name == "+a"})
+      assert(planningGraph.layerWithMutexes(0)._3 exists { _.predicate.name == "-e"})
+      assert(planningGraph.layerWithMutexes(0)._3.size == 2)
+      // second layer
+      assert(planningGraph.layerWithMutexes(1)._1 exists { _.task.name == "X"})
+      assert(planningGraph.layerWithMutexes(1)._1 exists { _.task.name == "Y"})
+      assert(planningGraph.layerWithMutexes(1)._1 exists { _.task.name == "NO-OP[-e]"})
+      assert(planningGraph.layerWithMutexes(1)._1 exists { _.task.name == "NO-OP[+a]"})
+      assert(planningGraph.layerWithMutexes(1)._2 exists { case (t1,t2) => (t1.task.name == "X") && (t2.task.name == "Y")})
+      assert(planningGraph.layerWithMutexes(1)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+a]") && (t2.task.name == "Y")})
+      assert(planningGraph.layerWithMutexes(1)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[-e]") && (t2.task.name == "X")})
+      assert(planningGraph.layerWithMutexes(1)._3 exists { _.predicate.name == "+e"})
+      assert(planningGraph.layerWithMutexes(1)._3 exists { _.predicate.name == "+b"})
+      assert(planningGraph.layerWithMutexes(1)._3 exists { _.predicate.name == "-a"})
+      assert(planningGraph.layerWithMutexes(1)._3 exists { _.predicate.name == "+c"})
+      assert(planningGraph.layerWithMutexes(1)._4 exists { case (p1,p2) => (p1.predicate.name == "+e") && (p2.predicate.name == "-e")})
+      assert(planningGraph.layerWithMutexes(1)._4 exists { case (p1,p2) => (p1.predicate.name == "+b") && (p2.predicate.name == "-e")})
+      assert(planningGraph.layerWithMutexes(1)._4 exists { case (p1,p2) => (p1.predicate.name == "+b") && (p2.predicate.name == "-a")})
+      assert(planningGraph.layerWithMutexes(1)._4 exists { case (p1,p2) => (p1.predicate.name == "+a") && (p2.predicate.name == "+c")})
+      assert(planningGraph.layerWithMutexes(1)._4 exists { case (p1,p2) => (p1.predicate.name == "+c") && (p2.predicate.name == "+e")})
+      assert(planningGraph.layerWithMutexes(1)._4 exists { case (p1,p2) => (p1.predicate.name == "+a") && (p2.predicate.name == "-a")})
+      assert(planningGraph.layerWithMutexes(1)._4 exists { case (p1,p2) => (p1.predicate.name == "+b") && (p2.predicate.name == "+c")})
+      assert(planningGraph.layerWithMutexes(1)._4 exists { case (p1,p2) => (p1.predicate.name == "+e") && (p2.predicate.name == "-a")})
+      assert(planningGraph.layerWithMutexes(1)._1.size == 4)
+      assert(planningGraph.layerWithMutexes(1)._2.size == 3)
+      assert(planningGraph.layerWithMutexes(1)._3.size == 6)
+      assert(planningGraph.layerWithMutexes(1)._4.size == 8)
+      //third layer
+      assert(planningGraph.layerWithMutexes(2)._1 exists { _.task.name == "NO-OP[+c]"})
+      assert(planningGraph.layerWithMutexes(2)._1 exists { _.task.name == "NO-OP[+b]"})
+      assert(planningGraph.layerWithMutexes(2)._1 exists { _.task.name == "NO-OP[+e]"})
+      assert(planningGraph.layerWithMutexes(2)._1 exists { _.task.name == "NO-OP[-a]"})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+b]") && (t2.task.name == "NO-OP[+c]")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+c]") && (t2.task.name == "NO-OP[+e]")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[-a]") && (t2.task.name == "X")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+e]") && (t2.task.name == "NO-OP[-e]")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+a]") && (t2.task.name == "NO-OP[+c]")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+b]") && (t2.task.name == "Y")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+b]") && (t2.task.name == "NO-OP[-a]")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+e]") && (t2.task.name == "NO-OP[-a]")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+b]") && (t2.task.name == "X")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+b]") && (t2.task.name == "NO-OP[-e]")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+c]") && (t2.task.name == "Y")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[-a]") && (t2.task.name == "Y")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+a]") && (t2.task.name == "NO-OP[-a]")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+e]") && (t2.task.name == "Y")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+e]") && (t2.task.name == "X")})
+      assert(planningGraph.layerWithMutexes(2)._2 exists { case (t1,t2) => (t1.task.name == "NO-OP[+c]") && (t2.task.name == "X")})
+      assert(planningGraph.layerWithMutexes(2)._1.size == 8)
+      assert(planningGraph.layerWithMutexes(2)._2.size == 19)
+      assert(planningGraph.layerWithMutexes(2)._3.size == 6)
+      assert(planningGraph.layerWithMutexes(2)._4.size == 8)
     }
 
     it must "instantiate actions with parameters not contained in preconditions" in {
