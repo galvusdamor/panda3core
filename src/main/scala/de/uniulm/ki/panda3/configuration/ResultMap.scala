@@ -45,6 +45,7 @@ object Timings {
   val PREPROCESSING                   = "02 preprocessing:00:total"
   val COMPILE_NEGATIVE_PRECONFITIONS  = "02 preprocessing:01:compile negative preconditions"
   val COMPILE_UNIT_METHODS            = "02 preprocessing:02:compile unit methods"
+  val COMPILE_ORDER_IN_METHODS        = "02 preprocessing:03:compile order in methods"
   val LIFTED_REACHABILITY_ANALYSIS    = "02 preprocessing:11:lifted reachabiltiy analysis"
   val GROUNDED_REACHABILITY_ANALYSIS  = "02 preprocessing:12:grounded reachabiltiy analysis"
   val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:13:grounded planning graph analysis"

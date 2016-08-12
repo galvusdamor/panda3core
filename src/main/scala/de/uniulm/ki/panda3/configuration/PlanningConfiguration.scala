@@ -78,6 +78,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       extra("Domain is mostly acyclic: " + domainStructureAnalysis.isMostlyAcyclic + "\n")
       extra("Domain is regular: " + domainStructureAnalysis.isRegular + "\n")
       extra("Domain is tail recursive: " + domainStructureAnalysis.isTailRecursive + "\n")
+      extra("Domain is totally ordered: " + domainStructureAnalysis.isTotallyOrdered + "\n")
 
     }
 
@@ -377,19 +378,25 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule start PREPROCESSING
     extra("Initial domain\n" + domain.statisticsString + "\n")
 
-    // removing negative preconditions
-    timeCapsule start COMPILE_NEGATIVE_PRECONFITIONS
-    val negativePreconditionsCompiled = if (preprocessingConfiguration.compileNegativePreconditions) {
-      info("Compiling negative preconditions ... ")
-      val compiled = RemoveNegativePreconditions.transform(domain, problem, ())
-      info("done.\n")
-      extra(compiled._1.statisticsString + "\n")
-      compiled
-    } else (domain, problem)
-    timeCapsule stop COMPILE_NEGATIVE_PRECONFITIONS
+    val compilerToBeApplied: Seq[(DomainTransformer[Unit], String, String)] =
+      (if (preprocessingConfiguration.compileNegativePreconditions) (RemoveNegativePreconditions, "negative preconditions", COMPILE_NEGATIVE_PRECONFITIONS) :: Nil else Nil) ::
+        (if (preprocessingConfiguration.compileOrderInMethods) (TotallyOrderAllMethods, "order in methods", COMPILE_ORDER_IN_METHODS) :: Nil else Nil) ::
+        Nil flatten
+
+    val (compiledDomain, compiledProblem) = compilerToBeApplied.foldLeft((domain, problem))(
+      { case ((dom, prob), (compiler, message, timingString)) =>
+        timeCapsule start timingString
+        info("Compiling " + message + " ... ")
+        val compiled = compiler.transform(domain, problem, ())
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        timeCapsule stop timingString
+        compiled
+      }
+                                                                                           )
 
     // initial run of the reachability analysis on the domain, until it has converged
-    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(negativePreconditionsCompiled._1, negativePreconditionsCompiled._2, timeCapsule)
+    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compiledDomain, compiledProblem, timeCapsule)
 
     // finished reachability analysis now we have to ground
     if (preprocessingConfiguration.groundDomain) {
@@ -408,13 +415,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       info("done.\n")
       extra(result._1.statisticsString + "\n")
 
-      // removing negative preconditions
+      // compile unit methods
       timeCapsule start COMPILE_UNIT_METHODS
       val unitMethodsCompiled = if (preprocessingConfiguration.compileUnitMethods) {
         info("Compiling unit methods ... ")
         val compiled = RemoveUnitMethods.transform(result._1, result._2, ())
-        Dot2PdfCompiler.writeDotToFile(result._1.taskSchemaTransitionGraph, "before.pdf")
-        Dot2PdfCompiler.writeDotToFile(compiled._1.taskSchemaTransitionGraph, "after.pdf")
         info("done.\n")
         extra(compiled._1.statisticsString + "\n")
         compiled
@@ -466,6 +471,7 @@ object TopDownTDG extends TDGGeneration
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
                                        compileUnitMethods: Boolean,
+                                       compileOrderInMethods: Boolean,
                                        liftedReachability: Boolean,
                                        groundedReachability: Boolean,
                                        planningGraph: Boolean,

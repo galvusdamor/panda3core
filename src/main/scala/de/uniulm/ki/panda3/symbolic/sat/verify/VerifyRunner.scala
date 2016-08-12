@@ -32,7 +32,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // create the configuration
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(parserType),
-                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = true,
+                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = true, compileOrderInMethods = false,
                                                                           liftedReachability = true, groundedReachability = false, planningGraph = true,
                                                                           groundedTaskDecompositionGraph = Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = false, groundDomain = true),

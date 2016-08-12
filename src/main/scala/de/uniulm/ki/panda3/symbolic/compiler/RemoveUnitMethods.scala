@@ -13,12 +13,11 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object RemoveUnitMethods extends DomainTransformer[Unit] {
+object RemoveUnitMethods extends DecompositionMethodTransformer[Unit] {
 
-  override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
-    assert(domain.predicates forall { _.argumentSorts.isEmpty })
+  override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod): Seq[DecompositionMethod] = {
 
-    val (unitMethods, nonUnitMethods) = domain.decompositionMethods partition { _.subPlan.planStepsWithoutInitGoal.size == 1 }
+    val (unitMethods, nonUnitMethods) = methods partition { _.subPlan.planStepsWithoutInitGoal.size == 1 }
     val oneStepReplacementRules: Map[Task, Seq[Task]] = unitMethods map { case SimpleDecompositionMethod(abstractTask, subPlan, _) =>
       (abstractTask, subPlan.planStepsWithoutInitGoal.head.schema)
     } groupBy { _._1 } map { case (a, b) => a -> (b map { _._2 }) } toMap
@@ -33,23 +32,7 @@ object RemoveUnitMethods extends DomainTransformer[Unit] {
 
     val replacementRules: Map[Task, Seq[Task]] = expand(oneStepReplacementRules)
 
-
-    // create an artificial method
-    val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
-    val topInit = PlanStep(plan.init.id, initAndGoalNOOP, Nil)
-    val topGoal = PlanStep(plan.goal.id, initAndGoalNOOP, Nil)
-
-    val topPlanTasks = plan.planStepsAndRemovedPlanStepsWithoutInitGoal :+ topInit :+ topGoal
-    val initialPlanInternalOrderings = plan.orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(plan.initAndGoal: _*) }
-    val topOrdering = TaskOrdering(initialPlanInternalOrderings ++ OrderingConstraint.allBetween(topInit, topGoal, plan.planStepsAndRemovedPlanStepsWithoutInitGoal: _*), topPlanTasks)
-    val initialPlanWithout = Plan(topPlanTasks, plan.causalLinksAndRemovedCausalLinks, topOrdering, plan.variableConstraints, topInit, topGoal,
-                                  plan.isModificationAllowed,
-                                  plan.isFlawAllowed, plan.planStepDecomposedByMethod, plan.planStepParentInDecompositionTree)
-
-    val topTask = ReducedTask("__unitCompilation__top", isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
-    val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top")
-
-    val extendedMethods: Seq[DecompositionMethod] = (nonUnitMethods :+ topMethod) flatMap { case SimpleDecompositionMethod(abstractTask, subPlan, methodName) =>
+    (nonUnitMethods :+ topMethod) flatMap { case SimpleDecompositionMethod(abstractTask, subPlan, methodName) =>
       val replaceablePlanSteps = subPlan.planStepsWithoutInitGoal filter { replacementRules contains _.schema }
       val replacementPossibilities: Seq[Seq[PlanStep]] = allSubsets(replaceablePlanSteps)
 
@@ -62,18 +45,12 @@ object RemoveUnitMethods extends DomainTransformer[Unit] {
         SimpleDecompositionMethod(abstractTask, subPlan update ExchangePlanSteps(substitution.toMap), methodName)
       }
     }
+  }
 
-    if ((extendedMethods count { _.abstractTask == topTask }) == 1) {
-      // we don't need to alter the plan
-      (domain.copy(decompositionMethods = extendedMethods filterNot { _.abstractTask == topTask }), plan)
-    } else {
-      // generate a new
-      val topPS = PlanStep(2, topTask, Nil)
-      val planSteps: Seq[PlanStep] = plan.init :: plan.goal :: topPS :: Nil
-      val ordering = TaskOrdering(OrderingConstraint.allBetween(plan.init, plan.goal, topPS), planSteps)
-      val initialPlan = Plan(planSteps, Nil, ordering, plan.variableConstraints, plan.init, plan.goal, plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map())
+  override protected val transformationName: String = "unitMethod"
 
-      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks :+ topTask), initialPlan)
-    }
+  override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
+    assert(domain.predicates forall { _.argumentSorts.isEmpty })
+    super.transform(domain, plan, info)
   }
 }
