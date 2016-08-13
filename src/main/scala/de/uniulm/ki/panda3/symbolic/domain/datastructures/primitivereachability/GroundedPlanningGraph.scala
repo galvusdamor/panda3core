@@ -94,6 +94,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
   }
 
+  layer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
+  layer foreach { case (_, b) => assert(initialState forall b.contains) }
 
   // Layers of the planning graph represented by sets of actions and propositions and their mutexes.
   lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {

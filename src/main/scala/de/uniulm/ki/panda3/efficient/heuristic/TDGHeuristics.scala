@@ -26,13 +26,16 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
 
 
   protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double = {
-    val groundTask = EfficientGroundTask(plan.planStepTasks(planStep),arguments)
+    val groundTask = EfficientGroundTask(plan.planStepTasks(planStep), arguments)
     if (!modificationEfforts.contains(groundTask)) Double.MaxValue else modificationEfforts(groundTask)
   }
 
   override def computeHeuristic(plan: EfficientPlan): Double = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = plan.openPreconditions.length // every flaw must be addressed
+
+    // TODO use this
+    //  val supportedByCausalLink = plan.planStepSupportedPreconditions(planStep) contains precondition
 
     // while looking at the TDG we will count the already closed preconditions, which are currently supported by causal links pointing to abstract tasks, again
     var cl = 0
@@ -76,4 +79,93 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
     dotStringBuilder append "}"
     dotStringBuilder.toString
   }
+}
+
+
+case class MinimumADDHeuristic(taskDecompositionTree: EfficientGroundedTaskDecompositionGraph, addHeuristic: AddHeuristic, domain: EfficientDomain)
+  extends MinimisationOverGroundingsBasedHeuristic {
+
+
+  protected def computeADD(taskID: Int, arguments: Array[Int]): Double = {
+    var heuristicEstimate = 0.0
+    val planStepTask = domain.tasks(taskID)
+    val planStepPreconditions = planStepTask.precondition
+
+    var precondition = 0
+    //println("CL " + plan.causalLinks.length * planStepPreconditions.length)
+    while (precondition < planStepPreconditions.length) {
+      // look whether this precondition is protected by a causal link
+
+      val literalArguments = planStepTask.getArgumentsOfLiteral(arguments, planStepPreconditions(precondition))
+      val h = addHeuristic.efficientAccessMaps(planStepPreconditions(precondition).predicate)(literalArguments)
+      heuristicEstimate += h
+      precondition += 1
+    }
+
+    heuristicEstimate
+  }
+
+
+  // memoize the heuristic values for task groundings
+  val modificationEfforts: Map[EfficientGroundTask, Double] = taskDecompositionTree.graph.andVertices map {
+    groundTask =>
+      groundTask -> taskDecompositionTree.graph.minSumTraversal(groundTask, {
+        groundTask =>
+          val task = domain.tasks(groundTask.taskID)
+          if (task.initOrGoalTask) 0 else computeADD(groundTask.taskID, groundTask.arguments)
+      })
+  } toMap
+
+
+  protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double = {
+    val groundTask = EfficientGroundTask(plan.planStepTasks(planStep), arguments)
+    if (!modificationEfforts.contains(groundTask)) Double.MaxValue
+    else {
+      var heuristicEstimate = modificationEfforts(groundTask)
+      val planStepTask = domain.tasks(plan.planStepTasks(planStep))
+      val planStepPreconditions = planStepTask.precondition
+
+      var precondition = 0
+      //println("CL " + plan.causalLinks.length * planStepPreconditions.length)
+      while (precondition < planStepPreconditions.length) {
+        // look whether this precondition is protected by a causal link
+        val supportedByCausalLink = plan.planStepSupportedPreconditions(planStep) contains precondition
+
+        if (supportedByCausalLink) {
+          val literalArguments = planStepTask.getArgumentsOfLiteral(arguments, planStepPreconditions(precondition))
+          val h = addHeuristic.efficientAccessMaps(planStepPreconditions(precondition).predicate)(literalArguments)
+          heuristicEstimate -= h
+        }
+        precondition += 1
+      }
+
+      heuristicEstimate
+    }
+  }
+
+  override def computeHeuristic(plan: EfficientPlan): Double = {
+    // accumulate for all actions in the plan
+    var heuristicValue: Double = 0 //plan.openPreconditions.length // every flaw must be addressed
+
+    // while looking at the TDG we will count the already closed preconditions, which are currently supported by causal links pointing to abstract tasks, again
+    /* var cl = 0
+     while (cl < plan.causalLinks.length) {
+       val link = plan.causalLinks(cl)
+       if (plan.isPlanStepPresentInPlan(link.producer) && plan.isPlanStepPresentInPlan(link.consumer) && domain.tasks(plan.planStepTasks(link.consumer)).isAbstract)
+         heuristicValue -= addHeuristic.
+       cl += 1
+     }*/
+
+    var i = 2 // init can't have a flaw
+    while (i < plan.numberOfAllPlanSteps) {
+      if (plan.isPlanStepPresentInPlan(i) /*&& domain.tasks(plan.planStepTasks(i)).isAbstract*/ ) {
+        // we have to ground here
+        heuristicValue += computeHeuristicByGrounding(i, new Array[Int](plan.planStepParameters(i).length), 0, plan)
+      }
+
+      i += 1
+    }
+    heuristicValue
+  }
+
 }
