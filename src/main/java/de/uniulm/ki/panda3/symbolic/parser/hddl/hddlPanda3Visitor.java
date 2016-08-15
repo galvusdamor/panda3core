@@ -694,7 +694,7 @@ public class hddlPanda3Visitor {
                 VariableConstraint vc = constraints.get(i);
                 if (vc instanceof Equal) {
                     Equal e = (Equal) vc;
-                    if (((Constant) e.right()).name().equals(pname)) {
+                    if ((e.right() instanceof Constant) && (((Constant) e.right()).name().equals(pname))) {
                         var = e.left();
                     }
                 }
