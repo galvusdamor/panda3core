@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import java.io.{File, FileInputStream}
+import java.io.{BufferedWriter, OutputStream, File, FileInputStream}
 
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.compiler.{ExpandSortHierarchy, ClosedWorldAssumption, SHOPMethodCompiler, ToPlainFormulaRepresentation}
@@ -12,6 +12,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.util._
 
 import scala.collection._
+import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 
 /**
@@ -73,7 +74,39 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   // LOGICALS ABBREVIATIONS
   private def atLeastOneOf(atoms: Seq[String]): Clause = Clause(atoms map { (_, true) })
 
-  private def atMostOneOf(atoms: Seq[String]): Seq[Clause] = for (i <- atoms.indices; j <- Range(i + 1, atoms.length)) yield Clause((atoms(i), false) ::(atoms(j), false) :: Nil)
+
+  private var atMostCounter = 0
+
+  private def atMostOneOf(atoms: Seq[String]): Seq[Clause] = {
+    val buffer = new ArrayBuffer[Clause]()
+    val numberOfBits: Int = Math.ceil(Math.log(atoms.length) / Math.log(2)).toInt
+    val bits = Range(0, numberOfBits) map { b => ("atMost_" + atMostCounter + "_" + b, b) }
+
+    atoms.zipWithIndex foreach { case (atom, index) =>
+      bits foreach { case (bitString, b) =>
+        if ((index & (1 << b)) == 0) buffer append Clause((atom, false) ::(bitString, false) :: Nil)
+        else buffer append Clause((atom, false) ::(bitString, true) :: Nil)
+      }
+    }
+
+    atMostCounter += 1
+    buffer.toSeq
+
+    /*val atomArray = atoms.toArray
+    val buffer = new ArrayBuffer[Clause]()
+
+    var i = 0
+    while (i < atomArray.length) {
+      var j = i + 1
+      while (j < atomArray.length) {
+        buffer append Clause((atomArray(i), false) ::(atomArray(j), false) :: Nil)
+        j += 1
+      }
+      i += 1
+    }
+    println("AT MOST " + atoms.length)
+    buffer.toSeq*/
+  }
 
   private def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms) :+ atLeastOneOf(atoms)
 
@@ -99,6 +132,18 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   private def allImply(left: Seq[String], target: String): Seq[Clause] = left flatMap { x => impliesRightAnd(x :: Nil, target :: Nil) }
 
 
+  def possibleAndImpossibleActionsPerLayer(layer: Int): (Seq[Task], Seq[Task]) = if (domain.taskSchemaTransitionGraph.isAcyclic) {
+    val actionsInDistance = initialPlan.planStepsWithoutInitGoal map { _.schema } flatMap { domain.taskSchemaTransitionGraph.getVerticesInDistance(_, layer + 1) }
+    val possibleActions = (actionsInDistance ++ domain.primitiveTasks).distinct
+    (possibleActions, domain.tasks filterNot possibleActions.contains)
+  } else
+    (domain.tasks, Nil)
+
+  def possibleMethodsWithIndexPerLayer(layer: Int): (Seq[(DecompositionMethod, Int)], Seq[(DecompositionMethod, Int)]) = {
+    val possibleActions = possibleAndImpossibleActionsPerLayer(layer)._1
+    domain.decompositionMethods.zipWithIndex partition { case (m, _) => possibleActions contains m.abstractTask }
+  }
+
   // FORMULA STRUCTURE
 
   private def noActionForLayerFrom(layer: Int, firstNoAction: Int, numberOfInstances: Int): Seq[Clause] = Range(firstNoAction, numberOfInstances) flatMap { pos =>
@@ -108,10 +153,15 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
 
   private def selectActionsForLayer(layer: Int, position: Int): Seq[Clause] = {
-    val actionAtoms: Seq[String] = domain.tasks map { task => action(layer, position, task) }
-    val abstractActions: Seq[String] = domain.abstractTasks map { task => action(layer, position, task) }
-    atMostOneOf(actionAtoms) ++ allImply(actionAtoms, actionUsed(layer, position)) ++ allImply(abstractActions, actionAbstract(layer, position)) :+
-      impliesRightOr(actionAbstract(layer, position) :: Nil, abstractActions) :+ impliesRightOr(actionUsed(layer, position) :: Nil, actionAtoms)
+    val (possibleActionOnLayer, impossibleActions): (Seq[Task], Seq[Task]) = possibleAndImpossibleActionsPerLayer(layer)
+
+    //println("SELECT " + domain.taskSchemaTransitionGraph.isAcyclic + " " + possibleActionOnLayer.length + " " + impossibleActions.length)
+
+    val actionAtoms: Seq[String] = possibleActionOnLayer map { task => action(layer, position, task) }
+    val abstractActions: Seq[String] = possibleActionOnLayer collect { case task if task.isAbstract => action(layer, position, task) }
+    (atMostOneOf(actionAtoms) ++ allImply(actionAtoms, actionUsed(layer, position)) ++ allImply(abstractActions, actionAbstract(layer, position)) :+
+      impliesRightOr(actionAbstract(layer, position) :: Nil, abstractActions) :+ impliesRightOr(actionUsed(layer, position) :: Nil, actionAtoms)) ++
+      (impossibleActions map { case task: Task => Clause((action(layer, position, task), false)) })
   }
 
 
@@ -124,12 +174,14 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
   // the method applied _to_ the layer
   private def applyMethod(layer: Int, position: Int): Seq[Clause] = {
-    val methodRestrictsAT = domain.decompositionMethods.zipWithIndex map { case (decompositionMethod, methodIdx) =>
+    val methodRestrictsAT = possibleMethodsWithIndexPerLayer(layer)._1 map { case (decompositionMethod, methodIdx) =>
       impliesSingle(method(layer, position, methodIdx), action(layer, position, decompositionMethod.abstractTask))
     }
-    val methodMustBeApplied = impliesRightOr(actionAbstract(layer, position) :: Nil, domain.decompositionMethods.zipWithIndex map { case (m, mIdx) => method(layer, position, mIdx) })
+    val methodMustBeApplied = impliesRightOr(actionAbstract(layer, position) :: Nil, possibleMethodsWithIndexPerLayer(layer)._1 map { case (m, mIdx) => method(layer, position, mIdx) })
 
-    methodRestrictsAT :+ methodMustBeApplied
+    val nonApplicableMethods: Seq[Clause] = possibleMethodsWithIndexPerLayer(layer)._2 map { case (m, mIdx: Int) => Clause((method(layer, position, mIdx), false)) }
+
+    methodRestrictsAT ++ nonApplicableMethods :+ methodMustBeApplied
   }
 
   private def notTwoMethods(layer: Int, position: Int): Seq[Clause] = atMostOneOf(domain.decompositionMethods.zipWithIndex map { case (_, mIdx) => method(layer, position, mIdx) })
@@ -176,7 +228,7 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
   }
 
   private def methodMustHaveChildren(layer: Int, fatherPosition: Int): Seq[Clause] = {
-    domain.decompositionMethods.zipWithIndex flatMap {
+    possibleMethodsWithIndexPerLayer(layer)._1 flatMap {
       case (m@SimpleDecompositionMethod(_, subPlan, _), methodIdx) =>
         // those selected
         val presentChildren: Seq[Clause] = subPlan.planStepsWithoutInitGoal.zipWithIndex flatMap {
@@ -305,6 +357,7 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
       }
   }
 
+  var numberOfChildrenClauses = 0
 
   lazy val decompositionFormula: Seq[Clause] = {
     // can't deal with this yet
@@ -320,17 +373,35 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
     } map {
       case OrderingConstraint(beforePS, afterPS) => Clause(before(-1, initialPlan.planStepsWithoutInitGoal indexOf beforePS, initialPlan.planStepsWithoutInitGoal indexOf afterPS))
     }
+
     val generalConstraintsLayerMinusOne = Range(0, numberOfActionsPerLayer) flatMap { position =>
+      numberOfChildrenClauses += methodMustHaveChildren(-1, position).length
+
       applyMethod(-1, position) ++ notTwoMethods(-1, position) ++ methodMustHaveChildren(-1, position) ++ selectActionsForLayer(-1, position)
     }
 
     val layerMinusOne = layerMinusOneActions ++ layerMinusOneNoOtherAction ++ layerMinusOneOrdering ++ generalConstraintsLayerMinusOne
 
+    println("initial layer done")
+
     val ordinaryLayers: Seq[Clause] = Range(0, K) flatMap { layer => (Range(0, numberOfActionsPerLayer) flatMap { position =>
-      selectActionsForLayer(layer, position) ++ maintainOrdering(layer, position) ++
-        applyMethod(layer, position) ++ notTwoMethods(layer, position) ++ methodMustHaveChildren(layer, position) ++
-        mustBeChildOf(layer, position) ++ fatherMustExist(layer, position) ++ childImpliesChildOf(layer, position) ++
-        maintainPrimitive(layer, position)
+      println("Layer " + layer + " " + position)
+      val selectAction = selectActionsForLayer(layer, position)
+      val maintainOrder = maintainOrdering(layer, position)
+      val selectMethod = applyMethod(layer, position)
+      val atMostOneMethod = notTwoMethods(layer, position)
+      val methodsProduce = methodMustHaveChildren(layer, position)
+      val noInsertion = mustBeChildOf(layer, position)
+      val father = fatherMustExist(layer, position)
+      val setChildOf = childImpliesChildOf(layer, position)
+      val keepPrimitive = maintainPrimitive(layer, position)
+
+      numberOfChildrenClauses += methodsProduce.length
+
+      //println(selectAction.length + " " + maintainOrder.length + " " + selectMethod.length + " " + atMostOneMethod.length + " " + methodsProduce.length + " " +
+      //         noInsertion.length + " " + father.length + " " + setChildOf.length + " " + keepPrimitive.length)
+
+      selectAction ++ maintainOrder ++ selectMethod ++ atMostOneMethod ++ methodsProduce ++ noInsertion ++ father ++ setChildOf ++ keepPrimitive
     }) ++ transitiveOrderForLayer(layer) ++ consistentOrderForLayer(layer)
     }
 
@@ -368,8 +439,9 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
   //lazy val atomIndices: Map[String, Int] = atoms.zipWithIndex.toMap
 
-  def miniSATString(formulasSeq: Seq[Clause]): String = {
+  def miniSATString(formulasSeq: Seq[Clause], writer: BufferedWriter): Map[String, Int] = {
     val formulas = formulasSeq.toArray
+    println("NUMBER OF CLAUSES " + formulasSeq.length)
 
     // generate the atoms to int map
     val atomIndices = new mutable.HashMap[String, Int]()
@@ -390,8 +462,9 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
 
     val header = "p cnf " + atomIndices.size + " " + formulas.length + "\n"
 
-    val stringBuffer = new StringBuffer()
-    stringBuffer append header
+    //val stringBuffer = new StringBuffer()
+    //stringBuffer append header
+    writer write header
 
     i = 0
     while (i < formulas.length) {
@@ -399,15 +472,19 @@ case class VerifyEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[T
       var j = 0
       while (j < lits.length) {
         val atomInt = (atomIndices(lits(j)._1) + 1) * (if (lits(j)._2) 1 else -1)
-        stringBuffer append atomInt
-        stringBuffer append ' '
+        //stringBuffer append atomInt
+        writer write ("" + atomInt)
+        //stringBuffer append ' '
+        writer write ' '
         j += 1
       }
-      stringBuffer append "0\n"
+      //stringBuffer append "0\n"
+      writer write "0\n"
       i += 1
     }
 
-    stringBuffer.toString
+    //stringBuffer.toString
+    atomIndices.toMap
   }
 }
 

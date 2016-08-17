@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import java.io.{File, FileInputStream}
+import java.io.{FileWriter, BufferedWriter, File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
@@ -22,18 +22,20 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
-    val searchConfig = configNumber match {
-      case x if x < 0 => SearchConfiguration(Some(1), None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true)
-      case 1          => SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true)
-      case 2          => SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true)
-      case 3          => SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumAction), printSearchInfo = true)
+    val (searchConfig, usePlanningGraph) = configNumber match {
+      case x if x < 0 => (SearchConfiguration(Some(1), None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true), true)
+      case 1          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true), true)
+      case 2          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true), true)
+      case 3          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumAction), printSearchInfo = true), true)
+      case 4          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true), false)
+      case 5          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true), false)
     }
 
     // create the configuration
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(parserType),
-                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = true, compileOrderInMethods = false,
-                                                                          liftedReachability = true, groundedReachability = false, planningGraph = true,
+                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = false,
+                                                                          liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,
                                                                           groundedTaskDecompositionGraph = Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = false, groundDomain = true),
                                                searchConfig,
@@ -81,7 +83,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
     // wait
     val startTime = System.currentTimeMillis()
-    while (System.currentTimeMillis() - startTime <= timelimit && runner.result.isEmpty) Thread.sleep(1000)
+    while (System.currentTimeMillis() - startTime <= timelimit && runner.result.isEmpty && thread.isAlive) Thread.sleep(1000)
     thread.stop()
 
     if (runner.result.isEmpty) (false, false, new TimeCapsule, new InformationCapsule) else (runner.result.get._1, true, runner.result.get._2, runner.result.get._3)
@@ -112,6 +114,12 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val informationCapsule = new InformationCapsule
 
     informationCapsule.set(VerifyRunner.PLAN_LENGTH, sequenceToVerify.length)
+    informationCapsule.set(Information.NUMBER_OF_CONSTANTS, domain.constants.length)
+    informationCapsule.set(Information.NUMBER_OF_PREDICATES, domain.predicates.length)
+    informationCapsule.set(Information.NUMBER_OF_ACTIONS, domain.tasks.length)
+    informationCapsule.set(Information.NUMBER_OF_ABSTRACT_ACTIONS, domain.abstractTasks.length)
+    informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domain.primitiveTasks.length)
+    informationCapsule.set(Information.NUMBER_OF_METHODS, domain.decompositionMethods.length)
 
     //val ordering = Range(0, 8) map { _ => domain.tasks.head }
 
@@ -129,20 +137,21 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
     timeCapsule start VerifyRunner.VERIFY_TOTAL
     timeCapsule start VerifyRunner.GENERATE_FORMULA
-    val usedFormula = encoder.decompositionFormula ++ encoder.stateTransitionFormula ++ encoder.initialState ++ (if (includeGoal) encoder.goalState else Nil) ++ (
+    val stateFormula = encoder.stateTransitionFormula ++ encoder.initialState ++ (if (includeGoal) encoder.goalState else Nil) ++ (
       if (verify) encoder.givenActionsFormula else encoder.noAbstractsFormula)
+    val usedFormula = encoder.decompositionFormula ++ stateFormula
     timeCapsule stop VerifyRunner.GENERATE_FORMULA
 
     timeCapsule start VerifyRunner.TRANSFORM_DIMACS
-    val cnfString = encoder.miniSATString(usedFormula)
+    val writer = new BufferedWriter(new FileWriter(new File("__cnfString")))
+    val atomMap = encoder.miniSATString(usedFormula, writer)
+    writer.flush()
+    writer.close()
     timeCapsule stop VerifyRunner.TRANSFORM_DIMACS
 
-    timeCapsule start VerifyRunner.WRITE_FORMULA
-    writeStringToFile(cnfString, new File("__cnfString"))
-    timeCapsule stop VerifyRunner.WRITE_FORMULA
-
-    informationCapsule.set(VerifyRunner.NUMBER_OF_VARIABLES, (usedFormula flatMap { _.disjuncts map { _._1 } } distinct).size)
-    informationCapsule.set(VerifyRunner.NUMBER_OF_CLAUSES, usedFormula.length)
+    //timeCapsule start VerifyRunner.WRITE_FORMULA
+    //writeStringToFile(cnfString, new File("__cnfString"))
+    //timeCapsule stop VerifyRunner.WRITE_FORMULA
 
     //writeStringToFile(usedFormula mkString "\n", new File("__formulaString"))
 
@@ -155,6 +164,14 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     }
     timeCapsule stop VerifyRunner.SAT_SOLVER
     timeCapsule stop VerifyRunner.VERIFY_TOTAL
+
+
+    informationCapsule.set(VerifyRunner.NUMBER_OF_VARIABLES, (usedFormula flatMap { _.disjuncts map { _._1 } } distinct).size)
+    informationCapsule.set(VerifyRunner.NUMBER_OF_CLAUSES, usedFormula.length)
+    informationCapsule.set(VerifyRunner.STATE_FORMULA, stateFormula.length)
+    informationCapsule.set(VerifyRunner.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
+    informationCapsule.set(VerifyRunner.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
+
 
     // postprocessing
 
@@ -170,7 +187,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
       val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, encoder.numberOfActionsPerLayer) map { pos =>
         domain.tasks map { task =>
           val actionString = encoder.action(layer, pos, task)
-          val isPres = if (encoder.atoms contains actionString) literals contains (1 + (encoder.atoms indexOf actionString)) else false
+          val isPres = if (atomMap contains actionString) literals contains (1 + (atomMap(actionString))) else false
           (actionString, isPres)
         } find { _._2 }
       } filter { _.isDefined } map { _.get._1 }
@@ -181,7 +198,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
         father =>
           Range(0, encoder.DELTA) flatMap { childIndex =>
             val childString = encoder.childWithIndex(layer, pos, father, childIndex)
-            if ((encoder.atoms contains childString) && (literals contains (1 + (encoder.atoms indexOf childString)))) {
+            if ((atomMap contains childString) && (literals contains (1 + (atomMap(childString))))) {
               // find parent and myself
               val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
               assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
@@ -204,7 +221,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
       Dot2PdfCompiler.writeDotToFile(decompGraph, "decomp.pdf")
       Dot2PdfCompiler.writeDotToFile(decompGraphNames, "decompName.pdf")
 
-      val allTrueAtoms = encoder.atoms.zipWithIndex filter { case (atom, index) => literals contains (index + 1) } map { _._1 }
+      val allTrueAtoms: Seq[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSeq
 
       writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
@@ -231,18 +248,29 @@ object VerifyRunner {
   val WRITE_FORMULA    = "99 verify:30:write formula"
   val SAT_SOLVER       = "99 verify:40:SAT solver"
 
-  val allTime = (VERIFY_TOTAL :: GENERATE_FORMULA :: TRANSFORM_DIMACS :: WRITE_FORMULA :: SAT_SOLVER :: Nil).sorted
+  val allTime = (VERIFY_TOTAL :: GENERATE_FORMULA :: TRANSFORM_DIMACS :: /*WRITE_FORMULA :: */ SAT_SOLVER :: Nil).sorted
 
-  val PLAN_LENGTH         = "99 verify:00:plan length"
-  val NUMBER_OF_VARIABLES = "99 verify:01:number of variables"
-  val NUMBER_OF_CLAUSES   = "99 verify:02:number of clauses"
-  val ICAPS_K             = "99 verify:10:K ICAPS"
-  val LOG_K               = "99 verify:11:K LOG"
-  val TSTG_K              = "99 verify:12:K task schema transition graph"
-  val OFFSET_K            = "99 verify:13:K offset"
-  val ACTUAL_K            = "99 verify:14:K chosen value"
+  val PLAN_LENGTH             = "99 verify:00:plan length"
+  val NUMBER_OF_VARIABLES     = "99 verify:01:number of variables"
+  val NUMBER_OF_CLAUSES       = "99 verify:02:number of clauses"
+  val ICAPS_K                 = "99 verify:10:K ICAPS"
+  val LOG_K                   = "99 verify:11:K LOG"
+  val TSTG_K                  = "99 verify:12:K task schema transition graph"
+  val OFFSET_K                = "99 verify:13:K offset"
+  val ACTUAL_K                = "99 verify:14:K chosen value"
+  val STATE_FORMULA           = "99 verify:20:state formula"
+  val ORDER_CLAUSES           = "99 verify:21:order clauses"
+  val METHOD_CHILDREN_CLAUSES = "99 verify:22:method children clauses"
 
-  val allData = (PLAN_LENGTH :: NUMBER_OF_VARIABLES :: NUMBER_OF_CLAUSES :: ICAPS_K :: LOG_K :: TSTG_K :: OFFSET_K :: ACTUAL_K :: Nil).sorted
+  val allData              = (PLAN_LENGTH :: NUMBER_OF_VARIABLES :: NUMBER_OF_CLAUSES :: ICAPS_K :: LOG_K :: TSTG_K :: OFFSET_K :: ACTUAL_K :: STATE_FORMULA :: ORDER_CLAUSES ::
+    METHOD_CHILDREN_CLAUSES :: Nil).sorted
+  val allProblemProperties =
+    (Information.NUMBER_OF_CONSTANTS ::
+      Information.NUMBER_OF_PREDICATES ::
+      Information.NUMBER_OF_ACTIONS ::
+      Information.NUMBER_OF_ABSTRACT_ACTIONS ::
+      Information.NUMBER_OF_PRIMITIVE_ACTIONS ::
+      Information.NUMBER_OF_METHODS :: Nil).sorted
 
   // domains to test
   //val prefix = "/home/gregor/Workspace/panda2-system/domains/XML/"
@@ -251,27 +279,27 @@ object VerifyRunner {
   val problemsToVerify: Seq[(String, ParserType, Seq[(String, Int)])] =
     ("UM-Translog/domains/UMTranslog.xml", XMLParserType,
       ("UM-Translog/problems/UMTranslog-P-1-AirplanesHub.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-Airplane.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-ArmoredRegularTruck.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar-bis.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-AutoTruck.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-FlatbedTruck.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-HopperTruck.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-MailTraincar.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedRegularTraincar.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTruck.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-Regular2TrainStations2PostOffices.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-2Regions.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-3Locations.xml", 1) ::
-        //("UM-Translog/problems/UMTranslog-P-1-RegularTruck-4Locations.xml", 1) ::   // TDG pruned and panda2 it is unsolvable
-        ("UM-Translog/problems/UMTranslog-P-1-RegularTruckCustom.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-RegularTruck.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-TankerTraincarHub.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-1-TankerTruck.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-2-ParcelsChemicals.xml", 1) ::
-        ("UM-Translog/problems/UMTranslog-P-2-RegularTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-Airplane.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-ArmoredRegularTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar-bis.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-AutoTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-FlatbedTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-HopperTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-MailTraincar.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedRegularTraincar.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-Regular2TrainStations2PostOffices.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-2Regions.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-3Locations.xml", 1) ::
+            //("UM-Translog/problems/UMTranslog-P-1-RegularTruck-4Locations.xml", 1) ::   // TDG pruned and panda2 it is unsolvable
+            ("UM-Translog/problems/UMTranslog-P-1-RegularTruckCustom.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-RegularTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-TankerTraincarHub.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-TankerTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-2-ParcelsChemicals.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-2-RegularTruck.xml", 1) ::
         Nil) ::
       ("Satellite/domains/satellite2.xml", XMLParserType,
         ("Satellite/problems/4--1--3.xml", 1) ::
@@ -320,6 +348,9 @@ object VerifyRunner {
           ("Woodworking-Socs/problems/p02-variant3-hierarchical.xml", 1) ::
           ("Woodworking-Socs/problems/p02-variant4-hierarchical.xml", 1) ::
           Nil) ::
+      ("domain.lisp", HDDLParserType,
+         ("p-0002-plow-road.lisp", 4) ::
+           Nil) ::
       Nil
 
   //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
@@ -327,9 +358,9 @@ object VerifyRunner {
   //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant1-hierarchical.xml"
 
 
-  val timeLimit: Long = 10 * 60 * 1000
-  val minOffset: Int  = -2
-  val maxOffset: Int  = 4
+  val timeLimit: Long = 30 * 60 * 1000
+  val minOffset: Int  = -3
+  val maxOffset: Int  = 0
 
   val numberOfRandomSeeds: Int = 5
 
@@ -343,6 +374,7 @@ object VerifyRunner {
 
     // problem statistics
     allData foreach { d => builder append (d + ",") }
+    allProblemProperties foreach { d => builder append (d + ",") }
     // actual data
     builder append ("preprocessTime" + ",")
     // time
@@ -363,6 +395,7 @@ object VerifyRunner {
 
     // problem statistics
     allData foreach { d => builder append (informationCapsule.integralDataMap().getOrElse(d, Integer.MAX_VALUE) + ",") }
+    allProblemProperties foreach { d => builder append (informationCapsule.integralDataMap().getOrElse(d, Integer.MAX_VALUE) + ",") }
     // actual data
     builder append (preprocessTime + ",")
     // time
@@ -443,7 +476,7 @@ object VerifyRunner {
     //val domFile = args(0)
     //val probFile = args(1)
 
-    //runPlanner(domFile,probFile,10)
+    //runPlanner(domFile,probFile,13)
     runEvaluation()
   }
 
