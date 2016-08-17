@@ -111,6 +111,8 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
   lazy val sources: Seq[T] = (degrees collect { case (node, (in, _)) if in == 0 => node }).toSeq
 
 
+  def getVerticesInDistance(v: T, distance: Int): Seq[T] = if (distance == 0) v :: Nil else edges(v) flatMap { getVerticesInDistance(_, distance - 1) }
+
   /** computes for each node, which other nodes can be reached from it using the edges of the graph */
   // TODO: this computation might be inefficient
   lazy val reachable: Map[T, Set[T]] = {
@@ -193,17 +195,17 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
 
   // Only implemented for acyclic graphs. Therefore Option[Int] as return type
   // For cyclic graphs the problem becomes NP-comlete instead of P for acyclic graphs
-  lazy val longestPathLength : Option[Int] = {
+  lazy val longestPathLength: Option[Int] = {
     // check if graph is acyclic
     topologicalOrdering match {
-      case (None) => None
+      case (None)       => None
       case Some(topOrd) => {
         var nodeLongestPathMap = Map(topOrd.head -> 0)
         for (i <- topOrd.indices) {
-          if(nodeLongestPathMap.get(topOrd(i)).isEmpty)
+          if (nodeLongestPathMap.get(topOrd(i)).isEmpty)
             nodeLongestPathMap += topOrd(i) -> 0
           edges(topOrd(i)) foreach (destination =>
-            if(nodeLongestPathMap.get(destination).isEmpty || nodeLongestPathMap(topOrd(i)) >= nodeLongestPathMap(destination))
+            if (nodeLongestPathMap.get(destination).isEmpty || nodeLongestPathMap(topOrd(i)) >= nodeLongestPathMap(destination))
               nodeLongestPathMap += destination -> (nodeLongestPathMap(topOrd(i)) + 1))
         }
 
@@ -238,11 +240,13 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
 
       val possibleOrderings = potentiallyFirstNodes map { first => dfs(processedNodes + first) map { _ map { s => first +: s } } } collect { case Some(x) => x } flatten
 
-      if (possibleOrderings.length == 0) None else Some(possibleOrderings)
+      if (possibleOrderings.isEmpty) None else Some(possibleOrderings)
     }
 
     dfs(Set())
   }
+
+  lazy val isAcyclic: Boolean = condensation.vertices.length == vertices.length
 
   /** The DOT representation of the object with options */
   override def dotString(options: Unit): String = dotString
@@ -258,7 +262,7 @@ object SimpleDirectedGraph {
   }
 }
 
-case class SimpleGraphNode(id : String, name : String) extends PrettyPrintable {
+case class SimpleGraphNode(id: String, name: String) extends PrettyPrintable {
   override def shortInfo: String = name
 
   override def mediumInfo: String = name
