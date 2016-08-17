@@ -36,6 +36,8 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task => assert(tasks contains task) }
   }
 
+  tasks foreach { t => (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map { _._1 } foreach {p => assert(predicates contains p)}}
+
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph        = TaskSchemaTransitionGraph(this)
   lazy val constants                : Seq[Constant]                    = (sorts flatMap { _.elements }).distinct
