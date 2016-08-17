@@ -65,11 +65,16 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
         res.unconstraintTasks.addAll(tn.getFirstNodes());
 
         // todo: change metric here
-        res.heuristic = this.heuristic.update(res, ps, m);
-        res.metric = res.solution.size() + res.heuristic.getHeuristic();
-        res.goalRelaxedReachable = res.heuristic.goalRelaxedReachable();
+        //res.heuristic = this.heuristic.update(res, ps, m);
+        //res.metric = (res.solution.size() + res.heuristic.getHeuristic()) * 1000 + res.heuristic.getHeuristic();
+
+        //res.metric = res.solution.size() + res.heuristic.getHeuristic();
+        res.metric = res.solution.size();
         //res.metric = res.solution.size() + (res.heuristic.getHeuristic() / 2);
         //res.metric = res.heuristic.getHeuristic();
+
+        //res.goalRelaxedReachable = res.heuristic.goalRelaxedReachable();
+        res.goalRelaxedReachable = true;
         return res;
     }
 
@@ -108,11 +113,16 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
         res.unconstraintTasks.addAll(potentialFirst);
 
         // todo: change metric here
-        res.heuristic = this.heuristic.update(res, ps);
-        res.metric = res.solution.size() + res.heuristic.getHeuristic();
-        res.goalRelaxedReachable = res.heuristic.goalRelaxedReachable();
+        //res.heuristic = this.heuristic.update(res, ps);
+        //res.metric = (res.solution.size() + res.heuristic.getHeuristic()) * 1000 + res.heuristic.getHeuristic();
+
+        //res.metric = res.solution.size() + res.heuristic.getHeuristic();
+        res.metric = res.solution.size();
         //res.metric = res.solution.size() + (res.heuristic.getHeuristic() / 2);
         //res.metric = res.heuristic.getHeuristic();
+
+        //res.goalRelaxedReachable = res.heuristic.goalRelaxedReachable();
+        res.goalRelaxedReachable = true;
         return res;
     }
 

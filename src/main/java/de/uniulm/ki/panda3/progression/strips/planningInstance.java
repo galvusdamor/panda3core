@@ -70,13 +70,13 @@ public class planningInstance {
         Set<GroundLiteral> allLiterals;
         Set<GroundTask> allActions;
         htnBottomUpGrounder gr = null;
-        if (relaxFirstGraph) {
+        //if (relaxFirstGraph) {
             System.out.println("Building initial relaxed planning graph.");
             symbolicRPG rpg = new symbolicRPG();
             rpg.build(d, p);
             allLiterals = rpg.facts.get(rpg.facts.size() - 1);
             allActions = rpg.actions.get(rpg.actions.size() - 1);
-        } else {
+        /*} else {
             allLiterals = new HashSet<>();
             allActions = new HashSet<>();
             System.out.println("Building initial (non-relaxed) planning graph.");
@@ -98,7 +98,7 @@ public class planningInstance {
             scala.collection.Iterator<GroundTask> iterAllActions = gpg.reachableGroundPrimitiveActions().iterator();
             while (iterAllActions.hasNext())
                 allActions.add(iterAllActions.next());
-        }
+        }*/
         System.out.println("Grounding completed in " + (System.currentTimeMillis() - time) + " ms.");
         time = System.currentTimeMillis();
 

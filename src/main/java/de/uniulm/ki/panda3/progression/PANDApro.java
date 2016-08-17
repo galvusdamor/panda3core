@@ -2,10 +2,8 @@ package de.uniulm.ki.panda3.progression;
 
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance;
 import de.uniulm.ki.panda3.progression.strips.planningInstance;
-import de.uniulm.ki.panda3.symbolic.compiler.ClosedWorldAssumption;
-import de.uniulm.ki.panda3.symbolic.compiler.ExpandSortHierarchy;
-import de.uniulm.ki.panda3.symbolic.compiler.RemoveNegativePreconditions;
-import de.uniulm.ki.panda3.symbolic.compiler.ToPlainFormulaRepresentation;
+import de.uniulm.ki.panda3.symbolic.compiler.*;
+import de.uniulm.ki.panda3.symbolic.compiler.prefix.forallAndExistsPrecCompiler;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.ioInterface.FileHandler;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
@@ -32,10 +30,15 @@ public class PANDApro {
         //String problemFile = "/home/dhoeller/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/problems/p01.pddl";
 
         // HTN
-        String domainFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp";
-        String problemFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p01-htn.lisp";
+        //String domainFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp";
+        //String problemFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp";
         //String domainFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/simple-finite-domain-2.lisp";
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/simple-finite-problem-2.lisp";
+        String domainFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/hddl-finalize/domain.lisp";
+        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/aaai/problems/p-0001-clear-road-wreck.lisp";
+        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/100/problems/p-0002-plow-road.lisp";
+        String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/100/problems/p-0003-set-up-shelter.lisp";
+        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/100/problems/p-0004-provide-medical-attention.lisp";
 
         //String domainFile = "/home/dhoeller/Schreibtisch/englert-test/testDomain1.pddl";
         //String problemFile ="/home/dhoeller/Schreibtisch/englert-test/testProblem1.pddl";
@@ -47,6 +50,9 @@ public class PANDApro {
         instance = ClosedWorldAssumption.transform(instance._1(), instance._2());
         instance = ToPlainFormulaRepresentation.transform(instance._1(), instance._2());
         instance = RemoveNegativePreconditions.transform(instance._1(), instance._2());
+        //instance = (new forallAndExistsPrecCompiler()).transform(instance, null);
+        instance = SHOPMethodCompiler.transform(instance);
+        instance = ToPlainFormulaRepresentation.transform(instance._1(), instance._2());
 
         boolean isHtn = instance._1().abstractTasks().size() > 0;
 

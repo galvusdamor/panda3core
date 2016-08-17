@@ -129,7 +129,7 @@ public class symbolicRPG {
             ReducedTask t = (ReducedTask) d.primitiveTasks().apply(i);
             for (int j = 0; j < t.instantiateGround().size(); j++) {
                 GroundTask groundT = t.instantiateGround().apply(j);
-                if (restrictToGivenActions && !allowedActions.get(groundT.task()).contains(groundT))
+                if (restrictToGivenActions && (allowedActions.containsKey(groundT.task())) && (!allowedActions.get(groundT.task()).contains(groundT)))
                     continue;
 
                 boolean fulfilled = true;

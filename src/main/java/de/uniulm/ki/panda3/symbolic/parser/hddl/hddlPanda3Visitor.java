@@ -719,7 +719,7 @@ public class hddlPanda3Visitor {
             }
         }
         if (var == null) {
-            System.out.println("ERROR: The variable name \"" + param.VAR_NAME() + "\" is used in a precondition or effect definition, but is not defined in the actions parameter definition.");
+            System.out.println("ERROR: The variable name \"" + param.getText() + "\" is used in a precondition or effect definition, but is not defined in the actions parameter definition.");
             System.out.println("Maybe it is a constant, then it is not your fault, but just a not yet implemented feature, but anyway...");
         }
         return var;

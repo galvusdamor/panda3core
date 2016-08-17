@@ -57,13 +57,12 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
     }
 
-    public cRPG(int absTaskCount, HashMap<Task, HashMap<GroundTask, List<method>>> methods, Set<GroundTask> allActions) {
+    public cRPG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, Set<GroundTask> allActions) {
         long time = System.currentTimeMillis();
         System.out.print("Init composition RPG heuristic");
 
         cRPG.numOperators = createMethodLookupTable(methods);
-        Set<GroundTask> allTasks = getGroundTasks(methods);
-        createTaskLookupTable(allActions, allTasks);
+        createTaskLookupTable(allActions, getGroundTasks(methods));
 
         cRPG.numHtnStateFeatures = operators.numStateFeatures + cRPG.numOperators; // action-task-facts are true one layer after the action, this can done due to the 1-to-1 correspondence
 
@@ -181,34 +180,29 @@ public class cRPG implements htnGroundedProgressionHeuristic {
     }
 
     public void build(progressionNetwork tn) {
-        /**
-         * The following array stores for every fact in which fact layer it has been made true:
-         * [6, 1, 0, -1] means that there are 4 facts, the first one has been made true in layer 6
-         * the second in layer 1... The -1 for fact 4 means that this fact has never been made true
-         */
-        int[] firstLayerWithFact;     // [f1, f2, ..., fm, a1, a2, ..., an, c1, c2, ..., co]
-        int[] numOfUnfulfilledPrecs;
+        // The following array stores for every fact in which fact layer it has been made true:
+        // [6, 1, 0, -1] means that there are 4 facts, the first one has been made true in layer 6
+        // the second in layer 1... The -1 for fact 4 means that this fact has never been made true
+        // contains STRIPS as well as HTN facts
+        int[] firstLayerWithFact = new int[cRPG.numHtnStateFeatures];
+
+        // operatorDelta is a list of lists. Each inner list contains those actions that are applicable
+        // in this layer for the *first time*, i.e. it is the delta of applicable actions
         List<List<Integer>> operatorDelta = new ArrayList<>();
 
-        /**
-         * Jörg Hoffmanns measure for choosing a supporter
-         */
-        int[] actionDifficulty;
-
-        /**
-         * goalDelta is a list of lists. Each inner list contains those goal facts that hold in the layer
-         * for the *first time*, i.e. it is the delta of fulfilled goal conditions. Be aware that
-         * goalDelta is *changed* during heuristic calculation.
-         */
+        // goalDelta is a list of lists. Each inner list contains those goal facts that hold in the layer
+        // for the *first time*, i.e. it is the delta of fulfilled goal conditions. Be aware that
+        // goalDelta is *changed* during heuristic calculation.
         List<List<Integer>> goalDelta = new ArrayList<>();
 
+        // is used to track how may preconditions are unfulfilled yet
+        int[] numOfUnfulfilledPrecs = numprecs.clone();
 
-        // init data structures
-        firstLayerWithFact = new int[cRPG.numHtnStateFeatures];
-        numOfUnfulfilledPrecs = numprecs.clone();
-        actionDifficulty = new int[cRPG.numOperators];
+        // Jörg Hoffmanns measure for choosing a supporter
+        // an action's difficulty is the sum of the layers of its preconditions
+        int[] actionDifficulty = new int[cRPG.numOperators];
 
-        // init literal fringe and literals in s0
+        // add literals in s0 to fringe
         LinkedList<Integer> changedLiterals = new LinkedList<>();
         for (int i = 0; i < operators.numStateFeatures; i++) {
             if (tn.state.get(i)) {
@@ -230,7 +224,6 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
         LinkedList<proPlanStep> goalFacts = new LinkedList<>();
         goalFacts.addAll(tn.getFirst());
-
         while (!goalFacts.isEmpty()) {
             proPlanStep ps = goalFacts.removeFirst();
             htnGoal.add(cRPG.TaskLiteralToIndex.get(ps.getTask()));
@@ -252,8 +245,9 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             }
         }
 
-        operatorDelta.add(new LinkedList<Integer>()); // dummyTaskList
+        operatorDelta.add(new LinkedList<Integer>()); // dummy list to make indices easier
 
+        // start building the graph
         int layerId = 1;
         this.goalRelaxedReachable = true;
         while (!unfulfilledGoals.isEmpty()) {
@@ -267,23 +261,30 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
             List<Integer> newlyApplicableActions = new ArrayList<>();
             operatorDelta.add(newlyApplicableActions);
-            if (layerId == 1)
+            if (layerId == 1) { // there might be actions without preconditions
                 newlyApplicableActions.addAll(cRPG.operatorsWithoutPrec);
+            }
 
+            // fact-loop
             while (!changedLiterals.isEmpty()) {
-                int addedLiteral = changedLiterals.removeFirst();
+                final int addedLiteral = changedLiterals.removeFirst();
                 for (int actionWithThisPrec : prec2task[addedLiteral]) {
                     numOfUnfulfilledPrecs[actionWithThisPrec]--;
+                    actionDifficulty[actionWithThisPrec] += layerId;
                     if (numOfUnfulfilledPrecs[actionWithThisPrec] == 0) {
                         newlyApplicableActions.add(actionWithThisPrec);
                     }
                 }
             }
+
+            // operator-loop
             for (int newlyApplicableAction : newlyApplicableActions) {
                 for (int effect : addLists[newlyApplicableAction]) {
                     if (firstLayerWithFact[effect] < 0) {
                         changedLiterals.add(effect);
                         firstLayerWithFact[effect] = layerId;
+
+                        // test if fact is in goal-list
                         if (unfulfilledGoals.remove(new Integer(effect))) {
                             while (unfulfilledGoals.remove(new Integer(effect))) {
                             }
@@ -296,10 +297,10 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         }
         //printLayerDelta(operatorDelta, firstLayerWithFact);
 
-        if (!goalRelaxedReachable)
-            this.heuristicValue = Integer.MAX_VALUE;
-        else {
+        if (goalRelaxedReachable) {
             this.heuristicValue = calcHeu(firstLayerWithFact, operatorDelta, actionDifficulty, goalDelta);
+        } else {
+            this.heuristicValue = Integer.MAX_VALUE;
         }
     }
 

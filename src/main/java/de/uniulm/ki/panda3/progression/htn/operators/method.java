@@ -64,12 +64,15 @@ public class method {
         }
     }
 
-    public void finalize() {
+    public void finalizeMethod() {
         for (int i = 0; i < tasks.length; i++) {
             if (tasks[i].task().isPrimitive()) {
                 actionID[i] = operators.ActionToIndex.get(tasks[i]);
             } else {
                 this.methods[i] = operators.methods.get(tasks[i].task()).get(tasks[i]);
+
+                assert (this.methods[i] != null);
+                assert (this.methods[i].size() > 0);
                 actionID[i] = -1;
             }
         }

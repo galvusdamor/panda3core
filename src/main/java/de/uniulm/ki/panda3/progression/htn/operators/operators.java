@@ -42,7 +42,7 @@ public class operators {
         for (HashMap<GroundTask, List<method>> x : operators.methods.values()) {
             for (List<method> y : x.values()) {
                 for (method z : y) {
-                    z.finalize();
+                    z.finalizeMethod();
                 }
             }
         }

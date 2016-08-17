@@ -8,7 +8,6 @@ import de.uniulm.ki.panda3.progression.htn.search.progressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.cRPG;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.simpleCompositionRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
@@ -19,6 +18,9 @@ import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import scala.Tuple2;
 import scala.collection.Seq;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
@@ -41,6 +43,7 @@ import java.util.concurrent.ExecutionException;
 public class htnPlanningInstance {
 
     final boolean verbose = false;
+    final private boolean writeGroundingForDebug = false;
 
     public void plan(Domain d, Plan p) throws ExecutionException, InterruptedException {
         long totaltime = System.currentTimeMillis();
@@ -74,6 +77,10 @@ public class htnPlanningInstance {
             }
         }
 
+        if (writeGroundingForDebug) {
+            writeGroundingToFile(gr, rpg);
+        }
+
         allLiterals = rpg.getReachableFacts();
         allActions = rpg.getApplicableActions();
         operators.numStateFeatures = allLiterals.size();
@@ -87,6 +94,13 @@ public class htnPlanningInstance {
         System.out.println(" - Found " + operators.numActions + " reachable ground actions.");
         System.out.println(" - Found " + operators.numStateFeatures + " reachable environment facts.");
         System.out.println("\nPreprocessing planning instance");
+
+        /*
+        for(Task t23 : gr.groundingsByTask.keySet()){
+            for(GroundTask gt23432 : gr.groundingsByTask.get(t23)){
+                System.out.println(gt23432.longInfo());
+            }
+        }*/
 
         // translate to efficient representation
         ToCompactRepresentation(allLiterals, allActions);
@@ -130,9 +144,10 @@ public class htnPlanningInstance {
 
         // todo: change heuristic here
         //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        initialNode.heuristic = new cRPG(gr.abstTaskCount, operators.methods, allActions);
-        initialNode.heuristic.build(initialNode);
-        initialNode.metric = initialNode.heuristic.getHeuristic();
+        //initialNode.heuristic = new cRPG(operators.methods, allActions);
+        //initialNode.heuristic.build(initialNode);
+        //initialNode.metric = initialNode.heuristic.getHeuristic();
+        initialNode.metric = 1;
 
 
         List<Object> solution = priorityQueueSearch(initialNode);
@@ -156,6 +171,32 @@ public class htnPlanningInstance {
             System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");*/
         } else System.out.println("Problem unsolvable.");
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
+    }
+
+    private void writeGroundingToFile(htnBottomUpGrounder gr, symbolicRPG rpg) {
+        try {
+            BufferedWriter bw = new BufferedWriter(new FileWriter("/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/temp/groundings.txt"));
+            for (Task task : gr.groundingsByTask.keySet()) {
+                for (GroundTask gt : gr.groundingsByTask.get(task)) {
+                    bw.write(gt.mediumInfo() + "\n");
+                }
+            }
+
+            bw.write("\n");
+            for (Task task : gr.methodsByTask.keySet()) {
+                for (GroundedDecompositionMethod meth : gr.methodsByTask.get(task)) {
+                    bw.write(meth.mediumInfo() + "\n");
+                }
+            }
+
+            bw.write("\n");
+            for (GroundTask ac : rpg.getApplicableActions()) {
+                bw.write(ac.mediumInfo() + "\n");
+            }
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private List<Object> priorityQueueSearch(progressionNetwork firstSearchNode) {
@@ -384,7 +425,7 @@ public class htnPlanningInstance {
 
     private String getInfoStr(int searchnodes, int fringesize, int bestMetric, progressionNetwork n, long searchtime) {
         return "nodes/sec: " + Math.round(searchnodes / ((System.currentTimeMillis() - searchtime) / 1000.0)) + " - generated nodes: " + searchnodes + " - fringe size: " + fringesize + " - best heuristic: " + bestMetric
-                + " - current heuristic: " + n.solution.size() + " + " + (n.metric - n.solution.size()) + " = " + n.metric;
+                + " - current heuristic: " + n.solution.size() + " - " + n.metric;
     }
 
     private HashMap<Task, HashMap<GroundTask, List<method>>> getEfficientMethodRep(HashMap<Task, Set<GroundedDecompositionMethod>> methodsByTask) {
