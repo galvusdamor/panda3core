@@ -72,6 +72,13 @@ object Information {
   val NUMBER_OF_EXPANDED_NODES  = "10 search nodes:01:expanded"
   val NUMBER_OF_DISCARDED_NODES = "10 search nodes:02:discarded nodes"
 
+  val NUMBER_OF_CONSTANTS         = "30 problem:01:number of constants"
+  val NUMBER_OF_PREDICATES        = "30 problem:02:number of predicates"
+  val NUMBER_OF_ACTIONS           = "30 problem:03:number of actions"
+  val NUMBER_OF_ABSTRACT_ACTIONS  = "30 problem:04:number of abstract actions"
+  val NUMBER_OF_PRIMITIVE_ACTIONS = "30 problem:05:number of primitive actions"
+  val NUMBER_OF_METHODS           = "30 problem:06:number of methods"
+
   val PLAN_SIZE = "20 search plans:01:number of plansteps"
 }
 
