@@ -20,12 +20,12 @@ object TotallyOrderAllMethods extends DecompositionMethodTransformer[Unit] {
 
   override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod): Seq[DecompositionMethod] = (methods :+ topMethod) flatMap {
     case SimpleDecompositionMethod(abstractTask, subPlan, methodName) =>
-      val allTotalOrderings = subPlan.orderingConstraints.graph.allTotalOrderings.get map { ordering =>
+      val allTotalOrderings = subPlan.orderingConstraints.graph.allTotalOrderings.get map { case ordering =>
         (ordering zip ordering.tail map { case (a, b) => OrderingConstraint(a, b) }) ++ (OrderingConstraint(subPlan.init, ordering.head) :: OrderingConstraint(ordering.last,
                                                                                                                                                                subPlan.goal) :: Nil)
       } map { constraints => TaskOrdering(constraints, subPlan.planSteps) }
 
-      allTotalOrderings map { ordering => SimpleDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering), methodName) }
+      allTotalOrderings.zipWithIndex map { case (ordering,i) => SimpleDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering), methodName + "_ordering_" + i) }
   }
 
   override protected val transformationName: String = "totalOrder"
