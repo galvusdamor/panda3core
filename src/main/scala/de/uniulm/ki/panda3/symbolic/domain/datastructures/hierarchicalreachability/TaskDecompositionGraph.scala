@@ -7,7 +7,7 @@ import de.uniulm.ki.panda3.symbolic.logic.{GroundLiteral, Sort, And, Constant}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep, GroundTask}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.util.{SimpleAndOrGraph, AndOrGraph}
+import de.uniulm.ki.util.{Dot2PdfCompiler, SimpleAndOrGraph, AndOrGraph}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -68,13 +68,13 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis {
     /**
       * @return abstract tasks and methods that remain in the pruning
       */
-    def pruneMethodsAndTasksIfPossible(remainingGroundTasks: Set[GroundTask], remainingGroundMethods: Set[GroundedDecompositionMethod]):
+    def pruneMethodsAndTasksIfPossible(remainingGroundTasks: Set[GroundTask], remainingGroundMethods: Set[GroundedDecompositionMethod], firstRound: Boolean = false):
     (Set[GroundTask], Set[GroundedDecompositionMethod]) = {
       // test all decomposition methods
       val stillSupportedMethods: Set[GroundedDecompositionMethod] = remainingGroundMethods filter { _.subPlanGroundedTasksWithoutInitAndGoal forall { remainingGroundTasks.contains } }
 
-
-      if (stillSupportedMethods.size == remainingGroundMethods.size) {
+      // in the first round we might also have to prune abstract tasks without methods being unsupported
+      if (!firstRound && stillSupportedMethods.size == remainingGroundMethods.size) {
         // nothing to prune
         (remainingGroundTasks, remainingGroundMethods)
       } else {
@@ -93,7 +93,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis {
 
 
     val allGroundedActions: Set[GroundTask] = (abstractTaskGroundings.values.flatten ++ groundedReachabilityAnalysis.reachableGroundPrimitiveActions).toSet
-    val (remainingGroundTasks, remainingGroundMethods) = pruneMethodsAndTasksIfPossible(allGroundedActions, groundedDecompositionMethods.values.flatten.toSet)
+    val (remainingGroundTasks, remainingGroundMethods) = pruneMethodsAndTasksIfPossible(allGroundedActions, groundedDecompositionMethods.values.flatten.toSet, firstRound = true)
 
     val prunedTaskToMethodEdgesMaybeIncomplete = groundedDecompositionMethods collect { case (a, b) if remainingGroundTasks contains a => (a, b.toSet intersect remainingGroundMethods) }
     val notMappedTasks = remainingGroundTasks diff prunedTaskToMethodEdgesMaybeIncomplete.keySet
@@ -122,11 +122,11 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis {
   override      val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod] = taskDecompositionGraph._3
 
   reachableGroundPrimitiveActions foreach { gt =>
-    gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e) }
-    gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e) }
+    gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
+    gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable precondition " + e.longInfo) }
   }
   reachableGroundAbstractActions foreach { gt =>
-    gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e) }
-    gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e) }
+    gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
+    gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable precondition " + e.longInfo) }
   }
 }
