@@ -124,10 +124,10 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
   }
 
   /** returns a string by which this object may be referenced */
-  override def shortInfo: String = task.name
+  override def shortInfo: String = task.name + (arguments map { _.name }).mkString("(", ",", ")")
 
   /** returns a string that can be utilized to define the object */
-  override def mediumInfo: String = shortInfo + (arguments map { _.name }).mkString("(", ",", ")")
+  override def mediumInfo: String = shortInfo
 
   /** returns a detailed information about the object */
   override def longInfo: String = mediumInfo
