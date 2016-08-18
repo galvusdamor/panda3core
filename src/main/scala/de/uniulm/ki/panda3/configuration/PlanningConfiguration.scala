@@ -331,6 +331,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       info("Lifted reachability analysis ... ")
       val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(domain, problem, emptyAnalysis)
       val disallowedTasks = domain.primitiveTasks filterNot newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.contains
+      println("\nDisallowed:")
+      println(disallowedTasks map {_.name} mkString "\n")
       val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
       val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
       info("done.\n")
@@ -387,7 +389,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       { case ((dom, prob), (compiler, message, timingString)) =>
         timeCapsule start timingString
         info("Compiling " + message + " ... ")
-        val compiled = compiler.transform(domain, problem, ())
+        val compiled = compiler.transform(dom, prob, ())
         info("done.\n")
         extra(compiled._1.statisticsString + "\n")
         timeCapsule stop timingString
