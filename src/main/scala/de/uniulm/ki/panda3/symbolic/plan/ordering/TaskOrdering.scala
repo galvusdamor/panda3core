@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
 import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangePlanSteps, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
-import de.uniulm.ki.util.{SimpleDirectedGraph, DirectedGraph, HashMemo}
+import de.uniulm.ki.util.{DirectedGraphWithInternalMapping, SimpleDirectedGraph, DirectedGraph, HashMemo}
 
 /**
   *
@@ -298,7 +298,7 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
       case (a, b) => (tasksWithoutInitAndGoal contains a) && (tasksWithoutInitAndGoal contains b)
     }
 
-    SimpleDirectedGraph(tasksWithoutInitAndGoal, edges)
+    DirectedGraphWithInternalMapping(tasksWithoutInitAndGoal, edges)
   }
 }
 

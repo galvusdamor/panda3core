@@ -19,6 +19,81 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
   /** adjacency list of the graph */
   def edges: Map[T, Seq[T]]
 
+  /** list of all edges as a list of pairs */
+  def edgeList: Seq[(T, T)]
+
+  /** in- and out- degrees of all nodes */
+  def degrees: Map[T, (Int, Int)]
+
+  def stronglyConnectedComponents: Seq[Set[T]]
+
+  def getComponentOf: Map[T, Set[T]]
+
+  lazy val condensation: DirectedGraph[Set[T]] = {
+    val edgeMap: Map[Set[T], Seq[Set[T]]] = (stronglyConnectedComponents map { comp =>
+      val edgeto = comp flatMap { elem => edges(elem) map getComponentOf filter { _ ne comp } }
+      (comp, edgeto.toSeq)
+    }).toMap
+    SimpleDirectedGraph(stronglyConnectedComponents, edgeMap)
+  }
+
+  def sources: Seq[T]
+
+  def getVerticesInDistance(v: T, distance: Int): Seq[T]
+
+  /** computes for each node, which other nodes can be reached from it using the edges of the graph */
+  def reachable: Map[T, Set[T]]
+
+  def reachableFrom(root: T): Set[T]
+
+  lazy val transitiveClosure = SimpleDirectedGraph(vertices, reachable map { case (a, b) => (a, b.toSeq) })
+
+  /**
+    * Compute a topological ordering of the graph.
+    * If the graph contains a cycle this function returns None.
+    */
+  def topologicalOrdering: Option[Seq[T]]
+
+  /** Only implemented for acyclic graphs. Therefore Option[Int] as return type
+    * For cyclic graphs the problem becomes NP-comlete instead of P for acyclic graphs
+    */
+  def longestPathLength: Option[Int]
+
+  /**
+    * This is not a fast implementation^^
+    */
+  def allTotalOrderings: Option[Seq[Seq[T]]]
+
+  lazy val isAcyclic: Boolean = condensation.vertices.length == vertices.length
+
+
+  override lazy val dotString: String = {
+    val dotStringBuilder = new StringBuilder()
+
+    dotStringBuilder append "digraph someDirectedGraph{\n"
+    edgeList foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + ";\n" }
+    dotStringBuilder append "\n"
+    vertices.zipWithIndex foreach { case (obj, index) =>
+      val string = (obj match {case pp: PrettyPrintable => pp.shortInfo; case x => x.toString}).replace('\"', '\'')
+      dotStringBuilder append ("\ta" + index + "[label=\"" + string + "\"];\n")
+    }
+    dotStringBuilder append "}"
+
+    dotStringBuilder.toString
+  }
+
+  /** The DOT representation of the object with options */
+  override def dotString(options: Unit): String = dotString
+}
+
+trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
+
+  /** a list of all node of the graph */
+  def vertices: Seq[T]
+
+  /** adjacency list of the graph */
+  def edges: Map[T, Seq[T]]
+
   /** adjacency list of the graph */
   private lazy val edgesSet        : Map[T, Set[T]] = edges map { case (a, b) => (a, b.toSet) }
   private lazy val reversedEdgesSet: Map[T, Set[T]] = vertices map { v => v -> (vertices filter { v2 => edgesSet(v2) contains v } toSet) } toMap
@@ -99,15 +174,6 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
     x
   }
 
-
-  lazy val condensation: DirectedGraph[Set[T]] = {
-    val edgeMap: Map[Set[T], Seq[Set[T]]] = (stronglyConnectedComponents map { comp =>
-      val edgeto = comp flatMap { elem => edges(elem) map getComponentOf filter { _ ne comp } }
-      (comp, edgeto.toSeq)
-    }).toMap
-    SimpleDirectedGraph(stronglyConnectedComponents, edgeMap)
-  }
-
   lazy val sources: Seq[T] = (degrees collect { case (node, (in, _)) if in == 0 => node }).toSeq
 
 
@@ -148,7 +214,6 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
     visited.toSet[T]
   }
 
-  lazy val transitiveClosure = SimpleDirectedGraph(vertices, reachable map { case (a, b) => (a, b.toSeq) })
 
   /**
     * Compute a topological ordering of the graph.
@@ -195,37 +260,22 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
 
   // Only implemented for acyclic graphs. Therefore Option[Int] as return type
   // For cyclic graphs the problem becomes NP-comlete instead of P for acyclic graphs
-  lazy val longestPathLength : Option[Int] = {
+  lazy val longestPathLength: Option[Int] = {
     // check if graph is acyclic
     topologicalOrdering match {
-      case (None) => None
+      case (None)                    => None
       case Some(topologicalOrdering) => {
         var nodeLongestPathMap = Map(topologicalOrdering.head -> 0)
         for (i <- 0 until topologicalOrdering.size) {
-          if(nodeLongestPathMap.get(topologicalOrdering(i)).isEmpty)
+          if (nodeLongestPathMap.get(topologicalOrdering(i)).isEmpty)
             nodeLongestPathMap += topologicalOrdering(i) -> 0
           edges(topologicalOrdering(i)) foreach (destination =>
-            if(nodeLongestPathMap.get(destination).isEmpty || nodeLongestPathMap(topologicalOrdering(i)) >= nodeLongestPathMap(destination))
+            if (nodeLongestPathMap.get(destination).isEmpty || nodeLongestPathMap(topologicalOrdering(i)) >= nodeLongestPathMap(destination))
               nodeLongestPathMap += destination -> (nodeLongestPathMap(topologicalOrdering(i)) + 1))
         }
         Some(nodeLongestPathMap.valuesIterator.max)
       }
     }
-  }
-
-  override lazy val dotString: String = {
-    val dotStringBuilder = new StringBuilder()
-
-    dotStringBuilder append "digraph someDirectedGraph{\n"
-    edgeList foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + ";\n" }
-    dotStringBuilder append "\n"
-    vertices.zipWithIndex foreach { case (obj, index) =>
-      val string = (obj match {case pp: PrettyPrintable => pp.shortInfo; case x => x.toString}).replace('\"', '\'')
-      dotStringBuilder append ("\ta" + index + "[label=\"" + string + "\"];\n")
-    }
-    dotStringBuilder append "}"
-
-    dotStringBuilder.toString
   }
 
   /**
@@ -244,15 +294,60 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
 
     dfs(Set())
   }
-
-  lazy val isAcyclic: Boolean = condensation.vertices.length == vertices.length
-
-  /** The DOT representation of the object with options */
-  override def dotString(options: Unit): String = dotString
 }
 
 
-case class SimpleDirectedGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraph[T] {}
+case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraph[T] {
+
+  private val verticesToInt: BiMap[T, Int] = BiMap(vertices.zipWithIndex)
+  private val internalGraph                = SimpleDirectedGraph[Int](vertices map verticesToInt.apply, edges map { case (from, to) =>
+    verticesToInt(from) -> to.map(verticesToInt.apply)
+  })
+
+  /** Only implemented for acyclic graphs. Therefore Option[Int] as return type
+    * For cyclic graphs the problem becomes NP-comlete instead of P for acyclic graphs
+    */
+  override lazy val longestPathLength: Option[Int] = internalGraph.longestPathLength
+
+  /**
+    * This is not a fast implementation^^
+    */
+  override lazy val allTotalOrderings: Option[Seq[Seq[T]]] = internalGraph.allTotalOrderings map { _ map { _ map verticesToInt.back } }
+
+  override lazy val sources: Seq[T] = internalGraph.sources map verticesToInt.back
+
+  /**
+    * Compute a topological ordering of the graph.
+    * If the graph contains a cycle this function returns None.
+    */
+  override lazy val topologicalOrdering: Option[Seq[T]] = internalGraph.topologicalOrdering map { _ map verticesToInt.back }
+
+  /** in- and out- degrees of all nodes */
+  override lazy val degrees: Map[T, (Int, Int)] = internalGraph.degrees map { case (n, deg) => verticesToInt.back(n) -> deg }
+
+  override lazy val getComponentOf: Map[T, Set[T]] = internalGraph.getComponentOf map { case (n, comp) => verticesToInt.back(n) -> comp.map(verticesToInt.back) }
+
+  override def getVerticesInDistance(v: T, distance: Int): Seq[T] = internalGraph.getVerticesInDistance(verticesToInt(v),distance) map verticesToInt.back
+
+  /** list of all edges as a list of pairs */
+  override lazy val edgeList: Seq[(T, T)] = internalGraph.edgeList map { case (a, b) => (verticesToInt.back(a), verticesToInt.back(b)) }
+
+  override def reachableFrom(root: T): Set[T] = internalGraph.reachableFrom(verticesToInt(root)) map verticesToInt.back
+
+  override lazy val stronglyConnectedComponents: Seq[Set[T]] = internalGraph.stronglyConnectedComponents map {_ map verticesToInt.back}
+
+  /** computes for each node, which other nodes can be reached from it using the edges of the graph */
+  override lazy val reachable: Map[T, Set[T]] = internalGraph.reachable map {case (n,reach) => verticesToInt.back(n) -> reach.map(verticesToInt.back)}
+}
+
+object  DirectedGraphWithInternalMapping {
+  def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): DirectedGraphWithInternalMapping[T] = {
+    edges flatMap { case (a, b) => a :: b :: Nil } foreach { n => assert(nodes contains n) }
+    DirectedGraphWithInternalMapping(nodes, (nodes zip (nodes map { n => edges.filter({ _._1 == n }).map({ _._2 }) })).toMap)
+  }
+}
+
+case class SimpleDirectedGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraphWithAlgorithms[T] {}
 
 object SimpleDirectedGraph {
   def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): SimpleDirectedGraph[T] = {

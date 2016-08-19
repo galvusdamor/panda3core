@@ -18,10 +18,15 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
   assert(domain.isTotallyOrdered)
 
   // layer, path to that action, actual task
-  private val action: ((Int, Seq[Int], Task)) => String = memoise[(Int, Seq[Int], Task), String]({ case (l, p, t) =>
+  /*private val action: ((Int, Seq[Int], Task)) => String = memoise[(Int, Seq[Int], Task), String]({ case (l, p, t) =>
     assert(p.length == l + 1)
     "action^" + l + "_" + p.mkString(";") + "," + taskIndex(t)
-                                                                                                 })
+                                                                                                 })*/
+
+  private def action(l: Int, p: Seq[Int], t: Task) = {
+    assert(p.length == l + 1)
+    "action^" + l + "_" + p.mkString(";") + "," + taskIndex(t)
+  }
 
   // layer, path to that action, actual method
   private val method: ((Int, Seq[Int], Int)) => String = memoise[(Int, Seq[Int], Int), String]({ case (l, pos, methodIdx) => "method^" + l + "_" + pos.mkString(";") + "," + methodIdx })

@@ -7,7 +7,7 @@ import scala.collection.mutable
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraph[T] {
+trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
   val andVertices: Set[A]
   val orVertices : Set[O]
 

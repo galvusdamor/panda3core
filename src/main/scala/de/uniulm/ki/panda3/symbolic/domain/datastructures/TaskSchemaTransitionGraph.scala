@@ -3,14 +3,14 @@ package de.uniulm.ki.panda3.symbolic.domain.datastructures
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
-import de.uniulm.ki.util.DirectedGraph
+import de.uniulm.ki.util.{DirectedGraphWithAlgorithms, DirectedGraph}
 
 /**
   * This is a simplified version of the TDG (task decomposition graph) which does not take variable constraints into account.
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraph[Task] {
+case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraphWithAlgorithms[Task] {
 
   /** a list of all node of the graph */
   override val vertices: Seq[Task] = domain.tasks

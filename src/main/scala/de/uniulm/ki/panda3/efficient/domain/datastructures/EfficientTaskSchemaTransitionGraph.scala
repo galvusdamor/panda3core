@@ -1,12 +1,12 @@
 package de.uniulm.ki.panda3.efficient.domain.datastructures
 
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
-import de.uniulm.ki.util.DirectedGraph
+import de.uniulm.ki.util.{DirectedGraphWithAlgorithms, DirectedGraph}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends DirectedGraph[Int] {
+case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends DirectedGraphWithAlgorithms[Int] {
 
   /** all tasks */
   override val vertices: Seq[Int] = domain.tasks.indices
