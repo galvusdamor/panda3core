@@ -116,7 +116,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(())
         timeCapsule stop TOTAL_TIME
-        runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan)
+        runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan, analysisMap)
       })
     } else {
       // EFFICIENT SEARCH
@@ -208,12 +208,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       (domainAndPlan._1, wrappedSearchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Option[Plan] = resultfunction(()) map { wrapper.wrap }
         timeCapsule stop TOTAL_TIME
-        runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan)
+        runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan, analysisMap)
       })
     }
   }
 
-  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan], domainAndPlan: (Domain, Plan)): ResultMap =
+  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan], domainAndPlan: (Domain, Plan),
+                        analysisMap: AnalysisMap): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings => timeCapsule
       case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
@@ -221,12 +222,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         SearchState.UNSOLVABLE
       else SearchState.INSEARCH // TODO account for the case we ran out of time
 
-      case SearchResult              => result
-      case SearchStatistics          => informationCapsule
-      case SearchSpace               => rootNode
-      case SolutionInternalString    => result match {case Some(plan) => Some(plan.longInfo); case _ => None}
-      case SolutionDotString         => result match {case Some(plan) => Some(plan.dotString); case _ => None}
-      case PreprocessedDomainAndPlan => domainAndPlan
+      case SearchResult                => result
+      case SearchStatistics            => informationCapsule
+      case SearchSpace                 => rootNode
+      case SolutionInternalString      => result match {case Some(plan) => Some(plan.longInfo); case _ => None}
+      case SolutionDotString           => result match {case Some(plan) => Some(plan.dotString); case _ => None}
+      case PreprocessedDomainAndPlan   => domainAndPlan
+      case FinalTaskDecompositionGraph => analysisMap(SymbolicGroundedTaskDecompositionGraph)
     })
     } toMap
              )

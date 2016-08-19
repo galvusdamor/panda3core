@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
@@ -29,6 +30,8 @@ object SolutionInternalString extends ResultType {type ResultType = Option[Strin
 object SolutionDotString extends ResultType {type ResultType = Option[String]}
 
 object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain, Plan)}
+
+object FinalTaskDecompositionGraph extends ResultType {type ResultType = TaskDecompositionGraph}
 
 
 object Timings {
