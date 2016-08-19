@@ -1,8 +1,10 @@
 package de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability
 
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.panda3.symbolic.domain.{SimpleDecompositionMethod, Task, GroundedDecompositionMethod, Domain}
+import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.logic.Variable
+import de.uniulm.ki.panda3.symbolic.logic.Constant
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 
@@ -19,6 +21,7 @@ case class TopDownTaskDecompositionGraph(domain: Domain, initialPlan: Plan, grou
     // here we rely on side-effects for speed and readability
 
     val abstractTasksMap = new mutable.HashMap[Task, Set[GroundTask]]().withDefaultValue(Set())
+    val alreadyGroundedMethods = new mutable.HashMap[DecompositionMethod, Set[Map[Variable, Constant]]].withDefaultValue(Set())
     val methodsMap = new mutable.HashMap[GroundTask, Set[GroundedDecompositionMethod]]().withDefaultValue(Set())
 
     def dfs(currentGroundTask: GroundTask): Unit = if (!(abstractTasksMap(currentGroundTask.task) contains currentGroundTask) && currentGroundTask.task.isAbstract) {
@@ -27,15 +30,21 @@ case class TopDownTaskDecompositionGraph(domain: Domain, initialPlan: Plan, grou
 
       // if the task is abstract, we have to ground it
       // we have a partial variable binding from the abstract task
-      val possibleMethods = (domain.decompositionMethods :+ topMethod) filter { _.abstractTask == currentGroundTask.task } flatMap {
-        case simpleMethod: SimpleDecompositionMethod => simpleMethod.groundWithAbstractTaskGrounding(currentGroundTask)
+      val possibleMethods = (domain.decompositionMethods :+ topMethod) filter { _.abstractTask == currentGroundTask.task } map {
+        case simpleMethod: SimpleDecompositionMethod =>
+          val candidateGroundings = simpleMethod.groundWithAbstractTaskGrounding(currentGroundTask)
+          val entryMap = alreadyGroundedMethods(simpleMethod)
+          val newGroundings = candidateGroundings filterNot { grounding => entryMap.contains(grounding.variableBinding) }
+          (simpleMethod, newGroundings)
         case _                                       => noSupport(NONSIMPLEMETHOD)
-      } filterNot methodsMap(currentGroundTask).contains
+      }
       // add the new methods to the map
-      methodsMap(currentGroundTask) = methodsMap(currentGroundTask) ++ possibleMethods
+      val flattenedPossibleMethods = possibleMethods flatMap { _._2 }
+      methodsMap(currentGroundTask) = methodsMap(currentGroundTask) ++ flattenedPossibleMethods
+      possibleMethods foreach { case (m, groundings) => alreadyGroundedMethods(m) = alreadyGroundedMethods(m) ++ (groundings map { _.variableBinding }) }
 
       // perform recursion
-      possibleMethods flatMap { _.subPlanPlanStepsToGrounded.values } foreach dfs
+      flattenedPossibleMethods flatMap { _.subPlanPlanStepsToGrounded.values } foreach dfs
     }
 
     dfs(groundedTopTask)
