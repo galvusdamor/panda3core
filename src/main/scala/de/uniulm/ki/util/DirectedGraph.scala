@@ -11,7 +11,7 @@ import scala.collection.mutable
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait DirectedGraph[T] extends DotPrintable[Unit] {
+trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
 
   /** a list of all node of the graph */
   def vertices: Seq[T]
@@ -67,24 +67,28 @@ trait DirectedGraph[T] extends DotPrintable[Unit] {
   lazy val isAcyclic: Boolean = condensation.vertices.length == vertices.length
 
 
-  override lazy val dotString: String = {
+  override lazy val dotString: String = dotString(DirectedGraphDotOptions())
+
+  /** The DOT representation of the object with options */
+  override def dotString(options: DirectedGraphDotOptions): String = {
     val dotStringBuilder = new StringBuilder()
 
     dotStringBuilder append "digraph someDirectedGraph{\n"
     edgeList foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + ";\n" }
     dotStringBuilder append "\n"
     vertices.zipWithIndex foreach { case (obj, index) =>
-      val string = (obj match {case pp: PrettyPrintable => pp.shortInfo; case x => x.toString}).replace('\"', '\'')
-      dotStringBuilder append ("\ta" + index + "[label=\"" + string + "\"];\n")
+      val string = (if (options.labelNodesWithNumbers) index.toString else obj match {case pp: PrettyPrintable => pp.shortInfo; case x => x.toString}).replace('\"', '\'')
+      dotStringBuilder append ("\ta" + index + "[label=\"" + string + "\"" + dotVertexStyleRenderer(obj) + "];\n")
     }
     dotStringBuilder append "}"
 
     dotStringBuilder.toString
   }
 
-  /** The DOT representation of the object with options */
-  override def dotString(options: Unit): String = dotString
+  protected def dotVertexStyleRenderer(v : T) : String = ""
 }
+
+case class DirectedGraphDotOptions(labelNodesWithNumbers: Boolean = false)
 
 trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
 
@@ -327,20 +331,20 @@ case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, S
 
   override lazy val getComponentOf: Map[T, Set[T]] = internalGraph.getComponentOf map { case (n, comp) => verticesToInt.back(n) -> comp.map(verticesToInt.back) }
 
-  override def getVerticesInDistance(v: T, distance: Int): Seq[T] = internalGraph.getVerticesInDistance(verticesToInt(v),distance) map verticesToInt.back
+  override def getVerticesInDistance(v: T, distance: Int): Seq[T] = internalGraph.getVerticesInDistance(verticesToInt(v), distance) map verticesToInt.back
 
   /** list of all edges as a list of pairs */
   override lazy val edgeList: Seq[(T, T)] = internalGraph.edgeList map { case (a, b) => (verticesToInt.back(a), verticesToInt.back(b)) }
 
   override def reachableFrom(root: T): Set[T] = internalGraph.reachableFrom(verticesToInt(root)) map verticesToInt.back
 
-  override lazy val stronglyConnectedComponents: Seq[Set[T]] = internalGraph.stronglyConnectedComponents map {_ map verticesToInt.back}
+  override lazy val stronglyConnectedComponents: Seq[Set[T]] = internalGraph.stronglyConnectedComponents map { _ map verticesToInt.back }
 
   /** computes for each node, which other nodes can be reached from it using the edges of the graph */
-  override lazy val reachable: Map[T, Set[T]] = internalGraph.reachable map {case (n,reach) => verticesToInt.back(n) -> reach.map(verticesToInt.back)}
+  override lazy val reachable: Map[T, Set[T]] = internalGraph.reachable map { case (n, reach) => verticesToInt.back(n) -> reach.map(verticesToInt.back) }
 }
 
-object  DirectedGraphWithInternalMapping {
+object DirectedGraphWithInternalMapping {
   def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): DirectedGraphWithInternalMapping[T] = {
     edges flatMap { case (a, b) => a :: b :: Nil } foreach { n => assert(nodes contains n) }
     DirectedGraphWithInternalMapping(nodes, (nodes zip (nodes map { n => edges.filter({ _._1 == n }).map({ _._2 }) })).toMap)

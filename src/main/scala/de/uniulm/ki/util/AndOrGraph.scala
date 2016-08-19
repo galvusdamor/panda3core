@@ -58,6 +58,12 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
     mini(root, evaluate)
   }
 
+
+  override protected def dotVertexStyleRenderer(v: T): String = v match {
+    case a : A if andEdges.contains(a) =>  ",shape = box, style = filled, fillcolor = red"
+    case o : O if orEdges.contains(o) => ""
+  }
+
   override def reachableFrom(node: T): Set[T] = super.reachableFrom(node)
 }
 

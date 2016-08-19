@@ -7,12 +7,12 @@ import de.uniulm.ki.panda3.symbolic.logic.{GroundLiteral, Sort, And, Constant}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep, GroundTask}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.util.{Dot2PdfCompiler, SimpleAndOrGraph, AndOrGraph}
+import de.uniulm.ki.util._
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait TaskDecompositionGraph extends GroundedReachabilityAnalysis {
+trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrintable[DirectedGraphDotOptions] {
 
   def domain: Domain
 
@@ -129,4 +129,8 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis {
     gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
     gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable precondition " + e.longInfo) }
   }
+  override val dotString: String = dotString(DirectedGraphDotOptions())
+
+  /** The DOT representation of the object with options */
+  override def dotString(options: DirectedGraphDotOptions): String = taskDecompositionGraph._1.dotString(options)
 }
