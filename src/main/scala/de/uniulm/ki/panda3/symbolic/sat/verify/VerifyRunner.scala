@@ -23,7 +23,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val probInputStream = new FileInputStream(probFile)
 
     val (searchConfig, usePlanningGraph) = configNumber match {
-      case x if x < 0 => (SearchConfiguration(Some(1), None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true), true)
+      case x if x < 0 => (SearchConfiguration(Some(1), None, efficientSearch = false, DFSType, None, printSearchInfo = true), true)
       case 1          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true), true)
       case 2          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true), true)
       case 3          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumAction), printSearchInfo = true), true)
@@ -34,7 +34,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // create the configuration
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(parserType),
-                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = false,
+                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = true,
                                                                           liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,
                                                                           groundedTaskDecompositionGraph = Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = false, groundDomain = true),
@@ -90,23 +90,25 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
   }
 
 
+  def checkIfTaskSequenceIsAValidPlan(sequenceToVerify: Seq[Task], checkGoal: Boolean = true): Unit = {
+    val groundTasks = sequenceToVerify map { task => GroundTask(task, Nil) }
+    val finalState = groundTasks.foldLeft(initialPlan.groundedInitialState)(
+      { case (state, action) =>
+        action.substitutedPreconditions foreach { prec => assert(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
+
+        (state diff action.substitutedDelEffects) ++ action.substitutedAddEffects
+      })
+
+    if (checkGoal) initialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => assert(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
+  }
+
   def run(sequenceToVerify: Seq[Task], offSetToK: Int, includeGoal: Boolean = true, verify: Boolean = true): (Boolean, TimeCapsule, InformationCapsule) = {
     println("PANDA is given the following sequence")
     println(sequenceToVerify map { _.name } mkString "\n")
 
 
     // check whether the given sequence is executable ...
-    if (verify) {
-      val groundTasks = sequenceToVerify map { task => GroundTask(task, Nil) }
-      val finalState = groundTasks.foldLeft(initialPlan.groundedInitialState)(
-        { case (state, action) =>
-          action.substitutedPreconditions foreach { prec => assert(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
-
-          (state diff action.substitutedDelEffects) ++ action.substitutedAddEffects
-        })
-
-      if (includeGoal) initialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => assert(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
-    }
+    if (verify) checkIfTaskSequenceIsAValidPlan(sequenceToVerify, includeGoal)
 
 
 
@@ -125,11 +127,13 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
 
     // start verification
-    val encoder = VerifyEncoding(domain, initialPlan, sequenceToVerify, offSetToK) // use theoretical value //(3)
+    val encoder = if (domain.isTotallyOrdered && !verify) TotallyOrderedEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
+    else GeneralEncoding(domain, initialPlan, sequenceToVerify, offSetToK)
+    // (3)
     println("K " + encoder.K)
-    informationCapsule.set(VerifyRunner.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, sequenceToVerify))
-    informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify))
-    informationCapsule.set(VerifyRunner.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, sequenceToVerify))
+    informationCapsule.set(VerifyRunner.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, sequenceToVerify.length))
+    informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify.length))
+    informationCapsule.set(VerifyRunner.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, sequenceToVerify.length))
     informationCapsule.set(VerifyRunner.OFFSET_K, offSetToK)
     informationCapsule.set(VerifyRunner.ACTUAL_K, encoder.K)
     println(informationCapsule.longInfo)
@@ -165,8 +169,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     timeCapsule stop VerifyRunner.SAT_SOLVER
     timeCapsule stop VerifyRunner.VERIFY_TOTAL
 
-
-    informationCapsule.set(VerifyRunner.NUMBER_OF_VARIABLES, (usedFormula flatMap { _.disjuncts map { _._1 } } distinct).size)
+    val formulaVariables: Seq[String] = (usedFormula flatMap { _.disjuncts map { _._1 } }).distinct
+    informationCapsule.set(VerifyRunner.NUMBER_OF_VARIABLES, formulaVariables.size)
     informationCapsule.set(VerifyRunner.NUMBER_OF_CLAUSES, usedFormula.length)
     informationCapsule.set(VerifyRunner.STATE_FORMULA, stateFormula.length)
     informationCapsule.set(VerifyRunner.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
@@ -179,62 +183,92 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     "rm __cnfString __res.txt" !
     val minisatResult = minisatOutput.split("\n")(0)
     println("MiniSAT says: " + minisatResult)
-    /*if (minisatResult == "SAT") {
+
+
+    // postprocessing
+    if (minisatResult == "SAT") {
+      // things that are independent from the solver type
       val minisatAssignment = minisatOutput.split("\n")(1)
-      val literals = (minisatAssignment.split(" ") filter { _ != 0 } map { _.toInt }).toSet
+      val literals: Set[Int] = (minisatAssignment.split(" ") filter { _ != 0 } map { _.toInt }).toSet
 
-      // iterate through layers
-      val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, encoder.numberOfActionsPerLayer) map { pos =>
-        domain.tasks map { task =>
-          val actionString = encoder.action(layer, pos, task)
-          val isPres = if (atomMap contains actionString) literals contains (1 + (atomMap(actionString))) else false
-          (actionString, isPres)
-        } find { _._2 }
-      } filter { _.isDefined } map { _.get._1 }
-      }
+      val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
+      writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
-      val edges: Seq[(String, String)] = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, encoder.numberOfActionsPerLayer) flatMap { pos => Range(0, encoder
-        .numberOfActionsPerLayer) flatMap {
-        father =>
-          Range(0, encoder.DELTA) flatMap { childIndex =>
-            val childString = encoder.childWithIndex(layer, pos, father, childIndex)
-            if ((atomMap contains childString) && (literals contains (1 + (atomMap(childString))))) {
-              // find parent and myself
-              val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
-              assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
-              val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
-              assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
-              (fatherStringOption.get, childStringOption.get) :: Nil
-            } else Nil
+      val (graphNodes, graphEdges) = encoder match {
+        case g: GeneralEncoding =>
+          // iterate through layers
+          val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) map { pos => domain.tasks map { task =>
+            val actionString = g.action(layer, pos, task)
+            val isPres = if (atomMap contains actionString) literals contains (1 + (atomMap(actionString))) else false
+            (actionString, isPres)
+          } find { _._2 }
+          } filter { _.isDefined } map { _.get._1 }
           }
-      }
-      }
+
+          val edges: Seq[(String, String)] = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) flatMap { pos => Range(0, g
+            .numberOfActionsPerLayer) flatMap {
+            father =>
+              Range(0, encoder.DELTA) flatMap { childIndex =>
+                val childString = g.childWithIndex(layer, pos, father, childIndex)
+                if ((atomMap contains childString) && (literals contains (1 + (atomMap(childString))))) {
+                  // find parent and myself
+                  val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
+                  assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
+                  val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
+                  assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
+                  (fatherStringOption.get, childStringOption.get) :: Nil
+                } else Nil
+              }
+          }
+          }
+          }
+
+          (nodes, edges)
+
+        case tot: TotallyOrderedEncoding =>
+          val nodes = formulaVariables filter { _.startsWith("action") } filter allTrueAtoms.contains
+
+          val edges = nodes flatMap { parent => nodes flatMap { child =>
+            val parentLayer = parent.split("\\^").last.split("_").head.toInt
+            val childLayer = child.split("\\^").last.split("_").head.toInt
+
+            if (parentLayer + 1 != childLayer) Nil
+            else {
+              val parentPathString = parent.split("_").last.split(",").head
+              val childPathString = child.split("_").last.split(",").head
+
+              assert(parentPathString.count({ case ';' => true; case _ => false }) + 1 == childPathString.count({ case ';' => true; case _ => false }))
+              val parentPath = parentPathString.split(";") map { _.toInt }
+              val childPath = childPathString.split(";") map { _.toInt }
+
+              if (parentPath sameElements childPath.take(parentPath.length)) (parent, child) :: Nil else Nil
+            }
+          }
+          }
+          // check executability of the plan
+          val primitiveSolution = nodes filter { t => t.split("\\^").last.split("_").head.toInt == tot.K } sortBy { t =>
+            val path = t.split("_").last.split(",").head.split(";") map { _.toInt }
+            tot.pathSortingFunction(path)
+          } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
+
+          primitiveSolution foreach { t => assert(t.isPrimitive) }
+          print("CHECKING primitive solution ...")
+          checkIfTaskSequenceIsAValidPlan(primitiveSolution,checkGoal = true)
+          println(" done.")
+          (nodes, edges)
       }
 
       def changeSATNameToActionName(satName: String): SimpleGraphNode = {
-        val actionID = satName.split(",")(1).toInt
+        val actionID = satName.split(",").last.toInt
         if (actionID >= 0) SimpleGraphNode(satName, domain.tasks(actionID).name) else SimpleGraphNode(satName, satName)
       }
 
-      val decompGraphNames = SimpleDirectedGraph(nodes map changeSATNameToActionName, edges map { case (a, b) => (changeSATNameToActionName(a), changeSATNameToActionName(b)) })
-      val decompGraph = SimpleDirectedGraph(nodes, edges)
+      val decompGraphNames = SimpleDirectedGraph(graphNodes map changeSATNameToActionName, graphEdges map { case (a, b) => (changeSATNameToActionName(a), changeSATNameToActionName(b)) })
+      val decompGraph = SimpleDirectedGraph(graphNodes, graphEdges)
       Dot2PdfCompiler.writeDotToFile(decompGraph, "decomp.pdf")
       Dot2PdfCompiler.writeDotToFile(decompGraphNames, "decompName.pdf")
 
-      val allTrueAtoms: Seq[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSeq
-
-      writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
-
-      // extract the state trace
-      val layerPredicates = allTrueAtoms filter { _ startsWith "predicate" } map { p =>
-        val split = p.split(",")
-        val layer = split.head.split("_")(1).toInt
-
-        (layer, domain.predicates(split(1).toInt).name)
-      } sorted
-
-      //println(layerPredicates mkString "\n")
-    }*/
+    }
 
     (minisatResult == "SAT", timeCapsule, informationCapsule)
   }
@@ -279,27 +313,27 @@ object VerifyRunner {
   val problemsToVerify: Seq[(String, ParserType, Seq[(String, Int)])] =
     ("UM-Translog/domains/UMTranslog.xml", XMLParserType,
       ("UM-Translog/problems/UMTranslog-P-1-AirplanesHub.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-Airplane.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-ArmoredRegularTruck.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar-bis.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-AutoTruck.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-FlatbedTruck.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-HopperTruck.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-MailTraincar.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedRegularTraincar.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTruck.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-Regular2TrainStations2PostOffices.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-2Regions.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-3Locations.xml", 1) ::
-            //("UM-Translog/problems/UMTranslog-P-1-RegularTruck-4Locations.xml", 1) ::   // TDG pruned and panda2 it is unsolvable
-            ("UM-Translog/problems/UMTranslog-P-1-RegularTruckCustom.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-RegularTruck.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-TankerTraincarHub.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-1-TankerTruck.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-2-ParcelsChemicals.xml", 1) ::
-            ("UM-Translog/problems/UMTranslog-P-2-RegularTruck.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-Airplane.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-ArmoredRegularTruck.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar-bis.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-AutoTruck.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-FlatbedTruck.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-HopperTruck.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-MailTraincar.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedRegularTraincar.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTruck.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-Regular2TrainStations2PostOffices.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-2Regions.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-3Locations.xml", 1) ::
+        //("UM-Translog/problems/UMTranslog-P-1-RegularTruck-4Locations.xml", 1) ::   // TDG pruned and panda2 it is unsolvable
+        ("UM-Translog/problems/UMTranslog-P-1-RegularTruckCustom.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-RegularTruck.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-TankerTraincarHub.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-1-TankerTruck.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-2-ParcelsChemicals.xml", 1) ::
+        ("UM-Translog/problems/UMTranslog-P-2-RegularTruck.xml", 1) ::
         Nil) ::
       ("Satellite/domains/satellite2.xml", XMLParserType,
         ("Satellite/problems/4--1--3.xml", 1) ::
@@ -349,8 +383,8 @@ object VerifyRunner {
           ("Woodworking-Socs/problems/p02-variant4-hierarchical.xml", 1) ::
           Nil) ::
       ("domain.lisp", HDDLParserType,
-         ("p-0002-plow-road.lisp", 4) ::
-           Nil) ::
+        ("p-0002-plow-road.lisp", 4) ::
+          Nil) ::
       Nil
 
   //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
@@ -446,8 +480,12 @@ object VerifyRunner {
 
   def runPlanner(domFile: String, probFile: String, length: Int): Unit = {
     val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType)
+    //val runner = VerifyRunner(domFile, probFile, -length, XMLParserType)
 
-    runner.run(runner.solutionPlan, 0, includeGoal = true, verify = false)
+    val (_, time, info) = runner.run(runner.solutionPlan, 0, includeGoal = true, verify = false)
+
+    println(time.longInfo)
+    println(info.longInfo)
   }
 
   def main(args: Array[String]) {
@@ -456,7 +494,7 @@ object VerifyRunner {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant1-hierarchical.xml"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml"
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
@@ -468,6 +506,8 @@ object VerifyRunner {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/sat-C.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/6--2--2.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8--3--4.xml"
 
     val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
     val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp"
@@ -476,8 +516,8 @@ object VerifyRunner {
     //val domFile = args(0)
     //val probFile = args(1)
 
-    //runPlanner(domFile,probFile,13)
-    runEvaluation()
+    runPlanner(domFile, probFile, 37)
+    //runEvaluation()
   }
 
 }
