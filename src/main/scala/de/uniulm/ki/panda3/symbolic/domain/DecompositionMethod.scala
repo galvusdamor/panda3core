@@ -121,6 +121,8 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
       inheritPreconditions && inheritEffects
     }
   }
+
+  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[SimpleDecompositionMethod] && this.hashCode == o.hashCode()) super.equals(o) else false
 }
 
 /**
@@ -154,4 +156,6 @@ case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod,
 
   /** returns a detailed information about the object */
   override def longInfo: String = mediumInfo
+
+  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[GroundedDecompositionMethod] && this.hashCode == o.hashCode()) super.equals(o) else false
 }
