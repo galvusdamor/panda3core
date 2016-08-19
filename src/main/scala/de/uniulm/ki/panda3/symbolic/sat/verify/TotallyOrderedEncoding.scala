@@ -37,8 +37,14 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
 
   // returns all clauses needed for the decomposition and all paths to the last layer
   private def generateDecompositionFormula(layer: Int, path: Seq[Int], possibleTasks: Set[Task]): (Seq[Clause], Set[Seq[Int]]) = {
+
+    val possibleTasksToActions = possibleTasks map { t => t -> action(layer, path, t) } toMap
+    val possibleChildTasks: Map[Int, Map[Task, String]] = Range(0, domain.maximumMethodSize) map { npos =>
+      npos -> (domain.tasks map { t => t -> action(layer + 1, path :+ npos, t) } toMap)
+    } toMap
+
     // write myself
-    val possibleTasksClauses: Seq[Clause] = atMostOneOf(possibleTasks map { t => action(layer, path, t) } toSeq)
+    val possibleTasksClauses: Seq[Clause] = atMostOneOf(possibleTasksToActions.values toSeq)
 
     if (layer == K) (possibleTasksClauses, Set(path))
     else {
@@ -54,10 +60,11 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
 
         // keep the primitive at position 0 and don't allow anything else
         val otherActions = Range(1, domain.maximumMethodSize) flatMap { index =>
-          domain.tasks map { task => action(layer + 1, path :+ index, task) }
+          domain.tasks map { task => possibleChildTasks(index)(task) } // action(layer + 1, path :+ index, task)
         }
 
-        impliesRightAnd(action(layer, path, primitive) :: Nil, action(layer + 1, path :+ 0, primitive) :: Nil) ++ impliesAllNot(action(layer, path, primitive), otherActions)
+        //impliesRightAnd(action(layer, path, primitive) :: Nil, action(layer + 1, path :+ 0, primitive) :: Nil) ++ impliesAllNot(action(layer, path, primitive), otherActions)
+        impliesRightAnd(possibleTasksToActions(primitive) :: Nil, possibleChildTasks(0)(primitive) :: Nil) ++ impliesAllNot(possibleTasksToActions(primitive), otherActions)
       }
 
       val decomposeAbstract: Seq[Clause] = possibleAbstracts.toSeq flatMap { abstractTask =>
@@ -65,7 +72,7 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
         val possibleMethods = domain.decompositionMethods.zipWithIndex filter { _._1.abstractTask == abstractTask } map { case (m, idx) => (m, method(layer, path, idx)) }
 
         // one method must be applied
-        val oneMustBeApplied = impliesRightOr(action(layer, path, abstractTask) :: Nil, possibleMethods map { _._2 })
+        val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractTask) :: Nil, possibleMethods map { _._2 })
         val atMostOneCanBeApplied = atMostOneOf(possibleMethods map { _._2 })
 
         // if a method is applied it will have children
@@ -76,12 +83,12 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
 
           val childAtoms = taskOrdering.zipWithIndex map { case (task, index) =>
             possibleTasksPerChildPosition(index) += task
-            action(layer + 1, path :+ index, task)
+            possibleChildTasks(index)(task)
           }
 
           // unused are not allowed to contain anything
           val unusedActions = Range(taskOrdering.length, domain.maximumMethodSize) flatMap { index =>
-            domain.tasks map { task => action(layer + 1, path :+ index, task) }
+            domain.tasks map { task => possibleChildTasks(index)(task) }
           }
 
           impliesRightAnd(methodString :: Nil, childAtoms) ++ impliesAllNot(methodString, unusedActions)
@@ -92,10 +99,10 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
 
       // if there is nothing select at the current position we are not allowed to create new tasks
       val noneApplied = {
-        val allActionAtoms = possibleTasks.toSeq map { action(layer, path, _) }
+        val allActionAtoms = possibleTasks.toSeq map possibleTasksToActions
 
         val allChildren = Range(0, domain.maximumMethodSize) flatMap { index =>
-          domain.tasks map { task => action(layer + 1, path :+ index, task) }
+          domain.tasks map { task => possibleChildTasks(index)(task) }
         }
 
         notImpliesAllNot(allActionAtoms, allChildren)

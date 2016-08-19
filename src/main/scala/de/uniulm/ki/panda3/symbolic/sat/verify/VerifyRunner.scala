@@ -23,7 +23,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val probInputStream = new FileInputStream(probFile)
 
     val (searchConfig, usePlanningGraph) = configNumber match {
-      case x if x < 0 => (SearchConfiguration(Some(1), None, efficientSearch = false, DFSType, None, printSearchInfo = true), true)
+      case x if x < 0 => (SearchConfiguration(Some(1), None, efficientSearch = false, DFSType, None, printSearchInfo = true), false)
       case 1          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true), true)
       case 2          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true), true)
       case 3          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumAction), printSearchInfo = true), true)
@@ -37,7 +37,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = true,
                                                                           liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,
                                                                           groundedTaskDecompositionGraph = Some(TopDownTDG),
-                                                                          iterateReachabilityAnalysis = false, groundDomain = true),
+                                                                          iterateReachabilityAnalysis = true, groundDomain = true),
                                                searchConfig,
                                                PostprocessingConfiguration(Set(ProcessingTimings,
                                                                                SearchStatus, SearchResult,
@@ -479,10 +479,11 @@ object VerifyRunner {
   }
 
   def runPlanner(domFile: String, probFile: String, length: Int): Unit = {
-    val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType)
-    //val runner = VerifyRunner(domFile, probFile, -length, XMLParserType)
+    //val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType)
+    val runner = VerifyRunner(domFile, probFile, -length, XMLParserType)
 
-    val (_, time, info) = runner.run(runner.solutionPlan, 0, includeGoal = true, verify = false)
+    //val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = -28036, includeGoal = true, verify = false)
+    val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = 0, includeGoal = true, verify = false)
 
     println(time.longInfo)
     println(info.longInfo)
@@ -496,10 +497,10 @@ object VerifyRunner {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml"
 
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Small.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
@@ -509,9 +510,13 @@ object VerifyRunner {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/6--2--2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8--3--4.xml"
 
-    val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
-    val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp"
+    //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
+    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp"
+    //val domFile = "IPC7-Transport/domain-htn.lisp"
+    //val probFile = "IPC7-Transport/p01-htn.lisp"
 
+    //val domFile = "domain.lisp"
+    //val probFile = "p-0002-plow-road.lisp"
 
     //val domFile = args(0)
     //val probFile = args(1)
