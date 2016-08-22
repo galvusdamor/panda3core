@@ -8,9 +8,7 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object RemoveNegativePreconditions extends DomainTransformer[Unit] {
-
-  def transform(domain: Domain, plan : Plan) : (Domain,Plan) = transform(domain,plan,())
+object RemoveNegativePreconditions extends DomainTransformerWithOutInformation {
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {

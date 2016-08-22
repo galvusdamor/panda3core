@@ -6,9 +6,7 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object ExpandSortHierarchy extends DomainTransformer[Unit]{
-
-  def transform(domain: Domain, plan: Plan) : (Domain,Plan) = transform(domain,plan,())
+object ExpandSortHierarchy extends DomainTransformerWithOutInformation{
 
   /** expands the sort hierarchy */
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
