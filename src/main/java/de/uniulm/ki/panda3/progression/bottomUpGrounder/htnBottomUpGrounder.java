@@ -12,6 +12,7 @@ import de.uniulm.ki.panda3.symbolic.logic.Variable;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
+import de.uniulm.ki.panda3.util.JavaToScala;
 import scala.Tuple2;
 import scala.collection.Iterator;
 import scala.collection.Seq;
@@ -72,9 +73,9 @@ public class htnBottomUpGrounder {
                 System.out.print(".");
                 if (firstPS) { // there is no list to combine
                     firstPS = false;
-                    partialGroundings = getMappingOfFirstPS(ps, m.subPlan().variableConstraints().constraints());
+                    partialGroundings = getMappingOfFirstPS(ps, m.subPlan().variableConstraints().constraints(), m);
                 } else {
-                    partialGroundings = combine(partialGroundings, ps, m.subPlan().variableConstraints().constraints());
+                    partialGroundings = combine(partialGroundings, ps, m.subPlan().variableConstraints().constraints(), m);
                 }
             }
             System.out.println();
@@ -232,6 +233,33 @@ public class htnBottomUpGrounder {
         return allFine;
     }
 
+    private boolean testMethod(GroundedDecompositionMethod method) {
+        for (int i = 0; i < method.subPlanGroundedTasksWithoutInitAndGoal().size(); i++) {
+            GroundTask subtask = method.subPlanGroundedTasksWithoutInitAndGoal().apply(i);
+            if (!groundingsByTask.get(subtask.task()).contains(subtask)) {
+                System.out.println("   Did not find subtask " + subtask.longInfo() + " of method " + method.mediumInfo() + " in list of reachable tasks");
+                return false;
+            }
+        }
+        return true;
+    }
+
+
+    private boolean testPartialMethod(DecompositionMethod method, List<Tuple2<Variable, Constant>> binding) {
+        Seq<GroundTask> tasks = method.getAllGroundedPlanStepsFromPartialMapping(JavaToScala.toScalaSeq(binding));
+
+
+        for (int i = 0; i < tasks.size(); i++) {
+            GroundTask subtask = tasks.apply(i);
+            if (!groundingsByTask.get(subtask.task()).contains(subtask)) {
+                System.out.println("   Did not find subtask " + subtask.longInfo() + " of method " + method.name() + " in list of reachable tasks");
+                return false;
+            }
+        }
+        return true;
+    }
+
+
     private boolean testSubtasks() {
         System.out.println("   Test if all subtasks of all methods are reachable");
         boolean allFine = true;
@@ -239,14 +267,7 @@ public class htnBottomUpGrounder {
         for (Set<GroundedDecompositionMethod> t : methodsByTask.values()) {
             java.util.Iterator<GroundedDecompositionMethod> iter = t.iterator();
             while (iter.hasNext()) {
-                GroundedDecompositionMethod method = iter.next();
-                for (int i = 0; i < method.subPlanGroundedTasksWithoutInitAndGoal().size(); i++) {
-                    GroundTask subtask = method.subPlanGroundedTasksWithoutInitAndGoal().apply(i);
-                    if (!groundingsByTask.get(subtask.task()).contains(subtask)) {
-                        System.out.println("   Did not find subtask " + subtask.longInfo() + " of method " + method.mediumInfo() + " in list of reachable tasks");
-                        allFine = false;
-                    }
-                }
+                allFine &= testMethod(iter.next());
             }
         }
 
@@ -292,7 +313,7 @@ public class htnBottomUpGrounder {
         return res;
     }
 
-    private List<List<Tuple2>> combine(List<List<Tuple2>> currentBindings, PlanStep ps, Seq<VariableConstraint> constraints) {
+    private List<List<Tuple2>> combine(List<List<Tuple2>> currentBindings, PlanStep ps, Seq<VariableConstraint> constraints, DecompositionMethod m) {
         List<List<Tuple2>> res = new ArrayList<>();
         Set<GroundTask> psGroundings = groundingsByTask.get(ps.schema());
 
@@ -325,8 +346,10 @@ public class htnBottomUpGrounder {
                 }
                 // if this is reached, no parameter is inconsistent
                 newCombination.addAll(current);
-                if (constraintsFine(constraints, newCombination))
+                if (constraintsFine(constraints, newCombination)) {
+                    assert (testPartialMethod(m, (List<Tuple2<Variable, Constant>>) (Object) newCombination));
                     res.add(newCombination);
+                }
             }
         }
         return res;
@@ -351,9 +374,10 @@ public class htnBottomUpGrounder {
     }
 
 
-    private List<List<Tuple2>> getMappingOfFirstPS(PlanStep ps, Seq<VariableConstraint> constraints) {
+    private List<List<Tuple2>> getMappingOfFirstPS(PlanStep ps, Seq<VariableConstraint> constraints, DecompositionMethod m) {
         List<List<Tuple2>> partialGroundingPerPS = new ArrayList<>();
         Set<GroundTask> listOfGroundings = groundingsByTask.get(ps.schema());
+        continueLoop:
         for (GroundTask gt : listOfGroundings) {
             List<Tuple2> partialGrounding = new ArrayList<>();
             for (int j = 0; j < gt.arguments().size(); j++) {
@@ -362,10 +386,12 @@ public class htnBottomUpGrounder {
                 if (v.sort().elements().contains(c)) {
                     partialGrounding.add(new Tuple2(v, c));
                     partialGrounding.addAll(propagateEquality(constraints, v, c));
-                }
+                } else continue continueLoop;
             }
-            if (constraintsFine(constraints, partialGrounding))
+            if (constraintsFine(constraints, partialGrounding)) {
+                assert (testPartialMethod(m, (List<Tuple2<Variable, Constant>>) (Object) partialGrounding));
                 partialGroundingPerPS.add(partialGrounding);
+            }
         }
         return partialGroundingPerPS;
     }
@@ -468,10 +494,14 @@ public class htnBottomUpGrounder {
                         all = getFullGrounding(all, v, m.subPlan().variableConstraints().constraints());
                     }
                     for (List<Tuple2> elem : all) {
-                        res.add(new GroundedDecompositionMethod(m, toScalaSet(elem)));
+                        GroundedDecompositionMethod gm = new GroundedDecompositionMethod(m, toScalaSet(elem));
+                        assert (testMethod(gm));
+                        res.add(gm);
                     }
                 } else { // totally grounded
-                    res.add(new GroundedDecompositionMethod(m, toScalaSet(varConstMapping)));
+                    GroundedDecompositionMethod gm = new GroundedDecompositionMethod(m, toScalaSet(varConstMapping));
+                    assert (testMethod(gm));
+                    res.add(gm);
                 }
             }
         }

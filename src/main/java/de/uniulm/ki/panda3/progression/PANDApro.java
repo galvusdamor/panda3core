@@ -35,10 +35,16 @@ public class PANDApro {
         //String domainFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/simple-finite-domain-2.lisp";
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/simple-finite-problem-2.lisp";
         String domainFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/hddl-finalize/domain.lisp";
+
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/aaai/problems/p-0001-clear-road-wreck.lisp";
-        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/100/problems/p-0002-plow-road.lisp";
-        String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/100/problems/p-0003-set-up-shelter.lisp";
-        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/100/problems/p-0004-provide-medical-attention.lisp";
+        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/deletedObjs-1-to-100/problems/p-0002-plow-road.lisp";
+        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/deletedObjs-1-to-100/problems/p-0003-set-up-shelter.lisp";
+        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/deletedObjs-1-to-100/problems/p-0004-provide-medical-attention.lisp";
+        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/deletedObjs-1-to-100/problems/p-0004-provide-medical-attention.lisp";
+        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/deletedObjs-1-to-100/problems/p-0005-clear-road-wreck.lisp";
+        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems-exact-obj/only/problems/p-0002-plow-road.lisp";
+        //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems-exact-obj/only/problems/p-0003-set-up-shelter.lisp";
+        String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/location/deletedObjs-1-to-100/problems/p-0002-plow-road.lisp";
 
         //String domainFile = "/home/dhoeller/Schreibtisch/englert-test/testDomain1.pddl";
         //String problemFile ="/home/dhoeller/Schreibtisch/englert-test/testProblem1.pddl";

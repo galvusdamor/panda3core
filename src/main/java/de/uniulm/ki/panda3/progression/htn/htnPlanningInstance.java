@@ -7,7 +7,9 @@ import de.uniulm.ki.panda3.progression.htn.search.proPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.progressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.IRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.cRPG;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.hierarchyAwareRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
@@ -56,11 +58,12 @@ public class htnPlanningInstance {
         Set<GroundTask> allActions;
         htnBottomUpGrounder gr = null;
         boolean converged = false;
-        symbolicRPG rpg = null;
+        IRPG rpg = null;
         while (!converged) {
             System.out.print("Building relaxed planning graph");
             long time2 = System.currentTimeMillis();
-            rpg = new symbolicRPG();
+            //rpg = new symbolicRPG();
+            rpg = new hierarchyAwareRPG();
             if (gr == null)
                 rpg.build(d, p);
             else
@@ -173,7 +176,7 @@ public class htnPlanningInstance {
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
     }
 
-    private void writeGroundingToFile(htnBottomUpGrounder gr, symbolicRPG rpg) {
+    private void writeGroundingToFile(htnBottomUpGrounder gr, IRPG rpg) {
         try {
             BufferedWriter bw = new BufferedWriter(new FileWriter("/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/temp/groundings.txt"));
             for (Task task : gr.groundingsByTask.keySet()) {

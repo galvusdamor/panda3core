@@ -13,16 +13,16 @@ import java.util.*;
 /**
  * Created by dhoeller on 29.06.16.
  */
-public class symbolicRPG {
+public class symbolicRPG implements IRPG{
 
     public List<Set<GroundTask>> actions = new ArrayList<>();
     public List<Set<GroundLiteral>> facts = new ArrayList<>();
     public List<Set<GroundLiteral>> Gt = new ArrayList<>();
 
     boolean restrictToGivenActions = false;
-    private HashMap<Task, Set<GroundTask>> allowedActions = null;
+    private Map<Task, Set<GroundTask>> allowedActions = null;
 
-    public void build(Domain d, Plan p, HashMap<Task, Set<GroundTask>> onlyUse) {
+    public void build(Domain d, Plan p, Map<Task, Set<GroundTask>> onlyUse) {
         restrictToGivenActions = true;
         this.allowedActions = onlyUse;
         build(d, p);
