@@ -113,7 +113,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       }
 
       (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
-        val actualResult: Option[Plan] = resultfunction(())
+        val actualResult: Seq[Plan] = resultfunction(())
         timeCapsule stop TOTAL_TIME
         runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan)
       })
@@ -148,7 +148,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           case DijkstraType | DFSType                         =>
             // just use the zero heuristic
 
-            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, true, false, invertCosts = searchConfiguration.searchAlgorithm == DFSType)
+            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, addNumberOfPlanSteps = true, addDepth = false,
+                                                                   continueOnSolution = searchConfiguration.continueOnSolution,
+                                                                   invertCosts = searchConfiguration.searchAlgorithm == DFSType)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                         searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
@@ -189,7 +191,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             val useDepthCosts = algo match {case AStarDepthType => true; case _ => false}
             val useActionCosts = algo match {case AStarActionsType => true; case _ => false}
 
-            val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts)
+            val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts,
+                                                                   continueOnSolution = searchConfiguration.continueOnSolution)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                         searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
@@ -201,27 +204,46 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       val wrappedSearchTreeRoot = wrapper.wrap(searchTreeRoot)
       (domainAndPlan._1, wrappedSearchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
-        val actualResult: Option[Plan] = resultfunction(()) map { wrapper.wrap }
+        val actualResult: Seq[Plan] = resultfunction(()) map { wrapper.wrap }
         timeCapsule stop TOTAL_TIME
         runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan)
       })
     }
   }
 
-  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Option[Plan], domainAndPlan: (Domain, Plan)): ResultMap =
+  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Seq[Plan], domainAndPlan: (Domain, Plan)): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings => timeCapsule
-      case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
+      case SearchStatus      => if (result.nonEmpty) SearchState.SOLUTION
       else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
         SearchState.UNSOLVABLE
       else SearchState.INSEARCH // TODO account for the case we ran out of time
 
-      case SearchResult              => result
-      case SearchStatistics          => informationCapsule
-      case SearchSpace               => rootNode
-      case SolutionInternalString    => result match {case Some(plan) => Some(plan.longInfo); case _ => None}
-      case SolutionDotString         => result match {case Some(plan) => Some(plan.dotString); case _ => None}
-      case PreprocessedDomainAndPlan => domainAndPlan
+      case SearchResult                   => result.headOption
+      case AllFoundPlans                  => result
+      case SearchStatistics               => informationCapsule
+      case SearchSpace                    => rootNode
+      case SolutionInternalString         => if (result.nonEmpty) Some(result.head.longInfo) else None
+      case SolutionDotString              => if (result.nonEmpty) Some(result.head.dotString) else None
+      case PreprocessedDomainAndPlan      => domainAndPlan
+      case AllFoundSolutionPathsWithHStar =>
+        // we have to find all solutions paths, so first compute the solution state of each node to only traverse the paths to the actual solutions
+        rootNode.recomputeSearchState()
+
+        def getAllSolutions(node: SearchNode): (Int, Seq[Seq[(SearchNode, Int)]]) = {
+          assert(node.searchState == SearchState.SOLUTION)
+          if (node.children.isEmpty) (node.plan.planSteps.length, ((node, 0) :: Nil) :: Nil)
+          else {
+            val solvableChildren = node.children filter { _._1.searchState == SearchState.SOLUTION } map { _._1 }
+            val children = solvableChildren map getAllSolutions
+            val minimalLength = children map { _._1 } min
+
+            // semantic empty line
+            (minimalLength, children flatMap { _._2 } map { case p => p.+:(node, minimalLength - node.plan.planSteps.length) })
+          }
+        }
+
+        if (rootNode.searchState == SearchState.SOLUTION) getAllSolutions(rootNode)._2 else Nil
     })
     } toMap
              )
@@ -237,8 +259,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     info("Parsing domain ... ")
     timeCapsule start FILEPARSER
     val parsedDomainAndProblem = parsingConfiguration.parserType match {
-      case XMLParserType  => XMLParser.asParser.parseDomainAndProblem(domain, problem)
-      case HDDLParserType => HDDLParser.parseDomainAndProblem(domain, problem)
+      case XMLParserType   => XMLParser.asParser.parseDomainAndProblem(domain, problem)
+      case HDDLParserType  => HDDLParser.parseDomainAndProblem(domain, problem)
       case HPDDLParserType => HPDDLParser.parseDomainAndProblem(domain, problem)
     }
     timeCapsule stop FILEPARSER
@@ -424,6 +446,7 @@ sealed trait ParserType
 object XMLParserType extends ParserType
 
 object HDDLParserType extends ParserType
+
 object HPDDLParserType extends ParserType
 
 case class ParsingConfiguration(
@@ -491,7 +514,12 @@ case class SearchConfiguration(
                                 efficientSearch: Boolean,
                                 searchAlgorithm: SearchAlgorithmType,
                                 heuristic: Option[SearchHeuristic],
+                                continueOnSolution: Boolean,
                                 printSearchInfo: Boolean
                               ) {}
 
-case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) {}
+case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) {
+  if (resultsToProduce contains AllFoundSolutionPathsWithHStar) assert(resultsToProduce contains SearchSpace,
+                                                                       "If we have to produce paths to the solutions, we have to keep the search space")
+
+}

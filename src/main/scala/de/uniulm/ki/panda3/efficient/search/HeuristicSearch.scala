@@ -25,7 +25,8 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: Boolean, addDepth: Boolean, invertCosts : Boolean = false) extends EfficientSearchAlgorithm {
+case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: Boolean, addDepth: Boolean, continueOnSolution: Boolean, invertCosts: Boolean = false)
+  extends EfficientSearchAlgorithm {
 
   override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
                            buildTree: Boolean, informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
@@ -47,7 +48,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
     var abort = false
 
     val searchQueue = new mutable.PriorityQueue[(EfficientSearchNode, Int)]()
-    var result: Option[EfficientPlan] = None
+    var result: Seq[EfficientPlan] = Nil
     searchQueue.enqueue((root, 0))
 
     var lowestHeuristicFound = Double.MaxValue
@@ -59,7 +60,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
     informationCapsule.addToDistribution(PLAN_SIZE, initialPlan.numberOfPlanSteps)
 
     def heuristicSearch() = {
-      while (searchQueue.nonEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
+      println("CONT " + continueOnSolution)
+      while (searchQueue.nonEmpty && (continueOnSolution || result.isEmpty) && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
         initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis()) {
         val (myNode, depth) = searchQueue.dequeue()
         val plan = myNode.plan
@@ -99,7 +101,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
 
 
         if (flaws.length == 0) {
-          result = Some(plan)
+          result = result :+ plan
+          println("\t\t\t\t SOL")
           myNode.setNotDirty()
         } else {
           if (buildTree) myNode.modifications = new Array[Array[EfficientModification]](flaws.length)
@@ -159,7 +162,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
 
             //assert(actualModifications.length == smallFlawNumMod, "Estimation of number of modifications was incorrect (" + actualModifications.length + " and " + smallFlawNumMod + ")")
             var modNum = 0
-            while (modNum < actualModifications.length && result.isEmpty) {
+            while (modNum < actualModifications.length) {
               // apply modification
               //val newPlan: EfficientPlan = plan.modify(myNode.modifications(myNode.selectedFlaw)(modNum))
               val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))

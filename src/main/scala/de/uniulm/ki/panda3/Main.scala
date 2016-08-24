@@ -3,9 +3,12 @@ package de.uniulm.ki.panda3
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
-import de.uniulm.ki.panda3.efficient.heuristic.AlwaysZeroHeuristic
-import de.uniulm.ki.panda3.efficient.search.HeuristicSearch
+import de.uniulm.ki.panda3.efficient.Wrapping
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraphConfiguration, GroundedPlanningGraph}
+import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
+import de.uniulm.ki.panda3.efficient.heuristic.AddHeuristic
 import de.uniulm.ki.util._
 
 
@@ -53,9 +56,9 @@ object Main {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--1--3.xml"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
@@ -65,14 +68,14 @@ object Main {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
 
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p05.pddl"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p01.pddl"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/domain/driverlog.pddl"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problems/pfile1"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/domain/zenotravelStrips.pddl"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/problems/pfile7"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/domain/stripsSat.pddl"
-    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/problems/pfile1"
+    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/problems/pfile4"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC4/PROMELA-PHILO/domain/P01_DOMAIN.PDDL"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC4/PROMELA-PHILO/problems/P01_PHIL2.PDDL"
 
@@ -100,19 +103,19 @@ object Main {
 
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                             ParsingConfiguration(XMLParserType),
+                                             ParsingConfiguration(HDDLParserType),
                                              PreprocessingConfiguration(compileNegativePreconditions = true,
                                                                         liftedReachability = true, groundedReachability = false, planningGraph = true,
-                                                                        naiveGroundedTaskDecompositionGraph = true,
+                                                                        naiveGroundedTaskDecompositionGraph = false,
                                                                         iterateReachabilityAnalysis = true, groundDomain = true),
-                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumADD), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
+                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumADD), true),
+                                             SearchConfiguration(Some(100000), None, efficientSearch = true, DijkstraType, None, true, true),
+                                             //SearchConfiguration(Some(100000), None, efficientSearch = true, AStarActionsType, Some(ADD), true, printSearchInfo = true),
                                              //SearchConfiguration(Some(500000), None, efficientSearch = true, BFSType, None, printSearchInfo = true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
-                                                                             SearchStatus, SearchResult,
+                                                                             SearchStatus, SearchResult, AllFoundPlans, AllFoundSolutionPathsWithHStar,
                                                                              SearchStatistics,
-                                                                             //SearchSpace,
+                                                                             SearchSpace,
                                                                              PreprocessedDomainAndPlan,
                                                                              SolutionInternalString,
                                                                              SolutionDotString)))
@@ -127,11 +130,42 @@ object Main {
     println("----------------- TIMINGS -----------------")
     println(results(ProcessingTimings).shortInfo)
 
+    // get all found plans
+    val foundPlans = results(AllFoundPlans)
+    println("Found in total " + foundPlans.length + " plans")
+
+    // get all found plans
+    val foundPaths = results(AllFoundSolutionPathsWithHStar)
+    println("Found in total " + foundPaths.length + " paths with lengths")
+    println(foundPaths map { _.length } map { "\t" + _ } mkString "\n")
+
+    assert(foundPaths.length == foundPaths.length)
+    if (foundPaths.nonEmpty) {
+      val lengthOfInitialInitialPlan = foundPaths.head.head._1.plan.planSteps.length
+
+      foundPaths foreach { p =>
+        assert(p.last._1.plan.flaws.isEmpty)
+        assert(p.head._1.plan.planSteps.length == lengthOfInitialInitialPlan)
+      }
+    }
+
+    val wrapper = Wrapping(results(PreprocessedDomainAndPlan))
+    val initialState = wrapper.initialPlan.groundedInitialStateOnlyPositive
+    val planningGraph = GroundedPlanningGraph(wrapper.symbolicDomain, initialState.toSet, GroundedPlanningGraphConfiguration())
+    val efficientPlanningGraph = EfficientGroundedPlanningGraphFromSymbolic(planningGraph, wrapper)
+    val efficientInitialState = wrapper.initialPlan.groundedInitialState collect { case GroundLiteral(task, true, args) =>
+      (wrapper.unwrap(task), args map wrapper.unwrap toArray)
+    }
+    val addHeuristic = AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, efficientInitialState.toArray, resuingAsVHPOP = false)
+
+
+    val pathsWithHStarAndADD: Seq[Seq[(SearchNode, (Int, Int))]] =
+      foundPaths map { p => p map { case (node, hstar) => (node, (hstar, addHeuristic.computeHeuristic(wrapper.unwrap(node.plan)).toInt)) } }
 
 
     if (results(SearchStatus) == SearchState.SOLUTION) {
       val solution = results(SearchResult).get
-      println(solution.planSteps.length)
+      //println(solution.planSteps.length)
       // write output
       if (outputPDF.endsWith("dot")) {
         writeStringToFile(solution.dotString, new File(outputPDF))
@@ -139,6 +173,8 @@ object Main {
         Dot2PdfCompiler.writeDotToFile(solution, outputPDF)
       }
     }
+
+
     var doneCounter = 0
     // check the tree
     def dfs(searchNode: SearchNode): Unit = if (!searchNode.dirty) {
@@ -151,10 +187,10 @@ object Main {
 
     //System.in.read()
 
-    if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) {
+    /*if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) {
       results(SearchSpace).recomputeSearchState()
       dfs(results(SearchSpace))
-    }
+    }*/
   }
 
 

@@ -153,6 +153,6 @@ object BFS extends EfficientSearchAlgorithm {
       }
     }).start()
 
-    (root, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result }), AbortFunction({ _ => abort = true }))
+    (root, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result match {case Some(p) => p :: Nil; case _ => Nil}}), AbortFunction({ _ => abort = true }))
   }
 }
