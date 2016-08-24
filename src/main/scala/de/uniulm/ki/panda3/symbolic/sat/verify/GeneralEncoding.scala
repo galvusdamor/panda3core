@@ -14,7 +14,7 @@ import scala.collection.Seq
   */
 case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[Task], offsetToK: Int) extends VerifyEncoding {
 
-  lazy val taskSequenceLength = taskSequence.length
+  lazy val taskSequenceLength      = taskSequence.length
   lazy val numberOfActionsPerLayer = taskSequence.length
 
   ///////////////////////////
@@ -211,24 +211,16 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
   }
 
   // maintains the state only if all actions are actually executed
-  private def maintainState(layer: Int, position: Int): Seq[Clause] = domain.predicates flatMap {
-    predicate =>
-      true :: false :: Nil map {
-        makeItPositive =>
-          val changingActions: Seq[Task] = domain.primitiveTasks filter {
-            case task: ReducedTask => task.effect.conjuncts exists { l =>
-              val matching = l.predicate == predicate && l.isPositive == makeItPositive
-
-              if ((task.effect.conjuncts exists { l => l.predicate == predicate && l.isNegative == makeItPositive }) && !makeItPositive)
-                false
-              else matching
-
-            }
-            case _                 => noSupport(FORUMLASNOTSUPPORTED)
-          }
-          val taskLiterals = changingActions map { action(layer, position, _) } map { (_, true) }
-          Clause(taskLiterals :+(statePredicate(layer, position, predicate), makeItPositive) :+(statePredicate(layer, position + 1, predicate), !makeItPositive))
-      }
+  private def maintainState(layer: Int, position: Int): Seq[Clause] = {
+    domain.predicates flatMap {
+      predicate =>
+        true :: false :: Nil map {
+          makeItPositive =>
+            val changingActions: Seq[Task] = if (makeItPositive) domain.primitiveChangingPredicate(predicate)._1 else domain.primitiveChangingPredicate(predicate)._2
+            val taskLiterals = changingActions map { action(layer, position, _) } map { (_, true) }
+            Clause(taskLiterals :+(statePredicate(layer, position, predicate), makeItPositive) :+(statePredicate(layer, position + 1, predicate), !makeItPositive))
+        }
+    }
   }
 
   var numberOfChildrenClauses = 0

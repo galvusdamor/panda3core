@@ -5,6 +5,7 @@ import java.io.{BufferedWriter, OutputStream, File, FileInputStream}
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.compiler.{ExpandSortHierarchy, ClosedWorldAssumption, SHOPMethodCompiler, ToPlainFormulaRepresentation}
 import de.uniulm.ki.panda3.symbolic.domain._
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -32,7 +33,7 @@ trait VerifyEncoding {
 
   val K: Int = VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
 
-  def numberOfChildrenClauses : Int
+  def numberOfChildrenClauses: Int
 
   domain.tasks foreach { t => assert(t.parameters.isEmpty) }
   domain.predicates foreach { p => assert(p.argumentSorts.isEmpty) }
@@ -120,17 +121,21 @@ trait VerifyEncoding {
   protected def allImply(left: Seq[String], target: String): Seq[Clause] = left flatMap { x => impliesRightAnd(x :: Nil, target :: Nil) }
 
 
-  def possibleAndImpossibleActionsPerLayer(layer: Int): (Seq[Task], Seq[Task]) = if (domain.taskSchemaTransitionGraph.isAcyclic) {
-    val actionsInDistance = initialPlan.planStepsWithoutInitGoal map { _.schema } flatMap { domain.taskSchemaTransitionGraph.getVerticesInDistance(_, layer + 1) }
-    val possibleActions = (actionsInDistance ++ domain.primitiveTasks).distinct
-    (possibleActions, domain.tasks filterNot possibleActions.contains)
-  } else
-    (domain.tasks, Nil)
+  lazy val possibleAndImpossibleActionsPerLayer: Map[Int, (Seq[Task], Seq[Task])] = Range(-1, K) map { layer =>
+    val possibleAndImpossibleActions = if (domain.taskSchemaTransitionGraph.isAcyclic) {
+      val actionsInDistance = initialPlan.planStepsWithoutInitGoal map { _.schema } flatMap { domain.taskSchemaTransitionGraph.getVerticesInDistance(_, layer + 1) }
+      val possibleActions = (actionsInDistance ++ domain.primitiveTasks).toSet
+      (possibleActions.toSeq, domain.tasks filterNot possibleActions.contains)
+    } else
+      (domain.tasks, Nil)
 
-  def possibleMethodsWithIndexPerLayer(layer: Int): (Seq[(DecompositionMethod, Int)], Seq[(DecompositionMethod, Int)]) = {
+    layer -> possibleAndImpossibleActions
+  } toMap
+
+  lazy val possibleMethodsWithIndexPerLayer: Map[Int, (Seq[(DecompositionMethod, Int)], Seq[(DecompositionMethod, Int)])] = Range(-1, K) map { layer =>
     val possibleActions = possibleAndImpossibleActionsPerLayer(layer)._1
-    domain.decompositionMethods.zipWithIndex partition { case (m, _) => possibleActions contains m.abstractTask }
-  }
+    layer -> (domain.decompositionMethods.zipWithIndex partition { case (m, _) => possibleActions contains m.abstractTask })
+  } toMap
 
   def decompositionFormula: Seq[Clause]
 
@@ -147,7 +152,7 @@ trait VerifyEncoding {
 
   def miniSATString(formulasSeq: Seq[Clause], writer: BufferedWriter): Map[String, Int] = {
     val formulas = formulasSeq.toArray
-    println("NUMBER OF CLAUSES " + formulasSeq.length)
+    println("NUMBER OF CLAUSES " + formulas.length)
 
     // generate the atoms to int map
     val atomIndices = new mutable.HashMap[String, Int]()
@@ -203,15 +208,39 @@ object VerifyEncoding {
   def computeMethodSize(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
     // recognize the case where only top has a unit method
     val (minMethodSize, heightIncrease) = if (plan.planStepsWithoutInitGoal.size == 1) {
-      val (topFromMethods, otherMethods) = domain.decompositionMethods partition { _.abstractTask == plan.planStepsWithoutInitGoal.head.schema }
+      val nonTopMethods = domain.decompositionMethods filterNot { _.abstractTask == plan.planStepsWithoutInitGoal.head.schema }
       val topToMethods = domain.decompositionMethods filter { _.subPlan.planStepsWithoutInitGoal exists { _.schema == plan.planStepsWithoutInitGoal.head.schema } }
 
 
-      if (topFromMethods.size == 1 && topToMethods.isEmpty) (otherMethods map { _.subPlan.planStepsWithoutInitGoal.length } min, 1) else (domain.minimumMethodSize, 0)
+      if (topToMethods.isEmpty) (nonTopMethods map { _.subPlan.planStepsWithoutInitGoal.length } min, 1) else (domain.minimumMethodSize, 0)
     } else (domain.minimumMethodSize, 0)
 
+    if (minMethodSize >= 2) Math.ceil(Math.log(taskSequenceLength) / Math.log(minMethodSize)).toInt + heightIncrease else Integer.MAX_VALUE
+  }
 
-    if (minMethodSize >= 2) Math.ceil(Math.log(taskSequenceLength) / Math.log(domain.minimumMethodSize)).toInt + heightIncrease else Integer.MAX_VALUE
+  def computeTDG(domain: Domain, plan: Plan, tdg: TaskDecompositionGraph, taskSequenceLength: Int): Int = {
+    val condensedTDG = tdg.taskDecompositionGraph._1.condensation
+    val condensationTopSort = condensedTDG.topologicalOrdering.get // this will always work, since it is a condensation
+
+    /*condensationTopSort.foldLeft(Map[Set[AnyRef], Map[Int, Int]]())(
+      { case (map, scc) =>
+        if (scc.size == 1){
+          condensedTDG.reversedEdgesSet(scc)
+          // unit scc
+          scc.head match {
+            case t : Task => map
+            case m : DecompositionMethod =>
+          }
+          ???
+        } else {
+          // actual scc
+          ???
+        }
+
+        map
+      })*/
+
+    100
   }
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
@@ -228,9 +257,11 @@ object VerifyEncoding {
   }
 }
 
-case class Clause(disjuncts: Seq[(String, Boolean)]) {}
+case class Clause(disjuncts: Array[(String, Boolean)]) {}
 
 object Clause {
+  def apply(disjuncts: Seq[(String, Boolean)]): Clause = Clause(disjuncts.toArray)
+
   def apply(atom: String): Clause = Clause((atom, true) :: Nil)
 
   def apply(literal: (String, Boolean)): Clause = Clause(literal :: Nil)
