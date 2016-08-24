@@ -36,17 +36,32 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task => assert(tasks contains task) }
   }
 
-  tasks foreach { t => (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map { _._1 } foreach {p => assert(predicates contains p)}}
+  tasks foreach { t => (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map { _._1 } foreach { p => assert(predicates contains p) } }
 
 
-  lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph        = TaskSchemaTransitionGraph(this)
-  lazy val constants                : Seq[Constant]                    = (sorts flatMap { _.elements }).distinct
-  lazy val sortGraph                : DirectedGraph[Sort]              = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
-  lazy val producersOf              : Map[Predicate, Seq[ReducedTask]] = (predicates map { pred => (pred, tasks collect { case t: ReducedTask => t } filter {
-    _.effect.conjuncts exists { _.predicate == pred }
-  })
+  lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
+  lazy val constants                : Seq[Constant]             = (sorts flatMap { _.elements }).distinct
+  lazy val sortGraph                : DirectedGraph[Sort]       = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
+
+  // producer and consumer
+  lazy val producersOf      : Map[Predicate, Seq[ReducedTask]]                     = producersOfPosNeg map { case (a, (b, c)) => a -> (b ++ c).toSeq }
+  lazy val producersOfPosNeg: Map[Predicate, (Set[ReducedTask], Set[ReducedTask])] = (predicates map { pred =>
+    val reducedTasksWithMatchingEffect = tasks collect { case t: ReducedTask => t } filter { _.effect.conjuncts exists { _.predicate == pred } }
+    val hasPositive = reducedTasksWithMatchingEffect filter { _.effect.conjuncts exists { l => l.predicate == pred && l.isPositive } }
+    val hasNegative = reducedTasksWithMatchingEffect filter { _.effect.conjuncts exists { l => l.predicate == pred && l.isNegative } }
+    (pred, (hasPositive.toSet, hasNegative.toSet))
   }).toMap
-  lazy val consumersOf              : Map[Predicate, Seq[ReducedTask]] = (predicates map { pred => (pred, tasks collect { case t: ReducedTask => t } filter {
+
+  lazy val primitiveChangingPredicate: Map[Predicate, (Seq[ReducedTask], Seq[ReducedTask])] = {
+    assert(constants.isEmpty, "Domain must be ground")
+    predicates map { pred =>
+      val adding = producersOfPosNeg(pred)._1 filter { _.isPrimitive }
+      val deletingButNotAdding = producersOfPosNeg(pred)._2 diff adding filter { _.isPrimitive }
+      pred ->(adding toSeq, deletingButNotAdding toSeq)
+    }
+  } toMap
+
+  lazy val consumersOf: Map[Predicate, Seq[ReducedTask]] = (predicates map { pred => (pred, tasks collect { case t: ReducedTask => t } filter {
     _.precondition.conjuncts exists { _.predicate == pred }
   })
   }).toMap
@@ -59,10 +74,12 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
   lazy val allGroundedAbstractTasks : Seq[GroundTask] = abstractTasks flatMap { _.instantiateGround }
 
+  lazy val methodsForAbstractTasks : Map[Task, Seq[DecompositionMethod]] = decompositionMethods.groupBy(_.abstractTask)
+
   lazy val minimumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min
   lazy val maximumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
   lazy val isGround         : Boolean = predicates forall { _.argumentSorts.isEmpty }
-  lazy val isTotallyOrdered : Boolean = decompositionMethods forall {_.subPlan.orderingConstraints.isTotalOrder()}
+  lazy val isTotallyOrdered : Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
 
   /**
     * Determines the sort a constant originally belonged to.
