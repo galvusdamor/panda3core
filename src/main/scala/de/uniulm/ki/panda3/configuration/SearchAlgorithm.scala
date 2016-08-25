@@ -24,7 +24,7 @@ trait SearchAlgorithm[DomainType, PlanType, SearchNodeType] {
 
 trait SymbolicSearchAlgorithm extends SearchAlgorithm[Domain, Plan, SearchNode]
 
-trait EfficientSearchAlgorithm extends SearchAlgorithm[EfficientDomain, EfficientPlan, EfficientSearchNode]
+trait EfficientSearchAlgorithm[Payload] extends SearchAlgorithm[EfficientDomain, EfficientPlan, EfficientSearchNode[Payload]]
 
 
 case class AbortFunction(abortFunction: Unit => Unit) extends (Unit => Unit) {

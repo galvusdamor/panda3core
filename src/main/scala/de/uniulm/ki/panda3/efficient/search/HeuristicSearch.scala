@@ -25,19 +25,19 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: Boolean, addDepth: Boolean, continueOnSolution: Boolean, invertCosts: Boolean = false)
-  extends EfficientSearchAlgorithm {
+case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], addNumberOfPlanSteps: Boolean, addDepth: Boolean, continueOnSolution: Boolean, invertCosts: Boolean = false)
+  extends EfficientSearchAlgorithm[Payload] {
 
   override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
                            buildTree: Boolean, informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
-  (EfficientSearchNode, Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
+  (EfficientSearchNode[Payload], Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
     import de.uniulm.ki.panda3.configuration.Timings._
     import de.uniulm.ki.panda3.configuration.Information._
     import scala.math.Ordering.Implicits._
 
 
     val semaphore: Semaphore = new Semaphore(0)
-    val root = new EfficientSearchNode(0, initialPlan, null, Double.MaxValue)
+    val root = new EfficientSearchNode[Payload](0, initialPlan, null, Double.MaxValue)
 
     // variables for the search
     val initTime: Long = System.currentTimeMillis()
@@ -47,7 +47,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
 
     var abort = false
 
-    val searchQueue = new mutable.PriorityQueue[(EfficientSearchNode, Int)]()
+    val searchQueue = new mutable.PriorityQueue[(EfficientSearchNode[Payload], Int)]()
     var result: Seq[EfficientPlan] = Nil
     searchQueue.enqueue((root, 0))
 
@@ -152,7 +152,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
 
           if (zeroFound) smallFlawNumMod = 0
 
-          val children = new ArrayBuffer[(EfficientSearchNode, Int)]()
+          val children = new ArrayBuffer[(EfficientSearchNode[Payload], Int)]()
 
           if (smallFlawNumMod != 0) {
             if (buildTree) timeCapsule start SEARCH_FLAW_RESOLVER
@@ -174,7 +174,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
                 timeCapsule start SEARCH_COMPUTE_HEURISTIC
                 //val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
                 val distanceValue = ((if (addNumberOfPlanSteps) newPlan.numberOfPlanSteps else 0) + (if (addDepth) depth + 1 else 0)) * (if (invertCosts) -1 else 1)
-                val h = heuristic.computeHeuristic(newPlan)
+                val (h, newPayload) = heuristic.computeHeuristic(newPlan, myNode.payload, actualModifications(modNum))
                 val heuristicValue = distanceValue + h
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
@@ -183,7 +183,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
                 assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps)
 
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
-                val searchNode = if (buildTree) new EfficientSearchNode(nodeNumber, newPlan, myNode, heuristicValue) else new EfficientSearchNode(nodeNumber, newPlan, null, heuristicValue)
+                val searchNode: EfficientSearchNode[Payload] = if (buildTree) new EfficientSearchNode[Payload](nodeNumber, newPlan, myNode, heuristicValue)
+                else new EfficientSearchNode[Payload](nodeNumber, newPlan, null, heuristicValue)
 
                 if (h < Double.MaxValue)
                   searchQueue enqueue ((searchNode, depth + 1))

@@ -409,9 +409,9 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   /**
     * Wraps the <br>whole</br> search space described by this node, i.e. itself and all of its children
     */
-  def wrap(efficientSearchNode: EfficientSearchNode): SearchNode = {
+  def wrap[Payload](efficientSearchNode: EfficientSearchNode[Payload]): SearchNode = {
 
-    def wrapWithParent(efficientSearchNode: EfficientSearchNode, parent: SearchNode): SearchNode = {
+    def wrapWithParent(efficientSearchNode: EfficientSearchNode[Payload], parent: SearchNode): SearchNode = {
       // set the essentials
       val searchNode = new SearchNode(efficientSearchNode.id, { _ =>
         val plan = wrap(efficientSearchNode.plan)

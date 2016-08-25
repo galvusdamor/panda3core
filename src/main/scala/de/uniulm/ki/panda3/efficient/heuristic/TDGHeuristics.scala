@@ -3,18 +3,19 @@ package de.uniulm.ki.panda3.efficient.heuristic
 import de.uniulm.ki.panda3.efficient.domain.{EfficientDomain, EfficientGroundTask}
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientGroundedTaskDecompositionGraph
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
+import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.util.DotPrintable
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait TDGHeuristics extends EfficientHeuristic {
+trait TDGHeuristics[Payload] extends EfficientHeuristic[Payload] {
   def taskDecompositionTree: Any
 }
 
 
 case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGroundedTaskDecompositionGraph, domain: EfficientDomain)
-  extends MinimisationOverGroundingsBasedHeuristic with DotPrintable[Unit] {
+  extends MinimisationOverGroundingsBasedHeuristic[Unit] with DotPrintable[Unit] {
 
   // memoise the heuristic values for task groundings
   val modificationEfforts: Map[EfficientGroundTask, Double] = taskDecompositionTree.graph.andVertices map { groundTask =>
@@ -30,7 +31,7 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
     if (!modificationEfforts.contains(groundTask)) Double.MaxValue else modificationEfforts(groundTask)
   }
 
-  override def computeHeuristic(plan: EfficientPlan): Double = {
+  override def computeHeuristic(plan: EfficientPlan, unit : Unit, mod : EfficientModification): (Double,Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = plan.openPreconditions.length // every flaw must be addressed
 
@@ -55,7 +56,7 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
 
       i += 1
     }
-    heuristicValue
+    (heuristicValue,())
   }
 
   override val dotString: String = dotString(())
@@ -83,7 +84,7 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
 
 
 case class MinimumADDHeuristic(taskDecompositionTree: EfficientGroundedTaskDecompositionGraph, addHeuristic: AddHeuristic, domain: EfficientDomain)
-  extends MinimisationOverGroundingsBasedHeuristic {
+  extends MinimisationOverGroundingsBasedHeuristic[Unit] {
 
 
   protected def computeADD(taskID: Int, arguments: Array[Int]): Double = {
@@ -143,7 +144,7 @@ case class MinimumADDHeuristic(taskDecompositionTree: EfficientGroundedTaskDecom
     }
   }
 
-  override def computeHeuristic(plan: EfficientPlan): Double = {
+  override def computeHeuristic(plan: EfficientPlan, unit : Unit, mod : EfficientModification): (Double,Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = 0 //plan.openPreconditions.length // every flaw must be addressed
 
@@ -165,7 +166,7 @@ case class MinimumADDHeuristic(taskDecompositionTree: EfficientGroundedTaskDecom
 
       i += 1
     }
-    heuristicValue
+    (heuristicValue,())
   }
 
 }
