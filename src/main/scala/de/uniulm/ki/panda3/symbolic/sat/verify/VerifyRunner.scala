@@ -14,7 +14,7 @@ import scala.io.Source
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, parserType: ParserType) {
+case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, parserType: ParserType, satsolver: Solvertype) {
 
   import sys.process._
 
@@ -186,13 +186,20 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
     timeCapsule start VerifyRunner.SAT_SOLVER
     try {
-      println("Starting minisat")
-      ("minisat " + VerifyRunner.fileDir + "__cnfString " + VerifyRunner.fileDir + "__res.txt") !
+      satsolver match {
+        case MINISAT()       =>
+          println("Starting minisat")
+          ("minisat " + VerifyRunner.fileDir + "__cnfString " + VerifyRunner.fileDir + "__res.txt") !
+        case CRYPTOMINISAT() =>
+          println("Starting cryptominisat5")
+          ("cryptominisat5 --verb 0 " + VerifyRunner.fileDir + "__cnfString") #> new File(VerifyRunner.fileDir + "__res.txt") !
+      }
     } catch {
       case rt: RuntimeException => println("Minisat exitcode problem ...")
     }
     timeCapsule stop VerifyRunner.SAT_SOLVER
     timeCapsule stop VerifyRunner.VERIFY_TOTAL
+
 
     val formulaVariables: Seq[String] = (usedFormula flatMap { _.disjuncts map { _._1 } }).distinct
     informationCapsule.set(VerifyRunner.NUMBER_OF_VARIABLES, formulaVariables.size)
@@ -204,17 +211,31 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
     // postprocessing
 
-    val minisatOutput = Source.fromFile(VerifyRunner.fileDir + "__res.txt").mkString
+    val solverOutput = Source.fromFile(VerifyRunner.fileDir + "__res.txt").mkString
+    val (solveState, assignment) = satsolver match {
+      case MINISAT()       =>
+        val splitted = solverOutput.split("\n")
+        if (splitted.length == 1) (splitted(0), "") else (splitted(0), splitted(1))
+      case CRYPTOMINISAT() =>
+        val cleanString = solverOutput.replaceAll("s ", "").replaceAll("v ", "")
+        val splitted = cleanString.split("\n", 2)
+
+        if (splitted.length == 1) (splitted.head, "")
+        else (splitted.head, splitted(1).replaceAll("\n", " "))
+    }
+
+    // delete files
     ("rm " + VerifyRunner.fileDir + "__cnfString " + VerifyRunner.fileDir + "__res.txt") !
-    val minisatResult = minisatOutput.split("\n")(0)
-    println("MiniSAT says: " + minisatResult)
+
+    // report on the result
+    println("MiniSAT says: " + solveState)
+    val solved = solveState == "SAT" || solveState == "SATISFIABLE"
 
 
     // postprocessing
-    if (minisatResult == "SAT") {
+    if (solved) {
       // things that are independent from the solver type
-      val minisatAssignment = minisatOutput.split("\n")(1)
-      val literals: Set[Int] = (minisatAssignment.split(" ") filter { _ != 0 } map { _.toInt }).toSet
+      val literals: Set[Int] = (assignment.split(" ") filter {_ != ""} map { _.toInt } filter { _ != 0 }).toSet
 
       val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
       writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
@@ -335,7 +356,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
           } else {
             val subTasks: Seq[Task] = nei map { n => (n, domain.tasks(n.id.split(",").last.toInt)) } sortBy { _._1.id } map { _._2 }
             val orderedMethods =
-              domain.methodsForAbstractTasks(myAction) map { _.subPlan } map { _.orderingConstraints.graph.allTotalOrderings.get.head map {_.schema}} filter {_ == subTasks}
+              domain.methodsForAbstractTasks(myAction) map { _.subPlan } map { _.orderingConstraints.graph.allTotalOrderings.get.head map { _.schema } } filter { _ == subTasks }
 
             assert(orderedMethods.nonEmpty, "Node " + v + " has no correctly ordered decomposition")
           }
@@ -343,7 +364,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
       }
     }
 
-    (minisatResult == "SAT", timeCapsule, informationCapsule)
+    (solved, timeCapsule, informationCapsule)
   }
 }
 
@@ -381,89 +402,89 @@ object VerifyRunner {
       Information.NUMBER_OF_METHODS :: Nil).sorted
 
   // domains to test
-  //val prefix = "/home/gregor/Workspace/panda2-system/domains/XML/"
-  val prefix = ""
+  val prefix = "/home/gregor/Workspace/panda2-system/domains/XML/"
+  //val prefix = ""
 
-  //val fileDir = "/dev/shm/"
+  val fileDir = "/dev/shm/"
   //val fileDir = "/media/tmpfs/"
-  val fileDir = ""
+  //val fileDir = ""
 
   val problemsToVerify: Seq[(String, ParserType, Seq[(String, Int)])] =
-  /*("UM-Translog/domains/UMTranslog.xml", XMLParserType,
-    ("UM-Translog/problems/UMTranslog-P-1-AirplanesHub.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-Airplane.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-ArmoredRegularTruck.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar-bis.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-AutoTruck.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-FlatbedTruck.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-HopperTruck.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-MailTraincar.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedRegularTraincar.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTruck.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-Regular2TrainStations2PostOffices.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-2Regions.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-3Locations.xml", 1) ::
-      //("UM-Translog/problems/UMTranslog-P-1-RegularTruck-4Locations.xml", 1) ::   // TDG pruned and panda2 it is unsolvable
-      ("UM-Translog/problems/UMTranslog-P-1-RegularTruckCustom.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-RegularTruck.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-TankerTraincarHub.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-1-TankerTruck.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-2-ParcelsChemicals.xml", 1) ::
-      ("UM-Translog/problems/UMTranslog-P-2-RegularTruck.xml", 1) ::
-      Nil) ::*/
-  //("Satellite/domains/satellite2.xml", XMLParserType,
-  /*("Satellite/problems/4--1--3.xml", 1) ::
-    ("Satellite/problems/4--2--3.xml", 1) ::
-    ("Satellite/problems/4--4--4.xml", 1) ::
-    //("Satellite/problems/5--2--2.xml", 3) :: DONT KNOW - probably to hard
-    //("Satellite/problems/5--5--5.xml", 1) :: DONT KNOW
-    //("Satellite/problems/6--2--2.xml", 1) :: DONT KNOW
-    //("Satellite/problems/8--3--4.xml", 1) :: DONT KNOW*/
-  //("Satellite/problems/sat-A.xml", 1) ::
-  //("Satellite/problems/sat-B.xml", 1) ::
-  // ("Satellite/problems/sat-C.xml", 1) ::
-  //("Satellite/problems/satellite2-P-abstract-1obs-1sat-1mod.xml", 1) ::
-  //("Satellite/problems/satellite2-P-abstract-1obs-2sat-1mod.xml", 1) ::
-  /*("Satellite/problems/satellite2-P-abstract-2obs-1sat-1mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-2obs-1sat-2mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-2obs-2sat-1mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-3obs-1sat-1mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-3obs-1sat-2mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-3obs-1sat-3mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-3obs-2sat-1mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-3obs-2sat-2mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-3obs-2sat-3mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-3obs-3sat-1mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-3obs-3sat-2mod.xml", 1) ::
-  ("Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml", 1) ::
-  //("Satellite/problems/satellite2-P-goal-1-simple.xml", 1) ::     non initial HTN
-  //("Satellite/problems/satellite2-P-goal-1.xml", 1) ::            non initial HTN
-  //("Satellite/problems/satellite2-P-goal-2-simple.xml", 1) ::     non initial HTN
-  //("Satellite/problems/satellite2-P-goal-2.xml", 1) ::            non initial HTN
-  //("Satellite/problems/satellite2-P-goal-3.xml", 1) ::            non initial HTN
-  //("Satellite/problems/satellite2-P-goal-4.xml", 1) ::            non initial HTN
-  //("Satellite/problems/satellite2-P-goal-5.xml", 1) ::            non initial HTN
-  ("Satellite/problems/satellite2-P-linkingTest.xml", 1) ::
-    Nil
-  ) ::
-      ("SmartPhone/domains/SmartPhone-HierarchicalNoAxioms.xml", XMLParserType,
-        ("SmartPhone/problems/OrganizeMeeting_VeryVerySmall.xml", 1) ::
-          ("SmartPhone/problems/OrganizeMeeting_VerySmall.xml", 2) ::
-          ("SmartPhone/problems/ThesisExampleProblem.xml", 1) ::
-          Nil) ::
-      ("Woodworking-Socs/domains/woodworking-socs.xml", XMLParserType,
-        ("Woodworking-Socs/problems/p01-hierarchical-socs.xml", 1) ::
-          ("Woodworking-Socs/problems/p02-variant1-hierarchical.xml", 1) ::
-          ("Woodworking-Socs/problems/p02-variant2-hierarchical.xml", 1) ::
-          ("Woodworking-Socs/problems/p02-variant3-hierarchical.xml", 1) ::
-          ("Woodworking-Socs/problems/p02-variant4-hierarchical.xml", 1) ::
-          Nil) :: */
-    ("domain.lisp", HDDLParserType,
+    ("UM-Translog/domains/UMTranslog.xml", XMLParserType,
+      ("UM-Translog/problems/UMTranslog-P-1-AirplanesHub.xml", 1) ::
+        /*    ("UM-Translog/problems/UMTranslog-P-1-Airplane.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-ArmoredRegularTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar-bis.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-AutoTraincar.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-AutoTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-FlatbedTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-HopperTruck.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-MailTraincar.xml", 1) ::
+            ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedRegularTraincar.xml", 1) :: */
+        //("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml", 1) ::
+        /* ("UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTruck.xml", 1) ::
+       ("UM-Translog/problems/UMTranslog-P-1-Regular2TrainStations2PostOffices.xml", 1) ::
+       ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-2Regions.xml", 1) ::
+       ("UM-Translog/problems/UMTranslog-P-1-RegularTruck-3Locations.xml", 1) ::
+       //("UM-Translog/problems/UMTranslog-P-1-RegularTruck-4Locations.xml", 1) ::   // TDG pruned and panda2 it is unsolvable
+       ("UM-Translog/problems/UMTranslog-P-1-RegularTruckCustom.xml", 1) ::
+       ("UM-Translog/problems/UMTranslog-P-1-RegularTruck.xml", 1) ::
+       ("UM-Translog/problems/UMTranslog-P-1-TankerTraincarHub.xml", 1) ::
+       ("UM-Translog/problems/UMTranslog-P-1-TankerTruck.xml", 1) ::
+       ("UM-Translog/problems/UMTranslog-P-2-ParcelsChemicals.xml", 1) ::
+       ("UM-Translog/problems/UMTranslog-P-2-RegularTruck.xml", 1) :: */
+        Nil) ::
+      //("Satellite/domains/satellite2.xml", XMLParserType,
+      /*("Satellite/problems/4--1--3.xml", 1) ::
+        ("Satellite/problems/4--2--3.xml", 1) ::
+        ("Satellite/problems/4--4--4.xml", 1) ::
+        //("Satellite/problems/5--2--2.xml", 3) :: DONT KNOW - probably to hard
+        //("Satellite/problems/5--5--5.xml", 1) :: DONT KNOW
+        //("Satellite/problems/6--2--2.xml", 1) :: DONT KNOW
+        //("Satellite/problems/8--3--4.xml", 1) :: DONT KNOW*/
+      //("Satellite/problems/sat-A.xml", 1) ::
+      //("Satellite/problems/sat-B.xml", 1) ::
+      // ("Satellite/problems/sat-C.xml", 1) ::
+      //("Satellite/problems/satellite2-P-abstract-1obs-1sat-1mod.xml", 1) ::
+      //("Satellite/problems/satellite2-P-abstract-1obs-2sat-1mod.xml", 1) ::
+      /*("Satellite/problems/satellite2-P-abstract-2obs-1sat-1mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-2obs-1sat-2mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-2obs-2sat-1mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-3obs-1sat-1mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-3obs-1sat-2mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-3obs-1sat-3mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-3obs-2sat-1mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-3obs-2sat-2mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-3obs-2sat-3mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-3obs-3sat-1mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-3obs-3sat-2mod.xml", 1) ::
+      ("Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml", 1) ::
+      //("Satellite/problems/satellite2-P-goal-1-simple.xml", 1) ::     non initial HTN
+      //("Satellite/problems/satellite2-P-goal-1.xml", 1) ::            non initial HTN
+      //("Satellite/problems/satellite2-P-goal-2-simple.xml", 1) ::     non initial HTN
+      //("Satellite/problems/satellite2-P-goal-2.xml", 1) ::            non initial HTN
+      //("Satellite/problems/satellite2-P-goal-3.xml", 1) ::            non initial HTN
+      //("Satellite/problems/satellite2-P-goal-4.xml", 1) ::            non initial HTN
+      //("Satellite/problems/satellite2-P-goal-5.xml", 1) ::            non initial HTN
+      ("Satellite/problems/satellite2-P-linkingTest.xml", 1) ::
+        Nil
+      ) ::
+          ("SmartPhone/domains/SmartPhone-HierarchicalNoAxioms.xml", XMLParserType,
+            ("SmartPhone/problems/OrganizeMeeting_VeryVerySmall.xml", 1) ::
+              ("SmartPhone/problems/OrganizeMeeting_VerySmall.xml", 2) ::
+              ("SmartPhone/problems/ThesisExampleProblem.xml", 1) ::
+              Nil) ::
+          ("Woodworking-Socs/domains/woodworking-socs.xml", XMLParserType,
+            ("Woodworking-Socs/problems/p01-hierarchical-socs.xml", 1) ::
+              ("Woodworking-Socs/problems/p02-variant1-hierarchical.xml", 1) ::
+              ("Woodworking-Socs/problems/p02-variant2-hierarchical.xml", 1) ::
+              ("Woodworking-Socs/problems/p02-variant3-hierarchical.xml", 1) ::
+              ("Woodworking-Socs/problems/p02-variant4-hierarchical.xml", 1) ::
+              Nil) :: */
+      // ("domain.lisp", HDDLParserType,
       //("p-0002-plow-road.lisp", 4) ::
-      ("problems/p-0001-clear-road-wreck.lisp", 4) :: // SOL 185
+      /*("problems/p-0001-clear-road-wreck.lisp", 4) :: // SOL 185
         ("problems/p-0002-plow-road.lisp", 4) :: // SOL 74
         ("problems/p-0003-set-up-shelter.lisp", 6) :: // SOL 46752
         ("problems/p-0004-provide-medical-attention.lisp", 4) :: // SOL 10
@@ -483,51 +504,52 @@ object VerifyRunner {
         ("problems/p-0018-fix-power-line.lisp", 4) :: // SOL 30
         ("problems/p-0019-clear-road-wreck.lisp", 4) :: // SOL 182
         ("problems/p-0020-set-up-shelter.lisp", 6) :: // SOL 23971
-        ("problems/p-0021-plow-road.lisp", 4) :: // SOL 80
-        /*  ("problems/p-0022-provide-medical-attention.lisp", 4) :: // SOL 230
-          ("problems/p-0023-plow-road.lisp", 4) :: // SOL 89
-          ("problems/p-0024-plow-road.lisp", 4) :: // SOL 6
-          ("problems/p-0025-clear-road-wreck.lisp", 4) :: // SOL 125
-          //("problems/p-0026-clear-road-tree.lisp",4) ::  // BUG
-          ("problems/p-0027-plow-road.lisp", 4) :: // SOL 50
-          //("problems/p-0028-set-up-shelter.lisp", 4) :: // SOL 18268
-          //("problems/p-0029-clear-road-tree.lisp",4) ::    // BUG
-          //("problems/p-0030-provide-temp-heat.lisp",4) ::  // TIMEOUT   (also on frodo)
-          //("problems/p-0030-provide-temp-heat.lisp",4) ::  // TIMEOUT
-          //("problems/p-0031-provide-temp-heat.lisp",4) ::  // TIMEOUT
-          ("problems/p-0032-plow-road.lisp", 4) :: // SOL 80
-          ("problems/p-0033-provide-medical-attention.lisp", 4) :: // SOL 146
-          ("problems/p-0034-provide-medical-attention.lisp", 4) :: // SOL 10
-          ("problems/p-0035-fix-power-line.lisp", 4) :: // SOL 28
-          ("problems/p-0036-clear-road-wreck.lisp", 4) :: // SOL 201
-          ("problems/p-0037-clear-road-hazard.lisp", 6) :: // SOL 508
-          ("problems/p-0038-plow-road.lisp", 4) :: // SOL 89
-          ("problems/p-0039-plow-road.lisp", 4) :: // SOL 73
-          ("problems/p-0040-provide-medical-attention.lisp", 4) :: // SOL 10
-          ("problems/p-0041-clear-road-wreck.lisp", 6) :: // SOL 10
-          ("problems/p-0042-clear-road-wreck.lisp", 4) :: // SOL 10
-          ("problems/p-0043-set-up-shelter.lisp", 6) :: // SOL 10
-          ("problems/p-0044-plow-road.lisp",6) ::   // SOL 457
-          ("problems/p-0045-plow-road.lisp",4) ::   // SOL 468
-          ("problems/p-0046-clear-road-wreck.lisp",6) ::   // SOL 8098
-          //("problems/p-0047-provide-temp-heat.lisp",4) ::   // TIMEOUT
-          //("problems/p-0048-provide-temp-heat.lisp",4) ::   // TIMEOUT
-          ("problems/p-0049-plow-road.lisp",4) ::   // SOL 97
-          ("problems/p-0050-clear-road-hazard.lisp",6) ::   // SOL 271
-          //("problems/p-0051-plow-road.lisp",4) ::   // SOL 33
-          //("problems/p-0052-provide-temp-heat.lisp",4) ::   // SOL 10
-          ("problems/p-0053-provide-medical-attention.lisp",4) ::   // SOL 185
-          ("problems/p-0054-clear-road-hazard.lisp",6) ::   // SOL 148
-          //("problems/p-0055-fix-power-line.lisp",4) ::   // SOL 30
-          ("problems/p-0056-provide-medical-attention.lisp",4) ::   // SOL 101
-          ("problems/p-0057-clear-road-wreck.lisp",4) ::   // SOL 47
-          //("problems/p-0058-fix-water-main.lisp",4) ::   // BUG
-          ("problems/p-0059-clear-road-hazard.lisp",6) ::   // SOL 608
-          ("problems/p-0060-clear-road-wreck.lisp",4) ::   // SOL 135
-          ("problems/p-0061-plow-road.lisp",4) ::   // SOL 50
-          ("problems/p-0062-clear-road-hazard.lisp",6) :: */
-        // SOL 50
-        Nil) ::
+        ("problems/p-0021-plow-road.lisp", 4) :: */
+      // SOL 80
+      /*     ("problems/p-0022-provide-medical-attention.lisp", 4) :: // SOL 230
+           ("problems/p-0023-plow-road.lisp", 4) :: // SOL 89
+           ("problems/p-0024-plow-road.lisp", 4) :: // SOL 6
+           ("problems/p-0025-clear-road-wreck.lisp", 4) :: // SOL 125
+           //("problems/p-0026-clear-road-tree.lisp",4) ::  // BUG
+           ("problems/p-0027-plow-road.lisp", 4) :: // SOL 50
+           //("problems/p-0028-set-up-shelter.lisp", 4) :: // SOL 18268
+           //("problems/p-0029-clear-road-tree.lisp",4) ::    // BUG
+           //("problems/p-0030-provide-temp-heat.lisp",4) ::  // TIMEOUT   (also on frodo)
+           //("problems/p-0030-provide-temp-heat.lisp",4) ::  // TIMEOUT
+           //("problems/p-0031-provide-temp-heat.lisp",4) ::  // TIMEOUT
+           ("problems/p-0032-plow-road.lisp", 4) :: // SOL 80
+           ("problems/p-0033-provide-medical-attention.lisp", 4) :: // SOL 146
+           ("problems/p-0034-provide-medical-attention.lisp", 4) :: // SOL 10
+           ("problems/p-0035-fix-power-line.lisp", 4) :: // SOL 28
+           ("problems/p-0036-clear-road-wreck.lisp", 4) :: // SOL 201
+           ("problems/p-0037-clear-road-hazard.lisp", 6) :: // SOL 508
+           ("problems/p-0038-plow-road.lisp", 4) :: // SOL 89
+           ("problems/p-0039-plow-road.lisp", 4) :: // SOL 73
+           ("problems/p-0040-provide-medical-attention.lisp", 4) :: // SOL 10
+           ("problems/p-0041-clear-road-wreck.lisp", 6) :: // SOL 10
+           ("problems/p-0042-clear-road-wreck.lisp", 4) :: // SOL 10
+           ("problems/p-0043-set-up-shelter.lisp", 6) :: // SOL 10
+           ("problems/p-0044-plow-road.lisp",6) ::   // SOL 457
+           ("problems/p-0045-plow-road.lisp",4) ::   // SOL 468
+           ("problems/p-0046-clear-road-wreck.lisp",6) ::   // SOL 8098
+           //("problems/p-0047-provide-temp-heat.lisp",4) ::   // TIMEOUT
+           //("problems/p-0048-provide-temp-heat.lisp",4) ::   // TIMEOUT
+           ("problems/p-0049-plow-road.lisp",4) ::   // SOL 97
+           ("problems/p-0050-clear-road-hazard.lisp",6) ::   // SOL 271
+           //("problems/p-0051-plow-road.lisp",4) ::   // SOL 33
+           //("problems/p-0052-provide-temp-heat.lisp",4) ::   // SOL 10
+           ("problems/p-0053-provide-medical-attention.lisp",4) ::   // SOL 185
+           ("problems/p-0054-clear-road-hazard.lisp",6) ::   // SOL 148
+           //("problems/p-0055-fix-power-line.lisp",4) ::   // SOL 30
+           ("problems/p-0056-provide-medical-attention.lisp",4) ::   // SOL 101
+           ("problems/p-0057-clear-road-wreck.lisp",4) ::   // SOL 47
+           //("problems/p-0058-fix-water-main.lisp",4) ::   // BUG
+           ("problems/p-0059-clear-road-hazard.lisp",6) ::   // SOL 608
+           ("problems/p-0060-clear-road-wreck.lisp",4) ::   // SOL 135
+           ("problems/p-0061-plow-road.lisp",4) ::   // SOL 50
+           ("problems/p-0062-clear-road-hazard.lisp",6) ::
+         // SOL 50
+         Nil) ::*/
       Nil
 
   //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
@@ -536,7 +558,8 @@ object VerifyRunner {
 
 
   val timeLimit: Long = 30 * 60 * 1000
-  val minOffset: Int  = -3
+  val minOffset: Int  = 0
+  // -3
   val maxOffset: Int  = 0
 
   val numberOfRandomSeeds: Int = 0 //5
@@ -586,7 +609,7 @@ object VerifyRunner {
     val result = problemsToVerify flatMap { case (domainFile, parserType, problems) => problems flatMap { case (problemFile, config) =>
       println("RUN " + domainFile + " " + problemFile)
 
-      val runner = VerifyRunner(prefix + domainFile, prefix + problemFile, config, parserType)
+      val runner = VerifyRunner(prefix + domainFile, prefix + problemFile, config, parserType, CRYPTOMINISAT())
 
       val solutionLines = Range(minOffset, maxOffset + 1) map { offsetToK =>
         val (isPlan, completed, time, information) = runner.runWithTimeLimit(timeLimit, runner.solutionPlan, offsetToK)
@@ -622,8 +645,8 @@ object VerifyRunner {
   }
 
   def runPlanner(domFile: String, probFile: String, length: Int): Unit = {
-    //val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType)
-    val runner = VerifyRunner(domFile, probFile, -length, XMLParserType)
+    //val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
+    val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
 
     val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = -4704, includeGoal = true, verify = false)
     //val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = 0, includeGoal = true, verify = false)
@@ -671,3 +694,9 @@ object VerifyRunner {
   }
 
 }
+
+sealed trait Solvertype
+
+case class MINISAT() extends Solvertype
+
+case class CRYPTOMINISAT() extends Solvertype
