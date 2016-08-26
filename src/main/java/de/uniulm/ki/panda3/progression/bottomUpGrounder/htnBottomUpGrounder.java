@@ -246,6 +246,7 @@ public class htnBottomUpGrounder {
 
 
     private boolean testPartialMethod(DecompositionMethod method, List<Tuple2<Variable, Constant>> binding) {
+        /*
         Seq<GroundTask> tasks = method.getAllGroundedPlanStepsFromPartialMapping(JavaToScala.toScalaSeq(binding));
 
 
@@ -255,7 +256,7 @@ public class htnBottomUpGrounder {
                 System.out.println("   Did not find subtask " + subtask.longInfo() + " of method " + method.name() + " in list of reachable tasks");
                 return false;
             }
-        }
+        }*/
         return true;
     }
 
@@ -396,7 +397,7 @@ public class htnBottomUpGrounder {
         return partialGroundingPerPS;
     }
 
-    private boolean constraintsFine(Seq<VariableConstraint> constraints, List<Tuple2> partialGrounding) {
+    public boolean constraintsFine(Seq<VariableConstraint> constraints, List<Tuple2> partialGrounding) {
         for (int i = 0; i < constraints.size(); i++) {
             VariableConstraint vc = constraints.apply(i);
             if (vc instanceof Equal) {

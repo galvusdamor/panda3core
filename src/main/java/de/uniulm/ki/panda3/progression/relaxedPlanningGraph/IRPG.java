@@ -21,4 +21,5 @@ public interface IRPG {
 
     Set<GroundLiteral> getReachableFacts();
 
+    int numOfReachableFacts();
 }

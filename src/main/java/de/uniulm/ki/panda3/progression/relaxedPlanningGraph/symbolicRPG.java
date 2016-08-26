@@ -13,7 +13,7 @@ import java.util.*;
 /**
  * Created by dhoeller on 29.06.16.
  */
-public class symbolicRPG implements IRPG{
+public class symbolicRPG implements IRPG {
 
     public List<Set<GroundTask>> actions = new ArrayList<>();
     public List<Set<GroundLiteral>> facts = new ArrayList<>();
@@ -45,8 +45,10 @@ public class symbolicRPG implements IRPG{
         int fulfilled = Gt.get(0).size();
         boolean done = false;
 
+        System.out.println("Actions: ");
         for (int i = 1; true; i++) {
             Set<GroundTask> a = getActionLayer(d, facts.get(i - 1));
+            System.out.print(a.size() + " -> ");
             actions.add(a);
 
             Set<GroundLiteral> f = getFactLayer(a, facts.get(i - 1));
@@ -165,5 +167,10 @@ public class symbolicRPG implements IRPG{
 
     public Set<GroundLiteral> getReachableFacts() {
         return this.facts.get(this.facts.size() - 1);
+    }
+
+    @Override
+    public int numOfReachableFacts() {
+        return 0;
     }
 }

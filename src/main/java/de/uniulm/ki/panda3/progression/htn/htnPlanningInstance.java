@@ -60,7 +60,7 @@ public class htnPlanningInstance {
         boolean converged = false;
         IRPG rpg = null;
         while (!converged) {
-            System.out.print("Building relaxed planning graph");
+            System.out.println("Building relaxed planning graph");
             long time2 = System.currentTimeMillis();
             //rpg = new symbolicRPG();
             rpg = new hierarchyAwareRPG();
@@ -70,8 +70,16 @@ public class htnPlanningInstance {
                 rpg.build(d, p, gr.groundingsByTask);
             System.out.println(" (" + (System.currentTimeMillis() - time2) + " ms).");
 
+
+            try {
+                System.out.println("<PRESS KEY>");
+                System.in.read();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
             System.out.println(" - Graph contains " + rpg.getApplicableActions().size() + " ground actions.");
-            System.out.println(" - Graph contains " + rpg.getReachableFacts().size() + " environment facts.");
+            System.out.println(" - Graph contains " + rpg.numOfReachableFacts() + " environment facts.");
 
             gr = new htnBottomUpGrounder(d, p, rpg.getApplicableActions());
             converged = !gr.deletedActions;

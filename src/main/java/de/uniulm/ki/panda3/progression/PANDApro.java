@@ -34,8 +34,9 @@ public class PANDApro {
         //String problemFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp";
         //String domainFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/simple-finite-domain-2.lisp";
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/papers/2017-panda-pro/domains/simple-finite-problem-2.lisp";
-        String domainFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/hddl-finalize/domain.lisp";
+        String domainFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/hddl-finalize/domain.lisp";
 
+        String basedir = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/problems/";
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/aaai/problems/p-0001-clear-road-wreck.lisp";
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/deletedObjs-1-to-100/problems/p-0002-plow-road.lisp";
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/deletedObjs-1-to-100/problems/p-0003-set-up-shelter.lisp";
@@ -44,7 +45,7 @@ public class PANDApro {
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/deletedObjs-1-to-100/problems/p-0005-clear-road-wreck.lisp";
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems-exact-obj/only/problems/p-0002-plow-road.lisp";
         //String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems-exact-obj/only/problems/p-0003-set-up-shelter.lisp";
-        String problemFile = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/problems/location/deletedObjs-1-to-100/problems/p-0002-plow-road.lisp";
+        String problemFile = basedir+"location/deletedObjs-1-to-100/problems/p-0002-plow-road.lisp";
 
         //String domainFile = "/home/dhoeller/Schreibtisch/englert-test/testDomain1.pddl";
         //String problemFile ="/home/dhoeller/Schreibtisch/englert-test/testProblem1.pddl";
