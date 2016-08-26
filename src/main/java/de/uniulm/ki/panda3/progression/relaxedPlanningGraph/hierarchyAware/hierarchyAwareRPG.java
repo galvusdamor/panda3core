@@ -35,13 +35,15 @@ public class hierarchyAwareRPG implements IRPG {
     public void build(Domain domain, Plan plan, Map<Task, Set<GroundTask>> onlyUse) {
         LitTaskCollection<Task> reachableTaskParamLists = new LitTaskCollection<>();
 
+        // stores which operators need to be re-computated when a new fact is introduced
         Map<Predicate, List<Tuple2<List<PlanStep>, Seq<VariableConstraint>>>> precToOperator = new HashMap<>();
 
+        // find methods containing primitive tasks
         getPrimMethods(domain, precToOperator);
 
-        Set<GroundLiteral> reachableSinceLast = getInit(plan);
-        addSetToMap(reachableSinceLast, reachableFacts);
-        boolean firstRun = true;
+        // init is added to the list of new facts
+        Set<GroundLiteral> addedFacts = getInit(plan);
+        addSetToMap(addedFacts, reachableFacts);
 
         try {
             System.out.println("<PRESS KEY>");
@@ -49,33 +51,32 @@ public class hierarchyAwareRPG implements IRPG {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        boolean firstRun = true;
         double time = System.currentTimeMillis();
-        System.out.print("Reachable tasks: ");
-        while (reachableSinceLast.size() > 0) {
+        System.out.print("Reachable tasks: 0");
+        while (addedFacts.size() > 0) {
 
             // get newly applicable operators
             Set<Tuple2<List<PlanStep>, Seq<VariableConstraint>>> operators = new HashSet<>();
-            if (firstRun) {
+            if (firstRun) {  // need to test operators without precondition
                 if (precToOperator.containsKey(emptyPrec))
                     operators.addAll(precToOperator.get(emptyPrec));
                 firstRun = false;
             }
 
-            Set<GroundLiteral> newlyReachable = new HashSet<>();
-            for (GroundLiteral newFact : reachableSinceLast) {
-                if (precToOperator.containsKey(newFact.predicate())) {
-                    operators.addAll(precToOperator.get(newFact.predicate()));
+            // calculate the set of operators that need to be applied
+            for (GroundLiteral fact : addedFacts) {
+                if (precToOperator.containsKey(fact.predicate())) {
+                    operators.addAll(precToOperator.get(fact.predicate()));
                 }
-
             }
+            addedFacts.clear();
 
-            boolean fullyCombineMetodPars = true;
+            //boolean fullyCombineMetodPars = true;
+            for (Tuple2<List<PlanStep>, Seq<VariableConstraint>> operator : operators) {
 
-            for (Tuple2<List<PlanStep>, Seq<VariableConstraint>> o : operators) {
-
-                List<PlanStep> totalOrder = o._1();
-
-                List<Set<HashMap<Variable, Constant>>> grPerStep = new ArrayList<>();
+                List<PlanStep> totalOrder = operator._1();
+                //List<Set<HashMap<Variable, Constant>>> grPerStep = new ArrayList<>();
                 Set<HashMap<Variable, Constant>> groundings = new HashSet<>();
                 groundings.add(new HashMap<>());
 
@@ -85,13 +86,13 @@ public class hierarchyAwareRPG implements IRPG {
                     List<List<GroundLiteral>> precGr = getPrecLitGroundings(step);
                     // get possible groundings of this single task (that are in line with the partial groundings)
 
-                    if (fullyCombineMetodPars) {
-                        groundings = groundStep(groundings, step, precGr, o._2());
-                    } else {
+                    //if (fullyCombineMetodPars) {
+                    groundings = groundStep(groundings, step, precGr, operator._2());
+                    /*} else {
                         groundings = getSubset(grPerStep, step, o._2());
                         groundings = groundStep(groundings, step, precGr, o._2());
                         grPerStep.add(groundings);
-                    }
+                    }*/
                     // add all effects to reachable facts
                     for (HashMap<Variable, Constant> grounding : groundings) {
                         if (!reachableTaskParamLists.containsNadd(step.schema(), step.arguments().iterator(), grounding)) {
@@ -99,7 +100,7 @@ public class hierarchyAwareRPG implements IRPG {
                             boolean add = ((onlyUse == null) || ((onlyUse.containsKey(t.task())) && onlyUse.get(t.task()).contains(t)));
                             if (add) {
                                 reachableTasks.add(t);
-                                addEffectLiterals(t, reachableFacts, newlyReachable);
+                                addEffectLiterals(t, reachableFacts, addedFacts);
                             }
                         }
                     }
@@ -110,12 +111,11 @@ public class hierarchyAwareRPG implements IRPG {
                 }
             }
             System.out.print(" -> " + reachableTaskParamLists.size());
-            reachableSinceLast = newlyReachable;
         }
         System.out.println("\nTime for grounding primitives: " + (System.currentTimeMillis() - time) + " ms");
-
     }
 
+    /*
     private Set<HashMap<Variable, Constant>> getSubset(List<Set<HashMap<Variable, Constant>>> precGr, PlanStep step, Seq<VariableConstraint> variableConstraintSeq) {
         Set<HashMap<Variable, Constant>> groundings = new HashSet<>();
         if (precGr.size() == 0) {
@@ -189,7 +189,7 @@ public class hierarchyAwareRPG implements IRPG {
             indexOrder[i] = i;
         }
         return indexOrder;
-    }
+    }*/
 
     private void addEffectLiterals(GroundTask task, Map<Predicate, Set<GroundLiteral>> reachableFacts, Set<GroundLiteral> newlyReachable) {
         Seq<GroundLiteral> effs = task.substitutedAddEffects();
@@ -247,6 +247,7 @@ public class hierarchyAwareRPG implements IRPG {
             worstCase *= precLitGroundings.get(i).size();
         }
 
+        /*
         // delete combination that will not work anyway
         Set<HashMap<Variable, Constant>> deletes = new HashSet<>();
         for (HashMap<Variable, Constant> oldGrounding : inPartialGrs) {
@@ -256,7 +257,7 @@ public class hierarchyAwareRPG implements IRPG {
         }
         if (deletes.size() > 0)
             inPartialGrs.removeAll(deletes);
-
+        */
 
         // generate lookup-table
         HashMap<Variable, HashMap<Constant, Set<Integer>>> lookupTable = new HashMap<>();
@@ -297,9 +298,8 @@ public class hierarchyAwareRPG implements IRPG {
         } else {
             newParGr = nextGroundingFromPrecondition(ps, precLitGroundings, currentPrecI);
         }
-        int counter = 0;
-        while (newParGr != null) {
 
+        while (newParGr != null) {
             boolean noBindingsJet = true;
             Set<Integer> conformGroundings = null;
             HashMap<Variable, Constant> needToAdd = new HashMap<>();
@@ -715,60 +715,3 @@ public class hierarchyAwareRPG implements IRPG {
         return getReachableFacts().size();
     }
 }
-/*
-        HashMap<Variable, HashMap<Constant, Set<Integer>>> lookupTable = new HashMap<>();
-        int index = 0;
-
-        Set<HashMap<Variable, Constant>> outGrs = new HashSet<>();
-        int[] currentPrecI = new int[precLitGroundings.size()];
-        for (int i = 0; i < currentPrecI.length - 1; i++) {
-            currentPrecI[i] = 0;
-        }
-        HashMap<Variable, Constant> newParGr;
-        if (precLitGroundings.size() == 0) {
-            newParGr = new HashMap<>();
-        } else {
-            newParGr = nextGroundingFromPrecondition(ps, precLitGroundings, currentPrecI);
-        }
-        while (newParGr != null) {
-            loopOverExistingGr:
-            for (HashMap<Variable, Constant> oldGrounding : inPartialGrs) {
-                HashMap<Variable, Constant> combinedGrounding = new HashMap<>();
-
-                for (Variable v : newParGr.keySet()) {
-                    Constant c = newParGr.get(v);
-                    if (oldGrounding.containsKey(v)) {
-                        // it is in and set to another const
-                        if (!oldGrounding.get(v).equals(c)) { // -> inconsistent, goto next new grounding
-                            continue loopOverExistingGr;
-                        }  // it is in and set to the same const -> will be added below this loop
-                    } else {
-                        // it is not in -> add it
-                        combinedGrounding.put(v, c);
-                        propagateEquality(combinedGrounding, constraints, v, c);
-                    }
-                }
-                // all new bindings are consistent, new bindings have been added, need to add old bindings
-                combinedGrounding.putAll(oldGrounding);
-
-                boolean groundingIsPartial = false;
-                Iterator<Variable> iterArg2 = ps.arguments().iterator();
-                while (iterArg2.hasNext()) {
-                    if (!combinedGrounding.containsKey(iterArg2.next())) {
-                        groundingIsPartial = true;
-                        break;
-                    }
-                }
-
-                if (groundingIsPartial) { // not fully grounded
-                    fullyGround(combinedGrounding, ps, constraints, outGrs);
-                } else { // it is a full grounding
-                    if (constraintsFine(constraints, combinedGrounding))
-                        outGrs.add(combinedGrounding);
-                }
-            }
-            newParGr = nextGroundingFromPrecondition(ps, precLitGroundings, currentPrecI);
-        }
-        return outGrs;
-    }
- */
