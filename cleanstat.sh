@@ -33,4 +33,4 @@ rm /tmp/cleancommit
 gitstats .git stats
 
 # reset all the changes filter-branch have done
-git reset --hard refs/original/refs/heads/master
+git reset --hard refs/original/heads/master
