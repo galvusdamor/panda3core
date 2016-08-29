@@ -21,7 +21,7 @@ case class RandomPlanGenerator(domain: Domain, plan: Plan) {
       val applicableTasks = domain.primitiveTasks filter {
         case rt: ReducedTask => rt.precondition.conjuncts forall { case Literal(predicate, isPositive, _) => (state contains predicate) == isPositive }
         case _               => false
-      } sortBy { _ => r.nextInt() }
+      } map { t => (t, r.nextInt()) } sortBy { _._2 } map { _._1 }
 
       if (applicableTasks.isEmpty) None
       else applicableTasks.foldLeft[Option[Seq[Task]]](None)(
