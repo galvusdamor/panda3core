@@ -98,7 +98,7 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
     }
     val children: Seq[Seq[String]] = Range(0, DELTA) map {
       mPos => Range(0, numberOfActionsPerLayer) map {
-        childPos => childWithIndex(layer, childPos, position, mPos)
+        childPos => childWithIndex(layer + 1, childPos, position, mPos)
       }
     }
 
@@ -130,10 +130,10 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
             val mustChildren: Clause = impliesRightOr(method(layer, fatherPosition, methodIdx) :: Nil,
                                                       Range(0, numberOfActionsPerLayer) map { childPos => childWithIndex(layer + 1, childPos, fatherPosition, childNumber) })
             // types of the children
-            val childrenType: Seq[Clause] = Range(0, numberOfActionsPerLayer) flatMap {
+            val childrenType: Seq[Clause] = Range(0, numberOfActionsPerLayer) map {
               childPos =>
-                impliesRightAnd(childWithIndex(layer + 1, childPos, fatherPosition, childNumber) :: method(layer, fatherPosition, methodIdx) :: Nil,
-                                action(layer + 1, childPos, ps.schema) :: Nil)
+                impliesRightAndSingle(childWithIndex(layer + 1, childPos, fatherPosition, childNumber) :: method(layer, fatherPosition, methodIdx) :: Nil,
+                                action(layer + 1, childPos, ps.schema))
             }
             childrenType :+ mustChildren
         }
@@ -149,10 +149,10 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
 
             val afterPos: Int = methodPlanStepIndices(methodIdx)(afterPS) // subPlan.planStepsWithoutInitGoal indexOf afterPS
             Range(0, numberOfActionsPerLayer) flatMap {
-              childBeforePos => Range(0, numberOfActionsPerLayer) flatMap {
+              childBeforePos => Range(0, numberOfActionsPerLayer) map {
                 childAfterPos =>
-                  impliesRightAnd(method(layer, fatherPosition, methodIdx) :: childWithIndex(layer + 1, childBeforePos, fatherPosition, beforePos) ::
-                                    childWithIndex(layer + 1, childAfterPos, fatherPosition, afterPos) :: Nil, before(layer + 1, childBeforePos, childAfterPos) :: Nil)
+                  impliesRightAndSingle(method(layer, fatherPosition, methodIdx) :: childWithIndex(layer + 1, childBeforePos, fatherPosition, beforePos) ::
+                                    childWithIndex(layer + 1, childAfterPos, fatherPosition, afterPos) :: Nil, before(layer + 1, childBeforePos, childAfterPos))
               }
             }
         }

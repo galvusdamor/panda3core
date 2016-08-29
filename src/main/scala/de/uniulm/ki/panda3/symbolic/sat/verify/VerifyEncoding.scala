@@ -113,6 +113,11 @@ trait VerifyEncoding {
     rightConjunct map { r => Clause(negLeft :+(r, true)) }
   }
 
+  protected def impliesRightAndSingle(leftConjunct: Seq[String], right: String): Clause = {
+    val negLeft = leftConjunct map { (_, false) }
+    Clause(negLeft :+(right, true))
+  }
+
   protected def impliesRightOr(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
     val negLeft = leftConjunct map { (_, false) }
     Clause(negLeft ++ (rightConjunct map { x => (x, true) }))
@@ -212,10 +217,12 @@ object VerifyEncoding {
       val topToMethods = domain.decompositionMethods filter { _.subPlan.planStepsWithoutInitGoal exists { _.schema == plan.planStepsWithoutInitGoal.head.schema } }
 
 
-      if (topToMethods.isEmpty) (nonTopMethods map { _.subPlan.planStepsWithoutInitGoal.length } min, 1) else (domain.minimumMethodSize, 0)
+      if (topToMethods.isEmpty) {
+        if (nonTopMethods.isEmpty) (Integer.MIN_VALUE, 1) else (nonTopMethods map { _.subPlan.planStepsWithoutInitGoal.length } min, 1)
+      } else (domain.minimumMethodSize, 0)
     } else (domain.minimumMethodSize, 0)
 
-    if (minMethodSize >= 2) Math.ceil(Math.log(taskSequenceLength) / Math.log(minMethodSize)).toInt + heightIncrease else Integer.MAX_VALUE
+    if (minMethodSize >= 2) Math.ceil((taskSequenceLength - plan.planStepsWithoutInitGoal.length).toDouble / (minMethodSize - 1)).toInt + heightIncrease else Integer.MAX_VALUE
   }
 
   def computeTDG(domain: Domain, plan: Plan, tdg: TaskDecompositionGraph, taskSequenceLength: Int): Int = {

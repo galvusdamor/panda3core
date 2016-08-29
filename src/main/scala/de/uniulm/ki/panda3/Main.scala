@@ -249,6 +249,4 @@ object Main {
       dfs(results(SearchSpace))
     }
   }
-
-
 }
