@@ -20,7 +20,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   def edges: Map[T, Seq[T]]
 
   /** adjacency list of the graph */
-  private lazy val edgesSet        : Map[T, Set[T]] = edges map { case (a, b) => (a, b.toSet) }
+  private lazy val edgesSet: Map[T, Set[T]] = edges map { case (a, b) => (a, b.toSet) }
 
   lazy val reversedEdgesSet: Map[T, Set[T]] = vertices map { v => v -> (vertices filter { v2 => edgesSet(v2) contains v } toSet) } toMap
 
@@ -44,7 +44,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
 
   def sources: Seq[T]
 
-  def getVerticesInDistance(v: T, distance: Int): Seq[T]
+  def getVerticesInDistance(v: T, distance: Int): Set[T]
 
   /** computes for each node, which other nodes can be reached from it using the edges of the graph */
   def reachable: Map[T, Set[T]]
@@ -90,7 +90,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
     dotStringBuilder.toString
   }
 
-  protected def dotVertexStyleRenderer(v : T) : String = ""
+  protected def dotVertexStyleRenderer(v: T): String = ""
 }
 
 case class DirectedGraphDotOptions(labelNodesWithNumbers: Boolean = false)
@@ -183,7 +183,18 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
   lazy val sources: Seq[T] = (degrees collect { case (node, (in, _)) if in == 0 => node }).toSeq
 
 
-  def getVerticesInDistance(v: T, distance: Int): Seq[T] = if (distance == 0) v :: Nil else edges(v) flatMap { getVerticesInDistance(_, distance - 1) }
+  private val memoisedVerticesInDistance = new mutable.HashMap[(T, Int), Set[T]]()
+
+  def getVerticesInDistance(v: T, distance: Int): Set[T] = if (distance == 0) Set(v)
+  else {
+    if (memoisedVerticesInDistance contains(v, distance)) memoisedVerticesInDistance((v, distance))
+    else {
+      val inDistance = edges(v) flatMap { getVerticesInDistance(_, distance - 1) } toSet
+
+      memoisedVerticesInDistance((v, distance)) = inDistance
+      inDistance
+    }
+  }
 
   /** computes for each node, which other nodes can be reached from it using the edges of the graph */
   // TODO: this computation might be inefficient
@@ -333,7 +344,7 @@ case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, S
 
   override lazy val getComponentOf: Map[T, Set[T]] = internalGraph.getComponentOf map { case (n, comp) => verticesToInt.back(n) -> comp.map(verticesToInt.back) }
 
-  override def getVerticesInDistance(v: T, distance: Int): Seq[T] = internalGraph.getVerticesInDistance(verticesToInt(v), distance) map verticesToInt.back
+  override def getVerticesInDistance(v: T, distance: Int): Set[T] = internalGraph.getVerticesInDistance(verticesToInt(v), distance) map verticesToInt.back
 
   /** list of all edges as a list of pairs */
   override lazy val edgeList: Seq[(T, T)] = internalGraph.edgeList map { case (a, b) => (verticesToInt.back(a), verticesToInt.back(b)) }
