@@ -195,8 +195,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     domain.tasks = (domainTasks.fromMap.toSeq.sortBy({ _._1 }) map { case (_, t) => domainTasksObjects(t) }).toArray
 
     domain.decompositionMethods = (symbolicDomain.decompositionMethods map {
-      case SimpleDecompositionMethod(task, subplan,_) => EfficientDecompositionMethod(domainTasks(task), computeEfficientPlan(subplan, domain, task.parameters))
-      case SHOPDecompositionMethod(_, _, _,_)         => noSupport(NONSIMPLEMETHOD)
+      case SimpleDecompositionMethod(task, subplan, _) => EfficientDecompositionMethod(domainTasks(task), computeEfficientPlan(subplan, domain, task.parameters))
+      case SHOPDecompositionMethod(_, _, _, _)         => noSupport(NONSIMPLEMETHOD)
     }).toArray
 
     domain
@@ -437,13 +437,18 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
           val modifications = searchNode.plan.flaws.zipWithIndex map { case (flaw, idx) =>
             val otherFlawIndex = efficientSearchNode.plan.flaws indexWhere { efficientFlaw => FlawEquivalenceChecker(efficientFlaw, flaw, this) }
 
-            if (!(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length)) {
+            val efficientDeadModifications = efficientSearchNode.modifications(otherFlawIndex) map { efficientSearchNode.plan.modify } filterNot { _.variableConstraints
+              .potentiallyConsistent
+            } size
+
+            if (!(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length - efficientDeadModifications)) {
               val symbolicMods = flaw.resolvents(symbolicDomain)
               val efficientMods = efficientSearchNode.modifications(otherFlawIndex)
-              println(flaw.resolvents(symbolicDomain).length + " == " + efficientSearchNode.modifications(otherFlawIndex).length)
+
+              println(flaw.resolvents(symbolicDomain).length + " == " + efficientSearchNode.modifications(otherFlawIndex).length  + " - " +  efficientDeadModifications)
             }
 
-            assert(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length)
+            assert(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length - efficientDeadModifications)
             (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
           }
           assert(searchNode.plan.flaws.size == efficientSearchNode.modifications.length)

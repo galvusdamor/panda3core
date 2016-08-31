@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.plan.element
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangePlanSteps, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, DomainUpdatable, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
@@ -59,7 +59,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
   private def substitute(literal: Literal): Literal = schema.substitute(literal, arguments)
 
   override def update(domainUpdate: DomainUpdate): PlanStep = domainUpdate match {
-    case ExchangePlanStep(oldps, newps) => if (oldps == this) newps else this
+    case ExchangePlanSteps(exchangeMap) => if (exchangeMap contains this) exchangeMap(this) else this
     case _                              => PlanStep(id, schema.update(domainUpdate), arguments map { _.update(domainUpdate) })
   }
 
@@ -124,10 +124,10 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
   }
 
   /** returns a string by which this object may be referenced */
-  override def shortInfo: String = task.name
+  override def shortInfo: String = task.name + (arguments map { _.name }).mkString("(", ",", ")")
 
   /** returns a string that can be utilized to define the object */
-  override def mediumInfo: String = shortInfo + (arguments map { _.name }).mkString("(", ",", ")")
+  override def mediumInfo: String = shortInfo
 
   /** returns a detailed information about the object */
   override def longInfo: String = mediumInfo

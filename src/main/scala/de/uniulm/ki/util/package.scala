@@ -2,6 +2,8 @@ package de.uniulm.ki
 
 import java.io.{PrintWriter, File}
 
+import scala.collection.mutable
+
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
@@ -32,5 +34,23 @@ package object util {
       i += 1
     }
     found
+  }
+
+  def allSubsets[A](seq: Seq[A]): Seq[Seq[A]] = seq.toSet.subsets() map { _.toSeq } toSeq
+
+  def memoise[Input, Output](function: Input => Output): Input => Output = {
+
+    val memoisationMap = new mutable.HashMap[Input, Output]()
+
+    def apply(input: Input): Output = {
+      if (memoisationMap contains input){ memoisationMap(input)}
+      else {
+        val newValue = function(input)
+        memoisationMap(input) = newValue
+        newValue
+      }
+    }
+
+    apply
   }
 }

@@ -100,7 +100,7 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
   lazy val methodCanSupportLiteral: Array[BitSet] = {
     decompositionMethods map { method =>
       val containedTasks = method.subPlan.planStepTasks.drop(2)
-      val reachableTasks = containedTasks flatMap taskSchemaTransitionGraph.reachable
+      val reachableTasks = containedTasks flatMap taskSchemaTransitionGraph.reachableFrom
 
       val literals = (containedTasks ++ reachableTasks) flatMap { task => tasks(task).effect map { case EfficientLiteral(pred, isPositive, _) => 2 * pred + (if (isPositive) 0 else 1) } }
       BitSet(literals: _*)

@@ -1,8 +1,8 @@
 package de.uniulm.ki.panda3.symbolic.compiler
 
 import de.uniulm.ki.panda3.symbolic.csp.Equal
-import de.uniulm.ki.panda3.symbolic.domain.updates.{AddVariableConstraints, AddVariables, ExchangePlanStep}
-import de.uniulm.ki.panda3.symbolic.domain.{GeneralTask, Domain, Task}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{AddVariableConstraints, AddVariables, ExchangePlanSteps}
+import de.uniulm.ki.panda3.symbolic.domain.{SHOPDecompositionMethod, GeneralTask, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
@@ -38,7 +38,9 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
     val variablesForConstants: Map[Constant, Variable] = existingVariablesForConstants ++ (newVariableConstraints map { case Equal(v, c) => c.asInstanceOf[Constant] -> v })
 
     // find predicates which never occur negatively in the domain at all ... we don't need to apply the CWA to them
-    val occurringNegativePredicates = (domain.tasks ++ domain.hiddenTasks) flatMap { _.precondition.containedPredicatesWithSign }
+    val occurringNegativePredicates = ((domain.tasks ++ domain.hiddenTasks) flatMap { _.precondition.containedPredicatesWithSign }) ++ (domain.decompositionMethods collect {
+      case SHOPDecompositionMethod(_, _, precondition, _) => precondition.containedPredicatesWithSign
+    } flatten)
     val nonOccurringNegativePredicates = domain.predicates map { p => (p, false) } filterNot occurringNegativePredicates.contains map { _._1 }
 
     // create the new initial plan step
@@ -58,9 +60,7 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
 
     //allLiterals filterNot { groundedLiteral => oldInit.substitutedEffects exists { initEffect => (groundedLiteral =?= initEffect) (newCSP) } }
 
-
     val newEffects = notPresentLiterals map { _.negate }
-
 
     val newInitSchema: GeneralTask = GeneralTask(oldInit.schema.name, isPrimitive = true, oldInit.schema.parameters ++ newVariables,
                                                  oldInit.schema.parameters ++ newVariables,
@@ -68,6 +68,6 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
                                                  And[Formula](newEffects :+ oldInit.schema.effect))
     val newInit: PlanStep = PlanStep(oldInit.id, newInitSchema, oldInit.arguments ++ newVariables)
 
-    (domain, plan.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints)).update(ExchangePlanStep(oldInit, newInit)))
+    (domain, plan.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints)).update(ExchangePlanSteps(oldInit, newInit)))
   }
 }

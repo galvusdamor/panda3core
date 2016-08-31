@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
@@ -28,7 +29,9 @@ object SolutionInternalString extends ResultType {type ResultType = Option[Strin
 
 object SolutionDotString extends ResultType {type ResultType = Option[String]}
 
-object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain,Plan)}
+object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain, Plan)}
+
+object FinalTaskDecompositionGraph extends ResultType {type ResultType = TaskDecompositionGraph}
 
 
 object Timings {
@@ -44,6 +47,8 @@ object Timings {
 
   val PREPROCESSING                   = "02 preprocessing:00:total"
   val COMPILE_NEGATIVE_PRECONFITIONS  = "02 preprocessing:01:compile negative preconditions"
+  val COMPILE_UNIT_METHODS            = "02 preprocessing:02:compile unit methods"
+  val COMPILE_ORDER_IN_METHODS        = "02 preprocessing:03:compile order in methods"
   val LIFTED_REACHABILITY_ANALYSIS    = "02 preprocessing:11:lifted reachabiltiy analysis"
   val GROUNDED_REACHABILITY_ANALYSIS  = "02 preprocessing:12:grounded reachabiltiy analysis"
   val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:13:grounded planning graph analysis"
@@ -69,6 +74,13 @@ object Information {
   val NUMBER_OF_NODES           = "10 search nodes:00:total"
   val NUMBER_OF_EXPANDED_NODES  = "10 search nodes:01:expanded"
   val NUMBER_OF_DISCARDED_NODES = "10 search nodes:02:discarded nodes"
+
+  val NUMBER_OF_CONSTANTS         = "30 problem:01:number of constants"
+  val NUMBER_OF_PREDICATES        = "30 problem:02:number of predicates"
+  val NUMBER_OF_ACTIONS           = "30 problem:03:number of actions"
+  val NUMBER_OF_ABSTRACT_ACTIONS  = "30 problem:04:number of abstract actions"
+  val NUMBER_OF_PRIMITIVE_ACTIONS = "30 problem:05:number of primitive actions"
+  val NUMBER_OF_METHODS           = "30 problem:06:number of methods"
 
   val PLAN_SIZE = "20 search plans:01:number of plansteps"
 }

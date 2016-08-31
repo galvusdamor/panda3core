@@ -25,7 +25,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: Boolean, addDepth: Boolean, invertCosts : Boolean = false) extends EfficientSearchAlgorithm {
+case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: Boolean, addDepth: Boolean, invertCosts: Boolean = false) extends EfficientSearchAlgorithm {
 
   override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
                            buildTree: Boolean, informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
@@ -101,6 +101,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
         if (flaws.length == 0) {
           result = Some(plan)
           myNode.setNotDirty()
+          println("Found solution at depth " + depth + " with " + (plan.numberOfPlanSteps - 2) + " actions and heuristic " + myNode.heuristic)
         } else {
           if (buildTree) myNode.modifications = new Array[Array[EfficientModification]](flaws.length)
           var flawnum = 0

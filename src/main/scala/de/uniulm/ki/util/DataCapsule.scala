@@ -20,7 +20,7 @@ trait DataCapsule extends PrettyPrintable {
       val reducedNames = reducedNamesWithPrefix.sortBy({ _._1 }) map { case (info, value) => info.substring(3) -> value }
       val maxLen = reducedNames.map { _._1.length } max
 
-      val castedIfPossibleMap: Map[String, Any] = reducedNames map { case (a, b: Double) => if (b.round == b) (a, b.toLong) else (a, b); case x => x } toMap
+      val castedIfPossibleMap: Seq[(String, Any)] = reducedNames map { case (a, b: Double) => if (b.round == b) (a, b.toLong) else (a, b); case x => x }
 
       castedIfPossibleMap foreach {
         case (info, value: Double) => builder append String.format("%-" + maxLen + "s = %f\n", info.asInstanceOf[Object], value.asInstanceOf[Object])

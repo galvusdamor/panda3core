@@ -7,7 +7,7 @@ import scala.collection.mutable
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraph[T] {
+trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
   val andVertices: Set[A]
   val orVertices : Set[O]
 
@@ -35,7 +35,7 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraph[T] {
   }
 
 
-  def minSumTraversal(root: A, evaluate: (A => Double)): Double = {
+  def minSumTraversal(root: A, evaluate: (A => Double), sumInitialValue : Int): Double = {
     val seen: scala.collection.mutable.Map[A, Double] = mutable.HashMap[A, Double]()
 
     def mini(root: A, evaluate: (A => Double)): Double = if (!andEdges.contains(root) || andEdges(root).isEmpty) evaluate(root)
@@ -44,18 +44,24 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraph[T] {
       seen.put(root, Double.MaxValue) // side effect
       val it = andEdges(root).iterator
       var value = Double.MaxValue
-      while (it.hasNext) value = Math.min(value, 1 + sum(it.next(), evaluate))
+      while (it.hasNext) value = Math.min(value, sum(it.next(), evaluate))
       seen.put(root, value) // side effect
       value
     }
 
     def sum(root: O, evaluate: (A => Double)): Double = {
       val it = orEdges(root).iterator
-      var value = 0.0
+      var value = sumInitialValue.toDouble
       while (it.hasNext) value += mini(it.next(), evaluate)
       value
     }
     mini(root, evaluate)
+  }
+
+
+  override protected def dotVertexStyleRenderer(v: T): String = v match {
+    case a : A if andEdges.contains(a) =>  ",shape = box, style = filled, fillcolor = red"
+    case o : O if orEdges.contains(o) => ""
   }
 
   override def reachableFrom(node: T): Set[T] = super.reachableFrom(node)
