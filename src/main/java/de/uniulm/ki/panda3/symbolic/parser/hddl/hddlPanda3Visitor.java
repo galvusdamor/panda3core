@@ -175,6 +175,7 @@ public class hddlPanda3Visitor {
                     Variable v = schema.parameters().apply(parameter);
                     Variable newVar = new Variable(parameter, psName + v.name(), v.sort());
                     psVars.add(newVar);
+                    variables.add(newVar);
                     // the constraints will be added by the plan
                 }
 
