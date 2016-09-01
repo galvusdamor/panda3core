@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 import java.io.FileInputStream
 
 import de.uniulm.ki.panda3.efficient.csp.EfficientUnionFind
-import de.uniulm.ki.panda3.symbolic.compiler.{ExpandSortHierarchy, RemoveNegativePreconditions, ToPlainFormulaRepresentation, ClosedWorldAssumption}
+import de.uniulm.ki.panda3.symbolic.compiler.{ClosedWorldAssumption, ExpandSortHierarchy, RemoveNegativePreconditions, ToPlainFormulaRepresentation}
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, GroundLiteral}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 
