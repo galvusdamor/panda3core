@@ -121,15 +121,18 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
   override      val additionalTaskNeededToGround   : Seq[GroundTask]                  = taskDecompositionGraph._2 :+ initialPlan.groundedGoalTask
   override      val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod] = taskDecompositionGraph._3
 
-  reachableGroundPrimitiveActions foreach { gt =>
+  println("TDG T " + reachableGroundedTasks.length)
+  println("TDG M " + reachableGroundMethods.length)
+
+  /*reachableGroundPrimitiveActions foreach { gt =>
     gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
     gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable precondition " + e.longInfo) }
   }
   reachableGroundAbstractActions foreach { gt =>
     gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
     gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable precondition " + e.longInfo) }
-  }
-  override val dotString: String = dotString(DirectedGraphDotOptions())
+  }*/
+  override lazy val dotString: String = dotString(DirectedGraphDotOptions())
 
   /** The DOT representation of the object with options */
   override def dotString(options: DirectedGraphDotOptions): String = taskDecompositionGraph._1.dotString(options)

@@ -21,7 +21,7 @@ import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.{efficient, symbolic}
-import de.uniulm.ki.util.{Dot2PdfCompiler, InformationCapsule, TimeCapsule}
+import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)

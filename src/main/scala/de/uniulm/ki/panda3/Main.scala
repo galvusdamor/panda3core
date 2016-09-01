@@ -5,6 +5,7 @@ import java.io.{File, FileInputStream}
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.efficient.heuristic.AlwaysZeroHeuristic
 import de.uniulm.ki.panda3.efficient.search.HeuristicSearch
+import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util._
 
@@ -17,7 +18,7 @@ import de.uniulm.ki.util._
 object Main {
   def main(args: Array[String]) {
 
-    /*println("This is Panda3")
+    println("This is Panda3")
 
     if (args.length != 3) {
       println("This programm needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the name of the output file. If the file extension is .dot a dot file will be" +
@@ -26,7 +27,7 @@ object Main {
     }
     val domFile = args(0)
     val probFile = args(1)
-    val outputPDF = args(2)*/
+    val outputPDF = args(2)
 
     //val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
@@ -36,7 +37,7 @@ object Main {
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val outputPDF = "/home/dhoeller/Schreibtisch/test.pdf"
-    val outputPDF = "/home/gregor/test.pdf"
+    //val outputPDF = "/home/gregor/test.pdf"
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
@@ -99,7 +100,7 @@ object Main {
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp"
 
-    val domFile = "domain.lisp"
+    //val domFile = "domain.lisp"
     //val probFile = "problems/p-0001-clear-road-wreck.lisp" // SOL 185
     //val probFile = "problems/p-0002-plow-road.lisp"    // SOL 74
     //val probFile = "problems/p-0003-set-up-shelter.lisp"   // SOL 46752
@@ -162,7 +163,7 @@ object Main {
     //val probFile = "problems/p-0059-clear-road-hazard.lisp"   // SOL 608
     //val probFile = "problems/p-0060-clear-road-wreck.lisp"   // SOL 135
     //val probFile = "problems/p-0061-plow-road.lisp"   // SOL 50
-    val probFile = "problems/p-0062-clear-road-hazard.lisp"   // SOL 50
+    //val probFile = "problems/p-0062-clear-road-hazard.lisp"   // SOL 50
 
     //val probFile = "p-0002-plow-road.lisp"
     //val probFile = "p-0003-set-up-shelter.lisp"
@@ -173,6 +174,10 @@ object Main {
 
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/domain/domain.hpddl"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/problems/pfile_03.pddl"
+
+    //val domFile =
+    //val probFile = "/home/gregor/p-0002-plow-road.lisp"
+    //val probFile = "p-0002-plow-road.lisp"
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
@@ -185,11 +190,11 @@ object Main {
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = false,
                                                                         liftedReachability = true, groundedReachability = doit, planningGraph = false,
                                                                         groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
-                                                                        iterateReachabilityAnalysis = true, groundDomain = true),
+                                                                        iterateReachabilityAnalysis = true, groundDomain = false),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
-                                             SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
+                                             //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumAction), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
+                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
                                              //SearchConfiguration(None, None, efficientSearch = false, BFSType, None, printSearchInfo = true),
@@ -212,8 +217,28 @@ object Main {
     println(results(ProcessingTimings).shortInfo)
 
 
-    println("Longest Path " + results(PreprocessedDomainAndPlan)._1.taskSchemaTransitionGraph.longestPathLength.get)
-    println("Maximum Method size " + results(PreprocessedDomainAndPlan)._1.maximumMethodSize)
+    println("SOLUTION SEQUENCE")
+    val plan = results(SearchResult).get
+
+    def psToString(ps: PlanStep): String = {
+      val name = ps.schema.name
+      val args = ps.arguments map plan.variableConstraints.getRepresentative map { _.shortInfo }
+
+      name + args.mkString("(", ",", ")")
+    }
+
+    println(plan.orderingConstraints.graph.topologicalOrdering.get map psToString mkString "\n")
+
+    println("FIRST DECOMPOSITION")
+    val initSchema = results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.head.schema
+    val initPS = plan.planStepsAndRemovedPlanSteps find { _.schema == initSchema } get
+    val realGoalSchema = plan.planStepDecomposedByMethod(initPS).subPlan.planStepsWithoutInitGoal.head.schema
+    val realGoal = plan.planStepsAndRemovedPlanSteps find { _.schema == realGoalSchema } get
+
+    println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
+
+    //println("Longest Path " + results(PreprocessedDomainAndPlan)._1.taskSchemaTransitionGraph.longestPathLength.get)
+    //println("Maximum Method size " + results(PreprocessedDomainAndPlan)._1.maximumMethodSize)
 
 
     if (results(SearchStatus) == SearchState.SOLUTION) {
@@ -232,7 +257,7 @@ object Main {
       searchNode.plan
       searchNode.plan.flaws
 
-      searchNode.plan.flaws map {_.resolvents(results(PreprocessedDomainAndPlan)._1)}
+      searchNode.plan.flaws map { _.resolvents(results(PreprocessedDomainAndPlan)._1) }
       searchNode.modifications
 
       doneCounter += 1
