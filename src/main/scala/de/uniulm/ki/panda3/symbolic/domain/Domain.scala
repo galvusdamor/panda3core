@@ -42,6 +42,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
   lazy val constants                : Seq[Constant]             = (sorts flatMap { _.elements }).distinct
   lazy val sortGraph                : DirectedGraph[Sort]       = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
+  lazy val taskSet                  : Set[Task]                 = tasks.toSet
 
   // producer and consumer
   lazy val producersOf      : Map[Predicate, Seq[ReducedTask]]                     = producersOfPosNeg map { case (a, (b, c)) => a -> (b ++ c).toSeq }
@@ -74,7 +75,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
   lazy val allGroundedAbstractTasks : Seq[GroundTask] = abstractTasks flatMap { _.instantiateGround }
 
-  lazy val methodsForAbstractTasks : Map[Task, Seq[DecompositionMethod]] = decompositionMethods.groupBy(_.abstractTask)
+  lazy val methodsForAbstractTasks: Map[Task, Seq[DecompositionMethod]] = decompositionMethods.groupBy(_.abstractTask)
 
   lazy val minimumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min
   lazy val maximumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
