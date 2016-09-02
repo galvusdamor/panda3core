@@ -46,12 +46,10 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   // producer and consumer
   lazy val producersOf      : Map[Predicate, Seq[ReducedTask]]                     = producersOfPosNeg map { case (a, (b, c)) => a -> (b ++ c).toSeq }
-  lazy val producersOfPosNeg: Map[Predicate, (Set[ReducedTask], Set[ReducedTask])] = (predicates map { pred =>
-    val reducedTasksWithMatchingEffect = tasks collect { case t: ReducedTask => t } filter { _.effect.conjuncts exists { _.predicate == pred } }
-    val hasPositive = reducedTasksWithMatchingEffect filter { _.effect.conjuncts exists { l => l.predicate == pred && l.isPositive } }
-    val hasNegative = reducedTasksWithMatchingEffect filter { _.effect.conjuncts exists { l => l.predicate == pred && l.isNegative } }
-    (pred, (hasPositive.toSet, hasNegative.toSet))
-  }).toMap
+  lazy val producersOfPosNeg: Map[Predicate, (Set[ReducedTask], Set[ReducedTask])] =
+    (tasks collect { case t: ReducedTask => t } flatMap { t => t.effect.conjuncts map { t -> _ } } groupBy { _._2.predicate } map { case (p, ts) =>
+      p -> (ts partition { _._2.isPositive } match {case (a, b) => (a map { _._1 } toSet, b map { _._1 } toSet)})
+    }).withDefaultValue((Set[ReducedTask](), Set[ReducedTask]()))
 
   lazy val primitiveChangingPredicate: Map[Predicate, (Seq[ReducedTask], Seq[ReducedTask])] = {
     assert(constants.isEmpty, "Domain must be ground")
@@ -75,7 +73,8 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
   lazy val allGroundedAbstractTasks : Seq[GroundTask] = abstractTasks flatMap { _.instantiateGround }
 
-  lazy val methodsForAbstractTasks: Map[Task, Seq[DecompositionMethod]] = decompositionMethods.groupBy(_.abstractTask)
+  lazy val methodsWithIndexForAbstractTasks: Map[Task, Seq[(DecompositionMethod, Int)]] = decompositionMethods.zipWithIndex.groupBy(_._1.abstractTask)
+  lazy val methodsForAbstractTasks         : Map[Task, Seq[DecompositionMethod]]        = methodsWithIndexForAbstractTasks map { case (a, b) => a -> (b map { _._1 }) }
 
   lazy val minimumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min
   lazy val maximumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
