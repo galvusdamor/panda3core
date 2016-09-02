@@ -36,6 +36,7 @@ import java.util.*;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -62,7 +63,7 @@ public class htnPlanningInstance {
     final private boolean writeGroundingForDebug = false;
 
 
-    public void plan(Plan p, HashMap<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals) throws ExecutionException, InterruptedException {
+    public void plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals) throws ExecutionException, InterruptedException {
         long totaltime = System.currentTimeMillis();
         long time = System.currentTimeMillis();
         //
@@ -491,7 +492,7 @@ public class htnPlanningInstance {
                 + " - current heuristic: " + n.solution.size() + " - " + n.metric;
     }
 
-    private HashMap<Task, HashMap<GroundTask, List<method>>> getEfficientMethodRep(HashMap<Task, Set<GroundedDecompositionMethod>> methodsByTask) {
+    private HashMap<Task, HashMap<GroundTask, List<method>>> getEfficientMethodRep(Map<Task, Set<GroundedDecompositionMethod>> methodsByTask) {
         HashMap<Task, HashMap<GroundTask, List<method>>> res = new HashMap<>();
         for (Task t : methodsByTask.keySet()) {
             HashMap<GroundTask, List<method>> oneSchema = new HashMap<>();
