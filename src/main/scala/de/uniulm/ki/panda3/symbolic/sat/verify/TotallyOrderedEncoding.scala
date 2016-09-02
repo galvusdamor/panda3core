@@ -36,20 +36,27 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
 
 
   // returns all clauses needed for the decomposition and all paths to the last layer
-  private def generateDecompositionFormula(layer: Int, path: Seq[Int], possibleTasks: Set[Task]): (Seq[Clause], Set[Seq[Int]]) = {
+  private def generateDecompositionFormula(layer: Int, path: Seq[Int], possibleTasks: Set[Task]): (Seq[Clause], Set[(Seq[Int], Set[Task])]) = {
+    println("GENPATH: L=" + layer + " p=" + path + " |pTasks|=" + possibleTasks.size + " \\Delta=" + domain.maximumMethodSize)
     val possibleTaskOrder = possibleTasks.toSeq
     //val possibleTasksToActions = possibleTasks map { t => t -> action(layer, path, t) } toMap
     val possibleTasksToActions: Array[String] = possibleTaskOrder map { t => action(layer, path, t) } toArray
-    val possibleChildTasks: Array[Map[Task, String]] = Range(0, domain.maximumMethodSize) map { npos => domain.tasks map { t => t -> action(layer + 1, path :+ npos, t) } toMap } toArray
+    val possibleChildTasks: Array[Map[Task, String]] = Range(0, domain.maximumMethodSize) map { npos =>
+      val npath = path :+ npos
+      domain.tasks map { t => t -> action(layer + 1, npath, t) } toMap
+    } toArray
 
     // write myself
     val possibleTasksClauses: Seq[Clause] = atMostOneOf(possibleTasksToActions)
 
     if (layer == K) {
-      val notAnyNonPossibleTask = domain.tasks filterNot possibleTasks map { action(layer, path, _) } map { a => Clause((a, false) :: Nil) }
-      (possibleTasksClauses ++ notAnyNonPossibleTask, Set(path))
+      //val notAnyNonPossibleTask = domain.tasks filterNot possibleTasks map { action(layer, path, _) } map { a => Clause((a, false) :: Nil) }
+      //(possibleTasksClauses ++ notAnyNonPossibleTask, Set((path, possibleTasks)))
+      (possibleTasksClauses, Set((path, possibleTasks)))
     } else {
       val (possibleAbstracts, possiblePrimitives) = possibleTaskOrder.zipWithIndex partition { _._1.isAbstract }
+
+      println("compute children")
 
       // compute per position all possible child tasks
       val possibleTasksPerChildPosition = new Array[mutable.Set[Task]](domain.maximumMethodSize)
@@ -68,6 +75,8 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
         }
       }
 
+      println("done " + (possibleTasksPerChildPosition count { _.nonEmpty }))
+
       //Range(0, domain.maximumMethodSize) foreach { possibleTasksPerChildPosition(_) ++= domain.tasks }
 
 
@@ -82,10 +91,11 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
         //impliesRightAnd(action(layer, path, primitive) :: Nil, action(layer + 1, path :+ 0, primitive) :: Nil) ++ impliesAllNot(action(layer, path, primitive), otherActions)
         impliesRightAnd(possibleTasksToActions(primitiveIndex) :: Nil, possibleChildTasks(0)(primitive) :: Nil) ++ impliesAllNot(possibleTasksToActions(primitiveIndex), otherActions)
       }
+      println("KEEP PRIM: " + keepPrimitives.length)
 
       val decomposeAbstract: Seq[Clause] = possibleAbstracts flatMap { case (abstractTask, abstractIndex) =>
         // select a method
-        val possibleMethods = domain.decompositionMethods.zipWithIndex filter { _._1.abstractTask == abstractTask } map { case (m, idx) => (m, method(layer, path, idx)) }
+        val possibleMethods = domain.methodsWithIndexForAbstractTasks(abstractTask) map { case (m, idx) => (m, method(layer, path, idx)) }
 
         // one method must be applied
         val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, possibleMethods map { _._2 })
@@ -111,6 +121,7 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
 
         methodChildren ++ atMostOneCanBeApplied :+ oneMustBeApplied
       }
+      println("DECOMP: " + decomposeAbstract.length)
 
       // if there is nothing select at the current position we are not allowed to create new tasks
       val noneApplied = {
@@ -118,8 +129,10 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
           possibleTasksPerChildPosition(index) map { task => possibleChildTasks(index)(task) }
         }
 
+        println("NOTIMPLY: |A|=" + possibleTasksToActions.length + " |B|=" + allChildren.length)
         notImpliesAllNot(possibleTasksToActions, allChildren)
       }
+      println("NON APL: " + noneApplied.length)
 
       // run recursive decent to get the formula for the downwards layers
       val subFormulas = possibleTasksPerChildPosition.zipWithIndex filter { _._1.nonEmpty } map { case (childPossibleTasks, index) =>
@@ -127,6 +140,7 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
       }
 
       val recursiveFormula = subFormulas flatMap { _._1 }
+      println("Recursive: " + path + " " + recursiveFormula.length)
       val paths = subFormulas flatMap { _._2 } toSet
 
       (possibleTasksClauses ++ keepPrimitives ++ decomposeAbstract ++ noneApplied ++ recursiveFormula, paths)
@@ -134,28 +148,28 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
   }
 
 
-  private def primitivesApplicable(layer: Int, position: Int): Seq[Clause] = domain.primitiveTasks flatMap {
+  private def primitivesApplicable(layer: Int, position: Int): Seq[Clause] = primitivePaths(position)._2.toSeq filter { _.isPrimitive } flatMap {
     case task: ReducedTask =>
       task.precondition.conjuncts map {
         case Literal(pred, isPositive, _) => // there won't be any parameters
           if (isPositive)
-            impliesSingle(action(layer, primitivePaths(position), task), statePredicate(layer, position, pred))
+            impliesSingle(action(layer, primitivePaths(position)._1, task), statePredicate(layer, position, pred))
           else
-            impliesNot(action(layer, primitivePaths(position), task), statePredicate(layer, position, pred))
+            impliesNot(action(layer, primitivePaths(position)._1, task), statePredicate(layer, position, pred))
       }
     case _                 => noSupport(FORUMLASNOTSUPPORTED)
   }
 
-  private def stateChange(layer: Int, position: Int): Seq[Clause] = domain.primitiveTasks flatMap {
+  private def stateChange(layer: Int, position: Int): Seq[Clause] = primitivePaths(position)._2.toSeq filter { _.isPrimitive } flatMap {
     case task: ReducedTask =>
       task.effect.conjuncts collect {
         // negated effect is also contained, ignore this one if it is negative
         case Literal(pred, isPositive, _) if !((task.effect.conjuncts exists { l => l.predicate == pred && l.isNegative == isPositive }) && !isPositive) =>
           // there won't be any parameters
           if (isPositive)
-            impliesSingle(action(layer, primitivePaths(position), task), statePredicate(layer, position + 1, pred))
+            impliesSingle(action(layer, primitivePaths(position)._1, task), statePredicate(layer, position + 1, pred))
           else
-            impliesNot(action(layer, primitivePaths(position), task), statePredicate(layer, position + 1, pred))
+            impliesNot(action(layer, primitivePaths(position)._1, task), statePredicate(layer, position + 1, pred))
       }
     case _                 => noSupport(FORUMLASNOTSUPPORTED)
   }
@@ -165,9 +179,11 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
     predicate =>
       true :: false :: Nil map {
         makeItPositive =>
-          val changingActions: Seq[Task] = if (makeItPositive) domain.primitiveChangingPredicate(predicate)._1 else domain.primitiveChangingPredicate(predicate)._2
-          val taskLiterals = changingActions map { action(layer, primitivePaths(position), _) } map { (_, true) }
-          Clause(taskLiterals :+(statePredicate(layer, position, predicate), makeItPositive) :+(statePredicate(layer, position + 1, predicate), !makeItPositive))
+          val changingActions: Seq[Task] = (if (makeItPositive) domain.primitiveChangingPredicate(predicate)._1 else domain.primitiveChangingPredicate(predicate)._2) filter
+            primitivePaths(position)._2.contains
+
+          val taskLiterals = changingActions map { action(layer, primitivePaths(position)._1, _) } map { (_, true) }
+          Clause(taskLiterals.+:(statePredicate(layer, position, predicate), makeItPositive).+:(statePredicate(layer, position + 1, predicate), !makeItPositive))
       }
   }
 
@@ -182,11 +198,11 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
     val assertedTasks = initialPlanOrdering.zipWithIndex map { case (task, index) => Clause(action(0, index :: Nil, task.schema)) }
 
     val paths = initialPlanClauses flatMap { _._2 }
-    paths.foreach { p => assert(p.length == paths.head.length) }
+    paths.foreach { p => assert(p._1.length == paths.head._1.length) }
     val dec = initialPlanClauses flatMap { _._1 }
 
     println(dec.length)
-    (dec ++ assertedTasks, initialPlanClauses flatMap { _._2 } sortBy pathSortingFunction)
+    (dec ++ assertedTasks, initialPlanClauses flatMap { _._2 } sortBy { case (p, _) => pathSortingFunction(p) })
   }
 
   override lazy val decompositionFormula: Seq[Clause] = computedDecompositionFormula
@@ -195,7 +211,8 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
     primitivesApplicable(K, position) ++ stateChange(K, position) ++ maintainState(K, position)
   }
 
-  override lazy val noAbstractsFormula: Seq[Clause] = primitivePaths flatMap { position => domain.abstractTasks map { task => Clause((action(K, position, task), false)) } }
+  override lazy val noAbstractsFormula: Seq[Clause] =
+    primitivePaths flatMap { case (position, tasks) => tasks filter { _.isAbstract } map { task => Clause((action(K, position, task), false)) } }
 
   override lazy val goalState: Seq[Clause] =
     initialPlan.goal.substitutedPreconditions map { case Literal(predicate, isPos, _) => Clause((statePredicate(K, primitivePaths.length, predicate), isPos)) }
