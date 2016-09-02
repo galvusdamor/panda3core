@@ -252,7 +252,7 @@ object VerifyEncoding {
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
     val icapsPaperLimit = computeICAPSK(domain, plan, taskSequenceLength)
-    val TSTGPath = computeTSTGK(domain, plan, taskSequenceLength)
+    val TSTGPath = Integer.MAX_VALUE //computeTSTGK(domain, plan, taskSequenceLength)
     val minimumMethodSize = computeMethodSize(domain, plan, taskSequenceLength)
 
     println("LEN " + taskSequenceLength)

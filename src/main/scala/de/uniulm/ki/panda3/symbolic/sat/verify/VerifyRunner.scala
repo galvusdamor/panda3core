@@ -69,7 +69,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     } else Range(0, -configNumber + 1) map { _ => processedDomain.tasks.head }
 
 
-    println(VerifyEncoding.computeTDG(processedDomain, processedInitialPlan, processedTDG, ordering.length))
+    //println(VerifyEncoding.computeTDG(processedDomain, processedInitialPlan, processedTDG, ordering.length))
 
     val parsingAndPreprocessingTime = results(ProcessingTimings).integralDataMap()(Timings.PARSING) + results(ProcessingTimings).integralDataMap()(Timings.PREPROCESSING)
 
@@ -140,7 +140,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // (3)
     println("K " + encoder.K)
     informationCapsule.set(VerifyRunner.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, sequenceToVerify.length))
-    informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify.length))
+    //informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify.length))
     informationCapsule.set(VerifyRunner.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, sequenceToVerify.length))
     informationCapsule.set(VerifyRunner.OFFSET_K, offSetToK)
     informationCapsule.set(VerifyRunner.ACTUAL_K, encoder.K)
