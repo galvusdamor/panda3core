@@ -59,21 +59,21 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
   abstractTask match {
     case ReducedTask(_, _, _, _, _, prec, eff) =>
       // check preconditions
-      prec.conjuncts foreach { case Literal(pred, isPos, _) =>
+      prec.conjuncts foreach { case l@Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
           case ReducedTask(_, _, _, _, _, tPre, _) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
           case _                                   => false
         }
-        assert(canBeInherited)
+        assert(canBeInherited, "Method " + name + "' subplan does not contain a precondition able to inherit " + l.shortInfo)
       }
 
       // check effects
-      eff.conjuncts foreach { case Literal(pred, isPos, _) =>
+      eff.conjuncts foreach { case l@Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
           case ReducedTask(_, _, _, _, _, _, tEff) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
           case _                                   => false
         }
-        assert(canBeInherited)
+        assert(canBeInherited, "Method " + name + "' subplan does not contain a effect able to inherit " + l.shortInfo)
       }
     case _                                     =>
   }
