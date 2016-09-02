@@ -25,10 +25,11 @@
  (:htn
   :tasks (and
    (deliver package-1 city-loc-5)
-   (deliver package-2 city-loc-4)
-   (deliver package-3 city-loc-3)
-   (deliver package-4 city-loc-2)
-   (deliver package-5 city-loc-1))
+   ;(deliver package-2 city-loc-4)
+   ;(deliver package-3 city-loc-3)
+   ;(deliver package-4 city-loc-2)
+   ;(deliver package-5 city-loc-1)
+   )
   :ordering ( )
   :constraints ( ))
  (:init

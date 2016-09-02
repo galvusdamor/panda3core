@@ -119,7 +119,7 @@ public class PANDAtranslator {
             planningInstance = ToPlainFormulaRepresentation.transform(planningInstance);
             planningInstance = (new forallAndExistsPrecCompiler()).transform(planningInstance, null);
 
-            FileHandler.writeHPDDLToFiles(planningInstance, toDomainFile, toProblemFile);
+            FileHandler.writeRonToFiles(planningInstance, toDomainFile, toProblemFile);
             System.out.println("PANDA says: Done.");
         } else if ((readProblem) && (toLang.equals(ourXmlFormat))) {
             planningInstance = ToPlainFormulaRepresentation.transform(planningInstance);

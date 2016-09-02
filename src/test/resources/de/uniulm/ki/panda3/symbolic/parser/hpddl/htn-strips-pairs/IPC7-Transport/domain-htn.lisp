@@ -31,7 +31,7 @@
 
   (:method m-unload
     :parameters (?v - vehicle ?l - location ?p - package ?s1 ?s2 - capacity-number)
-    :task (unload  ?v ?l ?p)
+    :task (unload ?v ?l ?p)
     :subtasks (drop ?v ?l ?p ?s1 ?s2)
   )
 

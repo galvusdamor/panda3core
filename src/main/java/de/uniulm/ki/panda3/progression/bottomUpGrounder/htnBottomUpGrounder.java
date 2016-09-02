@@ -70,7 +70,8 @@ public class htnBottomUpGrounder {
             List<Integer> subTaskOrder = getSubTaskOrder(m.subPlan().planStepsWithoutInitGoal());
             for (int i : subTaskOrder) {
                 PlanStep ps = m.subPlan().planStepsWithoutInitGoal().apply(i);
-                System.out.print(".");
+                //System.out.print(".");
+                System.out.print(" -> " + ps.schema().name());
                 if (firstPS) { // there is no list to combine
                     firstPS = false;
                     partialGroundings = getMappingOfFirstPS(ps, m.subPlan().variableConstraints().constraints(), m);
@@ -314,9 +315,21 @@ public class htnBottomUpGrounder {
         return res;
     }
 
+
     private List<List<Tuple2>> combine(List<List<Tuple2>> currentBindings, PlanStep ps, Seq<VariableConstraint> constraints, DecompositionMethod m) {
         List<List<Tuple2>> res = new ArrayList<>();
         Set<GroundTask> psGroundings = groundingsByTask.get(ps.schema());
+        System.out.print("(" + currentBindings.size() + "*" + psGroundings.size() + ")");
+        Iterator<Variable> scalaVIter = ps.arguments().iterator();
+        Variable[] vars = new Variable[ps.arguments().size()];
+        int i = 0;
+        while (scalaVIter.hasNext()) {
+            vars[i] = scalaVIter.next();
+            i++;
+        }
+
+        int x = 0;
+        int y = 0;
 
         for (List<Tuple2> current : currentBindings) {
 
@@ -324,13 +337,24 @@ public class htnBottomUpGrounder {
             for (GroundTask psGrounding : psGroundings) {
                 List<Tuple2> newCombination = new ArrayList<>();
 
+                Iterator<Constant> cIter = psGrounding.arguments().iterator();
+                int j = 0;
                 parameterLoop:
-                for (int parNo = 0; parNo < psGrounding.arguments().size(); parNo++) {
-                    Variable v = ps.arguments().apply(parNo);
-                    Constant c = psGrounding.arguments().apply(parNo);
-                    if (!v.sort().elements().contains(c)) {
+                while (cIter.hasNext()) {
+                    Variable v = vars[j];
+                    j++;
+                    Constant c = cIter.next();
+
+/*
+                    x++;
+                    if (x % 100000000 == 0)
+                        System.out.print(x + "-" + y + "~");
+
+                    if (!v.sort().elementSet().contains(c)) {
                         continue psGroundingLoop;
                     }
+                    y++;
+*/
                     for (Tuple2 b : current) {
                         if (b._1().equals(v)) {
                             if (!(b._2().equals(c)))
@@ -378,13 +402,14 @@ public class htnBottomUpGrounder {
     private List<List<Tuple2>> getMappingOfFirstPS(PlanStep ps, Seq<VariableConstraint> constraints, DecompositionMethod m) {
         List<List<Tuple2>> partialGroundingPerPS = new ArrayList<>();
         Set<GroundTask> listOfGroundings = groundingsByTask.get(ps.schema());
+        System.out.print("(" + listOfGroundings.size() + ")");
         continueLoop:
         for (GroundTask gt : listOfGroundings) {
             List<Tuple2> partialGrounding = new ArrayList<>();
             for (int j = 0; j < gt.arguments().size(); j++) {
                 Constant c = gt.arguments().apply(j);
                 Variable v = ps.arguments().apply(j);
-                if (v.sort().elements().contains(c)) {
+                if (v.sort().elementSet().contains(c)) {
                     partialGrounding.add(new Tuple2(v, c));
                     partialGrounding.addAll(propagateEquality(constraints, v, c));
                 } else continue continueLoop;
@@ -486,7 +511,7 @@ public class htnBottomUpGrounder {
 
                     // test if there is some variable that contains no constant
                     for (Variable v : unsetVars) {
-                        if (v.sort().elements().size() == 0) {
+                        if (v.sort().elementSet().size() == 0) {
                             continue mappingLoop;
                         }
                     }
@@ -518,7 +543,7 @@ public class htnBottomUpGrounder {
         }
         List<List<Tuple2>> all = new ArrayList<>();
         for (List<Tuple2> varConstMapping : partialGroundings) {
-            scala.collection.Iterator<Constant> iter = v.sort().elements().iterator();
+            scala.collection.Iterator<Constant> iter = v.sort().elementSet().iterator();
             while (iter.hasNext()) {
                 Constant c = iter.next();
                 List<Tuple2> newMapping = new ArrayList<>();

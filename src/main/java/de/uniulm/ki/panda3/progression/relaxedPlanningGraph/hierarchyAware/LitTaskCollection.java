@@ -35,10 +35,11 @@ public class LitTaskCollection<T> {
             Constant c = grounding.get(vars.next());
             if ((!found) || (!map.containsKey(c))) {
                 found = false;
+                HashMap<Constant, Object> oldMap = map;
                 map = new HashMap<Constant, Object>();
-                map.put(c, map);
+                oldMap.put(c, map);
             } else {
-                map = (HashMap<Constant, Object>) this.reachableTaskParamLists.get(c);
+                map = (HashMap<Constant, Object>) map.get(c);
             }
         }
         if (!found)

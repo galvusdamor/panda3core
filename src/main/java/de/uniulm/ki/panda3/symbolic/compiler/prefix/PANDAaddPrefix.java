@@ -21,7 +21,8 @@ public class PANDAaddPrefix {
 
     public static final String XML = "xml";
     public static final String RON = "ron";
-    private static String outFormat = XML;
+    public static final String HDDL = "hddl";
+    private static String outFormat = HDDL;
 
     public static void main(String[] args) {
         System.out.println("[START]\tRepair-Transformation");
@@ -66,7 +67,9 @@ public class PANDAaddPrefix {
             if (PANDAaddPrefix.outFormat.equals(XML))
                 FileHandler.writeXMLToFiles(domPlan, domain_targetPath, problem_targetPath);
             else if (PANDAaddPrefix.outFormat.equals(RON))
-                FileHandler.writeHPDDLToFiles(domPlan, domain_targetPath, problem_targetPath);
+                FileHandler.writeRonToFiles(domPlan, domain_targetPath, problem_targetPath);
+            else if (PANDAaddPrefix.outFormat.equals(HDDL))
+                FileHandler.writeHDDLToFiles(domPlan, domain_targetPath, problem_targetPath);
         } catch (addPrefixException error) {
             System.out.println("[ABORT]\tRepairing plan failed due to PlanRepairException: " + error.getMessage());
             error.printStackTrace();

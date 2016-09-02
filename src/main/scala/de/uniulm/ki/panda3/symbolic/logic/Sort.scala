@@ -13,6 +13,8 @@ import de.uniulm.ki.util.HashMemo
 //scalastyle:off covariant.equals
 case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo {
 
+  lazy val elementSet : Set[Constant] = elements toSet
+
   override def update(domainUpdate: DomainUpdate): Sort = (domainUpdate match {
     case ExchangeSorts(map) => if (map.contains(this)) map(this) else this
     case _                  => this

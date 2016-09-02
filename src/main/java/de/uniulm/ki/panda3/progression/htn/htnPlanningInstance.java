@@ -14,16 +14,29 @@ import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.symbolicRPG;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TopDownTaskDecompositionGraph;
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.DebuggingMode;
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.GroundedForwardSearchReachabilityAnalysis;
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.GroundedPlanningGraph;
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.GroundedPlanningGraphConfiguration;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
+import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
+import de.uniulm.ki.panda3.util.JavaToScala;
 import scala.Tuple2;
-import scala.collection.Seq;
+import scala.collection.*;
+import scala.collection.Iterator;
+import scala.collection.concurrent.Debug;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+import java.util.BitSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 /**
@@ -45,32 +58,58 @@ import java.util.concurrent.ExecutionException;
 public class htnPlanningInstance {
 
     final boolean verbose = false;
+    final boolean foo = true;
     final private boolean writeGroundingForDebug = false;
 
-    public void plan(Domain d, Plan p) throws ExecutionException, InterruptedException {
-        long totaltime = System.currentTimeMillis();
 
+    public void plan(Plan p, HashMap<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals) throws ExecutionException, InterruptedException {
+        long totaltime = System.currentTimeMillis();
+        long time = System.currentTimeMillis();
         //
         // Get reachable groundings
         //
-        long time = System.currentTimeMillis();
-        Set<GroundLiteral> allLiterals;
+/*        Set<GroundLiteral> allLiterals;
         Set<GroundTask> allActions;
-        htnBottomUpGrounder gr = null;
-        boolean converged = false;
-        IRPG rpg = null;
-        while (!converged) {
-            System.out.println("Building relaxed planning graph");
-            long time2 = System.currentTimeMillis();
-            //rpg = new symbolicRPG();
-            rpg = new hierarchyAwareRPG();
-            if (gr == null)
-                rpg.build(d, p);
-            else
-                rpg.build(d, p, gr.groundingsByTask);
-            System.out.println(" (" + (System.currentTimeMillis() - time2) + " ms).");
 
+        if (foo) {
+            GroundedPlanningGraphConfiguration pgConf = new GroundedPlanningGraphConfiguration(false, false,
+                    new scala.collection.immutable.HashSet<>(), new scala.collection.immutable.HashSet<>(),
+                    true, DebuggingMode.Disabled());
+            GroundedForwardSearchReachabilityAnalysis pg = GroundedForwardSearchReachabilityAnalysis.apply(d,p);
+                    //new GroundedPlanningGraph(d, p.groundedInitialStateOnlyPositiveSet(), pgConf);
+            System.out.println("ParteiGenosse");
+            TopDownTaskDecompositionGraph tdg = new TopDownTaskDecompositionGraph(d, p, pg, true);
+            System.out.println("TDG");
+            scala.collection.immutable.Map<Task, scala.collection.immutable.Set<GroundedDecompositionMethod>> groundFoo =
+                    tdg.reachableGroundMethodsByGroundAbstractTask();
 
+            HashMap<Task, Set<GroundedDecompositionMethod>> groundMap = new HashMap<>();
+
+            Iterator<Tuple2<Task, scala.collection.immutable.Set<GroundedDecompositionMethod>>> iter1 = groundFoo.iterator();
+            while (iter1.hasNext()) {
+                Tuple2<Task, scala.collection.immutable.Set<GroundedDecompositionMethod>> tup = iter1.next();
+                groundMap.put(tup._1(), JavaConversions.setAsJavaSet(tup._2()));
+            }
+            Iterator<GroundLiteral> iter2 = tdg.reachableGroundLiterals().iterator();
+            allLiterals = new HashSet<>();
+            while (iter2.hasNext()) {
+                allLiterals.add(iter2.next());
+            }
+
+            Iterator<GroundTask> iter3 = tdg.reachableGroundPrimitiveActions().iterator();
+            allActions = new HashSet<>();
+            while (iter3.hasNext()) {
+                allActions.add(iter3.next());
+            }
+
+            ToCompactRepresentation(allLiterals, allActions);
+            operators.methods = getEfficientMethodRep(groundMap);
+
+        } else {
+
+            htnBottomUpGrounder gr = null;
+            boolean converged = false;
+            IRPG rpg = null;
             try {
                 System.out.println("<PRESS KEY>");
                 System.in.read();
@@ -78,44 +117,52 @@ public class htnPlanningInstance {
                 e.printStackTrace();
             }
 
-            System.out.println(" - Graph contains " + rpg.getApplicableActions().size() + " ground actions.");
-            System.out.println(" - Graph contains " + rpg.numOfReachableFacts() + " environment facts.");
+            while (!converged) {
+                System.out.println("Building relaxed planning graph");
+                long time2 = System.currentTimeMillis();
+                rpg = new symbolicRPG();
+                //rpg = new hierarchyAwareRPG();
+                if (gr == null)
+                    rpg.build(d, p);
+                else
+                    rpg.build(d, p, gr.groundingsByTask);
+                System.out.println(" (" + (System.currentTimeMillis() - time2) + " ms).");
 
-            gr = new htnBottomUpGrounder(d, p, rpg.getApplicableActions());
-            converged = !gr.deletedActions;
-            if (gr.deletedActions) {
-                System.out.println("Restart grounding ...");
+                System.out.println(" - Graph contains " + rpg.getApplicableActions().size() + " ground actions.");
+                System.out.println(" - Graph contains " + rpg.numOfReachableFacts() + " environment facts.");
+
+                gr = new htnBottomUpGrounder(d, p, rpg.getApplicableActions());
+                converged = !gr.deletedActions;
+                if (gr.deletedActions) {
+                    System.out.println("Restart grounding ...");
+                }
             }
-        }
 
-        if (writeGroundingForDebug) {
-            writeGroundingToFile(gr, rpg);
-        }
+        //if (writeGroundingForDebug) {
+       //     writeGroundingToFile(gr, rpg);
+        //}
 
-        allLiterals = rpg.getReachableFacts();
-        allActions = rpg.getApplicableActions();
+            allLiterals = rpg.getReachableFacts();
+            allActions = rpg.getApplicableActions();
+            operators.numStateFeatures = allLiterals.size();
+            operators.numActions = allActions.size();
+
+            System.out.println("Grounding completed in " + (System.currentTimeMillis() - time) + " ms.");
+            time = System.currentTimeMillis();
+
+            System.out.println(" - Found " + gr.abstTaskCount + " reachable ground abstract tasks.");
+            System.out.println(" - Found " + gr.methodCount + " reachable ground methods.");
+            System.out.println(" - Found " + operators.numActions + " reachable ground actions.");
+            System.out.println(" - Found " + operators.numStateFeatures + " reachable environment facts.");
+            System.out.println("\nPreprocessing planning instance");
+            ToCompactRepresentation(allLiterals, allActions);
+            operators.methods = getEfficientMethodRep(gr.methodsByTask);
+        }*/
+        // translate to efficient representation
         operators.numStateFeatures = allLiterals.size();
         operators.numActions = allActions.size();
-
-        System.out.println("Grounding completed in " + (System.currentTimeMillis() - time) + " ms.");
-        time = System.currentTimeMillis();
-
-        System.out.println(" - Found " + gr.abstTaskCount + " reachable ground abstract tasks.");
-        System.out.println(" - Found " + gr.methodCount + " reachable ground methods.");
-        System.out.println(" - Found " + operators.numActions + " reachable ground actions.");
-        System.out.println(" - Found " + operators.numStateFeatures + " reachable environment facts.");
-        System.out.println("\nPreprocessing planning instance");
-
-        /*
-        for(Task t23 : gr.groundingsByTask.keySet()){
-            for(GroundTask gt23432 : gr.groundingsByTask.get(t23)){
-                System.out.println(gt23432.longInfo());
-            }
-        }*/
-
-        // translate to efficient representation
         ToCompactRepresentation(allLiterals, allActions);
-        operators.methods = getEfficientMethodRep(gr.methodsByTask);
+        operators.methods = getEfficientMethodRep(methodsByTask);
         operators.finalizeMethods();
 
         Tuple2<BitSet, int[]> s0 = getBitVector(p.groundedInitialState());
@@ -139,7 +186,7 @@ public class htnPlanningInstance {
         Set<GroundTask> initialGroundings = groundingUtil.getFullyGroundTN(p);
         assert (initialGroundings.size() == p.planStepsWithoutInitGoal().size());
 
-        Iterator<GroundTask> iter = initialGroundings.iterator();
+        java.util.Iterator<GroundTask> iter = initialGroundings.iterator();
         List<proPlanStep> initialTasks = new LinkedList<>();
         while (iter.hasNext()) {
             GroundTask n = iter.next();
@@ -148,6 +195,11 @@ public class htnPlanningInstance {
                 ps.action = operators.ActionToIndex.get(ps.getTask());
             } else {
                 ps.methods = operators.methods.get(ps.getTask().task()).get(ps.getTask());
+                if (ps.methods == null) {
+                    System.out.println("No method for initial task " + ps.getTask().longInfo());
+                    System.out.println("Problem unsolvable.");
+                    return;
+                }
             }
             initialTasks.add(ps);
         }
@@ -542,7 +594,7 @@ public class htnPlanningInstance {
         operators.LiteralToIndex = new HashMap<>();
         operators.IndexToLiteral = new GroundLiteral[operators.numStateFeatures];
 
-        Iterator<GroundLiteral> litIter = allLiterals.iterator();
+        java.util.Iterator<GroundLiteral> litIter = allLiterals.iterator();
         int i = 0;
         while (litIter.hasNext()) {
             GroundLiteral g = litIter.next();
@@ -560,7 +612,7 @@ public class htnPlanningInstance {
         operators.addList = new int[operators.numActions][];
         operators.del = new BitSet[operators.numActions];
 
-        Iterator<GroundTask> actionIter = allActions.iterator();
+        java.util.Iterator<GroundTask> actionIter = allActions.iterator();
         i = 0;
         List<GroundLiteral> deletedEffects = new LinkedList<>();
         while (actionIter.hasNext()) {

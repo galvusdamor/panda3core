@@ -28,7 +28,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
   }
 
   def writeVariable(v: Value, csp: CSP): String = csp getRepresentative v match {
-    case Constant(name)       => toPDDLIdentifier(name)
+    case Constant(name) => toPDDLIdentifier(name)
     case Variable(_, name, _) => toHPDDLVariableName(name)
   }
 
@@ -75,7 +75,10 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     val unionFind = SymbolicUnionFind.constructVariableUnionFind(plan)
 
     // sub tasks
-    builder append ("\t" + (if (indentation) "\t" else "") + ":subtasks (and\n")
+    builder append ("\t" + (if (indentation) "\t" else "") + ":subtasks (")
+    if (plan.planStepsWithoutInitGoal.nonEmpty) builder append "and"
+    builder append "\n"
+
     val planStepToID: Map[PlanStep, Int] = plan.planStepsWithoutInitGoal.zipWithIndex.toMap
     planStepToID.toSeq sortBy {
       _._1.id
@@ -109,8 +112,8 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     // write down the constraints
     val constraintConditions = plan.variableConstraints.constraints collect {
       case NotEqual(v1, v2) => "(not (= " + getRepresentative(v1, unionFind) + " " + getRepresentative(v2, unionFind) + "))"
-      case OfSort(v, s)     => "(" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, unionFind) + ")"
-      case NotOfSort(v, s)  => "(not (" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, unionFind) + "))"
+      case OfSort(v, s) => "(" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, unionFind) + ")"
+      case NotOfSort(v, s) => "(not (" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, unionFind) + "))"
     }
 
     if (constraintConditions.nonEmpty) {
@@ -129,43 +132,48 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
   }
 
   def getRepresentative(v: Value, uf: SymbolicUnionFind): String = v match {
-    case Constant(c)            => toPDDLIdentifier(c)
+    case Constant(c) => toPDDLIdentifier(c)
     case vari@Variable(_, _, _) => uf.getRepresentative(vari) match {
-      case Constant(c)          => toPDDLIdentifier(c)
+      case Constant(c) => toPDDLIdentifier(c)
       case Variable(_, name, _) => toHPDDLVariableName(name)
     }
   }
 
 
   def writeFormula(builder: StringBuilder, formula: Formula, indent: String, taskUF: SymbolicUnionFind): Unit = formula match {
-    case Identity()               => builder
-    case And(conj)                => builder.append(indent + "(and\n")
-      conj foreach {
-        writeFormula(builder, _, indent + "\t", taskUF)
+    case Identity() => builder
+    case And(conj) =>
+      if (conj.isEmpty || (conj forall { case Identity() => true; case _ => false }))
+        ()
+      else {
+        builder.append(indent + "(and\n")
+        conj foreach {
+          writeFormula(builder, _, indent + "\t", taskUF)
+        }
+        builder.append(indent + ")\n")
       }
-      builder.append(indent + ")\n")
-    case Or(disj)                 => builder.append(indent + "(or\n")
+    case Or(disj) => builder.append(indent + "(or\n")
       disj foreach {
         writeFormula(builder, _, indent + "\t", taskUF)
       }
       builder.append(indent + ")\n")
-    case l: Literal               =>
+    case l: Literal =>
       builder.append(writeLiteral(l, taskUF, indent))
-    case Not(form)                => builder.append(indent + "(not\n")
+    case Not(form) => builder.append(indent + "(not\n")
       writeFormula(builder, form, indent + "\t", taskUF)
       builder.append(indent + ")\n")
-    case Implies(left, right)     => builder.append(indent + "(imply\n")
+    case Implies(left, right) => builder.append(indent + "(imply\n")
       writeFormula(builder, left, indent + "\t", taskUF)
       writeFormula(builder, right, indent + "\t", taskUF)
       builder.append(indent + ")\n")
     case Equivalence(left, right) => writeFormula(builder, And(Implies(left, right) :: Implies(right, left) :: Nil), indent + "\t", taskUF)
-    case Exists(v, form)          => builder.append(indent + "(exists (" + writeVariable(v, NoConstraintsCSP) + " - " + toPDDLIdentifier(v.sort.name) + ")\n")
+    case Exists(v, form) => builder.append(indent + "(exists (" + writeVariable(v, NoConstraintsCSP) + " - " + toPDDLIdentifier(v.sort.name) + ")\n")
       val quantifiedUF = new SymbolicUnionFind()
       quantifiedUF.cloneFrom(taskUF)
       quantifiedUF.addVariable(v)
       writeFormula(builder, form, indent + "\t", quantifiedUF)
       builder.append(indent + ")\n")
-    case Forall(v, form)          => builder.append(indent + "(forall (" + writeVariable(v, NoConstraintsCSP) + " - " + toPDDLIdentifier(v.sort.name) + ")\n")
+    case Forall(v, form) => builder.append(indent + "(forall (" + writeVariable(v, NoConstraintsCSP) + " - " + toPDDLIdentifier(v.sort.name) + ")\n")
       val quantifiedUF = new SymbolicUnionFind()
       quantifiedUF.cloneFrom(taskUF)
       quantifiedUF.addVariable(v)
@@ -209,7 +217,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
       builder.append("\t\t" + toPDDLIdentifier(c.name) + " - ")
       dom.getSortOfConstant(c) match {
         case Some(s) => builder.append(toPDDLIdentifier(s.name) + "\n")
-        case None    => throw new IllegalArgumentException("The constant " + c + " does not have a unique sort in the given domain.")
+        case None => throw new IllegalArgumentException("The constant " + c + " does not have a unique sort in the given domain.")
       }
     }
     builder.append("\t)\n")
@@ -227,7 +235,8 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     if (dom.sorts.nonEmpty) {
       builder.append("\t(:types\n")
       dom.sorts foreach {
-        s => builder.append("\t\t" + toPDDLIdentifier(s.name))
+        case s if s.name == "object" => () // ignore
+        case s => builder.append("\t\t" + toPDDLIdentifier(s.name))
           val parentSorts = dom.sortGraph.edgeList filter {
             _._2 == s
           }
@@ -277,7 +286,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     dom.decompositionMethods.zipWithIndex foreach {
       case (m, idx) =>
         builder.append("\n")
-        builder.append("\t(:method method" + idx + "\n")
+        builder.append("\t(:method " + toPDDLIdentifier(m.name) + "\n")
         val planUF = SymbolicUnionFind.constructVariableUnionFind(m.subPlan)
         //if (m.subPlan.variableConstraints.variables.nonEmpty) {
         builder.append("\t\t:parameters (")
@@ -285,8 +294,8 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
           (m.subPlan.variableConstraints.variables.toSeq map planUF.getRepresentative collect {
             case v@Variable(_, _, _) => v
           }).distinct.sortWith({
-                                 _.name < _.name
-                               })
+            _.name < _.name
+          })
         }
         builder.append(writeParameters(methodParameters))
         builder.append(")\n")
@@ -300,8 +309,8 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         builder.append(")\n")
 
         val methodPrecondition = m match {
-          case SHOPDecompositionMethod(_, _, f,_) => f
-          case _                                => And[Formula](Nil)
+          case SHOPDecompositionMethod(_, _, f, _) => f
+          case _ => And[Formula](Nil)
         }
 
         if (!methodPrecondition.isEmpty) {

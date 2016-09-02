@@ -45,7 +45,7 @@ public class symbolicRPG implements IRPG {
         int fulfilled = Gt.get(0).size();
         boolean done = false;
 
-        System.out.println("Actions: ");
+        System.out.print("RPG - actions: ");
         for (int i = 1; true; i++) {
             Set<GroundTask> a = getActionLayer(d, facts.get(i - 1));
             System.out.print(a.size() + " -> ");

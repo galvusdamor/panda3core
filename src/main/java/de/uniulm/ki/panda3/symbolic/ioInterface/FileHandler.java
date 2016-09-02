@@ -5,6 +5,7 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.antlrHDDLLexer;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.antlrHDDLParser;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
+import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter;
 import de.uniulm.ki.panda3.symbolic.writer.hpddl.HPDDLWriter;
 import de.uniulm.ki.panda3.symbolic.writer.xml.XMLWriter;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -49,8 +50,21 @@ public class FileHandler {
         bwProblem.close();
     }
 
-    public static void writeHPDDLToFiles(Tuple2<Domain, Plan> planningInstance, String domainFileName, String problemFileName) throws IOException {
+    public static void writeRonToFiles(Tuple2<Domain, Plan> planningInstance, String domainFileName, String problemFileName) throws IOException {
         HPDDLWriter writer = HPDDLWriter.apply("someDomain", "someProblem");
+
+        BufferedWriter bwDomain = new BufferedWriter(new FileWriter(domainFileName));
+        BufferedWriter bwProblem = new BufferedWriter(new FileWriter(problemFileName));
+
+        bwDomain.write(writer.writeDomain(planningInstance._1()));
+        bwProblem.write(writer.writeProblem(planningInstance._1(), planningInstance._2()));
+
+        bwDomain.close();
+        bwProblem.close();
+    }
+
+    public static void writeHDDLToFiles(Tuple2<Domain, Plan> planningInstance, String domainFileName, String problemFileName) throws IOException {
+        HDDLWriter writer = HDDLWriter.apply("someDomain", "someProblem");
 
         BufferedWriter bwDomain = new BufferedWriter(new FileWriter(domainFileName));
         BufferedWriter bwProblem = new BufferedWriter(new FileWriter(problemFileName));
