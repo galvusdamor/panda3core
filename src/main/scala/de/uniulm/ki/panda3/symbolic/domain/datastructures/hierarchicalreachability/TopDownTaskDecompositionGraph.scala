@@ -30,7 +30,7 @@ case class TopDownTaskDecompositionGraph(domain: Domain, initialPlan: Plan, grou
 
       // if the task is abstract, we have to ground it
       // we have a partial variable binding from the abstract task
-      val possibleMethods = (domain.decompositionMethods :+ topMethod) filter { _.abstractTask == currentGroundTask.task } map {
+      val possibleMethods = (domain.methodsForAbstractTasks.getOrElse(currentGroundTask.task, Nil) ++ (if (topMethod.abstractTask == currentGroundTask.task) topMethod :: Nil else Nil)) map {
         case simpleMethod: SimpleDecompositionMethod =>
           val candidateGroundings = simpleMethod.groundWithAbstractTaskGrounding(currentGroundTask)
           val entryMap = alreadyGroundedMethods(simpleMethod)
