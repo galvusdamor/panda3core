@@ -218,7 +218,7 @@ object VerifyEncoding {
 
 
       if (topToMethods.isEmpty) {
-        if (nonTopMethods.isEmpty) (Integer.MIN_VALUE, 1) else (nonTopMethods map { _.subPlan.planStepsWithoutInitGoal.length } min, 1)
+        if (nonTopMethods.isEmpty) (Integer.MAX_VALUE, 1) else (nonTopMethods map { _.subPlan.planStepsWithoutInitGoal.length } min, 1)
       } else (domain.minimumMethodSize, 0)
     } else (domain.minimumMethodSize, 0)
 
