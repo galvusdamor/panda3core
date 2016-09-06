@@ -70,9 +70,13 @@ case class EfficientDecompositionMethod(abstractTask: Int, subPlan: EfficientPla
 
 
     // TODO: remove the ones induced by causal links
-    val orderings = subPlan.ordering.minimalOrderingConstraintsWithoutInitAndGoal() map { case (a, b) => (a - 2, b - 2) }
-    val numberOfAbstractTaskParameters = subPlan.domain.tasks(abstractTask).parameterSorts.length
+    val orderings = subPlan.ordering.orderingConstraints map { _ drop 2 } drop 2
 
+    //val orderings = subPlan.ordering.minimalOrderingConstraintsWithoutInitAndGoal() map { case (a, b) => (a - 2, b - 2) }
+    //println("DEC " + (subPlan.numberOfPlanSteps-2) + " " + orderings.length)
+
+
+    val numberOfAbstractTaskParameters = subPlan.domain.tasks(abstractTask).parameterSorts.length
     // find best sort for variables
     val newVariableSorts = (numberOfAbstractTaskParameters until subPlan.firstFreeVariableID map { v =>
       val possibleValuesOfVariable = subPlan.variableConstraints.getRemainingDomain(v)
@@ -113,7 +117,7 @@ case class EfficientExtractedMethodPlan(addedPlanSteps: Array[(Int, Array[Int])]
                                         addedVariableSorts: Array[Int],
                                         addedVariableConstraints: Array[EfficientVariableConstraint],
                                         addedCausalLinks: Array[EfficientCausalLink],
-                                        nonInducedAddedOrderings: Array[(Int, Int)],
+                                        innerOrdering: Array[Array[Byte]],
                                         ingoingSupporters: Array[Array[PotentialLinkSupporter]],
                                         outgoingSupporters: Array[Array[PotentialLinkSupporter]]) {
   val ingoingSupportersContainNecessary : Array[Boolean] = ingoingSupporters map { arr => arr exists { _.isNecessary } }
@@ -121,4 +125,4 @@ case class EfficientExtractedMethodPlan(addedPlanSteps: Array[(Int, Array[Int])]
 }
 
 
-case class EfficientGroundedDecompositionMethod(methodIndex : Int, methodArguments : Array[Int])
+case class EfficientGroundedDecompositionMethod(methodIndex: Int, methodArguments: Array[Int])
