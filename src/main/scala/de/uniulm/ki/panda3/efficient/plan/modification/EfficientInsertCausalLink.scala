@@ -28,22 +28,29 @@ object EfficientInsertCausalLink {
   private def iterateThroughModificationsFromPlanStep(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int, producer: Int, consumerLiteral:
   EfficientLiteral, consumerParameters: Array[Int], whatToDo: (Int, Array[EfficientVariableConstraint]) => Unit): Unit = {
     if (producer != consumer && plan.planStepDecomposedByMethod(producer) == -1 && !plan.ordering.gt(producer, consumer)) {
-      val producerTask = plan.domain.tasks(plan.planStepTasks(producer))
+      val producerTaskIndex = plan.planStepTasks(producer)
+      val producerTask = plan.domain.tasks(producerTaskIndex)
+
+      val potentiallyMatchingEffects =
+        if (consumerLiteral.isPositive) plan.domain.taskAddEffectsPerPredicate(producerTaskIndex)(consumerLiteral.predicate)
+        else plan.domain.taskDelEffectsPerPredicate(producerTaskIndex)(consumerLiteral.predicate)
+
+
       // and loop through all of their effects
-      var producerIndex = 0
-      while (producerIndex < producerTask.effect.length) {
-        val producerLiteral = producerTask.effect(producerIndex)
+      var effectIndex = 0
+      //println("P " + producerTask.effect.length)
+      while (effectIndex < potentiallyMatchingEffects.length) {
+        val (producerLiteral, producerIndex) = potentiallyMatchingEffects(effectIndex)
         // check whether it is the same predicate and has the same arity
-        if (consumerLiteral.predicate == producerLiteral.predicate && consumerLiteral.isPositive == producerLiteral.isPositive) {
-          // check whether they can be unified
-          val producerParameters = producerTask.getArgumentsOfLiteral(plan.planStepParameters(producer), producerLiteral)
-          val mgu = plan.variableConstraints.fastMGU(consumerParameters, producerParameters)
-          if (mgu.isDefined) {
-            assert(plan.potentialSupportersOfPlanStepPreconditions(consumer)(consumerIndex) contains producer)
-            whatToDo(producerIndex, mgu.get)
-          }
+        assert(consumerLiteral.predicate == producerLiteral.predicate && consumerLiteral.isPositive == producerLiteral.isPositive)
+        // check whether they can be unified
+        val producerParameters = producerTask.getArgumentsOfLiteral(plan.planStepParameters(producer), producerLiteral)
+        val mgu = plan.variableConstraints.fastMGU(consumerParameters, producerParameters)
+        if (mgu.isDefined) {
+          assert(plan.potentialSupportersOfPlanStepPreconditions(consumer)(consumerIndex) contains producer)
+          whatToDo(producerIndex, mgu.get)
         }
-        producerIndex += 1
+        effectIndex += 1
       }
     }
   }
@@ -94,7 +101,7 @@ object EfficientInsertCausalLink {
     var numberOfModifications = 0
 
     // iterate through all plansteps in the plan to find possible producers
-    val potentialSupporterIterator  = plan.potentialSupportersOfPlanStepPreconditions(consumer)(consumerIndex).iterator
+    val potentialSupporterIterator = plan.potentialSupportersOfPlanStepPreconditions(consumer)(consumerIndex).iterator
     //println("LENGTH " + plan.potentialSupportersOfPlanStepPreconditions(consumer).size)
 
     //var producer = 0
