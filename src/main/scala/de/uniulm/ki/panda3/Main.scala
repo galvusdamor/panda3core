@@ -181,6 +181,10 @@ object Main {
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/domain/domain.hpddl"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/problems/pfile_03.pddl"
 
+    //val domFile =
+    //val probFile = "/home/gregor/p-0002-plow-road.lisp"
+    //val probFile = "p-0002-plow-road.lisp"
+
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
@@ -192,14 +196,15 @@ object Main {
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = false,
                                                                         liftedReachability = true, groundedReachability = doit, planningGraph = false,
                                                                         groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
-                                                                        iterateReachabilityAnalysis = true, groundDomain = true),
+                                                                        iterateReachabilityAnalysis = true, groundDomain = false),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumAction), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
+                                             SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
-                                             SearchConfiguration(Some(0), None, efficientSearch = false, BFSType, None, printSearchInfo = true),
+//                                             SearchConfiguration(Some(0), None, efficientSearch = false, BFSType, None, printSearchInfo = true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult,
                                                                              SearchStatistics,
@@ -220,7 +225,6 @@ object Main {
 
 
 
-
     val (domain, plan) = results(PreprocessedDomainAndPlan)
     val progression = new htnPlanningInstance()
     val groundTasks = domain.primitiveTasks map { t => GroundTask(t, Nil) }
@@ -229,7 +233,6 @@ object Main {
       at -> JavaConversions.setAsJavaSet(ms map {m => GroundedDecompositionMethod(m,Map())} toSet)
     }
     progression.plan(plan,JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),JavaConversions.setAsJavaSet(groundLiterals.toSet))
-
 
 
 

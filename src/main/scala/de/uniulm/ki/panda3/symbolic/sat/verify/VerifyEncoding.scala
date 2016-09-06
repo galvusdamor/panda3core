@@ -93,29 +93,33 @@ trait VerifyEncoding {
     buffer.toSeq*/
   }
 
-  protected def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms) :+ atLeastOneOf(atoms)
+  protected def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms).+:(atLeastOneOf(atoms))
 
   protected def impliesNot(left: String, right: String): Clause = Clause((left, false) ::(right, false) :: Nil)
 
-  protected def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }) :+(right, false))
+  protected def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
 
   protected def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) ::(leftFalse, true) ::(right, false) :: Nil) :: Nil
 
   protected def impliesAllNot(left: String, right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
 
-  protected def notImpliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = right map { notImpliesNot(left, _) }
+  protected def notImpliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = {
+    val leftList = left map { (_, true) }
+
+    right map { r => Clause(leftList.+:((r, false))) }
+  }
 
   protected def impliesSingle(left: String, right: String): Clause = Clause((left, false) ::(right, true) :: Nil)
 
 
   protected def impliesRightAnd(leftConjunct: Seq[String], rightConjunct: Seq[String]): Seq[Clause] = {
     val negLeft = leftConjunct map { (_, false) }
-    rightConjunct map { r => Clause(negLeft :+(r, true)) }
+    rightConjunct map { r => Clause(negLeft.+:(r, true)) }
   }
 
   protected def impliesRightAndSingle(leftConjunct: Seq[String], right: String): Clause = {
     val negLeft = leftConjunct map { (_, false) }
-    Clause(negLeft :+(right, true))
+    Clause(negLeft.+:(right, true))
   }
 
   protected def impliesRightOr(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
@@ -252,7 +256,7 @@ object VerifyEncoding {
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
     val icapsPaperLimit = computeICAPSK(domain, plan, taskSequenceLength)
-    val TSTGPath = computeTSTGK(domain, plan, taskSequenceLength)
+    val TSTGPath = Integer.MAX_VALUE //computeTSTGK(domain, plan, taskSequenceLength)
     val minimumMethodSize = computeMethodSize(domain, plan, taskSequenceLength)
 
     println("LEN " + taskSequenceLength)

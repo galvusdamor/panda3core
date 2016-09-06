@@ -365,8 +365,10 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.BitS
     if (!possible) None else Some(mgu.toArray)
   }
 
-  /** a faster routine to compute the mgu, it might return one even if it is illegal */
-  def fastMGU(someVariables: Array[Int], otherVariables: Array[Int]): Option[Array[EfficientVariableConstraint]] = {
+  /** a faster routine to compute the mgu, it might return one even if it is illegal
+    * @param produceMGU if false, the mgu array will always be empty, but it will be checked if there might be an mgu
+    */
+  def fastMGU(someVariables: Array[Int], otherVariables: Array[Int], produceMGU : Boolean): Option[Array[EfficientVariableConstraint]] = {
     assert(someVariables.length == otherVariables.length)
     var possible = true
     val mgu = new ArrayBuffer[EfficientVariableConstraint]()
@@ -380,12 +382,12 @@ class EfficientCSP(domain: EfficientDomain, remainingDomains: Array[mutable.BitS
       if (compatibility == EfficientCSP.INCOMPATIBLE) possible = false
       else if (compatibility == EfficientCSP.COMPATIBLE) {
         if (x >= 0 && y >= 0) {
-          mgu append EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, x, y)
+          if (produceMGU) mgu append EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, x, y)
         } else if (x >= 0 || y >= 0) {
           // one of the reps is a
           val variable = if (x >= 0) x else y
           val constant = if (x >= 0) switchConstant(y) else switchConstant(x)
-          mgu append EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, variable, constant)
+          if (produceMGU) mgu append EfficientVariableConstraint(EfficientVariableConstraint.EQUALCONSTANT, variable, constant)
         } else {
           assert(x == y, "These are compatible constants, they should be equal")
         }

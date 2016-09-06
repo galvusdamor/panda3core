@@ -132,7 +132,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
 
     // TODO handle decomposition axioms ?!?
     assert(domain.decompositionAxioms.isEmpty)
-    (Domain(Nil, allGroundedPredicates.toSeq, allGroundedTasks.toSeq, groundedDecompositionMethods distinct, Nil), initialPlan)
+    (Domain(Nil, allGroundedPredicates.toSeq, allGroundedTasks.toSeq, groundedDecompositionMethods, Nil), initialPlan)
   }
 
 }

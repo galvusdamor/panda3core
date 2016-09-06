@@ -106,4 +106,17 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
       BitSet(literals: _*)
     }
   }
+
+
+  lazy val taskAddEffectsPerPredicate: Array[Array[Array[(EfficientLiteral,Int)]]] = tasks map { task =>
+    val effectMap = task.effect.zipWithIndex filter { _._1.isPositive } groupBy { _._1.predicate }
+    predicates.indices map { effectMap.getOrElse(_, Array()) } toArray
+  } toArray
+
+  lazy val taskDelEffectsPerPredicate: Array[Array[Array[(EfficientLiteral,Int)]]] = tasks map { task =>
+    val effectMap = task.effect.zipWithIndex filter { _._1.isNegative } groupBy { _._1.predicate }
+    predicates.indices map { effectMap.getOrElse(_, Array()) } toArray
+  } toArray
+
+
 }

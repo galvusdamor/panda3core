@@ -29,6 +29,8 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
   val isInitialPlanGround = initialPlan.variableConstraints.variables forall { v => initialPlan.variableConstraints.getRepresentative(v).isInstanceOf[Constant] }
 
 
+  println("G " + groundedReachabilityAnalysis.reachableGroundPrimitiveActions.length)
+
   val (topTask, topMethod, initAndGoalNOOP, groundedTopTask) = {
     val initialPlanAlreadyGroundedVariableMapping = initialPlan.variableConstraints.variables map { vari => (vari, initialPlan.variableConstraints.getRepresentative(vari)) } collect {
       case (v, c: Constant) => (v, c)

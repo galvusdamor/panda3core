@@ -9,6 +9,8 @@ package de.uniulm.ki.panda3.efficient.logic
   */
 case class EfficientLiteral(predicate: Int, isPositive: Boolean, parameterVariables: Array[Int]) {
 
+  val isNegative : Boolean = !isPositive
+
   def checkPredicateAndSign(other: EfficientLiteral): Boolean = predicate == other.predicate && isPositive == other.isPositive
 }
 

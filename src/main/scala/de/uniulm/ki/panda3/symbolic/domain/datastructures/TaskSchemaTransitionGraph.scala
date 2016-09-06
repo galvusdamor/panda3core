@@ -16,8 +16,8 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraphWithAl
   override val vertices: Seq[Task] = domain.tasks
 
   /** describes which tasks can be obtained from a given task by applying a given decomposition method */
-  val canBeDirectlyDecomposedIntoVia: Map[Task, Set[(DecompositionMethod, Task)]] = (domain.tasks map { case task => (task, (domain.decompositionMethods filter { _.abstractTask == task }
-    flatMap { case method => method.subPlan.planStepsWithoutInitGoal.map { case ps => (method, ps.schema) } }).toSet)
+  val canBeDirectlyDecomposedIntoVia: Map[Task, Set[(DecompositionMethod, Task)]] = (domain.tasks map { case task => (task,
+    (domain.methodsForAbstractTasks.getOrElse(task, Nil) flatMap { case method => method.subPlan.planStepsWithoutInitGoal.map { case ps => (method, ps.schema) } }).toSet)
   }).toMap
   // assertion for the decomposition via
   canBeDirectlyDecomposedIntoVia foreach { case (task, setofDecomps) => setofDecomps foreach { case (method, _) => assert(method.abstractTask == task) } }
@@ -38,7 +38,7 @@ case class TaskSchemaTransitionGraph(domain: Domain) extends DirectedGraphWithAl
       val targetDecompositions = set filter {
         case (method, reducedTask: ReducedTask) => reducedTask.effect.conjuncts exists { eff => eff.predicate == pred && eff.isPositive == positive }
         case _                                  => noSupport(FORUMLASNOTSUPPORTED)
-      } map {_._1}
+      } map { _._1 }
       (task, pred, positive) -> targetDecompositions.distinct
     }
   }

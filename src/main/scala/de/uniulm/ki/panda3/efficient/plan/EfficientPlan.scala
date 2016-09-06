@@ -287,7 +287,9 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
   def modify(modification: EfficientModification): EfficientPlan = {
     val newVariableConstraints: EfficientCSP = variableConstraints.addVariables(modification.addedVariableSorts)
-    val newOrdering: EfficientOrdering = ordering.addPlanSteps(modification.addedPlanSteps.length)
+    val newOrdering: EfficientOrdering =
+      if (modification.insertInOrderingRelativeToPlanStep == -1) ordering.addPlanSteps(modification.addedPlanSteps.length)
+      else ordering.addPlanStepsFromBase(modification.insertInOrderingRelativeToPlanStep, modification.addedPlanSteps.length, modification.insertedPlanStepsOrderingMatrix.get)
 
     // apply the modification
 
@@ -464,9 +466,14 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       decomposedPS += 1
     }
 
+
+
     val newPlan = EfficientPlan(domain, newPlanStepTasks, newPlanStepParameters, newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree,
                                 newPlanStepIsInstanceOfSubPlanPlanStep, newPlanStepSupportedPreconditions, newPotentialSupportersOfPlanStepPreconditions, newCausalLinksPotentialThreater,
                                 newVariableConstraints, newOrdering, newCausalLinks, problemConfiguration)()
+
+    //println("NP " + newPlan.planStepTasks.length + " of " + newPlan.numberOfPlanSteps)
+    //println("C " + modification.getClass + " " + modification.addedPlanSteps.length + " " + modification.addedOrderings.length)
 
     //newPlan.setPrecomputedOpenPreconditions(openPreconditions, modification)
 
