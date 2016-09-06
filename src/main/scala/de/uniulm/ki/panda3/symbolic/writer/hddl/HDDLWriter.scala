@@ -279,33 +279,47 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         builder.append("\n")
         builder.append("\t(:method method" + idx + "\n")
         val planUF = SymbolicUnionFind.constructVariableUnionFind(m.subPlan)
+
+        // we can't throw parameters of abstract tasks away
+        val taskUF = SymbolicUnionFind.constructVariableUnionFind(m.abstractTask)
+        val abstractTaskParameters = m.abstractTask.parameters filter {
+          taskUF.getRepresentative(_).isInstanceOf[Variable]
+        }
+
+
         //if (m.subPlan.variableConstraints.variables.nonEmpty) {
         builder.append("\t\t:parameters (")
         val methodParameters: Seq[Variable] = {
-          (m.subPlan.variableConstraints.variables.toSeq map planUF.getRepresentative collect {
+          ((m.subPlan.variableConstraints.variables.toSeq map planUF.getRepresentative collect {
             case v@Variable(_, _, _) => v
-          }).distinct.sortWith({
-                                 _.name < _.name
-                               })
+          }) ++ abstractTaskParameters).distinct.sortWith({ _.name < _.name })
         }
+
         builder.append(writeParameters(methodParameters))
         builder.append(")\n")
         //}
 
         builder.append("\t\t:task (" + toPDDLIdentifier(m.abstractTask.name))
-        val parameters = m.abstractTask.parameters filter {
-          planUF.getRepresentative(_).isInstanceOf[Variable]
-        } map planUF.getRepresentative
-        builder.append(writeVariableList(parameters, NoConstraintsCSP))
+        val mappedParameters = abstractTaskParameters map {
+          case v if planUF.getRepresentative(v).isInstanceOf[Variable] => planUF getRepresentative v
+          case v                                                       => taskUF getRepresentative v
+        }
+        builder.append(writeVariableList(mappedParameters, NoConstraintsCSP))
         builder.append(")\n")
 
         val methodPrecondition = m match {
-          case SHOPDecompositionMethod(_, _, f,_) => f
-          case _                                => And[Formula](Nil)
+          case SHOPDecompositionMethod(_, _, f, _) => f
+          case _                                   => And[Formula](Nil)
         }
 
-        if (!methodPrecondition.isEmpty) {
+        val neededVariableConstraints = abstractTaskParameters map { v => (v, planUF.getRepresentative(v)) } collect { case (v, c: Constant) => (v, c) }
+
+        if (!methodPrecondition.isEmpty || neededVariableConstraints.nonEmpty) {
           builder.append("\t\t:precondition (and\n")
+          if (neededVariableConstraints.nonEmpty)
+            neededVariableConstraints foreach {
+              case (v, c) => builder.append("\t\t\t(= " + toHPDDLVariableName(taskUF.getRepresentative(v).asInstanceOf[Variable].name) + " " + toPDDLIdentifier(c.name) + ")\n")
+            }
           if (!methodPrecondition.isEmpty) writeFormula(builder, methodPrecondition, "\t\t\t", planUF)
           builder.append("\t\t)\n")
         }
