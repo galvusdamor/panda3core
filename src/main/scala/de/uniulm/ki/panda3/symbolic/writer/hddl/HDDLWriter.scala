@@ -285,14 +285,19 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         val abstractTaskParameters = m.abstractTask.parameters filter {
           taskUF.getRepresentative(_).isInstanceOf[Variable]
         }
+        val mappedParameters = abstractTaskParameters map {
+          case v if planUF.getRepresentative(v).isInstanceOf[Variable] => planUF getRepresentative v
+          case v                                                       => taskUF getRepresentative v
+        }
 
+        val mappedVariables = mappedParameters collect {case v : Variable => v}
 
         //if (m.subPlan.variableConstraints.variables.nonEmpty) {
         builder.append("\t\t:parameters (")
         val methodParameters: Seq[Variable] = {
           ((m.subPlan.variableConstraints.variables.toSeq map planUF.getRepresentative collect {
             case v@Variable(_, _, _) => v
-          }) ++ abstractTaskParameters).distinct.sortWith({ _.name < _.name })
+          }) ++ mappedVariables).distinct.sortWith({ _.name < _.name })
         }
 
         builder.append(writeParameters(methodParameters))
@@ -300,10 +305,6 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         //}
 
         builder.append("\t\t:task (" + toPDDLIdentifier(m.abstractTask.name))
-        val mappedParameters = abstractTaskParameters map {
-          case v if planUF.getRepresentative(v).isInstanceOf[Variable] => planUF getRepresentative v
-          case v                                                       => taskUF getRepresentative v
-        }
         builder.append(writeVariableList(mappedParameters, NoConstraintsCSP))
         builder.append(")\n")
 
