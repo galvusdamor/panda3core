@@ -208,10 +208,10 @@ public class htnPlanningInstance {
 
         // todo: change heuristic here
         //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        //initialNode.heuristic = new cRPG(operators.methods, allActions);
-        //initialNode.heuristic.build(initialNode);
-        //initialNode.metric = initialNode.heuristic.getHeuristic();
-        initialNode.metric = 1;
+        initialNode.heuristic = new cRPG(operators.methods, allActions);
+        initialNode.heuristic.build(initialNode);
+        initialNode.metric = initialNode.heuristic.getHeuristic();
+        //initialNode.metric = 1;
 
 
         List<Object> solution = priorityQueueSearch(initialNode);
@@ -300,7 +300,7 @@ public class htnPlanningInstance {
                         }
                     }
                     searchnodes++;
-                    if ((searchnodes % 10000) == 0)
+                    if ((searchnodes % 100) == 0)
                         System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
                 } else { // is an abstract task
                     for (method m : ps.methods) {
@@ -320,7 +320,7 @@ public class htnPlanningInstance {
                             }
                         }
                         searchnodes++;
-                        if ((searchnodes % 10000) == 0)
+                        if ((searchnodes % 100) == 0)
                             System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
                     }
                 }

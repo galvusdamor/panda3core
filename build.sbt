@@ -25,7 +25,10 @@ description := "A planning system for partial-order causal-link, hierarchical an
 scalaVersion := "2.11.8"
 
 mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
+
 //mainClass in assembly := Some("de.uniulm.ki.panda3.symbolic.sat.verify.VerifyRunner")
+
+//mainClass in assembly := Some("de.uniulm.ki.panda3.progression.proUtil.switchTLT")
 
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 

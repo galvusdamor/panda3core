@@ -248,7 +248,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
         _ update exchangeInit update exchangeGoal
       },
            orderingConstraints update exchangeInit update exchangeGoal,
-           variableConstraints, newInit, goal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
+           variableConstraints, newInit, newGoal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
     }
     case _                                                                 =>
       val newInit = init update domainUpdate
@@ -444,6 +444,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   }
 
   lazy val groundedInitialStateOnlyPositive: Seq[GroundLiteral] = groundedInitialState filter { _.isPositive }
+  lazy val groundedInitialStateOnlyPositiveSet: Set[GroundLiteral] = groundedInitialStateOnlyPositive toSet
 
   lazy val groundedGoalState: Seq[GroundLiteral] = goal.substitutedPreconditions map { case Literal(predicate, isPositive, parameters) =>
     GroundLiteral(predicate, isPositive, parameters map { v =>

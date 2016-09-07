@@ -1,8 +1,9 @@
 package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.{LayeredGroundedPrimitiveReachabilityAnalysis, GroundedPrimitiveReachabilityAnalysis, GroundedReachabilityAnalysis}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, GroundedReachabilityAnalysis, LayeredGroundedPrimitiveReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
+import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 
 /**
@@ -34,4 +35,9 @@ case class GroundedForwardSearchReachabilityAnalysis(domain: Domain, initialStat
     }
     iterateLayer(initialState)
   }
+}
+
+object GroundedForwardSearchReachabilityAnalysis {
+  def apply(d : Domain , p : Plan ) : GroundedForwardSearchReachabilityAnalysis =
+    GroundedForwardSearchReachabilityAnalysis(d,p.groundedInitialState.toSet)()
 }

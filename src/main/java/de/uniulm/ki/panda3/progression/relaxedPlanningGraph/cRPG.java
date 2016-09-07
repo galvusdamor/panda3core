@@ -193,7 +193,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         // goalDelta is a list of lists. Each inner list contains those goal facts that hold in the layer
         // for the *first time*, i.e. it is the delta of fulfilled goal conditions. Be aware that
         // goalDelta is *changed* during heuristic calculation.
-        List<List<Integer>> goalDelta = new ArrayList<>();
+        List<HashSet<Integer>> goalDelta = new ArrayList<>();
 
         // is used to track how may preconditions are unfulfilled yet
         int[] numOfUnfulfilledPrecs = numprecs.clone();
@@ -230,11 +230,12 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             goalFacts.addAll(ps.successorList);
         }
 
-        LinkedList<Integer> unfulfilledGoals = new LinkedList<>();
+        //LinkedList<Integer> unfulfilledGoals = new LinkedList<>();
+        HashSet<Integer> unfulfilledGoals = new HashSet<>();
 
         // todo !evaluate!: this might be a set or a list
-        List<Integer> newGoals = new ArrayList<>();
-        //Set<Integer> newGoals = new HashSet<>();
+        //List<Integer> newGoals = new ArrayList<>();
+        HashSet<Integer> newGoals = new HashSet<>();
 
         goalDelta.add(newGoals);
         for (int goalFact : htnGoal) {
@@ -251,7 +252,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         int layerId = 1;
         this.goalRelaxedReachable = true;
         while (!unfulfilledGoals.isEmpty()) {
-            newGoals = new ArrayList<>();
+            newGoals = new HashSet<>();
             goalDelta.add(newGoals);
             if (changedLiterals.isEmpty()) {
                 // there are unfulfilled goals, but the state did not change -> relaxed unsolvable
@@ -286,8 +287,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
                         // test if fact is in goal-list
                         if (unfulfilledGoals.remove(new Integer(effect))) {
-                            while (unfulfilledGoals.remove(new Integer(effect))) {
-                            }
+                            //while (unfulfilledGoals.remove(new Integer(effect))) {
+                            //}
                             newGoals.add(effect);
                         }
                     }
@@ -304,7 +305,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         }
     }
 
-    private int calcHeu(int[] firstLayerWithFact, List<List<Integer>> operatorDelta, int[] actionDifficulty, List<List<Integer>> goalDelta) {
+    private int calcHeu(int[] firstLayerWithFact, List<List<Integer>> operatorDelta, int[] actionDifficulty, List<HashSet<Integer>> goalDelta) {
         int numactions = 0;
         for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
             for (int goalFact : goalDelta.get(layer)) {
