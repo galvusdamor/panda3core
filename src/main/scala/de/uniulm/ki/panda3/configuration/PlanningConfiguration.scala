@@ -219,7 +219,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings => timeCapsule
       case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
-      else if (timeCapsule.integralDataMap()(Timings.SEARCH) >= 1000*searchConfiguration.timeLimit.getOrElse(Integer.MAX_VALUE))
+      else if (timeCapsule.integralDataMap()(Timings.SEARCH) >= 1000*searchConfiguration.timeLimit.getOrElse(Integer.MAX_VALUE/1000))
         SearchState.TIMEOUT
       else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
         SearchState.UNSOLVABLE
