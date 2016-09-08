@@ -169,13 +169,17 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     timeCapsule stop VerifyRunner.TRANSFORM_DIMACS
 
     encoder match {
-      case tot: TotallyOrderedEncoding => informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, tot.primitivePaths.length)
+      case tot: TotallyOrderedEncoding =>
+
+        println(tot.primitivePaths map {case (a,b) => (a,b map {_.name})} mkString "\n")
+
+        informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, tot.primitivePaths.length)
       case _                           =>
     }
 
     println(timeCapsule.integralDataMap())
 
-    System exit 0
+    //System exit 0
 
     //timeCapsule start VerifyRunner.WRITE_FORMULA
     //writeStringToFile(cnfString, new File("__cnfString"))
@@ -208,6 +212,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     informationCapsule.set(VerifyRunner.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
 
 
+
+
     // postprocessing
 
     val solverOutput = Source.fromFile(VerifyRunner.fileDir + "__res.txt").mkString
@@ -232,7 +238,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
 
     // postprocessing
-    /* if (solved) {
+     if (solved) {
        // things that are independent from the solver type
        val literals: Set[Int] = (assignment.split(" ") filter {_ != ""} map { _.toInt } filter { _ != 0 }).toSet
 
@@ -291,13 +297,15 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
            }
            }
            // check executability of the plan
-           val primitiveSolution = nodes filter { t => t.split("\\^").last.split("_").head.toInt == tot.K } sortBy { t =>
-             val path = t.split("_").last.split(",").head.split(";") map { _.toInt }
-             tot.pathSortingFunction(path)
+           val primitiveSolution = nodes filter { t => t.split("\\^").last.split("_").head.toInt == tot.K } sortWith  { case (t1,t2) =>
+             val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
+             val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
+             tot.pathSortingFunction(path1,path2)
            } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
            primitiveSolution foreach { t => assert(t.isPrimitive) }
            print("CHECKING primitive solution of length " + primitiveSolution.length + " ...")
+           println(primitiveSolution map {_.name} mkString "\n")
            checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
            println(" done.")
            (nodes, edges)
@@ -361,7 +369,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
            }
          }
        }
-     } */
+     }
 
     (solved, timeCapsule, informationCapsule)
   }
