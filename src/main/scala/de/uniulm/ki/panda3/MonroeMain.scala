@@ -32,8 +32,8 @@ object MonroeMain {
     resultStream.flush()
 
     //filter { _.getName contains "full-pref" }
-    domains filter { _.getName contains "verify" } foreach { domFile =>
-      val probFile = new File(domFile.getAbsolutePath.replaceAll("/d-", "/p-"))
+    domains filter { d => d.getName.split("-")(1).toInt % 4 == run } foreach { domFile =>
+      val probFile = new File(domFile.getAbsolutePath.replaceAll("/d-", "/p-") + "tlt")
       println("\n\n\nDOMAIN: " + domFile.getName)
 
       val domInputStream = new FileInputStream(domFile)
@@ -43,10 +43,10 @@ object MonroeMain {
       val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(HDDLParserType),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = false,
-                                                                          liftedReachability = true, groundedReachability = true, planningGraph = false,
-                                                                          groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
-                                                                          iterateReachabilityAnalysis = true, groundDomain = true),
-                                               SearchConfiguration(None, Some(60), efficientSearch = true, GreedyType, Some(LiftedTDGMinimumModification), printSearchInfo = true),
+                                                                          liftedReachability = true, groundedReachability = false, planningGraph = false,
+                                                                          groundedTaskDecompositionGraph = None, //Some(TopDownTDG),
+                                                                          iterateReachabilityAnalysis = true, groundDomain = false),
+                                               SearchConfiguration(None, Some(5 * 60), efficientSearch = true, GreedyType, Some(LiftedTDGMinimumModification), printSearchInfo = true),
                                                //SearchConfiguration(None, Some(5), efficientSearch = true, DFSType, None, printSearchInfo = true),
                                                //SearchConfiguration(None, Some(5 * 60), efficientSearch = true, GreedyType, Some(NumberOfFlaws), printSearchInfo =true),
                                                PostprocessingConfiguration(Set(ProcessingTimings,
@@ -59,6 +59,7 @@ object MonroeMain {
       //System.in.read()
 
       val results: ResultMap = try {
+        //throw new OutOfMemoryError()
         searchConfig.runResultSearch(domInputStream, probInputStream)
       } catch {
         case t: Throwable => t.printStackTrace()
