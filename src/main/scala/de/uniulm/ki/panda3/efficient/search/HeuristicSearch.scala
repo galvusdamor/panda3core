@@ -73,6 +73,15 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
         timeCapsule stop SEARCH_FLAW_COMPUTATION
         minFlaw = Math.min(minFlaw, flaws.length)
 
+        //println("PLAN")
+        //plan.remainingAccessiblePrimitiveTasks.length
+        //if (!plan.allContainedApplicable) println("DEAD CONTAINED")
+        //if (!plan.allLandmarksApplicable) println("DEAD LANDMARKS")
+        //if (!plan.allAbstractTasksAllowed) println("DEAD ALLOWED")
+        //println(plan.allLandmarks filter { domain.tasks(_).isPrimitive } size)
+
+        //println("LM " + plan.allLandmarks.size + "/" + plan.simpleLandMark.size + " all " + plan.taskAllowed.count(x => x))
+
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
 
         // heuristic statistics
@@ -149,9 +158,12 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
               val treeff = if (depth % 1 == 1) tff.isPossiblySolvable(newPlan) else true
               timeCapsule stop SEARCH_COMPUTE_FILTER
 
-              if (!treeff) informationCapsule increment NUMBER_OF_DISCARDED_NODES
+              //if (!newPlan.allContainedApplicable) println("DEAD CONTAINED")
+              //if (!newPlan.allLandmarksApplicable) println("DEAD LANDMARKS")
+              //if (!newPlan.allAbstractTasksAllowed) println("DEAD ALLOWED")
 
-              if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent && treeff) {
+              if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent && treeff &&
+                newPlan.goalPotentiallyReachable && newPlan.allLandmarksApplicable && newPlan.allContainedApplicable && newPlan.allAbstractTasksAllowed) {
                 informationCapsule increment NUMBER_OF_NODES
                 informationCapsule.addToDistribution(PLAN_SIZE, newPlan.numberOfPlanSteps)
 
@@ -174,7 +186,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
                 if (h < Double.MaxValue)
                   searchQueue enqueue ((searchNode, depth + 1))
                 children append ((searchNode, modNum))
-              }
+              } else informationCapsule increment NUMBER_OF_DISCARDED_NODES
               modNum += 1
             }
           } /*else {

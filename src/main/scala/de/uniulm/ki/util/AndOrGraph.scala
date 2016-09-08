@@ -70,8 +70,14 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
 
     val topOrd = condensation.topologicalOrdering.get.reverse
 
+    Dot2PdfCompiler.writeDotToFile(this,"foo.pdf")
+
     topOrd foreach { scc =>
       scc foreach { x => seen(x) = Integer.MAX_VALUE }
+      scc foreach {
+        case a: A if andEdges.contains(a) => andEdges(a) foreach { x => assert(seen contains x, "EDGE " + a + "->" + x) }
+        case o: O if orEdges.contains(o)  => orEdges(o) foreach { x => assert(seen contains x, "EDGE " + o + "->" + x) }
+      }
 
       var changed = true
       while (changed) {
