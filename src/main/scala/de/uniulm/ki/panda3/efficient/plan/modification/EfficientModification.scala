@@ -23,6 +23,9 @@ trait EfficientModification extends PrettyPrintable{
   /** (type of new, parameters of new planstep, decomposed by method, parent in decomposition tree, ps in method subplan) */
   val addedPlanSteps  : Array[(Int, Array[Int], Int, Int, Int)] = Array()
 
+  // in general insertion will be done completely free
+  val insertInOrderingRelativeToPlanStep : Int = -1
+  val insertedPlanStepsOrderingMatrix : Option[Array[Array[Byte]]] = None
 
   lazy val addedOrderings: Array[(Int, Int)] = {
     assert(plan != null, "Orderings can only be computed if connection to parent plan has not been severed")

@@ -23,7 +23,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val probInputStream = new FileInputStream(probFile)
 
     val (searchConfig, usePlanningGraph) = configNumber match {
-      case x if x < 0 => (SearchConfiguration(Some(1), None, efficientSearch = false, DFSType, None, printSearchInfo = true), false)
+      case x if x < 0 => (SearchConfiguration(Some(0), Some(0), efficientSearch = false, DFSType, None, printSearchInfo = true), false)
       case 1          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true), true)
       case 2          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true), true)
       case 3          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumAction), printSearchInfo = true), true)
@@ -35,7 +35,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // create the configuration
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(parserType),
-                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = false,
+                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = true,
                                                                           liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,
                                                                           groundedTaskDecompositionGraph = Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = true),
@@ -69,7 +69,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     } else Range(0, -configNumber + 1) map { _ => processedDomain.tasks.head }
 
 
-    println(VerifyEncoding.computeTDG(processedDomain, processedInitialPlan, processedTDG, ordering.length))
+    //println(VerifyEncoding.computeTDG(processedDomain, processedInitialPlan, processedTDG, ordering.length))
 
     val parsingAndPreprocessingTime = results(ProcessingTimings).integralDataMap()(Timings.PARSING) + results(ProcessingTimings).integralDataMap()(Timings.PREPROCESSING)
 
@@ -140,7 +140,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // (3)
     println("K " + encoder.K)
     informationCapsule.set(VerifyRunner.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, sequenceToVerify.length))
-    informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify.length))
+    //informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify.length))
     informationCapsule.set(VerifyRunner.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, sequenceToVerify.length))
     informationCapsule.set(VerifyRunner.OFFSET_K, offSetToK)
     informationCapsule.set(VerifyRunner.ACTUAL_K, encoder.K)
@@ -169,13 +169,17 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     timeCapsule stop VerifyRunner.TRANSFORM_DIMACS
 
     encoder match {
-      case tot: TotallyOrderedEncoding => informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, tot.primitivePaths.length)
+      case tot: TotallyOrderedEncoding =>
+
+        println(tot.primitivePaths map {case (a,b) => (a,b map {_.name})} mkString "\n")
+
+        informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, tot.primitivePaths.length)
       case _                           =>
     }
 
     println(timeCapsule.integralDataMap())
 
-    System exit 0
+    //System exit 0
 
     //timeCapsule start VerifyRunner.WRITE_FORMULA
     //writeStringToFile(cnfString, new File("__cnfString"))
@@ -208,6 +212,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     informationCapsule.set(VerifyRunner.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
 
 
+
+
     // postprocessing
 
     val solverOutput = Source.fromFile(VerifyRunner.fileDir + "__res.txt").mkString
@@ -232,7 +238,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
 
     // postprocessing
-    /* if (solved) {
+     if (solved) {
        // things that are independent from the solver type
        val literals: Set[Int] = (assignment.split(" ") filter {_ != ""} map { _.toInt } filter { _ != 0 }).toSet
 
@@ -291,13 +297,15 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
            }
            }
            // check executability of the plan
-           val primitiveSolution = nodes filter { t => t.split("\\^").last.split("_").head.toInt == tot.K } sortBy { t =>
-             val path = t.split("_").last.split(",").head.split(";") map { _.toInt }
-             tot.pathSortingFunction(path)
+           val primitiveSolution = nodes filter { t => t.split("\\^").last.split("_").head.toInt == tot.K } sortWith  { case (t1,t2) =>
+             val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
+             val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
+             tot.pathSortingFunction(path1,path2)
            } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
            primitiveSolution foreach { t => assert(t.isPrimitive) }
            print("CHECKING primitive solution of length " + primitiveSolution.length + " ...")
+           println(primitiveSolution map {_.name} mkString "\n")
            checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
            println(" done.")
            (nodes, edges)
@@ -361,7 +369,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
            }
          }
        }
-     } */
+     }
 
     (solved, timeCapsule, informationCapsule)
   }
@@ -401,8 +409,8 @@ object VerifyRunner {
       Information.NUMBER_OF_METHODS :: Nil).sorted
 
   // domains to test
-  //val prefix = "/home/gregor/Workspace/panda2-system/domains/XML/"
-  val prefix = ""
+  val prefix = "/home/gregor/Workspace/panda2-system/domains/XML/"
+  //val prefix = ""
 
   val fileDir = "/dev/shm/"
   //val fileDir = "/media/tmpfs/"
@@ -474,14 +482,14 @@ object VerifyRunner {
          ("SmartPhone/problems/OrganizeMeeting_VerySmall.xml", 2) ::
          ("SmartPhone/problems/ThesisExampleProblem.xml", 1) ::
          Nil) ::
-     ("Woodworking-Socs/domains/woodworking-socs.xml", XMLParserType,
-       ("Woodworking-Socs/problems/p01-hierarchical-socs.xml", 1) ::
+ */    ("Woodworking-Socs/domains/woodworking-socs.xml", XMLParserType,
+       //("Woodworking-Socs/problems/p01-hierarchical-socs.xml", 1) ::
          ("Woodworking-Socs/problems/p02-variant1-hierarchical.xml", 1) ::
          ("Woodworking-Socs/problems/p02-variant2-hierarchical.xml", 1) ::
          ("Woodworking-Socs/problems/p02-variant3-hierarchical.xml", 1) ::
          ("Woodworking-Socs/problems/p02-variant4-hierarchical.xml", 1) ::
          Nil) ::
- */ ("domain.lisp", HDDLParserType,
+ /* ("domain.lisp", HDDLParserType,
     //("p-0002-plow-road.lisp", 4) ::
     ("problems/p-0001-clear-road-wreck.lisp", 4) :: // SOL 185
       ("problems/p-0002-plow-road.lisp", 4) :: // SOL 74
@@ -547,7 +555,7 @@ object VerifyRunner {
       ("problems/p-0061-plow-road.lisp", 4) :: // SOL 50
       ("problems/p-0062-clear-road-hazard.lisp", 6) :: // SOL 50
       Nil
-    ) ::
+    ) ::  */
     Nil
 
   //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
@@ -644,11 +652,11 @@ object VerifyRunner {
     writeStringToFile(writeHead + "\n" + result + "\n", "result.csv")
   }
 
-  def runPlanner(domFile: String, probFile: String, length: Int): Unit = {
-    //val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
-    val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
+  def runPlanner(domFile: String, probFile: String, length: Int, offset : Int): Unit = {
+    val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
+    //val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
 
-    val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = -4704, includeGoal = true, verify = false)
+    val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = offset, includeGoal = true, verify = false)
     //val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = 0, includeGoal = true, verify = false)
 
     println(time.longInfo)
@@ -663,10 +671,10 @@ object VerifyRunner {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml"
 
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Small.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Large.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
 
@@ -683,14 +691,16 @@ object VerifyRunner {
     //val domFile = "IPC7-Transport/domain-htn.lisp"
     //val probFile = "IPC7-Transport/p01-htn.lisp"
 
-    //val domFile = "domain.lisp"
-    //val probFile = "problems/p-0002-plow-road.lisp"
+    //val domFile = "../02-translation/d-0017-clear-road-tree-full-pref.hddl"
+    //val probFile = "../02-translation/p-0017-clear-road-tree-full-pref.hddl"
 
-    //val domFile = args(0)
-    //val probFile = args(1)
+    val domFile = args(0)
+    val probFile = args(1)
+    val len = args(2).toInt
+    val offset = args(3).toInt
 
-    //runPlanner(domFile, probFile, 37)
-    runEvaluation()
+    runPlanner(domFile, probFile, len, offset)
+    //runEvaluation()
   }
 
 }

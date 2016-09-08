@@ -22,12 +22,15 @@ description := "A planning system for partial-order causal-link, hierarchical an
 
 //licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.8"
 
-//mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
-mainClass in assembly := Some("de.uniulm.ki.panda3.symbolic.sat.verify.VerifyRunner")
+//mainClass in assembly := Some("de.uniulm.ki.panda3.MonroeMain")
+mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
+//mainClass in assembly := Some("de.uniulm.ki.panda3.symbolic.sat.verify.VerifyRunner")
 
 test in assembly := {}
+
+scalacOptions in assembly ++= Seq("-Xelide-below", "5000")
 
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 

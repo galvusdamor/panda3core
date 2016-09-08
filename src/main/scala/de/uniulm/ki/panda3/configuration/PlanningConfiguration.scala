@@ -21,7 +21,7 @@ import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.{efficient, symbolic}
-import de.uniulm.ki.util.{Dot2PdfCompiler, InformationCapsule, TimeCapsule}
+import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -162,12 +162,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             // prepare the heuristic
             val heuristicInstance = searchConfiguration.heuristic match {
               case Some(heuristic) => heuristic match {
-                case NumberOfFlaws          => EfficientNumberOfFlaws
-                case NumberOfPlanSteps      => EfficientNumberOfPlanSteps
-                case WeightedFlaws          => ???
-                case TDGMinimumModification => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
-                case TDGMinimumAction       => MinimumActionCount(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
-                case TDGMinimumADD          =>
+                case NumberOfFlaws                => EfficientNumberOfFlaws
+                case NumberOfPlanSteps            => EfficientNumberOfPlanSteps
+                case WeightedFlaws                => ???
+                case TDGMinimumModification       => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                case LiftedTDGMinimumModification => TSTGHeuristic(wrapper.efficientDomain)
+                case TDGMinimumAction             => MinimumActionCount(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                case TDGMinimumADD                =>
                   // TODO experimental
                   val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
                   val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
@@ -218,6 +219,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings => timeCapsule
       case SearchStatus      => if (result.isDefined) SearchState.SOLUTION
+      else if (timeCapsule.integralDataMap()(Timings.SEARCH) >= 1000*searchConfiguration.timeLimit.getOrElse(Integer.MAX_VALUE/1000))
+        SearchState.TIMEOUT
       else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
         SearchState.UNSOLVABLE
       else SearchState.INSEARCH // TODO account for the case we ran out of time
@@ -516,6 +519,8 @@ object NumberOfPlanSteps extends SearchHeuristic
 object WeightedFlaws extends SearchHeuristic
 
 object TDGMinimumModification extends SearchHeuristic
+
+object LiftedTDGMinimumModification extends SearchHeuristic
 
 object TDGMinimumADD extends SearchHeuristic
 

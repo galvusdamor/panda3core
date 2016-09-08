@@ -521,9 +521,9 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
       val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
       val subPlanPlanSteps = insertedPlanSteps :+ init :+ goal
-      val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) } filter {
-        case OrderingConstraint(before, after) => subPlanPlanSteps.contains(before) && subPlanPlanSteps.contains(after)
-      }
+      val subPlanOrderingConstraints = for (before <- addedPlanSteps.indices; after <- addedPlanSteps.indices if subOrdering.get(before)(after) == TaskOrdering.BEFORE) yield
+        OrderingConstraint(getPlanStep(before + wrappedPlan.getFirstFreePlanStepID), getPlanStep(after + wrappedPlan.getFirstFreePlanStepID))
+
       val ordering = TaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
       val csp = CSP((newVariables ++ nonPresentDecomposedPlanStep.arguments).toSet, innerConstraints)
       val subPlan = Plan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](), Map[PlanStep, (PlanStep, PlanStep)]())
