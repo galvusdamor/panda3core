@@ -5,10 +5,13 @@ import java.io.{File, FileInputStream}
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.efficient.heuristic.AlwaysZeroHeuristic
 import de.uniulm.ki.panda3.efficient.search.HeuristicSearch
+import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util._
 
+import scala.annotation.elidable
+import scala.annotation.elidable._
 
 /**
   *
@@ -16,18 +19,24 @@ import de.uniulm.ki.util._
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 object Main {
+
   def main(args: Array[String]) {
 
     println("This is Panda3")
 
-    if (args.length != 3) {
+    if (args.length != 2) {
       println("This programm needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the name of the output file. If the file extension is .dot a dot file will be" +
                 " written, else a pdf.")
       System.exit(1)
     }
     val domFile = args(0)
     val probFile = args(1)
-    val outputPDF = args(2)
+    //val outputPDF = args(2)
+
+
+    //val outputPDF = "/home/dhoeller/Schreibtisch/test.pdf"
+    val outputPDF = "/home/gregor/test.pdf"
+
 
     //val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
@@ -36,8 +45,6 @@ object Main {
 
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
-    //val outputPDF = "/home/dhoeller/Schreibtisch/test.pdf"
-    //val outputPDF = "/home/gregor/test.pdf"
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
@@ -179,23 +186,27 @@ object Main {
     //val probFile = "/home/gregor/p-0002-plow-road.lisp"
     //val probFile = "p-0002-plow-road.lisp"
 
+    //val domFile = "/home/gregor/d-0111-plow-road-verify.hddl"
+    //val probFile = "/home/gregor/p-0111-plow-road-verify.hddl"
+    //val domFile = "/home/gregor/d-0111-plow-road-full-pref.hddl"
+    //val probFile = "/home/gregor/p-0111-plow-road-full-pref.hddl"
+
+
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
-
-    val doit = true
 
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(HDDLParserType),
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = false,
-                                                                        liftedReachability = true, groundedReachability = doit, planningGraph = false,
+                                                                        liftedReachability = true, groundedReachability = true, planningGraph = false,
                                                                         groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
-                                                                        iterateReachabilityAnalysis = true, groundDomain = false),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
+                                                                        iterateReachabilityAnalysis = false, groundDomain = true),
+                                             SearchConfiguration(None, Some(60), efficientSearch = true, AStarActionsType, Some(LiftedTDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumAction), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
-                                             SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
+                                             //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
+                                             //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
                                              //SearchConfiguration(None, None, efficientSearch = false, BFSType, None, printSearchInfo = true),
@@ -228,7 +239,7 @@ object Main {
       name + args.mkString("(", ",", ")")
     }
 
-    println(plan.orderingConstraints.graph.topologicalOrdering.get map psToString mkString "\n")
+    println(plan.orderingConstraints.graph.topologicalOrdering.get filter {_.schema.isPrimitive} map psToString mkString "\n")
 
     println("FIRST DECOMPOSITION")
     val initSchema = results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.head.schema
@@ -247,9 +258,9 @@ object Main {
       println(solution.planSteps.length)
       // write output
       if (outputPDF.endsWith("dot")) {
-        writeStringToFile(solution.dotString, new File(outputPDF))
+        writeStringToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), new File(outputPDF))
       } else {
-        Dot2PdfCompiler.writeDotToFile(solution, outputPDF)
+        Dot2PdfCompiler.writeDotToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), outputPDF)
       }
     }
     var doneCounter = 0
