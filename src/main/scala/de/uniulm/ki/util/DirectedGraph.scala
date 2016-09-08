@@ -199,6 +199,8 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
   /** computes for each node, which other nodes can be reached from it using the edges of the graph */
   // TODO: this computation might be inefficient
   lazy val reachable: Map[T, Set[T]] = {
+    println("START REACHABLE")
+    val stime = System.currentTimeMillis()
     val reachabilityMap: mutable.Map[T, Set[T]] = mutable.HashMap()
 
     def dfs(scc: Set[T]): Unit = {
@@ -206,16 +208,26 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
       if (!reachabilityMap.contains(scc.head)) {
         condensation.edges(scc) foreach dfs
 
-        val allReachable: Set[T] =
-          (if (scc.size > 1) scc else Set()) ++ (condensation.edges(scc) flatMap { neighbour => reachabilityMap(neighbour.head) ++ (if (neighbour.size == 1) neighbour else Nil) })
+        val allReachable = new mutable.HashSet[T]()
+        if (scc.size > 1) allReachable ++= scc
 
-        scc foreach { reachabilityMap(_) = allReachable }
+        condensation.edges(scc) foreach { neighbour =>
+          allReachable ++= reachabilityMap(neighbour.head)
+          if (neighbour.size == 1) allReachable add neighbour.head
+        }
+
+        val reachableSet = allReachable.toSet
+        if (reachabilityMap.size % 1000 == 0)
+          println("SZ " + reachableSet.size + " @ " + reachabilityMap.size + "/" + vertices.size)
+        scc foreach { reachabilityMap(_) = reachableSet }
       }
     }
     // run the dfs on all source SCCs of the condensation
     condensation.sources foreach dfs
     assert(reachabilityMap.size == vertices.size)
-    reachabilityMap.toMap
+    val m = reachabilityMap.toMap
+    println("DONE in " + (System.currentTimeMillis() - stime))
+    m
   }
 
   def reachableFrom(root: T): Set[T] = {

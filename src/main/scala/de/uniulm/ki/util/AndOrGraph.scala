@@ -34,34 +34,61 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
     SimpleAndOrGraph(prunedAndVertices, prunedOrVertices, prunedAndEdges, prunedOrEdges)
   }
 
+  def minSumTraversal(root: A, evaluate: (A => Double), sumInitialValue: Int): Double = minSumTraversalMap(evaluate, sumInitialValue)(root)
 
-  def minSumTraversal(root: A, evaluate: (A => Double), sumInitialValue : Int): Double = {
-    val seen: scala.collection.mutable.Map[A, Double] = mutable.HashMap[A, Double]()
 
-    def mini(root: A, evaluate: (A => Double)): Double = if (!andEdges.contains(root) || andEdges(root).isEmpty) evaluate(root)
-    else if (seen.contains(root)) seen(root)
-    else {
-      seen.put(root, Double.MaxValue) // side effect
-      val it = andEdges(root).iterator
-      var value = Double.MaxValue
-      while (it.hasNext) value = Math.min(value, sum(it.next(), evaluate))
-      seen.put(root, value) // side effect
-      value
-    }
+  def minSumTraversalMap(evaluate: (A => Double), sumInitialValue: Int): Map[A, Double] = {
+    val seen: scala.collection.mutable.Map[T, Double] = mutable.HashMap[T, Double]()
 
-    def sum(root: O, evaluate: (A => Double)): Double = {
+    def mini(root: A): Boolean =
+      if (!andEdges.contains(root) || andEdges(root).isEmpty) {
+        val v = evaluate(root)
+        seen(root) = v
+        false
+      } else {
+        //seen.put(root, Integer.MAX_VALUE) // side effect
+        val it = andEdges(root).iterator
+        var value: Double = Integer.MAX_VALUE
+        while (it.hasNext) value = Math.min(value, seen(it.next()))
+
+        if (seen(root) != value) {
+          seen.put(root, value) // side effect
+          true
+        } else false
+      }
+
+    def sum(root: O): Boolean = {
       val it = orEdges(root).iterator
       var value = sumInitialValue.toDouble
-      while (it.hasNext) value += mini(it.next(), evaluate)
-      value
+      while (it.hasNext) value += seen(it.next())
+      if (seen(root) != value) {
+        seen(root) = value
+        true
+      } else false
     }
-    mini(root, evaluate)
+
+
+    val topOrd = condensation.topologicalOrdering.get.reverse
+
+    topOrd foreach { scc =>
+      scc foreach { x => seen(x) = Integer.MAX_VALUE }
+
+      var changed = true
+      while (changed) {
+        changed = scc map {
+          case a: A if andEdges.contains(a) => mini(a)
+          case o: O if orEdges.contains(o)  => sum(o)
+        } exists { i => i }
+      }
+    }
+
+    seen collect { case (a: A, v) if andVertices contains a => a -> v } toMap
   }
 
 
   override protected def dotVertexStyleRenderer(v: T): String = v match {
-    case a : A if andEdges.contains(a) =>  ",shape = box, style = filled, fillcolor = red"
-    case o : O if orEdges.contains(o) => ""
+    case a: A if andEdges.contains(a) => ",shape = box, style = filled, fillcolor = red"
+    case o: O if orEdges.contains(o)  => ""
   }
 
   override def reachableFrom(node: T): Set[T] = super.reachableFrom(node)

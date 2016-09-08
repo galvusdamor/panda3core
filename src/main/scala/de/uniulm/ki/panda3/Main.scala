@@ -188,8 +188,8 @@ object Main {
 
     //val domFile = "/home/gregor/d-0111-plow-road-verify.hddl"
     //val probFile = "/home/gregor/p-0111-plow-road-verify.hddl"
-    //val domFile = "/home/gregor/d-0111-plow-road-full-pref.hddl"
-    //val probFile = "/home/gregor/p-0111-plow-road-full-pref.hddl"
+    //val domFile = "/home/gregor/d-0009-quell-riot-4.hddl"
+    //val probFile = "/home/gregor/p-0009-quell-riot-4.hddltlt"
 
 
     val domInputStream = new FileInputStream(domFile)
@@ -199,10 +199,10 @@ object Main {
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(HDDLParserType),
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = false,
-                                                                        liftedReachability = true, groundedReachability = true, planningGraph = false,
-                                                                        groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
-                                                                        iterateReachabilityAnalysis = false, groundDomain = true),
-                                             SearchConfiguration(None, Some(60), efficientSearch = true, AStarActionsType, Some(LiftedTDGMinimumModification), true),
+                                                                        liftedReachability = true, groundedReachability = false, planningGraph = false,
+                                                                        groundedTaskDecompositionGraph = None, //Some(TopDownTDG), // None,
+                                                                        iterateReachabilityAnalysis = false, groundDomain = false),
+                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(LiftedTDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumAction), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),

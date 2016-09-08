@@ -30,7 +30,7 @@ mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
 
 test in assembly := {}
 
-scalacOptions in assembly ++= Seq("-Xelide-below", "5000")
+scalacOptions ++= Seq("-Xelide-below", "5000")
 
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 
