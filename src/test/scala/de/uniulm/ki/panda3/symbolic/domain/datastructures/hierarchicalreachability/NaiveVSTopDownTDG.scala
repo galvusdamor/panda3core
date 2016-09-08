@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachabil
 import java.io.FileInputStream
 
 import de.uniulm.ki.panda3.symbolic.compiler._
+import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraphConfiguration, GroundedPlanningGraph}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
@@ -42,7 +43,7 @@ class NaiveVSTopDownTDG extends FlatSpec {
     assert(naiveTDG.reachableGroundedTasks.toSet == topDownTDG.reachableGroundedTasks.toSet)
     assert(naiveTDG.reachableGroundAbstractActions.toSet == topDownTDG.reachableGroundAbstractActions.toSet)
     assert(naiveTDG.reachableGroundPrimitiveActions == topDownTDG.reachableGroundPrimitiveActions)
-    assert(naiveTDG.reachableGroundMethods.toSet == topDownTDG.reachableGroundMethods.toSet)
-    assert(naiveTDG.reachableGroundLiterals.toSet == topDownTDG.reachableGroundLiterals.toSet)
+    assert(naiveTDG.reachableGroundMethods.toSet === topDownTDG.reachableGroundMethods.toSet)
+    assert(naiveTDG.reachableGroundLiterals.toSet === topDownTDG.reachableGroundLiterals.toSet)
   }
 }
