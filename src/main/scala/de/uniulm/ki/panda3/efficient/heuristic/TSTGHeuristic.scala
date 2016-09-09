@@ -1,10 +1,9 @@
 package de.uniulm.ki.panda3.efficient.heuristic
 
-import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientGroundedTaskDecompositionGraph
-import de.uniulm.ki.panda3.efficient.domain.{EfficientDecompositionMethod, EfficientTask, EfficientDomain}
+import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
-import de.uniulm.ki.util.{Dot2PdfCompiler, SimpleAndOrGraph}
+import de.uniulm.ki.util.SimpleAndOrGraph
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)

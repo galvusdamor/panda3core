@@ -38,6 +38,43 @@ case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends D
     }).toMap
   }
 
+  val mutexes: Array[Array[(Int, Int)]] = {
+    val mutex = new Array[Array[(Int, Int)]](domain.tasks.length)
+    val topOrd = condensation.topologicalOrdering.get.reverse
+
+    def recomputeMutexesFor(task: Int): Boolean = {
+      val methodTasks = domain.taskToPossibleMethods(task) map { _._1.subPlan.planStepTasks.drop(2) }
+      val methodReachable = methodTasks map { ts => ts ++ (ts flatMap reachable) toSet }
+      val potentialMutexes = reachable(task) flatMap { x => reachable(task) collect { case y if y > x => (x, y) } }
+
+      val methodMutexes = methodReachable map { m =>
+        m flatMap { t => mutex(t) filter { case (a, b) => m filter { _ != t } exists { ot => reachable(ot).contains(a) || reachable(ot).contains(b) } } }
+      }
+      val mutexesViaAnyMethod = methodMutexes map { mm =>
+        mm filter { case (a, b) => methodMutexes.indices exists { mi => methodReachable(mi).contains(a) && methodReachable(mi).contains(b) && !methodMutexes(mi).contains((a, b)) } } toSet
+      }
+
+      val allMethodMutexes = mutexesViaAnyMethod flatten
+      val actualMutexes = potentialMutexes filterNot { case (x, y) => methodReachable exists { m => m.contains(x) && m.contains(y) && !allMethodMutexes.contains(x, y) } }
+      val allMutexes = (allMethodMutexes ++ actualMutexes).distinct
+
+      val changed = mutex(task).length != allMutexes.length
+      mutex(task) = allMutexes
+      changed
+    }
+
+    topOrd foreach { scc =>
+      scc foreach { t => mutex(t) = Array() }
+
+      var changed = true
+      // recomputed allowed tasks
+      while (changed)
+        changed = scc map recomputeMutexesFor forall { x => x }
+    }
+
+    mutex
+  }
+
 
   def landMarkFromAndAllowedTasks(allowedPrimitives: BitSet): (Array[BitSet], Array[Boolean]) = {
     val landmarks = new Array[BitSet](domain.tasks.length)

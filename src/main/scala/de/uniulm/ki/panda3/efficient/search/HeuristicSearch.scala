@@ -63,6 +63,10 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
     informationCapsule increment NUMBER_OF_NODES
     informationCapsule.addToDistribution(PLAN_SIZE, initialPlan.numberOfPlanSteps)
 
+    println(domain.tasks.indices map {t => t + " -> " + domain.taskSchemaTransitionGraph.mutexes(t).mkString(",")} mkString "\n")
+    //System exit 0
+
+
     def heuristicSearch() = {
       while (searchQueue.nonEmpty && (continueOnSolution || result.isEmpty) && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
         initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis() - 50) {
