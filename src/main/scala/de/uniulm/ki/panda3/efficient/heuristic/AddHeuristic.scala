@@ -20,7 +20,7 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
   private val heuristicMap: Map[EfficientGroundLiteral, Double] =
     (planningGraph.actionLayer zip planningGraph.stateLayer).foldLeft(initialState map { case (predicate, args) => EfficientGroundLiteral(predicate, isPositive = true, args) -> 0.0 } toMap)(
       {
-        case (initiallyComputedValues, (actions, stateFeatures)) =>
+        case (initiallyComputedValues, (actions, _)) =>
           // apply all actions
           actions.foldLeft(initiallyComputedValues)({ case (computedValues, (task, arguments)) =>
             val groundTask = EfficientGroundTask(task, arguments)
@@ -60,11 +60,8 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
     BucketAccessMap(literals map { case (k, v) => (k.arguments, v) })
   }
 
-  var foo = 0
-
   protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double = {
     var heuristicEstimate = 0.0
-    foo += 1
     val planStepTask = domain.tasks(plan.planStepTasks(planStep))
     val planStepPreconditions = planStepTask.precondition
 
@@ -86,7 +83,7 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
         }
         if (!resuingAsVHPOP || !potentialSupporterFound) {
           val literalArguments = planStepTask.getArgumentsOfLiteral(arguments, planStepPreconditions(precondition))
-          val h = efficientAccessMaps(planStepPreconditions(precondition).predicate)(literalArguments)
+          val h = 1 + efficientAccessMaps(planStepPreconditions(precondition).predicate)(literalArguments)
           heuristicEstimate += h
         }
       }
@@ -96,23 +93,19 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
     heuristicEstimate
   }
 
-  override def computeHeuristic(plan: EfficientPlan, unit : Unit, mod : EfficientModification): (Double,Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification): (Double, Unit) = {
     // accumulate for all actions in the plan
-    var heuristicValue: Double = plan.openPreconditions.length // every flaw must be addressed
-    foo = 0
-    //println("ACTIONS " + plan.numberOfPlanSteps)
-    //println("CLs " + plan.causalLinks.length)
-    val startTime = System.currentTimeMillis()
-    var i = 2 // init doesn't have effects
+    var heuristicValue: Double = 0 // plan.openPreconditions.length // every flaw must be addressed
+
+    var i = 1 // init doesn't have effects
     while (i < plan.numberOfAllPlanSteps) {
       if (plan.isPlanStepPresentInPlan(i)) {
         // we have to ground here
-        heuristicValue += computeHeuristicByGrounding(i, new Array[Int](plan.planStepParameters(i).length), 0, plan)
+        heuristicValue += computeHeuristicByGrounding(i, plan)
       }
 
       i += 1
     }
-    //println("HEURISTIC " + heuristicValue + " took " + (System.currentTimeMillis() - startTime) + " groundings "  + foo)
-    (heuristicValue,())
+    (heuristicValue, ())
   }
 }
