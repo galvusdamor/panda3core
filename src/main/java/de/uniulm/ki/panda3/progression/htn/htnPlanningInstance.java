@@ -208,10 +208,10 @@ public class htnPlanningInstance {
 
         // todo: change heuristic here
         //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        initialNode.heuristic = new cRPG(operators.methods, allActions);
-        initialNode.heuristic.build(initialNode);
-        initialNode.metric = initialNode.heuristic.getHeuristic();
-        //initialNode.metric = 1;
+        //initialNode.heuristic = new cRPG(operators.methods, allActions);
+        //initialNode.heuristic.build(initialNode);
+        //initialNode.metric = initialNode.heuristic.getHeuristic();
+        initialNode.metric = 1;
 
 
         List<Object> solution = priorityQueueSearch(initialNode);
