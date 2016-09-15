@@ -10,7 +10,7 @@ import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
-import de.uniulm.ki.panda3.efficient.heuristic.AddHeuristic
+import de.uniulm.ki.panda3.efficient.heuristic.{RelaxHeuristic, AddHeuristic}
 import de.uniulm.ki.util._
 
 
@@ -83,15 +83,15 @@ object Main {
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
 
     val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p03.pddl"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p05.pddl"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/domain/driverlog.pddl"
-    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problems/pfile1"
+    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problems/pfile2"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/domain/zenotravelStrips.pddl"
-    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/problems/pfile7"
+    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/problems/pfile2"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/domain/stripsSat.pddl"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/problems/pfile4"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC4/PROMELA-PHILO/domain/P01_DOMAIN.PDDL"
@@ -202,10 +202,10 @@ object Main {
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(HDDLParserType),
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = false,
-                                                                        liftedReachability = true, groundedReachability = false, planningGraph = false,
+                                                                        liftedReachability = true, groundedReachability = false, planningGraph = true,
                                                                         groundedTaskDecompositionGraph = None, //Some(TopDownTDG), // None,
-                                                                        iterateReachabilityAnalysis = false, groundDomain = false),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumADD), true),
+                                                                        iterateReachabilityAnalysis = false, groundDomain = true),
+                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), false, true),
                                              SearchConfiguration(Some(100000), None, efficientSearch = true, DijkstraType, None, true, true),
                                              //SearchConfiguration(Some(100000), None, efficientSearch = true, AStarActionsType, Some(ADD), true, printSearchInfo = true),
                                              //SearchConfiguration(Some(500000), None, efficientSearch = true, BFSType, None, printSearchInfo = true),
@@ -254,10 +254,12 @@ object Main {
       (wrapper.unwrap(task), args map wrapper.unwrap toArray)
     }
     val addHeuristic = AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, efficientInitialState.toArray, resuingAsVHPOP = false)
+    val relaxHeuristic = RelaxHeuristic(efficientPlanningGraph, wrapper.efficientDomain, efficientInitialState.toArray)
 
 
-    val pathsWithHStarAndADD: Seq[Seq[(SearchNode, (Int, Int))]] =
-      foundPaths map { p => p map { case (node, hstar) => (node, (hstar, addHeuristic.computeHeuristic(wrapper.unwrap(node.plan), (), null)._1.toInt)) } }
+    val pathsWithHStarAndADD: Seq[Seq[(SearchNode, (Int, Int,Int))]] =
+      foundPaths map { p => p map { case (node, hstar) => (node, (hstar, addHeuristic.computeHeuristic(wrapper.unwrap(node.plan), (), null)._1.toInt,
+        relaxHeuristic.computeHeuristic(wrapper.unwrap(node.plan), (), null)._1.toInt)) } }
 
     println("SOLUTION SEQUENCE")
     val plan = results(SearchResult).get
