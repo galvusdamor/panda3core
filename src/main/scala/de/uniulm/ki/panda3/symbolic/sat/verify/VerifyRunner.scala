@@ -300,7 +300,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
           val primitiveSolution = nodes filter { t => t.split("\\^").last.split("_").head.toInt == tot.K } sortWith { case (t1, t2) =>
             val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
             val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
-            tot.pathSortingFunction(path1, path2)
+            PathBasedEncoding.pathSortingFunction(path1, path2)
           } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
           primitiveSolution foreach { t => assert(t.isPrimitive) }
