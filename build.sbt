@@ -28,6 +28,8 @@ mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 //mainClass in assembly := Some("de.uniulm.ki.panda3.symbolic.compiler.prefix.PANDAaddPrefix")
 
+test in assembly := {}
+
 compileOrder in Compile := CompileOrder.Mixed
 
 compileOrder in Test := CompileOrder.Mixed
