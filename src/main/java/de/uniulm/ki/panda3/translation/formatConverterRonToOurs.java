@@ -4,10 +4,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,8 +23,8 @@ public class formatConverterRonToOurs {
         //String inFile = "/home/dhoeller/Schreibtisch/rons-domains/blocksworld/domain/domain.hpddl";
         //String outFile = "/home/dhoeller/Schreibtisch/rons-domains/blocksworld/domain/domain.hpddl-2";
 
-        String inFile = "/home/dhoeller/Schreibtisch/rons-domains/multiarm-blocksworld/problems/pfile_10_100.pddl";
-        String outFile = "/home/dhoeller/Schreibtisch/rons-domains/multiarm-blocksworld/problems/pfile_10_100.pddl-2";
+        String inFile = "C:\\Projekte\\panda3\\src\\test\\resources\\de\\uniulm\\ki\\panda3\\symbolic\\parser\\hddl\\towers\\domain\\domain.hpddl";
+        String outFile = "C:\\Projekte\\panda3\\src\\test\\resources\\de\\uniulm\\ki\\panda3\\symbolic\\parser\\hddl\\towers\\domain\\domain.hpddl-2";
 
         String txtFile = readFile(inFile);
 
@@ -111,12 +108,11 @@ public class formatConverterRonToOurs {
             if (def.trim().startsWith("(:action"))
                 actions.add(def);
 
-        Map<String, String> taskReplacementMap = new HashMap<>();
+        Map<String, List<String>> taskReplacementMap = new HashMap<>();
         // add new methods
         for (String def : actions) {
             newMethods.add(addNewMethods(def, taskReplacementMap));
         }
-
 
         for (String def : definitions) {
             if (def.trim().startsWith("define")) {
@@ -156,11 +152,13 @@ public class formatConverterRonToOurs {
 
     static int newMethodID = 1;
     static String acNameRegEx = "\\(\\:action ([a-zA-Z0-9_-]*)";
+    static String parameterRegEx = "\\:parameters \\(([^)]*)\\)";
     static String meNameRegEx = "\\:task \\(([^)]*)\\)";
     static Pattern pActionName = Pattern.compile(acNameRegEx);
     static Pattern pTaskName = Pattern.compile(meNameRegEx);
+    static Pattern pParameter = Pattern.compile(parameterRegEx);
 
-    private static String addNewMethods(String def, Map<String, String> taskReplacementMap) {
+    private static String addNewMethods(String def, Map<String, List<String>> taskReplacementMap) {
         Matcher mAction = pActionName.matcher(def);
         if (!mAction.find()) {
             System.out.println("Error: could not find action name");
@@ -177,16 +175,28 @@ public class formatConverterRonToOurs {
         String taskName = task.split(" ")[0];
         String replacementTaskName = taskName + "_abstract";
         String parameters = task.substring(taskName.length());
+        Matcher mParameter = pParameter.matcher(def);
+        if (!mParameter.find()) {
+            System.out.println("Error: could not find parameters!");
+            return null;
+        }
+        String aParameters = mParameter.group().substring(12);
         // TODO this does not always work
         String parameterType = "";
         if (parameters.length() != 0)
             parameterType = " - OBJ";
 
-        taskReplacementMap.put(taskName, replacementTaskName);
-        return "(:method newMethod" + (newMethodID++) + "\n" +
-                "    :parameters (" + parameters + " " + parameterType + ")\n" +
-                "    :task (" + replacementTaskName + parameters + ")\n" +
-                "    :tasks (" + actionName + parameters + "))";
+        if(taskReplacementMap.containsKey(taskName)) {
+            taskReplacementMap.get(taskName).add(replacementTaskName + " " + aParameters.substring(12, aParameters.length() - 1) + ")");
+        } else {
+            taskReplacementMap.put(taskName, new ArrayList<>());
+            taskReplacementMap.get(taskName).add(replacementTaskName + " " + aParameters.substring(12, aParameters.length() - 1) + ")");
+        }
+        System.out.println(taskReplacementMap.get(taskName));
+        return  "\n (:method newMethod" + (newMethodID++) + "\n" +
+                "  :parameters " + aParameters + "\n" +
+                "  :task (" + replacementTaskName + " " + aParameters.substring(12, aParameters.length() - 1) + ")\n" +
+                "  :tasks (" + actionName + " " + aParameters.substring(12, aParameters.length() - 1) + "))";
     }
 
     static String delTaskLineRegEx = "[\\s]*:task \\([^)]*\\)";
@@ -195,10 +205,9 @@ public class formatConverterRonToOurs {
         return def.replaceAll(delTaskLineRegEx, "");
     }
 
-    private static String transformMethods(String def, Map<String, String> taskReplacementMap) {
+    private static String transformMethods(String def, Map<String, List<String>> taskReplacementMap) {
         int paramPos = def.indexOf(":parameters");
         int taskPos = def.indexOf(":task");
-
         if (paramPos != -1) {
             if (taskPos < paramPos) {
                 int endLineParam = def.indexOf("\n", paramPos);
@@ -206,6 +215,7 @@ public class formatConverterRonToOurs {
 
                 String parameters = def.substring(paramPos, endLineParam);
                 String task = def.substring(taskPos, endLineTask);
+
 
                 String newDef = def.substring(0, taskPos);
                 newDef += parameters;
@@ -218,32 +228,66 @@ public class formatConverterRonToOurs {
         } else {
             def = def.substring(0, taskPos) + "    :parameters ()\n" + def.substring(taskPos);
         }
-
-        for (Map.Entry<String, String> x : taskReplacementMap.entrySet())
-            def = def.replaceAll(x.getKey(), x.getValue());
-
-        return def.replaceAll("\\:tasks \\(\\(", ":tasks (and (");
+        List<String> taskList = new ArrayList<>();
+        taskList.add(def.substring(taskPos, def.indexOf("\n", taskPos)));
+        int tasksStart = def.indexOf(":tasks");
+        int tasksEnd = def.lastIndexOf(")");
+        if(tasksStart != -1) {
+            String tasks = def.substring(tasksStart, tasksEnd);
+            String taskRegrex = "\\(([^)]*)\\)";
+            Pattern taskPattern = Pattern.compile(taskRegrex);
+            Matcher tMatcher = taskPattern.matcher(tasks.substring(tasks.indexOf("(") + 1, tasks.lastIndexOf(")") - 1));
+            while (tMatcher.find()) {
+                taskList.add(tMatcher.group());
+            }
+        }
+        String finaldef = "";
+        for (Map.Entry<String, List<String>> x : taskReplacementMap.entrySet()) {
+            if (def.contains(x.getKey())) {
+                for (String y : x.getValue()) {
+                    finaldef = finaldef.concat(def);
+                    for(String task : taskList) {
+                        if(task.contains(x.getKey())) {
+                            if(finaldef.contains(task)){
+                                System.out.println("Contains!");
+                            }
+                            finaldef = finaldef.replace(task, "("+ y + ")");
+                            System.out.println(finaldef);
+                        }
+                    }
+                }
+            }
+        }
+        if (finaldef.equals("")){
+            finaldef = def;
+        }
+        return finaldef.replaceAll("\\:tasks \\(\\(", ":tasks (and (");
     }
 
     static String taskDefRegEx = "\\(([a-zA-Z0-9_-]+)( [^)]+)?";
     static Pattern pTask = Pattern.compile(taskDefRegEx);
 
-    private static String transformTasks(String def, Map<String, String> taskReplacementMap) {
+    private static String transformTasks(String def, Map<String, List<String>> taskReplacementMap) {
         StringBuilder res = new StringBuilder();
         Matcher mTasks = pTask.matcher(def);
         int offset = 0;
         while (mTasks.find(offset)) {
-            res.append("  (:task ");
-            if (taskReplacementMap.containsKey(mTasks.group(1)))
-                res.append(taskReplacementMap.get(mTasks.group(1)));
-            else
+            if (taskReplacementMap.containsKey(mTasks.group(1))) {
+                for(String x : taskReplacementMap.get(mTasks.group(1))){
+                    res.append("  (:task ");
+                    res.append(x);
+                    res.append("\n");
+                }
+            } else {
+                res.append("  (:task ");
                 res.append(mTasks.group(1));
-            res.append(" :parameters (");
-            String paramStr = mTasks.group(2);
-            if (paramStr != null) {
-                res.append(paramStr.trim()); // parameters
+                res.append(" :parameters (");
+                String paramStr = mTasks.group(2);
+                if (paramStr != null) {
+                    res.append(paramStr.trim()); // parameters
+                }
+                res.append("))\n");
             }
-            res.append("))\n");
             offset = mTasks.end();
         }
         return res.toString();

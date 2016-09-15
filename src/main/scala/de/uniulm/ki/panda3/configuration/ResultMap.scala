@@ -21,6 +21,10 @@ object SearchStatus extends ResultType {type ResultType = SearchState}
 
 object SearchResult extends ResultType {type ResultType = Option[Plan]}
 
+object AllFoundPlans extends ResultType {type ResultType = Seq[Plan]}
+
+object AllFoundSolutionPathsWithHStar extends ResultType {type ResultType = Seq[Seq[(SearchNode,Int)]]}
+
 object SearchStatistics extends ResultType {type ResultType = InformationCapsule}
 
 object SearchSpace extends ResultType {type ResultType = SearchNode}

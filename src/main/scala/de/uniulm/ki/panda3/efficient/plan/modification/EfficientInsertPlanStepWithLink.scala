@@ -45,29 +45,31 @@ object EfficientInsertPlanStepWithLink {
     var i = 0
     while (i < possibleProducer.length) {
       val producerTask = plan.domain.tasks(possibleProducer(i)._1)
-      val producerLiteral = producerTask.effect(possibleProducer(i)._2)
-      val newVariableSorts = producerTask.parameterSorts
-      val planStepParameterVariables = Array.range(plan.firstFreeVariableID, plan.firstFreeVariableID + newVariableSorts.length)
-      val constraintsBuffer = new ArrayBuffer[EfficientVariableConstraint]()
-      // add the constraints inherent to the task itself
-      var j = 0
-      while (j < producerTask.constraints.length) {
-        constraintsBuffer append producerTask.applyArgumentsToConstraint(planStepParameterVariables, producerTask.constraints(j))
-        j += 1
-      }
+      if (producerTask.allowedToInsert) {
+        val producerLiteral = producerTask.effect(possibleProducer(i)._2)
+        val newVariableSorts = producerTask.parameterSorts
+        val planStepParameterVariables = Array.range(plan.firstFreeVariableID, plan.firstFreeVariableID + newVariableSorts.length)
+        val constraintsBuffer = new ArrayBuffer[EfficientVariableConstraint]()
+        // add the constraints inherent to the task itself
+        var j = 0
+        while (j < producerTask.constraints.length) {
+          constraintsBuffer append producerTask.applyArgumentsToConstraint(planStepParameterVariables, producerTask.constraints(j))
+          j += 1
+        }
 
-      // add the constraints we need to set the causal link
-      // TODO: this is really naive .. maybe we add a CSP here (on the other hand CSPs are really slow if created that often)
-      val producerParameters = producerTask.getArgumentsOfLiteral(planStepParameterVariables, producerLiteral)
-      j = 0
-      while (j < producerParameters.length) {
-        constraintsBuffer append new EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, producerParameters(j), consumerParameters(j))
-        j += 1
-      }
+        // add the constraints we need to set the causal link
+        // TODO: this is really naive .. maybe we add a CSP here (on the other hand CSPs are really slow if created that often)
+        val producerParameters = producerTask.getArgumentsOfLiteral(planStepParameterVariables, producerLiteral)
+        j = 0
+        while (j < producerParameters.length) {
+          constraintsBuffer append new EfficientVariableConstraint(EfficientVariableConstraint.EQUALVARIABLE, producerParameters(j), consumerParameters(j))
+          j += 1
+        }
 
-      val planStep = (possibleProducer(i)._1, planStepParameterVariables, -1, -1, -1)
-      val causalLink = EfficientCausalLink(plan.firstFreePlanStepID, consumer, possibleProducer(i)._2, consumerIndex)
-      buffer append EfficientInsertPlanStepWithLink(plan, resolvedFlaw, planStep, newVariableSorts, causalLink, constraintsBuffer.toArray)
+        val planStep = (possibleProducer(i)._1, planStepParameterVariables, -1, -1, -1)
+        val causalLink = EfficientCausalLink(plan.firstFreePlanStepID, consumer, possibleProducer(i)._2, consumerIndex)
+        buffer append EfficientInsertPlanStepWithLink(plan, resolvedFlaw, planStep, newVariableSorts, causalLink, constraintsBuffer.toArray)
+      }
       i += 1
     }
 

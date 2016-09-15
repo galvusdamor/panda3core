@@ -4,6 +4,7 @@ import de.uniulm.ki.panda3.efficient.domain.{EfficientDomain, EfficientGroundTas
 import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.logic.EfficientGroundLiteral
+import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.util.BucketAccessMap
 
 import scala.collection.mutable.ArrayBuffer
@@ -14,7 +15,7 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: EfficientDomain, initialState: Array[(Int, Array[Int])],
-                        resuingAsVHPOP: Boolean) extends MinimisationOverGroundingsBasedHeuristic {
+                        resuingAsVHPOP: Boolean) extends MinimisationOverGroundingsBasedHeuristic[Unit] {
 
   private val heuristicMap: Map[EfficientGroundLiteral, Double] =
     (planningGraph.actionLayer zip planningGraph.stateLayer).foldLeft(initialState map { case (predicate, args) => EfficientGroundLiteral(predicate, isPositive = true, args) -> 0.0 } toMap)(
@@ -95,7 +96,7 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
     heuristicEstimate
   }
 
-  override def computeHeuristic(plan: EfficientPlan): Double = {
+  override def computeHeuristic(plan: EfficientPlan, unit : Unit, mod : EfficientModification): (Double,Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = plan.openPreconditions.length // every flaw must be addressed
     foo = 0
@@ -112,6 +113,6 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
       i += 1
     }
     //println("HEURISTIC " + heuristicValue + " took " + (System.currentTimeMillis() - startTime) + " groundings "  + foo)
-    heuristicValue
+    (heuristicValue,())
   }
 }

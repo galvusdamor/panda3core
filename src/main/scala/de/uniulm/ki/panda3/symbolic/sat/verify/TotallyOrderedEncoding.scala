@@ -187,7 +187,13 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
       }
   }
 
-  def pathSortingFunction(path: Seq[Int]): Int = path.foldLeft(0)({ case (acc, v) => acc * domain.maximumMethodSize + v })
+  //def pathSortingFunction(pathA: Seq[Int], pathB: Seq[Int]): Int = path.foldLeft(0)({ case (acc, v) => acc * domain.maximumMethodSize + v })
+  def pathSortingFunction(pathA: Seq[Int], pathB: Seq[Int]): Boolean =
+    pathA.zip(pathB).foldLeft[Option[Boolean]](None)(
+      {
+        case (Some(x), _)     => Some(x)
+        case (None, (p1, p2)) => if (p1 < p2) Some(true) else if (p1 > p2) Some(false) else None
+      }).getOrElse(false)
 
   lazy val (computedDecompositionFormula, primitivePaths) = {
     val allOrderingsInitialPlan = initialPlan.orderingConstraints.graph.allTotalOrderings.get
@@ -202,7 +208,7 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
     val dec = initialPlanClauses flatMap { _._1 }
 
     println(dec.length)
-    (dec ++ assertedTasks, initialPlanClauses flatMap { _._2 } sortBy { case (p, _) => pathSortingFunction(p) })
+    (dec ++ assertedTasks, initialPlanClauses flatMap { _._2 } sortWith { case ((p1, _), (p2, _)) => pathSortingFunction(p1, p2) }) //sortBy { case (p, _) => pathSortingFunction(p) })
   }
 
   override lazy val decompositionFormula: Seq[Clause] = computedDecompositionFormula

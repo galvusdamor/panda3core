@@ -107,6 +107,6 @@ object DFS extends SymbolicSearchAlgorithm {
         semaphore.release()
       }
     }).start()
-    (node, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result }), AbortFunction({ _ => abort = true }))
+    (node, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result match {case Some(p) => p :: Nil; case _ => Nil} }), AbortFunction({ _ => abort = true }))
   }
 }

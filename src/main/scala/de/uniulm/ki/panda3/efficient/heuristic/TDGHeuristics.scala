@@ -3,15 +3,16 @@ package de.uniulm.ki.panda3.efficient.heuristic
 import de.uniulm.ki.panda3.efficient.domain.{EfficientDomain, EfficientGroundTask}
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientGroundedTaskDecompositionGraph
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
+import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.util.DotPrintable
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait TDGHeuristics extends MinimisationOverGroundingsBasedHeuristic with DotPrintable[Unit] {
 
-  def taskDecompositionTree: EfficientGroundedTaskDecompositionGraph
+trait TDGHeuristics extends MinimisationOverGroundingsBasedHeuristic[Unit] with DotPrintable[Unit] {
 
+  val taskDecompositionTree: EfficientGroundedTaskDecompositionGraph
   val domain: EfficientDomain
 
   // memoise the heuristic values for task groundings
@@ -42,19 +43,17 @@ trait TDGHeuristics extends MinimisationOverGroundingsBasedHeuristic with DotPri
 
 case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGroundedTaskDecompositionGraph, domain: EfficientDomain) extends TDGHeuristics {
 
-  val modificationEfforts: Map[EfficientGroundTask, Double] = taskDecompositionTree.graph.andVertices map { groundTask =>
-    groundTask -> taskDecompositionTree.graph.minSumTraversal(groundTask, { groundTask =>
-      val task = domain.tasks(groundTask.taskID)
-      if (task.initOrGoalTask) 0 else task.precondition.length
-    }, sumInitialValue = 1)
-  } toMap
+  val modificationEfforts: Map[EfficientGroundTask, Double] = taskDecompositionTree.graph.minSumTraversalMap({ groundTask =>
+    val task = domain.tasks(groundTask.taskID)
+    if (task.initOrGoalTask) 0 else task.precondition.length
+                                                                                                             }, sumInitialValue = 1)
 
   protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double = {
     val groundTask = EfficientGroundTask(plan.planStepTasks(planStep), arguments)
     if (!modificationEfforts.contains(groundTask)) Double.MaxValue else modificationEfforts(groundTask)
   }
 
-  override def computeHeuristic(plan: EfficientPlan): Double = {
+  override def computeHeuristic(plan: EfficientPlan, unit : Unit, mod : EfficientModification): (Double,Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = plan.openPreconditions.length // every flaw must be addressed
 
@@ -79,7 +78,7 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
 
       i += 1
     }
-    heuristicValue
+    (heuristicValue,())
   }
 
 
@@ -89,17 +88,17 @@ trait TDGPrimitiveActionValueHeuristic extends TDGHeuristics {
 
   protected def computeHeuristicForGroundPrimitive(taskID: Int, arguments: Array[Int]): Double
 
+  protected def initialDeductionFromHeuristicValue(plan: EfficientPlan): Double
+
   protected def deductionForSupportedPrecondition(predicate: Int, arguments: Array[Int]): Double
 
   // memoize the heuristic values for task groundings
-  val modificationEfforts: Map[EfficientGroundTask, Double] = taskDecompositionTree.graph.andVertices map {
-    groundTask =>
-      groundTask -> taskDecompositionTree.graph.minSumTraversal(groundTask, {
-        groundTask =>
-          val task = domain.tasks(groundTask.taskID)
-          if (task.initOrGoalTask) 0 else computeHeuristicForGroundPrimitive(groundTask.taskID, groundTask.arguments)
+  val modificationEfforts: Map[EfficientGroundTask, Double] =
+    taskDecompositionTree.graph.minSumTraversalMap(
+      { groundTask =>
+        val task = domain.tasks(groundTask.taskID)
+        if (task.initOrGoalTask) 0 else computeHeuristicForGroundPrimitive(groundTask.taskID, groundTask.arguments)
       }, sumInitialValue = 0)
-  } toMap
 
 
   protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double = {
@@ -127,11 +126,9 @@ trait TDGPrimitiveActionValueHeuristic extends TDGHeuristics {
     }
   }
 
-  protected def initialDeductionFromHeuristicValue(plan : EfficientPlan) : Double
-
-  override def computeHeuristic(plan: EfficientPlan): Double = {
+  override def computeHeuristic(plan: EfficientPlan, unit : Unit, mod : EfficientModification): (Double,Unit) = {
     // accumulate for all actions in the plan
-    var heuristicValue: Double = - initialDeductionFromHeuristicValue(plan)
+    var heuristicValue: Double = -initialDeductionFromHeuristicValue(plan)
 
     var i = 2 // init can't have a precondition
     while (i < plan.numberOfAllPlanSteps) {
@@ -139,10 +136,9 @@ trait TDGPrimitiveActionValueHeuristic extends TDGHeuristics {
         // we have to ground here
         heuristicValue += computeHeuristicByGrounding(i, new Array[Int](plan.planStepParameters(i).length), 0, plan)
       }
-
       i += 1
     }
-    heuristicValue
+    (heuristicValue,())
   }
 }
 
@@ -168,7 +164,7 @@ case class MinimumADDHeuristic(taskDecompositionTree: EfficientGroundedTaskDecom
     heuristicEstimate
   }
 
-  protected def initialDeductionFromHeuristicValue(plan : EfficientPlan) : Double = 0.0
+  protected def initialDeductionFromHeuristicValue(plan: EfficientPlan): Double = 0.0
 }
 
 case class MinimumActionCount(taskDecompositionTree: EfficientGroundedTaskDecompositionGraph, domain: EfficientDomain) extends TDGPrimitiveActionValueHeuristic {
@@ -176,5 +172,5 @@ case class MinimumActionCount(taskDecompositionTree: EfficientGroundedTaskDecomp
 
   override protected def deductionForSupportedPrecondition(predicate: Int, arguments: Array[Int]): Double = 0.0
 
-  protected def initialDeductionFromHeuristicValue(plan : EfficientPlan) : Double = plan.numberOfPlanSteps - 2
+  protected def initialDeductionFromHeuristicValue(plan: EfficientPlan): Double = plan.numberOfPlanSteps - 2
 }

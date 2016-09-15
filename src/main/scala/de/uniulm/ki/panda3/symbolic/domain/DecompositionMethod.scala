@@ -177,5 +177,8 @@ case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod,
   /** returns a detailed information about the object */
   override def longInfo: String = mediumInfo
 
-  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[GroundedDecompositionMethod] && this.hashCode == o.hashCode()) super.equals(o) else false
+  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[GroundedDecompositionMethod] && this.hashCode == o.hashCode()) {
+    val that = o.asInstanceOf[GroundedDecompositionMethod]
+    this.decompositionMethod.equals(that.decompositionMethod) && this.variableBinding == that.variableBinding
+  } else false
 }

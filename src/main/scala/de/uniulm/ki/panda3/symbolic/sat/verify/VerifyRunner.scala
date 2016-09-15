@@ -23,13 +23,13 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val probInputStream = new FileInputStream(probFile)
 
     val (searchConfig, usePlanningGraph) = configNumber match {
-      case x if x < 0 => (SearchConfiguration(Some(0), Some(0), efficientSearch = false, DFSType, None, printSearchInfo = true), false)
-      case 1          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true), true)
-      case 2          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true), true)
-      case 3          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumAction), printSearchInfo = true), true)
-      case 4          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), printSearchInfo = true), false)
-      case 5          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, printSearchInfo = true), false)
-      case 6          => (SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), printSearchInfo = true), false)
+      case x if x < 0 => (SearchConfiguration(Some(0), Some(0), efficientSearch = false, DFSType, None, false, printSearchInfo = true), false)
+      case 1          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), false, printSearchInfo = true), true)
+      case 2          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, false, printSearchInfo = true), true)
+      case 3          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumAction), false, printSearchInfo = true), true)
+      case 4          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), false, printSearchInfo = true), false)
+      case 5          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, false, printSearchInfo = true), false)
+      case 6          => (SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), false, printSearchInfo = true), false)
     }
 
     // create the configuration
@@ -169,13 +169,17 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     timeCapsule stop VerifyRunner.TRANSFORM_DIMACS
 
     encoder match {
-      case tot: TotallyOrderedEncoding => informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, tot.primitivePaths.length)
+      case tot: TotallyOrderedEncoding =>
+
+        println(tot.primitivePaths map { case (a, b) => (a, b map { _.name }) } mkString "\n")
+
+        informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, tot.primitivePaths.length)
       case _                           =>
     }
 
     println(timeCapsule.integralDataMap())
 
-    System exit 0
+    //System exit 0
 
     //timeCapsule start VerifyRunner.WRITE_FORMULA
     //writeStringToFile(cnfString, new File("__cnfString"))
@@ -208,6 +212,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     informationCapsule.set(VerifyRunner.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
 
 
+
+
     // postprocessing
 
     val solverOutput = Source.fromFile(VerifyRunner.fileDir + "__res.txt").mkString
@@ -232,136 +238,138 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
 
     // postprocessing
-    /* if (solved) {
-       // things that are independent from the solver type
-       val literals: Set[Int] = (assignment.split(" ") filter {_ != ""} map { _.toInt } filter { _ != 0 }).toSet
+    if (solved) {
+      // things that are independent from the solver type
+      val literals: Set[Int] = (assignment.split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet
 
-       val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-       writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+      val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
+      writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
-       val (graphNodes, graphEdges) = encoder match {
-         case g: GeneralEncoding =>
-           // iterate through layers
-           val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) map { pos => domain.tasks map { task =>
-             val actionString = g.action(layer, pos, task)
-             val isPres = if (atomMap contains actionString) literals contains (1 + atomMap(actionString)) else false
-             (actionString, isPres)
-           } find { _._2 }
-           } filter { _.isDefined } map { _.get._1 }
-           }
+      val (graphNodes, graphEdges) = encoder match {
+        case g: GeneralEncoding =>
+          // iterate through layers
+          val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) map { pos => domain.tasks map { task =>
+            val actionString = g.action(layer, pos, task)
+            val isPres = if (atomMap contains actionString) literals contains (1 + atomMap(actionString)) else false
+            (actionString, isPres)
+          } find { _._2 }
+          } filter { _.isDefined } map { _.get._1 }
+          }
 
-           val edges: Seq[(String, String)] = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) flatMap { pos => Range(0, g
-             .numberOfActionsPerLayer) flatMap {
-             father =>
-               Range(0, encoder.DELTA) flatMap { childIndex =>
-                 val childString = g.childWithIndex(layer, pos, father, childIndex)
-                 if ((atomMap contains childString) && (literals contains (1 + atomMap(childString)))) {
-                   // find parent and myself
-                   val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
-                   assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
-                   val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
-                   assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
-                   (fatherStringOption.get, childStringOption.get) :: Nil
-                 } else Nil
-               }
-           }
-           }
-           }
+          val edges: Seq[(String, String)] = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) flatMap { pos => Range(0, g
+            .numberOfActionsPerLayer) flatMap {
+            father =>
+              Range(0, encoder.DELTA) flatMap { childIndex =>
+                val childString = g.childWithIndex(layer, pos, father, childIndex)
+                if ((atomMap contains childString) && (literals contains (1 + atomMap(childString)))) {
+                  // find parent and myself
+                  val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
+                  assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
+                  val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
+                  assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
+                  (fatherStringOption.get, childStringOption.get) :: Nil
+                } else Nil
+              }
+          }
+          }
+          }
 
-           (nodes, edges)
+          (nodes, edges)
 
-         case tot: TotallyOrderedEncoding =>
-           val nodes = formulaVariables filter { _.startsWith("action") } filter allTrueAtoms.contains
+        case tot: TotallyOrderedEncoding =>
+          val nodes = formulaVariables filter { _.startsWith("action") } filter allTrueAtoms.contains
 
-           val edges = nodes flatMap { parent => nodes flatMap { child =>
-             val parentLayer = parent.split("\\^").last.split("_").head.toInt
-             val childLayer = child.split("\\^").last.split("_").head.toInt
+          val edges = nodes flatMap { parent => nodes flatMap { child =>
+            val parentLayer = parent.split("\\^").last.split("_").head.toInt
+            val childLayer = child.split("\\^").last.split("_").head.toInt
 
-             if (parentLayer + 1 != childLayer) Nil
-             else {
-               val parentPathString = parent.split("_").last.split(",").head
-               val childPathString = child.split("_").last.split(",").head
+            if (parentLayer + 1 != childLayer) Nil
+            else {
+              val parentPathString = parent.split("_").last.split(",").head
+              val childPathString = child.split("_").last.split(",").head
 
-               assert(parentPathString.count({ case ';' => true; case _ => false }) + 1 == childPathString.count({ case ';' => true; case _ => false }))
-               val parentPath = parentPathString.split(";") map { _.toInt }
-               val childPath = childPathString.split(";") map { _.toInt }
+              assert(parentPathString.count({ case ';' => true; case _ => false }) + 1 == childPathString.count({ case ';' => true; case _ => false }))
+              val parentPath = parentPathString.split(";") map { _.toInt }
+              val childPath = childPathString.split(";") map { _.toInt }
 
-               if (parentPath sameElements childPath.take(parentPath.length)) (parent, child) :: Nil else Nil
-             }
-           }
-           }
-           // check executability of the plan
-           val primitiveSolution = nodes filter { t => t.split("\\^").last.split("_").head.toInt == tot.K } sortBy { t =>
-             val path = t.split("_").last.split(",").head.split(";") map { _.toInt }
-             tot.pathSortingFunction(path)
-           } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
+              if (parentPath sameElements childPath.take(parentPath.length)) (parent, child) :: Nil else Nil
+            }
+          }
+          }
+          // check executability of the plan
+          val primitiveSolution = nodes filter { t => t.split("\\^").last.split("_").head.toInt == tot.K } sortWith { case (t1, t2) =>
+            val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
+            val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
+            tot.pathSortingFunction(path1, path2)
+          } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
-           primitiveSolution foreach { t => assert(t.isPrimitive) }
-           print("CHECKING primitive solution of length " + primitiveSolution.length + " ...")
-           checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
-           println(" done.")
-           (nodes, edges)
-       }
+          primitiveSolution foreach { t => assert(t.isPrimitive) }
+          print("CHECKING primitive solution of length " + primitiveSolution.length + " ...")
+          println(primitiveSolution map { _.name } mkString "\n")
+          checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
+          println(" done.")
+          (nodes, edges)
+      }
 
-       def changeSATNameToActionName(satName: String): SimpleGraphNode = {
-         val actionID = satName.split(",").last.toInt
-         if (actionID >= 0) SimpleGraphNode(satName, (if (domain.tasks(actionID).isPrimitive) "!" else "") + domain.tasks(actionID).name) else SimpleGraphNode(satName, satName)
-         //if (actionID >= 0) SimpleGraphNode(satName, "") else SimpleGraphNode(satName, satName)
-       }
+      def changeSATNameToActionName(satName: String): SimpleGraphNode = {
+        val actionID = satName.split(",").last.toInt
+        if (actionID >= 0) SimpleGraphNode(satName, (if (domain.tasks(actionID).isPrimitive) "!" else "") + domain.tasks(actionID).name) else SimpleGraphNode(satName, satName)
+        //if (actionID >= 0) SimpleGraphNode(satName, "") else SimpleGraphNode(satName, satName)
+      }
 
-       val decompGraphNames = SimpleDirectedGraph(graphNodes map changeSATNameToActionName, graphEdges map { case (a, b) => (changeSATNameToActionName(a), changeSATNameToActionName(b)) })
-       val decompGraph = SimpleDirectedGraph(graphNodes, graphEdges)
-       writeStringToFile(decompGraphNames.dotString, "decompName.dot")
-       Dot2PdfCompiler.writeDotToFile(decompGraph, "decomp.pdf")
-       Dot2PdfCompiler.writeDotToFile(decompGraphNames, "decompName.pdf")
+      val decompGraphNames = SimpleDirectedGraph(graphNodes map changeSATNameToActionName, graphEdges map { case (a, b) => (changeSATNameToActionName(a), changeSATNameToActionName(b)) })
+      val decompGraph = SimpleDirectedGraph(graphNodes, graphEdges)
+      writeStringToFile(decompGraphNames.dotString, "decompName.dot")
+      Dot2PdfCompiler.writeDotToFile(decompGraph, "decomp.pdf")
+      Dot2PdfCompiler.writeDotToFile(decompGraphNames, "decompName.pdf")
 
-       // no isolated nodes
-       decompGraphNames.vertices foreach { v =>
-         val (indeg, outdeg) = decompGraphNames.degrees(v)
-         assert(indeg + outdeg != 0, "unconnected action " + v)
-       }
+      // no isolated nodes
+      decompGraphNames.vertices foreach { v =>
+        val (indeg, outdeg) = decompGraphNames.degrees(v)
+        assert(indeg + outdeg != 0, "unconnected action " + v)
+      }
 
-       if (encoder.isInstanceOf[TotallyOrderedEncoding]) {
-         // check integrity of the methods
-         decompGraphNames.vertices filter { v => decompGraphNames.degrees(v)._2 != 0 } foreach { v =>
-           // either it is primitive
-           val nei = decompGraphNames.edges(v)
-           val myAction = domain.tasks(v.id.split(",").last.toInt)
-           if (myAction.isPrimitive) {
-             assert(nei.size == 1)
-             assert(nei.head.name == v.name)
-           } else {
-             val subTasks: Seq[Task] = nei map { n => domain.tasks(n.id.split(",").last.toInt) }
-             val tasksSchemaCount = subTasks groupBy { p => p }
-             val possibleMethods = domain.methodsForAbstractTasks(myAction) map { _.subPlan.planStepsWithoutInitGoal } filter { planSteps =>
-               val sameSize = planSteps.length == subTasks.length
-               val planSchemaCount = planSteps groupBy { _.schema }
-               val sameTasks = tasksSchemaCount.size == planSchemaCount.size && (tasksSchemaCount.keys forall planSchemaCount.contains)
+      if (encoder.isInstanceOf[TotallyOrderedEncoding]) {
+        // check integrity of the methods
+        decompGraphNames.vertices filter { v => decompGraphNames.degrees(v)._2 != 0 } foreach { v =>
+          // either it is primitive
+          val nei = decompGraphNames.edges(v)
+          val myAction = domain.tasks(v.id.split(",").last.toInt)
+          if (myAction.isPrimitive) {
+            assert(nei.size == 1)
+            assert(nei.head.name == v.name)
+          } else {
+            val subTasks: Seq[Task] = nei map { n => domain.tasks(n.id.split(",").last.toInt) }
+            val tasksSchemaCount = subTasks groupBy { p => p }
+            val possibleMethods = domain.methodsForAbstractTasks(myAction) map { _.subPlan.planStepsWithoutInitGoal } filter { planSteps =>
+              val sameSize = planSteps.length == subTasks.length
+              val planSchemaCount = planSteps groupBy { _.schema }
+              val sameTasks = tasksSchemaCount.size == planSchemaCount.size && (tasksSchemaCount.keys forall planSchemaCount.contains)
 
-               if (sameSize && sameTasks) tasksSchemaCount.keys forall { t => planSchemaCount(t).size == tasksSchemaCount(t).size } else false
-             }
-             assert(possibleMethods.nonEmpty, "Node " + v + " has no valid decomposition")
-           }
-         }
+              if (sameSize && sameTasks) tasksSchemaCount.keys forall { t => planSchemaCount(t).size == tasksSchemaCount(t).size } else false
+            }
+            assert(possibleMethods.nonEmpty, "Node " + v + " has no valid decomposition")
+          }
+        }
 
-         // check order of methods
-         decompGraphNames.vertices filter { v => decompGraphNames.degrees(v)._2 != 0 } foreach { v =>
-           // either it is primitive
-           val nei = decompGraphNames.edges(v)
-           val myAction = domain.tasks(v.id.split(",").last.toInt)
-           if (myAction.isPrimitive) {
-             assert(nei.size == 1)
-             assert(nei.head.name == v.name)
-           } else {
-             val subTasks: Seq[Task] = nei map { n => (n, domain.tasks(n.id.split(",").last.toInt)) } sortBy { _._1.id } map { _._2 }
-             val orderedMethods =
-               domain.methodsForAbstractTasks(myAction) map { _.subPlan } map { _.orderingConstraints.graph.allTotalOrderings.get.head map { _.schema } } filter { _ == subTasks }
+        // check order of methods
+        decompGraphNames.vertices filter { v => decompGraphNames.degrees(v)._2 != 0 } foreach { v =>
+          // either it is primitive
+          val nei = decompGraphNames.edges(v)
+          val myAction = domain.tasks(v.id.split(",").last.toInt)
+          if (myAction.isPrimitive) {
+            assert(nei.size == 1)
+            assert(nei.head.name == v.name)
+          } else {
+            val subTasks: Seq[Task] = nei map { n => (n, domain.tasks(n.id.split(",").last.toInt)) } sortBy { _._1.id } map { _._2 }
+            val orderedMethods =
+              domain.methodsForAbstractTasks(myAction) map { _.subPlan } map { _.orderingConstraints.graph.allTotalOrderings.get.head map { _.schema } } filter { _ == subTasks }
 
-             assert(orderedMethods.nonEmpty, "Node " + v + " has no correctly ordered decomposition")
-           }
-         }
-       }
-     } */
+            assert(orderedMethods.nonEmpty, "Node " + v + " has no correctly ordered decomposition")
+          }
+        }
+      }
+    }
 
     (solved, timeCapsule, informationCapsule)
   }
@@ -474,80 +482,80 @@ object VerifyRunner {
          ("SmartPhone/problems/OrganizeMeeting_VerySmall.xml", 2) ::
          ("SmartPhone/problems/ThesisExampleProblem.xml", 1) ::
          Nil) ::
- */    ("Woodworking-Socs/domains/woodworking-socs.xml", XMLParserType,
-       //("Woodworking-Socs/problems/p01-hierarchical-socs.xml", 1) ::
-         ("Woodworking-Socs/problems/p02-variant1-hierarchical.xml", 1) ::
-         ("Woodworking-Socs/problems/p02-variant2-hierarchical.xml", 1) ::
-         ("Woodworking-Socs/problems/p02-variant3-hierarchical.xml", 1) ::
-         ("Woodworking-Socs/problems/p02-variant4-hierarchical.xml", 1) ::
-         Nil) ::
- /* ("domain.lisp", HDDLParserType,
-    //("p-0002-plow-road.lisp", 4) ::
-    ("problems/p-0001-clear-road-wreck.lisp", 4) :: // SOL 185
-      ("problems/p-0002-plow-road.lisp", 4) :: // SOL 74
-      ("problems/p-0003-set-up-shelter.lisp", 6) :: // SOL 46752
-      ("problems/p-0004-provide-medical-attention.lisp", 4) :: // SOL 10
-      ("problems/p-0005-clear-road-wreck.lisp", 4) :: // SOL 116
-      ("problems/p-0006-clear-road-wreck.lisp", 4) :: // SOL 77
-      ("problems/p-0007-provide-temp-heat.lisp", 4) :: // SOL 2790
-      ("problems/p-0008-provide-medical-attention.lisp", 4) :: // SOL 230
-      ("problems/p-0009-quell-riot.lisp", 4) :: // SOL 84
-      ("problems/p-0010-set-up-shelter.lisp", 6) :: // SOL GROUND 62423
-      ("problems/p-0011-plow-road.lisp", 4) :: // SOL 73
-      ("problems/p-0012-plow-road.lisp", 4) :: // SOL 84
-      ("problems/p-0013-clear-road-hazard.lisp", 6) :: // SOL 308
-      ("problems/p-0014-fix-power-line.lisp", 4) :: // SOL 28
-      ("problems/p-0015-clear-road-hazard.lisp", 6) :: // SOL 417
-      ("problems/p-0016-fix-power-line.lisp", 4) :: // SOL 30
-      //("problems/p-0017-clear-road-tree.lisp",4) ::      // BUG
-      ("problems/p-0018-fix-power-line.lisp", 4) :: // SOL 30
-      ("problems/p-0019-clear-road-wreck.lisp", 4) :: // SOL 182
-      ("problems/p-0020-set-up-shelter.lisp", 6) :: // SOL 23971
-      ("problems/p-0021-plow-road.lisp", 4) :: // SOL 80
-      ("problems/p-0022-provide-medical-attention.lisp", 4) :: // SOL 230
-      ("problems/p-0023-plow-road.lisp", 4) :: // SOL 89
-      ("problems/p-0024-plow-road.lisp", 4) :: // SOL 6
-      ("problems/p-0025-clear-road-wreck.lisp", 4) :: // SOL 125
-      //("problems/p-0026-clear-road-tree.lisp",4) ::  // BUG
-      ("problems/p-0027-plow-road.lisp", 4) :: // SOL 50
-      //("problems/p-0028-set-up-shelter.lisp", 4) :: // SOL 18268
-      //("problems/p-0029-clear-road-tree.lisp",4) ::    // BUG
-      //("problems/p-0030-provide-temp-heat.lisp",4) ::  // TIMEOUT   (also on frodo)
-      //("problems/p-0030-provide-temp-heat.lisp",4) ::  // TIMEOUT
-      //("problems/p-0031-provide-temp-heat.lisp",4) ::  // TIMEOUT
-      ("problems/p-0032-plow-road.lisp", 4) :: // SOL 80
-      ("problems/p-0033-provide-medical-attention.lisp", 4) :: // SOL 146
-      ("problems/p-0034-provide-medical-attention.lisp", 4) :: // SOL 10
-      ("problems/p-0035-fix-power-line.lisp", 4) :: // SOL 28
-      ("problems/p-0036-clear-road-wreck.lisp", 4) :: // SOL 201
-      ("problems/p-0037-clear-road-hazard.lisp", 6) :: // SOL 508
-      ("problems/p-0038-plow-road.lisp", 4) :: // SOL 89
-      ("problems/p-0039-plow-road.lisp", 4) :: // SOL 73
-      ("problems/p-0040-provide-medical-attention.lisp", 4) :: // SOL 10
-      ("problems/p-0041-clear-road-wreck.lisp", 6) :: // SOL 10
-      ("problems/p-0042-clear-road-wreck.lisp", 4) :: // SOL 10
-      ("problems/p-0043-set-up-shelter.lisp", 6) :: // SOL 10
-      ("problems/p-0044-plow-road.lisp", 6) :: // SOL 457
-      ("problems/p-0045-plow-road.lisp", 4) :: // SOL 468
-      ("problems/p-0046-clear-road-wreck.lisp", 6) :: // SOL 8098
-      //("problems/p-0047-provide-temp-heat.lisp",4) ::   // TIMEOUT
-      //("problems/p-0048-provide-temp-heat.lisp",4) ::   // TIMEOUT
-      ("problems/p-0049-plow-road.lisp", 4) :: // SOL 97
-      ("problems/p-0050-clear-road-hazard.lisp", 6) :: // SOL 271
-      //("problems/p-0051-plow-road.lisp",4) ::   // SOL 33
-      //("problems/p-0052-provide-temp-heat.lisp",4) ::   // SOL 10
-      ("problems/p-0053-provide-medical-attention.lisp", 4) :: // SOL 185
-      ("problems/p-0054-clear-road-hazard.lisp", 6) :: // SOL 148
-      //("problems/p-0055-fix-power-line.lisp",4) ::   // SOL 30
-      ("problems/p-0056-provide-medical-attention.lisp", 4) :: // SOL 101
-      ("problems/p-0057-clear-road-wreck.lisp", 4) :: // SOL 47
-      //("problems/p-0058-fix-water-main.lisp",4) ::   // BUG
-      ("problems/p-0059-clear-road-hazard.lisp", 6) :: // SOL 608
-      ("problems/p-0060-clear-road-wreck.lisp", 4) :: // SOL 135
-      ("problems/p-0061-plow-road.lisp", 4) :: // SOL 50
-      ("problems/p-0062-clear-road-hazard.lisp", 6) :: // SOL 50
-      Nil
-    ) ::  */
+ */ ("Woodworking-Socs/domains/woodworking-socs.xml", XMLParserType,
+    //("Woodworking-Socs/problems/p01-hierarchical-socs.xml", 1) ::
+    ("Woodworking-Socs/problems/p02-variant1-hierarchical.xml", 1) ::
+      ("Woodworking-Socs/problems/p02-variant2-hierarchical.xml", 1) ::
+      ("Woodworking-Socs/problems/p02-variant3-hierarchical.xml", 1) ::
+      ("Woodworking-Socs/problems/p02-variant4-hierarchical.xml", 1) ::
+      Nil) ::
+    /* ("domain.lisp", HDDLParserType,
+       //("p-0002-plow-road.lisp", 4) ::
+       ("problems/p-0001-clear-road-wreck.lisp", 4) :: // SOL 185
+         ("problems/p-0002-plow-road.lisp", 4) :: // SOL 74
+         ("problems/p-0003-set-up-shelter.lisp", 6) :: // SOL 46752
+         ("problems/p-0004-provide-medical-attention.lisp", 4) :: // SOL 10
+         ("problems/p-0005-clear-road-wreck.lisp", 4) :: // SOL 116
+         ("problems/p-0006-clear-road-wreck.lisp", 4) :: // SOL 77
+         ("problems/p-0007-provide-temp-heat.lisp", 4) :: // SOL 2790
+         ("problems/p-0008-provide-medical-attention.lisp", 4) :: // SOL 230
+         ("problems/p-0009-quell-riot.lisp", 4) :: // SOL 84
+         ("problems/p-0010-set-up-shelter.lisp", 6) :: // SOL GROUND 62423
+         ("problems/p-0011-plow-road.lisp", 4) :: // SOL 73
+         ("problems/p-0012-plow-road.lisp", 4) :: // SOL 84
+         ("problems/p-0013-clear-road-hazard.lisp", 6) :: // SOL 308
+         ("problems/p-0014-fix-power-line.lisp", 4) :: // SOL 28
+         ("problems/p-0015-clear-road-hazard.lisp", 6) :: // SOL 417
+         ("problems/p-0016-fix-power-line.lisp", 4) :: // SOL 30
+         //("problems/p-0017-clear-road-tree.lisp",4) ::      // BUG
+         ("problems/p-0018-fix-power-line.lisp", 4) :: // SOL 30
+         ("problems/p-0019-clear-road-wreck.lisp", 4) :: // SOL 182
+         ("problems/p-0020-set-up-shelter.lisp", 6) :: // SOL 23971
+         ("problems/p-0021-plow-road.lisp", 4) :: // SOL 80
+         ("problems/p-0022-provide-medical-attention.lisp", 4) :: // SOL 230
+         ("problems/p-0023-plow-road.lisp", 4) :: // SOL 89
+         ("problems/p-0024-plow-road.lisp", 4) :: // SOL 6
+         ("problems/p-0025-clear-road-wreck.lisp", 4) :: // SOL 125
+         //("problems/p-0026-clear-road-tree.lisp",4) ::  // BUG
+         ("problems/p-0027-plow-road.lisp", 4) :: // SOL 50
+         //("problems/p-0028-set-up-shelter.lisp", 4) :: // SOL 18268
+         //("problems/p-0029-clear-road-tree.lisp",4) ::    // BUG
+         //("problems/p-0030-provide-temp-heat.lisp",4) ::  // TIMEOUT   (also on frodo)
+         //("problems/p-0030-provide-temp-heat.lisp",4) ::  // TIMEOUT
+         //("problems/p-0031-provide-temp-heat.lisp",4) ::  // TIMEOUT
+         ("problems/p-0032-plow-road.lisp", 4) :: // SOL 80
+         ("problems/p-0033-provide-medical-attention.lisp", 4) :: // SOL 146
+         ("problems/p-0034-provide-medical-attention.lisp", 4) :: // SOL 10
+         ("problems/p-0035-fix-power-line.lisp", 4) :: // SOL 28
+         ("problems/p-0036-clear-road-wreck.lisp", 4) :: // SOL 201
+         ("problems/p-0037-clear-road-hazard.lisp", 6) :: // SOL 508
+         ("problems/p-0038-plow-road.lisp", 4) :: // SOL 89
+         ("problems/p-0039-plow-road.lisp", 4) :: // SOL 73
+         ("problems/p-0040-provide-medical-attention.lisp", 4) :: // SOL 10
+         ("problems/p-0041-clear-road-wreck.lisp", 6) :: // SOL 10
+         ("problems/p-0042-clear-road-wreck.lisp", 4) :: // SOL 10
+         ("problems/p-0043-set-up-shelter.lisp", 6) :: // SOL 10
+         ("problems/p-0044-plow-road.lisp", 6) :: // SOL 457
+         ("problems/p-0045-plow-road.lisp", 4) :: // SOL 468
+         ("problems/p-0046-clear-road-wreck.lisp", 6) :: // SOL 8098
+         //("problems/p-0047-provide-temp-heat.lisp",4) ::   // TIMEOUT
+         //("problems/p-0048-provide-temp-heat.lisp",4) ::   // TIMEOUT
+         ("problems/p-0049-plow-road.lisp", 4) :: // SOL 97
+         ("problems/p-0050-clear-road-hazard.lisp", 6) :: // SOL 271
+         //("problems/p-0051-plow-road.lisp",4) ::   // SOL 33
+         //("problems/p-0052-provide-temp-heat.lisp",4) ::   // SOL 10
+         ("problems/p-0053-provide-medical-attention.lisp", 4) :: // SOL 185
+         ("problems/p-0054-clear-road-hazard.lisp", 6) :: // SOL 148
+         //("problems/p-0055-fix-power-line.lisp",4) ::   // SOL 30
+         ("problems/p-0056-provide-medical-attention.lisp", 4) :: // SOL 101
+         ("problems/p-0057-clear-road-wreck.lisp", 4) :: // SOL 47
+         //("problems/p-0058-fix-water-main.lisp",4) ::   // BUG
+         ("problems/p-0059-clear-road-hazard.lisp", 6) :: // SOL 608
+         ("problems/p-0060-clear-road-wreck.lisp", 4) :: // SOL 135
+         ("problems/p-0061-plow-road.lisp", 4) :: // SOL 50
+         ("problems/p-0062-clear-road-hazard.lisp", 6) :: // SOL 50
+         Nil
+       ) ::  */
     Nil
 
   //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/domains/woodworking-socs.xml"
@@ -556,7 +564,8 @@ object VerifyRunner {
 
 
   val timeLimit: Long = 30 * 60 * 1000
-  val minOffset: Int  = 0 //-3
+  val minOffset: Int  = 0
+  //-3
   val maxOffset: Int = 0
 
   val numberOfRandomSeeds: Int = 5
@@ -644,7 +653,7 @@ object VerifyRunner {
     writeStringToFile(writeHead + "\n" + result + "\n", "result.csv")
   }
 
-  def runPlanner(domFile: String, probFile: String, length: Int, offset : Int): Unit = {
+  def runPlanner(domFile: String, probFile: String, length: Int, offset: Int): Unit = {
     val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
     //val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
 

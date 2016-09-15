@@ -3,13 +3,16 @@ package de.uniulm.ki.panda3
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
-import de.uniulm.ki.panda3.efficient.heuristic.AlwaysZeroHeuristic
-import de.uniulm.ki.panda3.efficient.search.HeuristicSearch
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod
-import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
+import de.uniulm.ki.panda3.efficient.Wrapping
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraphConfiguration, GroundedPlanningGraph}
+import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
+import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
+import de.uniulm.ki.panda3.efficient.heuristic.AddHeuristic
 import de.uniulm.ki.util._
 
 import scala.collection.JavaConversions
@@ -21,6 +24,7 @@ import scala.collection.JavaConversions
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 object Main {
+
   def main(args: Array[String]) {
 
     println("This is Panda3")
@@ -42,8 +46,6 @@ object Main {
 
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
-    //val outputPDF = "/home/dhoeller/Schreibtisch/test.pdf"
-    //val outputPDF = "/home/gregor/test.pdf"
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
@@ -80,6 +82,8 @@ object Main {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
 
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p03.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
@@ -89,7 +93,7 @@ object Main {
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/domain/zenotravelStrips.pddl"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/problems/pfile7"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/domain/stripsSat.pddl"
-    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/problems/pfile1"
+    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/problems/pfile4"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC4/PROMELA-PHILO/domain/P01_DOMAIN.PDDL"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC4/PROMELA-PHILO/problems/P01_PHIL2.PDDL"
 
@@ -185,30 +189,31 @@ object Main {
     //val probFile = "/home/gregor/p-0002-plow-road.lisp"
     //val probFile = "p-0002-plow-road.lisp"
 
+    //val domFile = "/home/gregor/d-0111-plow-road-verify.hddl"
+    //val probFile = "/home/gregor/p-0111-plow-road-verify.hddl"
+    //val domFile = "/home/gregor/d-0009-quell-riot-4.hddl"
+    //val probFile = "/home/gregor/p-0009-quell-riot-4.hddltlt"
+
+
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
-
-    val doit = true
 
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(HDDLParserType),
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = false,
-                                                                        liftedReachability = true, groundedReachability = doit, planningGraph = false,
-                                                                        groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
-                                                                        iterateReachabilityAnalysis = true, groundDomain = false),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumAction), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
-                                             SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
-//                                             SearchConfiguration(Some(0), None, efficientSearch = false, BFSType, None, printSearchInfo = true),
+                                                                        liftedReachability = true, groundedReachability = false, planningGraph = false,
+                                                                        groundedTaskDecompositionGraph = None, //Some(TopDownTDG), // None,
+                                                                        iterateReachabilityAnalysis = false, groundDomain = false),
+                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumADD), true),
+                                             //SearchConfiguration(Some(100000), None, efficientSearch = true, DijkstraType, None, true, true),
+                                              SearchConfiguration(Some(-1), Some(1), efficientSearch = false, BFSType, None, false, true),
+                                             //SearchConfiguration(Some(100000), None, efficientSearch = true, AStarActionsType, Some(ADD), true, printSearchInfo = true),
+                                             //SearchConfiguration(Some(500000), None, efficientSearch = true, BFSType, None, printSearchInfo = true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
-                                                                             SearchStatus, SearchResult,
+                                                                             SearchStatus, SearchResult, AllFoundPlans, AllFoundSolutionPathsWithHStar,
                                                                              SearchStatistics,
-                                                                             //SearchSpace,
+                                                                             SearchSpace,
                                                                              PreprocessedDomainAndPlan,
                                                                              SolutionInternalString,
                                                                              SolutionDotString)))
@@ -223,8 +228,6 @@ object Main {
     println("----------------- TIMINGS -----------------")
     println(results(ProcessingTimings).shortInfo)
 
-
-
     val (domain, plan) = results(PreprocessedDomainAndPlan)
     val progression = new htnPlanningInstance()
     val groundTasks = domain.primitiveTasks map { t => GroundTask(t, Nil) }
@@ -234,22 +237,22 @@ object Main {
     }
     progression.plan(plan,JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),JavaConversions.setAsJavaSet(groundLiterals.toSet))
 
-
-
     //println("Longest Path " + results(PreprocessedDomainAndPlan)._1.taskSchemaTransitionGraph.longestPathLength.get)
     //println("Maximum Method size " + results(PreprocessedDomainAndPlan)._1.maximumMethodSize)
 
 
     if (results(SearchStatus) == SearchState.SOLUTION) {
       val solution = results(SearchResult).get
-      println(solution.planSteps.length)
+      //println(solution.planSteps.length)
       // write output
       if (outputPDF.endsWith("dot")) {
-        writeStringToFile(solution.dotString, new File(outputPDF))
+        writeStringToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), new File(outputPDF))
       } else {
-        Dot2PdfCompiler.writeDotToFile(solution, outputPDF)
+        Dot2PdfCompiler.writeDotToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), outputPDF)
       }
     }
+
+
     var doneCounter = 0
     // check the tree
     def dfs(searchNode: SearchNode): Unit = if (!searchNode.dirty) {
@@ -268,9 +271,9 @@ object Main {
 
     //System.in.read()
 
-    if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) {
+    /*if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) {
       results(SearchSpace).recomputeSearchState()
       dfs(results(SearchSpace))
-    }
+    }*/
   }
 }

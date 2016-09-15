@@ -9,6 +9,10 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep, 
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.util._
 
+import scala.annotation.elidable
+import scala.annotation.elidable._
+
+
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
@@ -28,8 +32,6 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
 
   val isInitialPlanGround = initialPlan.variableConstraints.variables forall { v => initialPlan.variableConstraints.getRepresentative(v).isInstanceOf[Constant] }
 
-
-  println("G " + groundedReachabilityAnalysis.reachableGroundPrimitiveActions.length)
 
   val (topTask, topMethod, initAndGoalNOOP, groundedTopTask) = {
     val initialPlanAlreadyGroundedVariableMapping = initialPlan.variableConstraints.variables map { vari => (vari, initialPlan.variableConstraints.getRepresentative(vari)) } collect {
@@ -123,14 +125,18 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
   override      val additionalTaskNeededToGround   : Seq[GroundTask]                  = taskDecompositionGraph._2 :+ initialPlan.groundedGoalTask
   override      val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod] = taskDecompositionGraph._3
 
-  /*reachableGroundPrimitiveActions foreach { gt =>
-    gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
-    gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable precondition " + e.longInfo) }
+  @elidable(ASSERTION)
+  val assertion = {
+    reachableGroundPrimitiveActions foreach { gt =>
+      gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
+      gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable precondition " + e.longInfo) }
+    }
+    reachableGroundAbstractActions foreach { gt =>
+      gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
+      gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable precondition " + e.longInfo) }
+    }
   }
-  reachableGroundAbstractActions foreach { gt =>
-    gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
-    gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable precondition " + e.longInfo) }
-  }*/
+
   override lazy val dotString: String = dotString(DirectedGraphDotOptions())
 
   /** The DOT representation of the object with options */

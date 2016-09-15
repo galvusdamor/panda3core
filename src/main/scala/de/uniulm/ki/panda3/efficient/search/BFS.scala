@@ -15,16 +15,16 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object BFS extends EfficientSearchAlgorithm {
+object BFS extends EfficientSearchAlgorithm[Unit] {
 
   override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
                            buildTree: Boolean, informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
-  (EfficientSearchNode, Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
+  (EfficientSearchNode[Unit], Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
     import de.uniulm.ki.panda3.configuration.Timings._
     import de.uniulm.ki.panda3.configuration.Information._
 
     val semaphore: Semaphore = new Semaphore(0)
-    val root = new EfficientSearchNode(0, initialPlan, null, Double.MaxValue)
+    val root = new EfficientSearchNode[Unit](0, initialPlan, null, Double.MaxValue)
 
     // variables for the search
     val initTime: Long = System.currentTimeMillis()
@@ -34,7 +34,7 @@ object BFS extends EfficientSearchAlgorithm {
 
     var abort = false
 
-    val stack = new util.ArrayDeque[(EfficientPlan, EfficientSearchNode, Int)]()
+    val stack = new util.ArrayDeque[(EfficientPlan, EfficientSearchNode[Unit], Int)]()
     var result: Option[EfficientPlan] = None
     stack.add((initialPlan, root, 0))
 
@@ -102,7 +102,7 @@ object BFS extends EfficientSearchAlgorithm {
           }
           timeCapsule stop (if (buildTree) SEARCH_FLAW_RESOLVER else SEARCH_FLAW_RESOLVER_ESTIMATION)
 
-          val children = new ArrayBuffer[(EfficientSearchNode, Int)]()
+          val children = new ArrayBuffer[(EfficientSearchNode[Unit], Int)]()
           if (smallFlawNumMod != 0) {
             if (buildTree) timeCapsule start SEARCH_FLAW_RESOLVER
             val actualModifications = if (buildTree) myNode.modifications(myNode.selectedFlaw) else flaws(myNode.selectedFlaw).resolver
@@ -119,7 +119,7 @@ object BFS extends EfficientSearchAlgorithm {
               if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
                 informationCapsule increment NUMBER_OF_NODES
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
-                val searchNode = if (buildTree) new EfficientSearchNode(nodeNumber, newPlan, myNode, 0) else new EfficientSearchNode(nodeNumber, newPlan, null, 0)
+                val searchNode = if (buildTree) new EfficientSearchNode[Unit](nodeNumber, newPlan, myNode, 0) else new EfficientSearchNode[Unit](nodeNumber, newPlan, null, 0)
 
                 stack add(newPlan, searchNode, depth + 1)
                 children append ((searchNode, modNum))
@@ -153,6 +153,6 @@ object BFS extends EfficientSearchAlgorithm {
       }
     }).start()
 
-    (root, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result }), AbortFunction({ _ => abort = true }))
+    (root, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result match {case Some(p) => p :: Nil; case _ => Nil}}), AbortFunction({ _ => abort = true }))
   }
 }

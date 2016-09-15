@@ -110,6 +110,6 @@ object BFS extends SymbolicSearchAlgorithm {
         semaphore.release()
       }
     }).start()
-    (rootnode, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result }), AbortFunction({ _ => abort = true }))
+    (rootnode, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result match {case Some(p) => p :: Nil; case _ => Nil} }), AbortFunction({ _ => abort = true }))
   }
 }

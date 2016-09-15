@@ -30,6 +30,8 @@ mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
 
 //mainClass in assembly := Some("de.uniulm.ki.panda3.progression.proUtil.switchTLT")
 
+scalacOptions ++= Seq("-Xelide-below", "5000")
+
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 
 //mainClass in assembly := Some("de.uniulm.ki.panda3.symbolic.compiler.prefix.PANDAaddPrefix")

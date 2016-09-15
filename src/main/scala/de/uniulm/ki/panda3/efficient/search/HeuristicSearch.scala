@@ -4,12 +4,12 @@ import java.io.FileInputStream
 import java.util
 import java.util.concurrent.Semaphore
 
-import de.uniulm.ki.panda3.configuration.{EfficientSearchAlgorithm, AbortFunction, ResultFunction}
+import de.uniulm.ki.panda3.configuration.{PlanningConfiguration, EfficientSearchAlgorithm, AbortFunction, ResultFunction}
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 import de.uniulm.ki.panda3.efficient.heuristic.{EfficientNumberOfFlaws, EfficientHeuristic}
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
-import de.uniulm.ki.panda3.efficient.plan.flaw.{EfficientOpenPrecondition, EfficientCausalThreat}
+import de.uniulm.ki.panda3.efficient.plan.flaw.{EfficientAbstractPlanStep, EfficientOpenPrecondition, EfficientCausalThreat}
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.PruneHierarchy
 import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
@@ -25,18 +25,19 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: Boolean, addDepth: Boolean, invertCosts: Boolean = false) extends EfficientSearchAlgorithm {
+case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], addNumberOfPlanSteps: Boolean, addDepth: Boolean, continueOnSolution: Boolean, invertCosts: Boolean = false)
+  extends EfficientSearchAlgorithm[Payload] {
 
   override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
                            buildTree: Boolean, informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
-  (EfficientSearchNode, Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
+  (EfficientSearchNode[Payload], Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
     import de.uniulm.ki.panda3.configuration.Timings._
     import de.uniulm.ki.panda3.configuration.Information._
     import scala.math.Ordering.Implicits._
 
 
     val semaphore: Semaphore = new Semaphore(0)
-    val root = new EfficientSearchNode(0, initialPlan, null, Double.MaxValue)
+    val root = new EfficientSearchNode[Payload](0, initialPlan, null, Double.MaxValue)
 
     // variables for the search
     val initTime: Long = System.currentTimeMillis()
@@ -46,8 +47,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
 
     var abort = false
 
-    val searchQueue = new mutable.PriorityQueue[(EfficientSearchNode, Int)]()
-    var result: Option[EfficientPlan] = None
+    val searchQueue = new mutable.PriorityQueue[(EfficientSearchNode[Payload], Int)]()
+    var result: Seq[EfficientPlan] = Nil
     searchQueue.enqueue((root, 0))
 
     var lowestHeuristicFound = Double.MaxValue
@@ -59,8 +60,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
     informationCapsule.addToDistribution(PLAN_SIZE, initialPlan.numberOfPlanSteps)
 
     def heuristicSearch() = {
-      while (searchQueue.nonEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
-        initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis()) {
+      while (searchQueue.nonEmpty && (continueOnSolution || result.isEmpty) && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
+        initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis() - 50) {
         val (myNode, depth) = searchQueue.dequeue()
         val plan = myNode.plan
         timeCapsule start SEARCH_FLAW_COMPUTATION
@@ -99,7 +100,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
 
 
         if (flaws.length == 0) {
-          result = Some(plan)
+          result = result :+ plan
+          println("\t\t\t\t SOL")
           myNode.setNotDirty()
           println("Found solution at depth " + depth + " with " + (plan.numberOfPlanSteps - 2) + " actions and heuristic " + myNode.heuristic)
         } else {
@@ -113,7 +115,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
           var zeroFound = false
 
           timeCapsule start (if (buildTree) SEARCH_FLAW_RESOLVER else SEARCH_FLAW_RESOLVER_ESTIMATION)
-          while (flawnum < flaws.length) {
+          while (flawnum < flaws.length && !zeroFound) {
             if (buildTree) {
               myNode.modifications(flawnum) = flaws(flawnum).resolver
               if (myNode.modifications(flawnum).length < smallFlawNumMod) {
@@ -121,36 +123,37 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
                 myNode.selectedFlaw = flawnum
               }
             } else {
-              val numberOfModifiactions = flaws(flawnum).estimatedNumberOfResolvers
+              val numberOfModifications = flaws(flawnum).estimatedNumberOfResolvers
 
-              if (numberOfModifiactions == 0)
+              if (numberOfModifications == 0) {
                 zeroFound = true
 
-              if (flaws(flawnum).isInstanceOf[EfficientCausalThreat]) {
-                smallFlawIsCausalThreat = true
-                smallFlawNumMod = numberOfModifiactions
-                myNode.selectedFlaw = flawnum
-              } else if (!smallFlawIsCausalThreat) {
-                val actionNumber = if (flaws(flawnum).isInstanceOf[EfficientOpenPrecondition]) flaws(flawnum).asInstanceOf[EfficientOpenPrecondition].planStep else -1
+                /* if (flaws(flawnum).isInstanceOf[EfficientCausalThreat]) {
+                   smallFlawIsCausalThreat = true
+                   smallFlawNumMod = numberOfModifiactions
+                   myNode.selectedFlaw = flawnum
+                 } else if (!smallFlawIsCausalThreat) {
+                   val actionNumber = if (flaws(flawnum).isInstanceOf[EfficientOpenPrecondition]) flaws(flawnum).asInstanceOf[EfficientOpenPrecondition].planStep else -1
 
-                smallFlawActionNumber = actionNumber
+                   smallFlawActionNumber = actionNumber
 
-                if (actionNumber > smallFlawActionNumber || (actionNumber == smallFlawActionNumber && numberOfModifiactions <= smallFlawNumMod)) {
-                  //if (numberOfModifiactions < smallFlawNumMod) {
-                  smallFlawNumMod = numberOfModifiactions
-                  smallFlawActionNumber = actionNumber
+                   if (actionNumber > smallFlawActionNumber || (actionNumber == smallFlawActionNumber && numberOfModifiactions <= smallFlawNumMod)) {*/
+                if (numberOfModifications < smallFlawNumMod) {
+                  smallFlawNumMod = numberOfModifications
+                  //smallFlawActionNumber = actionNumber
                   myNode.selectedFlaw = flawnum
                 }
+                //}
               }
+              //assert(numberOfModifiactions == flaws(flawnum).resolver.length)
+              flawnum += 1
             }
-            //assert(numberOfModifiactions == flaws(flawnum).resolver.length)
-            flawnum += 1
           }
           timeCapsule stop (if (buildTree) SEARCH_FLAW_RESOLVER else SEARCH_FLAW_RESOLVER_ESTIMATION)
 
           if (zeroFound) smallFlawNumMod = 0
 
-          val children = new ArrayBuffer[(EfficientSearchNode, Int)]()
+          val children = new ArrayBuffer[(EfficientSearchNode[Payload], Int)]()
 
           if (smallFlawNumMod != 0) {
             if (buildTree) timeCapsule start SEARCH_FLAW_RESOLVER
@@ -160,7 +163,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
 
             //assert(actualModifications.length == smallFlawNumMod, "Estimation of number of modifications was incorrect (" + actualModifications.length + " and " + smallFlawNumMod + ")")
             var modNum = 0
-            while (modNum < actualModifications.length && result.isEmpty) {
+            while (modNum < actualModifications.length) {
               // apply modification
               //val newPlan: EfficientPlan = plan.modify(myNode.modifications(myNode.selectedFlaw)(modNum))
               val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))
@@ -172,7 +175,7 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
                 timeCapsule start SEARCH_COMPUTE_HEURISTIC
                 //val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
                 val distanceValue = ((if (addNumberOfPlanSteps) newPlan.numberOfPlanSteps else 0) + (if (addDepth) depth + 1 else 0)) * (if (invertCosts) -1 else 1)
-                val h = heuristic.computeHeuristic(newPlan)
+                val (h, newPayload) = heuristic.computeHeuristic(newPlan, myNode.payload, actualModifications(modNum))
                 val heuristicValue = distanceValue + h
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
@@ -181,7 +184,8 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
                 assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps)
 
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
-                val searchNode = if (buildTree) new EfficientSearchNode(nodeNumber, newPlan, myNode, heuristicValue) else new EfficientSearchNode(nodeNumber, newPlan, null, heuristicValue)
+                val searchNode: EfficientSearchNode[Payload] = if (buildTree) new EfficientSearchNode[Payload](nodeNumber, newPlan, myNode, heuristicValue)
+                else new EfficientSearchNode[Payload](nodeNumber, newPlan, null, heuristicValue)
 
                 if (h < Double.MaxValue)
                   searchQueue enqueue ((searchNode, depth + 1))
@@ -197,7 +201,6 @@ case class HeuristicSearch(heuristic: EfficientHeuristic, addNumberOfPlanSteps: 
       }
       semaphore.release()
     }
-
     val resultSemaphore = new Semaphore(0)
 
 

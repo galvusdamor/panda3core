@@ -2,21 +2,22 @@ package de.uniulm.ki.panda3.efficient.heuristic
 
 import de.uniulm.ki.panda3.efficient.domain.EfficientGroundTask
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
+import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait EfficientHeuristic {
+trait EfficientHeuristic[Payload] {
 
-  def computeHeuristic(plan: EfficientPlan): Double
+  def computeHeuristic(plan: EfficientPlan, payload: Payload, appliedModification: EfficientModification): (Double, Payload)
 }
 
 
-object AlwaysZeroHeuristic extends EfficientHeuristic {
-  override def computeHeuristic(plan: EfficientPlan): Double = 0
+object AlwaysZeroHeuristic extends EfficientHeuristic[Unit] {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification): (Double, Unit) = (0, ())
 }
 
-trait MinimisationOverGroundingsBasedHeuristic extends EfficientHeuristic {
+trait MinimisationOverGroundingsBasedHeuristic[Payload] extends EfficientHeuristic[Payload] {
 
   protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double
 
