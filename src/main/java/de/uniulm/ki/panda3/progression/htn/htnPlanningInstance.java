@@ -3,8 +3,7 @@ package de.uniulm.ki.panda3.progression.htn;
 import de.uniulm.ki.panda3.progression.bottomUpGrounder.groundingUtil;
 import de.uniulm.ki.panda3.progression.bottomUpGrounder.htnBottomUpGrounder;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
-import de.uniulm.ki.panda3.progression.htn.search.proPlanStep;
-import de.uniulm.ki.panda3.progression.htn.search.progressionNetwork;
+import de.uniulm.ki.panda3.progression.htn.search.*;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.IRPG;
@@ -213,10 +212,12 @@ public class htnPlanningInstance {
         //initialNode.metric = initialNode.heuristic.getHeuristic();
         initialNode.metric = 1;
 
+        ProgressionSearchRoutine routine;
+        routine = new PriorityQueueSearch();
+        //routine = new EnforcedHillClimbing();
+        //routine = new CompleteEnforcedHillClimbing();
 
-        List<Object> solution = priorityQueueSearch(initialNode);
-        //List<Object> solution = enforcedHillClimbing(initialNode);
-        //List<Object> solution = completeEnforcedHillClimbing(initialNode);
+        List<Object> solution = routine.search(initialNode);
 
         int n = 1;
         if (solution != null) {
@@ -261,246 +262,6 @@ public class htnPlanningInstance {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    private List<Object> priorityQueueSearch(progressionNetwork firstSearchNode) {
-        System.out.println("\nStarting priority queue search");
-        int searchnodes = 1;
-        int bestMetric = Integer.MAX_VALUE;
-        List<Object> solution = null;
-        long time = System.currentTimeMillis();
-        PriorityQueue<progressionNetwork> fringe = new PriorityQueue<>();
-        fringe.add(firstSearchNode);
-
-        planningloop:
-        while (!fringe.isEmpty()) {
-            progressionNetwork n = fringe.poll();
-            operatorloop:
-            for (proPlanStep ps : n.getFirst()) {
-                if (ps.isPrimitive) {
-                    int pre = operators.prec[ps.action].nextSetBit(0);
-                    while (pre > -1) {
-                        if (!n.state.get(pre))
-                            continue operatorloop;
-                        pre = operators.prec[ps.action].nextSetBit(pre + 1);
-                    }
-
-                    progressionNetwork node = n.apply(ps);
-
-                    // todo: add unit propagation here
-                    node.heuristic = n.heuristic.update(node, ps);
-                    node.metric = node.solution.size() + node.heuristic.getHeuristic();
-                    node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
-
-                    if (node.goalRelaxedReachable) {
-                        // early goal test - NON-OPTIMAL
-                        if (node.isGoal()) {
-                            solution = node.solution;
-                            break planningloop;
-                        }
-
-                        fringe.add(node);
-                        if (node.metric < bestMetric) {
-                            bestMetric = node.metric;
-                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
-                        }
-                    }
-                    searchnodes++;
-                    if ((searchnodes % 100) == 0)
-                        System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
-                } else { // is an abstract task
-                    for (method m : ps.methods) {
-                        progressionNetwork node = n.decompose(ps, m);
-
-                        // todo: add unit propagation here
-                        node.heuristic = n.heuristic.update(node, ps, m);
-                        node.metric = node.solution.size() + node.heuristic.getHeuristic();
-                        node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
-
-                        if (node.goalRelaxedReachable) {
-
-                            if (node.isGoal()) {
-                                solution = node.solution;
-                                break planningloop;
-                            }
-
-                            fringe.add(node);
-                            if (node.metric < bestMetric) {
-                                bestMetric = node.metric;
-                                System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
-                            }
-                        }
-                        searchnodes++;
-                        if ((searchnodes % 100) == 0)
-                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
-                    }
-                }
-            }
-        }
-
-        System.out.println("Generated search nodes (total): " + searchnodes);
-        System.out.println("Search time: " + (System.currentTimeMillis() - time) + " ms");
-        return solution;
-    }
-
-
-    private List<Object> enforcedHillClimbing(progressionNetwork firstSearchNode) {
-        System.out.println("\nStarting enforced hill climbing search");
-        int searchnodes = 1;
-        int bestMetric = firstSearchNode.metric;
-        List<Object> solution = null;
-        long time = System.currentTimeMillis();
-        LinkedList<progressionNetwork> fringe = new LinkedList<>();
-        fringe.add(firstSearchNode);
-
-        planningloop:
-        while (true) {
-            if (fringe.isEmpty()) // failure
-                return null;
-
-            progressionNetwork n = fringe.removeFirst();
-
-            operatorloop:
-            for (proPlanStep ps : n.getFirst()) {
-                if (ps.isPrimitive) {
-                    int pre = operators.prec[ps.action].nextSetBit(0);
-                    while (pre > -1) {
-                        if (!n.state.get(pre))
-                            continue operatorloop;
-                        pre = operators.prec[ps.action].nextSetBit(pre + 1);
-                    }
-
-                    progressionNetwork node = n.apply(ps);
-                    if (node.heuristic.goalRelaxedReachable()) {
-                        // early goal test - NON-OPTIMAL
-                        if (node.isGoal()) {
-                            solution = node.solution;
-                            break planningloop;
-                        }
-
-
-                        if (node.metric < bestMetric) {
-                            bestMetric = node.metric;
-                            fringe.clear();
-                            fringe.add(node);
-                            System.out.println("Found new best metric value: " + node.metric);
-                            continue planningloop;
-                        } else {
-                            fringe.addLast(node);
-                        }
-                    }
-                    searchnodes++;
-                    if ((searchnodes % 10000) == 0)
-                        System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
-                } else { // is an abstract task
-                    for (method m : ps.methods) {
-                        progressionNetwork node = n.decompose(ps, m);
-
-                        if (node.heuristic.goalRelaxedReachable()) {
-
-                            if (node.isGoal()) {
-                                solution = node.solution;
-                                break planningloop;
-                            }
-
-                            if (node.metric < bestMetric) {
-                                bestMetric = node.metric;
-                                fringe.clear();
-                                fringe.add(node);
-                                System.out.println("Found new best metric value: " + node.metric);
-                                continue planningloop;
-                            } else {
-                                fringe.addLast(node);
-                            }
-                        }
-                        searchnodes++;
-                        if ((searchnodes % 10000) == 0)
-                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
-                    }
-                }
-            }
-        }
-
-        System.out.println("Generated search nodes (total): " + searchnodes);
-        System.out.println("Search time: " + (System.currentTimeMillis() - time) + " ms");
-        return solution;
-    }
-
-    int cehcSearchNodes = 1;
-
-    private List<Object> completeEnforcedHillClimbing(progressionNetwork firstSearchNode) {
-        int bestMetric = firstSearchNode.metric;
-        LinkedList<progressionNetwork> fringe = new LinkedList<>();
-        fringe.add(firstSearchNode);
-
-        planningloop:
-        while (true) {
-            if (fringe.isEmpty()) // failure
-                return null;
-
-            progressionNetwork n = fringe.removeFirst();
-
-            operatorloop:
-            for (proPlanStep ps : n.getFirst()) {
-                if (ps.isPrimitive) {
-                    int pre = operators.prec[ps.action].nextSetBit(0);
-                    while (pre > -1) {
-                        if (!n.state.get(pre))
-                            continue operatorloop;
-                        pre = operators.prec[ps.action].nextSetBit(pre + 1);
-                    }
-
-                    progressionNetwork node = n.apply(ps);
-                    if (node.heuristic.goalRelaxedReachable()) {
-                        if (node.isGoal())
-                            return node.solution;
-
-                        if (node.metric < bestMetric) {
-                            bestMetric = node.metric;
-                            System.out.println("-> " + node.metric);
-                            List<Object> solution = completeEnforcedHillClimbing(node);
-                            if (solution != null)
-                                return solution;
-
-                            System.out.println("<- " + bestMetric);
-                        }
-                        fringe.addLast(node);
-                    }
-                    cehcSearchNodes++;
-                    if ((cehcSearchNodes % 10000) == 0)
-                        System.out.println("Searchnodes :" + cehcSearchNodes);
-                } else { // is an abstract task
-                    for (method m : ps.methods) {
-                        progressionNetwork node = n.decompose(ps, m);
-
-                        if (node.heuristic.goalRelaxedReachable()) {
-                            if (node.isGoal())
-                                return node.solution;
-
-                            if (node.metric < bestMetric) {
-                                bestMetric = node.metric;
-                                System.out.println("-> " + node.metric);
-                                List<Object> solution = completeEnforcedHillClimbing(node);
-                                if (solution != null)
-                                    return solution;
-
-                                System.out.println("<- " + bestMetric);
-                            }
-                            fringe.addLast(node);
-                        }
-                        cehcSearchNodes++;
-                        if ((cehcSearchNodes % 10000) == 0)
-                            System.out.println("Searchnodes :" + cehcSearchNodes);
-
-                    }
-                }
-            }
-        }
-    }
-
-    private String getInfoStr(int searchnodes, int fringesize, int bestMetric, progressionNetwork n, long searchtime) {
-        return "nodes/sec: " + Math.round(searchnodes / ((System.currentTimeMillis() - searchtime) / 1000.0)) + " - generated nodes: " + searchnodes + " - fringe size: " + fringesize + " - best heuristic: " + bestMetric
-                + " - current heuristic: " + n.solution.size() + " - " + n.metric;
     }
 
     private HashMap<Task, HashMap<GroundTask, List<method>>> getEfficientMethodRep(Map<Task, Set<GroundedDecompositionMethod>> methodsByTask) {
