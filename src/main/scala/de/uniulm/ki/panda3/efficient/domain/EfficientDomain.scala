@@ -40,6 +40,9 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
     }
   }
 
+
+  val isGround : Boolean = sortsOfConstant.length == 0 && subSortsForSort.length == 0
+
   lazy val insertableTasks: Array[EfficientTask] = tasks filter { _.allowedToInsert }
 
   /** the ith index of the array contains all possible tasks that produce predicate i. The first list in the pair the positive ones, the second the negative ones.
