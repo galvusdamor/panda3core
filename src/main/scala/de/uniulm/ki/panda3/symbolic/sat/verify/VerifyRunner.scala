@@ -140,12 +140,12 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // (3)
     println("K " + encoder.K)
     informationCapsule.set(VerifyRunner.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, sequenceToVerify.length))
-    //informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify.length))
+    informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify.length))
+    informationCapsule.set(VerifyRunner.DP_K, VerifyEncoding.computeTDG(domain, initialPlan, sequenceToVerify.length))
     informationCapsule.set(VerifyRunner.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, sequenceToVerify.length))
     informationCapsule.set(VerifyRunner.OFFSET_K, offSetToK)
     informationCapsule.set(VerifyRunner.ACTUAL_K, encoder.K)
     println(informationCapsule.longInfo)
-
 
     timeCapsule start VerifyRunner.VERIFY_TOTAL
     timeCapsule start VerifyRunner.GENERATE_FORMULA
@@ -391,8 +391,9 @@ object VerifyRunner {
   val ICAPS_K                 = "99 verify:10:K ICAPS"
   val LOG_K                   = "99 verify:11:K LOG"
   val TSTG_K                  = "99 verify:12:K task schema transition graph"
-  val OFFSET_K                = "99 verify:13:K offset"
-  val ACTUAL_K                = "99 verify:14:K chosen value"
+  val DP_K                    = "99 verify:13:K DP"
+  val OFFSET_K                = "99 verify:14:K offset"
+  val ACTUAL_K                = "99 verify:15:K chosen value"
   val STATE_FORMULA           = "99 verify:20:state formula"
   val ORDER_CLAUSES           = "99 verify:21:order clauses"
   val METHOD_CHILDREN_CLAUSES = "99 verify:22:method children clauses"
@@ -566,7 +567,7 @@ object VerifyRunner {
   val timeLimit: Long = 30 * 60 * 1000
   val minOffset: Int  = 0
   //-3
-  val maxOffset: Int = 0
+  val maxOffset: Int  = 0
 
   val numberOfRandomSeeds: Int = 5
 
@@ -692,15 +693,16 @@ object VerifyRunner {
     //val domFile = "IPC7-Transport/domain-htn.lisp"
     //val probFile = "IPC7-Transport/p01-htn.lisp"
 
-    //val domFile = "../02-translation/d-0017-clear-road-tree-full-pref.hddl"
-    //val probFile = "../02-translation/p-0017-clear-road-tree-full-pref.hddl"
+    val domFile = "domain.lisp"
+    val probFile = "problems/p-0002-plow-road.lisp"
 
-    val domFile = args(0)
-    val probFile = args(1)
-    val len = args(2).toInt
-    val offset = args(3).toInt
+    //val domFile = args(0)
+    //val probFile = args(1)
+    //val len = args(2).toInt
+    //val offset = args(3).toInt
 
-    runPlanner(domFile, probFile, len, offset)
+    //runPlanner(domFile, probFile, len, offset)
+    runPlanner(domFile, probFile, 40, 0)
     //runEvaluation()
   }
 

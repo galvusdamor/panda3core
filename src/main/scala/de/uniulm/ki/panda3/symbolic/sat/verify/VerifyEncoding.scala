@@ -229,42 +229,80 @@ object VerifyEncoding {
     if (minMethodSize >= 2) Math.ceil((taskSequenceLength - plan.planStepsWithoutInitGoal.length).toDouble / (minMethodSize - 1)).toInt + heightIncrease else Integer.MAX_VALUE
   }
 
-  def computeTDG(domain: Domain, plan: Plan, tdg: TaskDecompositionGraph, taskSequenceLength: Int): Int = {
-    val condensedTDG = tdg.taskDecompositionGraph._1.condensation
-    val condensationTopSort = condensedTDG.topologicalOrdering.get // this will always work, since it is a condensation
+  def computeTDG(domain: Domain, initialPlan: Plan, taskSequenceLength: Int): Int = {
 
-    /*condensationTopSort.foldLeft(Map[Set[AnyRef], Map[Int, Int]]())(
+    def printMap(map: Map[Task, Map[Int, Int]]): Unit = {
+      println("\nMAP")
+      println(map map { case (t, m) => t.name + " -> " + m.toString } mkString "\n")
+    }
+
+    def recomputePlan(plan: Plan, map: Map[Task, Map[Int, Int]]): Map[Int, Int] = {
+      val sortedTasks = plan.planStepsWithoutInitGoal map { _.schema } sortBy { map(_).size } toArray
+      val cached = new mutable.HashMap[(Int, Int), Option[Int]]()
+
+      Range(0, taskSequenceLength + 1) map { totalLength =>
+        // try to distribute it to all tasks in the plan
+        def minimumByDistribution(currentTask: Int, remainingLength: Int): Option[Int] = if (cached contains(currentTask, remainingLength)) cached((currentTask, remainingLength))
+        else if (currentTask == sortedTasks.length) {if (remainingLength == 0) Some(0) else None } else {
+          val firstTaskMap = map(sortedTasks(currentTask))
+          val subValues = Range(0, remainingLength + 1) collect { case l if firstTaskMap contains l => (l, minimumByDistribution(currentTask + 1, remainingLength - l)) }
+          val definedSubValues = subValues filter { _._2.isDefined } map { case (l, Some(subHeight)) => Math.max(subHeight, firstTaskMap(l)) }
+          val result = if (definedSubValues.isEmpty) None else Some(definedSubValues max)
+          cached((currentTask, remainingLength)) = result
+          result
+        }
+        totalLength -> minimumByDistribution(0, totalLength)
+      } collect { case (length, Some(height)) => length -> (1 + height) } toMap
+    }
+
+    def recomputeTask(task: Task, m: Map[Task, Map[Int, Int]]): (Map[Task, Map[Int, Int]], Boolean) = if (task.isPrimitive) (m, false)
+    else {
+      val methodMaps = domain.methodsForAbstractTasks(task) map { method => recomputePlan(method.subPlan, m) }
+      val newMap: Map[Int, Int] = methodMaps reduce[Map[Int, Int]] { case (m1, m2) => m1 ++ m2.map({ case (l, h) => l -> Math.max(h, m1.getOrElse(l, 0)) }) }
+
+      (m + (task -> newMap), newMap != m(task))
+    }
+
+    val condensedTSTG = domain.taskSchemaTransitionGraph.condensation
+    val condensationTopSort: Seq[Set[Task]] = condensedTSTG.topologicalOrdering.get.reverse // this will always work, since it is a condensation
+
+    // run through the topological sorting of the condensation
+    val expandedMap = condensationTopSort.foldLeft(Map[Task, Map[Int, Int]]())(
       { case (map, scc) =>
-        if (scc.size == 1){
-          condensedTDG.reversedEdgesSet(scc)
-          // unit scc
-          scc.head match {
-            case t : Task => map
-            case m : DecompositionMethod =>
-          }
-          ???
-        } else {
-          // actual scc
-          ???
+        var initalised = scc.foldLeft(map)({ case (m, t) => m + (t -> (if (t.isPrimitive) Map(1 -> 1) else Map())) })
+
+        var changed = true
+        while (changed) {
+          val (newMap, newChanged) = scc.foldLeft((initalised, false))({ case ((m, changedUntilNow), task) =>
+            val (newMap, changed) = recomputeTask(task, m)
+            (newMap, changed || changedUntilNow)
+                                                                       })
+          changed = newChanged
+          initalised = newMap
         }
 
-        map
-      })*/
+        initalised
+      })
 
-    100
+    val initialPlanMap = recomputePlan(initialPlan, expandedMap)
+    val maximumLength = Range(0, taskSequenceLength + 1).reverse find initialPlanMap.contains
+
+    initialPlanMap(maximumLength.get)
   }
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
     val icapsPaperLimit = computeICAPSK(domain, plan, taskSequenceLength)
     val TSTGPath = computeTSTGK(domain, plan, taskSequenceLength)
     val minimumMethodSize = computeMethodSize(domain, plan, taskSequenceLength)
+    val tdg = computeTDG(domain, plan, taskSequenceLength)
 
     println("LEN " + taskSequenceLength)
-    println(icapsPaperLimit)
-    println(TSTGPath)
-    println(minimumMethodSize)
+    println("ICAPS: " + icapsPaperLimit)
+    println("TSTG: " + TSTGPath)
+    println("Method: " + minimumMethodSize)
+    println("DP: " + tdg)
 
-    Math.min(icapsPaperLimit, Math.min(TSTGPath, minimumMethodSize))
+    Math.min(icapsPaperLimit, Math.min(TSTGPath, Math.min(minimumMethodSize, tdg)))
   }
 }
 
