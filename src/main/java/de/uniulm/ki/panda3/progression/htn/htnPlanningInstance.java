@@ -286,6 +286,12 @@ public class htnPlanningInstance {
                     }
 
                     progressionNetwork node = n.apply(ps);
+
+                    // todo: add unit propagation here
+                    node.heuristic = n.heuristic.update(node, ps);
+                    node.metric = node.solution.size() + node.heuristic.getHeuristic();
+                    node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
+
                     if (node.goalRelaxedReachable) {
                         // early goal test - NON-OPTIMAL
                         if (node.isGoal()) {
@@ -305,6 +311,11 @@ public class htnPlanningInstance {
                 } else { // is an abstract task
                     for (method m : ps.methods) {
                         progressionNetwork node = n.decompose(ps, m);
+
+                        // todo: add unit propagation here
+                        node.heuristic = n.heuristic.update(node, ps, m);
+                        node.metric = node.solution.size() + node.heuristic.getHeuristic();
+                        node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
 
                         if (node.goalRelaxedReachable) {
 
