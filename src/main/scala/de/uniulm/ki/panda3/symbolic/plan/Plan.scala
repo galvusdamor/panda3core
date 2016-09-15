@@ -354,7 +354,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     // ordering constraints
     dotStringBuilder append "\n"
 
-    def reachableViaCausalLinksFrom(from: PlanStep, to: PlanStep): Boolean = if (from == to) true
+    def reachableViaCausalLinksFrom(from: PlanStep, to: PlanStep): Boolean = if (!options.showCausalLinks) false else if (from == to) true
     else {
       // TODO might introduce cycles ...
       causalLinksAndRemovedCausalLinks exists { case CausalLink(p, c, _) => if (p == from) reachableViaCausalLinksFrom(c, to) else false }
@@ -364,6 +364,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       if (options.omitImpliedOrderings) {case OrderingConstraint(before, after) => !reachableViaCausalLinksFrom(before, after)} else {case _ => true}
     val orderingFilterHierarchy: OrderingConstraint => Boolean =
       if (options.showHierarchy) {case _ => true} else {case OrderingConstraint(before, after) => isPresent(before) && isPresent(after)}
+
     val displayedOrderings = orderingConstraints.minimalOrderingConstraints() filter orderingFilterHierarchy filter orderingFilterCausalLinks
 
 
