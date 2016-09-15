@@ -195,8 +195,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     domain.tasks = (domainTasks.fromMap.toSeq.sortBy({ _._1 }) map { case (_, t) => domainTasksObjects(t) }).toArray
 
     domain.decompositionMethods = (symbolicDomain.decompositionMethods map {
-      case SimpleDecompositionMethod(task, subplan,_) => EfficientDecompositionMethod(domainTasks(task), computeEfficientPlan(subplan, domain, task.parameters))
-      case SHOPDecompositionMethod(_, _, _,_)         => noSupport(NONSIMPLEMETHOD)
+      case SimpleDecompositionMethod(task, subplan, _) => EfficientDecompositionMethod(domainTasks(task), computeEfficientPlan(subplan, domain, task.parameters))
+      case SHOPDecompositionMethod(_, _, _, _)         => noSupport(NONSIMPLEMETHOD)
     }).toArray
 
     domain
@@ -437,13 +437,18 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
           val modifications = searchNode.plan.flaws.zipWithIndex map { case (flaw, idx) =>
             val otherFlawIndex = efficientSearchNode.plan.flaws indexWhere { efficientFlaw => FlawEquivalenceChecker(efficientFlaw, flaw, this) }
 
-            if (!(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length)) {
+            val efficientDeadModifications = efficientSearchNode.modifications(otherFlawIndex) map { efficientSearchNode.plan.modify } filterNot { _.variableConstraints
+              .potentiallyConsistent
+            } size
+
+            if (!(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length - efficientDeadModifications)) {
               val symbolicMods = flaw.resolvents(symbolicDomain)
               val efficientMods = efficientSearchNode.modifications(otherFlawIndex)
-              println(flaw.resolvents(symbolicDomain).length + " == " + efficientSearchNode.modifications(otherFlawIndex).length)
+
+              println(flaw.resolvents(symbolicDomain).length + " == " + efficientSearchNode.modifications(otherFlawIndex).length  + " - " +  efficientDeadModifications)
             }
 
-            assert(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length)
+            assert(flaw.resolvents(symbolicDomain).length == efficientSearchNode.modifications(otherFlawIndex).length - efficientDeadModifications)
             (efficientSearchNode.modifications(otherFlawIndex) map { wrap(_, searchNode.plan) }).toSeq
           }
           assert(searchNode.plan.flaws.size == efficientSearchNode.modifications.length)
@@ -516,9 +521,9 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
       val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
       val subPlanPlanSteps = insertedPlanSteps :+ init :+ goal
-      val subPlanOrderingConstraints = subOrdering map { case (before, after) => OrderingConstraint(getPlanStep(before), getPlanStep(after)) } filter {
-        case OrderingConstraint(before, after) => subPlanPlanSteps.contains(before) && subPlanPlanSteps.contains(after)
-      }
+      val subPlanOrderingConstraints = for (before <- addedPlanSteps.indices; after <- addedPlanSteps.indices if subOrdering.get(before)(after) == TaskOrdering.BEFORE) yield
+        OrderingConstraint(getPlanStep(before + wrappedPlan.getFirstFreePlanStepID), getPlanStep(after + wrappedPlan.getFirstFreePlanStepID))
+
       val ordering = TaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
       val csp = CSP((newVariables ++ nonPresentDecomposedPlanStep.arguments).toSet, innerConstraints)
       val subPlan = Plan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](), Map[PlanStep, (PlanStep, PlanStep)]())

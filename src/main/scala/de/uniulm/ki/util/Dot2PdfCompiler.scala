@@ -18,11 +18,15 @@ object Dot2PdfCompiler {
 
     de.uniulm.ki.util.writeStringToFile(dotString, tempFile)
 
-    System.getProperty("os.name") match {
-      case osname if osname.toLowerCase startsWith "windows" =>
-        ("cmd.exe /c dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
-      case _                                                 => // Linux and all the others
-        ("dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
+    try {
+      System.getProperty("os.name") match {
+        case osname if osname.toLowerCase startsWith "windows" =>
+          ("cmd.exe /c dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
+        case _                                                 => // Linux and all the others
+          ("dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
+      }
+    } catch {
+      case _: Throwable =>
     }
   }
 }

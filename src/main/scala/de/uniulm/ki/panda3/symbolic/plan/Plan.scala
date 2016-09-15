@@ -26,6 +26,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
                 planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)]) extends
   DomainUpdatable with PrettyPrintable with HashMemo with DotPrintable[PlanDotOptions] {
 
+  assert(planStepsAndRemovedPlanSteps == orderingConstraints.tasks)
+
   assert(planStepsAndRemovedPlanSteps forall {
     ps => ps.arguments.size == ps.schema.parameters.size
   })
@@ -237,8 +239,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       }
       val newGoal = PlanStep(goal.id, goalTask, goal.arguments)
 
-      val exchangeInit = ExchangePlanStep(init, newInit)
-      val exchangeGoal = ExchangePlanStep(goal, newGoal)
+      val exchangeInit = ExchangePlanSteps(init, newInit)
+      val exchangeGoal = ExchangePlanSteps(goal, newGoal)
 
       Plan(planStepsAndRemovedPlanSteps map {
         _ update exchangeInit update exchangeGoal
@@ -258,9 +260,11 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
         case _                                   => domainUpdate
       }
 
-      val newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal = planStepsAndRemovedPlanStepsWithoutInitGoal map { _ update possiblyInvertedUpdate }
-
-      val newPlanStepsAndRemovedPlanSteps = newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal :+ newInit :+ newGoal
+      val newPlanStepsAndRemovedPlanSteps = planSteps map {
+        case ps if ps == init => newInit
+        case ps if ps == goal => newGoal
+        case ps => ps update possiblyInvertedUpdate
+      }
 
       val newCausalLinksAndRemovedCausalLinks = causalLinksAndRemovedCausalLinks map { _ update possiblyInvertedUpdate }
       val newOrderingConstraints = orderingConstraints update possiblyInvertedUpdate
@@ -462,33 +466,3 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
 case class PlanDotOptions(showParameters: Boolean = true, showOrdering: Boolean = true, omitImpliedOrderings: Boolean = true, showCausalLinks: Boolean = true,
                           showHierarchy: Boolean = false, showOpenPreconditions: Boolean = true) {}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

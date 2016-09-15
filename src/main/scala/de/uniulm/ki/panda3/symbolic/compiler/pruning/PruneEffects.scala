@@ -21,7 +21,7 @@ object PruneEffects extends DomainTransformer[Set[Task]] {
     }
 
     val unnecessaryPredicates = domain.predicates flatMap { p => (p, true) ::(p, false) :: Nil } filterNot necessaryPredicates.contains
-    val update = RemoveEffects(unnecessaryPredicates, invertedTreatment = false)
+    val update = RemoveEffects(unnecessaryPredicates.toSet, invertedTreatment = false)
     (domain update update, plan update update)
   }
 }

@@ -6,7 +6,7 @@ import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.
 import de.uniulm.ki.panda3.symbolic.domain.{Task, Domain, ReducedTask}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
-
+import de.uniulm.ki.panda3.symbolic._
 
 /**
   * @author Kristof Mickeleit (kristof.mickeleit@uni-ulm.de)
@@ -47,7 +47,12 @@ object DebuggingMode extends Enumeration {
   */
 case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral], configuration: GroundedPlanningGraphConfiguration) extends LayeredGroundedPrimitiveReachabilityAnalysis {
 
-  initialState foreach { f => assert(f.isPositive) }
+  initialState foreach { f => assert(f.isPositive, "Initial state contains the negative fact " + f.longInfo) }
+  domain.primitiveTasks foreach {
+    case ReducedTask(name, _, _, _, _, prec, _) => prec.conjuncts foreach { l => assert(l.isPositive, "Primitive task " + name + " has the negative precondition " + l.longInfo) }
+    case _                                      => noSupport(FORUMLASNOTSUPPORTED)
+  }
+
 
   // Number of layers of the planning graph.
   lazy val graphSize: Int = layerWithMutexes.size
@@ -63,7 +68,6 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     // check assertions
     computedLayer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
     computedLayer foreach { case (_, b) => assert(initialState forall b.contains) }
-
     // return the graph
     computedLayer
   }
@@ -94,24 +98,16 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
   }
 
-  layer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
-  layer foreach { case (_, b) => assert(initialState forall b.contains) }
-
   // Layers of the planning graph represented by sets of actions and propositions and their mutexes.
   lazy val layerWithMutexes: Seq[(Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)])] = {
     val originalLayers = buildGraph(graph = Seq((Set.empty[GroundTask], Set.empty[(GroundTask, GroundTask)], initialState, Set.empty[(GroundLiteral, GroundLiteral)])),
-      metaData = GroundedPlanningGraphMetaData(addedPropositions = initialState, firstLayer = true))
+                                    metaData = GroundedPlanningGraphMetaData(addedPropositions = initialState, firstLayer = true))
 
-    originalLayers map {
-      _._2
-    } foreach {
-      _ foreach { case (action1, action2) => assert(action1 != action2) }
-    }
-    originalLayers map {
-      _._4
-    } foreach {
-      _ foreach { case (predicate1, predicate2) => assert(predicate1 != predicate2) }
-    }
+    originalLayers map { _._1 } foreach { _ foreach { gt => assert(gt.task.isPrimitive) } }
+    originalLayers map { _._2 } foreach { _ foreach { case (action1, action2) => assert(action1 != action2) } }
+    originalLayers map { _._3 } foreach { _ foreach { gl => assert(gl.isPositive) } }
+    originalLayers map { _._3 } foreach { b => assert(initialState forall b.contains) }
+    originalLayers map { _._4 } foreach { _ foreach { case (predicate1, predicate2) => assert(predicate1 != predicate2) } }
 
     originalLayers
   }
@@ -133,20 +129,20 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
     // New actions whose instantiation was made possible by added propositions and deleted proposition-mutexes of the previous layer.
     val newActions: Set[GroundTask] = computeNewActions(domain, configuration, metaData.firstLayer, metaData.addedPropositions,
-      metaData.deletedPropositionMutexes, updatedPredicateMap, previousLayer._4)
+                                                        metaData.deletedPropositionMutexes, updatedPredicateMap, previousLayer._4)
 
     val (updatedPreBuckets, updatedAddBuckets, updatedDelBuckets) = updateBuckets(metaData.preconditionBuckets, metaData.addBuckets, metaData.deleteBuckets, newActions, configuration)
     val allActions: Set[GroundTask] = previousLayer._1 ++ newActions
 
     val (interferenceMutexes, competingNeedsMutexes) = configuration.computeMutexes match {
-      case true => configuration.buckets match {
-        case true => computeActionMutexesWBuckets(configuration, newActions, metaData.previousInterferenceMutexes, previousLayer._4, updatedPreBuckets, updatedAddBuckets, updatedDelBuckets)
+      case true  => configuration.buckets match {
+        case true  => computeActionMutexesWBuckets(configuration, newActions, metaData.previousInterferenceMutexes, previousLayer._4, updatedPreBuckets, updatedAddBuckets, updatedDelBuckets)
         case false => computeActionMutexes(configuration, newActions, previousLayer._1, metaData.previousInterferenceMutexes, metaData.previousCompetingNeedsMutexes, previousLayer._4)
       }
       case false => (Set.empty[(GroundTask, GroundTask)], Set.empty[(GroundTask, GroundTask)])
     }
     val serialMutexes = configuration.isSerial match {
-      case true => computeSerialMutexes(newActions, allActions)
+      case true  => computeSerialMutexes(newActions, allActions)
       case false => Set.empty[(GroundTask, GroundTask)]
     }
     val allActionMutexes = serialMutexes ++ interferenceMutexes ++ competingNeedsMutexes
@@ -157,7 +153,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     val allPropositions: Set[GroundLiteral] = newPropositions ++ previousLayer._3
 
     val propositionMutexes: Set[(GroundLiteral, GroundLiteral)] = configuration.computeMutexes match {
-      case true => computePropositionMutexes(configuration, newPropositions, previousLayer._3, allPropositions, allActionMutexes, updatedAddBuckets, previousLayer._4)
+      case true  => computePropositionMutexes(configuration, newPropositions, previousLayer._3, allPropositions, allActionMutexes, updatedAddBuckets, previousLayer._4)
       case false => Set.empty[(GroundLiteral, GroundLiteral)]
     }
 
@@ -181,14 +177,14 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     } else {
       // Setting the new meta data about current graph.
       val newMetaData = GroundedPlanningGraphMetaData(addedPropositions = newPropositions,
-        deletedPropositionMutexes = previousLayer._4 diff propositionMutexes,
-        previousInterferenceMutexes = interferenceMutexes,
-        previousCompetingNeedsMutexes = competingNeedsMutexes,
-        predicateMap = updatedPredicateMap,
-        preconditionBuckets = updatedPreBuckets,
-        addBuckets = updatedAddBuckets,
-        deleteBuckets = updatedDelBuckets
-      )
+                                                      deletedPropositionMutexes = previousLayer._4 diff propositionMutexes,
+                                                      previousInterferenceMutexes = interferenceMutexes,
+                                                      previousCompetingNeedsMutexes = competingNeedsMutexes,
+                                                      predicateMap = updatedPredicateMap,
+                                                      preconditionBuckets = updatedPreBuckets,
+                                                      addBuckets = updatedAddBuckets,
+                                                      deleteBuckets = updatedDelBuckets
+                                                     )
 
       printLayer(thisLayer, configuration.debuggingMode)
       // Start the computation of the next layer of the graph.
@@ -208,10 +204,10 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
   def printLayer(thisLayer: (Set[GroundTask], Set[(GroundTask, GroundTask)], Set[GroundLiteral], Set[(GroundLiteral, GroundLiteral)]), debuggingMode: DebuggingMode): Unit = {
     if (debuggingMode.id > 0) {
       println("<======================>")
-      println(s"Number of actions: ${thisLayer._1.size}")
-      println(s"Number of action mutexes: ${thisLayer._2.size}")
-      println(s"Number of propositions: ${thisLayer._3.size}")
-      println(s"Number of proposition mutexes: ${thisLayer._4.size}")
+      println(s"Number of actions: ${thisLayer._1.size }")
+      println(s"Number of action mutexes: ${thisLayer._2.size }")
+      println(s"Number of propositions: ${thisLayer._3.size }")
+      println(s"Number of proposition mutexes: ${thisLayer._4.size }")
       if (debuggingMode.id > 1) {
         println("=== Actions ===")
         for (x <- thisLayer._1) {
@@ -225,7 +221,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
         }
         println("=== Action mutexes ===")
         for (x <- thisLayer._2) {
-          println(s"[${x._1.task.name}, ${x._2.task.name}]")
+          println(s"[${x._1.task.name }, ${x._2.task.name }]")
           if (debuggingMode.id > 2) {
             println(x._1.task.name)
             println("= Arguments =")
@@ -250,7 +246,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
         }
         println("=== Proposition mutexes ===")
         for (x <- thisLayer._4) {
-          println(s"[${x._1.predicate.name}, ${x._2.predicate.name}]")
+          println(s"[${x._1.predicate.name }, ${x._2.predicate.name }]")
           if (debuggingMode.id > 2) {
             println(x._1.predicate.name)
             println("= Constants =")
@@ -451,10 +447,11 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
      * Find all tasks that could be up for instantiation because either at least one of their preconditions were added in the previous layer or
      * two of its preconditions were contained in a now deleted mutex. The tasks are paired up with propositions which are the reason the tasks are considered.
      */
-    val tasksFromAddedPropositions: Set[(Set[GroundLiteral], Seq[ReducedTask])] = addedPropositions map { proposition => (Set(proposition), domain.consumersOf(proposition.predicate)) }
+    val tasksFromAddedPropositions: Set[(Set[GroundLiteral], Seq[ReducedTask])] =
+      addedPropositions map { proposition => (Set(proposition), domain.primitiveConsumerOf(proposition.predicate)) }
     val tasksFromDeletedMutexes: Set[(Set[GroundLiteral], Seq[ReducedTask])] =
       deletedMutexes map { case (proposition1, proposition2) =>
-        (Set(proposition1, proposition2), domain.consumersOf(proposition1.predicate) intersect domain.consumersOf(proposition2.predicate))
+        (Set(proposition1, proposition2), domain.primitiveConsumerOf(proposition1.predicate) intersect domain.primitiveConsumerOf(proposition2.predicate))
       }
 
     // Merge the sets of tasks-proposition pairs that could be up for instantiation and filter them for forbidden lifted tasks, since they are not allowed to be instantiated.
@@ -473,7 +470,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
     // special treatment for tasks without preconditions. the are always applicable in the first action layer
     val newActionsFromParameters: Set[GroundTask] = firstLayer match {
-      case true => domain.tasks filter { case task: ReducedTask =>
+      case true  => domain.primitiveTasks filter { case task: ReducedTask =>
         task.precondition.isEmpty && !(configuration.forbiddenLiftedTasks contains task)
       } flatMap { case task: ReducedTask => createActionInstancesForTasksWithoutPreconditions(task) } toSet
       case false => Set.empty[GroundTask]
@@ -516,17 +513,18 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
   private def updatePredicateMap(predicateMap: Map[Predicate, Set[GroundLiteral]], propositions: Set[GroundLiteral]): Map[Predicate, Set[GroundLiteral]] = {
     propositions.foldLeft(predicateMap) { case (pMap, proposition) =>
       pMap + (proposition.predicate -> (pMap.getOrElse(proposition.predicate, Set.empty[GroundLiteral]) + proposition))
-    }
+                                        }
   }
 
   /**
     * Updates the buckets with new actions.
     * Add-buckets need always to be updated, preconditions- and delete- buckets only if the bucket flag is set in the graph configuration.
+    *
     * @param preconditionBuckets Bucket to be updated.
-    * @param addBuckets Bucket to be updated.
-    * @param deleteBuckets Bucket to be updated.
-    * @param newActions Set of actions the buckets will be updated with.
-    * @param configuration Configuration of the planning graph.
+    * @param addBuckets          Bucket to be updated.
+    * @param deleteBuckets       Bucket to be updated.
+    * @param newActions          Set of actions the buckets will be updated with.
+    * @param configuration       Configuration of the planning graph.
     * @return Returns the updated buckets.
     */
   private def updateBuckets(preconditionBuckets: Map[GroundLiteral, Set[GroundTask]],
@@ -536,18 +534,23 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
                             configuration: GroundedPlanningGraphConfiguration):
   (Map[GroundLiteral, Set[GroundTask]], Map[GroundLiteral, Set[GroundTask]], Map[GroundLiteral, Set[GroundTask]]) = {
 
-    val (updatedPreBucket, updatedAddBucket, updatedDelBucket) = newActions.foldLeft((preconditionBuckets, addBuckets, deleteBuckets)) { case(buckets, action) =>
-        (configuration.buckets match {
-          case true => action.substitutedPreconditions.foldLeft(buckets._1) { case(pBuckets, proposition) =>
-          pBuckets + (proposition -> (pBuckets.getOrElse(proposition, Set.empty[GroundTask]) + action))}
-          case false => Map.empty[GroundLiteral, Set[GroundTask]]},
-          action.substitutedAddEffects.foldLeft(buckets._2) { case(aBuckets, proposition) =>
-            aBuckets + (proposition -> (aBuckets.getOrElse(proposition, Set.empty[GroundTask]) + action))},
-          configuration.buckets match {
-            case true => action.substitutedDelEffects.foldLeft(buckets._3) { case(dBuckets, proposition) =>
-            dBuckets + (proposition.copy(isPositive = true) -> (dBuckets.getOrElse(proposition.copy(isPositive = true), Set.empty[GroundTask]) + action))}
-            case false => Map.empty[GroundLiteral, Set[GroundTask]]})
-    }
+    val (updatedPreBucket, updatedAddBucket, updatedDelBucket) = newActions.foldLeft((preconditionBuckets, addBuckets, deleteBuckets)) { case (buckets, action) =>
+      (configuration.buckets match {
+        case true  => action.substitutedPreconditions.foldLeft(buckets._1) { case (pBuckets, proposition) =>
+          pBuckets + (proposition -> (pBuckets.getOrElse(proposition, Set.empty[GroundTask]) + action))
+                                                                           }
+        case false => Map.empty[GroundLiteral, Set[GroundTask]]
+      },
+        action.substitutedAddEffects.foldLeft(buckets._2) { case (aBuckets, proposition) =>
+          aBuckets + (proposition -> (aBuckets.getOrElse(proposition, Set.empty[GroundTask]) + action))
+                                                          },
+        configuration.buckets match {
+          case true  => action.substitutedDelEffects.foldLeft(buckets._3) { case (dBuckets, proposition) =>
+            dBuckets + (proposition.copy(isPositive = true) -> (dBuckets.getOrElse(proposition.copy(isPositive = true), Set.empty[GroundTask]) + action))
+                                                                          }
+          case false => Map.empty[GroundLiteral, Set[GroundTask]]
+        })
+                                                                                                                                       }
     (updatedPreBucket, updatedAddBucket, updatedDelBucket)
   }
 
@@ -589,15 +592,15 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       // check whether we might have violated parameter constraints
       val taskConstraintsOK = task.parameterConstraints forall {
         case Equal(var1,
-        var2: Variable) => if ((updatedAssignmentMap contains var1) && (updatedAssignmentMap contains var2)) updatedAssignmentMap(var1) == updatedAssignmentMap(var2)
+                   var2: Variable)           => if ((updatedAssignmentMap contains var1) && (updatedAssignmentMap contains var2)) updatedAssignmentMap(var1) == updatedAssignmentMap(var2)
         else true
-        case Equal(var1, const: Constant) => if (updatedAssignmentMap contains var1) updatedAssignmentMap(var1) == const else true
+        case Equal(var1, const: Constant)    => if (updatedAssignmentMap contains var1) updatedAssignmentMap(var1) == const else true
         case NotEqual(var1,
-        var2: Variable) => if ((updatedAssignmentMap contains var1) && (updatedAssignmentMap contains var2)) updatedAssignmentMap(var1) != updatedAssignmentMap(var2)
+                      var2: Variable)        => if ((updatedAssignmentMap contains var1) && (updatedAssignmentMap contains var2)) updatedAssignmentMap(var1) != updatedAssignmentMap(var2)
         else true
         case NotEqual(var1, const: Constant) => if (updatedAssignmentMap contains var1) updatedAssignmentMap(var1) != const else true
-        case OfSort(vari, sort) => if (updatedAssignmentMap contains vari) sort.elements contains updatedAssignmentMap(vari) else true
-        case NotOfSort(vari, sort) => if (updatedAssignmentMap contains vari) !(sort.elements contains updatedAssignmentMap(vari)) else true
+        case OfSort(vari, sort)              => if (updatedAssignmentMap contains vari) sort.elements contains updatedAssignmentMap(vari) else true
+        case NotOfSort(vari, sort)           => if (updatedAssignmentMap contains vari) !(sort.elements contains updatedAssignmentMap(vari)) else true
       }
 
 
@@ -615,12 +618,12 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
             val unassignedVariables: Seq[Variable] = task.parameters filterNot { variable => updatedAssignmentMap.keySet contains variable }
 
             // Find all possible variable substitution to be able to instantiate all possible actions later.
-            val possibleSubstitutionCombinations: Seq[Seq[(Variable,Constant)]] =
-            unassignedVariables.foldLeft[Seq[Seq[(Variable, Constant)]]](Nil :: Nil)({ case (args, variable) => variable.sort.elements flatMap { c => args map {
-                _ :+ (variable, c)
+            val possibleSubstitutionCombinations: Seq[Seq[(Variable, Constant)]] =
+              unassignedVariables.foldLeft[Seq[Seq[(Variable, Constant)]]](Nil :: Nil)({ case (args, variable) => variable.sort.elements flatMap { c => args map {
+                _ :+(variable, c)
               }
               }
-              })
+                                                                                       })
 
             // Compute all argument combinations and initiate a new action for each of them.
             val allArgumentCombinations: Seq[Seq[Constant]] = possibleSubstitutionCombinations map { combination =>
@@ -638,7 +641,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
             preconditionCandidates flatMap {
               nextPrecondition => instantiateActions(task, Seq((nextPrecondition, nextLiteral)), disallowedActions,
-                remainingUnfulfilledPreconditions, predicateMap, mutexes, updatedAssignmentMap, updatedUsedPropositions)
+                                                     remainingUnfulfilledPreconditions, predicateMap, mutexes, updatedAssignmentMap, updatedUsedPropositions)
             }
           } else {
             instantiateActions(task, remainingLiteralPairs, disallowedActions, remainingUnfulfilledPreconditions, predicateMap, mutexes, updatedAssignmentMap, updatedUsedPropositions)
@@ -686,7 +689,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       _ :+ c
     }
     }
-    }) map { arguments => GroundTask(task, arguments) } toSet
+                                                             }) map { arguments => GroundTask(task, arguments) } toSet
   }
 
   /**
@@ -698,13 +701,13 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
   private def createNOOP(proposition: GroundLiteral): GroundTask = {
     // Create a sequence of variables corresponding to the constants contained in the proposition.
     val parameters: Seq[Variable] = proposition.parameter.zipWithIndex map { case (constant, id) => Variable(id, "no-op",
-      (domain.sorts find { sort => sort.elements contains constant }).get)
+                                                                                                             (domain.sorts find { sort => sort.elements contains constant }).get)
     }
     // Create a literal corresponding to the proposition.
     val literal: Literal = Literal(proposition.predicate, isPositive = true, parameters)
     // Create a lifted task that has the literal as precondition and add-effect.
     val task: ReducedTask = ReducedTask("NO-OP[" + proposition.predicate.name + "]",
-      isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
+                                        isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
     // Instantiate an action based on the lifted task and return it.
     GroundTask(task, proposition.parameter)
   }

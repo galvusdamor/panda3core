@@ -1,12 +1,11 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class DomainPropertyAnalyser(domain: Domain, tdg: NaiveGroundedTaskDecompositionGraph) {
+case class DomainPropertyAnalyser(domain: Domain, tdg: TaskDecompositionGraph) {
 
   private val tdgStrata = tdg.taskDecompositionGraph._1.condensation
 
@@ -45,4 +44,5 @@ case class DomainPropertyAnalyser(domain: Domain, tdg: NaiveGroundedTaskDecompos
     nonLastPlanSteps forall { ps => !(groundedAbstractTaskComponent contains groundMethod.subPlanPlanStepsToGrounded(ps)) }
   }
 
+  val isTotallyOrdered : Boolean = domain.isTotallyOrdered
 }

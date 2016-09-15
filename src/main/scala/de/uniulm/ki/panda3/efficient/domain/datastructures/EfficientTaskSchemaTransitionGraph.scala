@@ -1,20 +1,20 @@
 package de.uniulm.ki.panda3.efficient.domain.datastructures
 
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
-import de.uniulm.ki.util.DirectedGraph
+import de.uniulm.ki.util.{DirectedGraphWithAlgorithms, DirectedGraph}
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends DirectedGraph[Int] {
+case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends DirectedGraphWithAlgorithms[Int] {
 
   /** all tasks */
-  override def vertices: Seq[Int] = {
-    domain.tasks.indices
-  }
+  override val vertices: Seq[Int] = domain.tasks.indices
 
   /** adjacency list of the graph */
-  override def edges: Map[Int, Seq[Int]] = (vertices map { task => val decomposableInto = domain.taskToPossibleMethods(task) flatMap {
+  override val edges: Map[Int, Seq[Int]] = (vertices map { task => val decomposableInto = domain.taskToPossibleMethods(task) flatMap {
     case (method, _) =>
       val methodTasks = method.subPlan.planStepTasks
       methodTasks.slice(2, methodTasks.length)
@@ -23,8 +23,23 @@ case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends D
   }).toMap
 
 
-  lazy val taskCanSupportByDecomposition: Map[Int, Array[(Int, Boolean)]] = (vertices map { task =>
-      val produciblePredicates = reachable(task) filterNot { _ == task } flatMap { subTask => domain.tasks(subTask).effect map { eff => (eff.predicate, eff.isPositive) } }
-      (task, produciblePredicates.toArray)
+  lazy val taskCanSupportByDecomposition: Map[Int, Array[(Int, Boolean)]] = {
+    val startT = System.currentTimeMillis()
+    val x = (vertices map { task =>
+      val buffer = new ArrayBuffer[(Int, Boolean)]()
+      val reach = reachable(task) filterNot { _ == task }
+      //println("REACHABLE" + reach.size)
+
+      if (task % 1000 == 0)
+        println("EFF " + task + "/" + vertices.length)
+
+      reach foreach { subTask => domain.tasks(subTask).effect foreach { eff => buffer append ((eff.predicate, eff.isPositive)) } }
+
+      val arr = buffer.toArray
+      //println("EFF " + arr.length)
+      (task, arr)
     }).toMap
+    println("DONE " + (System.currentTimeMillis() - startT))
+    x
+  }
 }

@@ -2,8 +2,8 @@ package de.uniulm.ki.panda3.configuration
 
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientGroundedTaskDecompositionGraph
 import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, GroundedReachabilityAnalysis, PrimitiveReachabilityAnalysis}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, PrimitiveReachabilityAnalysis}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -16,7 +16,7 @@ object SymbolicLiftedReachability extends AnalysisType {type ResultType = Primit
 
 object SymbolicGroundedReachability extends AnalysisType {type ResultType = GroundedPrimitiveReachabilityAnalysis}
 
-object SymbolicGroundedTaskDecompositionGraph extends AnalysisType {type ResultType = NaiveGroundedTaskDecompositionGraph}
+object SymbolicGroundedTaskDecompositionGraph extends AnalysisType {type ResultType = TaskDecompositionGraph}
 
 object EfficientGroundedTDG extends AnalysisType {type ResultType = EfficientGroundedTaskDecompositionGraph}
 

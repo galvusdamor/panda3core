@@ -10,8 +10,8 @@ import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{EverythingIsHiearchicallyReachable, EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability,
-NaiveGroundedTaskDecompositionGraph}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{TopDownTaskDecompositionGraph, EverythingIsHiearchicallyReachable,
+EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability, NaiveGroundedTaskDecompositionGraph}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, DomainPropertyAnalyser}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
@@ -78,6 +78,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       extra("Domain is mostly acyclic: " + domainStructureAnalysis.isMostlyAcyclic + "\n")
       extra("Domain is regular: " + domainStructureAnalysis.isRegular + "\n")
       extra("Domain is tail recursive: " + domainStructureAnalysis.isTailRecursive + "\n")
+      extra("Domain is totally ordered: " + domainStructureAnalysis.isTotallyOrdered + "\n")
 
     }
 
@@ -87,7 +88,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // TDG based heuristics need the TDG
     if (searchConfiguration.heuristic contains TDGMinimumModification) if (!(analysisMap contains SymbolicGroundedTaskDecompositionGraph)) {
       timeCapsule start GROUNDED_TDG_ANALYSIS
-      analysisMap = runNaiveGroundedTaskDecompositionGraph(domainAndPlan._1, domainAndPlan._2, analysisMap)
+      analysisMap = runGroundedTaskDecompositionGraph(domainAndPlan._1, domainAndPlan._2, analysisMap, preprocessingConfiguration.groundedTaskDecompositionGraph.get)
       timeCapsule stop GROUNDED_TDG_ANALYSIS
     }
     timeCapsule stop HEURISTICS_PREPARATION
@@ -115,7 +116,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Seq[Plan] = resultfunction(())
         timeCapsule stop TOTAL_TIME
-        runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan)
+        runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan, analysisMap)
       })
     } else {
       // EFFICIENT SEARCH
@@ -126,8 +127,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       // in some cases we need to re-do some steps of the preparation as we have to transfer them into the efficient representation
       timeCapsule start HEURISTICS_PREPARATION
-      if ((searchConfiguration.heuristic contains TDGMinimumModification) || (searchConfiguration.heuristic contains TDGMinimumADD))
+      // compute the efficient TDG if needed during search
+      if ((searchConfiguration.heuristic contains TDGMinimumModification) || (searchConfiguration.heuristic contains TDGMinimumADD) ||
+        (searchConfiguration.heuristic contains TDGMinimumAction))
         analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
+
       if ((searchConfiguration.heuristic contains ADD) || (searchConfiguration.heuristic contains ADDReusing) || (searchConfiguration.heuristic contains TDGMinimumADD)) {
         // do the whole preparation, i.e. planning graph
         val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
@@ -160,11 +164,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             // prepare the heuristic
             val heuristicInstance = searchConfiguration.heuristic match {
               case Some(heuristic) => heuristic match {
-                case NumberOfFlaws          => EfficientNumberOfFlaws
-                case NumberOfPlanSteps      => EfficientNumberOfPlanSteps
-                case WeightedFlaws          => ???
-                case TDGMinimumModification => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
-                case TDGMinimumADD          =>
+                case NumberOfFlaws                => EfficientNumberOfFlaws
+                case NumberOfPlanSteps            => EfficientNumberOfPlanSteps
+                case WeightedFlaws                => ???
+                case TDGMinimumModification       => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                case LiftedTDGMinimumModification => TSTGHeuristic(wrapper.efficientDomain)
+                case TDGMinimumAction             => MinimumActionCount(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                case TDGMinimumADD                =>
                   // TODO experimental
                   val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
                   val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
@@ -206,25 +212,28 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       (domainAndPlan._1, wrappedSearchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
         val actualResult: Seq[Plan] = resultfunction(()) map { wrapper.wrap }
         timeCapsule stop TOTAL_TIME
-        runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan)
+        runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan, analysisMap)
       })
     }
   }
 
-  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Seq[Plan], domainAndPlan: (Domain, Plan)): ResultMap =
+  def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Seq[Plan], domainAndPlan: (Domain, Plan),
+                        analysisMap: AnalysisMap): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
-      case ProcessingTimings => timeCapsule
-      case SearchStatus      => if (result.nonEmpty) SearchState.SOLUTION
+      case ProcessingTimings              => timeCapsule
+      case SearchStatus                   => if (result.nonEmpty) SearchState.SOLUTION
+      else if (timeCapsule.integralDataMap()(Timings.SEARCH) >= 1000 * searchConfiguration.timeLimit.getOrElse(Integer.MAX_VALUE / 1000))
+        SearchState.TIMEOUT
       else if (searchConfiguration.nodeLimit.isEmpty || searchConfiguration.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
         SearchState.UNSOLVABLE
-      else SearchState.INSEARCH // TODO account for the case we ran out of time
-
+      else SearchState.INSEARCH
       case SearchResult                   => result.headOption
       case AllFoundPlans                  => result
       case SearchStatistics               => informationCapsule
       case SearchSpace                    => rootNode
       case SolutionInternalString         => if (result.nonEmpty) Some(result.head.longInfo) else None
       case SolutionDotString              => if (result.nonEmpty) Some(result.head.dotString) else None
+      case FinalTaskDecompositionGraph    => analysisMap(SymbolicGroundedTaskDecompositionGraph)
       case PreprocessedDomainAndPlan      => domainAndPlan
       case AllFoundSolutionPathsWithHStar =>
         // we have to find all solutions paths, so first compute the solution state of each node to only traverse the paths to the actual solutions
@@ -318,12 +327,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }
 
-  private def runNaiveGroundedTaskDecompositionGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
+  private def runGroundedTaskDecompositionGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap, tdgType: TDGGeneration): AnalysisMap = {
     val groundedReachabilityAnalysis =
       if (analysisMap contains SymbolicGroundedReachability) analysisMap(SymbolicGroundedReachability)
       else EverythingIsReachable(domain, problem.groundedInitialState.toSet)
 
-    val tdg = NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+    val tdg = tdgType match {
+      case NaiveTDG   => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case TopDownTDG => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+    }
 
     analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg)
   }
@@ -344,7 +356,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     val liftedResult = if (preprocessingConfiguration.liftedReachability) {
       info("Lifted reachability analysis ... ")
       val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(domain, problem, emptyAnalysis)
-      val disallowedTasks = domain.primitiveTasks filterNot newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.contains
+      val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
+      val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
       val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
       val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
       info("done.\n")
@@ -361,7 +374,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         if (preprocessingConfiguration.groundedReachability) runGroundedForwardSearchReachabilityAnalysis(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
         else runGroundedPlanningGraph(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
 
-      val disallowedTasks = liftedResult._1._1.primitiveTasks filterNot newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.contains
+      val reachable = newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.toSet
+      val disallowedTasks = liftedResult._1._1.primitiveTasks filterNot reachable.contains
       val pruned = PruneHierarchy.transform(liftedResult._1._1, liftedResult._1._2, disallowedTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
@@ -371,10 +385,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
-    val tdgResult = if (preprocessingConfiguration.naiveGroundedTaskDecompositionGraph) {
-      info("Naive TDG ... ")
+    val tdgResult = if (preprocessingConfiguration.groundedTaskDecompositionGraph.isDefined) {
+      if (preprocessingConfiguration.groundedTaskDecompositionGraph contains NaiveTDG) info("Naive TDG ... ") else info("Top Down TDG ...")
       // get the reachability analysis, if there is none, just use the trivial one
-      val newAnalysisMap = runNaiveGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2)
+      val newAnalysisMap = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, preprocessingConfiguration.groundedTaskDecompositionGraph.get)
       val pruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
@@ -392,19 +406,25 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule start PREPROCESSING
     extra("Initial domain\n" + domain.statisticsString + "\n")
 
-    // removing negative preconditions
-    timeCapsule start COMPILE_NEGATIVE_PRECONFITIONS
-    val compilationResult = if (preprocessingConfiguration.compileNegativePreconditions) {
-      info("Compiling negative preconditions ... ")
-      val compiled = RemoveNegativePreconditions.transform(domain, problem, ())
-      info("done.\n")
-      extra(compiled._1.statisticsString + "\n")
-      compiled
-    } else (domain, problem)
-    timeCapsule stop COMPILE_NEGATIVE_PRECONFITIONS
+    val compilerToBeApplied: Seq[(DomainTransformer[Unit], String, String)] =
+      (if (preprocessingConfiguration.compileNegativePreconditions) (RemoveNegativePreconditions, "negative preconditions", COMPILE_NEGATIVE_PRECONFITIONS) :: Nil else Nil) ::
+        (if (preprocessingConfiguration.compileOrderInMethods) (TotallyOrderAllMethods, "order in methods", COMPILE_ORDER_IN_METHODS) :: Nil else Nil) ::
+        Nil flatten
+
+    val (compiledDomain, compiledProblem) = compilerToBeApplied.foldLeft((domain, problem))(
+      { case ((dom, prob), (compiler, message, timingString)) =>
+        timeCapsule start timingString
+        info("Compiling " + message + " ... ")
+        val compiled = compiler.transform(dom, prob, ())
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        timeCapsule stop timingString
+        compiled
+      }
+                                                                                           )
 
     // initial run of the reachability analysis on the domain, until it has converged
-    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compilationResult._1, compilationResult._2, timeCapsule)
+    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compiledDomain, compiledProblem, timeCapsule)
 
     // finished reachability analysis now we have to ground
     if (preprocessingConfiguration.groundDomain) {
@@ -423,7 +443,20 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       info("done.\n")
       extra(result._1.statisticsString + "\n")
 
-      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(result._1, result._2, timeCapsule)
+      // compile unit methods
+      timeCapsule start COMPILE_UNIT_METHODS
+      val unitMethodsCompiled = if (preprocessingConfiguration.compileUnitMethods) {
+        info("Compiling unit methods ... ")
+        val compiled = RemoveUnitMethods.transform(result._1, result._2, ())
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        compiled
+      } else (result._1, result._2)
+      timeCapsule stop COMPILE_UNIT_METHODS
+
+
+
+      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, timeCapsule)
 
       timeCapsule stop PREPROCESSING
       ((groundedDomainAndPlan, groundedAnalysisMap), timeCapsule)
@@ -457,13 +490,20 @@ case class ParsingConfiguration(
                                  toPlainFormulaRepresentation: Boolean = true
                                ) {}
 
+sealed trait TDGGeneration
+
+object NaiveTDG extends TDGGeneration
+
+object TopDownTDG extends TDGGeneration
 
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
+                                       compileUnitMethods: Boolean,
+                                       compileOrderInMethods: Boolean,
                                        liftedReachability: Boolean,
                                        groundedReachability: Boolean,
                                        planningGraph: Boolean,
-                                       naiveGroundedTaskDecompositionGraph: Boolean,
+                                       groundedTaskDecompositionGraph: Option[TDGGeneration],
                                        iterateReachabilityAnalysis: Boolean,
                                        groundDomain: Boolean
                                      ) {
@@ -501,7 +541,11 @@ object WeightedFlaws extends SearchHeuristic
 
 object TDGMinimumModification extends SearchHeuristic
 
+object LiftedTDGMinimumModification extends SearchHeuristic
+
 object TDGMinimumADD extends SearchHeuristic
+
+object TDGMinimumAction extends SearchHeuristic
 
 object ADD extends SearchHeuristic
 

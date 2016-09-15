@@ -1,16 +1,16 @@
 package de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.{EfficientGroundedDecompositionMethod, EfficientGroundTask}
+import de.uniulm.ki.panda3.efficient.domain.{EfficientGroundTask, EfficientGroundedDecompositionMethod}
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.NaiveGroundedTaskDecompositionGraph
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
-import de.uniulm.ki.util.{SimpleAndOrGraph, AndOrGraph}
+import de.uniulm.ki.util.{AndOrGraph, SimpleAndOrGraph}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientTDGFromGroundedSymbolic(symbolicTDG: NaiveGroundedTaskDecompositionGraph, wrapping: Wrapping) extends EfficientGroundedTaskDecompositionGraph {
+case class EfficientTDGFromGroundedSymbolic(symbolicTDG: TaskDecompositionGraph, wrapping: Wrapping) extends EfficientGroundedTaskDecompositionGraph {
 
   val graph: AndOrGraph[AnyRef, EfficientGroundTask, EfficientGroundedDecompositionMethod] = {
     val symbolicGraph = symbolicTDG.taskDecompositionGraph._1

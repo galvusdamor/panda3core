@@ -15,11 +15,12 @@ object SHOPMethodCompiler extends DomainTransformer[Unit] {
   /** transforms all SHOP2 style methods into ordinary methods */
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
     val compiledMethods: Seq[(SimpleDecompositionMethod, Option[Task])] = domain.decompositionMethods.zipWithIndex map {
-      case (sm@SimpleDecompositionMethod(_, _,_), _)                             => (sm, None)
-      case (SHOPDecompositionMethod(abstractTask, subPlan, precondition,name), idx) => if (precondition.isEmpty) (SimpleDecompositionMethod(abstractTask, subPlan, name), None)
+      case (sm@SimpleDecompositionMethod(_, _, _), _)                                => (sm, None)
+      case (SHOPDecompositionMethod(abstractTask, subPlan, precondition, name), idx) => if (precondition.isEmpty) (SimpleDecompositionMethod(abstractTask, subPlan, name), None)
       else {
         // generate a new schema that represents the decomposition method
-        val preconditionTaskSchema = GeneralTask("SHOP_method" + idx + "_precondition", isPrimitive = true, precondition.containedVariables.toSeq, Nil, Nil, precondition, new And[Formula](Nil))
+        val preconditionTaskSchema = GeneralTask("SHOP_method" + name + "_precondition", isPrimitive = true, precondition.containedVariables.toSeq, Nil, Nil,
+                                                 precondition, new And[Formula](Nil))
         // instantiate
         val preconditionPlanStep = new PlanStep(subPlan.getFirstFreePlanStepID, preconditionTaskSchema, preconditionTaskSchema.parameters)
         // make this plan step the first actual task in the method
