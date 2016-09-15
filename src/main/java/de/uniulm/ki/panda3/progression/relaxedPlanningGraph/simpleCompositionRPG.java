@@ -2,15 +2,10 @@ package de.uniulm.ki.panda3.progression.relaxedPlanningGraph;
 
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
-import de.uniulm.ki.panda3.progression.htn.search.proPlanStep;
-import de.uniulm.ki.panda3.progression.htn.search.progressionNetwork;
-import de.uniulm.ki.panda3.progression.proUtil.dotNode;
-import de.uniulm.ki.panda3.progression.proUtil.dotit;
-import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
-import scala.Tuple2;
-import scala.Tuple3;
 
 import java.util.*;
 
@@ -130,7 +125,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
         System.out.println(" (" + (System.currentTimeMillis() - time) + " ms)");
     }
 
-    public void build(progressionNetwork tn) {
+    public void build(ProgressionNetwork tn) {
         /**
          * The following array stores for every fact in which fact layer it has been made true:
          * [6, 1, 0, -1] means that there are 4 facts, the first one has been made true in layer 6
@@ -173,11 +168,11 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
             htnGoal.add(operators.goalList[i]);
         }
 
-        LinkedList<proPlanStep> goalFacts = new LinkedList<>();
+        LinkedList<ProgressionPlanStep> goalFacts = new LinkedList<>();
         goalFacts.addAll(tn.getFirst());
 
         while (!goalFacts.isEmpty()) {
-            proPlanStep ps = goalFacts.removeFirst();
+            ProgressionPlanStep ps = goalFacts.removeFirst();
             htnGoal.add(simpleCompositionRPG.TaskLiteralToIndex.get(ps.getTask()));
             goalFacts.addAll(ps.successorList);
         }
@@ -566,14 +561,14 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
     }
 
     @Override
-    public htnGroundedProgressionHeuristic update(progressionNetwork tn, proPlanStep ps, method m) {
+    public htnGroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps, method m) {
         simpleCompositionRPG simpleCompositionRPG = new simpleCompositionRPG();
         simpleCompositionRPG.build(tn);
         return simpleCompositionRPG;
     }
 
     @Override
-    public htnGroundedProgressionHeuristic update(progressionNetwork tn, proPlanStep ps) {
+    public htnGroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps) {
         simpleCompositionRPG simpleCompositionRPG = new simpleCompositionRPG();
         simpleCompositionRPG.build(tn);
         return simpleCompositionRPG;

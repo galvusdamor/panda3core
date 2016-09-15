@@ -1,7 +1,9 @@
-package de.uniulm.ki.panda3.progression.htn.search;
+package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -11,13 +13,13 @@ import java.util.List;
  */
 public class EnforcedHillClimbing extends ProgressionSearchRoutine{
 
-    public List<Object> search(progressionNetwork firstSearchNode) {
+    public List<Object> search(ProgressionNetwork firstSearchNode) {
         System.out.println("\nStarting enforced hill climbing search");
         int searchnodes = 1;
         int bestMetric = firstSearchNode.metric;
         List<Object> solution = null;
         long time = System.currentTimeMillis();
-        LinkedList<progressionNetwork> fringe = new LinkedList<>();
+        LinkedList<ProgressionNetwork> fringe = new LinkedList<>();
         fringe.add(firstSearchNode);
 
         planningloop:
@@ -25,10 +27,10 @@ public class EnforcedHillClimbing extends ProgressionSearchRoutine{
             if (fringe.isEmpty()) // failure
                 return null;
 
-            progressionNetwork n = fringe.removeFirst();
+            ProgressionNetwork n = fringe.removeFirst();
 
             operatorloop:
-            for (proPlanStep ps : n.getFirst()) {
+            for (ProgressionPlanStep ps : n.getFirst()) {
                 if (ps.isPrimitive) {
                     int pre = operators.prec[ps.action].nextSetBit(0);
                     while (pre > -1) {
@@ -37,7 +39,7 @@ public class EnforcedHillClimbing extends ProgressionSearchRoutine{
                         pre = operators.prec[ps.action].nextSetBit(pre + 1);
                     }
 
-                    progressionNetwork node = n.apply(ps);
+                    ProgressionNetwork node = n.apply(ps);
                     if (node.heuristic.goalRelaxedReachable()) {
                         // early goal test - NON-OPTIMAL
                         if (node.isGoal()) {
@@ -61,7 +63,7 @@ public class EnforcedHillClimbing extends ProgressionSearchRoutine{
                         System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
                 } else { // is an abstract task
                     for (method m : ps.methods) {
-                        progressionNetwork node = n.decompose(ps, m);
+                        ProgressionNetwork node = n.decompose(ps, m);
 
                         if (node.heuristic.goalRelaxedReachable()) {
 

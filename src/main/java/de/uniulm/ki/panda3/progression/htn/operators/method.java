@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.progression.htn.operators;
 
-import de.uniulm.ki.panda3.progression.htn.search.proPlanStep;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint;
@@ -80,20 +80,20 @@ public class method {
     }
 
     public subtaskNetwork instantiate() {
-        proPlanStep[] steps = new proPlanStep[this.tasks.length];
+        ProgressionPlanStep[] steps = new ProgressionPlanStep[this.tasks.length];
         for (int i = 0; i < steps.length; i++) {
-            steps[i] = new proPlanStep(this.tasks[i]);
+            steps[i] = new ProgressionPlanStep(this.tasks[i]);
             steps[i].action = this.actionID[i];
             steps[i].methods = this.methods[i];
         }
         for (int[] o : this.orderings) {
             steps[o[0]].successorList.add(steps[o[1]]);
         }
-        List<proPlanStep> f = new LinkedList<>();
+        List<ProgressionPlanStep> f = new LinkedList<>();
         for (Integer i : this.firsts) {
             f.add(steps[i]);
         }
-        List<proPlanStep> l = new LinkedList<>();
+        List<ProgressionPlanStep> l = new LinkedList<>();
         for (Integer i : this.lasts) {
             l.add(steps[i]);
         }

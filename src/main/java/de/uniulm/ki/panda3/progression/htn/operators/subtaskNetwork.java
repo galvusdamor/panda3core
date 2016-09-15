@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.progression.htn.operators;
 
-import de.uniulm.ki.panda3.progression.htn.search.proPlanStep;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 
 import java.util.List;
 
@@ -8,21 +8,21 @@ import java.util.List;
  * Created by dhoeller on 22.07.16.
  */
 public class subtaskNetwork {
-    private final proPlanStep[] steps;
-    private final List<proPlanStep> firsts;
-    private final List<proPlanStep> lasts;
+    private final ProgressionPlanStep[] steps;
+    private final List<ProgressionPlanStep> firsts;
+    private final List<ProgressionPlanStep> lasts;
 
-    public subtaskNetwork(proPlanStep[] steps, List<proPlanStep> firsts, List<proPlanStep> lasts) {
+    public subtaskNetwork(ProgressionPlanStep[] steps, List<ProgressionPlanStep> firsts, List<ProgressionPlanStep> lasts) {
         this.steps = steps;
         this.firsts = firsts;
         this.lasts = lasts;
     }
 
-    public List<proPlanStep> getLastNodes() {
+    public List<ProgressionPlanStep> getLastNodes() {
         return this.lasts;
     }
 
-    public List<proPlanStep> getFirstNodes() {
+    public List<ProgressionPlanStep> getFirstNodes() {
         return this.firsts;
     }
 }

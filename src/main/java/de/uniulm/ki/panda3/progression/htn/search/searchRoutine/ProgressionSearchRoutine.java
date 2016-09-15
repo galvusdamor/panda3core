@@ -1,4 +1,6 @@
-package de.uniulm.ki.panda3.progression.htn.search;
+package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
+
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 
 import java.util.List;
 
@@ -7,10 +9,10 @@ import java.util.List;
  */
 public abstract class ProgressionSearchRoutine {
 
-    protected String getInfoStr(int searchnodes, int fringesize, int bestMetric, progressionNetwork n, long searchtime) {
+    protected String getInfoStr(int searchnodes, int fringesize, int bestMetric, ProgressionNetwork n, long searchtime) {
         return "nodes/sec: " + Math.round(searchnodes / ((System.currentTimeMillis() - searchtime) / 1000.0)) + " - generated nodes: " + searchnodes + " - fringe size: " + fringesize + " - best heuristic: " + bestMetric
                 + " - current heuristic: " + n.solution.size() + " - " + n.metric;
     }
 
-    public abstract List<Object> search(progressionNetwork firstSearchNode);
+    public abstract List<Object> search(ProgressionNetwork firstSearchNode);
 }

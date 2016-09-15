@@ -1,7 +1,9 @@
-package de.uniulm.ki.panda3.progression.htn.search;
+package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -14,9 +16,9 @@ public class CompleteEnforcedHillClimbing extends ProgressionSearchRoutine {
 
     int cehcSearchNodes = 1;
 
-    public List<Object> search(progressionNetwork firstSearchNode) {
+    public List<Object> search(ProgressionNetwork firstSearchNode) {
         int bestMetric = firstSearchNode.metric;
-        LinkedList<progressionNetwork> fringe = new LinkedList<>();
+        LinkedList<ProgressionNetwork> fringe = new LinkedList<>();
         fringe.add(firstSearchNode);
 
         planningloop:
@@ -24,10 +26,10 @@ public class CompleteEnforcedHillClimbing extends ProgressionSearchRoutine {
             if (fringe.isEmpty()) // failure
                 return null;
 
-            progressionNetwork n = fringe.removeFirst();
+            ProgressionNetwork n = fringe.removeFirst();
 
             operatorloop:
-            for (proPlanStep ps : n.getFirst()) {
+            for (ProgressionPlanStep ps : n.getFirst()) {
                 if (ps.isPrimitive) {
                     int pre = operators.prec[ps.action].nextSetBit(0);
                     while (pre > -1) {
@@ -36,7 +38,7 @@ public class CompleteEnforcedHillClimbing extends ProgressionSearchRoutine {
                         pre = operators.prec[ps.action].nextSetBit(pre + 1);
                     }
 
-                    progressionNetwork node = n.apply(ps);
+                    ProgressionNetwork node = n.apply(ps);
                     if (node.heuristic.goalRelaxedReachable()) {
                         if (node.isGoal())
                             return node.solution;
@@ -57,7 +59,7 @@ public class CompleteEnforcedHillClimbing extends ProgressionSearchRoutine {
                         System.out.println("Searchnodes :" + cehcSearchNodes);
                 } else { // is an abstract task
                     for (method m : ps.methods) {
-                        progressionNetwork node = n.decompose(ps, m);
+                        ProgressionNetwork node = n.decompose(ps, m);
 
                         if (node.heuristic.goalRelaxedReachable()) {
                             if (node.isGoal())

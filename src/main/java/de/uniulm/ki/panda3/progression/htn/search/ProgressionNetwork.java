@@ -13,14 +13,14 @@ import java.util.*;
  * The implementation reuses unchanged parts of the task network and adds only those nodes that are new. This can
  * be done because it is changed only at its beginning, and the nodes only hold pointers to its successors.
  */
-public class progressionNetwork implements Comparable<progressionNetwork>, Cloneable {
+public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Cloneable {
     /* todo
      * - does this work for empty task networks? I don't think so. Could one compile these methods in something other?
      */
 
     // this is state that has to be cloned
     public BitSet state;
-    List<proPlanStep> unconstraintTasks;
+    List<ProgressionPlanStep> unconstraintTasks;
     public LinkedList<Object> solution;
 
     public htnGroundedProgressionHeuristic heuristic;
@@ -28,10 +28,10 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
     public int metric = 0;
     public boolean goalRelaxedReachable = true;
 
-    private progressionNetwork() {
+    private ProgressionNetwork() {
     }
 
-    public progressionNetwork(BitSet state, List<proPlanStep> ps) {
+    public ProgressionNetwork(BitSet state, List<ProgressionPlanStep> ps) {
         this.unconstraintTasks = new LinkedList<>();
         this.unconstraintTasks.addAll(ps);
         this.solution = new LinkedList<>();
@@ -42,12 +42,12 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
         return unconstraintTasks.isEmpty();
     }
 
-    public List<proPlanStep> getFirst() {
+    public List<ProgressionPlanStep> getFirst() {
         return unconstraintTasks;
     }
 
-    public progressionNetwork decompose(proPlanStep ps, method m) {
-        progressionNetwork res = this.clone();
+    public ProgressionNetwork decompose(ProgressionPlanStep ps, method m) {
+        ProgressionNetwork res = this.clone();
         res.state = this.state;
         res.solution.add(m.m);
         res.unconstraintTasks.remove(ps);
@@ -56,8 +56,8 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
         subtaskNetwork tn = m.instantiate();
 
         // method's last tasks constrain all tasks that have been constrained by ps before
-        List<proPlanStep> lastNodes = tn.getLastNodes();
-        for (proPlanStep ps2 : lastNodes) {
+        List<ProgressionPlanStep> lastNodes = tn.getLastNodes();
+        for (ProgressionPlanStep ps2 : lastNodes) {
             ps2.successorList.addAll(ps.successorList);
         }
 
@@ -66,8 +66,8 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
         return res;
     }
 
-    public progressionNetwork apply(proPlanStep ps) {
-        progressionNetwork res = this.clone();
+    public ProgressionNetwork apply(ProgressionPlanStep ps) {
+        ProgressionNetwork res = this.clone();
         res.state = (BitSet) this.state.clone();
         res.solution.add(ps.action);
 
@@ -79,11 +79,11 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
 
         // every successor of ps is a first task if and only if it is
         // not a successor of any task in the firstTasks list.
-        HashSet<proPlanStep> potentialFirst = new HashSet<>();
+        HashSet<ProgressionPlanStep> potentialFirst = new HashSet<>();
         potentialFirst.addAll(ps.successorList);
 
-        LinkedList<proPlanStep> potentialPredecessors = new LinkedList<>();
-        for (proPlanStep f : res.unconstraintTasks) { // this must be res.unconstraintTasks. otherwise, the ps itself is in there!
+        LinkedList<ProgressionPlanStep> potentialPredecessors = new LinkedList<>();
+        for (ProgressionPlanStep f : res.unconstraintTasks) { // this must be res.unconstraintTasks. otherwise, the ps itself is in there!
             potentialPredecessors.addAll(f.successorList);
         }
 
@@ -94,7 +94,7 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
             if (potentialPredecessors.isEmpty()) {
                 break; // the next that are left are valid firstTasks
             }
-            proPlanStep ps2 = potentialPredecessors.removeFirst();
+            ProgressionPlanStep ps2 = potentialPredecessors.removeFirst();
             potentialPredecessors.addAll(ps2.successorList);
             potentialFirst.remove(ps2);
         }
@@ -112,8 +112,8 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
     }
 
     @Override
-    protected progressionNetwork clone() {
-        progressionNetwork res = new progressionNetwork();
+    protected ProgressionNetwork clone() {
+        ProgressionNetwork res = new ProgressionNetwork();
         res.unconstraintTasks = new LinkedList<>(); // todo: array or linkedList?
         res.unconstraintTasks.addAll(this.unconstraintTasks);
         res.solution = new LinkedList<>();
@@ -122,7 +122,7 @@ public class progressionNetwork implements Comparable<progressionNetwork>, Clone
     }
 
     @Override
-    public int compareTo(progressionNetwork other) {
+    public int compareTo(ProgressionNetwork other) {
         return (this.metric - other.metric);
     }
 }

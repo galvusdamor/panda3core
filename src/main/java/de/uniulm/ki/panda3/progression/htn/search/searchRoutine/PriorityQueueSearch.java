@@ -1,7 +1,9 @@
-package de.uniulm.ki.panda3.progression.htn.search;
+package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 
 import java.util.List;
 import java.util.PriorityQueue;
@@ -11,20 +13,20 @@ import java.util.PriorityQueue;
  */
 public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
-    public List<Object> search(progressionNetwork firstSearchNode) {
+    public List<Object> search(ProgressionNetwork firstSearchNode) {
         System.out.println("\nStarting priority queue search");
         int searchnodes = 1;
         int bestMetric = Integer.MAX_VALUE;
         List<Object> solution = null;
         long time = System.currentTimeMillis();
-        PriorityQueue<progressionNetwork> fringe = new PriorityQueue<>();
+        PriorityQueue<ProgressionNetwork> fringe = new PriorityQueue<>();
         fringe.add(firstSearchNode);
 
         planningloop:
         while (!fringe.isEmpty()) {
-            progressionNetwork n = fringe.poll();
+            ProgressionNetwork n = fringe.poll();
             operatorloop:
-            for (proPlanStep ps : n.getFirst()) {
+            for (ProgressionPlanStep ps : n.getFirst()) {
                 if (ps.isPrimitive) {
                     int pre = operators.prec[ps.action].nextSetBit(0);
                     while (pre > -1) {
@@ -33,7 +35,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         pre = operators.prec[ps.action].nextSetBit(pre + 1);
                     }
 
-                    progressionNetwork node = n.apply(ps);
+                    ProgressionNetwork node = n.apply(ps);
 
                     // todo: add unit propagation here
                     node.heuristic = n.heuristic.update(node, ps);
@@ -58,7 +60,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
                 } else { // is an abstract task
                     for (method m : ps.methods) {
-                        progressionNetwork node = n.decompose(ps, m);
+                        ProgressionNetwork node = n.decompose(ps, m);
 
                         // todo: add unit propagation here
                         node.heuristic = n.heuristic.update(node, ps, m);

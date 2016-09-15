@@ -2,8 +2,8 @@ package de.uniulm.ki.panda3.progression.relaxedPlanningGraph;
 
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
-import de.uniulm.ki.panda3.progression.htn.search.proPlanStep;
-import de.uniulm.ki.panda3.progression.htn.search.progressionNetwork;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 
@@ -179,7 +179,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         return methodID;
     }
 
-    public void build(progressionNetwork tn) {
+    public void build(ProgressionNetwork tn) {
         // The following array stores for every fact in which fact layer it has been made true:
         // [6, 1, 0, -1] means that there are 4 facts, the first one has been made true in layer 6
         // the second in layer 1... The -1 for fact 4 means that this fact has never been made true
@@ -222,10 +222,10 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             htnGoal.add(operators.goalList[i]);
         }
 
-        LinkedList<proPlanStep> goalFacts = new LinkedList<>();
+        LinkedList<ProgressionPlanStep> goalFacts = new LinkedList<>();
         goalFacts.addAll(tn.getFirst());
         while (!goalFacts.isEmpty()) {
-            proPlanStep ps = goalFacts.removeFirst();
+            ProgressionPlanStep ps = goalFacts.removeFirst();
             htnGoal.add(cRPG.TaskLiteralToIndex.get(ps.getTask()));
             goalFacts.addAll(ps.successorList);
         }
@@ -381,14 +381,14 @@ public class cRPG implements htnGroundedProgressionHeuristic {
     }
 
     @Override
-    public htnGroundedProgressionHeuristic update(progressionNetwork tn, proPlanStep ps, method m) {
+    public htnGroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps, method m) {
         cRPG crpg = new cRPG();
         crpg.build(tn);
         return crpg;
     }
 
     @Override
-    public htnGroundedProgressionHeuristic update(progressionNetwork tn, proPlanStep ps) {
+    public htnGroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps) {
         cRPG crpg = new cRPG();
         crpg.build(tn);
         return crpg;
