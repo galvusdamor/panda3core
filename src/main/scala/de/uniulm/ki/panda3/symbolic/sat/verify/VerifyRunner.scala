@@ -35,7 +35,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // create the configuration
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(parserType),
-                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = true,
+                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = false,
                                                                           liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,
                                                                           groundedTaskDecompositionGraph = Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = true),
@@ -135,8 +135,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
 
     // start verification
-    val encoder = if (domain.isTotallyOrdered && !verify) TotallyOrderedEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
-    else GeneralEncoding(domain, initialPlan, sequenceToVerify, offSetToK)
+    val encoder = if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder() && !verify) TotallyOrderedEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
+    else if (verify) GeneralEncoding(domain, initialPlan, sequenceToVerify, offSetToK) else TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
     // (3)
     println("K " + encoder.K)
     informationCapsule.set(VerifyRunner.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, sequenceToVerify.length))
@@ -169,11 +169,9 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     timeCapsule stop VerifyRunner.TRANSFORM_DIMACS
 
     encoder match {
-      case tot: TotallyOrderedEncoding =>
-
-        println(tot.primitivePaths map { case (a, b) => (a, b map { _.name }) } mkString "\n")
-
-        informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, tot.primitivePaths.length)
+      case pathbased: PathBasedEncoding =>
+        //println(tot.primitivePaths map { case (a, b) => (a, b map { _.name }) } mkString "\n")
+        informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, pathbased.primitivePaths.length)
       case _                           =>
     }
 
@@ -280,8 +278,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
           val nodes = formulaVariables filter { _.startsWith("action") } filter allTrueAtoms.contains
 
           val edges = nodes flatMap { parent => nodes flatMap { child =>
-            val parentLayer = parent.split("\\^").last.split("_").head.toInt
-            val childLayer = child.split("\\^").last.split("_").head.toInt
+            val parentLayer = parent.split("!").last.split("_").head.toInt
+            val childLayer = child.split("!").last.split("_").head.toInt
 
             if (parentLayer + 1 != childLayer) Nil
             else {
@@ -297,7 +295,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
           }
           }
           // check executability of the plan
-          val primitiveSolution = nodes filter { t => t.split("\\^").last.split("_").head.toInt == tot.K } sortWith { case (t1, t2) =>
+          val primitiveSolution = nodes filter { t => t.split("!").last.split("_").head.toInt == tot.K } sortWith { case (t1, t2) =>
             val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
             val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
             PathBasedEncoding.pathSortingFunction(path1, path2)
@@ -655,8 +653,8 @@ object VerifyRunner {
   }
 
   def runPlanner(domFile: String, probFile: String, length: Int, offset: Int): Unit = {
-    val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
-    //val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
+    //val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
+    val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
 
     val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = offset, includeGoal = true, verify = false)
     //val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = 0, includeGoal = true, verify = false)
@@ -673,9 +671,9 @@ object VerifyRunner {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml"
 
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Large.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
@@ -693,8 +691,8 @@ object VerifyRunner {
     //val domFile = "IPC7-Transport/domain-htn.lisp"
     //val probFile = "IPC7-Transport/p01-htn.lisp"
 
-    val domFile = "domain.lisp"
-    val probFile = "problems/p-0002-plow-road.lisp"
+    //val domFile = "domain.lisp"
+    //val probFile = "problems/p-0002-plow-road.lisp"
 
     //val domFile = args(0)
     //val probFile = args(1)
@@ -702,7 +700,7 @@ object VerifyRunner {
     //val offset = args(3).toInt
 
     //runPlanner(domFile, probFile, len, offset)
-    runPlanner(domFile, probFile, 40, 0)
+    runPlanner(domFile, probFile, 20, 0)
     //runEvaluation()
   }
 

@@ -237,19 +237,10 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
 
   lazy val givenActionsFormula: Seq[Clause] = taskSequence.zipWithIndex map { case (task, index) => Clause(action(K - 1, index, task)) }
 
-  lazy val noAbstractsFormula: Seq[Clause] = Range(0, numberOfActionsPerLayer) flatMap { position => domain.abstractTasks map { task => Clause((action(K - 1, position, task), false)) } }
+  lazy val noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(numberOfActionsPerLayer)
 
   lazy val stateTransitionFormula: Seq[Clause] = stateTransitionFormulaOfLength(numberOfActionsPerLayer)
 
-  lazy val initialState: Seq[Clause] = {
-    val initiallyTruePredicates = initialPlan.init.substitutedEffects collect { case Literal(pred, true, _) => pred }
-
-    val initTrue = initiallyTruePredicates map { pred => Clause((statePredicate(K - 1, 0, pred), true)) }
-    val initFalse = domain.predicates diff initiallyTruePredicates map { pred => Clause((statePredicate(K - 1, 0, pred), false)) }
-
-    initTrue ++ initFalse
-  }
-
-  lazy val goalState: Seq[Clause] = initialPlan.goal.substitutedPreconditions map { case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, numberOfActionsPerLayer, pred), isPos)) }
+  lazy val goalState: Seq[Clause] = goalStateOfLength(numberOfActionsPerLayer)
 
 }

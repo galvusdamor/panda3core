@@ -62,4 +62,18 @@ trait LinearPrimitivePlanEncoding extends VerifyEncoding {
     primitivesApplicable(K - 1, position) ++ stateChange(K - 1, position) ++ maintainState(K - 1, position)
   }
 
+  def noAbstractsFormulaOfLength(length: Int): Seq[Clause] = Range(0, length) flatMap { position => domain.abstractTasks map { task => Clause((action(K - 1, position, task), false)) } }
+
+  lazy val initialState: Seq[Clause] = {
+    val initiallyTruePredicates = initialPlan.init.substitutedEffects collect { case Literal(pred, true, _) => pred }
+
+    val initTrue = initiallyTruePredicates map { pred => Clause((statePredicate(K - 1, 0, pred), true)) }
+    val initFalse = domain.predicates diff initiallyTruePredicates map { pred => Clause((statePredicate(K - 1, 0, pred), false)) }
+
+    initTrue ++ initFalse
+  }
+
+  def goalStateOfLength(length: Int): Seq[Clause] =
+    initialPlan.goal.substitutedPreconditions map { case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, length, pred), isPos))    }
+
 }

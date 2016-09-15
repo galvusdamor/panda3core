@@ -97,6 +97,8 @@ trait VerifyEncoding {
 
   protected def impliesNot(left: String, right: String): Clause = Clause((left, false) ::(right, false) :: Nil)
 
+  protected def impliesNot(left: Seq[String], right: String): Clause = Clause((left map { l => (l, false) }).+:(right, false))
+
   protected def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
 
   protected def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) ::(leftFalse, true) ::(right, false) :: Nil) :: Nil
