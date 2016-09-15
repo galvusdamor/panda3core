@@ -13,7 +13,7 @@ import de.uniulm.ki.util.DotPrintable
 trait TDGHeuristics extends MinimisationOverGroundingsBasedHeuristic[Unit] with DotPrintable[Unit] {
 
   val taskDecompositionTree: EfficientGroundedTaskDecompositionGraph
-  val domain: EfficientDomain
+  val domain               : EfficientDomain
 
   // memoise the heuristic values for task groundings
   def modificationEfforts: Map[EfficientGroundTask, Double]
@@ -53,7 +53,7 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
     if (!modificationEfforts.contains(groundTask)) Double.MaxValue else modificationEfforts(groundTask)
   }
 
-  override def computeHeuristic(plan: EfficientPlan, unit : Unit, mod : EfficientModification): (Double,Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification): (Double, Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = plan.openPreconditions.length // every flaw must be addressed
 
@@ -73,12 +73,12 @@ case class MinimumModificationEffortHeuristic(taskDecompositionTree: EfficientGr
     while (i < plan.numberOfAllPlanSteps) {
       if (plan.isPlanStepPresentInPlan(i) && domain.tasks(plan.planStepTasks(i)).isAbstract) {
         // we have to ground here
-        heuristicValue += computeHeuristicByGrounding(i, new Array[Int](plan.planStepParameters(i).length), 0, plan)
+        heuristicValue += computeHeuristicByGrounding(i, plan)
       }
 
       i += 1
     }
-    (heuristicValue,())
+    (heuristicValue, ())
   }
 
 
@@ -126,7 +126,7 @@ trait TDGPrimitiveActionValueHeuristic extends TDGHeuristics {
     }
   }
 
-  override def computeHeuristic(plan: EfficientPlan, unit : Unit, mod : EfficientModification): (Double,Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification): (Double, Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = -initialDeductionFromHeuristicValue(plan)
 
@@ -134,11 +134,11 @@ trait TDGPrimitiveActionValueHeuristic extends TDGHeuristics {
     while (i < plan.numberOfAllPlanSteps) {
       if (plan.isPlanStepPresentInPlan(i)) {
         // we have to ground here
-        heuristicValue += computeHeuristicByGrounding(i, new Array[Int](plan.planStepParameters(i).length), 0, plan)
+        heuristicValue += computeHeuristicByGrounding(i, plan)
       }
       i += 1
     }
-    (heuristicValue,())
+    (heuristicValue, ())
   }
 }
 
