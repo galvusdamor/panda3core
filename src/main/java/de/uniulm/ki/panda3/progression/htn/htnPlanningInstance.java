@@ -42,8 +42,6 @@ import java.util.concurrent.ExecutionException;
 public class htnPlanningInstance {
 
     final boolean verbose = false;
-    final boolean foo = true;
-    final private boolean writeGroundingForDebug = false;
 
 
     public void plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals) throws ExecutionException, InterruptedException {
