@@ -29,7 +29,7 @@ trait PathBasedEncoding extends VerifyEncoding {
 
   // returns all clauses needed for the decomposition and all paths to the last layer
   private def generateDecompositionFormula(layer: Int, path: Seq[Int], possibleTasks: Set[Task]): (Seq[Clause], Set[(Seq[Int], Set[Task])]) = {
-    println("GENPATH: L=" + layer + " p=" + path + " |pTasks|=" + possibleTasks.size + " \\Delta=" + domain.maximumMethodSize)
+    //println("GENPATH: L=" + layer + " p=" + path + " |pTasks|=" + possibleTasks.size + " \\Delta=" + domain.maximumMethodSize)
     val possibleTaskOrder = possibleTasks.toSeq
     //val possibleTasksToActions = possibleTasks map { t => t -> action(layer, path, t) } toMap
     val possibleTasksToActions: Array[String] = possibleTaskOrder map { t => pathAction(layer, path, t) } toArray
@@ -191,6 +191,7 @@ trait PathBasedEncoding extends VerifyEncoding {
   }
 
   protected final val primitivePathArray = primitivePaths.toArray
+  protected final val primitivePathsOnlyPathArray = primitivePathArray map {_._1}
 
   override lazy val decompositionFormula: Seq[Clause] = computedDecompositionFormula
 }

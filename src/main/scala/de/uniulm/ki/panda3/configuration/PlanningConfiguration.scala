@@ -122,7 +122,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       })
     } else {
       // EFFICIENT SEARCH
-      writeStringToFile(HDDLWriter("foo","bar").writeDomain(domainAndPlan._1),"domain-compiled.hddl")
       timeCapsule start COMPUTE_EFFICIENT_REPRESENTATION
       val wrapper = Wrapping(domainAndPlan)
       val efficientInitialPlan = wrapper.unwrap(domainAndPlan._2)
@@ -368,7 +367,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(domain, problem, emptyAnalysis)
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
-      println(disallowedTasks map {_.name} mkString("\n"))
       val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
       val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
       info("done.\n")

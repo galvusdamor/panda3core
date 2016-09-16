@@ -231,7 +231,7 @@ object VerifyEncoding {
     if (minMethodSize >= 2) Math.ceil((taskSequenceLength - plan.planStepsWithoutInitGoal.length).toDouble / (minMethodSize - 1)).toInt + heightIncrease else Integer.MAX_VALUE
   }
 
-  def computeTDG(domain: Domain, initialPlan: Plan, taskSequenceLength: Int): Int = {
+  def computeTDG(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, accumulate : (Int,Int) => Int, initialValue : Int): Int = {
 
     def printMap(map: Map[Task, Map[Int, Int]]): Unit = {
       println("\nMAP")
@@ -260,7 +260,7 @@ object VerifyEncoding {
     def recomputeTask(task: Task, m: Map[Task, Map[Int, Int]]): (Map[Task, Map[Int, Int]], Boolean) = if (task.isPrimitive) (m, false)
     else {
       val methodMaps = domain.methodsForAbstractTasks(task) map { method => recomputePlan(method.subPlan, m) }
-      val newMap: Map[Int, Int] = methodMaps reduce[Map[Int, Int]] { case (m1, m2) => m1 ++ m2.map({ case (l, h) => l -> Math.max(h, m1.getOrElse(l, 0)) }) }
+      val newMap: Map[Int, Int] = methodMaps reduce[Map[Int, Int]] { case (m1, m2) => m1 ++ m2.map({ case (l, h) => l -> accumulate(h, m1.getOrElse(l, initialValue)) }) }
 
       (m + (task -> newMap), newMap != m(task))
     }
@@ -296,13 +296,15 @@ object VerifyEncoding {
     val icapsPaperLimit = computeICAPSK(domain, plan, taskSequenceLength)
     val TSTGPath = computeTSTGK(domain, plan, taskSequenceLength)
     val minimumMethodSize = computeMethodSize(domain, plan, taskSequenceLength)
-    val tdg = computeTDG(domain, plan, taskSequenceLength)
+    val tdg = computeTDG(domain, plan, taskSequenceLength, Math.max, 0)
+    val tdgmin = computeTDG(domain, plan, taskSequenceLength, Math.min, Integer.MAX_VALUE)
 
     println("LEN " + taskSequenceLength)
     println("ICAPS: " + icapsPaperLimit)
     println("TSTG: " + TSTGPath)
     println("Method: " + minimumMethodSize)
-    println("DP: " + tdg)
+    println("DP max: " + tdg)
+    println("DP min: " + tdgmin)
 
     Math.min(icapsPaperLimit, Math.min(TSTGPath, Math.min(minimumMethodSize, tdg)))
   }

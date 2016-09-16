@@ -13,11 +13,16 @@ import scala.collection.{mutable, Seq}
 case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int) extends PathBasedEncoding with LinearPrimitivePlanEncoding {
   override val numberOfChildrenClauses: Int = 0
 
+  protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position
 
   protected def orderBefore(l: Int, p: Seq[Int], before: Int, after: Int) = {
     assert(p.length == l + 1)
     "before!" + l + "_" + p.mkString(";") + "," + before + "<" + after
   }
+
+  protected def nextPath(p1: Seq[Int], p2: Seq[Int]) = "next!" + "_" + p1.mkString(";") + "_" + p2.mkString(";")
+
+  protected def pathActive(p1: Seq[Int]) = "active!" + "_" + p1.mkString(";")
 
   protected val orderFromCommonPath: ((Int, Int)) => String = memoise[(Int, Int), String]({ case (pathAIndex, pathBIndex) =>
     val pathA = primitivePathArray(pathAIndex)._1
@@ -54,7 +59,6 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
     impliesRightAnd(methodString :: Nil, orderingAtoms)
   }
 
-  protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position
 
   override def stateTransitionFormula: Seq[Clause] = {
     println("TREE P:" + primitivePaths.length + " S: " + taskSequenceLength)
@@ -67,12 +71,19 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
 
     val atMostOneConstraints = (positionsPerPath flatMap { case (a, s) => atMostOneOf(s map { _._3 }) }) ++ (pathsPerPosition flatMap { case (a, s) => atMostOneOf(s map { _._3 }) })
     println("A " + atMostOneConstraints.size)
-    val onlySelectableIfChosen = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
-      val actionAtoms = tasks.toSeq map { pathAction(K, path, _) }
 
-      notImpliesAllNot(actionAtoms, positionsPerPath(pindex) map { _._3 })
+    val selected = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
+      val actionAtoms = tasks.toSeq map { pathAction(K, path, _) }
+      val pathString = pathActive(path)
+      notImpliesAllNot(pathString :: Nil, actionAtoms).+:(impliesRightOr(pathString :: Nil, actionAtoms))
     }
-    println("B " + onlySelectableIfChosen.length)
+    println("B " + selected.length)
+
+    val onlySelectableIfChosen = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
+      val pathString = pathActive(path)
+      notImpliesAllNot(pathString :: Nil, positionsPerPath(pindex) map { _._3 }) :+ impliesRightOr(pathString :: Nil, positionsPerPath(pindex) map { _._3 })
+    }
+    println("C " + onlySelectableIfChosen.length)
 
     val onlyPrimitiveIfChosen = Range(0, taskSequenceLength) flatMap { case position =>
       val actionAtoms = domain.primitiveTasks map { action(K - 1, position, _) }
@@ -81,7 +92,7 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
 
       atMostOne ++ onlyIfConnected
     }
-    println("C " + onlyPrimitiveIfChosen.length)
+    println("D " + onlyPrimitiveIfChosen.length)
 
     val sameAction = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
       tasks.toSeq map { t => (t, pathAction(K, path, t)) } flatMap { case (t, actionAtom) =>
@@ -90,11 +101,49 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
         }
       }
     }
-    println("D " + sameAction.length)
+    println("E " + sameAction.length)
+
+    // select a total order of the paths
+    val nextPossible = primitivePathsOnlyPathArray.zipWithIndex flatMap { case (p1, p1i) => primitivePathsOnlyPathArray.zipWithIndex flatMap { case (p2, p2i) =>
+      if (p1i != p2i) {
+        val next = nextPath(p1, p2)
+        impliesNot(next, orderFromCommonPath(p2i, p1i)) :: impliesSingle(next, pathActive(p1)) :: impliesSingle(next, pathActive(p2)) :: Nil
+      } else Nil
+    }
+    }
+    println("F " + nextPossible.length)
+
+    val nextValid = primitivePathsOnlyPathArray.+:(Integer.MAX_VALUE :: Nil).+:(-1 :: Nil) flatMap { path =>
+      val successor = primitivePaths.+:((Integer.MAX_VALUE :: Nil, Set[Task]())) collect { case (next, _) if next != path=> nextPath(path, next) }
+      val predecessor = primitivePaths.+:((-1 :: Nil, Set[Task]())) collect { case (next, _) if next != path => nextPath(next, path) }
+
+      val atMostSuccessor = if (path.head != Integer.MAX_VALUE) atMostOneOf(successor) else successor map {s =>  Clause((s, false)) }
+      val atMostPredecessor = if (path.head != -1) atMostOneOf(predecessor) else predecessor map {s =>  Clause((s, false)) }
+      val activeCheck =
+        if (path.head != Integer.MAX_VALUE && path.head != -1) impliesRightOr(pathActive(path) :: Nil, successor) :: impliesRightOr(pathActive(path) :: Nil, predecessor) :: Nil else Nil
+
+      atMostSuccessor ++ atMostPredecessor ++ activeCheck
+    }
+    println("G " + nextValid.length)
+
+    val primitivesOrder = primitivePathsOnlyPathArray.zipWithIndex flatMap { case (p1, p1i) => primitivePathsOnlyPathArray.zipWithIndex flatMap { case (p2, p2i) =>
+      if (p1i != p2i) {
+        Range(0, taskSequenceLength - 1) flatMap { case pos =>
+          val thisConnection = pathToPos(p1, pos)
+          val next = nextPath(p1, p2)
+          val nextConnection = pathToPos(p2, pos + 1)
+
+          impliesRightAndSingle(thisConnection :: next :: Nil, nextConnection) :: impliesRightAndSingle(nextConnection :: next :: Nil, thisConnection) :: Nil
+        }
+      } else Nil
+    }
+    }
+    println("H " + primitivesOrder.length)
+
+
 
     println("COMP: " + (taskSequenceLength * (taskSequenceLength + 1) / 2) * primitivePaths.length * (primitivePaths.length - 1))
-    println("COMP NEW: " + (taskSequenceLength * primitivePaths.length * (primitivePaths.length - 1)))
-    val orderingKept = Range(0, taskSequenceLength) flatMap { case positionBefore =>
+    /*val orderingKept = Range(0, taskSequenceLength) flatMap { case positionBefore =>
       println("BEF POS " + positionBefore)
       Range(positionBefore, taskSequenceLength) flatMap { case positionAfter =>
         //println("AFT POS " + positionAfter)
@@ -105,9 +154,12 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
         }
       }
     }
-    println("D " + orderingKept.length)
+    println("D " + orderingKept.length)*/
 
-    stateTransitionFormulaOfLength(taskSequenceLength) ++ atMostOneConstraints ++ onlySelectableIfChosen ++ onlyPrimitiveIfChosen ++ sameAction ++ orderingKept
+    //orderingKept
+
+    stateTransitionFormulaOfLength(taskSequenceLength) ++ atMostOneConstraints ++ selected ++ onlySelectableIfChosen ++ onlyPrimitiveIfChosen ++ sameAction ++ nextPossible ++ nextValid ++
+      primitivesOrder
   }
 
   override def noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)

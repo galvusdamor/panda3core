@@ -14,6 +14,7 @@ import scala.io.Source
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+// scalastyle:off method.length
 case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, parserType: ParserType, satsolver: Solvertype) {
 
   import sys.process._
@@ -35,7 +36,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // create the configuration
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(parserType),
-                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = true,
+                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = false,
                                                                           liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,
                                                                           groundedTaskDecompositionGraph = Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = true),
@@ -111,9 +112,10 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
   }
 
   def run(sequenceToVerify: Seq[Task], offSetToK: Int, includeGoal: Boolean = true, verify: Boolean = true): (Boolean, TimeCapsule, InformationCapsule) = {
-    println("PANDA is given the following sequence")
-    println(sequenceToVerify map { _.name } mkString "\n")
-
+    if (verify) {
+      println("PANDA is given the following sequence")
+      println(sequenceToVerify map { _.name } mkString "\n")
+    }
 
     // check whether the given sequence is executable ...
     if (verify) checkIfTaskSequenceIsAValidPlan(sequenceToVerify, includeGoal)
@@ -135,13 +137,15 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
 
     // start verification
-    val encoder = if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder() && !verify) TotallyOrderedEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
+    val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
+      if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder() && !verify) TotallyOrderedEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
     else if (verify) GeneralEncoding(domain, initialPlan, sequenceToVerify, offSetToK) else TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
+
     // (3)
     println("K " + encoder.K)
     informationCapsule.set(VerifyRunner.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, sequenceToVerify.length))
     informationCapsule.set(VerifyRunner.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, sequenceToVerify.length))
-    informationCapsule.set(VerifyRunner.DP_K, VerifyEncoding.computeTDG(domain, initialPlan, sequenceToVerify.length))
+    informationCapsule.set(VerifyRunner.DP_K, VerifyEncoding.computeTDG(domain, initialPlan, sequenceToVerify.length, Math.max, 0))
     informationCapsule.set(VerifyRunner.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, sequenceToVerify.length))
     informationCapsule.set(VerifyRunner.OFFSET_K, offSetToK)
     informationCapsule.set(VerifyRunner.ACTUAL_K, encoder.K)
@@ -173,7 +177,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
         //println(tot.primitivePaths map { case (a, b) => (a, b map { _.name }) } mkString "\n")
         informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, pathbased.primitivePaths.length)
         println("NUMBER OF PATHS " + pathbased.primitivePaths.length)
-      case _                           =>
+      case _                            =>
     }
 
     println(timeCapsule.integralDataMap())
@@ -275,8 +279,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
           (nodes, edges)
 
-        case tot: TotallyOrderedEncoding =>
-          val nodes = formulaVariables filter { _.startsWith("action") } filter allTrueAtoms.contains
+        case pbe: PathBasedEncoding =>
+          val nodes = formulaVariables filter { _.startsWith("action!") } filter allTrueAtoms.contains
 
           val edges = nodes flatMap { parent => nodes flatMap { child =>
             val parentLayer = parent.split("!").last.split("_").head.toInt
@@ -295,18 +299,63 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
             }
           }
           }
-          // check executability of the plan
-          val primitiveSolution = nodes filter { t => t.split("!").last.split("_").head.toInt == tot.K } sortWith { case (t1, t2) =>
-            val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
-            val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
-            PathBasedEncoding.pathSortingFunction(path1, path2)
-          } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
+          val primitiveSolution = pbe match {
+            case tot: TotallyOrderedEncoding =>
+              // check executability of the plan
+              nodes filter { t => t.split("!").last.split("_").head.toInt == tot.K } sortWith { case (t1, t2) =>
+                val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
+                val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
+                PathBasedEncoding.pathSortingFunction(path1, path2)
+              } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
+
+            case tree: TreeEncoding =>
+              val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
+              println(primitiveActions mkString "\n")
+              val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
+              val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
+              val taskSequence = actionSequence map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
+
+              val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
+              println(pathToPos mkString "\n")
+              val active = allTrueAtoms filter { _.startsWith("active") }
+              println(active mkString "\n")
+              assert(pathToPos.size == taskSequence.length)
+              assert(active.size == taskSequence.length, "ACTIVE " + active.size + " vs " + taskSequence.length)
+
+              val graph = SimpleDirectedGraph(nodes, edges)
+              println(graph.sinks mkString "\n")
+              assert(graph.sinks.length == taskSequence.length, "SINKS " + graph.sinks.length + " vs " + taskSequence.length)
+              val nextPredicates = allTrueAtoms filter { _.startsWith("next") }
+              println(nextPredicates mkString "\n")
+              assert(nextPredicates.size == taskSequence.length + 1, "NEXT " + nextPredicates.size + " vs " + (taskSequence.length + 1))
+
+              val nextRel: Seq[(Array[Int], Array[Int])] =
+                nextPredicates map { n => n.split("_").drop(1) } map { case l => (l.head, l(1)) } map { case (a, b) => (a.split(";") map { _.toInt }, b.split(";") map { _.toInt }) } toSeq
+
+              println(nextRel map { case (a, b) => (a mkString ",") + ", " + (b mkString ",") } mkString "\n")
+              nextRel foreach { case (a, b) => assert(!(a sameElements b), "IDENTICAL " + (a mkString ",") + ", " + (b mkString ",")) }
+
+
+
+              val lastPath = nextRel.indices.foldLeft((Array(-1), nextRel))(
+                { case ((current, pairs), _) =>
+                  val (nextNext, remaining) = pairs partition { _._1 sameElements current }
+                  assert(nextNext.length == 1)
+
+                  (nextNext.head._2, remaining)
+                })
+
+              assert(lastPath._1 sameElements  Integer.MAX_VALUE :: Nil)
+
+              taskSequence
+          }
 
           primitiveSolution foreach { t => assert(t.isPrimitive) }
-          print("CHECKING primitive solution of length " + primitiveSolution.length + " ...")
+          println("CHECKING primitive solution of length " + primitiveSolution.length + " ...")
           println(primitiveSolution map { _.name } mkString "\n")
           checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
           println(" done.")
+
           (nodes, edges)
       }
 
@@ -328,7 +377,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
         assert(indeg + outdeg != 0, "unconnected action " + v)
       }
 
-      if (encoder.isInstanceOf[TotallyOrderedEncoding]) {
+      if (encoder.isInstanceOf[PathBasedEncoding]) {
         // check integrity of the methods
         decompGraphNames.vertices filter { v => decompGraphNames.degrees(v)._2 != 0 } foreach { v =>
           // either it is primitive
@@ -359,7 +408,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
           if (myAction.isPrimitive) {
             assert(nei.size == 1)
             assert(nei.head.name == v.name)
-          } else {
+          } else if (encoder.isInstanceOf[TotallyOrderedEncoding]) {
             val subTasks: Seq[Task] = nei map { n => (n, domain.tasks(n.id.split(",").last.toInt)) } sortBy { _._1.id } map { _._2 }
             val orderedMethods =
               domain.methodsForAbstractTasks(myAction) map { _.subPlan } map { _.orderingConstraints.graph.allTotalOrderings.get.head map { _.schema } } filter { _ == subTasks }
@@ -687,8 +736,8 @@ object VerifyRunner {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/6--2--2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8--3--4.xml"
 
-    //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
-    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp"
+    val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
+    val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp"
     //val domFile = "IPC7-Transport/domain-htn.lisp"
     //val probFile = "IPC7-Transport/p01-htn.lisp"
 
@@ -700,13 +749,13 @@ object VerifyRunner {
     //val len = args(2).toInt
     //val offset = args(3).toInt
 
-    val domFile = "domain-block.hpddl-2"
-    val probFile = "pfile_020.pddl"
+    //val domFile = "domain-block.hpddl-2"
+    //val probFile = "pfile_020.pddl"
     //val probFile = "pfile_005.pddl-2"
 
 
     //runPlanner(domFile, probFile, len, offset)
-    runPlanner(domFile, probFile, 60, 0)
+    runPlanner(domFile, probFile, 33, 0)
     //runEvaluation()
   }
 
