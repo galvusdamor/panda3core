@@ -83,6 +83,7 @@ method_def :
       ':parameters' '(' typed_var_list ')'
       ':task' '(' task_symbol var_or_const* ')'
       (':precondition' gd)?
+      (':effect' effect_body)?
       tasknetwork_def;
 
 tasknetwork_def :
