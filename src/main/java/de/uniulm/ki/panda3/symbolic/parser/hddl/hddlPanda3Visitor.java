@@ -375,6 +375,17 @@ public class hddlPanda3Visitor {
                 hasPrecondition = false;
             }
 
+            boolean hasEffect = false;
+            Formula effect = new And<Literal>(new Vector<Literal>(0, 0, 0));
+            if (m.effect_body() != null) {
+                if ((m.effect_body() != null) && (m.effect_body().c_effect() != null)) {
+                    effect = visitConEff(methodParams, tnConstraints, sorts, predicates, m.effect_body().c_effect());
+                } else if ((m.effect_body() != null) && (m.effect_body().eff_conjuntion() != null)) {
+                    effect = visitConEffConj(methodParams, tnConstraints, sorts, predicates, m.effect_body().eff_conjuntion());
+                }
+                hasEffect = true;
+            }
+
             // Create subplan, method and add it to method list
             GeneralTask initSchema = new GeneralTask("init", true, abstractTask.parameters(), abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), abstractTask.precondition());
             GeneralTask goalSchema = new GeneralTask("goal", true, abstractTask.parameters(), abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), abstractTask.effect(), new And<Literal>(new Vector<Literal>(0, 0, 0)));
@@ -387,6 +398,7 @@ public class hddlPanda3Visitor {
 
             DecompositionMethod method;
             if (hasPrecondition) {
+                // todo @Gregor: wenn "hasEffect" wahr ist, steht der Effekt in "effect"
                 method = new SHOPDecompositionMethod(abstractTask, subPlan, precFormula, nameStr);
             } else {
                 method = new SimpleDecompositionMethod(abstractTask, subPlan, nameStr);
