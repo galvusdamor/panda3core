@@ -701,11 +701,12 @@ object VerifyRunner {
     //val offset = args(3).toInt
 
     val domFile = "domain-block.hpddl-2"
-    val probFile = "pfile_002.pddl-2"
+    val probFile = "pfile_020.pddl"
+    //val probFile = "pfile_005.pddl-2"
 
 
     //runPlanner(domFile, probFile, len, offset)
-    runPlanner(domFile, probFile, 40, -30)
+    runPlanner(domFile, probFile, 60, 0)
     //runEvaluation()
   }
 

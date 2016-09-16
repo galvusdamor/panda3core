@@ -82,8 +82,8 @@ object Main {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
 
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p01.pddl"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
@@ -185,9 +185,8 @@ object Main {
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/domain/domain.hpddl"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/problems/pfile_03.pddl"
 
-    //val domFile =
-    //val probFile = "/home/gregor/p-0002-plow-road.lisp"
-    //val probFile = "p-0002-plow-road.lisp"
+    val domFile = "domain-block.hpddl-2"
+    val probFile = "pfile_005.pddl-2"
 
     //val domFile = "/home/gregor/d-0111-plow-road-verify.hddl"
     //val probFile = "/home/gregor/p-0111-plow-road-verify.hddl"
@@ -202,15 +201,15 @@ object Main {
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(HDDLParserType),
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = false,
-                                                                        liftedReachability = true, groundedReachability = false, planningGraph = true,
-                                                                        groundedTaskDecompositionGraph = None, //Some(TopDownTDG), // None,
-                                                                        iterateReachabilityAnalysis = false, groundDomain = true),
+                                                                        liftedReachability = true, groundedReachability = true, planningGraph = false,
+                                                                        groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
+                                                                        iterateReachabilityAnalysis = true, groundDomain = true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), false, true),
-                                             SearchConfiguration(Some(100000), None, efficientSearch = true, DijkstraType, None, true, true),
-                                             //SearchConfiguration(Some(100000), None, efficientSearch = true, AStarActionsType, Some(ADD), true, printSearchInfo = true),
-                                             //SearchConfiguration(Some(500000), None, efficientSearch = true, BFSType, None, printSearchInfo = true),
+                                             //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, false, true),
+                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true, printSearchInfo = true),
+                                             //SearchConfiguration(Some(500000), None, efficientSearch = true, BFSType, None, false, printSearchInfo = true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
-                                                                             SearchStatus, SearchResult, AllFoundPlans, AllFoundSolutionPathsWithHStar,
+                                                                             SearchStatus, SearchResult, AllFoundPlans,
                                                                              SearchStatistics,
                                                                              SearchSpace,
                                                                              PreprocessedDomainAndPlan,
@@ -231,7 +230,7 @@ object Main {
     val foundPlans = results(AllFoundPlans)
     println("Found in total " + foundPlans.length + " plans")
 
-    // get all found plans
+    /*// get all found plans
     val foundPaths = results(AllFoundSolutionPathsWithHStar)
     println("Found in total " + foundPaths.length + " paths with lengths")
     println(foundPaths map { _.length } map { "\t" + _ } mkString "\n")
@@ -261,29 +260,32 @@ object Main {
       foundPaths map { p => p map { case (node, hstar) => (node, (hstar, addHeuristic.computeHeuristic(wrapper.unwrap(node.plan), (), null)._1.toInt,
         relaxHeuristic.computeHeuristic(wrapper.unwrap(node.plan), (), null)._1.toInt)) } }
 
-    println("SOLUTION SEQUENCE")
-    val plan = results(SearchResult).get
+    */
+    if (results(SearchResult).isDefined) {
 
-    def psToString(ps: PlanStep): String = {
-      val name = ps.schema.name
-      val args = ps.arguments map plan.variableConstraints.getRepresentative map { _.shortInfo }
+      println("SOLUTION SEQUENCE")
+      val plan = results(SearchResult).get
 
-      name + args.mkString("(", ",", ")")
+      def psToString(ps: PlanStep): String = {
+        val name = ps.schema.name
+        val args = ps.arguments map plan.variableConstraints.getRepresentative map { _.shortInfo }
+
+        name + args.mkString("(", ",", ")")
+      }
+
+      println(plan.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive } map psToString mkString "\n")
+
+      println("FIRST DECOMPOSITION")
+      val initSchema = results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.head.schema
+      val initPS = plan.planStepsAndRemovedPlanSteps find { _.schema == initSchema } get
+      val realGoalSchema = plan.planStepDecomposedByMethod(initPS).subPlan.planStepsWithoutInitGoal.head.schema
+      val realGoal = plan.planStepsAndRemovedPlanSteps find { _.schema == realGoalSchema } get
+
+      println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
+
+      //println("Longest Path " + results(PreprocessedDomainAndPlan)._1.taskSchemaTransitionGraph.longestPathLength.get)
+      //println("Maximum Method size " + results(PreprocessedDomainAndPlan)._1.maximumMethodSize)
     }
-
-    println(plan.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive } map psToString mkString "\n")
-
-    println("FIRST DECOMPOSITION")
-    val initSchema = results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.head.schema
-    val initPS = plan.planStepsAndRemovedPlanSteps find { _.schema == initSchema } get
-    val realGoalSchema = plan.planStepDecomposedByMethod(initPS).subPlan.planStepsWithoutInitGoal.head.schema
-    val realGoal = plan.planStepsAndRemovedPlanSteps find { _.schema == realGoalSchema } get
-
-    println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
-
-    //println("Longest Path " + results(PreprocessedDomainAndPlan)._1.taskSchemaTransitionGraph.longestPathLength.get)
-    //println("Maximum Method size " + results(PreprocessedDomainAndPlan)._1.maximumMethodSize)
-
 
     if (results(SearchStatus) == SearchState.SOLUTION) {
       val solution = results(SearchResult).get

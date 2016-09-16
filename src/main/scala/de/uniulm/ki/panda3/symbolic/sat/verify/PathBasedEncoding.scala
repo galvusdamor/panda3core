@@ -29,7 +29,7 @@ trait PathBasedEncoding extends VerifyEncoding {
 
   // returns all clauses needed for the decomposition and all paths to the last layer
   private def generateDecompositionFormula(layer: Int, path: Seq[Int], possibleTasks: Set[Task]): (Seq[Clause], Set[(Seq[Int], Set[Task])]) = {
-    //println("GENPATH: L=" + layer + " p=" + path + " |pTasks|=" + possibleTasks.size + " \\Delta=" + domain.maximumMethodSize)
+    println("GENPATH: L=" + layer + " p=" + path + " |pTasks|=" + possibleTasks.size + " \\Delta=" + domain.maximumMethodSize)
     val possibleTaskOrder = possibleTasks.toSeq
     //val possibleTasksToActions = possibleTasks map { t => t -> action(layer, path, t) } toMap
     val possibleTasksToActions: Array[String] = possibleTaskOrder map { t => pathAction(layer, path, t) } toArray
@@ -54,17 +54,19 @@ trait PathBasedEncoding extends VerifyEncoding {
       val possibleTasksPerChildPosition = new Array[mutable.Set[Task]](domain.maximumMethodSize)
       Range(0, domain.maximumMethodSize) foreach { possibleTasksPerChildPosition(_) = new mutable.HashSet[Task]() }
       possiblePrimitives foreach { case (primitive, _) => possibleTasksPerChildPosition(0) += primitive }
-      possibleAbstracts foreach { case (abstractTask, abstractIndex) =>
+      val possibleSubTaskSequences = possibleAbstracts flatMap { case (abstractTask, abstractIndex) =>
         // select a method
         val possibleMethods = domain.methodsForAbstractTasks(abstractTask)
 
         // if a method is applied it will have children
-        possibleMethods foreach { decompositionMethod =>
-          val allTotalOrderings = decompositionMethod.subPlan.orderingConstraints.graph.allTotalOrderings.get
-          val taskOrdering = allTotalOrderings.head map { _.schema }
-          taskOrdering.zipWithIndex map { case (task, index) => possibleTasksPerChildPosition(index) += task }
+        possibleMethods map { decompositionMethod =>
+          val allTotalOrderings = decompositionMethod.subPlan.orderingConstraints.graph.topologicalOrdering.get
+          allTotalOrderings map { _.schema }
         }
       }
+
+      val maxMethodLength = optimiseTaskSequenceArrangement(possibleSubTaskSequences, possibleTasksPerChildPosition)
+      val methodRange = Range(0, maxMethodLength)
 
       //println("done " + (possibleTasksPerChildPosition count { _.nonEmpty }))
 
@@ -94,16 +96,29 @@ trait PathBasedEncoding extends VerifyEncoding {
 
         // if a method is applied it will have children
         val methodChildren = possibleMethods flatMap { case (decompositionMethod, methodString) =>
-          val allTotalOrderings = decompositionMethod.subPlan.orderingConstraints.graph.allTotalOrderings.get
-          val taskOrdering = allTotalOrderings.head map { _.schema }
+          val allTotalOrderings = decompositionMethod.subPlan.orderingConstraints.graph.topologicalOrdering.get
+          val taskOrdering = allTotalOrderings map { _.schema }
 
-          val childAtoms = taskOrdering.zipWithIndex map { case (task, index) =>
-            possibleChildTasks(index)(task)
-          }
+          val usedPositions = new mutable.BitSet()
+          var childAtoms: Seq[String] = Nil
+
+          methodRange.foldLeft(taskOrdering)(
+            {
+              case (Nil,_) => Nil
+              case (remainingTasks, i) =>
+                if (possibleTasksPerChildPosition(i) contains remainingTasks.head) {
+                  usedPositions add i
+                  childAtoms = childAtoms.+:(possibleChildTasks(i)(remainingTasks.head))
+                  remainingTasks.tail
+                }
+                else remainingTasks
+            })
+
+          //taskOrdering.zipWithIndex map { case (task, index) => possibleChildTasks(index)(task) }
 
           // unused are not allowed to contain anything
-          val unusedActions = Range(taskOrdering.length, domain.maximumMethodSize) flatMap { index =>
-            possibleTasksPerChildPosition(index) map { task => possibleChildTasks(index)(task) }
+          val unusedActions = Range(0, domain.maximumMethodSize) flatMap { case index =>
+            if (!usedPositions.contains(index)) possibleTasksPerChildPosition(index) map { task => possibleChildTasks(index)(task) } else Nil
           }
 
           impliesRightAnd(methodString :: Nil, childAtoms) ++ impliesAllNot(methodString, unusedActions) ++
@@ -136,6 +151,27 @@ trait PathBasedEncoding extends VerifyEncoding {
 
       (possibleTasksClauses ++ keepPrimitives ++ decomposeAbstract ++ noneApplied ++ recursiveFormula, paths)
     }
+  }
+
+
+  private def optimiseTaskSequenceArrangement(taskSequences: Seq[Seq[Task]], possibleTasksPerChildPosition: Array[mutable.Set[Task]]): Int = {
+    // take the longest ones first
+    val sorted = taskSequences.sortBy(-_.length)
+    val maxLen = if (sorted.nonEmpty) sorted.head.length else 0
+    val range = Range(0, maxLen)
+
+    sorted foreach { seq =>
+      range.foldLeft(seq)(
+        {
+          case (Nil,_) => Nil
+          case (remainingTasks, i) => if (possibleTasksPerChildPosition(i) contains remainingTasks.head) remainingTasks.tail
+          else if (remainingTasks.length == maxLen - i) {possibleTasksPerChildPosition(i) += remainingTasks.head; remainingTasks.tail }
+          else remainingTasks
+        })
+      //zipWithIndex map { case (task, index) => possibleTasksPerChildPosition(index) += task }
+    }
+
+    maxLen
   }
 
 
