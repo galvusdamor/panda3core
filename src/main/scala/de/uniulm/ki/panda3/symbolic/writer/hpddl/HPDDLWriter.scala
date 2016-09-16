@@ -229,8 +229,9 @@ case class HPDDLWriter(domainName: String, problemName: String) extends Writer {
         case NotOfSort(v, s) => "(not (" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, planUF) + "))"
       }
 
+      // TODO method effects
       val methodPrecondition = m match {
-        case SHOPDecompositionMethod(_, _, f,_) => f
+        case SHOPDecompositionMethod(_, _, f,_,_) => f
         case _ => And[Formula](Nil)
       }
 

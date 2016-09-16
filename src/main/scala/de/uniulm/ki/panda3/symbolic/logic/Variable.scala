@@ -29,3 +29,9 @@ case class Variable(id: Int, name: String, sort: Sort) extends Value with Pretty
   /** returns a more detailed information about the object */
   override def longInfo: String = shortInfo + ":" + sort.shortInfo
 }
+
+object Variable {
+  private var varCounter: Long = 0
+
+  def nextFreeVariableID(): Long = this.synchronized({ varCounter += 1; varCounter })
+}

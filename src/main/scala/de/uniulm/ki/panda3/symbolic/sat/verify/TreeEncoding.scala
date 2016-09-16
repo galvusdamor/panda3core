@@ -93,6 +93,7 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
     println("D " + sameAction.length)
 
     println("COMP: " + (taskSequenceLength * (taskSequenceLength + 1) / 2) * primitivePaths.length * (primitivePaths.length - 1))
+    println("COMP NEW: " + (taskSequenceLength * primitivePaths.length * (primitivePaths.length - 1)))
     val orderingKept = Range(0, taskSequenceLength) flatMap { case positionBefore =>
       println("BEF POS " + positionBefore)
       Range(positionBefore, taskSequenceLength) flatMap { case positionAfter =>

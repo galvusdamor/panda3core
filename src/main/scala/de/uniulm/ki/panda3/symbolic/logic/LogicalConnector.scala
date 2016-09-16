@@ -4,14 +4,14 @@ import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 
 //import de.uniulm.ki.panda3.symbolic.domain.updates.{ReduceFormula, DomainUpdate}
 
-import de.uniulm.ki.panda3.symbolic.domain.updates.{ReduceFormula, DomainUpdate}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeVariable, ReduceFormula, DomainUpdate}
 import de.uniulm.ki.util.HashMemo
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 trait LogicalConnector extends Formula {
 
 }
@@ -27,17 +27,23 @@ case class Not(formula: Formula) extends LogicalConnector with DefaultLongInfo w
   override def update(domainUpdate: DomainUpdate): Formula =
     formula.update(domainUpdate) match {
       case Literal(predicate, isPositive, parameters) => Literal(predicate, !isPositive, parameters)
-      case Not(sub) => sub // eliminate double negation
-      case f => Not(f)
+      case Not(sub)                                   => sub // eliminate double negation
+      case f                                          => Not(f)
     }
 
   lazy val containedVariables: Set[Variable] = formula.containedVariables
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = formula.containedPredicatesWithSign map {case (a,b) => (a,!b)}
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = formula.containedPredicatesWithSign map { case (a, b) => (a, !b) }
 
   override def longInfo: String = "!" + formula.longInfo
 
   override val isEmpty: Boolean = formula.isEmpty
+
+  def compileQuantors(): (Formula, Seq[Variable]) = {
+    val (inner, vars) = formula.compileQuantors()
+
+    (Not(inner), vars)
+  }
 }
 
 /*
@@ -57,7 +63,8 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
   }*/
 
 case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends LogicalConnector with DefaultLongInfo with HashMemo {
-  assert(conjuncts forall {_ != null})
+  assert(!(conjuncts contains null))
+
   override def update(domainUpdate: DomainUpdate): Formula = {
     val subreduced = conjuncts map {
       _ update domainUpdate
@@ -67,21 +74,21 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
       case ReduceFormula() =>
         val identitiesRemoved = subreduced filter {
           case Identity() => false
-          case _ => true
+          case _          => true
         }
 
         val flattenedSubs = identitiesRemoved flatMap {
           case And(sub) => sub
-          case f => f :: Nil
+          case f        => f :: Nil
         }
         And[Formula](flattenedSubs)
-      case _ => And[Formula](subreduced)
+      case _               => And[Formula](subreduced)
     }
   }
 
   lazy val containedVariables: Set[Variable] = conjuncts.flatMap(_.containedVariables).toSet
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = conjuncts flatMap {case f : Formula => f.containedPredicatesWithSign} toSet
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = conjuncts flatMap { case f: Formula => f.containedPredicatesWithSign } toSet
 
   override def longInfo: String = (conjuncts map {
     _.longInfo
@@ -91,7 +98,13 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
     _.isEmpty
   }
 
-  lazy val containsOnlyLiterals = conjuncts forall { case l: Literal => true; case _ => false}
+  lazy val containsOnlyLiterals = conjuncts forall { case l: Literal => true; case _ => false }
+
+  override def compileQuantors(): (Formula, Seq[Variable]) = {
+    val (newconj, newvars) = conjuncts map { _.compileQuantors() } unzip
+
+    (And(newconj), newvars flatten)
+  }
 }
 
 case class Identity[SubFormulas <: Formula]() extends LogicalConnector with DefaultLongInfo with HashMemo {
@@ -99,11 +112,13 @@ case class Identity[SubFormulas <: Formula]() extends LogicalConnector with Defa
 
   lazy val containedVariables: Set[Variable] = Set[Variable]()
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = Set[(Predicate,Boolean)]()
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = Set[(Predicate, Boolean)]()
 
   override def longInfo: String = "Identity"
 
   override val isEmpty: Boolean = true
+
+  override def compileQuantors(): (Formula, Seq[Variable]) = (this, Nil)
 }
 
 case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends LogicalConnector with DefaultLongInfo with HashMemo {
@@ -113,7 +128,7 @@ case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends Logic
 
   lazy val containedVariables: Set[Variable] = disjuncts.flatMap(_.containedVariables).toSet
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = disjuncts flatMap {case f : Formula => f.containedPredicatesWithSign} toSet
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = disjuncts flatMap { case f: Formula => f.containedPredicatesWithSign } toSet
 
   override def longInfo: String = (disjuncts map {
     _.longInfo
@@ -122,6 +137,12 @@ case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends Logic
   override val isEmpty: Boolean = disjuncts forall {
     _.isEmpty
   }
+
+  override def compileQuantors(): (Formula, Seq[Variable]) = {
+    val (newdis, newvars) = disjuncts map { _.compileQuantors() } unzip
+
+    (Or(newdis), newvars flatten)
+  }
 }
 
 case class Implies(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo {
@@ -129,11 +150,18 @@ case class Implies(left: Formula, right: Formula) extends LogicalConnector with 
 
   lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
 
   override def longInfo: String = left.longInfo + " => " + right.longInfo
 
   override val isEmpty: Boolean = left.isEmpty && right.isEmpty
+
+  override def compileQuantors(): (Formula, Seq[Variable]) = {
+    val (lForm, lVars) = left.compileQuantors()
+    val (rForm, rVars) = right.compileQuantors()
+
+    (Implies(lForm, rForm), lVars ++ rVars)
+  }
 }
 
 case class Equivalence(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo {
@@ -141,11 +169,18 @@ case class Equivalence(left: Formula, right: Formula) extends LogicalConnector w
 
   lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
 
   override def longInfo: String = left.longInfo + " == " + right.longInfo
 
   override val isEmpty: Boolean = left.isEmpty && right.isEmpty
+
+  override def compileQuantors(): (Formula, Seq[Variable]) = {
+    val (lForm, lVars) = left.compileQuantors()
+    val (rForm, rVars) = right.compileQuantors()
+
+    (Equivalence(lForm, rForm), lVars ++ rVars)
+  }
 }
 
 case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo with HashMemo {
@@ -153,11 +188,20 @@ case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLon
 
   lazy val containedVariables: Set[Variable] = formula.containedVariables - v
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = formula.containedPredicatesWithSign
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = formula.containedPredicatesWithSign
 
   override def longInfo: String = "exists " + v.shortInfo + " in (" + formula.longInfo + ")"
 
   override val isEmpty: Boolean = formula.isEmpty
+
+  override def compileQuantors(): (Formula, Seq[Variable]) = {
+    val (innerFormula, innerVars) = formula.compileQuantors()
+
+    // create for instance for the quantifier
+    val newVar = v.copy(name = v.name + "_compiled_" + Variable.nextFreeVariableID())
+
+    (innerFormula update ExchangeVariable(v, newVar), innerVars :+ newVar)
+  }
 }
 
 case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo with HashMemo {
@@ -165,9 +209,21 @@ case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLon
 
   lazy val containedVariables: Set[Variable] = formula.containedVariables - v
 
-  lazy val containedPredicatesWithSign : Set[(Predicate,Boolean)] = formula.containedPredicatesWithSign
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = formula.containedPredicatesWithSign
 
   override def longInfo: String = "forall " + v.shortInfo + " in (" + formula.longInfo + ")"
 
   override val isEmpty: Boolean = formula.isEmpty
+
+  override def compileQuantors(): (Formula, Seq[Variable]) = {
+    val (innerFormula, innerVars) = formula.compileQuantors()
+
+    // create for instance for the quantifier
+    val newVars = v.sort.elements map { c =>
+      val newSort = Sort(v.sort.name, c :: Nil, Nil)
+      v.copy(name = v.name + "_compiled_" + Variable.nextFreeVariableID() + c.name, sort = newSort)
+    }
+
+    (And(newVars map { nv => innerFormula update ExchangeVariable(v, nv) }), innerVars ++ newVars)
+  }
 }

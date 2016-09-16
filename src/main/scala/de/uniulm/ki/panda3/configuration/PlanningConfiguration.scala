@@ -20,8 +20,10 @@ import de.uniulm.ki.panda3.symbolic.parser.hpddl.HPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
+import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
+import de.uniulm.ki.util._
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -120,6 +122,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       })
     } else {
       // EFFICIENT SEARCH
+      writeStringToFile(HDDLWriter("foo","bar").writeDomain(domainAndPlan._1),"domain-compiled.hddl")
       timeCapsule start COMPUTE_EFFICIENT_REPRESENTATION
       val wrapper = Wrapping(domainAndPlan)
       val efficientInitialPlan = wrapper.unwrap(domainAndPlan._2)
@@ -365,6 +368,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(domain, problem, emptyAnalysis)
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
+      println(disallowedTasks map {_.name} mkString("\n"))
       val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
       val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
       info("done.\n")

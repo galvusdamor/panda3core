@@ -35,7 +35,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // create the configuration
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(parserType),
-                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = false,
+                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = true,
                                                                           liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,
                                                                           groundedTaskDecompositionGraph = Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = true),
@@ -172,6 +172,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
       case pathbased: PathBasedEncoding =>
         //println(tot.primitivePaths map { case (a, b) => (a, b map { _.name }) } mkString "\n")
         informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, pathbased.primitivePaths.length)
+        println("NUMBER OF PATHS " + pathbased.primitivePaths.length)
       case _                           =>
     }
 
@@ -398,7 +399,7 @@ object VerifyRunner {
   val NUMBER_OF_PATHS         = "99 verify:30:number of paths"
 
   val allData              = (PLAN_LENGTH :: NUMBER_OF_VARIABLES :: NUMBER_OF_CLAUSES :: ICAPS_K :: LOG_K :: TSTG_K :: OFFSET_K :: ACTUAL_K :: STATE_FORMULA :: ORDER_CLAUSES ::
-    METHOD_CHILDREN_CLAUSES :: Nil).sorted
+    METHOD_CHILDREN_CLAUSES :: NUMBER_OF_PATHS :: Nil).sorted
   val allProblemProperties =
     (Information.NUMBER_OF_CONSTANTS ::
       Information.NUMBER_OF_PREDICATES ::
@@ -653,8 +654,8 @@ object VerifyRunner {
   }
 
   def runPlanner(domFile: String, probFile: String, length: Int, offset: Int): Unit = {
-    //val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
-    val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
+    val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
+    //val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
 
     val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = offset, includeGoal = true, verify = false)
     //val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = 0, includeGoal = true, verify = false)
@@ -671,9 +672,9 @@ object VerifyRunner {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml"
 
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Large.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
@@ -699,8 +700,12 @@ object VerifyRunner {
     //val len = args(2).toInt
     //val offset = args(3).toInt
 
+    val domFile = "domain-block.hpddl-2"
+    val probFile = "pfile_002.pddl-2"
+
+
     //runPlanner(domFile, probFile, len, offset)
-    runPlanner(domFile, probFile, 20, 0)
+    runPlanner(domFile, probFile, 40, -30)
     //runEvaluation()
   }
 
