@@ -20,8 +20,11 @@ public class formatConverterRonToOurs {
             System.out.println("Usage: <program> inFileName outFileName");
             System.out.println("The program will detect automatically whether it is a domain or problem file.");
         }
-        String inFile = "/home/dh/Schreibtisch/test-ron/domain-block.hpddl";
-        String outFile = "/home/dh/Schreibtisch/test-ron/domain-block.hpddl-2";
+        //String inFile = "/home/dh/Schreibtisch/test-ron/domain-block.hpddl";
+        //String outFile = "/home/dh/Schreibtisch/test-ron/domain-block.hpddl-2";
+
+        String inFile = "/home/dh/Schreibtisch/test-ron/pfile_005.pddl";
+        String outFile = "/home/dh/Schreibtisch/test-ron/pfile_005.pddl-2";
 
         //String inFile = "C:\\Projekte\\panda3\\src\\test\\resources\\de\\uniulm\\ki\\panda3\\symbolic\\parser\\hddl\\towers\\domain\\domain.hpddl";
         //String outFile = "C:\\Projekte\\panda3\\src\\test\\resources\\de\\uniulm\\ki\\panda3\\symbolic\\parser\\hddl\\towers\\domain\\domain.hpddl-2";
@@ -72,11 +75,25 @@ public class formatConverterRonToOurs {
         bw.write("  :constraints ( )\n");
         bw.write(" )\n");
 
-        bw.write(init + "\n");
+        bw.write(transformGoalToInit(init, goal) + "\n");
         bw.write(goal + "\n");
         bw.write(")");
         bw.close();
         fw.close();
+    }
+
+    private static String transformGoalToInit(String init, String goal) {
+        String res;
+        String init2 = init.trim();
+        res = init2.substring(0, init2.length() - 1);
+        String goal2 = goal.trim();
+        if ((!goal2.startsWith("(:goal (and")) || (!goal2.endsWith("))"))) {
+            System.out.println("ERROR: Could not transform goal");
+        }
+        goal2 = goal2.substring("(:goal (and".length() + 1, goal2.length() - 2).trim();
+        goal2 = goal2.replaceAll("\\(", "(goal_");
+        res = res + "\n" + goal2 + ")";
+        return res;
     }
 
     static String initTaskRegEx = "\\(\\:tasks[\\s]+(\\([a-zA-Z0-9]+[\\s]*\\([^\\)]+\\)\\))\\)";
@@ -197,7 +214,7 @@ public class formatConverterRonToOurs {
         return "\n (:method newMethod" + (newMethodID++) + "\n" +
                 "  :parameters " + aParameters + "\n" +
                 "  :task (" + replacementTaskName + " " + parameters + ")\n" +
-                "  :tasks (" + actionName + " " + typeless + "))\n";
+                "  :ordered-subtasks (" + actionName + " " + typeless + "))\n";
     }
 
     static String delTaskLineRegEx = "[\\s]*:task \\([^)]*\\)";
