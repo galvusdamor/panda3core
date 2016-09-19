@@ -265,7 +265,7 @@ public class formatConverterRonToOurs {
             def = def.replaceAll(actionName + " ", replacement + " ");
         }
 
-        return def.replaceAll("\\:tasks \\(\\(", ":tasks (and (");
+        return def.replaceAll("\\:tasks \\(\\(", ":ordered-tasks (and (");
     }
 
     static String taskDefRegEx = "\\(([a-zA-Z0-9_-]+)( [^)]+)?";
