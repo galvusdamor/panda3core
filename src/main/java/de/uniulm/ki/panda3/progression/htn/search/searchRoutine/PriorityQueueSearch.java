@@ -12,13 +12,15 @@ import java.util.PriorityQueue;
  * Created by dh on 15.09.16.
  */
 public class PriorityQueueSearch extends ProgressionSearchRoutine {
+    boolean aStar = true;
 
     public List<Object> search(ProgressionNetwork firstSearchNode) {
         System.out.println("\nStarting priority queue search");
         int searchnodes = 1;
         int bestMetric = Integer.MAX_VALUE;
         List<Object> solution = null;
-        long time = System.currentTimeMillis();
+        long totalSearchTime = System.currentTimeMillis();
+        long lastInfo = System.currentTimeMillis();
         PriorityQueue<ProgressionNetwork> fringe = new PriorityQueue<>();
         fringe.add(firstSearchNode);
 
@@ -39,7 +41,11 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
                     // todo: add unit propagation here
                     node.heuristic = n.heuristic.update(node, ps);
-                    node.metric = node.solution.size() + node.heuristic.getHeuristic();
+                    node.metric = node.heuristic.getHeuristic();
+                    if (aStar) {
+                        node.metric += node.solution.size();
+                    }
+
                     node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
 
                     if (node.goalRelaxedReachable) {
@@ -52,19 +58,25 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         fringe.add(node);
                         if (node.metric < bestMetric) {
                             bestMetric = node.metric;
-                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
+                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
                         }
                     }
                     searchnodes++;
-                    if ((searchnodes % 100) == 0)
-                        System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
+                    if ((System.currentTimeMillis() - lastInfo) > 1000) {
+                        lastInfo = System.currentTimeMillis();
+                        System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                    }
                 } else { // is an abstract task
                     for (method m : ps.methods) {
                         ProgressionNetwork node = n.decompose(ps, m);
 
                         // todo: add unit propagation here
                         node.heuristic = n.heuristic.update(node, ps, m);
-                        node.metric = node.solution.size() + node.heuristic.getHeuristic();
+                        node.metric = node.heuristic.getHeuristic();
+                        if(aStar){
+                            node.metric += node.solution.size();
+                        }
+
                         node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
 
                         if (node.goalRelaxedReachable) {
@@ -77,19 +89,21 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                             fringe.add(node);
                             if (node.metric < bestMetric) {
                                 bestMetric = node.metric;
-                                System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
+                                System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
                             }
                         }
                         searchnodes++;
-                        if ((searchnodes % 100) == 0)
-                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, time));
+                        if ((System.currentTimeMillis() - lastInfo) > 1000) {
+                            lastInfo = System.currentTimeMillis();
+                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                        }
                     }
                 }
             }
         }
 
         System.out.println("Generated search nodes (total): " + searchnodes);
-        System.out.println("Search time: " + (System.currentTimeMillis() - time) + " ms");
+        System.out.println("Search time: " + (System.currentTimeMillis() - totalSearchTime) + " ms");
         return solution;
     }
 }

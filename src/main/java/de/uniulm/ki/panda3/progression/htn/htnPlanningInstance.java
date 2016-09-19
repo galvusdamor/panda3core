@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.ProgressionSearchRoutine;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.cRPG;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
@@ -97,10 +98,9 @@ public class htnPlanningInstance {
 
         // todo: change heuristic here
         //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        //initialNode.heuristic = new cRPG(operators.methods, allActions);
-        //initialNode.heuristic.build(initialNode);
-        //initialNode.metric = initialNode.heuristic.getHeuristic();
-        initialNode.metric = 1;
+        initialNode.heuristic = new cRPG(operators.methods, allActions);
+        initialNode.heuristic.build(initialNode);
+        initialNode.metric = initialNode.heuristic.getHeuristic();
 
         ProgressionSearchRoutine routine;
         routine = new PriorityQueueSearch();
