@@ -71,8 +71,6 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], addN
 
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
 
-        //println("PLAN " + plan.numberOfPlanSteps + "/" + plan.numberOfAllPlanSteps + " @ " + myNode.heuristic)
-
         // heuristic statistics
         if (myNode.heuristic < lowestHeuristicFound) {
           lowestHeuristicFound = myNode.heuristic
@@ -109,8 +107,6 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], addN
           var flawnum = 0
           myNode.selectedFlaw = 0
           var smallFlawNumMod = Integer.MAX_VALUE
-          var smallFlawActionNumber = -1
-          var smallFlawIsCausalThreat = false
 
           var zeroFound = false
 
@@ -128,26 +124,13 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], addN
               if (numberOfModifications == 0) {
                 zeroFound = true
 
-                /* if (flaws(flawnum).isInstanceOf[EfficientCausalThreat]) {
-                   smallFlawIsCausalThreat = true
-                   smallFlawNumMod = numberOfModifiactions
-                   myNode.selectedFlaw = flawnum
-                 } else if (!smallFlawIsCausalThreat) {
-                   val actionNumber = if (flaws(flawnum).isInstanceOf[EfficientOpenPrecondition]) flaws(flawnum).asInstanceOf[EfficientOpenPrecondition].planStep else -1
-
-                   smallFlawActionNumber = actionNumber
-
-                   if (actionNumber > smallFlawActionNumber || (actionNumber == smallFlawActionNumber && numberOfModifiactions <= smallFlawNumMod)) {*/
                 if (numberOfModifications < smallFlawNumMod) {
                   smallFlawNumMod = numberOfModifications
-                  //smallFlawActionNumber = actionNumber
                   myNode.selectedFlaw = flawnum
                 }
-                //}
               }
-              //assert(numberOfModifiactions == flaws(flawnum).resolver.length)
-              flawnum += 1
             }
+            flawnum += 1
           }
           timeCapsule stop (if (buildTree) SEARCH_FLAW_RESOLVER else SEARCH_FLAW_RESOLVER_ESTIMATION)
 

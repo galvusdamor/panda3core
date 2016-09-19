@@ -20,8 +20,10 @@ import de.uniulm.ki.panda3.symbolic.parser.hpddl.HPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
+import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
+import de.uniulm.ki.util._
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -132,7 +134,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (searchConfiguration.heuristic contains TDGMinimumAction))
         analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
 
-      if ((searchConfiguration.heuristic contains ADD) || (searchConfiguration.heuristic contains ADDReusing) || (searchConfiguration.heuristic contains TDGMinimumADD)) {
+      if ((searchConfiguration.heuristic contains ADD) || (searchConfiguration.heuristic contains ADDReusing) || (searchConfiguration.heuristic contains TDGMinimumADD) ||
+        (searchConfiguration.heuristic contains Relax)) {
         // do the whole preparation, i.e. planning graph
         val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
         val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, GroundedPlanningGraphConfiguration())
@@ -182,14 +185,20 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                     .efficientDomain)
 
 
-                case ADD | ADDReusing =>
+                case ADD | ADDReusing | Relax =>
                   val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
                   val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
                     (wrapper.unwrap(task), args map wrapper.unwrap toArray)
                   }
-                  val reusing = if (heuristic == ADDReusing) true else false
-                  // TODO check that we have compiled negative preconditions away
-                  AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray, reusing)
+
+                  searchConfiguration.heuristic.get match {
+                    case ADD | ADDReusing =>
+                      val reusing = if (heuristic == ADDReusing) true else false
+                      // TODO check that we have compiled negative preconditions away
+                      AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray, reusing)
+                    case Relax            =>
+                      RelaxHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray)
+                  }
               }
               case None            => throw new UnsupportedOperationException("In order to use a heuristic search procedure, a heuristic must be defined.")
             }
@@ -550,6 +559,8 @@ object TDGMinimumAction extends SearchHeuristic
 object ADD extends SearchHeuristic
 
 object ADDReusing extends SearchHeuristic
+
+object Relax extends SearchHeuristic
 
 
 case class SearchConfiguration(

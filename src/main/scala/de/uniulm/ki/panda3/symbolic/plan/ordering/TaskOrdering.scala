@@ -244,12 +244,22 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
                 case (_, _)                                             => ()
               }
 
-      val allPairs = for (from <- ord.indices; to <- from + 1 until ord.length) yield (from, to)
+      getOrderingConstraintsOfArrangement(ord)
+    }
+  }
+
+  def allOrderingConstraints() : Seq[OrderingConstraint] = {
+    ensureTransitiveHull()
+    if (!isConsistent) Nil
+    else getOrderingConstraintsOfArrangement(innerArrangement)
+  }
+
+  private def getOrderingConstraintsOfArrangement(arrangement : Array[Array[Byte]]) : Seq[OrderingConstraint] = {
+    val allPairs = for (from <- arrangement.indices; to <- from + 1 until arrangement.length) yield (from, to)
 
 
-      allPairs collect { case (x, y) if ord(x)(y) == AFTER => OrderingConstraint(arrangemetnIndexToPlanStep(y), arrangemetnIndexToPlanStep(x))
-      case (x, y) if ord(x)(y) == BEFORE                   => OrderingConstraint(arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
-      }
+    allPairs collect { case (x, y) if arrangement(x)(y) == AFTER => OrderingConstraint(arrangemetnIndexToPlanStep(y), arrangemetnIndexToPlanStep(x))
+    case (x, y) if arrangement(x)(y) == BEFORE                   => OrderingConstraint(arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
     }
   }
 

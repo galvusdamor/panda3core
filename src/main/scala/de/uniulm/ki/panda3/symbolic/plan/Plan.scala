@@ -212,7 +212,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
                                                                                    variableConstraints.addConstraints(newVariableConstraints), init, goal, isModificationAllowed,
                                                                                    isFlawAllowed,
                                                                                    planStepDecomposedByMethod, planStepParentInDecompositionTree)
-    case AddLiteralsToInitAndGoal(literalsInit, literalsGoal, constraints) => {
+    case AddLiteralsToInitAndGoal(literalsInit, literalsGoal, constraints) =>
       // TODO: currently we only support this operation if all literals are 0-ary
       assert((literalsInit ++ literalsGoal) forall {
         _.parameterVariables.isEmpty
@@ -242,15 +242,24 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       val exchangeInit = ExchangePlanSteps(init, newInit)
       val exchangeGoal = ExchangePlanSteps(goal, newGoal)
 
-      Plan(planStepsAndRemovedPlanSteps map {
-        _ update exchangeInit update exchangeGoal
-      }, causalLinksAndRemovedCausalLinks map {
-        _ update exchangeInit update exchangeGoal
-      },
-           orderingConstraints update exchangeInit update exchangeGoal,
-           variableConstraints, newInit, newGoal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
-    }
-    case _                                                                 =>
+      Plan(planStepsAndRemovedPlanSteps map { _ update exchangeInit update exchangeGoal }, causalLinksAndRemovedCausalLinks map { _ update exchangeInit update exchangeGoal },
+           orderingConstraints update exchangeInit update exchangeGoal, variableConstraints, newInit, goal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod,
+           planStepParentInDecompositionTree)
+
+    case ExchangeTask(taskMap) =>
+      // if any planstep will get more arguments ... just add them
+      val newPlanSteps = planSteps map { ps => (ps, ps update domainUpdate) }
+      val newVariables = newPlanSteps flatMap { case (ps1, ps2) => ps2.arguments drop ps1.arguments.length }
+
+      val newPlan = copy(parameterVariableConstraints = parameterVariableConstraints.addVariables(newVariables))
+
+      Plan(newPlan.planStepsAndRemovedPlanSteps map { _ update domainUpdate }, newPlan.causalLinksAndRemovedCausalLinks map { _ update domainUpdate },
+           newPlan.orderingConstraints update domainUpdate, newPlan.parameterVariableConstraints, newPlan.init update domainUpdate, newPlan.goal update domainUpdate,
+           newPlan.isModificationAllowed, newPlan.isFlawAllowed,
+           newPlan.planStepDecomposedByMethod map { case (a, b) => (a update domainUpdate, b update domainUpdate) },
+           newPlan.planStepParentInDecompositionTree map { case (a, (b, c)) => (a update domainUpdate, (b update domainUpdate, c update domainUpdate)) })
+
+    case _ =>
       val newInit = init update domainUpdate
       val newGoal = goal update domainUpdate
 
@@ -263,7 +272,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       val newPlanStepsAndRemovedPlanSteps = planSteps map {
         case ps if ps == init => newInit
         case ps if ps == goal => newGoal
-        case ps => ps update possiblyInvertedUpdate
+        case ps               => ps update possiblyInvertedUpdate
       }
 
       val newCausalLinksAndRemovedCausalLinks = causalLinksAndRemovedCausalLinks map { _ update possiblyInvertedUpdate }

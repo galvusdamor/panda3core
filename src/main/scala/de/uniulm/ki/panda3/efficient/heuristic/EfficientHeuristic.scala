@@ -21,7 +21,10 @@ trait MinimisationOverGroundingsBasedHeuristic[Payload] extends EfficientHeurist
 
   protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double
 
-  protected def computeHeuristicByGrounding(planStep: Int, parameter: Array[Int], numberOfChosenParameters: Int, plan: EfficientPlan): Double =
+  protected def computeHeuristicByGrounding(planStep: Int, plan: EfficientPlan): Double =
+    computeHeuristicByGrounding(planStep, new Array[Int](plan.planStepParameters(planStep).length), 0, plan)
+
+  private def computeHeuristicByGrounding(planStep: Int, parameter: Array[Int], numberOfChosenParameters: Int, plan: EfficientPlan): Double =
     if (numberOfChosenParameters == parameter.length) {
       // query the actual heuristic
       //val groundTask = EfficientGroundTask(plan.planStepTasks(planStep), parameter)

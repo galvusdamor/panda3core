@@ -56,7 +56,8 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
                         sdm.subPlan().planStepDecomposedByMethod(),
                         sdm.subPlan().planStepParentInDecompositionTree());
 
-                updatedMethods.add(new SHOPDecompositionMethod(sdm.abstractTask(), newSubPlan, updated._3(), sdm.name()));
+                // TODO reat effects
+                updatedMethods.add(new SHOPDecompositionMethod(sdm.abstractTask(), newSubPlan, updated._3(), sdm.methodEffect(), sdm.name()));
             }
         }
         return updatedMethods.result();

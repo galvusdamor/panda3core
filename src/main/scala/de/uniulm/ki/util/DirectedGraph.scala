@@ -43,6 +43,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   }
 
   def sources: Seq[T]
+  def sinks  : Seq[T]
 
   def getVerticesInDistance(v: T, distance: Int): Set[T]
 
@@ -181,6 +182,7 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
   }
 
   lazy val sources: Seq[T] = (degrees collect { case (node, (in, _)) if in == 0 => node }).toSeq
+  lazy val sinks  : Seq[T] = (degrees collect { case (node, (_, out)) if out == 0 => node }).toSeq
 
 
   private val memoisedVerticesInDistance = new mutable.HashMap[(T, Int), Set[T]]()
@@ -344,6 +346,7 @@ case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, S
   override lazy val allTotalOrderings: Option[Seq[Seq[T]]] = internalGraph.allTotalOrderings map { _ map { _ map verticesToInt.back } }
 
   override lazy val sources: Seq[T] = internalGraph.sources map verticesToInt.back
+  override lazy val sinks: Seq[T] = internalGraph.sinks map verticesToInt.back
 
   /**
     * Compute a topological ordering of the graph.

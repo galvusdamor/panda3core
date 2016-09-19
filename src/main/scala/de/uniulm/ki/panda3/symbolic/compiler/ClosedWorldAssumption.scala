@@ -39,7 +39,7 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
 
     // find predicates which never occur negatively in the domain at all ... we don't need to apply the CWA to them
     val occurringNegativePredicates = ((domain.tasks ++ domain.hiddenTasks) flatMap { _.precondition.containedPredicatesWithSign }) ++ (domain.decompositionMethods collect {
-      case SHOPDecompositionMethod(_, _, precondition, _) => precondition.containedPredicatesWithSign
+      case SHOPDecompositionMethod(_, _, precondition, _, _) => precondition.containedPredicatesWithSign
     } flatten)
     val nonOccurringNegativePredicates = domain.predicates map { p => (p, false) } filterNot occurringNegativePredicates.contains map { _._1 }
 

@@ -150,11 +150,13 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula, name: String) extends DecompositionMethod with HashMemo {
+case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula, methodEffect: Formula, name: String) extends DecompositionMethod with HashMemo {
   override def update(domainUpdate: DomainUpdate): SHOPDecompositionMethod = domainUpdate match {
     case ExchangeLiteralsByPredicate(map, false) =>
-      SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true), methodPrecondition update domainUpdate, name)
-    case _                                       => SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update domainUpdate, methodPrecondition update domainUpdate, name)
+      SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
+                              methodPrecondition update domainUpdate, methodEffect update domainUpdate, name)
+    case _                                       => SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update domainUpdate,
+                                                                            methodPrecondition update domainUpdate, methodEffect update domainUpdate, name)
   }
 }
 

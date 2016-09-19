@@ -364,7 +364,7 @@ public class hddlPanda3Visitor {
             }
 
             // Read method preconditions
-            Formula precFormula = null;
+            Formula precFormula = new And<Literal>(new Vector<Literal>(0, 0, 0));
             boolean hasPrecondition;
             if (m.gd() != null) {
                 seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
@@ -397,9 +397,9 @@ public class hddlPanda3Visitor {
                     NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy, hddlPanda3Visitor.planStepsDecompositionParents);
 
             DecompositionMethod method;
-            if (hasPrecondition) {
+            if (hasPrecondition || hasEffect) {
                 // todo @Gregor: wenn "hasEffect" wahr ist, steht der Effekt in "effect"
-                method = new SHOPDecompositionMethod(abstractTask, subPlan, precFormula, nameStr);
+                method = new SHOPDecompositionMethod(abstractTask, subPlan, precFormula, effect, nameStr);
             } else {
                 method = new SimpleDecompositionMethod(abstractTask, subPlan, nameStr);
             }

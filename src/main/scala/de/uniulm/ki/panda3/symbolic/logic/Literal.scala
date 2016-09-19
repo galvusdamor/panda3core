@@ -72,6 +72,8 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
   override val isEmpty: Boolean = false
 
   def ground(totalSubstitution: TotalSubstitution[Variable, Constant]): GroundLiteral = GroundLiteral(predicate, isPositive, parameterVariables map totalSubstitution)
+
+  def compileQuantors() : (Formula, Seq[Variable]) = (this,Nil)
 }
 
 case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo with Ordered[GroundLiteral] {
@@ -109,4 +111,5 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
       case _ => this.predicate compare that.predicate
     }
   }
+  def compileQuantors() : (Formula, Seq[Variable]) = (this,Nil)
 }

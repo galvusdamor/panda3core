@@ -317,8 +317,9 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         builder.append(writeVariableList(mappedParameters, NoConstraintsCSP))
         builder.append(")\n")
 
+        // TODO method effects
         val methodPrecondition = m match {
-          case SHOPDecompositionMethod(_, _, f, _) => f
+          case SHOPDecompositionMethod(_, _, f, _, _) => f
           case _                                   => And[Formula](Nil)
         }
 

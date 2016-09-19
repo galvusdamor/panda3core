@@ -148,7 +148,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     }
 
     val allSorts = sorts ++ taskSorts ++ parameterConstraintSorts ++ planVariableSorts ++ planConstraintSorts
-    (allSorts filter sorts.contains).distinct
+    allSorts.distinct
   }
 
   override def update(domainUpdate: DomainUpdate): Domain = domainUpdate match {

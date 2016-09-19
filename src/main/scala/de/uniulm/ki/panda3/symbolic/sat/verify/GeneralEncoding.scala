@@ -12,7 +12,7 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[Task], offsetToK: Int) extends VerifyEncoding {
+case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[Task], offsetToK: Int) extends LinearPrimitivePlanEncoding {
 
   lazy val taskSequenceLength      = taskSequence.length
   lazy val numberOfActionsPerLayer = taskSequence.length
@@ -20,8 +20,6 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
   ///////////////////////////
   // STRING GENERATORS
   ///////////////////////////
-
-  val action: ((Int, Int, Task)) => String = memoise[(Int, Int, Task), String]({ case (l, p, t) => "action^" + l + "_" + p + "," + taskIndex(t) })
 
   protected val actionUsed: ((Int, Int)) => String = memoise[(Int, Int), String]({ case (l, p) => "actionUsed^" + l + "_" + p })
 
@@ -35,8 +33,6 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
 
   protected val method: ((Int, Int, Int)) => String = memoise[(Int, Int, Int), String]({ case (l, pos, methodIdx) => "method^" + l + "_" + pos + "," + methodIdx })
 
-  protected val statePredicate: ((Int, Int, Predicate)) => String =
-    memoise[(Int, Int, Predicate), String]({ case (l, pos, pred) => "predicate^" + l + "_" + pos + "," + predicateIndex(pred) })
 
   // FORMULA STRUCTURE
 
@@ -133,7 +129,7 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
             val childrenType: Seq[Clause] = Range(0, numberOfActionsPerLayer) map {
               childPos =>
                 impliesRightAndSingle(childWithIndex(layer + 1, childPos, fatherPosition, childNumber) :: method(layer, fatherPosition, methodIdx) :: Nil,
-                                action(layer + 1, childPos, ps.schema))
+                                      action(layer + 1, childPos, ps.schema))
             }
             childrenType :+ mustChildren
         }
@@ -152,7 +148,7 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
               childBeforePos => Range(0, numberOfActionsPerLayer) map {
                 childAfterPos =>
                   impliesRightAndSingle(method(layer, fatherPosition, methodIdx) :: childWithIndex(layer + 1, childBeforePos, fatherPosition, beforePos) ::
-                                    childWithIndex(layer + 1, childAfterPos, fatherPosition, afterPos) :: Nil, before(layer + 1, childBeforePos, childAfterPos))
+                                          childWithIndex(layer + 1, childAfterPos, fatherPosition, afterPos) :: Nil, before(layer + 1, childBeforePos, childAfterPos))
               }
             }
         }
@@ -183,45 +179,6 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
           }
         }
     }
-
-  private def primitivesApplicable(layer: Int, position: Int): Seq[Clause] = domain.primitiveTasks flatMap {
-    case task: ReducedTask =>
-      task.precondition.conjuncts map {
-        case Literal(pred, isPositive, _) => // there won't be any parameters
-          if (isPositive)
-            impliesSingle(action(layer, position, task), statePredicate(layer, position, pred))
-          else
-            impliesNot(action(layer, position, task), statePredicate(layer, position, pred))
-      }
-    case _                 => noSupport(FORUMLASNOTSUPPORTED)
-  }
-
-  private def stateChange(layer: Int, position: Int): Seq[Clause] = domain.primitiveTasks flatMap {
-    case task: ReducedTask =>
-      task.effect.conjuncts collect {
-        // negated effect is also contained, ignore this one if it is negative
-        case Literal(pred, isPositive, _) if !((task.effect.conjuncts exists { l => l.predicate == pred && l.isNegative == isPositive }) && !isPositive) =>
-          // there won't be any parameters
-          if (isPositive)
-            impliesSingle(action(layer, position, task), statePredicate(layer, position + 1, pred))
-          else
-            impliesNot(action(layer, position, task), statePredicate(layer, position + 1, pred))
-      }
-    case _                 => noSupport(FORUMLASNOTSUPPORTED)
-  }
-
-  // maintains the state only if all actions are actually executed
-  private def maintainState(layer: Int, position: Int): Seq[Clause] = {
-    domain.predicates flatMap {
-      predicate =>
-        true :: false :: Nil map {
-          makeItPositive =>
-            val changingActions: Seq[Task] = if (makeItPositive) domain.primitiveChangingPredicate(predicate)._1 else domain.primitiveChangingPredicate(predicate)._2
-            val taskLiterals = changingActions map { action(layer, position, _) } map { (_, true) }
-            Clause(taskLiterals :+(statePredicate(layer, position, predicate), makeItPositive) :+(statePredicate(layer, position + 1, predicate), !makeItPositive))
-        }
-    }
-  }
 
   var numberOfChildrenClauses = 0
 
@@ -280,21 +237,10 @@ case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[
 
   lazy val givenActionsFormula: Seq[Clause] = taskSequence.zipWithIndex map { case (task, index) => Clause(action(K - 1, index, task)) }
 
-  lazy val noAbstractsFormula: Seq[Clause] = Range(0, numberOfActionsPerLayer) flatMap { position => domain.abstractTasks map { task => Clause((action(K - 1, position, task), false)) } }
+  lazy val noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(numberOfActionsPerLayer)
 
-  lazy val stateTransitionFormula: Seq[Clause] = Range(0, numberOfActionsPerLayer) flatMap { position =>
-    primitivesApplicable(K - 1, position) ++ stateChange(K - 1, position) ++ maintainState(K - 1, position)
-  }
+  lazy val stateTransitionFormula: Seq[Clause] = stateTransitionFormulaOfLength(numberOfActionsPerLayer)
 
-  lazy val initialState: Seq[Clause] = {
-    val initiallyTruePredicates = initialPlan.init.substitutedEffects collect { case Literal(pred, true, _) => pred }
-
-    val initTrue = initiallyTruePredicates map { pred => Clause((statePredicate(K - 1, 0, pred), true)) }
-    val initFalse = domain.predicates diff initiallyTruePredicates map { pred => Clause((statePredicate(K - 1, 0, pred), false)) }
-
-    initTrue ++ initFalse
-  }
-
-  lazy val goalState: Seq[Clause] = initialPlan.goal.substitutedPreconditions map { case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, numberOfActionsPerLayer, pred), isPos)) }
+  lazy val goalState: Seq[Clause] = goalStateOfLength(numberOfActionsPerLayer)
 
 }
