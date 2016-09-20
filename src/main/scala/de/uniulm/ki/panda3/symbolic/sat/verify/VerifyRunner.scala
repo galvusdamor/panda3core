@@ -423,7 +423,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
             val orderedMethods =
               domain.methodsForAbstractTasks(myAction) map { _.subPlan } map { plan =>
                 assert(plan.orderingConstraints.graph.allTotalOrderings.get.size == 1)
-                val planTaskOrdering = plan.orderingConstraints.graph.allTotalOrderings.get.head map { _.schema }
+                plan.orderingConstraints.graph.allTotalOrderings.get.head map { _.schema }
               } filter { _ == subTasks }
 
             assert(orderedMethods.nonEmpty, "Node " + v + " has no correctly ordered decomposition")
