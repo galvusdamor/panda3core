@@ -415,16 +415,24 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule start PREPROCESSING
     extra("Initial domain\n" + domain.statisticsString + "\n")
 
-    val compilerToBeApplied: Seq[(DomainTransformer[Unit], String, String)] =
-      (if (preprocessingConfiguration.compileNegativePreconditions) (RemoveNegativePreconditions, "negative preconditions", COMPILE_NEGATIVE_PRECONFITIONS) :: Nil else Nil) ::
-        (if (preprocessingConfiguration.compileOrderInMethods) (TotallyOrderAllMethods, "order in methods", COMPILE_ORDER_IN_METHODS) :: Nil else Nil) ::
+    case class CompilerConfiguration[T](domainTransformer: DomainTransformer[T], information: T, name: String, timingName: String) {
+      def run(domain: Domain, plan: Plan) = domainTransformer.transform(domain, plan, information)
+    }
+
+    val compilerToBeApplied: Seq[CompilerConfiguration[_]] =
+      (if (preprocessingConfiguration.compileNegativePreconditions)
+        CompilerConfiguration(RemoveNegativePreconditions, (), "negative preconditions", COMPILE_NEGATIVE_PRECONFITIONS) :: Nil
+      else Nil) ::
+        (if (preprocessingConfiguration.compileOrderInMethods.isDefined)
+          CompilerConfiguration(TotallyOrderAllMethods, preprocessingConfiguration.compileOrderInMethods.get, "order in methods", COMPILE_ORDER_IN_METHODS) :: Nil
+        else Nil) ::
         Nil flatten
 
     val (compiledDomain, compiledProblem) = compilerToBeApplied.foldLeft((domain, problem))(
-      { case ((dom, prob), (compiler, message, timingString)) =>
+      { case ((dom, prob), cc@CompilerConfiguration(compiler, option, message, timingString)) =>
         timeCapsule start timingString
         info("Compiling " + message + " ... ")
-        val compiled = compiler.transform(dom, prob, ())
+        val compiled = cc.run(dom, prob)
         info("done.\n")
         extra(compiled._1.statisticsString + "\n")
         timeCapsule stop timingString
@@ -508,7 +516,7 @@ object TopDownTDG extends TDGGeneration
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
                                        compileUnitMethods: Boolean,
-                                       compileOrderInMethods: Boolean,
+                                       compileOrderInMethods: Option[TotallyOrderingOption],
                                        liftedReachability: Boolean,
                                        groundedReachability: Boolean,
                                        planningGraph: Boolean,

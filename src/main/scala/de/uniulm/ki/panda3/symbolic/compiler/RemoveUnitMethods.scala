@@ -15,7 +15,7 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
   */
 object RemoveUnitMethods extends DecompositionMethodTransformer[Unit] {
 
-  override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod): Seq[DecompositionMethod] = {
+  override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, unit : Unit): Seq[DecompositionMethod] = {
 
     val (unitMethods, nonUnitMethods) = methods partition { _.subPlan.planStepsWithoutInitGoal.size == 1 }
     val oneStepReplacementRules: Map[Task, Seq[Task]] = unitMethods map { case SimpleDecompositionMethod(abstractTask, subPlan, _) =>
