@@ -160,40 +160,40 @@ class EfficientOrderingTest extends FlatSpec {
     subOrdering.addOrderingConstraint(2, 3)
 
     // replace 1 in the main ordering with the subordering and let 2 be the representative
-    val replaced = mainOrdering.replacePlanStep(1, subOrdering, 2)
+    val replaced = mainOrdering.addPlanStepsFromBase(1, 5, subOrdering.orderingConstraints)
     assert(replaced.isConsistent)
-    assert(replaced.orderingConstraints.length == 9)
+    assert(replaced.orderingConstraints.length == 10)
 
     // direct relations
     assert(replaced.lt(0, 5))
     assert(replaced.lt(0, 6))
-    assert(replaced.lt(0, 8))
-    assert(replaced.lt(5, 1))
-    assert(replaced.lt(6, 1))
-    assert(replaced.lt(1, 7))
-    assert(replaced.lt(7, 2))
+    assert(replaced.lt(0, 9))
+    assert(replaced.lt(5, 7))
+    assert(replaced.lt(6, 7))
+    assert(replaced.lt(7, 8))
     assert(replaced.lt(8, 2))
+    assert(replaced.lt(9, 2))
     assert(replaced.lt(0, 3))
     assert(replaced.lt(0, 2))
 
-    // dome impled ones
+    // dome implied ones
     assert(replaced.lt(5, 4))
     assert(replaced.lt(6, 4))
-    assert(replaced.lt(8, 4))
-    assert(replaced.lt(1, 4))
+    assert(replaced.lt(9, 4))
     assert(replaced.lt(7, 4))
+    assert(replaced.lt(8, 4))
 
     // uncomparable external
-    assert(replaced.tryCompare(1, 3) === None)
+    assert(replaced.tryCompare(7, 3) === None)
     assert(replaced.tryCompare(5, 3) === None)
     assert(replaced.tryCompare(6, 3) === None)
+    assert(replaced.tryCompare(9, 3) === None)
     assert(replaced.tryCompare(8, 3) === None)
-    assert(replaced.tryCompare(7, 3) === None)
     // uncomparable internal
-    assert(replaced.tryCompare(8, 5) === None)
-    assert(replaced.tryCompare(8, 6) === None)
-    assert(replaced.tryCompare(8, 1) === None)
-    assert(replaced.tryCompare(8, 7) === None)
+    assert(replaced.tryCompare(9, 5) === None)
+    assert(replaced.tryCompare(9, 6) === None)
+    assert(replaced.tryCompare(9, 7) === None)
+    assert(replaced.tryCompare(9, 8) === None)
   }
 
   "Derived test" must "be correct " in {
@@ -203,10 +203,10 @@ class EfficientOrderingTest extends FlatSpec {
     ordering.addOrderingConstraint(3, 1)
     ordering.addOrderingConstraint(2, 1)
 
-    assert(!ordering.gt(2,3))
-    assert(!ordering.lt(2,3))
-    assert(!ordering.gt(3,2))
-    assert(!ordering.lt(3,2))
+    assert(!ordering.gt(2, 3))
+    assert(!ordering.lt(2, 3))
+    assert(!ordering.gt(3, 2))
+    assert(!ordering.lt(3, 2))
   }
 }
 

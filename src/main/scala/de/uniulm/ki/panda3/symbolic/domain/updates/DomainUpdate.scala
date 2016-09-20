@@ -34,7 +34,11 @@ case class AddPredicate(newPredicates: Seq[Predicate]) extends DomainUpdate
 
 case class AddVariables(newVariables: Seq[Variable]) extends DomainUpdate
 
-case class ExchangePlanStep(oldPlanStep: PlanStep, newPlanStep: PlanStep) extends DomainUpdate
+case class ExchangePlanSteps(exchangeMap: Map[PlanStep, PlanStep]) extends DomainUpdate
+
+object ExchangePlanSteps {
+  def apply(oldPS: PlanStep, newPS: PlanStep): ExchangePlanSteps = ExchangePlanSteps(Map(oldPS -> newPS))
+}
 
 case class ExchangeSorts(exchangeMap: Map[Sort, Sort]) extends DomainUpdate
 
@@ -50,4 +54,4 @@ case class ExchangeVariable(oldVariable: Variable, newVariable: Variable) extend
 
 case class ExchangeLiteralsByPredicate(replacement: Map[Predicate, (Predicate, Predicate)], invertedTreatment: Boolean) extends DomainUpdate
 
-case class RemoveEffects(unnecessaryEffects: Seq[(Predicate, Boolean)], invertedTreatment : Boolean) extends DomainUpdate
+case class RemoveEffects(unnecessaryEffects: Set[(Predicate, Boolean)], invertedTreatment: Boolean) extends DomainUpdate

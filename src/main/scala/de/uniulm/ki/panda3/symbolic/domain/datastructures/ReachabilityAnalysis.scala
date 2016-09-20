@@ -20,7 +20,7 @@ trait GroundedPrimitiveReachabilityAnalysis extends PrimitiveReachabilityAnalysi
   lazy val reachableLiftedPrimitiveActions: Seq[Task]                 = reachableGroundPrimitiveActions map { _.task } distinct
 }
 
-trait ReachabilityAnalysis extends {
+trait ReachabilityAnalysis extends PrimitiveReachabilityAnalysis{
   val reachableLiftedAbstractActions: Seq[Task]
   val reachableLiftedMethods        : Seq[DecompositionMethod]
 }
@@ -39,7 +39,9 @@ trait GroundedReachabilityAnalysis extends ReachabilityAnalysis with GroundedPri
   lazy val reachableLiftedAbstractActions: Seq[Task]                = reachableGroundAbstractActions map { _.task } distinct
   lazy val reachableLiftedMethods        : Seq[DecompositionMethod] = reachableGroundMethods map { _.decompositionMethod } distinct
 
-  val additionalTaskNeededToGround   : Seq[GroundTask]
+  val additionalTaskNeededToGround: Seq[GroundTask]
+  final lazy val additionalLiteralsNeededToGround: Seq[GroundLiteral] = (additionalTaskNeededToGround flatMap { gt => gt.substitutedPreconditions ++ gt.substitutedEffects } filterNot
+    reachableGroundLiterals.contains) distinct
   val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod]
 }
 
@@ -53,9 +55,11 @@ trait LayeredLiftedPrimitiveReachabilityAnalysis extends PrimitiveReachabilityAn
 }
 
 trait LayeredGroundedPrimitiveReachabilityAnalysis extends GroundedPrimitiveReachabilityAnalysis {
-  override lazy val reachableGroundLiterals: Seq[GroundLiteral] = layer.last._2.toSeq
-
   override lazy val reachableGroundPrimitiveActions: Seq[GroundTask] = layer.last._1.toSeq
+
+  //override lazy val reachableGroundLiterals: Seq[GroundLiteral] = layer.last._2.toSeq
+  override lazy val reachableGroundLiterals: Seq[GroundLiteral] =
+    ((reachableGroundPrimitiveActions flatMap { _.substitutedEffects }) ++ layer.last._2.toSeq) distinct
 
   protected val layer: Seq[(Set[GroundTask], Set[GroundLiteral])]
 }

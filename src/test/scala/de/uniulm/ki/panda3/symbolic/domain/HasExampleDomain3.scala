@@ -23,15 +23,15 @@ import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 // scalastyle:off magic.number
 trait HasExampleDomain3 extends HasExampleDomain2 {
 
-  val abstractTask1: ReducedTask = ReducedTask("abstractTask_1", isPrimitive = false, variableSort1(7) :: Nil, Nil,
+  val abstractTask1: ReducedTask = ReducedTask("abstractTask_1", isPrimitive = false, variableSort1(7) :: Nil, Nil, Nil,
                                                precondition = And[Literal](Literal(predicate1, isPositive = false, variableSort1(7)
                                                  :: Nil) :: Nil), effect = And[Literal](Literal(predicate1, isPositive = true, variableSort1(7) :: Nil) :: Nil))
 
 
   // decomposition method 1 -- the one without causal links
-  val initTaskOfPlanOfDecompositionMethod1: ReducedTask = ReducedTask("initM1", isPrimitive = true, variableSort1(8) :: Nil, Nil, precondition = And[Literal](Nil),
+  val initTaskOfPlanOfDecompositionMethod1: ReducedTask = ReducedTask("initM1", isPrimitive = true, variableSort1(8) :: Nil, Nil, Nil, precondition = And[Literal](Nil),
                                                                       effect = And[Literal](Literal(predicate1, isPositive = false, variableSort1(8) :: Nil) :: Nil))
-  val goalTaskOfPlanOfDecompositionMethod1: ReducedTask = ReducedTask("goalM1", isPrimitive = true, variableSort1(9) :: Nil, Nil,
+  val goalTaskOfPlanOfDecompositionMethod1: ReducedTask = ReducedTask("goalM1", isPrimitive = true, variableSort1(9) :: Nil, Nil, Nil,
                                                                       precondition = And[Literal](Literal(predicate1, isPositive = true, variableSort1(9) :: Nil) :: Nil),
                                                                       effect = And[Literal](Nil))
 
@@ -48,7 +48,7 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
                                                                            cspOfPlanOfDecompositionMethod1, initOfPlanOfDecompositionMethod1, goalOfPlanOfDecompositionMethod1,
                                                                            AllModifications, AllFlaws, Map(), Map())
   /** a decomposition method without causal links */
-  val decompositionMethod1      : SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask1, planOfDecompositionMethod1)
+  val decompositionMethod1      : SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask1, planOfDecompositionMethod1, "some method")
 
 
   // decomposition method 2 -- the one with causal links
@@ -61,7 +61,7 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
                                                       Map())
 
   /** a decomposition method with causal links */
-  val decompositionMethod2: SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask1, planOfDecompositionMethod2)
+  val decompositionMethod2: SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask1, planOfDecompositionMethod2, "some method")
 
 
   val domain3: Domain = Domain(sort1 :: Nil, predicate1 :: Nil, abstractTask1 :: task1 :: init :: goal1 :: Nil, decompositionMethod1 :: decompositionMethod2 :: Nil, Nil)

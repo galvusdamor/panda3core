@@ -9,7 +9,7 @@ import de.uniulm.ki.util.HashMemo
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class Constant(name: String) extends Value with PrettyPrintable with HashMemo{
+case class Constant(name: String) extends Value with PrettyPrintable with HashMemo with Ordered[Constant] {
   override def update(domainUpdate: DomainUpdate): Constant = this
 
   /** returns a short information about the object */
@@ -22,4 +22,6 @@ case class Constant(name: String) extends Value with PrettyPrintable with HashMe
   override def longInfo: String = name
 
   override val isConstant: Boolean = true
+
+  override def compare(that: Constant): Int = this.name compare that.name
 }

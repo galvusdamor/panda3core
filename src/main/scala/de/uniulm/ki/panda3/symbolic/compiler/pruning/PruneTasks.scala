@@ -15,7 +15,8 @@ object PruneTasks extends DomainTransformer[Set[Task]] {
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
   override def transform(domain: Domain, plan: Plan, removedTasks: Set[Task]): (Domain, Plan) = {
-    val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks filterNot removedTasks.contains, domain.decompositionMethods, domain.decompositionAxioms)
+    val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks filterNot removedTasks.contains,
+                               domain.decompositionMethods filterNot { m => removedTasks exists { rt => m containsTask rt } }, domain.decompositionAxioms)
 
     (reducedDomain, plan)
   }
@@ -25,8 +26,9 @@ object PruneUselessAbstractTasks extends DomainTransformer[Unit] {
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
   override def transform(domain: Domain, plan: Plan, unit: Unit): (Domain, Plan) = {
-    val uselessAbstractTasks = (domain.abstractTasks filterNot { at => domain.decompositionMethods exists { _.abstractTask == at } }).toSet
-    val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks filterNot uselessAbstractTasks.contains, domain.decompositionMethods, domain.decompositionAxioms)
+    val uselessAbstractTasks = (domain.abstractTasks filterNot { at => domain.methodsForAbstractTasks contains at }).toSet
+    val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks filterNot uselessAbstractTasks.contains,
+                               domain.decompositionMethods filterNot { m => uselessAbstractTasks exists { rt => m containsTask rt } }, domain.decompositionAxioms)
     (reducedDomain, plan)
   }
 }

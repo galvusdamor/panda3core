@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE problem SYSTEM "problem-2.0.dtd">
+<problem domain="SmartPhone" name="OrganizeMeeting_Small" type="pure-hierarchical">
+   <constantDeclaration name="agenda" sort="Agenda"/>
+   <constantDeclaration name="appointmentForMeeting" sort="Appointment"/>
+   <constantDeclaration name="contact1" sort="Contact"/>
+   <constantDeclaration name="contact2" sort="Contact"/>
+   <constantDeclaration name="headOfDepartment" sort="Person"/>
+   <constantDeclaration name="peer1" sort="Person"/>
+   <constantDeclaration name="headOfDepartmentEMailAddress"
+      sort="EMailAddress"/>
+   <constantDeclaration name="peer1EMailAddress" sort="EMailAddress"/>
+   <constantDeclaration name="dateForMeeting" sort="Date"/>
+   <constantDeclaration name="email1" sort="EMail"/>
+   <constantDeclaration name="email2" sort="EMail"/>
+   <constantDeclaration name="account1" sort="EMailAccount"/>
+   <constantDeclaration name="taskCreateHandout" sort="Task"/>
+   <constantDeclaration name="room101" sort="Location"/>
+   <constantDeclaration name="headOfDepartmentPicture" sort="Picture"/>
+   <constantDeclaration name="peer1Picture" sort="Picture"/>
+   <initialState>
+      <fact relation="associated_Contact">
+         <constant name="contact1"/>
+         <constant name="headOfDepartment"/>
+      </fact>
+      <fact relation="associated_Contact">
+         <constant name="contact2"/>
+         <constant name="peer1"/>
+      </fact>
+      <fact relation="associated_Picture">
+         <constant name="contact1"/>
+         <constant name="headOfDepartmentPicture"/>
+      </fact>
+      <fact relation="associated_Picture">
+         <constant name="contact2"/>
+         <constant name="peer1Picture"/>
+      </fact>
+      <fact relation="created">
+         <constant name="contact1"/>
+      </fact>
+      <fact relation="haveInformation_Contactable">
+         <constant name="headOfDepartment"/>
+         <constant name="headOfDepartmentEMailAddress"/>
+      </fact>
+      <fact relation="haveInformation_Contactable">
+         <constant name="peer1"/>
+         <constant name="peer1EMailAddress"/>
+      </fact>
+      <fact relation="haveInformation_Regular">
+         <constant name="agenda"/>
+      </fact>
+      <fact relation="haveInformation_Regular">
+         <constant name="dateForMeeting"/>
+      </fact>
+      <fact relation="haveInformation_Regular">
+         <constant name="headOfDepartmentPicture"/>
+      </fact>
+      <fact relation="haveInformation_Regular">
+         <constant name="peer1Picture"/>
+      </fact>
+      <fact relation="haveInformation_Regular">
+         <constant name="room101"/>
+      </fact>
+      <fact relation="inMode_Home"/>
+      <fact relation="inUse">
+         <constant name="contact1"/>
+      </fact>
+      <fact relation="inUse">
+         <constant name="contact2"/>
+      </fact>
+      <fact relation="isFavourite">
+         <constant name="contact1"/>
+      </fact>
+      <fact relation="isFavourite">
+         <constant name="contact2"/>
+      </fact>
+      <fact relation="selected">
+         <constant name="account1"/>
+      </fact>
+      <fact relation="created">
+         <constant name="contact2"/>
+      </fact>
+   </initialState>
+   <goals>
+      <fact relation="hasInformation_Regular">
+         <constant name="headOfDepartment"/>
+         <constant name="dateForMeeting"/>
+      </fact>
+      <fact relation="hasInformation_Regular">
+         <constant name="peer1"/>
+         <constant name="dateForMeeting"/>
+      </fact>
+      <fact relation="hasInformation_Regular">
+         <constant name="headOfDepartment"/>
+         <constant name="room101"/>
+      </fact>
+      <fact relation="hasInformation_Regular">
+         <constant name="peer1"/>
+         <constant name="room101"/>
+      </fact>
+      <fact relation="hasInformation_Regular">
+         <constant name="headOfDepartment"/>
+         <constant name="agenda"/>
+      </fact>
+      <fact relation="hasInformation_Regular">
+         <constant name="peer1"/>
+         <constant name="agenda"/>
+      </fact>
+      <fact relation="created">
+         <constant name="appointmentForMeeting"/>
+      </fact>
+      <fact relation="created">
+         <constant name="taskCreateHandout"/>
+      </fact>
+   </goals>
+   <initialTaskNetwork>
+      <taskNode name="attachMultipleInformationToEmail1" taskSchema="attachMultipleInformation">
+         <variableDeclaration
+            name="attachMultipleInformationToEmail1_message" sort="Message"/>
+      </taskNode>
+	  <taskNode name="attachMultipleInformationToEmail2" taskSchema="attachMultipleInformation">
+         <variableDeclaration
+            name="attachMultipleInformationToEmail2_message" sort="Message"/>
+      </taskNode>
+      <taskNode name="sendEmail1ToHeadOfDepartment" taskSchema="send_EMail">
+         <variableDeclaration name="sendEmail1ToHeadOfDepartment_receipient" sort="Contactable"/>
+         <variableDeclaration name="sendEmail1ToHeadOfDepartment_email" sort="EMail"/>
+      </taskNode>
+      <taskNode name="sendEmail2ToPeer1" taskSchema="send_EMail">
+         <variableDeclaration name="sendEmail2ToPeer1_receipient" sort="Contactable"/>
+         <variableDeclaration name="sendEmail2ToPeer1_email" sort="EMail"/>
+      </taskNode>
+      <taskNode name="create_AppointmentForMeeting" taskSchema="create_Appointment">
+         <variableDeclaration name="create_AppointmentForMeeting_appointment" sort="Appointment"/>
+         <variableDeclaration name="create_AppointmentForMeeting_location" sort="Location"/>
+         <variableDeclaration name="create_AppointmentForMeeting_date" sort="Date"/>
+      </taskNode>
+      <taskNode name="create_HandoutForMeeting" taskSchema="create_Task">
+         <variableDeclaration name="create_HandoutForMeeting_task" sort="Task"/>
+      </taskNode>
+      <taskNode name="extractsMultipleInformation_headOfDepartment" taskSchema="extractsMultipleInformation">
+         <variableDeclaration
+            name="extractsMultipleInformation_headOfDepartment_contactable" sort="Contactable"/>
+         <variableDeclaration
+            name="extractsMultipleInformation_headOfDepartment_message" sort="Message"/>
+      </taskNode>
+      <taskNode name="extractsMultipleInformation_peer1" taskSchema="extractsMultipleInformation">
+         <variableDeclaration
+            name="extractsMultipleInformation_peer1_contactable" sort="Contactable"/>
+         <variableDeclaration
+            name="extractsMultipleInformation_peer1_message" sort="Message"/>
+      </taskNode>
+      <orderingConstraint
+         predecessor="attachMultipleInformationToEmail1" successor="sendEmail1ToHeadOfDepartment"/>
+      <orderingConstraint
+         predecessor="attachMultipleInformationToEmail2" successor="sendEmail2ToPeer1"/>
+      <orderingConstraint predecessor="sendEmail1ToHeadOfDepartment" successor="extractsMultipleInformation_headOfDepartment"/>
+      <orderingConstraint predecessor="sendEmail2ToPeer1" successor="extractsMultipleInformation_peer1"/>
+      <valueRestriction type="eq" variable="attachMultipleInformationToEmail1_message">
+         <constant name="email1"/>
+      </valueRestriction>
+	  <valueRestriction type="eq" variable="attachMultipleInformationToEmail2_message">
+         <constant name="email2"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="sendEmail1ToHeadOfDepartment_email">
+         <constant name="email1"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="sendEmail2ToPeer1_email">
+         <constant name="email2"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="sendEmail1ToHeadOfDepartment_receipient">
+         <constant name="headOfDepartment"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="sendEmail2ToPeer1_receipient">
+         <constant name="peer1"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="create_AppointmentForMeeting_appointment">
+         <constant name="appointmentForMeeting"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="create_AppointmentForMeeting_date">
+         <constant name="dateForMeeting"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="create_AppointmentForMeeting_location">
+         <constant name="room101"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="create_HandoutForMeeting_task">
+         <constant name="taskCreateHandout"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="extractsMultipleInformation_headOfDepartment_contactable">
+         <constant name="headOfDepartment"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="extractsMultipleInformation_peer1_contactable">
+         <constant name="peer1"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="extractsMultipleInformation_headOfDepartment_message">
+         <constant name="email1"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="extractsMultipleInformation_peer1_message">
+         <constant name="email2"/>
+      </valueRestriction>
+      <causalLink
+         consumer="extractsMultipleInformation_headOfDepartment" producer="sendEmail1ToHeadOfDepartment">
+         <atomic relation="hasReceived">
+            <constant name="headOfDepartment"/>
+            <constant name="email1"/>
+         </atomic>
+      </causalLink>
+      <causalLink consumer="extractsMultipleInformation_peer1" producer="sendEmail2ToPeer1">
+         <atomic relation="hasReceived">
+            <constant name="peer1"/>
+            <constant name="email2"/>
+         </atomic>
+      </causalLink>
+   </initialTaskNetwork>
+</problem>

@@ -1,9 +1,9 @@
 package de.uniulm.ki.panda3.symbolic.plan.element
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
-import de.uniulm.ki.panda3.symbolic.csp.{TotalSubstitution, CSP, PartialSubstitution}
-import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
-import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, ReducedTask, DomainUpdatable, Task}
+import de.uniulm.ki.panda3.symbolic.csp._
+import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeTask, ExchangePlanSteps, DomainUpdate}
+import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, DomainUpdatable, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.util.HashMemo
@@ -59,7 +59,11 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
   private def substitute(literal: Literal): Literal = schema.substitute(literal, arguments)
 
   override def update(domainUpdate: DomainUpdate): PlanStep = domainUpdate match {
-    case ExchangePlanStep(oldps, newps) => if (oldps == this) newps else this
+    case ExchangePlanSteps(exchangeMap) => if (exchangeMap contains this) exchangeMap(this) else this
+    case ExchangeTask(exchangeMap)      => if (exchangeMap contains schema) {
+      val additionalParameters = exchangeMap(schema).parameters.drop(arguments.length) map { v => v.copy(name = v.name + "_ps" + id) }
+      PlanStep(id, exchangeMap(schema), arguments ++ additionalParameters)
+    } else this
     case _                              => PlanStep(id, schema.update(domainUpdate), arguments map { _.update(domainUpdate) })
   }
 
@@ -83,9 +87,18 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
 /**
   * A ground task is basically a planstep without an id.
   */
-case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo with PrettyPrintable{
+case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo with Ordered[GroundTask] with PrettyPrintable {
   assert(task.parameters.size == arguments.size)
-  task.parameters.zipWithIndex foreach { case (p, i) => assert(p.sort.elements.contains(arguments(i))) }
+  task.parameters.zipWithIndex foreach { case (p, i) =>
+    if (!p.sort.elements.contains(arguments(i))) {
+      println(p.sort.elements)
+      println(arguments(i))
+    }
+    assert(p.sort.elements.contains(arguments(i)))
+  }
+
+  // the arguments must be allowed
+  assert(task.areParametersAllowed(arguments))
 
   private lazy val parameterSubstitution: TotalSubstitution[Variable, Constant] = TotalSubstitution(task.parameters, arguments)
 
@@ -95,6 +108,7 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
   }
 
   lazy val substitutedPreconditionsSet: Set[GroundLiteral] = substitutedPreconditions.toSet
+  lazy val substitutedEffectSet       : Set[GroundLiteral] = substitutedEffects.toSet
 
   /** returns a version of the effects */
   lazy val substitutedEffects: Seq[GroundLiteral] = task match {
@@ -102,11 +116,22 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
     case _                    => noSupport(FORUMLASNOTSUPPORTED)
   }
 
+  lazy val substitutedDelEffects: Seq[GroundLiteral] = substitutedEffects filterNot { _.isPositive }
+
+  lazy val substitutedAddEffects: Seq[GroundLiteral] = substitutedEffects filter { _.isPositive }
+
+  override def compare(that: GroundTask): Int = {
+    this.task compare that.task match {
+      case 0 => ((this.arguments zip that.arguments) map { case (x, y) => x compare y }) find ((i: Int) => i != 0) getOrElse (0)
+      case _ => this.task compare that.task
+    }
+  }
+
   /** returns a string by which this object may be referenced */
-  override def shortInfo: String = task.name
+  override def shortInfo: String = task.name + (arguments map { _.name }).mkString("(", ",", ")")
 
   /** returns a string that can be utilized to define the object */
-  override def mediumInfo: String = shortInfo + (arguments map {_.name}).mkString("(",",",")")
+  override def mediumInfo: String = shortInfo
 
   /** returns a detailed information about the object */
   override def longInfo: String = mediumInfo
@@ -115,7 +140,7 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
 
 case class PartiallyInstantiatedTask(task: Task, arguments: Map[Variable, Constant]) extends HashMemo {
 
-  lazy val allInstantiations: Seq[GroundTask] = Sort.allPossibleInstantiationsWithVariables(task.parameters filterNot  { arguments.contains } map { v => (v, v.sort.elements) }) map {
+  lazy val allInstantiations: Seq[GroundTask] = Sort.allPossibleInstantiationsWithVariables(task.parameters filterNot { arguments.contains } map { v => (v, v.sort.elements) }) map {
     case newlyBoundVariables =>
       val allVariablesMap = arguments ++ newlyBoundVariables
       GroundTask(task, task.parameters map allVariablesMap)

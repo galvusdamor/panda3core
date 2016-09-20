@@ -1,0 +1,24 @@
+(define (domain domain-06)
+
+  ; this domain tests whether the planner and the PDDL parser can cope with
+  ; the fact that there is a sort (namely B) for which there are no objects in
+  ; the problem description. However, the corresponding problem is solvable!
+
+  (:requirements :typing :action-costs :hierachie )
+
+  (:types
+    A - Object
+    B - Object
+  )
+
+  (:predicates
+    (dummyPredicate)
+  )
+
+  (:action dummyAction
+    :parameters ()
+    :precondition (and (dummyPredicate))
+    :effect (and (not (dummyPredicate)))
+  )
+
+)

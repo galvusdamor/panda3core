@@ -7,6 +7,9 @@ import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraph}
 
+import scala.annotation.elidable
+import scala.annotation.elidable._
+
 /**
   * Planning domains contain the overall description of a planning problem.
   * They are composed of several list of things that exist in the planning domain.
@@ -30,27 +33,59 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                   decompositionAxioms: Seq[DecompositionAxiom]) extends DomainUpdatable {
 
   // sanity check for the sorts
-  sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
+  @elidable(ASSERTION)
+  val assertion = {
+    sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
+    decompositionMethods foreach { dm =>
+      assert(tasks contains dm.abstractTask)
+      dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task => assert(tasks contains task) }
+    }
 
+    tasks foreach { t => (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map { _._1 } foreach { p => assert(predicates contains p) } }
+  }
 
-  lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph        = TaskSchemaTransitionGraph(this)
-  lazy val constants                : Seq[Constant]                    = (sorts flatMap { _.elements }).distinct
-  lazy val sortGraph                : DirectedGraph[Sort]              = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
-  lazy val producersOf              : Map[Predicate, Seq[ReducedTask]] = (predicates map { pred => (pred, tasks collect { case t: ReducedTask => t } filter {
-    _.effect.conjuncts exists { _.predicate == pred }
-  })
-  }).toMap
-  lazy val consumersOf              : Map[Predicate, Seq[ReducedTask]] = (predicates map { pred => (pred, tasks collect { case t: ReducedTask => t } filter {
+  lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
+  lazy val constants                : Seq[Constant]             = (sorts flatMap { _.elements }).distinct
+  lazy val sortGraph                : DirectedGraph[Sort]       = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
+  lazy val taskSet                  : Set[Task]                 = tasks.toSet
+
+  // producer and consumer
+  lazy val producersOf      : Map[Predicate, Seq[ReducedTask]]                     = producersOfPosNeg map { case (a, (b, c)) => a -> (b ++ c).toSeq }
+  lazy val producersOfPosNeg: Map[Predicate, (Set[ReducedTask], Set[ReducedTask])] =
+    (tasks collect { case t: ReducedTask => t } flatMap { t => t.effect.conjuncts map { t -> _ } } groupBy { _._2.predicate } map { case (p, ts) =>
+      p -> (ts partition { _._2.isPositive } match {case (a, b) => (a map { _._1 } toSet, b map { _._1 } toSet)})
+    }).withDefaultValue((Set[ReducedTask](), Set[ReducedTask]()))
+
+  lazy val primitiveChangingPredicate: Map[Predicate, (Seq[ReducedTask], Seq[ReducedTask])] = {
+    assert(constants.isEmpty, "Domain must be ground")
+    predicates map { pred =>
+      val adding = producersOfPosNeg(pred)._1 filter { _.isPrimitive }
+      val deletingButNotAdding = producersOfPosNeg(pred)._2 diff adding filter { _.isPrimitive }
+      pred ->(adding toSeq, deletingButNotAdding toSeq)
+    }
+  } toMap
+
+  lazy val consumersOf: Map[Predicate, Seq[ReducedTask]] = (predicates map { pred => (pred, tasks collect { case t: ReducedTask => t } filter {
     _.precondition.conjuncts exists { _.predicate == pred }
   })
   }).toMap
 
+  lazy val primitiveConsumerOf: Map[Predicate, Seq[ReducedTask]] = consumersOf map { case (pred, cons) => pred -> cons.filter { _.isPrimitive } }
 
   lazy val primitiveTasks: Seq[Task] = tasks filter { _.isPrimitive }
   lazy val abstractTasks : Seq[Task] = tasks filterNot { _.isPrimitive }
 
   lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
   lazy val allGroundedAbstractTasks : Seq[GroundTask] = abstractTasks flatMap { _.instantiateGround }
+
+  lazy val methodsWithIndexForAbstractTasks: Map[Task, Seq[(DecompositionMethod, Int)]] = decompositionMethods.zipWithIndex.groupBy(_._1.abstractTask)
+  lazy val methodsForAbstractTasks         : Map[Task, Seq[DecompositionMethod]]        = methodsWithIndexForAbstractTasks map { case (a, b) => a -> (b map { _._1 }) }
+
+
+  lazy val minimumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min
+  lazy val maximumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
+  lazy val isGround         : Boolean = predicates forall { _.argumentSorts.isEmpty }
+  lazy val isTotallyOrdered : Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
 
   /**
     * Determines the sort a constant originally belonged to.
@@ -114,7 +149,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     }
 
     val allSorts = sorts ++ taskSorts ++ parameterConstraintSorts ++ planVariableSorts ++ planConstraintSorts
-    (allSorts filter sorts.contains).distinct
+    allSorts.distinct
   }
 
   override def update(domainUpdate: DomainUpdate): Domain = domainUpdate match {

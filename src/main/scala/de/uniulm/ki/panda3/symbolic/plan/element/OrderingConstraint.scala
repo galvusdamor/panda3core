@@ -22,4 +22,6 @@ object OrderingConstraint {
     (steps flatMap { ps => OrderingConstraint(first, ps) :: OrderingConstraint(ps, last) :: Nil }) :+ OrderingConstraint(first, last)
 
   def allAfter(first: PlanStep, steps: PlanStep*): Seq[OrderingConstraint] = steps map { OrderingConstraint(first, _) }
+
+  def allBefore(first: PlanStep, steps: PlanStep*): Seq[OrderingConstraint] = steps map { OrderingConstraint(_, first) }
 }

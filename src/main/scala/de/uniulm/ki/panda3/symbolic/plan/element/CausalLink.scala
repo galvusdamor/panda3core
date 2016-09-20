@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.plan.element
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
-import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangePlanSteps, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.logic.Literal
 
 /**
@@ -19,7 +19,8 @@ case class CausalLink(producer: PlanStep, consumer: PlanStep, condition: Literal
   def contains(ps: PlanStep): Boolean = ps == producer || ps == consumer
 
   override def update(domainUpdate: DomainUpdate): CausalLink = domainUpdate match {
-    case ExchangePlanStep(oldPS, newPS) => CausalLink(if (oldPS == producer) newPS else producer, if (oldPS == consumer) newPS else consumer, condition)
+    case ExchangePlanSteps(exchangeMap) => CausalLink(if (exchangeMap contains producer) exchangeMap(producer) else producer,
+                                                      if (exchangeMap contains consumer) exchangeMap(consumer) else consumer, condition)
     case _                              => CausalLink(producer.update(domainUpdate), consumer.update(domainUpdate), condition.update(domainUpdate))
   }
 

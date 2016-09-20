@@ -1,0 +1,45 @@
+(define (domain transport)
+  (:requirements :typing :action-costs :hierachie )
+  (:types
+        dummyType - object
+  )
+
+  (:predicates
+     (a)
+     (b)
+     (c)
+     (d)
+  )
+
+  (:action X
+    :parameters ( )
+    :precondition (and
+        (a)
+      )
+    :effect (and
+        (b)
+      )
+  )
+
+  (:action Y
+    :parameters ( )
+    :precondition (and
+        (a)
+      )
+    :effect (and
+        (c)
+        (not (a))
+      )
+  )
+
+  (:action Z
+    :parameters ( )
+    :precondition (and
+        (b)
+        (c)
+      )
+    :effect (and
+        (d)
+      )
+  )
+)

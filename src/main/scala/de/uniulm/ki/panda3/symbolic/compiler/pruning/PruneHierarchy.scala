@@ -12,7 +12,7 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 object PruneInconsistentDecompositionMethods extends DomainTransformer[Unit] {
 
   override def transform(domain: Domain, plan: Plan, unit: Unit): (Domain, Plan) = {
-    val validDecompositionMethods = domain.decompositionMethods filter { _.subPlan.planStepsWithoutInitGoal map { _.schema } forall domain.tasks.contains }
+    val validDecompositionMethods = domain.decompositionMethods filter { _.subPlan.planStepsWithoutInitGoal map { _.schema } forall domain.taskSet.contains }
     val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks, validDecompositionMethods, domain.decompositionAxioms)
     (reducedDomain, plan)
   }
@@ -36,7 +36,12 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
       if (withoutAbstractTasks._1 == curDomain) curDomain else propagateInHierarchy(withoutAbstractTasks._1)
     }
 
-    (propagateInHierarchy(initialPruning._1), plan)
+    val propagated = propagateInHierarchy(initialPruning._1)
+
+    // all abstract tasks should have at least one method
+    assert(propagated.abstractTasks forall { at => propagated.methodsForAbstractTasks(at).nonEmpty })
+
+    (propagated, plan)
   }
 }
 

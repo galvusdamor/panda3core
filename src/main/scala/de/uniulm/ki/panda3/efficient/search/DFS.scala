@@ -29,7 +29,7 @@ object DFS {
     val parsedProblem = domAndInitialPlan._2.update(sortExpansion)
 
     // apply the CWA
-    val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem, ())
+    val cwaApplied = ClosedWorldAssumption.transform(parsedDom, parsedProblem)
     val flattened = ToPlainFormulaRepresentation.transform(cwaApplied._1, cwaApplied._2, ())
 
     // wrap everything into the efficient Datastructures

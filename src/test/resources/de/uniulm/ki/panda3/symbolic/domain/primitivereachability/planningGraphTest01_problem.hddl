@@ -1,0 +1,17 @@
+(define (problem transport1)
+ (:domain transport)
+ (:objects
+  dummyObject - dummyType
+ )
+ (:htn
+  :tasks ( )
+  :ordering ( )
+  :constraints ( )
+ )
+ (:init
+  (a)
+  )
+ (:goal (and
+  (d)
+ ))
+)

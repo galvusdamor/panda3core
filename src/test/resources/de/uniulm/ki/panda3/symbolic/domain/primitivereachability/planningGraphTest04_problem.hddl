@@ -1,0 +1,22 @@
+(define (problem problem-06)
+
+  (:domain domain-06)
+
+  (:objects
+    a b - A
+  )
+  (:htn
+    :tasks ( )
+    :ordering ( )
+    :constraints ( )
+  )
+
+  (:init
+    (dummyPredicate)
+  )
+
+  (:goal
+    (not (dummyPredicate))
+  )
+
+)

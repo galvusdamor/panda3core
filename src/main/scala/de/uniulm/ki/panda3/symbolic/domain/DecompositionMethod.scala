@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
-import de.uniulm.ki.panda3.symbolic.csp.Equal
+import de.uniulm.ki.panda3.symbolic.csp.{NotOfSort, OfSort, NotEqual, Equal}
 import de.uniulm.ki.panda3.symbolic.domain.updates.{RemoveEffects, ExchangeLiteralsByPredicate, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -18,6 +18,7 @@ trait DecompositionMethod extends DomainUpdatable {
 
   val abstractTask: Task
   val subPlan     : Plan
+  val name        : String
 
   assert(!abstractTask.isPrimitive)
   (abstractTask, subPlan.init.schema) match {
@@ -41,6 +42,9 @@ trait DecompositionMethod extends DomainUpdatable {
   } flatMap { _.effect.conjuncts map { _.predicate } }
 
   override def update(domainUpdate: DomainUpdate): DecompositionMethod
+
+  def containsTask(task: Task): Boolean =
+    task == abstractTask || (subPlan.planSteps exists { _.schema == task })
 }
 
 
@@ -49,64 +53,134 @@ trait DecompositionMethod extends DomainUpdatable {
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan) extends DecompositionMethod with HashMemo {
+// scalastyle:off covariant.equals
+case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: String) extends DecompositionMethod with HashMemo {
+
+  abstractTask match {
+    case ReducedTask(_, _, _, _, _, prec, eff) =>
+      // check preconditions
+      prec.conjuncts foreach { case l@Literal(pred, isPos, _) =>
+        val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
+          case ReducedTask(_, _, _, _, _, tPre, _) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
+          case _                                   => false
+        }
+        assert(canBeInherited, "Method " + name + "' subplan does not contain a precondition able to inherit " + l.shortInfo)
+      }
+
+      // check effects
+      eff.conjuncts foreach { case l@Literal(pred, isPos, _) =>
+        val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
+          case ReducedTask(_, _, _, _, _, _, tEff) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
+          case _                                   => false
+        }
+        assert(canBeInherited, "Method " + name + "' subplan does not contain a effect able to inherit " + l.shortInfo)
+      }
+    case _                                     =>
+  }
+
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = domainUpdate match {
-    case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true))
-    case RemoveEffects(effToRemove, false)       => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update RemoveEffects(effToRemove, invertedTreatment = true))
-    case _                                       => SimpleDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate))
+    case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
+                                                                              name)
+    case RemoveEffects(toRemove, false)          => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update RemoveEffects(toRemove, invertedTreatment = true), name)
+    case _                                       => SimpleDecompositionMethod(abstractTask.update(domainUpdate), subPlan.update(domainUpdate), name)
   }
 
 
   def groundWithAbstractTaskGrounding(groundedAbstractTask: GroundTask): Seq[GroundedDecompositionMethod] = {
-    val bindArguments = groundedAbstractTask.task.parameters zip groundedAbstractTask.arguments map { case (v, c) => Equal(v, c) }
-    val boundCSP = subPlan.variableConstraints.addConstraints(bindArguments)
-    val unboundVariables = boundCSP.variables filter { v => boundCSP.getRepresentative(v) match {
-      case c: Constant    => false
-      case repV: Variable => repV == v
-    }
-    }
-    // try to bind all variables to their
-    val unboundVariablesWithRemainingValues: Seq[(Variable, Seq[Constant])] = (unboundVariables map { v => (v, boundCSP.reducedDomainOf(v)) }).toSeq
-    val allInstantiations = Sort allPossibleInstantiationsWithVariables unboundVariablesWithRemainingValues
+    val initialMapping = groundedAbstractTask.task.parameters zip groundedAbstractTask.arguments toMap
 
-    val methodInstantiations: Seq[Map[Variable, Constant]] = allInstantiations map { instantiation =>
-      val additionalConstraints = instantiation map { case (v, c) => Equal(v, c) }
-      val innerCSP = boundCSP addConstraints additionalConstraints
-      if (innerCSP.isSolvable contains false) None
-      else Some((innerCSP.variables map { v => v -> innerCSP.getRepresentative(v).asInstanceOf[Constant] }).toMap)
-    } filter { _.isDefined } map { _.get }
+    val nonMappedVariables = subPlan.variableConstraints.variables filterNot initialMapping.contains
 
-    methodInstantiations map { args => GroundedDecompositionMethod(this, args) }
+
+    def expandGrounding(mapping: Map[Variable, Constant], remainingVars: Seq[Variable]): Option[(Map[Variable, Constant], Seq[Variable])] = {
+      val newlyBoundVariables = subPlan.variableConstraints.constraints collect {
+        case Equal(var1, var2: Variable) if mapping.contains(var1) && !mapping.contains(var2) => var2 -> mapping(var1)
+        case Equal(var1, var2: Variable) if mapping.contains(var2) && !mapping.contains(var1) => var1 -> mapping(var2)
+        case Equal(vari, const: Constant) if !mapping.contains(vari)                          => vari -> const
+      } toMap
+
+      if (newlyBoundVariables.isEmpty)
+        Some(mapping, remainingVars)
+      else {
+        val stillUnbound = remainingVars filterNot newlyBoundVariables.contains
+
+        if (newlyBoundVariables forall { case (v, c) => v.sort.elements contains c })
+          expandGrounding(mapping ++ newlyBoundVariables, stillUnbound)
+        else None
+      }
+    }
+
+    expandGrounding(initialMapping, nonMappedVariables.toSeq) match {
+      case None                                      => Nil
+      case Some((expandedMapping, unboundVariables)) =>
+        val allInstantiations = Sort allPossibleInstantiationsWithVariables (unboundVariables map { v => (v, v.sort.elements) })
+
+        def areParametersAllowed(instantiation: Map[Variable, Constant]): Boolean = subPlan.variableConstraints.constraints forall {
+          case Equal(var1, var2: Variable)     => instantiation(var1) == instantiation(var2)
+          case Equal(vari, const: Constant)    => instantiation(vari) == const
+          case NotEqual(var1, var2: Variable)  => instantiation(var1) != instantiation(var2)
+          case NotEqual(vari, const: Constant) => instantiation(vari) != const
+          case OfSort(vari, sort)              => sort.elements contains instantiation(vari)
+          case NotOfSort(vari, sort)           => !(sort.elements contains instantiation(vari))
+        }
+
+
+        val methodInstantiations: Seq[Map[Variable, Constant]] = allInstantiations map { instantiation => expandedMapping ++ instantiation } filter areParametersAllowed
+
+        // only take those methods that inherit correctly
+        methodInstantiations map { args => GroundedDecompositionMethod(this, args) } filter { gm =>
+          val groundedAbstractTask = gm.groundAbstractTask
+          val groundedSubtasks = gm.subPlanGroundedTasksWithoutInitAndGoal
+
+          val inheritPreconditions = groundedAbstractTask.substitutedPreconditions forall { prec => groundedSubtasks exists { sub => sub.substitutedPreconditionsSet contains prec } }
+          val inheritEffects = groundedAbstractTask.substitutedEffects forall { eff => groundedSubtasks exists { sub => sub.substitutedEffectSet contains eff } }
+
+          inheritPreconditions && inheritEffects
+        }
+    }
   }
 
-
+  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[SimpleDecompositionMethod] && this.hashCode == o.hashCode()) super.equals(o) else false
 }
+
+// scalastyle:on
 
 /**
   * In addition to a plan, SHOPs (and SHOP2s) decomposition methods also may have preconditions. For the semantics of these preconditions see the SHOP/SHOP2 papers
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula) extends DecompositionMethod with HashMemo {
+case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula, methodEffect: Formula, name: String) extends DecompositionMethod with HashMemo {
   override def update(domainUpdate: DomainUpdate): SHOPDecompositionMethod = domainUpdate match {
     case ExchangeLiteralsByPredicate(map, false) =>
-      SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true), methodPrecondition update domainUpdate)
-    case _                                       => SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update domainUpdate, methodPrecondition update domainUpdate)
+      SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
+                              methodPrecondition update domainUpdate, methodEffect update domainUpdate, name)
+    case _                                       => SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update domainUpdate,
+                                                                            methodPrecondition update domainUpdate, methodEffect update domainUpdate, name)
   }
 }
 
 case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends HashMemo with PrettyPrintable {
-  val groundAbstractTask                    : GroundTask      = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
-  val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map { case PlanStep(_, schema, arguments) =>
-    GroundTask(schema, arguments map variableBinding)
-  }
+  val groundAbstractTask: GroundTask = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
+
+  lazy val subPlanPlanStepsToGrounded: Map[PlanStep, GroundTask] = decompositionMethod.subPlan.planSteps map { case ps@PlanStep(_, schema, arguments) =>
+    ps -> GroundTask(schema, arguments map variableBinding)
+  } toMap
+
+  lazy val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map subPlanPlanStepsToGrounded
+
 
   /** returns a string by which this object may be referenced */
-  override def shortInfo: String = "method-" + decompositionMethod.abstractTask.name
+  override def shortInfo: String = "method-" + decompositionMethod.name
 
   /** returns a string that can be utilized to define the object */
-  override def mediumInfo: String = ???
+  override def mediumInfo: String = shortInfo + " of " + decompositionMethod.abstractTask.name
 
   /** returns a detailed information about the object */
-  override def longInfo: String = ???
+  override def longInfo: String = mediumInfo
+
+  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[GroundedDecompositionMethod] && this.hashCode == o.hashCode()) {
+    val that = o.asInstanceOf[GroundedDecompositionMethod]
+    this.decompositionMethod.equals(that.decompositionMethod) && this.variableBinding == that.variableBinding
+  } else false
 }

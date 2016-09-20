@@ -2,9 +2,9 @@ package de.uniulm.ki.panda3.symbolic.plan.ordering
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
-import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangePlanStep}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangePlanSteps, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
-import de.uniulm.ki.util.HashMemo
+import de.uniulm.ki.util.{DirectedGraphWithInternalMapping, SimpleDirectedGraph, DirectedGraph, HashMemo}
 
 /**
   *
@@ -79,7 +79,7 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
   def replacePlanStep(psOld: PlanStep, psNew: PlanStep): TaskOrdering =
     if (!(tasks contains psOld)) this
     else {
-      val newOrdering = TaskOrdering(originalOrderingConstraints map { _.update(ExchangePlanStep(psOld, psNew)) }, tasks map { case ps => if (ps == psOld) psNew else ps })
+      val newOrdering = TaskOrdering(originalOrderingConstraints map { _.update(ExchangePlanSteps(psOld, psNew)) }, tasks map { case ps => if (ps == psOld) psNew else ps })
 
       // if this ordering was already initialised let the new one know what we did so far
       if (isTransitiveHullComputed)
@@ -244,12 +244,22 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
                 case (_, _)                                             => ()
               }
 
-      val allPairs = for (from <- ord.indices; to <- from + 1 until ord.length) yield (from, to)
+      getOrderingConstraintsOfArrangement(ord)
+    }
+  }
+
+  def allOrderingConstraints() : Seq[OrderingConstraint] = {
+    ensureTransitiveHull()
+    if (!isConsistent) Nil
+    else getOrderingConstraintsOfArrangement(innerArrangement)
+  }
+
+  private def getOrderingConstraintsOfArrangement(arrangement : Array[Array[Byte]]) : Seq[OrderingConstraint] = {
+    val allPairs = for (from <- arrangement.indices; to <- from + 1 until arrangement.length) yield (from, to)
 
 
-      allPairs collect { case (x, y) if ord(x)(y) == AFTER => OrderingConstraint(arrangemetnIndexToPlanStep(y), arrangemetnIndexToPlanStep(x))
-      case (x, y) if ord(x)(y) == BEFORE                   => OrderingConstraint(arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
-      }
+    allPairs collect { case (x, y) if arrangement(x)(y) == AFTER => OrderingConstraint(arrangemetnIndexToPlanStep(y), arrangemetnIndexToPlanStep(x))
+    case (x, y) if arrangement(x)(y) == BEFORE                   => OrderingConstraint(arrangemetnIndexToPlanStep(x), arrangemetnIndexToPlanStep(y))
     }
   }
 
@@ -259,7 +269,7 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
     }
 
   override def update(domainUpdate: DomainUpdate): TaskOrdering = domainUpdate match {
-    case ExchangePlanStep(oldPS, newPS) => replacePlanStep(oldPS, newPS)
+    case ExchangePlanSteps(exchangeMap) => exchangeMap.foldLeft(this) { case (ord, (oldPS, newPS)) => ord.replacePlanStep(oldPS, newPS) }
     case _                              => TaskOrdering(originalOrderingConstraints map { _.update(domainUpdate) }, tasks map { _.update(domainUpdate) })
   }
 
@@ -292,6 +302,14 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
     (for (t1 <- tasks; t2 <- tasks) yield (t1, t2))
       collect { case (t1, t2) if lt(t1, t2) => "\t" + t1.shortInfo + " -> " + t2.shortInfo }).mkString("\n")
 
+  lazy val graph: DirectedGraph[PlanStep] = {
+    val tasksWithoutInitAndGoal = tasks filterNot { t => tasks forall { ot => lteq(t, ot) } } filterNot { t => tasks forall { ot => gteq(t, ot) } }
+    val edges = minimalOrderingConstraints() map { case OrderingConstraint(before, after) => (before, after) } filter {
+      case (a, b) => (tasksWithoutInitAndGoal contains a) && (tasksWithoutInitAndGoal contains b)
+    }
+
+    DirectedGraphWithInternalMapping(tasksWithoutInitAndGoal, edges)
+  }
 }
 
 object TaskOrdering {

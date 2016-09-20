@@ -1,0 +1,33 @@
+(define (domain domain-19)
+
+  ; Modification of 18 to test the planning graph and the STRIPS representation
+
+  (:requirements :typing :action-costs :hierachie )
+  (:types
+        dummyType - object
+  )
+  (:predicates
+	(a) (b)
+  )
+
+  (:action make-a
+   :parameters ()
+   :precondition (and
+    (not (b))
+   )
+   :effect (and
+    (a)
+   )
+  )
+
+  (:action make-b
+   :parameters ()
+   :precondition (and
+    (not (a))
+    )
+   :effect (and
+    (b)
+    )
+  )
+
+)

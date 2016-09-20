@@ -13,7 +13,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 case class GroundedForwardSearchReachabilityAnalysis(domain: Domain, initialState: Set[GroundLiteral])(allowedGroundings: Seq[GroundTask] = domain.allGroundedPrimitiveTasks) extends
   LayeredGroundedPrimitiveReachabilityAnalysis {
 
-  protected lazy val layer: Seq[(Set[GroundTask], Set[GroundLiteral])] = {
+  lazy val layer: Seq[(Set[GroundTask], Set[GroundLiteral])] = {
     // function to build a single layer
     def buildLayer(state: Set[GroundLiteral]): (Set[GroundTask], Set[GroundLiteral]) = {
       val applicableGroundActions = allowedGroundings filter { _.substitutedPreconditionsSet subsetOf state }

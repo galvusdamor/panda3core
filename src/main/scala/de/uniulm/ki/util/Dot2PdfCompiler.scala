@@ -13,19 +13,21 @@ object Dot2PdfCompiler {
 
   def writeDotToFile[X](dotObject: DotPrintable[X], file: String): Unit = writeDotToFile(dotObject.dotString, file)
 
-  def writeDotToFile(dotString: String, file: String): Unit = System.getProperty("os.name") match {
-    case "NEVER" => //"Linux"
-      // println(dotString)
-      val prepString = dotString.replaceAll("\n", "\\\\n").replaceAll("\t", "\\\\t").replaceAll("'", "\\'")
-      ("echo -e " + prepString + "") #| ("dot -Tpdf -o " + file) !!
+  def writeDotToFile(dotString: String, file: String): Unit = {
+    val tempFile = File.createTempFile("__panda_dot_print", "dot")
 
-    case _ =>
-      val tempFile = File.createTempFile("__panda_dot_print", "dot")
+    de.uniulm.ki.util.writeStringToFile(dotString, tempFile)
 
-      de.uniulm.ki.util.writeStringToFile(dotString, tempFile)
-
-      ("dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
-
+    try {
+      System.getProperty("os.name") match {
+        case osname if osname.toLowerCase startsWith "windows" =>
+          ("cmd.exe /c dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
+        case _                                                 => // Linux and all the others
+          ("dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
+      }
+    } catch {
+      case _: Throwable =>
+    }
   }
 }
 

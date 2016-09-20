@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.logic._
-import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
@@ -20,10 +20,13 @@ import de.uniulm.ki.panda3.symbolic.writer._
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemovedCausalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering, parameterVariableConstraints: CSP,
+case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemovedCausalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering,
+                @Deprecated parameterVariableConstraints: CSP,
                 init: PlanStep, goal: PlanStep, isModificationAllowed: IsModificationAllowed, isFlawAllowed: IsFlawAllowed,
                 planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)]) extends
   DomainUpdatable with PrettyPrintable with HashMemo with DotPrintable[PlanDotOptions] {
+
+  assert(planStepsAndRemovedPlanSteps == orderingConstraints.tasks)
 
   assert(planStepsAndRemovedPlanSteps forall {
     ps => ps.arguments.size == ps.schema.parameters.size
@@ -58,6 +61,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   lazy val initAndGoal = init :: goal :: Nil
 
   lazy val planStepsAndRemovedWithInitAndGoalFirst = (init :: goal :: Nil) ++ planStepsAndRemovedPlanStepsWithoutInitGoal
+
+  lazy val orderingConstraintsWithoutRemovedPlanSteps = orderingConstraints.removePlanSteps(planStepsAndRemovedPlanSteps diff planSteps)
 
   // TODO: this is extremely inefficient
   // add all constraints inherited from tasks to the CSP
@@ -207,54 +212,68 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
                                                                                    variableConstraints.addConstraints(newVariableConstraints), init, goal, isModificationAllowed,
                                                                                    isFlawAllowed,
                                                                                    planStepDecomposedByMethod, planStepParentInDecompositionTree)
-    case AddLiteralsToInitAndGoal(literalsInit, literalsGoal, constraints) => {
+    case AddLiteralsToInitAndGoal(literalsInit, literalsGoal, constraints) =>
       // TODO: currently we only support this operation if all literals are 0-ary
       assert((literalsInit ++ literalsGoal) forall {
         _.parameterVariables.isEmpty
       })
       // build a new schema for init
       val initTask = init.schema match {
-        case reduced: ReducedTask => ReducedTask(reduced.name, isPrimitive = true, reduced.parameters, reduced.parameterConstraints ++ constraints, reduced.precondition,
-                                                 And[Literal](reduced.effect.conjuncts ++ literalsInit))
+        case reduced: ReducedTask => ReducedTask(reduced.name, isPrimitive = true, reduced.parameters, reduced.artificialParametersRepresentingConstants,
+                                                 reduced.parameterConstraints ++ constraints,
+                                                 reduced.precondition, And[Literal](reduced.effect.conjuncts ++ literalsInit))
         case general: GeneralTask =>
-          GeneralTask(general.name, isPrimitive = true, general.parameters, general.parameterConstraints ++ constraints, general.precondition, And[Formula](literalsInit :+ general.effect))
+          GeneralTask(general.name, isPrimitive = true, general.parameters, general.artificialParametersRepresentingConstants, general.parameterConstraints ++ constraints,
+                      general.precondition, And[Formula](literalsInit :+ general.effect))
       }
       val newInit = PlanStep(init.id, initTask, init.arguments)
 
       // build a new schema for goal
       val goalTask = goal.schema match {
         case reduced: ReducedTask =>
-          ReducedTask(reduced.name, isPrimitive = true, reduced.parameters, reduced.parameterConstraints ++ constraints, And[Literal](reduced.precondition.conjuncts ++ literalsGoal),
-                      reduced.effect)
+          ReducedTask(reduced.name, isPrimitive = true, reduced.parameters, reduced.artificialParametersRepresentingConstants,
+                      reduced.parameterConstraints ++ constraints, And[Literal](reduced.precondition.conjuncts ++ literalsGoal), reduced.effect)
         case general: GeneralTask =>
-          GeneralTask(general.name, isPrimitive = true, general.parameters, general.parameterConstraints ++ constraints, And[Formula](literalsGoal :+ general.precondition), general.effect)
+          GeneralTask(general.name, isPrimitive = true, general.parameters, general.artificialParametersRepresentingConstants,
+                      general.parameterConstraints ++ constraints, And[Formula](literalsGoal :+ general.precondition), general.effect)
       }
       val newGoal = PlanStep(goal.id, goalTask, goal.arguments)
 
-      val exchangeInit = ExchangePlanStep(init, newInit)
-      val exchangeGoal = ExchangePlanStep(goal, newGoal)
+      val exchangeInit = ExchangePlanSteps(init, newInit)
+      val exchangeGoal = ExchangePlanSteps(goal, newGoal)
 
-      Plan(planStepsAndRemovedPlanSteps map {
-        _ update exchangeInit update exchangeGoal
-      }, causalLinksAndRemovedCausalLinks map {
-        _ update exchangeInit update exchangeGoal
-      },
-           orderingConstraints update exchangeInit update exchangeGoal,
-           variableConstraints, newInit, goal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
-    }
-    case _                                                                 =>
+      Plan(planStepsAndRemovedPlanSteps map { _ update exchangeInit update exchangeGoal }, causalLinksAndRemovedCausalLinks map { _ update exchangeInit update exchangeGoal },
+           orderingConstraints update exchangeInit update exchangeGoal, variableConstraints, newInit, goal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod,
+           planStepParentInDecompositionTree)
+
+    case ExchangeTask(taskMap) =>
+      // if any planstep will get more arguments ... just add them
+      val newPlanSteps = planSteps map { ps => (ps, ps update domainUpdate) }
+      val newVariables = newPlanSteps flatMap { case (ps1, ps2) => ps2.arguments drop ps1.arguments.length }
+
+      val newPlan = copy(parameterVariableConstraints = parameterVariableConstraints.addVariables(newVariables))
+
+      Plan(newPlan.planStepsAndRemovedPlanSteps map { _ update domainUpdate }, newPlan.causalLinksAndRemovedCausalLinks map { _ update domainUpdate },
+           newPlan.orderingConstraints update domainUpdate, newPlan.parameterVariableConstraints, newPlan.init update domainUpdate, newPlan.goal update domainUpdate,
+           newPlan.isModificationAllowed, newPlan.isFlawAllowed,
+           newPlan.planStepDecomposedByMethod map { case (a, b) => (a update domainUpdate, b update domainUpdate) },
+           newPlan.planStepParentInDecompositionTree map { case (a, (b, c)) => (a update domainUpdate, (b update domainUpdate, c update domainUpdate)) })
+
+    case _ =>
       val newInit = init update domainUpdate
       val newGoal = goal update domainUpdate
 
       val possiblyInvertedUpdate = domainUpdate match {
         case ExchangeLiteralsByPredicate(map, _) => ExchangeLiteralsByPredicate(map, invertedTreatment = false)
-        case RemoveEffects(map, _)               => RemoveEffects(map, invertedTreatment = false)
+        case RemoveEffects(toRemove, _)          => RemoveEffects(toRemove, invertedTreatment = false)
         case _                                   => domainUpdate
       }
 
-      val newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal = planStepsAndRemovedPlanStepsWithoutInitGoal map { _ update possiblyInvertedUpdate }
-
-      val newPlanStepsAndRemovedPlanSteps = newPlanStepsAndRemovedPlanStepsWithoutInitAndGoal :+ newInit :+ newGoal
+      val newPlanStepsAndRemovedPlanSteps = planSteps map {
+        case ps if ps == init => newInit
+        case ps if ps == goal => newGoal
+        case ps               => ps update possiblyInvertedUpdate
+      }
 
       val newCausalLinksAndRemovedCausalLinks = causalLinksAndRemovedCausalLinks map { _ update possiblyInvertedUpdate }
       val newOrderingConstraints = orderingConstraints update possiblyInvertedUpdate
@@ -267,11 +286,27 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
            newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree)
   }
 
+  def replaceInitAndGoal(newInit: PlanStep, newGoal: PlanStep): Plan = {
+    val topPlanTasks = planStepsAndRemovedPlanStepsWithoutInitGoal :+ newInit :+ newGoal
+    val initialPlanInternalOrderings = orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(initAndGoal: _*) }
+    val topOrdering = TaskOrdering(initialPlanInternalOrderings ++ OrderingConstraint.allBetween(newInit, newGoal, planStepsAndRemovedPlanStepsWithoutInitGoal: _*), topPlanTasks)
+    val newCausalLinks = causalLinksAndRemovedCausalLinks map { case CausalLink(p, c, cond) =>
+      def replace(ps: PlanStep): PlanStep = if (ps == init) newInit else if (ps == goal) newGoal else ps
+      CausalLink(replace(p), replace(c), cond)
+    }
+    Plan(topPlanTasks,newCausalLinks, topOrdering, variableConstraints, newInit, newGoal,
+         isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
+
+  }
+
   def isPresent(planStep: PlanStep): Boolean = !planStepDecomposedByMethod.contains(planStep)
 
   /* convenience methods to determine usable IDs */
   lazy val getFirstFreePlanStepID: Int = 1 + (planSteps foldLeft 0) { case (m, ps: PlanStep) => math.max(m, ps.id) }
   lazy val getFirstFreeVariableID: Int = 1 + (variableConstraints.variables foldLeft 0) { case (m, v: Variable) => math.max(m, v.id) }
+
+  def isLastPlanStep(planStep: PlanStep): Boolean = planStepsWithoutInitGoal filter { _ != planStep } forall { other => orderingConstraints.lt(other, planStep) }
+
 
   /** returns a short information about the object */
   override def shortInfo: String = (planSteps map { "PS " + _.mediumInfo }).mkString("\n") + "\n" + orderingConstraints.shortInfo + "\n" + (causalLinks map { _.longInfo }).mkString("\n") +
@@ -431,38 +466,26 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     })
   }
 
+  lazy val groundedInitialStateOnlyPositive: Seq[GroundLiteral] = groundedInitialState filter { _.isPositive }
+
+  lazy val groundedGoalState: Seq[GroundLiteral] = goal.substitutedPreconditions map { case Literal(predicate, isPositive, parameters) =>
+    GroundLiteral(predicate, isPositive, parameters map { v =>
+      val value = variableConstraints.getRepresentative(v)
+      assert(value.isInstanceOf[Constant])
+      value.asInstanceOf[Constant]
+    })
+  }
+
+  lazy val groundedGoalTask: GroundTask = {
+    val arguments = goal.arguments map variableConstraints.getRepresentative map {
+      case c: Constant => c
+      case _           => noSupport(LIFTEDGOAL)
+    }
+    GroundTask(goal.schema, arguments)
+  }
+
   override lazy val dotString: String = dotString(PlanDotOptions())
 }
 
 case class PlanDotOptions(showParameters: Boolean = true, showOrdering: Boolean = true, omitImpliedOrderings: Boolean = true, showCausalLinks: Boolean = true,
                           showHierarchy: Boolean = false, showOpenPreconditions: Boolean = true) {}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
