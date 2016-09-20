@@ -1,11 +1,13 @@
 #!/bin/bash
 
-git pull
+git fetch
+git rebase
 
 cat << 'EOF' > /tmp/cleancommit
 #!/bin/bash
 
 find . -name "*.pddl" -type f -delete
+find . -name "*.PDDL" -type f -delete
 find . -name "*.xml" -type f -delete
 find . -name "*.hddp" -type f -delete
 find . -name "*.in" -type f -delete
@@ -30,7 +32,7 @@ git filter-branch -f --tree-filter '/tmp/cleancommit' HEAD
 rm /tmp/cleancommit
 
 # now execute your gitstats command (should be fixed for your needs)
-gitstats .git stats
+#gitstats .git stats
 
 # reset all the changes filter-branch have done
-git reset --hard origin/master
+#git reset --hard origin/master
