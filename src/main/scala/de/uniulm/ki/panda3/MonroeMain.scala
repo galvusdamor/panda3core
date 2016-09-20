@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3
 import java.io._
 
 import de.uniulm.ki.panda3.configuration._
+import de.uniulm.ki.panda3.symbolic.compiler.TotallyOrderingOption
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
 import de.uniulm.ki.panda3.symbolic.logic.Constant
 import de.uniulm.ki.panda3.symbolic.search.SearchState
@@ -42,7 +43,7 @@ object MonroeMain {
       // create the configuration
       val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(HDDLParserType),
-                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = false,
+                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = None,
                                                                           liftedReachability = true, groundedReachability = false, planningGraph = false,
                                                                           groundedTaskDecompositionGraph = None, //Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = false),

@@ -4,6 +4,7 @@ import java.io.{FileWriter, BufferedWriter, File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
+import de.uniulm.ki.panda3.symbolic.compiler.OneRandomOrdering
 import de.uniulm.ki.panda3.symbolic.domain.{RandomPlanGenerator, Task}
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
 import de.uniulm.ki.util._
@@ -14,7 +15,7 @@ import scala.io.Source
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-// scalastyle:off method.length
+// scalastyle:off method.length cyclomatic.complexity
 case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, parserType: ParserType, satsolver: Solvertype) {
 
   import sys.process._
@@ -36,7 +37,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // create the configuration
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(parserType),
-                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = false,
+                                               PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph, compileOrderInMethods = Some
+                                               (OneRandomOrdering()),
                                                                           liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,
                                                                           groundedTaskDecompositionGraph = Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = true),
@@ -139,7 +141,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     // start verification
     val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
       if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder() && !verify) TotallyOrderedEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
-    else if (verify) GeneralEncoding(domain, initialPlan, sequenceToVerify, offSetToK) else TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
+      else if (verify) GeneralEncoding(domain, initialPlan, sequenceToVerify, offSetToK) else TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
 
     // (3)
     println("K " + encoder.K)
@@ -302,7 +304,10 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
           val primitiveSolution = pbe match {
             case tot: TotallyOrderedEncoding =>
               // check executability of the plan
-              nodes filter { t => t.split("!").last.split("_").head.toInt == tot.K } sortWith { case (t1, t2) =>
+
+              val graph = SimpleDirectedGraph(nodes, edges)
+
+              graph.sinks sortWith { case (t1, t2) =>
                 val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
                 val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
                 PathBasedEncoding.pathSortingFunction(path1, path2)
@@ -345,7 +350,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
                   (nextNext.head._2, remaining)
                 })
 
-              assert(lastPath._1 sameElements  Integer.MAX_VALUE :: Nil)
+              assert(lastPath._1 sameElements Integer.MAX_VALUE :: Nil)
 
               taskSequence
           }
@@ -409,9 +414,17 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
             assert(nei.size == 1)
             assert(nei.head.name == v.name)
           } else if (encoder.isInstanceOf[TotallyOrderedEncoding]) {
-            val subTasks: Seq[Task] = nei map { n => (n, domain.tasks(n.id.split(",").last.toInt)) } sortBy { _._1.id } map { _._2 }
+            val subTasks: Seq[Task] = nei map { n => (n.id, domain.tasks(n.id.split(",").last.toInt)) } sortWith { case ((t1, _), (t2, _)) =>
+              val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
+              val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
+              PathBasedEncoding.pathSortingFunction(path1, path2)
+            } map { _._2 }
+
             val orderedMethods =
-              domain.methodsForAbstractTasks(myAction) map { _.subPlan } map { _.orderingConstraints.graph.allTotalOrderings.get.head map { _.schema } } filter { _ == subTasks }
+              domain.methodsForAbstractTasks(myAction) map { _.subPlan } map { plan =>
+                assert(plan.orderingConstraints.graph.allTotalOrderings.get.size == 1)
+                val planTaskOrdering = plan.orderingConstraints.graph.allTotalOrderings.get.head map { _.schema }
+              } filter { _ == subTasks }
 
             assert(orderedMethods.nonEmpty, "Node " + v + " has no correctly ordered decomposition")
           }
@@ -703,8 +716,9 @@ object VerifyRunner {
   }
 
   def runPlanner(domFile: String, probFile: String, length: Int, offset: Int): Unit = {
-    val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
-    //val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
+    //val runner = VerifyRunner(domFile, probFile, -length, HPDDLParserType, CRYPTOMINISAT())
+    //val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
+    val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
 
     val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = offset, includeGoal = true, verify = false)
     //val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = 0, includeGoal = true, verify = false)
@@ -721,10 +735,10 @@ object VerifyRunner {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml"
 
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Small.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Large.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
 
@@ -736,13 +750,16 @@ object VerifyRunner {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/6--2--2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8--3--4.xml"
 
-    val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
-    val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp"
+    //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
+    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p01-htn.lisp"
     //val domFile = "IPC7-Transport/domain-htn.lisp"
     //val probFile = "IPC7-Transport/p01-htn.lisp"
 
-    //val domFile = "domain.lisp"
-    //val probFile = "problems/p-0002-plow-road.lisp"
+    //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/blocksworld/domain/domain.hpddl"
+    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/blocksworld/problems/pfile_020.pddl"
+
+    //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/domain/domain.hpddl"
+    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/problems/pfile_03.pddl"
 
     //val domFile = args(0)
     //val probFile = args(1)
@@ -755,7 +772,7 @@ object VerifyRunner {
 
 
     //runPlanner(domFile, probFile, len, offset)
-    runPlanner(domFile, probFile, 33, 0)
+    runPlanner(domFile, probFile, 30, 0)
     //runEvaluation()
   }
 
