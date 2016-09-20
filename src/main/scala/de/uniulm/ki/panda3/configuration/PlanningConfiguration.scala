@@ -409,10 +409,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       if (preprocessingConfiguration.groundedTaskDecompositionGraph contains NaiveTDG) info("Naive TDG ... ") else info("Top Down TDG ...")
       // get the reachability analysis, if there is none, just use the trivial one
       val newAnalysisMap = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, preprocessingConfiguration.groundedTaskDecompositionGraph.get)
-      val pruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
+      val methodsPruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
+      val removedTasks = groundedResult._1._1.tasks.toSet diff newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedActions.toSet
+      val tasksPruned = PruneHierarchy.transform(methodsPruned._1, methodsPruned._2, removedTasks)
+
+      //val pruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
       info("done.\n")
-      extra(pruned._1.statisticsString + "\n")
-      (pruned, newAnalysisMap)
+      extra(tasksPruned._1.statisticsString + "\n")
+      (tasksPruned, newAnalysisMap)
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
