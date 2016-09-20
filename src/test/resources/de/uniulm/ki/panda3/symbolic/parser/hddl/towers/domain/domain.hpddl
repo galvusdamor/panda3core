@@ -1,6 +1,6 @@
 (define (domain towers)
  (:requirements :strips :disjunctive-preconditions)
- (:types OBJ RING - OBJ TOWER - OBJ)
+ (:types RING - OBJ TOWER - OBJ)
  (:predicates
   (on ?r - RING ?o - OBJ)
   (goal_on ?r - RING ?o - OBJ)
