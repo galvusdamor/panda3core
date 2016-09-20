@@ -260,7 +260,7 @@ object VerifyEncoding {
     def recomputeTask(task: Task, m: Map[Task, Map[Int, Int]]): (Map[Task, Map[Int, Int]], Boolean) = if (task.isPrimitive) (m, false)
     else {
       val methodMaps = domain.methodsForAbstractTasks(task) map { method => recomputePlan(method.subPlan, m) }
-      val newMap: Map[Int, Int] = methodMaps reduce[Map[Int, Int]] { case (m1, m2) => m1 ++ m2.map({ case (l, h) => l -> accumulate(h, m1.getOrElse(l, initialValue)) }) }
+      val newMap: Map[Int, Int] = methodMaps.reduce[Map[Int, Int]]({ case (m1, m2) => m1 ++ m2.map({ case (l, h) => l -> accumulate(h, m1.getOrElse(l, initialValue)) }) })
 
       (m + (task -> newMap), newMap != m(task))
     }
