@@ -5,7 +5,7 @@ import java.io.{File, FileInputStream}
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
-import de.uniulm.ki.panda3.symbolic.compiler.TotallyOrderingOption
+import de.uniulm.ki.panda3.symbolic.compiler.{AllOrderings, TotallyOrderingOption}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraphConfiguration, GroundedPlanningGraph}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
@@ -51,9 +51,9 @@ object Main {
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
     //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
@@ -80,8 +80,9 @@ object Main {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant3-hierarchical.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant4-hierarchical.xml"
 
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
+
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/p02-part1-hierarchical.xml"
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p01.pddl"
@@ -198,14 +199,14 @@ object Main {
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                              ParsingConfiguration(XMLParserType),
-                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = None,
+                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = Some(AllOrderings()),
                                                                         liftedReachability = true, groundedReachability = true, planningGraph = false,
                                                                         groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
                                                                         iterateReachabilityAnalysis = true, groundDomain = true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), false, true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, LCFR, false, true),
                                              SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), LCFR, false, printSearchInfo = true),
-                                             //SearchConfiguration(Some(500000), None, efficientSearch = true, BFSType, None, false, printSearchInfo = true),
+                                             //SearchConfiguration(Some(500000), None, efficientSearch = true, DijkstraType, None, LCFR, false, printSearchInfo = true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult, AllFoundPlans,
                                                                              SearchStatistics,

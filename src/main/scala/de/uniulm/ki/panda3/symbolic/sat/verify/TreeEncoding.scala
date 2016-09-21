@@ -10,7 +10,8 @@ import scala.collection.{mutable, Seq}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int) extends PathBasedEncoding with LinearPrimitivePlanEncoding {
+case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK : Option[Int] = None)
+  extends PathBasedEncoding with LinearPrimitivePlanEncoding {
   override val numberOfChildrenClauses: Int = 0
 
   protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position

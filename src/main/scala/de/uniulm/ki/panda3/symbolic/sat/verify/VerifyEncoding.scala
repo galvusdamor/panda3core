@@ -31,7 +31,9 @@ trait VerifyEncoding {
 
   def offsetToK: Int
 
-  val K: Int = VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
+  def overrideK : Option[Int]
+
+  val K: Int = if (overrideK.isDefined) overrideK.get else VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
 
   def numberOfChildrenClauses: Int
 
@@ -289,7 +291,11 @@ object VerifyEncoding {
     val initialPlanMap = recomputePlan(initialPlan, expandedMap)
     val maximumLength = Range(0, taskSequenceLength + 1).reverse find initialPlanMap.contains
 
-    initialPlanMap(maximumLength.get)
+    maximumLength match {
+      case Some(length) => initialPlanMap(length)
+      case None => 0
+    }
+
   }
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
