@@ -286,6 +286,19 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
            newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree)
   }
 
+  def replaceInitAndGoal(newInit: PlanStep, newGoal: PlanStep): Plan = {
+    val topPlanTasks = planStepsAndRemovedPlanStepsWithoutInitGoal :+ newInit :+ newGoal
+    val initialPlanInternalOrderings = orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(initAndGoal: _*) }
+    val topOrdering = TaskOrdering(initialPlanInternalOrderings ++ OrderingConstraint.allBetween(newInit, newGoal, planStepsAndRemovedPlanStepsWithoutInitGoal: _*), topPlanTasks)
+    val newCausalLinks = causalLinksAndRemovedCausalLinks map { case CausalLink(p, c, cond) =>
+      def replace(ps: PlanStep): PlanStep = if (ps == init) newInit else if (ps == goal) newGoal else ps
+      CausalLink(replace(p), replace(c), cond)
+    }
+    Plan(topPlanTasks,newCausalLinks, topOrdering, variableConstraints, newInit, newGoal,
+         isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
+
+  }
+
   def isPresent(planStep: PlanStep): Boolean = !planStepDecomposedByMethod.contains(planStep)
 
   /* convenience methods to determine usable IDs */

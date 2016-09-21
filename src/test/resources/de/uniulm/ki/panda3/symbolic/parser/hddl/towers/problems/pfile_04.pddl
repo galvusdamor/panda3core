@@ -28,4 +28,6 @@
   (towerTop r1 t1)
   (towerTop t2 t2)
   (towerTop t3 t3))
- (:goal (and (on r1 r2) (on r2 r3) (on r3 r4) (on r4 t3))))
+ (:goal (and (on r1 r2) (on r2 r3) (on r3 r4) (on r4 t3)))
+ (:tasks (task0 (shiftTower t1 t2 t3)))
+ )

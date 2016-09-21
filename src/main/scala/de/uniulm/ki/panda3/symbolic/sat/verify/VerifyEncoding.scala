@@ -305,6 +305,7 @@ object VerifyEncoding {
     println("Method: " + minimumMethodSize)
     println("DP max: " + tdg)
     println("DP min: " + tdgmin)
+    //System exit 0
 
     Math.min(icapsPaperLimit, Math.min(TSTGPath, Math.min(minimumMethodSize, tdg)))
   }

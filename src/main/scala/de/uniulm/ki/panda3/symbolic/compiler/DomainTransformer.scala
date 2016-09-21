@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.compiler
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, SimpleDecompositionMethod, ReducedTask, Domain}
 import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 
 /**
@@ -42,31 +42,28 @@ trait DomainTransformerWithOutInformation extends DomainTransformer[Unit] {
 
 trait DecompositionMethodTransformer[Information] extends DomainTransformer[Information] {
 
-  protected def transformMethods(methods: Seq[DecompositionMethod], topMethod : DecompositionMethod): Seq[DecompositionMethod]
+  protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, info: Information): Seq[DecompositionMethod]
 
   protected val transformationName: String
 
+
   override def transform(domain: Domain, plan: Plan, info: Information): (Domain, Plan) = {
     // create an artificial method
+    // TODO not yet correct for hybrid planning problems
     val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
     val topInit = PlanStep(plan.init.id, initAndGoalNOOP, Nil)
     val topGoal = PlanStep(plan.goal.id, initAndGoalNOOP, Nil)
-
-    val topPlanTasks = plan.planStepsAndRemovedPlanStepsWithoutInitGoal :+ topInit :+ topGoal
-    val initialPlanInternalOrderings = plan.orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(plan.initAndGoal: _*) }
-    val topOrdering = TaskOrdering(initialPlanInternalOrderings ++ OrderingConstraint.allBetween(topInit, topGoal, plan.planStepsAndRemovedPlanStepsWithoutInitGoal: _*), topPlanTasks)
-    val initialPlanWithout = Plan(topPlanTasks, plan.causalLinksAndRemovedCausalLinks, topOrdering, plan.variableConstraints, topInit, topGoal,
-                                  plan.isModificationAllowed,
-                                  plan.isFlawAllowed, plan.planStepDecomposedByMethod, plan.planStepParentInDecompositionTree)
-
+    val initialPlanWithout = plan.replaceInitAndGoal(topInit, topGoal)
     val topTask = ReducedTask("__" + transformationName + "Compilation__top", isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
     val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top")
 
-    val extendedMethods: Seq[DecompositionMethod] = transformMethods(domain.decompositionMethods, topMethod)
+    val extendedMethods: Seq[DecompositionMethod] = transformMethods(domain.decompositionMethods, topMethod, info)
 
     if ((extendedMethods count { _.abstractTask == topTask }) == 1) {
-      // we don't need to alter the plan
-      (domain.copy(decompositionMethods = extendedMethods filterNot { _.abstractTask == topTask }), plan)
+      // regenerate the initial plan, as it may have changed
+      val remainingTopMethod = (extendedMethods find { _.abstractTask == topTask }).get.subPlan
+      val newPlan = remainingTopMethod.replaceInitAndGoal(plan.init,plan.goal)
+      (domain.copy(decompositionMethods = extendedMethods filterNot { _.abstractTask == topTask }), newPlan)
     } else {
       // generate a new
       val topPS = PlanStep(2, topTask, Nil)

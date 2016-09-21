@@ -41,7 +41,7 @@ trait PathBasedEncoding extends VerifyEncoding {
     // write myself
     val possibleTasksClauses: Seq[Clause] = atMostOneOf(possibleTasksToActions)
 
-    if (layer == K) {
+    if (layer == K || (possibleTaskOrder forall {_.isPrimitive})) {
       //val notAnyNonPossibleTask = domain.tasks filterNot possibleTasks map { action(layer, path, _) } map { a => Clause((a, false) :: Nil) }
       //(possibleTasksClauses ++ notAnyNonPossibleTask, Set((path, possibleTasks)))
       (possibleTasksClauses, Set((path, possibleTasks)))
@@ -183,7 +183,7 @@ trait PathBasedEncoding extends VerifyEncoding {
     val assertedTasks = initialPlanOrdering.zipWithIndex map { case (task, index) => Clause(pathAction(0, index :: Nil, task.schema)) }
 
     val paths = initialPlanClauses flatMap { _._2 }
-    paths.foreach { p => assert(p._1.length == paths.head._1.length) }
+//    paths.foreach { p => assert(p._1.length == paths.head._1.length) }
     val dec = initialPlanClauses flatMap { _._1 }
 
     //println(dec.length)

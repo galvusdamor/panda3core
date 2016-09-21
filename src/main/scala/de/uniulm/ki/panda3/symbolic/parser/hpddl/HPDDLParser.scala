@@ -28,9 +28,6 @@ object HPDDLParser extends Parser {
     val dom = scala.io.Source.fromFile(translatedDomain.getAbsolutePath).mkString
     val prob = scala.io.Source.fromFile(translatedProblem.getAbsolutePath).mkString
 
-    println(dom)
-    println(prob)
-
     HDDLParser.parseDomainAndProblem(new FileInputStream(translatedDomain),new FileInputStream(translatedProblem))
   }
 }
