@@ -26,9 +26,9 @@ object Dot2PdfCompiler {
     try {
       System.getProperty("os.name") match {
         case osname if osname.toLowerCase startsWith "windows" =>
-          ("cmd.exe /c dot -T" + plotType + " " + tempFile.getAbsolutePath + " -o " + file) !!
+          ("cmd.exe /c dot -T" + plotType + " " + tempFile.getAbsolutePath + " -o " + file + " -Nfontname=\"Monospace\"") !!
         case _                                                 => // Linux and all the others
-          ("dot -T" + plotType + " " + tempFile.getAbsolutePath + " -o " + file) !!
+          ("dot -T" + plotType + " " + tempFile.getAbsolutePath + " -o " + file + " -Nfontname=\"Monospace\"") !!
       }
     } catch {
       case _: Throwable =>
