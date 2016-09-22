@@ -53,11 +53,11 @@ case class FileTypeDetector(reportingFunction : String => Unit) extends Parser {
     var parseError = false
     val errorListener = new ANTLRErrorListener {
       override def reportContextSensitivity(recognizer: runtime.Parser, dfa: DFA, startIndex: Int, stopIndex: Int, prediction: Int,
-                                            configs: ATNConfigSet): Unit = ???
+                                            configs: ATNConfigSet): Unit = ()
 
-      override def reportAmbiguity(recognizer: runtime.Parser, dfa: DFA, startIndex: Int, stopIndex: Int, exact: Boolean, ambigAlts: util.BitSet, configs: ATNConfigSet): Unit = ???
+      override def reportAmbiguity(recognizer: runtime.Parser, dfa: DFA, startIndex: Int, stopIndex: Int, exact: Boolean, ambigAlts: util.BitSet, configs: ATNConfigSet): Unit = ()
 
-      override def reportAttemptingFullContext(recognizer: runtime.Parser, dfa: DFA, startIndex: Int, stopIndex: Int, conflictingAlts: util.BitSet, configs: ATNConfigSet): Unit = ???
+      override def reportAttemptingFullContext(recognizer: runtime.Parser, dfa: DFA, startIndex: Int, stopIndex: Int, conflictingAlts: util.BitSet, configs: ATNConfigSet): Unit = ()
 
       override def syntaxError(recognizer: Recognizer[_, _], offendingSymbol: scala.Any, line: Int, charPositionInLine: Int, msg: String, e: RecognitionException): Unit =
         parseError = true
