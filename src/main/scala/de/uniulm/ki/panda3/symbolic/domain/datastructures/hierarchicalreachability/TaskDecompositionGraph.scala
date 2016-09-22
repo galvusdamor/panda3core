@@ -108,14 +108,14 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
     // reachability analysis
     //System.in.read()
     val allReachable = firstAndOrGraph.reachableFrom(topGrounded)
-    val rechableWithoutTop = allReachable partition {
+    val reachableWithoutTop = allReachable partition {
       case GroundedDecompositionMethod(m, _) => m.abstractTask == topTask
       case GroundTask(task, _)               => task == topTask
     }
 
-    val topMethods = rechableWithoutTop._1 collect { case x: GroundedDecompositionMethod => x }
+    val topMethods = reachableWithoutTop._1 collect { case x: GroundedDecompositionMethod => x }
 
-    (firstAndOrGraph pruneToEntities rechableWithoutTop._2, if (isInitialPlanGround) Nil else topGrounded :: GroundTask(initAndGoalNOOP, Nil) :: Nil,
+    (firstAndOrGraph pruneToEntities reachableWithoutTop._2, if (isInitialPlanGround) Nil else topGrounded :: GroundTask(initAndGoalNOOP, Nil) :: Nil,
       if (isInitialPlanGround) Nil else topMethods.toSeq)
   }
 
