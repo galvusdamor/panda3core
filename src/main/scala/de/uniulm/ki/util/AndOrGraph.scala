@@ -20,7 +20,8 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
   /** adjacency list of the graph */
   lazy val edges: Map[T, Seq[T]] = {
     val edg = (andEdges ++ orEdges) map { case (a, b) => (a, b.toSeq) }
-    //edg.values.flatten foreach { x => assert(vertices contains x) }
+    edg.keys foreach {x => assert(vertices contains x)}
+    edg.values.flatten foreach { x => assert(vertices contains x) }
     edg
   }
 
