@@ -25,18 +25,18 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val probInputStream = new FileInputStream(probFile)
 
     val (searchConfig, usePlanningGraph) = configNumber match {
-      case x if x < 0 => (SearchConfiguration(Some(0), Some(0), efficientSearch = false, DFSType, None, LCFR, false, printSearchInfo = true), false)
-      case 1          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), LCFR, false, printSearchInfo = true), true)
-      case 2          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, LCFR, false, printSearchInfo = true), true)
-      case 3          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumAction), LCFR, false, printSearchInfo = true), true)
-      case 4          => (SearchConfiguration(None, None, efficientSearch = true, AStarDepthType, Some(TDGMinimumModification), LCFR, false, printSearchInfo = true), false)
-      case 5          => (SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, LCFR, false, printSearchInfo = true), false)
-      case 6          => (SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), LCFR, false, printSearchInfo = true), false)
+      case x if x < 0 => (SearchConfiguration(Some(0), Some(0), DFSType, None, LCFR, efficientSearch = false), false)
+      case 1          => (SearchConfiguration(None, None, AStarDepthType, Some(TDGMinimumModification), LCFR), true)
+      case 2          => (SearchConfiguration(None, None, DijkstraType, None, LCFR), true)
+      case 3          => (SearchConfiguration(None, None, AStarDepthType, Some(TDGMinimumAction), LCFR), true)
+      case 4          => (SearchConfiguration(None, None, AStarDepthType, Some(TDGMinimumModification), LCFR), false)
+      case 5          => (SearchConfiguration(None, None, DijkstraType, None, LCFR), false)
+      case 6          => (SearchConfiguration(None, None, GreedyType, Some(TDGMinimumModification), LCFR), false)
     }
 
     // create the configuration
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                               ParsingConfiguration(parserType),
+                                               ParsingConfiguration(),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph,
                                                                           compileOrderInMethods = None, //Some(AllOrderings()),
                                                                           liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,

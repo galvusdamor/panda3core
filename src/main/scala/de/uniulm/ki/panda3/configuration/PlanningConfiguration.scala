@@ -13,6 +13,7 @@ import de.uniulm.ki.panda3.efficient.heuristic.{MinimumModificationEffortHeurist
 import de.uniulm.ki.panda3.efficient.search.EfficientSearchNode
 import de.uniulm.ki.panda3.efficient.search.flawSelector.{EfficientFlawSelector, AbstractFirstWithDeferred, LeastCostFlawRepair}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
@@ -37,7 +38,7 @@ import de.uniulm.ki.util._
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class PlanningConfiguration(printGeneralInformation: Boolean, printAdditionalData: Boolean,
-                                 parsingConfiguration: ParsingConfiguration,
+                                 parsingConfiguration: ParsingConfiguration = ParsingConfiguration(),
                                  preprocessingConfiguration: PreprocessingConfiguration,
                                  searchConfiguration: SearchConfiguration,
                                  postprocessingConfiguration: PostprocessingConfiguration) {
@@ -291,6 +292,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case XMLParserType   => XMLParser.asParser.parseDomainAndProblem(domain, problem)
       case HDDLParserType  => HDDLParser.parseDomainAndProblem(domain, problem)
       case HPDDLParserType => HPDDLParser.parseDomainAndProblem(domain, problem)
+      case AutoDetectParserType => FileTypeDetector(info).parseDomainAndProblem(domain, problem)
     }
     timeCapsule stop FILEPARSER
     info("done\n")
@@ -514,8 +516,10 @@ object HDDLParserType extends ParserType
 
 object HPDDLParserType extends ParserType
 
+object AutoDetectParserType extends ParserType
+
 case class ParsingConfiguration(
-                                 parserType: ParserType,
+                                 parserType: ParserType = AutoDetectParserType,
                                  expandSortHierarchy: Boolean = true,
                                  closedWorldAssumption: Boolean = true,
                                  compileSHOPMethods: Boolean = true,
@@ -595,12 +599,12 @@ object LCFR extends SearchFlawSelector
 case class SearchConfiguration(
                                 nodeLimit: Option[Int],
                                 timeLimit: Option[Int],
-                                efficientSearch: Boolean,
                                 searchAlgorithm: SearchAlgorithmType,
                                 heuristic: Option[SearchHeuristic],
                                 flawSelector: SearchFlawSelector,
-                                continueOnSolution: Boolean,
-                                printSearchInfo: Boolean
+                                efficientSearch: Boolean = true,
+                                continueOnSolution: Boolean = false,
+                                printSearchInfo: Boolean = true
                               ) {}
 
 case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) {

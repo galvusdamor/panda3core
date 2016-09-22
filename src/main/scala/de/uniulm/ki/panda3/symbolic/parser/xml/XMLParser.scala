@@ -45,7 +45,7 @@ object XMLParser extends StepwiseParser {
     // Not required for JAXB/XInclude
     val xr: XMLReader = spf.newSAXParser().getXMLReader
     xr.setEntityResolver(new EntityResolver {
-      override def resolveEntity(s: String, s1: String): InputSource = return new InputSource(XMLParser.getClass.getResourceAsStream("domain-2.0.dtd"))
+      override def resolveEntity(s: String, s1: String): InputSource = new InputSource(XMLParser.getClass.getResourceAsStream("domain-2.0.dtd"))
     })
     val source: SAXSource = new SAXSource(xr, new InputSource(domainStream))
     val dom: XMLDomain = marshaller.unmarshal(source).asInstanceOf[XMLDomain]

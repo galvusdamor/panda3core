@@ -80,10 +80,6 @@ object Main {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant3-hierarchical.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant4-hierarchical.xml"
 
-
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/p02-part1-hierarchical.xml"
-
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
@@ -177,36 +173,24 @@ object Main {
     //val probFile = "problems/p-0061-plow-road.lisp"   // SOL 50
     //val probFile = "problems/p-0062-clear-road-hazard.lisp"   // SOL 50
 
-    //val probFile = "p-0002-plow-road.lisp"
-    //val probFile = "p-0003-set-up-shelter.lisp"
-    //val probFile = "p-0005-clear-road-wreck.lisp"
-    //val domFile = "../panda3core_with_planning_graph/testDomain1.pddl"
-    //val probFile = "../panda3core_with_planning_graph/testProblem1.pddl"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/blocksworld/domain/domain.hpddl"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/blocksworld/problems/pfile_005.pddl"
 
-
-    //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/domain/domain.hpddl"
-    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/problems/pfile_03.pddl"
-
-    //val domFile = "domain-block.hpddl-2"
-    //val probFile = "pfile_005.pddl-2"
-
-    //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/domain/domain.hpddl"
-    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/problems/pfile_04.pddl"
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                             ParsingConfiguration(XMLParserType),
+                                             ParsingConfiguration(),
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = Some(AllOrderings()),
-                                                                        liftedReachability = true, groundedReachability = true, planningGraph = false,
-                                                                        groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
-                                                                        iterateReachabilityAnalysis = true, groundDomain = true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), false, true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, LCFR, false, true),
-                                             SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), LCFR, false, printSearchInfo = true),
-                                             //SearchConfiguration(Some(500000), None, efficientSearch = true, DijkstraType, None, LCFR, false, printSearchInfo = true),
+                                                                        liftedReachability = true, groundedReachability = false, planningGraph = false,
+                                                                        groundedTaskDecompositionGraph = None, //Some(TopDownTDG), // None,
+                                                                        iterateReachabilityAnalysis = true, groundDomain = false),
+                                             //SearchConfiguration(None, None, AStarActionsType, Some(ADD)),
+                                             //SearchConfiguration(None, None, DijkstraType, None, LCFR),
+                                             SearchConfiguration(None, None, AStarActionsType, Some(LiftedTDGMinimumModification), LCFR),
+                                             //SearchConfiguration(Some(500000), None, DijkstraType, None, LCFR),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult, AllFoundPlans,
                                                                              SearchStatistics,
