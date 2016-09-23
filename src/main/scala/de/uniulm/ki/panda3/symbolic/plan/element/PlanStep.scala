@@ -26,6 +26,8 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
 
   override val hashCode: Int = id
 
+  lazy val argumentSet = arguments.toSet
+
   if (arguments.size != schema.parameters.size) {
     System.out.println("The number of parameters given in a plan step definition does not match the number that was given in the definition of the task schema.")
   }
@@ -99,6 +101,8 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
 
   // the arguments must be allowed
   assert(task.areParametersAllowed(arguments))
+
+  lazy val argumentArray = arguments.toArray
 
   private lazy val parameterSubstitution: TotalSubstitution[Variable, Constant] = TotalSubstitution(task.parameters, arguments)
 
