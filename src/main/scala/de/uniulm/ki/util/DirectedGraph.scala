@@ -43,7 +43,8 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   }
 
   def sources: Seq[T]
-  def sinks  : Seq[T]
+
+  def sinks: Seq[T]
 
   def getVerticesInDistance(v: T, distance: Int): Set[T]
 
@@ -247,40 +248,24 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
   lazy val topologicalOrdering: Option[Seq[T]] = {
     val color: mutable.Map[T, Int] = mutable.Map(vertices map { (_, 0) }: _*)
 
+    var ordering: Seq[T] = Nil
+    var failure = false
+
     // dfs
-    def dfs(v: T): Option[Seq[T]] = if (color(v) == 1) None
-    else if (color(v) == 2) Some(Nil)
-    else {
-      // set own color to grey
-      color.put(v, 1)
-      val order: Option[Seq[T]] = edges(v).foldLeft[Option[Seq[T]]](Some(Nil))({
-                                                                                 case (None, _)           => None
-                                                                                 case (Some(topOrder), n) => val nTopOrder = dfs(n)
-                                                                                   nTopOrder match {
-                                                                                     case None         => None
-                                                                                     case Some(nOrder) =>
-                                                                                       Some(nOrder ++ topOrder)
-                                                                                   }
-                                                                               })
-
-      // set own color to black
-      color.put(v, 2)
-
-      order match {
-        case None    => None
-        case Some(o) => Some(Seq(v) ++ o)
+    def dfs(v: T): Unit =
+      if (failure || color(v) == 1) failure = true
+      else if (color(v) != 2) {
+        // set own color to grey
+        color.put(v, 1)
+        edges(v) foreach dfs
+        // set own color to black
+        color.put(v, 2)
+        ordering = ordering.+:(v)
       }
-    }
-
-
     // run dfs on every vertex
-    vertices.foldLeft[Option[Seq[T]]](Some(Nil))({
-                                                   case (None, _)        => None
-                                                   case (Some(order), v) => dfs(v) match {
-                                                     case None            => None
-                                                     case Some(nextOrder) => Some(nextOrder ++ order)
-                                                   }
-                                                 })
+    vertices foreach dfs
+
+    if (failure) None else Some(ordering)
   }
 
   // Only implemented for acyclic graphs. Therefore Option[Int] as return type
@@ -340,7 +325,7 @@ case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, S
   override lazy val allTotalOrderings: Option[Seq[Seq[T]]] = internalGraph.allTotalOrderings map { _ map { _ map verticesToInt.back } }
 
   override lazy val sources: Seq[T] = internalGraph.sources map verticesToInt.back
-  override lazy val sinks: Seq[T] = internalGraph.sinks map verticesToInt.back
+  override lazy val sinks  : Seq[T] = internalGraph.sinks map verticesToInt.back
 
   /**
     * Compute a topological ordering of the graph.
