@@ -235,10 +235,10 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
 
       // run floyd-warshall backwards
       for (from <- ord.indices; middle <- ord.indices)
-        if (ord(from)(middle) != DONTKNOW)
+        if (innerArrangement(from)(middle) != DONTKNOW)
           for (to <- ord.indices)
             if (from != middle && to != middle && from != to)
-              (ord(from)(middle), ord(middle)(to)) match {
+              (innerArrangement(from)(middle), innerArrangement(middle)(to)) match {
                 case (AFTER, AFTER) | (SAME, AFTER) | (AFTER, SAME)     => ord(from)(to) = DONTKNOW
                 case (BEFORE, BEFORE) | (SAME, BEFORE) | (BEFORE, SAME) => ord(from)(to) = DONTKNOW
                 case (_, _)                                             => ()
