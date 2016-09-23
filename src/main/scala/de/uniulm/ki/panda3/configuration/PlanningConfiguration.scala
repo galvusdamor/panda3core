@@ -19,8 +19,7 @@ import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompo
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{TopDownTaskDecompositionGraph, EverythingIsHiearchicallyReachable,
-EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability, NaiveGroundedTaskDecompositionGraph}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, DomainPropertyAnalyser}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
@@ -318,8 +317,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     val simpleMethod = if (parsingConfiguration.compileSHOPMethods) SHOPMethodCompiler.transform(cwaApplied, ()) else cwaApplied
     timeCapsule stop PARSER_SHOP_METHODS
 
+    timeCapsule start PARSER_ELIMINATE_EQUALITY
+    val identity = if (parsingConfiguration.eliminateEquality) RemoveIdenticalVariables.transform(simpleMethod, ()) else simpleMethod
+    timeCapsule stop PARSER_ELIMINATE_EQUALITY
+
     timeCapsule start PARSER_FLATTEN_FORMULA
-    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(simpleMethod, ()) else simpleMethod
+    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(identity, ()) else simpleMethod
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule stop PARSING
@@ -357,6 +360,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     val tdg = tdgType match {
       case NaiveTDG   => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
       case TopDownTDG => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case TwoWayTDG => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
     }
 
     analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg)
@@ -523,6 +527,7 @@ case class ParsingConfiguration(
                                  expandSortHierarchy: Boolean = true,
                                  closedWorldAssumption: Boolean = true,
                                  compileSHOPMethods: Boolean = true,
+                                 eliminateEquality: Boolean = true,
                                  toPlainFormulaRepresentation: Boolean = true
                                ) {}
 
@@ -531,6 +536,8 @@ sealed trait TDGGeneration
 object NaiveTDG extends TDGGeneration
 
 object TopDownTDG extends TDGGeneration
+
+object TwoWayTDG extends TDGGeneration
 
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,

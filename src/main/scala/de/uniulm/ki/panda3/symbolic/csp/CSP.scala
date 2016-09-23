@@ -328,7 +328,7 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
     }
   }
 
-  override def update(domainUpdate: DomainUpdate): CSP = CSP(variables map { _.update(domainUpdate) }, constraints map { _.update(domainUpdate) })
+  override def update(domainUpdate: DomainUpdate): CSP = CSP(variables map { _.update(domainUpdate) }, constraints map { _.update(domainUpdate) } filterNot {_.isTautologic})
 
   /** determines whether two variables or constants must be equal in this CSP */
   def equal(v1: Value, v2: Value): Boolean = getRepresentative(v1) == getRepresentative(v2)

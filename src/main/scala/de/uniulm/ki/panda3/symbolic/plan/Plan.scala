@@ -259,7 +259,19 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
            newPlan.planStepDecomposedByMethod map { case (a, b) => (a update domainUpdate, b update domainUpdate) },
            newPlan.planStepParentInDecompositionTree map { case (a, (b, c)) => (a update domainUpdate, (b update domainUpdate, c update domainUpdate)) })
 
-    case _ =>
+    case PropagateEquality(protectedVariables) =>
+      // determine all variables that can be eliminated
+
+      val (_, replacement) = (variableConstraints.variables -- protectedVariables).foldLeft[(Set[Variable], Seq[(Variable, Variable)])]((protectedVariables, Nil))(
+        { case ((representativeVariables, deletedVariables), nextVariable) =>
+          representativeVariables find { v => variableConstraints.equal(v, nextVariable) } match {
+            case Some(v) => (representativeVariables, deletedVariables :+(nextVariable, v))
+            case None    => (representativeVariables, deletedVariables)
+          }
+        })
+
+      (replacement map { case (oldV, newV) => ExchangeVariable(oldV, newV) }).foldLeft(this)({ case (p, u) => p update u })
+    case _                                     =>
       val newInit = init update domainUpdate
       val newGoal = goal update domainUpdate
 
@@ -294,7 +306,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       def replace(ps: PlanStep): PlanStep = if (ps == init) newInit else if (ps == goal) newGoal else ps
       CausalLink(replace(p), replace(c), cond)
     }
-    Plan(topPlanTasks,newCausalLinks, topOrdering, variableConstraints, newInit, newGoal,
+    Plan(topPlanTasks, newCausalLinks, topOrdering, variableConstraints, newInit, newGoal,
          isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
 
   }
@@ -389,7 +401,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     // ordering constraints
     dotStringBuilder append "\n"
 
-    def reachableViaCausalLinksFrom(from: PlanStep, to: PlanStep): Boolean = if (!options.showCausalLinks) false else if (from == to) true
+    def reachableViaCausalLinksFrom(from: PlanStep, to: PlanStep): Boolean = if (!options.showCausalLinks) false
+    else if (from == to) true
     else {
       // TODO might introduce cycles ...
       causalLinksAndRemovedCausalLinks exists { case CausalLink(p, c, _) => if (p == from) reachableViaCausalLinksFrom(c, to) else false }

@@ -25,6 +25,8 @@ sealed trait VariableConstraint extends DomainUpdatable {
   def substitute(sub: PartialSubstitution[Variable]): VariableConstraint
 
   override def update(domainUpdate: DomainUpdate): VariableConstraint
+
+  def isTautologic : Boolean
 }
 
 
@@ -55,6 +57,8 @@ case class Equal(left: Variable, right: Value) extends VariableConstraint {
   }
 
   override def update(domainUpdate: DomainUpdate): Equal = Equal(left.update(domainUpdate), right.update(domainUpdate))
+
+  lazy val isTautologic : Boolean = left == right
 }
 
 
@@ -84,6 +88,11 @@ case class NotEqual(left: Variable, right: Value) extends VariableConstraint {
   }
 
   override def update(domainUpdate: DomainUpdate): NotEqual = NotEqual(left.update(domainUpdate), right.update(domainUpdate))
+
+  lazy val isTautologic : Boolean = right match {
+    case c : Constant => !(left.sort.elements contains c)
+    case _ => false
+  }
 }
 
 
@@ -96,6 +105,8 @@ case class OfSort(left: Variable, right: Sort) extends VariableConstraint {
   override def substitute(sub: PartialSubstitution[Variable]): VariableConstraint = OfSort(sub(left), right)
 
   override def update(domainUpdate: DomainUpdate): OfSort = OfSort(left.update(domainUpdate), right.update(domainUpdate))
+
+  lazy val isTautologic : Boolean = left.sort.elements forall right.elements.contains
 }
 
 /**
@@ -107,4 +118,5 @@ case class NotOfSort(left: Variable, right: Sort) extends VariableConstraint {
   override def substitute(sub: PartialSubstitution[Variable]): VariableConstraint = NotOfSort(sub(left), right)
 
   override def update(domainUpdate: DomainUpdate): NotOfSort = NotOfSort(left.update(domainUpdate), right.update(domainUpdate))
+  lazy val isTautologic : Boolean = !(left.sort.elements exists right.elements.contains)
 }
