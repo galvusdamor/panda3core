@@ -4,9 +4,7 @@ import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 
-import java.util.BitSet;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by dhoeller on 23.07.16.
@@ -34,6 +32,8 @@ public class operators {
 
     public static BitSet goal;
     public static int[] goalList;
+
+    public static Set<Integer> ShopPrecActions = new HashSet<>();
 
     // The method representation used in progression search
     public static HashMap<Task, HashMap<GroundTask, List<method>>> methods;

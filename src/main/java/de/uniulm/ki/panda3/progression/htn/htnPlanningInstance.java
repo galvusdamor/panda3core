@@ -8,6 +8,11 @@ import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSea
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.ProgressionSearchRoutine;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.cRPG;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.greedyProgression;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.cRpgHtn;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.delRelaxedHTN;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.proBFS;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.simpleCompositionRPG;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
@@ -98,12 +103,17 @@ public class htnPlanningInstance {
 
         // todo: change heuristic here
         //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        initialNode.heuristic = new cRPG(operators.methods, allActions);
+        //initialNode.heuristic = new cRPG(operators.methods, allActions);
+        //initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
+        initialNode.heuristic = new greedyProgression();
+        //initialNode.heuristic = new delRelaxedHTN(operators.methods, allActions);
+        //initialNode.heuristic = new proBFS();
+
         initialNode.heuristic.build(initialNode);
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
         ProgressionSearchRoutine routine;
-        routine = new PriorityQueueSearch();
+        routine = new PriorityQueueSearch(false, false, true);
         //routine = new EnforcedHillClimbing();
         //routine = new CompleteEnforcedHillClimbing();
 
@@ -116,7 +126,7 @@ public class htnPlanningInstance {
                 if (a instanceof Integer)
                     System.out.println(n + " " + proPrinter.actionToStr(operators.IndexToAction[(Integer) a]));
                 else
-                    System.out.println(n + " " + ((GroundedDecompositionMethod) a).mediumInfo());
+                    System.out.println(n + " " + ((GroundedDecompositionMethod) a).longInfo());
                 n++;
             }
             /*
@@ -192,6 +202,9 @@ public class htnPlanningInstance {
             GroundTask action = actionIter.next();
             operators.ActionToIndex.put(action, i);
             operators.IndexToAction[i] = action;
+            if (action.mediumInfo().startsWith("SHOP_")) {
+                operators.ShopPrecActions.add(i);
+            }
 
             operators.prec[i] = new BitSet(operators.numStateFeatures);
             operators.precList[i] = new int[action.substitutedPreconditions().size()];

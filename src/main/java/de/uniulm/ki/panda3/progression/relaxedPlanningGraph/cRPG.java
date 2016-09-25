@@ -304,6 +304,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
     }
 
     private int calcHeu(int[] firstLayerWithFact, List<List<Integer>> operatorDelta, int[] actionDifficulty, List<List<Integer>> goalDelta) {
+//        String s = printLayerDelta(operatorDelta, firstLayerWithFact, goalDelta);
         int numactions = 0;
         for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
             for (int goalFact : goalDelta.get(layer)) {
@@ -314,59 +315,84 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                 // todo: the extraction of the producer might be written more optimized
                 for (int maybeProducer : operatorDelta.get(layer)) {
                     for (int eff : cRPG.addLists[maybeProducer]) {
+                        if ((eff == goalFact) && (numprecs[maybeProducer] < bestDifficulty)) {
+                            bestDifficulty = numprecs[maybeProducer];
+                            producer = maybeProducer;
+                        }
+
+/*
                         if ((eff == goalFact) && (actionDifficulty[maybeProducer] < bestDifficulty)) {
                             bestDifficulty = actionDifficulty[maybeProducer];
                             producer = maybeProducer;
-                        }
+                        }*/
                     }
                 }
                 numactions++;
                 for (Integer aPrec : cRPG.precLists[producer]) {
                     int fl = firstLayerWithFact[aPrec];
-                    if (fl > 0)
+                    if (fl > 0) {
                         goalDelta.get(fl).add(aPrec);
+                    }
                 }
             }
         }
         return numactions;
     }
 
-    private void printLayerDelta(List<List<Integer>> operatorDelta, int[] firstLayerWithFact) {
+    private String printLayerDelta(List<List<Integer>> operatorDelta, int[] firstLayerWithFact, List<List<Integer>> goalDelta) {
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < operatorDelta.size(); i++) {
             if (i >= 0) {
-                System.out.print("Operator Layer " + i + ": ");
+                sb.append("Operator Delta " + i + ": ");
                 boolean first = true;
                 for (int j = 0; j < operatorDelta.get(i).size(); j++) {
                     int action = operatorDelta.get(i).get(j);
                     if (first) {
                         first = false;
                     } else {
-                        System.out.print(", ");
+                        sb.append(", ");
                     }
                     if (action < operators.numActions) {
-                        System.out.print(operators.IndexToAction[action].mediumInfo());
+                        sb.append(operators.IndexToAction[action].mediumInfo());
                     } else
-                        System.out.print(cRPG.IndexToMethod.get(action).m.mediumInfo());
+                        sb.append(cRPG.IndexToMethod.get(action).m.mediumInfo());
                 }
             }
 
-            System.out.print("\n    Fact Layer " + i + ": ");
+            sb.append("\n    Fact Delta " + i + ": ");
             boolean first = true;
             for (int j = 0; j < firstLayerWithFact.length; j++) {
                 if (firstLayerWithFact[j] == i) {
                     if (first) {
                         first = false;
                     } else {
-                        System.out.print(", ");
+                        sb.append(", ");
                     }
                     if (j < operators.numStateFeatures) {
-                        System.out.print(operators.IndexToLiteral[j].mediumInfo());
+                        sb.append(operators.IndexToLiteral[j].mediumInfo());
                     } else
-                        System.out.print(cRPG.IndexToTaskLiteral.get(j).mediumInfo());
+                        sb.append(cRPG.IndexToTaskLiteral.get(j).mediumInfo());
                 }
             }
-            System.out.println("\n");
+
+            sb.append("\n    Goal Delta " + i + ": ");
+            first = true;
+            for (int j = 0; j < goalDelta.get(i).size(); j++) {
+                int fact = goalDelta.get(i).get(j);
+                if (first) {
+                    first = false;
+                } else {
+                    sb.append(", ");
+                }
+                if (fact < operators.numStateFeatures) {
+                    sb.append(operators.IndexToLiteral[fact].mediumInfo());
+                } else
+                    sb.append(cRPG.IndexToTaskLiteral.get(fact).mediumInfo());
+            }
+
+            sb.append("\n\n");
         }
+        return sb.toString();
     }
 
     @Override
@@ -381,20 +407,10 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
     @Override
     public htnGroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps, method m) {
-        /*assert (decreseByOne(tn, ps, m));
-        cRPG crpg = new cRPG();
-        crpg.heuristicValue = this.heuristicValue - 1;
-        return crpg;*/
         cRPG crpg = new cRPG();
         crpg.build(tn);
         return crpg;
     }
-/*
-    private boolean decreseByOne(ProgressionNetwork tn, ProgressionPlanStep ps, method m) {
-        cRPG crpg = new cRPG();
-        crpg.build(tn);
-        return (this.getHeuristic() == (crpg.getHeuristic() - 1));
-    }*/
 
     @Override
     public htnGroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps) {

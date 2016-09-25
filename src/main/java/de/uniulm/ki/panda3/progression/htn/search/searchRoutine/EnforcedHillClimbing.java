@@ -39,7 +39,7 @@ public class EnforcedHillClimbing extends ProgressionSearchRoutine{
                         pre = operators.prec[ps.action].nextSetBit(pre + 1);
                     }
 
-                    ProgressionNetwork node = n.apply(ps);
+                    ProgressionNetwork node = n.apply(ps, false);
                     if (node.heuristic.goalRelaxedReachable()) {
                         // early goal test - NON-OPTIMAL
                         if (node.isGoal()) {

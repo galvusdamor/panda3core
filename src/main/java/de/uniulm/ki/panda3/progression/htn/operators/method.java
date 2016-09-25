@@ -14,6 +14,40 @@ import java.util.*;
  */
 public class method {
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("task ");
+        sb.append(this.m.groundAbstractTask().longInfo());
+        sb.append("\n t { 0: ");
+        if (tasks.length > 0) {
+            sb.append(tasks[0].longInfo());
+        }
+        for (int i = 1; i < tasks.length; i++) {
+            sb.append("\n     ");
+            sb.append(i);
+            sb.append(": ");
+            sb.append(tasks[i].longInfo());
+        }
+        sb.append("}\n < { ");
+        if (orderings.size() > 0) {
+            int[] ord = orderings.get(0);
+            sb.append(ord[0]);
+            sb.append("<");
+            sb.append(ord[1]);
+
+        }
+        for (int i = 1; i < orderings.size(); i++) {
+            int[] ord = orderings.get(i);
+            sb.append(", ");
+            sb.append(ord[0]);
+            sb.append("<");
+            sb.append(ord[1]);
+        }
+        sb.append(" }\n");
+        return sb.toString();
+    }
+
     public final GroundedDecompositionMethod m; // this is the original method that is saved for printing the solution
     public GroundTask[] tasks;
 
@@ -26,6 +60,14 @@ public class method {
     HashSet<Integer> lasts;
 
     public method(GroundedDecompositionMethod dm) {
+        /*if (dm.groundAbstractTask().toString().toLowerCase().contains("call")) {
+            for (int i = 0; i < dm.decompositionMethod().subPlan().planSteps().size(); i++) {
+                System.out.println(dm.decompositionMethod().subPlan().planSteps().apply(i).longInfo());
+            }
+            for (int i = 0; i < dm.decompositionMethod().subPlan().planStepsWithoutInitGoal().size(); i++) {
+                System.out.println(dm.decompositionMethod().subPlan().planStepsWithoutInitGoal().apply(i).longInfo());
+            }
+        }*/
         this.m = dm;
         Seq<PlanStep> steps = dm.decompositionMethod().subPlan().planStepsWithoutInitGoal();
         this.tasks = new GroundTask[steps.size()];
@@ -76,7 +118,6 @@ public class method {
                 actionID[i] = -1;
             }
         }
-
     }
 
     public subtaskNetwork instantiate() {

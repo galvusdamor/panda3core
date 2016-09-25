@@ -25,4 +25,8 @@ public class subtaskNetwork {
     public List<ProgressionPlanStep> getFirstNodes() {
         return this.firsts;
     }
+
+    public int size() {
+        return steps.length;
+    }
 }
