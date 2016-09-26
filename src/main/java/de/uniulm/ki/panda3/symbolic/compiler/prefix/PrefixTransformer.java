@@ -87,6 +87,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             domPlan = transformStep_M_x(domPlan);
             domPlan = transformStep_s_i(domPlan);
             domPlan = transformStep_M_t(domPlan, false);
+
         } catch (addPrefixException e) {
             e.printStackTrace();
         }
@@ -111,6 +112,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
     /**
      * L_x is the set of new literals that is added to the preconditions to enforce the ordering of the prefix.
      * The number of literals differs in the cases of (1) repair and (2) recognition and (3) verification.
+     * The predicate that is made true by the last enforced action is added to the goal of the problem.
      */
     private Tuple2<Domain, Plan> transformStep_L_x(Tuple2<Domain, Plan> domPlan) {
         String prefixExtension = "l";
@@ -129,7 +131,39 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
         }
 
         AddPredicate updateObject = new AddPredicate(newPredicates.result());
-        return new Tuple2<Domain, Plan>(domPlan._1().update(updateObject), domPlan._2());
+        Tuple2<Domain, Plan> tempDomain = new Tuple2<Domain, Plan>(domPlan._1().update(updateObject), domPlan._2());
+
+        //
+        // add the last literal to the goal to enforce the execution of the prefix
+        //
+        int addToGoal;
+        if ((this.whatToDo == programTasks.repair) || (this.whatToDo == programTasks.recognition)) {
+            addToGoal = predicateCount - 1;
+        } else {
+            addToGoal = predicateCount - 2;
+        }
+        Formula g = new Literal(newPredicates.get(addToGoal), true, (new seqProviderList<Variable>()).result());
+
+        seqProviderList<Formula> goalLiterals = new seqProviderList();
+        goalLiterals.add(tempDomain._2().goal().schema().precondition());
+        goalLiterals.add(g);
+        And newGoal = new And(goalLiterals.result());
+
+        Task tGoal = new GeneralTask(
+                tempDomain._2().goal().schema().name(),
+                tempDomain._2().goal().schema().isPrimitive(),
+                tempDomain._2().goal().schema().parameters(),
+                tempDomain._2().goal().schema().artificialParametersRepresentingConstants(),
+                tempDomain._2().goal().schema().parameterConstraints(),
+                newGoal,
+                tempDomain._2().goal().schema().effect()
+        );
+
+        scala.collection.immutable.HashMap map = new scala.collection.immutable.HashMap();
+        map = map.$plus(new Tuple2(domPlan._2().goal().schema(), tGoal));
+        ExchangeTask exchangeGoal = new ExchangeTask(map);
+
+        return new Tuple2<Domain, Plan>(tempDomain._1(), tempDomain._2().update(exchangeGoal));
     }
 
 
