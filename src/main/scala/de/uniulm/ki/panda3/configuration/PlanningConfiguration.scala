@@ -132,7 +132,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       // EFFICIENT SEARCH
       timeCapsule start COMPUTE_EFFICIENT_REPRESENTATION
       val wrapper = Wrapping(domainAndPlan)
-      PlanningConfiguration.wrapper = wrapper
       val efficientInitialPlan = wrapper.unwrap(domainAndPlan._2)
       timeCapsule stop COMPUTE_EFFICIENT_REPRESENTATION
 
