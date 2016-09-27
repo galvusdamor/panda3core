@@ -38,7 +38,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph,
-                                                                          compileOrderInMethods = None, //Some(AllOrderings()),
+                                                                          compileOrderInMethods = Some(OneRandomOrdering()),
                                                                           liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,
                                                                           groundedTaskDecompositionGraph = Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = true),
@@ -141,8 +141,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
     // start verification
     val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
-    /*if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder() && !verify) TotallyOrderedEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK, defineK)
-    else */ if (verify) GeneralEncoding(domain, initialPlan, sequenceToVerify, offSetToK, defineK) else TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK, defineK)
+    if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder() && !verify) TotallyOrderedEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK, defineK)
+    else  if (verify) GeneralEncoding(domain, initialPlan, sequenceToVerify, offSetToK, defineK) else TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK, defineK)
 
     // (3)
     println("K " + encoder.K)
@@ -639,10 +639,10 @@ object VerifyRunner {
 
 
   val timeLimit: Long = 30 * 60 * 1000
-  val minOffset: Int  = 5
+  val minOffset: Int  = 1
   val maxOffset: Int  = 10
   val minPlan  : Int  = 30
-  val maxPlan  : Int  = 60
+  val maxPlan  : Int  = 30
   val stepPlan : Int  = 10
 
   val numberOfRandomSeeds: Int = 5

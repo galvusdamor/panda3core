@@ -250,7 +250,7 @@ object VerifyEncoding {
         else if (currentTask == sortedTasks.length) {if (remainingLength == 0) Some(0) else None } else {
           val firstTaskMap = map(sortedTasks(currentTask))
           val subValues = Range(0, remainingLength + 1) collect { case l if firstTaskMap contains l => (l, minimumByDistribution(currentTask + 1, remainingLength - l)) }
-          val definedSubValues = subValues filter { _._2.isDefined } map { case (l, Some(subHeight)) => Math.max(subHeight, firstTaskMap(l)) }
+          val definedSubValues = subValues collect { case (l, Some(subHeight)) => Math.max(subHeight, firstTaskMap(l)) }
           val result = if (definedSubValues.isEmpty) None else Some(definedSubValues max)
           cached((currentTask, remainingLength)) = result
           result
