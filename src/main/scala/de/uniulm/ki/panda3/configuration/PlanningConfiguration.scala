@@ -52,7 +52,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   def runResultSearch(domain: InputStream, problem: InputStream, timeCapsule: TimeCapsule = new TimeCapsule()): ResultMap = runSearchHandle(domain, problem, None, timeCapsule)._6()
 
   /**
-    * Runs the complete planner and returs the results
+    * Runs the complete planner and returns the results
     */
   def runResultSearch(domain: Domain, problem: Plan, timeCapsule: TimeCapsule): ResultMap = runSearchHandle(domain, problem, None, timeCapsule)._6()
 
@@ -132,6 +132,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       // EFFICIENT SEARCH
       timeCapsule start COMPUTE_EFFICIENT_REPRESENTATION
       val wrapper = Wrapping(domainAndPlan)
+      PlanningConfiguration.wrapper = wrapper
       val efficientInitialPlan = wrapper.unwrap(domainAndPlan._2)
       timeCapsule stop COMPUTE_EFFICIENT_REPRESENTATION
 
