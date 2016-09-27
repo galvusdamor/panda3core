@@ -23,8 +23,8 @@ object ToPlainFormulaRepresentation extends DomainTransformer[Unit] {
         val (newPrec, precVars) = prec.compileQuantors()
         val (newEff, effVars) = eff.compileQuantors()
         val newTask = gt.copy(effect = newEff, precondition = newPrec, parameters = parameters ++ precVars ++ effVars)
-        if ((precVars ++ effVars).nonEmpty) (gt, newTask) :: Nil else Nil
-
+        //if ((precVars ++ effVars).nonEmpty) (gt, newTask) :: Nil else Nil
+        (gt, newTask) :: Nil
       case _ => Nil
     }
 
