@@ -18,6 +18,8 @@ import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
+import de.uniulm.ki.util.InformationCapsule;
+import de.uniulm.ki.util.TimeCapsule;
 import scala.Tuple2;
 import scala.collection.*;
 
@@ -117,7 +119,11 @@ public class htnPlanningInstance {
         //routine = new EnforcedHillClimbing();
         //routine = new CompleteEnforcedHillClimbing();
 
-        List<Object> solution = routine.search(initialNode);
+        InformationCapsule ic = new InformationCapsule();
+        TimeCapsule tc = new TimeCapsule();
+        List<Object> solution = routine.search(initialNode, ic, tc);
+        assert (isApplicable(solution, s0._1()));
+        System.out.println("###" + ic.keyValueListString() + ";" + tc.keyValueListString());
 
         int n = 1;
         if (solution != null) {
@@ -136,6 +142,23 @@ public class htnPlanningInstance {
             System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");*/
         } else System.out.println("Problem unsolvable.");
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
+    }
+
+    private boolean isApplicable(List<Object> solution, BitSet state) {
+        for (Object mod : solution) {
+            if (mod instanceof Integer) {
+                int a = (Integer) mod;
+                int pre = operators.prec[a].nextSetBit(0);
+                while (pre > -1) {
+                    if (!state.get(pre))
+                        return false;
+                    pre = operators.prec[a].nextSetBit(pre + 1);
+                }
+                state.andNot(operators.del[a]);
+                state.or(operators.add[a]);
+            }
+        }
+        return true;
     }
 
     private HashMap<Task, HashMap<GroundTask, List<method>>> getEfficientMethodRep(Map<Task, Set<GroundedDecompositionMethod>> methodsByTask) {

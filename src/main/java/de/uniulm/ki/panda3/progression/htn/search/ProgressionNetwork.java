@@ -18,7 +18,6 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
      * - does this work for empty task networks? I don't think so. Could one compile these methods in something other?
      */
 
-    // this is state that has to be cloned
     public BitSet state;
     List<ProgressionPlanStep> unconstraintPrimitiveTasks;
     List<ProgressionPlanStep> unconstraintAbstractTasks;
@@ -28,13 +27,14 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public int numDecompositionSteps = 0;
 
 
-    private boolean printProgressionTrace = true;
-    public String progressionTrace = "";
+    private boolean printProgressionTrace = false;
+    public String progressionTrace;
 
     public htnGroundedProgressionHeuristic heuristic;
 
     public int metric = 0;
     public boolean goalRelaxedReachable = true;
+    public int id = 0;
 
     private ProgressionNetwork() {
     }
@@ -51,8 +51,8 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         }
         this.solution = new LinkedList<>();
         if (printProgressionTrace) {
-            System.out.println("WARNING: The system is recording a full decomposition trace - this is VERY slow and only recomented for debugging.");
-            this.progressionTrace += "PROGRESSION-TRACE:\n\n";
+            System.out.println("WARNING: The system is recording a full decomposition trace - this is VERY slow and only recommended for debugging.");
+            this.progressionTrace = "\nPROGRESSION-TRACE:\n\n";
             this.progressionTrace += this.toString();
         }
         this.state = state;
@@ -97,10 +97,11 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
             ProgressionPlanStep ps = pss.removeFirst();
             int iPrec = tasks.get(ps);
             for (ProgressionPlanStep succ : ps.successorList) {
-                if (!tasks.containsKey(succ))
+                if (!tasks.containsKey(succ)) {
                     tasks.put(succ, taskid++);
+                    pss.add(succ);
+                }
                 int iSucc = tasks.get(succ);
-                pss.add(succ);
                 int[] ord = new int[2];
                 ord[0] = iPrec;
                 ord[1] = iSucc;
@@ -169,60 +170,23 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
         // get copy of method subtask network
         subtaskNetwork tn = m.instantiate();
-        if (tn.size() > 0) {
-            assert (tn.getLastNodes().size() > 0);
-            assert (tn.getFirstNodes().size() > 0);
-            // method's last tasks constrain all tasks that have been constrained by ps before
-            List<ProgressionPlanStep> lastNodes = tn.getLastNodes();
-            for (ProgressionPlanStep ps2 : lastNodes) {
-                ps2.successorList.addAll(ps.successorList);
-            }
 
-            // the first nodes off the task network are new first nodes of this network
-            for (ProgressionPlanStep p : tn.getFirstNodes()) {
-                if (p.isPrimitive)
-                    res.unconstraintPrimitiveTasks.add(p);
-                else
-                    res.unconstraintAbstractTasks.add(p);
-            }
-        } else { // empty task network, this is quite similar to a primitive task
+        assert (tn.size() > 0);
+        assert (tn.getLastNodes().size() > 0);
+        assert (tn.getFirstNodes().size() > 0);
 
-            // every successor of ps is a first task if and only if it is
-            // not a successor of any task in the firstTasks list.
-            HashSet<ProgressionPlanStep> potentialFirst = new HashSet<>();
-            potentialFirst.addAll(ps.successorList);
+        // method's last tasks constrain all tasks that have been constrained by ps before
+        List<ProgressionPlanStep> lastNodes = tn.getLastNodes();
+        for (ProgressionPlanStep ps2 : lastNodes) {
+            ps2.successorList.addAll(ps.successorList);
+        }
 
-            // todo: shouldn't this be a set?
-            LinkedList<ProgressionPlanStep> potentialPredecessors = new LinkedList<>();
-            for (ProgressionPlanStep f : res.unconstraintAbstractTasks) {
-                potentialPredecessors.addAll(f.successorList);
-            }
-            for (ProgressionPlanStep f : res.unconstraintPrimitiveTasks) {
-                potentialPredecessors.addAll(f.successorList);
-            }
-
-            // todo: this could be done in preprocessing
-            for (ProgressionPlanStep f : ps.successorList) {
-                potentialPredecessors.addAll(f.successorList);
-            }
-
-            while (true) {
-                if (potentialFirst.isEmpty()) {
-                    break; // no first left
-                }
-                if (potentialPredecessors.isEmpty()) {
-                    break; // the next that are left are valid firstTasks
-                }
-                ProgressionPlanStep ps2 = potentialPredecessors.removeFirst();
-                potentialPredecessors.addAll(ps2.successorList);
-                potentialFirst.remove(ps2);
-            }
-            for (ProgressionPlanStep p : potentialFirst) {
-                if (p.isPrimitive)
-                    res.unconstraintPrimitiveTasks.add(p);
-                else
-                    res.unconstraintAbstractTasks.add(p);
-            }
+        // the first nodes off the task network are new first nodes of this network
+        for (ProgressionPlanStep p : tn.getFirstNodes()) {
+            if (p.isPrimitive)
+                res.unconstraintPrimitiveTasks.add(p);
+            else
+                res.unconstraintAbstractTasks.add(p);
         }
         if (printProgressionTrace) {
             res.progressionTrace += "\n";
@@ -232,8 +196,6 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     }
 
     public ProgressionNetwork apply(ProgressionPlanStep ps, boolean deleteRelaxed) {
-        if (ps.getTask().longInfo().toLowerCase().contains("p_2call"))
-            System.out.println();
         ProgressionNetwork res = this.clone();
         res.state = (BitSet) this.state.clone();
         res.solution.add(ps.action);
@@ -243,6 +205,8 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
             res.numProgressionSteps++;
 
         res.unconstraintPrimitiveTasks.remove(ps);
+
+        assert(isApplicable(res.state, ps.action));
 
         // transfer state
         if (!deleteRelaxed) {
@@ -293,6 +257,16 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         return res;
     }
 
+    private boolean isApplicable(BitSet state, int action) {
+        int pre = operators.prec[action].nextSetBit(0);
+        while (pre > -1) {
+            if (!state.get(pre))
+                return false;
+            pre = operators.prec[action].nextSetBit(pre + 1);
+        }
+        return true;
+    }
+
     public boolean isGoal() {
         if (!this.empty()) {
             return false;
@@ -312,7 +286,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.solution = new LinkedList<>();
         res.solution.addAll(this.solution);
         if (printProgressionTrace)
-            res.progressionTrace += this.progressionTrace;
+            res.progressionTrace = this.progressionTrace;
         res.numDecompositionSteps = this.numDecompositionSteps;
         res.numProgressionSteps = this.numProgressionSteps;
         res.numSHOPProgressionSteps = this.numSHOPProgressionSteps;
@@ -321,6 +295,9 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
     @Override
     public int compareTo(ProgressionNetwork other) {
-        return (this.metric - other.metric);
+        int c = (this.metric - other.metric);
+        //if (c == 0)
+        //    c = (this.id - other.id);
+        return c;
     }
 }
