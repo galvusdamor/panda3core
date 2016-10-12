@@ -4,6 +4,8 @@ import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
+import de.uniulm.ki.util.InformationCapsule;
+import de.uniulm.ki.util.TimeCapsule;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -84,5 +86,10 @@ public class CompleteEnforcedHillClimbing extends ProgressionSearchRoutine {
                 }
             }
         }
+    }
+
+    @Override
+    public List<Object> search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
+        return null;
     }
 }

@@ -1,6 +1,8 @@
 package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
+import de.uniulm.ki.util.InformationCapsule;
+import de.uniulm.ki.util.TimeCapsule;
 
 import java.util.List;
 
@@ -19,4 +21,6 @@ public abstract class ProgressionSearchRoutine {
     }
 
     public abstract List<Object> search(ProgressionNetwork firstSearchNode);
+
+    public abstract List<Object> search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing);
 }
