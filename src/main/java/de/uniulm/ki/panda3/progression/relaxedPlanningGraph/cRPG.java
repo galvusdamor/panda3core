@@ -327,7 +327,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                         }*/
                     }
                 }
-                numactions++;
+                if (!operators.ShopPrecActions.contains(producer))
+                    numactions++;
                 for (Integer aPrec : cRPG.precLists[producer]) {
                     int fl = firstLayerWithFact[aPrec];
                     if (fl > 0) {
