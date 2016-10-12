@@ -9,6 +9,8 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
  */
 public interface htnGroundedProgressionHeuristic {
 
+    String getName();
+
     void build(ProgressionNetwork tn);
 
     htnGroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, method m);

@@ -33,7 +33,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
     boolean deleteRelaxed = false;
     boolean output = true;
     //long wallTime = 300000; // 5 min
-    long wallTime = -1;
     boolean exitDueToTimeLimit = false;
 
     public PriorityQueueSearch() {
@@ -216,6 +215,11 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         if (output)
             System.out.println("Search time: " + (System.currentTimeMillis() - totalSearchTime) + " ms");
         return solution;
+    }
+
+    @Override
+    public String SearchName() {
+        return "Priority Queue";
     }
 
     private void setSolInfo(List<Object> solution, InformationCapsule ic) {

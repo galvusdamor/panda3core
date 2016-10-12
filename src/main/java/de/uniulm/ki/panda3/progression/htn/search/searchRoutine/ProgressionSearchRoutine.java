@@ -11,6 +11,8 @@ import java.util.List;
  */
 public abstract class ProgressionSearchRoutine {
 
+    public long wallTime = -1;
+
     protected String getInfoStr(int searchnodes, int fringesize, int bestMetric, ProgressionNetwork n, long searchtime) {
         return "nodes/sec: " + Math.round(searchnodes / ((System.currentTimeMillis() - searchtime) / 1000.0))
                 + " - generated nodes: " + searchnodes
@@ -23,4 +25,8 @@ public abstract class ProgressionSearchRoutine {
     public abstract List<Object> search(ProgressionNetwork firstSearchNode);
 
     public abstract List<Object> search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing);
+
+    public String SearchName(){
+        return "unknown";
+    }
 }

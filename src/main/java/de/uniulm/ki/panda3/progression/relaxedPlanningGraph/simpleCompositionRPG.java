@@ -125,6 +125,11 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
         System.out.println(" (" + (System.currentTimeMillis() - time) + " ms)");
     }
 
+    @Override
+    public String getName() {
+        return "Symbolic Composition Graph";
+    }
+
     public void build(ProgressionNetwork tn) {
         /**
          * The following array stores for every fact in which fact layer it has been made true:

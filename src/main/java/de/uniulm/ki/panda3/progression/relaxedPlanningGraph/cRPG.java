@@ -176,6 +176,11 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         return methodID;
     }
 
+    @Override
+    public String getName() {
+        return "Simple Composition Graph";
+    }
+
     public void build(ProgressionNetwork tn) {
         // The following array stores for every fact in which fact layer it has been made true:
         // [6, 1, 0, -1] means that there are 4 facts, the first one has been made true in layer 6
@@ -221,7 +226,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
         // add all tasks in the current network as goal
         LinkedList<ProgressionPlanStep> goalFacts = new LinkedList<>();
-        goalFacts.addAll(tn.getFirst());
+        goalFacts.addAll(tn.getFirstAbstractTasks());
+        goalFacts.addAll(tn.getFirstPrimitiveTasks());
         while (!goalFacts.isEmpty()) {
             ProgressionPlanStep ps = goalFacts.removeFirst();
             htnGoal.add(cRPG.TaskLiteralToIndex.get(ps.getTask()));

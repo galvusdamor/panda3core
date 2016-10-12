@@ -105,9 +105,9 @@ public class htnPlanningInstance {
 
         // todo: change heuristic here
         //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        //initialNode.heuristic = new cRPG(operators.methods, allActions);
+        initialNode.heuristic = new cRPG(operators.methods, allActions);
         //initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
-        initialNode.heuristic = new greedyProgression();
+        //initialNode.heuristic = new greedyProgression();
         //initialNode.heuristic = new delRelaxedHTN(operators.methods, allActions);
         //initialNode.heuristic = new proBFS();
 
@@ -115,9 +115,27 @@ public class htnPlanningInstance {
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
         ProgressionSearchRoutine routine;
-        routine = new PriorityQueueSearch(false, false, true);
+        boolean aStar = false;
+        boolean deleteRelaxed = false;
+        boolean printOutput = true;
+        long quitAfterMs = -1;
+
+        routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput);
         //routine = new EnforcedHillClimbing();
         //routine = new CompleteEnforcedHillClimbing();
+        routine.wallTime = quitAfterMs;
+
+        System.out.println("Searching with \n - " + routine.SearchName() + " search routine");
+        if (aStar) {
+            System.out.println(" - A-Star search");
+        } else {
+            System.out.println(" - Greedy search");
+        }
+        System.out.println(" - " + initialNode.heuristic.getName()+" heuristic");
+
+        if (deleteRelaxed) {
+            System.out.println(" - DELETE-RELAXED actions");
+        }
 
         InformationCapsule ic = new InformationCapsule();
         TimeCapsule tc = new TimeCapsule();
