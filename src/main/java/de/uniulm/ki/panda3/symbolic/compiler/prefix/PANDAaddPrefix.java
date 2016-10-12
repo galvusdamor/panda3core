@@ -59,7 +59,6 @@ public class PANDAaddPrefix {
             }
             // transformation introduces nasty structures that should be removed
             domPlan = ToPlainFormulaRepresentation.transform(domPlan);
-            domPlan = (new forallAndExistsPrecCompiler()).transform(domPlan, null);
 
             // be sure that this is done AFTER the encoding (otherwise no decomposition will be possible before executing the prefix)
             domPlan = SHOPMethodCompiler.transform(domPlan);

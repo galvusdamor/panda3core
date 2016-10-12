@@ -191,6 +191,10 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             ArrayList<VariableConstraint> newPrimVarConstraints = new ArrayList<VariableConstraint>();
 
             for (int b = 0; b < relatedTask.parameters().size(); b++) {
+                if (b >= (prefixNameArguments[a - 1].length - 1)) {
+                    System.out.println("This should be mapped to a const: " + relatedTask.parameters().apply(b).name());
+                    continue;
+                }
                 Constant tempConstant = getConstantFromDomainByName(domPlan._1(), prefixNameArguments[a - 1][b + 1]);
 
                 newPrimVarConstraints.add(new Equal(relatedTask.parameters().apply(b), tempConstant));
