@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.{Task, Domain, SHOPDecompositionMethod}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.writer.{Writer, _}
 
 
@@ -54,7 +54,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     builder.toString()
   }
 
-  def writeLiteral(literal: Literal, uf: SymbolicUnionFind, indentation: String): String = {
+  def writeLiteral(literal: Literal, uf: SymbolicUnionFind, indentation: String, appendNewLine: Boolean = true): String = {
     val builder: StringBuilder = new StringBuilder()
 
     builder.append(indentation + "(")
@@ -65,7 +65,8 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     builder.append(writeVariableList(parameters, NoConstraintsCSP))
 
     if (literal.isNegative) builder.append(")")
-    builder.append(")\n")
+    builder.append(")")
+    if (appendNewLine) builder.append("\n")
     builder.toString()
   }
 
@@ -109,8 +110,8 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     // write down the constraints
     val constraintConditions = plan.variableConstraints.constraints collect {
       case NotEqual(v1, v2) => "(not (= " + getRepresentative(v1, unionFind) + " " + getRepresentative(v2, unionFind) + "))"
-      case OfSort(v, s)     => "(" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, unionFind) + ")"
-      case NotOfSort(v, s)  => "(not (" + toPDDLIdentifier(s.name) + " " + getRepresentative(v, unionFind) + "))"
+      case OfSort(v, s)     => "(sortof " + getRepresentative(v, unionFind) + " - " + toPDDLIdentifier(s.name) + ")"
+      case NotOfSort(v, s)  => "(not (sortof " + getRepresentative(v, unionFind) + " - " + toPDDLIdentifier(s.name) + "))"
     }
 
     if (constraintConditions.nonEmpty) {
@@ -118,11 +119,24 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
       constraintConditions foreach { condition =>
         builder.append("\t" + (if (indentation) "\t" else "") + (if (problemMode) "(" else "") + "\t")
         builder append condition
-        builder append "\n"
+        builder append ((if (problemMode) ")" else "") + "\n")
       }
 
       builder.append("\t" + (if (indentation) "\t" else "") + (if (problemMode) "(" else "") + ")\n")
+    }
 
+    if (plan.causalLinks.nonEmpty) {
+      builder.append("\t" + (if (indentation) "\t" else "") + (if (problemMode) "(" else "") + ":causallinks (and\n")
+      plan.causalLinks foreach { case CausalLink(producer, consumer, literal) =>
+        builder.append("\t" + (if (indentation) "\t" else "") + "\t(")
+        builder append ("task" + planStepToID(producer) + " ")
+        builder append writeLiteral(literal, unionFind, "", appendNewLine = false)
+        builder append (" task" + planStepToID(consumer))
+
+        builder append ")\n"
+
+      }
+      builder.append("\t" + (if (indentation) "\t" else "") + (if (problemMode) "(" else "") + ")\n")
     }
 
     builder.toString()
@@ -226,22 +240,28 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     // add all sorts
     if (dom.sorts.nonEmpty) {
       builder.append("\t(:types\n")
-      dom.sorts foreach {
-        s => builder.append("\t\t" + toPDDLIdentifier(s.name))
-          val parentSorts = dom.sortGraph.edgeList filter {
-            _._2 == s
-          }
-          if (parentSorts.size == 1) builder.append(" - " + toPDDLIdentifier(parentSorts.head._1.name))
-          if (parentSorts.size > 1) {
-            builder.append(" - (either")
-            parentSorts foreach {
-              ps => builder.append(" " + toPDDLIdentifier(ps._1.name))
+      val (regularSorts, isolatedSorts) = dom.sorts partition { s => dom.sortGraph.degrees(s) match {case (a, b) => a != 0 || b != 0} }
+
+
+      regularSorts foreach { s =>
+          val parentSorts = dom.sortGraph.edgeList filter { _._2 == s }
+          // if it has no parent sort it will be the parent of something
+          if (parentSorts.nonEmpty) {
+            builder.append("\t\t" + toPDDLIdentifier(s.name))
+            if (parentSorts.size == 1) builder.append(" - " + toPDDLIdentifier(parentSorts.head._1.name))
+            if (parentSorts.size > 1) {
+              builder.append(" - (either")
+              parentSorts foreach {
+                ps => builder.append(" " + toPDDLIdentifier(ps._1.name))
+              }
+              builder.append(")")
             }
-            builder.append(")")
+            builder.append("\n")
           }
-          if (parentSorts.isEmpty) builder append " - object"
-          builder.append("\n")
       }
+      // write isolated sorts at the end
+      isolatedSorts foreach {s => builder.append("\t\t" + toPDDLIdentifier(s.name) + "\n")}
+
       builder.append("\t)\n")
     }
 
@@ -290,7 +310,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
           case v                                                       => taskUF getRepresentative v
         }
 
-        val mappedVariables = mappedParameters collect {case v : Variable => v}
+        val mappedVariables = mappedParameters collect { case v: Variable => v }
 
         //if (m.subPlan.variableConstraints.variables.nonEmpty) {
         builder.append("\t\t:parameters (")
@@ -311,7 +331,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         // TODO method effects
         val methodPrecondition = m match {
           case SHOPDecompositionMethod(_, _, f, _, _) => f
-          case _                                   => And[Formula](Nil)
+          case _                                      => And[Formula](Nil)
         }
 
         val neededVariableConstraints = abstractTaskParameters map { v => (v, planUF.getRepresentative(v)) } collect { case (v, c: Constant) => (v, c) }
@@ -352,9 +372,22 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     writeConstants(builder, dom.constants, dom, isInDomain = false)
 
     // initial task network
-    builder append "\t(:htn\n"
-    builder.append(writePlan(plan, indentation = true, problemMode = false))
-    builder append "\t)\n"
+    if (plan.planStepsWithoutInitGoal.nonEmpty) {
+      builder append "\t(:htn\n"
+      //if (m.subPlan.variableConstraints.variables.nonEmpty) {
+      builder.append("\t\t:parameters (")
+      val planUF = SymbolicUnionFind.constructVariableUnionFind(plan)
+      val methodParameters: Seq[Variable] =
+        (plan.variableConstraints.variables.toSeq map planUF.getRepresentative collect {
+          case v@Variable(_, _, _) => v
+        }).distinct.sortWith({ _.name < _.name })
+
+      builder.append(writeParameters(methodParameters))
+      builder.append(")\n")
+      //}
+      builder.append(writePlan(plan, indentation = true, problemMode = false))
+      builder append "\t)\n"
+    }
 
     // initial state
     if (!plan.init.schema.effect.isEmpty) {
