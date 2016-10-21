@@ -7,6 +7,7 @@ import java.util.concurrent.Semaphore
 import de.uniulm.ki.panda3.configuration.{PlanningConfiguration, EfficientSearchAlgorithm, AbortFunction, ResultFunction}
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
+import de.uniulm.ki.panda3.efficient.heuristic.filter.TreeFF
 import de.uniulm.ki.panda3.efficient.heuristic.{EfficientNumberOfFlaws, EfficientHeuristic}
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.flaw.{EfficientAbstractPlanStep, EfficientOpenPrecondition, EfficientCausalThreat}
@@ -36,6 +37,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
     import de.uniulm.ki.panda3.configuration.Information._
     import scala.math.Ordering.Implicits._
 
+    val tff = TreeFF(domain)
 
     val semaphore: Semaphore = new Semaphore(0)
     val root = new EfficientSearchNode[Payload](0, initialPlan, null, Double.MaxValue)
@@ -143,7 +145,13 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
               //val newPlan: EfficientPlan = plan.modify(myNode.modifications(myNode.selectedFlaw)(modNum))
               val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))
 
-              if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent) {
+              timeCapsule start SEARCH_COMPUTE_FILTER
+              val treeff = tff.isPossiblySolvable(newPlan)
+              timeCapsule stop SEARCH_COMPUTE_FILTER
+
+              if (!treeff) informationCapsule increment NUMBER_OF_DISCARDED_NODES
+
+              if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent && treeff) {
                 informationCapsule increment NUMBER_OF_NODES
                 informationCapsule.addToDistribution(PLAN_SIZE, newPlan.numberOfPlanSteps)
 
@@ -168,7 +176,21 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
               }
               modNum += 1
             }
-          }
+          } /*else {
+            val flaw = myNode.plan.flaws(myNode.selectedFlaw)
+            println(flaw)
+            flaw match {
+              case EfficientOpenPrecondition(p,ps,precIndex) =>
+                val taskIndex = p.planStepTasks(ps)
+                val task = PlanningConfiguration.wrapper.wrapTask(taskIndex)
+                println(task.name)
+                val prec = p.taskOfPlanStep(ps).precondition(precIndex)
+                println(PlanningConfiguration.wrapper.wrapPredicate(prec.predicate).name)
+
+
+              case _ => ()
+            }
+          }*/
           if (buildTree) myNode.children = children.toArray
         }
         // now the node is processed
