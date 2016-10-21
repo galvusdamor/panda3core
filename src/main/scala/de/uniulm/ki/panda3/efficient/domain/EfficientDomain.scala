@@ -41,7 +41,8 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
   }
 
 
-  val isGround: Boolean = sortsOfConstant.length == 0 && subSortsForSort.length == 0
+  val isGround               : Boolean = sortsOfConstant.isEmpty && subSortsForSort.isEmpty
+  val noNegativePreconditions: Boolean = tasks forall { _.precondition forall { _.isPositive } }
 
   lazy val insertableTasks: Array[EfficientTask] = tasks filter { _.allowedToInsert }
 
