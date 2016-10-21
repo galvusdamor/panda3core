@@ -16,6 +16,8 @@ import de.uniulm.ki.util.HashMemo
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
   extends DomainUpdatable with PrettyPrintable {
 
+  arguments foreach {v => assert(v != null)}
+
 
   // TODO: this might cause problems in the wrapper (two decompositon methods might be judges as equal if they really are not), but is necessary to achieve at least a decent performance
   // for the symbolic planner
