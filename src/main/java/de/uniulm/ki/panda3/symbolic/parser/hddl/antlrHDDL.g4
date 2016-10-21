@@ -1,14 +1,12 @@
 grammar antlrHDDL;
 
-//
-// Version Log:
-//
-// 15-04-12 DH :
-//   - basic version with typing, propositions, conditional effects, hierarchy
-//   - pure PDDL rules are taken from Fox and Long's PDDL 2.1 definition
-//
-// MISSING FEATURES:
-//   - decomposition axioms
+/**
+ * Created by Daniel Höller, Ulm University (daniel.hoeller@uni-ulm.de)
+ * - This file contains the grammar for the ANTLR parser generator
+ * - It describes an extension of the Planning Domain Definition Language to describe hierarchical
+ *   planning problems like Hybrid Planning or Hierarchical Task Network planning.
+ * - It is based on the PDDL 2.1 definition by Maria Fox & Derek Long (so far, only the non-temporal part)
+**/
 
 // @IGNORE
 hddl_file : domain | problem;
@@ -87,8 +85,8 @@ task_symbol : NAME;
 // @HDDL
 // @LABEL {In a pure HTN setting, methods consist of the definition of the abstract task they may decompose as well as the
 //         resulting task network. The parameters of a method are supposed to include all parameters of the abstract task
-//         that it decomposes as well as the tasks in its network of subtasks. By setting the :htn-method-preconditions
-//         requirement, one might use method preconditions similar to the ones used in SHOP.}
+//         that it decomposes as well as the tasks in its network of subtasks. By setting the :htn-method-pre-eff
+//         requirement, one might use method preconditions and effects similar to the ones used in SHOP.}
 method_def :
    '(' ':method' method_symbol
       ':parameters' '(' typed_var_list ')'
@@ -104,8 +102,8 @@ method_def :
 //         to include causal links into the model. When the keys :ordered-subtasks or :ordered-tasks are used, the
 //         network is regarded to be totally ordered. In the other cases, ordering relations may be defined in the
 //         respective section. To do so, the task definition includes an id for every task that can be referenced here.
-//         They are also used to define causal links. Two dedicated ids "init" and "goal" can be used in link definition
-//         to reference the initial state and the goal definition.}
+//         They are also used to define causal links. Two dedicated ids "init" and "goal" can be used in causal link
+//         definition to reference the initial state and the goal definition.}
 tasknetwork_def :
       ((':subtasks' | ':tasks' | ':ordered-subtasks' | ':ordered-tasks') subtask_defs)?
       ((':ordering' | ':order') ordering_defs)?
@@ -121,8 +119,9 @@ method_symbol : NAME;
 // @HDDL
 // @LABEL {The subtask definition may contain one or more subtasks. The tasks consist of a task symbol as well as a
 //         list of parameters. In case of a method's subnetwork, these parameters have to be included in the method's
-//         parameters, in case of the initial task network, they have to be defined in s0. The tasks may start with the
-//         of an id that can be used to define ordering constraints and causal links.}
+//         parameters, in case of the initial task network, they have to be defined as constants in s0 or in a dedicated
+//         parameter list (see definition of the initial task network). The tasks may start with the of an id that can
+//         be used to define ordering constraints and causal links.}
 subtask_defs : '(' ')' | subtask_def | '(' 'and' subtask_def+ ')';
 subtask_def : ('(' task_symbol var_or_const* ')' | '(' subtask_id '(' task_symbol var_or_const* ')' ')');
 subtask_id : NAME;
@@ -139,17 +138,19 @@ ordering_def : '(' subtask_id '<' subtask_id ')';
 // variable constraits
 //
 // @HDDL
-// @LABEL {The variable constraints enable to codesignate or non-codesignate variables.}
-// @EXAMPLE {(= ?v1 ?v2)), (not (= ?v3 ?v4)))}
+// @LABEL {The variable constraints enable to codesignate or non-codesignate variables; or to enforce (or forbid) a
+//         variable to have a certain type.}
+// @EXAMPLE {(= ?v1 ?v2)), (not (= ?v3 ?v4)), (sort ?v - type), (not (sort ?v - type))}
 constraint_defs : '(' ')' | constraint_def | '(' 'and' constraint_def+ ')';
-constraint_def : '(' ')' | '(' 'not' equallity var_or_const var_or_const')' ')' | equallity var_or_const var_or_const ')';
+constraint_def : '(' ')' | '(' 'not' equallity var_or_const var_or_const')' ')' | equallity var_or_const var_or_const ')'
+                 | '(' ('type' | 'typeof' | 'sort' | 'sortof') '-' var_type ')' ;
 
 //
 // causal links
 //
 // @HDDL
-// @LABEL {Causal links in the model enables it to predefine which action support a certain precondition. They reference
-//         the tasks by the ids that are also used in the definition of ordering constraints.}
+// @LABEL {Causal links in the model enable the predefinition on which action supports a certain precondition. They
+//         reference the tasks by the ids that are also used in the definition of ordering constraints.}
 causallink_defs : '(' ')' | causallink_def | '(' 'and' causallink_def+ ')';
 causallink_def : '(' subtask_id literal subtask_id ')';
 
@@ -175,14 +176,10 @@ gd_negation : '(' 'not' gd ')';
 gd_existential : '(exists' '(' typed_var_list ')' gd ')';
 gd_univeral : '(forall' '(' typed_var_list ')' gd ')';
 
-// todo: ???
-//
 gd_equality_constraint : equallity var_or_const var_or_const ')';
 
 //
 // effects
-//
-// - enables forall and when statements
 //
 effect_body : eff_empty | c_effect | eff_conjuntion;
 
@@ -228,12 +225,12 @@ typed_obj_list : typed_objs*;
 typed_vars : VAR_NAME+ '-' var_type;
 typed_objs : new_consts+ '-' var_type;
 new_consts : NAME;
-var_type : NAME;
+var_type : NAME | '(' 'either' var_type+ ')';
 
 // "require"-statements start with a ":"-symbol
 REQUIRE_NAME : ':' NAME;
 
-// names of variables with a "?"
+// names of variables start with a "?"
 var_or_const : NAME | VAR_NAME;
 VAR_NAME : '?'NAME;
 
@@ -251,7 +248,6 @@ NUMBER : [0-9][0-9]* ;
 //
 // Problem Definition
 //
-// TODO: define EBNF for TR
 
 problem : '(' 'define' '(' 'problem' NAME ')'
               '(' ':domain' NAME ')'
@@ -270,6 +266,7 @@ num_init : equallity f_head NUMBER ')';
 p_goal : '(' ':goal' gd ')';
 
 p_htn : '(' (':htn'|':htnti')
+        (':parameters' '(' typed_var_list ')')?
         tasknetwork_def;
 
 metric_spec : '(' ':metric' optimization ground_f_exp')';
