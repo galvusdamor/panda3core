@@ -27,5 +27,4 @@
      (driving d3 t4)
      (driving d4 t1)
    )
-   (:goal )
 )
