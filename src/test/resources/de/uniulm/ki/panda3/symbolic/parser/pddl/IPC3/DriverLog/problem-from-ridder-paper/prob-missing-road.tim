@@ -1,0 +1,463 @@
+
+State space states:
+{at_0 }
+{driving_0 }
+
+Space properties: at_0 driving_0 
+Space objects: d1 d2 d3 d4 
+Space rules:
+{} => {at_0 } -> {driving_0 }
+{} => {driving_0 } -> {at_0 }
+{} => {at_0 } -> {at_0 }
+Space is: state valued
+
+State space states:
+{empty_0 }
+{driving_1 }
+
+Space properties: empty_0 driving_1 
+Space objects: t1 t2 t3 t4 
+Space rules:
+{at_0 } => {empty_0 } -> {driving_1 }
+{at_0 } => {driving_1 } -> {empty_0 }
+Space is: state valued
+
+State space states:
+{at_0 }
+
+Space properties: at_0 
+Space objects: t1 t2 t3 t4 
+Space rules:
+{driving_1 } => {at_0 } -> {at_0 }
+Space is: state valued
+
+State space states:
+
+Space properties: at_0 in_0 
+Space objects: 
+Space rules:
+{} => {at_0 } -> {in_0 }
+{} => {in_0 } -> {at_0 }
+Space is: state valued
+
+State space states:
+
+Space properties: in_1 
+Space objects: t1 t2 t3 t4 
+Space rules:
+{at_0 } => {} -> {in_1 } attribute rule: increasing
+{at_0 } => {in_1 } -> {} attribute rule: decreasing
+Space is: attribute valued
+
+State space states:
+{at_1 }
+{at_1 at_1 at_1 at_1 }
+
+Space properties: at_1 
+Space objects: s1 s2 p1 
+Space rules:
+{at_1 } => {at_1 } -> {} attribute rule: decreasing
+{at_1 } => {} -> {at_1 } attribute rule: increasing
+Space is: attribute valued
+
+State space states:
+{at_1 }
+{at_1 at_1 at_1 at_1 }
+
+Space properties: at_1 
+Space objects: s1 s2 p1 
+Space rules:
+{link_0 } => {at_1 } -> {} attribute rule: decreasing
+{link_1 } => {} -> {at_1 } attribute rule: increasing
+Space is: attribute valued
+
+State space states:
+{at_1 }
+{at_1 at_1 at_1 at_1 }
+
+Space properties: at_1 
+Space objects: s1 s2 p1 
+Space rules:
+{at_1 } => {at_1 } -> {} attribute rule: decreasing
+{at_1 } => {} -> {at_1 } attribute rule: increasing
+{path_0 } => {at_1 } -> {} attribute rule: decreasing
+{path_1 } => {} -> {at_1 } attribute rule: increasing
+Space is: attribute valued
+
+   (pred_decl)
+   head: 
+      (symbol)
+      name: at
+   args: 
+      (typed_symbol_list<>)
+         (symbol)
+         name: obj[0xeac9f0]
+
+         type: 
+            (symbol)
+            name: locatable[0xeac470]
+
+            type: 
+               (symbol)
+               name: object[0xeac530]
+
+               type: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)
+         (symbol)
+         name: loc[0xeacad0]
+
+         type: 
+            (symbol)
+            name: location[0xeac3b0]
+
+            type: 
+               (symbol)
+               name: object[0xeac530]
+
+               type: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)
+   (pred_decl)
+   head: 
+      (symbol)
+      name: in
+   args: 
+      (typed_symbol_list<>)
+         (symbol)
+         name: obj1[0xeacda0]
+
+         type: 
+            (symbol)
+            name: obj[0xeac770]
+
+            type: 
+               (symbol)
+               name: locatable[0xeac470]
+
+               type: 
+                  (symbol)
+                  name: object[0xeac530]
+
+                  type: (NULL)
+                  either_types: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)
+         (symbol)
+         name: obj[0xeace80]
+
+         type: 
+            (symbol)
+            name: truck[0xeac6b0]
+
+            type: 
+               (symbol)
+               name: locatable[0xeac470]
+
+               type: 
+                  (symbol)
+                  name: object[0xeac530]
+
+                  type: (NULL)
+                  either_types: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)
+   (pred_decl)
+   head: 
+      (symbol)
+      name: driving
+   args: 
+      (typed_symbol_list<>)
+         (symbol)
+         name: d[0xead150]
+
+         type: 
+            (symbol)
+            name: driver[0xeac5f0]
+
+            type: 
+               (symbol)
+               name: locatable[0xeac470]
+
+               type: 
+                  (symbol)
+                  name: object[0xeac530]
+
+                  type: (NULL)
+                  either_types: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)
+         (symbol)
+         name: v[0xead230]
+
+         type: 
+            (symbol)
+            name: truck[0xeac6b0]
+
+            type: 
+               (symbol)
+               name: locatable[0xeac470]
+
+               type: 
+                  (symbol)
+                  name: object[0xeac530]
+
+                  type: (NULL)
+                  either_types: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)
+   (pred_decl)
+   head: 
+      (symbol)
+      name: link
+   args: 
+      (typed_symbol_list<>)
+         (symbol)
+         name: x[0xead500]
+
+         type: 
+            (symbol)
+            name: location[0xeac3b0]
+
+            type: 
+               (symbol)
+               name: object[0xeac530]
+
+               type: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)
+         (symbol)
+         name: y[0xead5a0]
+
+         type: 
+            (symbol)
+            name: location[0xeac3b0]
+
+            type: 
+               (symbol)
+               name: object[0xeac530]
+
+               type: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)
+   (pred_decl)
+   head: 
+      (symbol)
+      name: path
+   args: 
+      (typed_symbol_list<>)
+         (symbol)
+         name: x[0xead8b0]
+
+         type: 
+            (symbol)
+            name: location[0xeac3b0]
+
+            type: 
+               (symbol)
+               name: object[0xeac530]
+
+               type: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)
+         (symbol)
+         name: y[0xead950]
+
+         type: 
+            (symbol)
+            name: location[0xeac3b0]
+
+            type: 
+               (symbol)
+               name: object[0xeac530]
+
+               type: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)
+   (pred_decl)
+   head: 
+      (symbol)
+      name: empty
+   args: 
+      (typed_symbol_list<>)
+         (symbol)
+         name: v[0xeadc60]
+
+         type: 
+            (symbol)
+            name: truck[0xeac6b0]
+
+            type: 
+               (symbol)
+               name: locatable[0xeac470]
+
+               type: 
+                  (symbol)
+                  name: object[0xeac530]
+
+                  type: (NULL)
+                  either_types: (NULL)
+               either_types: (NULL)
+            either_types: (NULL)
+         either_types: (NULL)Print the predicate vars
+
+Report for: at(driver [] location [] )
+------------
+Initial: 2 Goal: 0 positive/ 0 negative
+Initial state records:
+d1
+ p1
+  --1
+d2
+ s1
+  --2
+
+Preconditions:
+	board
+	walk
+Adds:
+	disembark
+	walk
+Dels:
+	board
+	walk
+
+Is definitely static 00
+, 
+Report for: at(truck [] location [] )
+------------
+Initial: 4 Goal: 0 positive/ 0 negative
+Initial state records:
+t1
+ s1
+  --3
+t2
+ s1
+  --4
+t3
+ s1
+  --5
+t4
+ s2
+  --6
+
+Preconditions:
+	load
+	unload
+	board
+	disembark
+	drive
+Adds:
+	drive
+Dels:
+	drive
+
+Is definitely static 00
+, 
+Report for: at(obj [] location [] )
+------------
+Initial: 0 Goal: 0 positive/ 0 negative
+Initial state records:
+
+Preconditions:
+	load
+Adds:
+	unload
+Dels:
+	load
+
+Is definitely static 00
+, 
+Report for: in(obj [] truck [] )
+------------
+Initial: 0 Goal: 0 positive/ 0 negative
+Initial state records:
+
+Preconditions:
+	unload
+Adds:
+	load
+Dels:
+	unload
+
+Is definitely static 00
+, 
+Report for: driving(driver [] truck [] )
+------------
+Initial: 2 Goal: 0 positive/ 0 negative
+Initial state records:
+d3
+ t4
+  --11
+d4
+ t1
+  --12
+
+Preconditions:
+	disembark
+	drive
+Adds:
+	board
+Dels:
+	disembark
+
+Is definitely static 00
+, 
+Report for: link(location [] location [] )
+------------
+Initial: 0 Goal: 0 positive/ 0 negative
+Initial state records:
+
+Preconditions:
+	drive
+Proposition appears static
+	Really is static
+
+Is definitely static 11
+, 
+Report for: path(location [] location [] )
+------------
+Initial: 2 Goal: 0 positive/ 0 negative
+Initial state records:
+s1
+ p1
+  --10
+p1
+ s1
+  --9
+
+Preconditions:
+	walk
+Proposition appears static
+	Really is static
+
+Is definitely static 11
+, 
+Report for: empty(truck [] )
+------------
+Initial: 2 Goal: 0 positive/ 0 negative
+Initial state records:
+t2
+ --7
+t3
+ --8
+
+Preconditions:
+	board
+Adds:
+	disembark
+Dels:
+	board
+
+Is definitely static 00
+, 
