@@ -62,6 +62,8 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
     predicates.indices map { predicate => entryMap.getOrElse(predicate, (Array[(Int, Int)](), Array[(Int, Int)]())) } toArray
   }
 
+  lazy val possibleProducerTasksOfOnlyTasks: Array[(Array[Int], Array[Int])] = possibleProducerTasksOf map { case (a, b) => (a map { _._1 }, b map { _._1 }) }
+
 
   /*(predicates.indices map { predicate =>
     val positive: Array[(Int, Int)] = tasks.zipWithIndex flatMap { case (task, taskIndex) =>

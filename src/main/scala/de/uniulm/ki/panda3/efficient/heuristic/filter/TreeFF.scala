@@ -152,10 +152,10 @@ case class TreeFF(domain: EfficientDomain) {
           // we may have to run actions again which add effects of the now deleted state features
           i = 0
           while (i < deleteEffect.length){
-            val producersOf : Array[(Int, Int)] = domain.possibleProducerTasksOf(deleteEffect(i))._1 // (taskID, effectID)
+            val producersOf : Array[Int] = domain.possibleProducerTasksOfOnlyTasks(deleteEffect(i))._1 // (taskID, effectID)
             var j = 0
             while (j < producersOf.length){
-              val task = producersOf(j)._1
+              val task = producersOf(j)
               if (newEffectProtection(task) == -1){
                 // count causal links
                 newEffectProtection(task) = 0
