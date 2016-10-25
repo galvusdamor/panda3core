@@ -24,34 +24,81 @@ case class TreeFF(domain: EfficientDomain) {
 
 
   /** expands the state */
-  private def ff(state: BitSet, links: BitSet, usefulActions: Array[EfficientTask]): (BitSet, Array[EfficientTask]) = {
+  private def ff(state: BitSet, linkProtection: Array[Int]): (BitSet, Array[Int]) = {
     var changed = true
     val finalState = mutable.BitSet(state.toArray: _*)
 
-    var (linkForbiddenActions, actions) = usefulActions partition {linkViolation(links,_)}
+    val actions = new Array[Int](linkProtection.length)
 
-    while (changed) {
-      // applicable actions
-      val (applicableActions, nonApplicableActions) = actions partition { _.precondition forall { finalState contains _.predicate } }
-      changed = applicableActions.nonEmpty
-
-      applicableActions foreach { _.effect filter { _.isPositive } foreach { finalState add _.predicate } }
-      actions = nonApplicableActions
+    var i = 0
+    while (i < linkProtection.length) {
+      actions(i) = 0
+      if (linkProtection(i) == 0) {
+        var j = 0
+        val positivePreconditions = domain.tasks(i).positivePreconditionPredicates
+        while (j < positivePreconditions.length) {
+          if (!finalState.contains(positivePreconditions(j)))
+            actions(i) += 1
+          j += 1
+        }
+      }
+      i += 1
     }
 
-    (BitSet(finalState.toArray: _*), linkForbiddenActions ++ actions)
+
+    while (changed) {
+      changed = false
+      // apply applicable actions
+      i = 0
+      while (i < actions.length) {
+        if (actions(i) == 0 && linkProtection(i) == 0) {
+          // an action was applied
+          changed = true
+          actions(i) = -1 // already applied
+          linkProtection(i) = -1 // not useful any more
+          val addEffects = domain.tasks(i).positiveEffectPredicates
+          var j = 0
+          while (j < addEffects.length) {
+            if (!finalState.contains(addEffects(j))) {
+              // add new predicate to the state
+              finalState.add(addEffects(j))
+              // decrement respective precondition counters
+              var k = 0
+              while (k < actions.length) {
+                if (domain.tasks(k).positivePreconditionPredicatesBitSet contains addEffects(j))
+                  actions(k) -= 1
+                k += 1
+              }
+            }
+            j += 1
+          }
+        }
+        i += 1
+      }
+    }
+
+    (BitSet(finalState.toArray: _*), linkProtection)
   }
 
 
   def isPossiblySolvable(plan: EfficientPlan): Boolean = {
-    // TODO using bitsets for causal links here is not totally correct (overlapping links!)
-    val initial: (BitSet, BitSet, Array[EfficientTask]) = (BitSet(), BitSet(), domain.insertableTasks)
+    // state, link-protectedLiterals, status of actions under links (0 - applicable, -1 - applied, -2 - never allowed, x > 0 - forbidden by link)
+    val usefulTasks = new Array[Int](domain.tasks.length)
+    var i = 0
+    while (i < usefulTasks.length) {
+      if (!domain.tasks(i).allowedToInsert) usefulTasks(i) = TreeFF.NEVER
+      i += 1
+    }
+    val initial: (BitSet, Array[Int], Array[Int]) = (BitSet(), new Array[Int](domain.predicates.length), usefulTasks)
 
-    def progress(stateAndLinks: (BitSet, BitSet, Array[EfficientTask]), ps: Int): ((BitSet, BitSet, Array[EfficientTask]), Boolean) =
+    def progress(stateAndLinks: (BitSet, Array[Int], Array[Int]), ps: Int):
+    ((BitSet, Array[Int], Array[Int]), Boolean) =
       if (!plan.isPlanStepPresentInPlan(ps)) (stateAndLinks, true)
       else {
         // run ff towards the planstep
-        val (reachableFacts, remainingActions) = ff(stateAndLinks._1, stateAndLinks._2, stateAndLinks._3)
+        val oldEffectProtection = new Array[Int](stateAndLinks._3.length)
+        Array.copy(stateAndLinks._3, 0, oldEffectProtection, 0, oldEffectProtection.length)
+        val (reachableFacts, newEffectProtection) = ff(stateAndLinks._1,oldEffectProtection)
 
         // check applicability
         val psTask = plan.taskOfPlanStep(ps)
@@ -61,23 +108,77 @@ case class TreeFF(domain: EfficientDomain) {
         if (!applicable) (stateAndLinks, false)
         else {
           // update the state
-          val deleteEffect = psTask.effect filter { _.isNegative } map { _.predicate }
+          val deleteEffect : Array[Int] = psTask.effect filter { _.isNegative } map { _.predicate }
           val updatedState = (reachableFacts -- deleteEffect) ++ (psTask.effect filter { _.isPositive } map { _.predicate })
 
           // update the links
-          // TODO count links
-          val endingLinks = plan.causalLinks collect { case l if l.consumer == ps => psTask.precondition(l.conditionIndexOfConsumer).predicate }
+          // copy
+          val newLinkProtections = new Array[Int](domain.predicates.length)
+          Array.copy(stateAndLinks._2, 0, newLinkProtections, 0, newLinkProtections.length)
+          // links ending here
+          val endingLinks: Array[Int] = plan.causalLinks collect { case l if l.consumer == ps => psTask.precondition(l.conditionIndexOfConsumer).predicate }
+          var i = 0
+          while (i < endingLinks.length) {
+            newLinkProtections(endingLinks(i)) -= 1
+            if (newLinkProtections(endingLinks(i)) == 0) {
+              // if the action as the link's literal as an effect reduce the number of currently forbidden negative effects
+              var j = 0
+              while (j < newEffectProtection.length) {
+                if (newEffectProtection(j) > 0 && domain.tasks(j).negativeEffectPredicatesBitSet.contains(endingLinks(i)))
+                  newEffectProtection(j) -= 1
+                j += 1
+              }
+            }
+            i += 1
+          }
+          // links starting here
           val startingLinks: Array[Int] = plan.causalLinks collect { case l if l.producer == ps => psTask.effect(l.conditionIndexOfProducer).predicate }
-          val updatedLinks: BitSet = (stateAndLinks._2 -- endingLinks) ++ startingLinks
+          i = 0
+          while (i < startingLinks.length) {
+            if (newLinkProtections(startingLinks(i)) == 0) {
+              // if the action as the link's literal as an effect increase the number of currently forbidden negative effects
+              var j = 0
+              while (j < newEffectProtection.length) {
+                if (newEffectProtection(j) >= 0 && domain.tasks(j).negativeEffectPredicatesBitSet.contains(startingLinks(i)))
+                  newEffectProtection(j) += 1
+                j += 1
+              }
+            }
+            newLinkProtections(startingLinks(i)) += 1
+            i += 1
+          }
 
-          // add actions that might be necessary again
-          val actionsAddingDeletedEffects: Array[EfficientTask] =
-            deleteEffect flatMap { p => domain.possibleProducerTasksOf(p)._1 } map { case (t, _) => domain.tasks(t) } filter { _.allowedToInsert }
 
-          ((updatedState, updatedLinks, (remainingActions ++ actionsAddingDeletedEffects).distinct), true)
+          // we may have to run actions again which add effects of the now deleted state features
+          i = 0
+          while (i < deleteEffect.length){
+            val producersOf : Array[(Int, Int)] = domain.possibleProducerTasksOf(deleteEffect(i))._1 // (taskID, effectID)
+            var j = 0
+            while (j < producersOf.length){
+              val task = producersOf(j)._1
+              if (newEffectProtection(task) == -1){
+                // count causal links
+                newEffectProtection(task) = 0
+                val negativeEffects = domain.tasks(task).negativeEffectPredicates
+                var k = 0
+                while (k < negativeEffects.length){
+                  newEffectProtection(task) += newLinkProtections(negativeEffects(k))
+                  k += 1
+                }
+              }
+              j += 1
+            }
+            i += 1
+          }
+
+          ((updatedState, newLinkProtections, newEffectProtection), true)
         }
       }
 
     plan.ordering.existsLinearisationWithPropertyFold(initial, progress)
   }
+}
+
+object TreeFF {
+  val NEVER = -2
 }
