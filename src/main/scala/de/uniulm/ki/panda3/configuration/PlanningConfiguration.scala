@@ -14,6 +14,7 @@ import de.uniulm.ki.panda3.efficient.search.EfficientSearchNode
 import de.uniulm.ki.panda3.efficient.search.flawSelector.{EfficientFlawSelector, AbstractFirstWithDeferred, LeastCostFlawRepair}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
+import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
@@ -291,6 +292,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case XMLParserType   => XMLParser.asParser.parseDomainAndProblem(domain, problem)
       case HDDLParserType  => HDDLParser.parseDomainAndProblem(domain, problem)
       case HPDDLParserType => HPDDLParser.parseDomainAndProblem(domain, problem)
+      case OldPDDLType => OldPDDLParser.parseDomainAndProblem(domain,problem)
       case AutoDetectParserType => FileTypeDetector(info).parseDomainAndProblem(domain, problem)
     }
     timeCapsule stop FILEPARSER
@@ -519,6 +521,8 @@ object XMLParserType extends ParserType
 object HDDLParserType extends ParserType
 
 object HPDDLParserType extends ParserType
+
+object OldPDDLType extends ParserType
 
 object AutoDetectParserType extends ParserType
 
