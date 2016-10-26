@@ -48,11 +48,11 @@
 
 (:method release-putdown 
  :task (release)
- :precondition (exists (?loc - ROOM ?obj - PACKAGE) 
+ :precondition (exists (?loc - ROOM) (exists (?obj - PACKAGE)
     (and 
         (rloc ?loc) 
         (holding ?obj)
-        (goal_in ?obj ?loc)))
+        (goal_in ?obj ?loc))))
  :tasks ((putdown) (achieve-goals)))
 
 (:method release-move
