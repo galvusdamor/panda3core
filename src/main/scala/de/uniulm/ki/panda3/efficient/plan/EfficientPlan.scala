@@ -51,6 +51,8 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
   }
 
   assert(causalLinksPotentialThreater.length == causalLinks.length)
+  assert(causalLinks forall { case EfficientCausalLink(prod, cons, pInd, cInd) => taskOfPlanStep(prod).effect(pInd).predicate == taskOfPlanStep(cons).precondition(cInd).predicate })
+
 
   //assert(possibleSupportersByDecompositionPerLiteral.length == 2 * domain.predicates.length)
 
