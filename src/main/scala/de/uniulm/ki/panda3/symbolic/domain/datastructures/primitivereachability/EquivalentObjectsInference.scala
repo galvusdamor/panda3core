@@ -66,10 +66,15 @@ object EquivalentObjectsInference {
 
 
   def main(args: Array[String]) {
+    val domFile = "../lifted_planner/data/transport/p01-domain.pddl"
+    val probFile = "../lifted_planner/data/transport/p01.pddl"
+
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/domain/domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/problems/p01.pddl"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/tidybot/domain/domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/tidybot/problems/p01.pddl"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Depots/domain/Depots-Mod.pddl"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Depots/problems/pfile5-mod"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problem-from-ridder-paper/domain.lisp"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problem-from-ridder-paper/prob.lisp"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC4/SATELLITE/domain/DOMAIN.PDDL"
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC4/SATELLITE/problems/P20_PFILE20.PDDL"
     //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/domain/zenotravelStrips.pddl"
@@ -79,8 +84,8 @@ object EquivalentObjectsInference {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
 
-    val domFile = args(0)
-    val probFile = args(1)
+    //val domFile = args(0)
+    //val probFile = args(1)
 
     val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
     // we assume that the domain is grounded
@@ -99,6 +104,8 @@ object EquivalentObjectsInference {
     val finalLiterals = planningGraph.reachableGroundLiterals map { _.copy(isPositive = true) } distinct
 
     println(finalLiterals map { _.longInfo } mkString "\n")
+    println(finalLiterals.size)
+    println(planningGraph.graphSize)
 
     val equivalenceClasses = computeEquivalentObjects(finalLiterals, domain.constants)
     //val equivalenceClasses = computeEquivalentObjects(initialPlan.groundedInitialStateOnlyPositive, domain.constants)
