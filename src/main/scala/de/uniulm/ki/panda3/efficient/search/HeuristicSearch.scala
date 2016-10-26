@@ -146,7 +146,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
               val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))
 
               timeCapsule start SEARCH_COMPUTE_FILTER
-              val treeff = tff.isPossiblySolvable(newPlan)
+              val treeff = if (depth % 1 == 1) tff.isPossiblySolvable(newPlan) else true
               timeCapsule stop SEARCH_COMPUTE_FILTER
 
               if (!treeff) informationCapsule increment NUMBER_OF_DISCARDED_NODES
