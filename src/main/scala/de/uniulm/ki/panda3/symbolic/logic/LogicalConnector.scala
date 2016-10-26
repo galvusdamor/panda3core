@@ -216,14 +216,15 @@ case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLon
   override val isEmpty: Boolean = formula.isEmpty
 
   override def compileQuantors(): (Formula, Seq[Variable]) = {
-    val (innerFormula, innerVars) = formula.compileQuantors()
-
     // create for instance for the quantifier
-    val newVars = v.sort.elements map { c =>
+    val newForlumaeAndVars = v.sort.elements map { c =>
+      val (innerFormula, innerVars) = formula.compileQuantors()
       val newSort = Sort(v.sort.name, c :: Nil, Nil)
-      v.copy(name = v.name + "_compiled_" + Variable.nextFreeVariableID() + c.name, sort = newSort)
+      val newVar = v.copy(name = v.name + "_compiled_" + Variable.nextFreeVariableID() + c.name, sort = newSort)
+
+      (innerFormula update ExchangeVariable(v, newVar), innerVars :+ newVar)
     }
 
-    (And(newVars map { nv => innerFormula update ExchangeVariable(v, nv) }), innerVars ++ newVars)
+    (And(newForlumaeAndVars map {_._1}), newForlumaeAndVars flatMap {_._2})
   }
 }
