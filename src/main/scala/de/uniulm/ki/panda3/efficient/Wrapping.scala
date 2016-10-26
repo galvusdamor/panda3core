@@ -89,7 +89,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val variablesMap: BiMap[Variable, Int] = BiMap(variableOrder.zipWithIndex)
 
     // plan steps
-    val orderedTasks = (plan.init :: plan.goal :: Nil) ++ plan.planStepsWithoutInitGoal
+    val orderedTasks = (plan.init :: plan.goal :: Nil) ++ plan.planStepsAndRemovedPlanStepsWithoutInitGoal
     val planStepTasks = orderedTasks map { ps => domainTasks(ps.schema) }
     val planStepParameters = orderedTasks map { ps => (ps.arguments map { variablesMap(_) }).toArray }
     val planStepDecomposedBy = orderedTasks map { ps =>
