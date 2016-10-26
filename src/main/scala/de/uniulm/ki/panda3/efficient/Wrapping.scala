@@ -89,7 +89,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val variablesMap: BiMap[Variable, Int] = BiMap(variableOrder.zipWithIndex)
 
     // plan steps
-    val orderedTasks = (plan.init :: plan.goal :: Nil) ++ plan.planStepsWithoutInitGoal
+    val orderedTasks = (plan.init :: plan.goal :: Nil) ++ plan.planStepsAndRemovedPlanStepsWithoutInitGoal
     val planStepTasks = orderedTasks map { ps => domainTasks(ps.schema) }
     val planStepParameters = orderedTasks map { ps => (ps.arguments map { variablesMap(_) }).toArray }
     val planStepDecomposedBy = orderedTasks map { ps =>
@@ -479,11 +479,11 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
   // MODIFICATION
 
   def wrap(efficientModification: EfficientModification, wrappedPlan: Plan): Modification = efficientModification match {
-    case EfficientAddOrdering(_, _, before, after)                                                                                                                    =>
+    case EfficientAddOrdering(_, _, before, after)                                                                                                                       =>
       AddOrdering(wrappedPlan, OrderingConstraint(wrapPlanStep(before, wrappedPlan), wrapPlanStep(after, wrappedPlan)))
-    case EfficientBindVariable(_, _, variable, constant)                                                                                                              =>
+    case EfficientBindVariable(_, _, variable, constant)                                                                                                                 =>
       BindVariableToValue(wrappedPlan, wrapVariable(variable, wrappedPlan), wrapConstant(constant))
-    case EfficientDecomposePlanStep(_, _, decomposedPS, addedPlanSteps, newVariableSorts, variableConstraints, efficientCausalLinks, subOrdering, decomposedByMethod) =>
+    case EfficientDecomposePlanStep(_, _, decomposedPS, _, addedPlanSteps, newVariableSorts, variableConstraints, efficientCausalLinks, subOrdering, decomposedByMethod) =>
       val newVariables = newVariableSorts zip Range(wrappedPlan.getFirstFreeVariableID, wrappedPlan.getFirstFreeVariableID + newVariableSorts.length) map {
         case (sortIndex, variableIndex) => newVariableFormEfficient(variableIndex, sortIndex)
       }
@@ -532,12 +532,12 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       // construct the modification
       DecomposePlanStep(wrapPlanStep(decomposedPS, wrappedPlan), nonPresentDecomposedPlanStep, subPlan, outerConstraints, inheritedLinks, appliedDecompositionMethod, planStepMapping,
                         wrappedPlan)
-    case EfficientInsertCausalLink(_, _, link, constraints)                                                                                                           =>
+    case EfficientInsertCausalLink(_, _, link, constraints)                                                                                                              =>
       val symbolicLink = wrap(link, wrappedPlan)
       val sortedVariables = sortVariables(wrappedPlan.variableConstraints.variables.toSeq)
       val symbolicConstraints = constraints map { wrapConstraintVariablesSorted(_, sortedVariables) }
       InsertCausalLink(wrappedPlan, symbolicLink, symbolicConstraints.toSeq)
-    case EfficientInsertPlanStepWithLink(_, _, planstep, parameterSorts, link, constraints)                                                                           =>
+    case EfficientInsertPlanStepWithLink(_, _, planstep, parameterSorts, link, constraints)                                                                              =>
       val newPlanStepArguments = parameterSorts zip Range(wrappedPlan.getFirstFreeVariableID, wrappedPlan.getFirstFreeVariableID + parameterSorts.length) map {
         case (sortIndex, variableIndex) => newVariableFormEfficient(variableIndex, sortIndex)
       }
@@ -553,7 +553,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
       // construct the modification
       InsertPlanStepWithLink(newPlanStep, causalLink, symbolicConstraints, wrappedPlan)
-    case EfficientMakeLiteralsUnUnifiable(_, _, variable1, variable2)                                                                                                 =>
+    case EfficientMakeLiteralsUnUnifiable(_, _, variable1, variable2)                                                                                                    =>
       MakeLiteralsUnUnifiable(wrappedPlan, NotEqual(wrapVariable(variable1, wrappedPlan), wrapVariable(variable2, wrappedPlan)))
   }
 }

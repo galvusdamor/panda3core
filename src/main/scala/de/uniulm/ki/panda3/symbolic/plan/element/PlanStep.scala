@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.plan.element
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeTask, ExchangePlanSteps, DomainUpdate}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeVariable, ExchangeTask, ExchangePlanSteps, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, DomainUpdatable, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
@@ -16,6 +16,8 @@ import de.uniulm.ki.util.HashMemo
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
   extends DomainUpdatable with PrettyPrintable {
 
+  arguments foreach {v => assert(v != null)}
+
 
   // TODO: this might cause problems in the wrapper (two decompositon methods might be judges as equal if they really are not), but is necessary to achieve at least a decent performance
   // for the symbolic planner
@@ -25,6 +27,8 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
   }
 
   override val hashCode: Int = id
+
+  lazy val argumentSet = arguments.toSet
 
   if (arguments.size != schema.parameters.size) {
     System.out.println("The number of parameters given in a plan step definition does not match the number that was given in the definition of the task schema.")
@@ -59,12 +63,13 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
   private def substitute(literal: Literal): Literal = schema.substitute(literal, arguments)
 
   override def update(domainUpdate: DomainUpdate): PlanStep = domainUpdate match {
-    case ExchangePlanSteps(exchangeMap) => if (exchangeMap contains this) exchangeMap(this) else this
-    case ExchangeTask(exchangeMap)      => if (exchangeMap contains schema) {
+    case ExchangePlanSteps(exchangeMap)   => if (exchangeMap contains this) exchangeMap(this) else this
+    case ExchangeTask(exchangeMap)        => if (exchangeMap contains schema) {
       val additionalParameters = exchangeMap(schema).parameters.drop(arguments.length) map { v => v.copy(name = v.name + "_ps" + id) }
       PlanStep(id, exchangeMap(schema), arguments ++ additionalParameters)
     } else this
-    case _                              => PlanStep(id, schema.update(domainUpdate), arguments map { _.update(domainUpdate) })
+    case ExchangeVariable(oldVar, newVar) => PlanStep(id, schema, arguments map { _.update(domainUpdate) })
+    case _                                => PlanStep(id, schema.update(domainUpdate), arguments map { _.update(domainUpdate) })
   }
 
   /** returns a short information about the object */
@@ -99,6 +104,8 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
 
   // the arguments must be allowed
   assert(task.areParametersAllowed(arguments))
+
+  lazy val argumentArray = arguments.toArray
 
   private lazy val parameterSubstitution: TotalSubstitution[Variable, Constant] = TotalSubstitution(task.parameters, arguments)
 

@@ -1,7 +1,6 @@
 package de.uniulm.ki.panda3.configuration
 
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientGroundedTaskDecompositionGraph
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, PrimitiveReachabilityAnalysis}
 
@@ -20,10 +19,11 @@ object SymbolicGroundedTaskDecompositionGraph extends AnalysisType {type ResultT
 
 object EfficientGroundedTDG extends AnalysisType {type ResultType = EfficientGroundedTaskDecompositionGraph}
 
-object EfficientGroundedPlanningGraph extends AnalysisType {type ResultType = EfficientGroundedPlanningGraph}
+object EfficientGroundedPlanningGraph extends AnalysisType {type ResultType = de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph}
 
 case class AnalysisMap(map: Map[AnalysisType, Any]) extends (AnalysisType => Any) {
-  map foreach { case (anaType, elem) => assert(elem.isInstanceOf[anaType.ResultType]) }
+  // this assertion is useless due to Java Type erasure
+  //map foreach { case (anaType, elem) => assert(elem.isInstanceOf[anaType.ResultType]) }
 
   def apply(analysis: AnalysisType): analysis.ResultType = map(analysis).asInstanceOf[analysis.ResultType]
 

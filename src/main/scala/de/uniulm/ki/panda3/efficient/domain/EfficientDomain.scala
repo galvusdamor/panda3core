@@ -41,7 +41,8 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
   }
 
 
-  val isGround : Boolean = sortsOfConstant.length == 0 && subSortsForSort.length == 0
+  val isGround               : Boolean = sortsOfConstant.isEmpty && subSortsForSort.isEmpty
+  val noNegativePreconditions: Boolean = tasks forall { _.precondition forall { _.isPositive } }
 
   lazy val insertableTasks: Array[EfficientTask] = tasks filter { _.allowedToInsert }
 
@@ -60,6 +61,8 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
 
     predicates.indices map { predicate => entryMap.getOrElse(predicate, (Array[(Int, Int)](), Array[(Int, Int)]())) } toArray
   }
+
+  lazy val possibleProducerTasksOfOnlyTasks: Array[(Array[Int], Array[Int])] = possibleProducerTasksOf map { case (a, b) => (a map { _._1 }, b map { _._1 }) }
 
 
   /*(predicates.indices map { predicate =>
@@ -134,35 +137,26 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
 
 
   /** This applied literal encoding (i.e. +l is 2*l and -l is 2*l+1) */
-  lazy val methodCanSupportLiteral: Array[mutable.BitSet] = {
-    val startT = System.currentTimeMillis()
-    val x = decompositionMethods.zipWithIndex map {
-      case (method, mi) =>
-        if (mi % 100 == 0)
-          println("METHOD " + mi + "/" + decompositionMethods.length)
+  lazy val methodCanSupportLiteral: Array[mutable.BitSet] = decompositionMethods.zipWithIndex map {
+    case (method, mi) =>
 
-        val containedTasks = method.subPlan.planStepTasks.drop(2)
+      val containedTasks = method.subPlan.planStepTasks.drop(2)
 
-        //val reachableTasks = containedTasks flatMap taskSchemaTransitionGraph.reachable
+      //val reachableTasks = containedTasks flatMap taskSchemaTransitionGraph.reachable
 
-        val bitset = new mutable.BitSet()
+      val bitset = new mutable.BitSet()
 
-        containedTasks foreach {
-          task =>
-            tasks(task).effect foreach {
-              case EfficientLiteral(pred, isPositive, _) => bitset add (2 * pred + (if (isPositive) 0 else 1))
-            }
+      containedTasks foreach {
+        task =>
+          tasks(task).effect foreach {
+            case EfficientLiteral(pred, isPositive, _) => bitset add (2 * pred + (if (isPositive) 0 else 1))
+          }
 
-            taskSchemaTransitionGraph.taskCanSupportByDecomposition(task) foreach {
-              case (pred, isPositive) => bitset add (2 * pred + (if (isPositive) 0 else 1))
-            }
-        }
-        bitset
-    }
-
-    println("TIME " + (System.currentTimeMillis() - startT))
-
-    x
+          taskSchemaTransitionGraph.taskCanSupportByDecomposition(task) foreach {
+            case (pred, isPositive) => bitset add (2 * pred + (if (isPositive) 0 else 1))
+          }
+      }
+      bitset
   }
 
 
@@ -189,6 +183,4 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
         effectMap.getOrElse(_, Array())
       } toArray
   } toArray
-
-
 }

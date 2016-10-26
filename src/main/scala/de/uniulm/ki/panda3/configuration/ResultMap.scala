@@ -23,7 +23,7 @@ object SearchResult extends ResultType {type ResultType = Option[Plan]}
 
 object AllFoundPlans extends ResultType {type ResultType = Seq[Plan]}
 
-object AllFoundSolutionPathsWithHStar extends ResultType {type ResultType = Seq[Seq[(SearchNode,Int)]]}
+object AllFoundSolutionPathsWithHStar extends ResultType {type ResultType = Seq[Seq[(SearchNode, Int)]]}
 
 object SearchStatistics extends ResultType {type ResultType = InformationCapsule}
 
@@ -41,12 +41,13 @@ object FinalTaskDecompositionGraph extends ResultType {type ResultType = TaskDec
 object Timings {
   val TOTAL_TIME = "00 total:00:total"
 
-  val PARSING                = "01 parsing:00:total"
-  val FILEPARSER             = "01 parsing:01:file parser"
-  val PARSER_SORT_EXPANSION  = "01 parsing:02:sort expansion"
-  val PARSER_CWA             = "01 parsing:03:closed world assumption"
-  val PARSER_SHOP_METHODS    = "01 parsing:04:shop methods"
-  val PARSER_FLATTEN_FORMULA = "01 parsing:05:flatten formula"
+  val PARSING                   = "01 parsing:00:total"
+  val FILEPARSER                = "01 parsing:01:file parser"
+  val PARSER_SORT_EXPANSION     = "01 parsing:02:sort expansion"
+  val PARSER_CWA                = "01 parsing:03:closed world assumption"
+  val PARSER_SHOP_METHODS       = "01 parsing:04:shop methods"
+  val PARSER_ELIMINATE_EQUALITY = "01 parsing:05:eliminate identical variables"
+  val PARSER_FLATTEN_FORMULA    = "01 parsing:06:flatten formula"
 
 
   val PREPROCESSING                   = "02 preprocessing:00:total"
@@ -72,9 +73,10 @@ object Timings {
   val SEARCH_FLAW_RESOLVER            = "20 search:20:flaw resolver computation"
   val SEARCH_GENERATE_SUCCESSORS      = "20 search:30:apply modifications"
   val SEARCH_COMPUTE_HEURISTIC        = "20 search:40:compute heuristic"
+  val SEARCH_COMPUTE_FILTER           = "20 search:50:compute filter"
 
-  val allTimings = TOTAL_TIME :: PARSING :: FILEPARSER :: PARSER_SORT_EXPANSION :: PARSER_CWA :: PARSER_SHOP_METHODS :: PARSER_FLATTEN_FORMULA :: PREPROCESSING ::
-    COMPILE_NEGATIVE_PRECONFITIONS :: COMPILE_UNIT_METHODS :: COMPILE_ORDER_IN_METHODS :: LIFTED_REACHABILITY_ANALYSIS :: GROUNDED_REACHABILITY_ANALYSIS ::
+  val allTimings = TOTAL_TIME :: PARSING :: FILEPARSER :: PARSER_SORT_EXPANSION :: PARSER_CWA :: PARSER_SHOP_METHODS :: PARSER_ELIMINATE_EQUALITY :: PARSER_FLATTEN_FORMULA ::
+    PREPROCESSING :: COMPILE_NEGATIVE_PRECONFITIONS :: COMPILE_UNIT_METHODS :: COMPILE_ORDER_IN_METHODS :: LIFTED_REACHABILITY_ANALYSIS :: GROUNDED_REACHABILITY_ANALYSIS ::
     GROUNDED_PLANNINGGRAPH_ANALYSIS :: GROUNDED_TDG_ANALYSIS :: HEURISTICS_PREPARATION :: SEARCH_PREPARATION :: COMPUTE_EFFICIENT_REPRESENTATION :: SEARCH ::
     SEARCH_FLAW_RESOLVER_ESTIMATION :: SEARCH_FLAW_COMPUTATION :: SEARCH_FLAW_SELECTOR :: SEARCH_FLAW_RESOLVER :: SEARCH_GENERATE_SUCCESSORS :: SEARCH_COMPUTE_HEURISTIC :: Nil
 }

@@ -61,6 +61,8 @@ class SymbolicUnionFind {
   def cloneFrom(from: SymbolicUnionFind): Unit = {
     unionFind = from.unionFind
   }
+
+  def apply(v: Variable): Value = getRepresentative(v)
 }
 
 

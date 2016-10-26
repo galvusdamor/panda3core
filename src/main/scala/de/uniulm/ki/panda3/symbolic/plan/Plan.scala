@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.plan
 
-import de.uniulm.ki.panda3.symbolic.csp.{CSP, PartialSubstitution}
+import de.uniulm.ki.panda3.symbolic.csp.{Equal, OfSort, CSP, PartialSubstitution}
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic._
@@ -259,7 +259,29 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
            newPlan.planStepDecomposedByMethod map { case (a, b) => (a update domainUpdate, b update domainUpdate) },
            newPlan.planStepParentInDecompositionTree map { case (a, (b, c)) => (a update domainUpdate, (b update domainUpdate, c update domainUpdate)) })
 
-    case _ =>
+    case PropagateEquality(protectedVariables) =>
+      // determine all variables that can be eliminated
+
+      val initialRepresentatives = protectedVariables map { v => v -> v.sort.elements.toSet } toMap
+      val (representatives, replacement) =
+        (variableConstraints.variables -- protectedVariables).foldLeft[(Map[Variable, Set[Constant]], Seq[(Variable, Variable)])]((initialRepresentatives, Nil))(
+          { case ((representativeVariables, deletedVariables), nextVariable) =>
+            representativeVariables.keys find { v => variableConstraints.equal(v, nextVariable) } match {
+              case Some(v) =>
+                val newDomain = representativeVariables(v) intersect nextVariable.sort.elements.toSet
+                (representativeVariables + (v -> newDomain), deletedVariables :+(nextVariable, v))
+              case None    => (representativeVariables + (nextVariable -> nextVariable.sort.elements.toSet), deletedVariables)
+            }
+          })
+
+      val newConstraints = representatives collect { case (v, allowedValues) if v.sort.elements.toSet != allowedValues => OfSort(v, Sort("adhocSort_" + v.name, allowedValues.toSeq, Nil)) }
+
+      val newPlan = (replacement map { case (oldV, newV) => ExchangeVariable(oldV, newV) }).foldLeft(this)({ case (p, u) => p update u })
+
+      assert(newPlan.variableConstraints.constraints forall { case Equal(_, vari: Variable) => protectedVariables contains vari; case _ => true })
+
+      newPlan.copy(parameterVariableConstraints = newPlan.parameterVariableConstraints.addConstraints(newConstraints.toSeq))
+    case _                                     =>
       val newInit = init update domainUpdate
       val newGoal = goal update domainUpdate
 
@@ -294,7 +316,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       def replace(ps: PlanStep): PlanStep = if (ps == init) newInit else if (ps == goal) newGoal else ps
       CausalLink(replace(p), replace(c), cond)
     }
-    Plan(topPlanTasks,newCausalLinks, topOrdering, variableConstraints, newInit, newGoal,
+    Plan(topPlanTasks, newCausalLinks, topOrdering, variableConstraints, newInit, newGoal,
          isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
 
   }
@@ -389,7 +411,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     // ordering constraints
     dotStringBuilder append "\n"
 
-    def reachableViaCausalLinksFrom(from: PlanStep, to: PlanStep): Boolean = if (from == to) true
+    def reachableViaCausalLinksFrom(from: PlanStep, to: PlanStep): Boolean = if (!options.showCausalLinks) false
+    else if (from == to) true
     else {
       // TODO might introduce cycles ...
       causalLinksAndRemovedCausalLinks exists { case CausalLink(p, c, _) => if (p == from) reachableViaCausalLinksFrom(c, to) else false }
@@ -399,6 +422,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       if (options.omitImpliedOrderings) {case OrderingConstraint(before, after) => !reachableViaCausalLinksFrom(before, after)} else {case _ => true}
     val orderingFilterHierarchy: OrderingConstraint => Boolean =
       if (options.showHierarchy) {case _ => true} else {case OrderingConstraint(before, after) => isPresent(before) && isPresent(after)}
+
     val displayedOrderings = orderingConstraints.minimalOrderingConstraints() filter orderingFilterHierarchy filter orderingFilterCausalLinks
 
 

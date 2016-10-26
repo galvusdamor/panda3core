@@ -40,8 +40,13 @@ require_defs : REQUIRE_NAME+;
 // type-definition
 //
 // @PDDL
+<<<<<<< HEAD
 type_def : '(' ':types' one_def+ ')';
 one_def : new_types ('-' var_type)?;
+=======
+type_def : '(' ':types' type_def_list ')';
+type_def_list : NAME* | (new_types '-' var_type type_def_list) ;
+>>>>>>> coremaster/master
 new_types : NAME+;
 
 //
@@ -143,7 +148,8 @@ ordering_def : '(' subtask_id '<' subtask_id ')';
 // @EXAMPLE {(= ?v1 ?v2)), (not (= ?v3 ?v4)), (sort ?v - type), (not (sort ?v - type))}
 constraint_defs : '(' ')' | constraint_def | '(' 'and' constraint_def+ ')';
 constraint_def : '(' ')' | '(' 'not' equallity var_or_const var_or_const')' ')' | equallity var_or_const var_or_const ')'
-                 | '(' ('type' | 'typeof' | 'sort' | 'sortof') '-' var_type ')' ;
+                 | '(' ('type' | 'typeof' | 'sort' | 'sortof') typed_var ')'
+                 | '(' 'not' '(' ('type' | 'typeof' | 'sort' | 'sortof') typed_var ')' ')' ;
 
 //
 // causal links
@@ -223,6 +229,7 @@ typed_obj_list : typed_objs*;
 
 // one or more variable names, followed by a type
 typed_vars : VAR_NAME+ '-' var_type;
+typed_var : VAR_NAME '-' var_type;
 typed_objs : new_consts+ '-' var_type;
 new_consts : NAME;
 var_type : NAME | '(' 'either' var_type+ ')';

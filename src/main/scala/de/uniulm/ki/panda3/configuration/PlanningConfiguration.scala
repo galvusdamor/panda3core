@@ -7,11 +7,20 @@ import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic._
+import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
+import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.{EfficientGroundedTaskDecompositionGraph, EfficientTDGFromGroundedSymbolic}
+import de.uniulm.ki.panda3.efficient.heuristic.{MinimumModificationEffortHeuristic, EfficientNumberOfPlanSteps, EfficientNumberOfFlaws, AlwaysZeroHeuristic}
+import de.uniulm.ki.panda3.efficient.search.EfficientSearchNode
+import de.uniulm.ki.panda3.efficient.search.flawSelector.{EfficientFlawSelector, AbstractFirstWithDeferred, LeastCostFlawRepair}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
+import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
+import de.uniulm.ki.panda3.{efficient, symbolic}
+import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneEffects, PruneDecompositionMethods, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.{TopDownTaskDecompositionGraph, EverythingIsHiearchicallyReachable,
-EverythingIsHiearchicallyReachableBasedOnPrimitiveReachability, NaiveGroundedTaskDecompositionGraph}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, DomainPropertyAnalyser}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
@@ -29,7 +38,7 @@ import de.uniulm.ki.util._
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class PlanningConfiguration(printGeneralInformation: Boolean, printAdditionalData: Boolean,
-                                 parsingConfiguration: ParsingConfiguration,
+                                 parsingConfiguration: ParsingConfiguration = ParsingConfiguration(),
                                  preprocessingConfiguration: PreprocessingConfiguration,
                                  searchConfiguration: SearchConfiguration,
                                  postprocessingConfiguration: PostprocessingConfiguration) {
@@ -44,7 +53,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   def runResultSearch(domain: InputStream, problem: InputStream, timeCapsule: TimeCapsule = new TimeCapsule()): ResultMap = runSearchHandle(domain, problem, None, timeCapsule)._6()
 
   /**
-    * Runs the complete planner and returs the results
+    * Runs the complete planner and returns the results
     */
   def runResultSearch(domain: Domain, problem: Plan, timeCapsule: TimeCapsule): ResultMap = runSearchHandle(domain, problem, None, timeCapsule)._6()
 
@@ -144,6 +153,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       timeCapsule stop HEURISTICS_PREPARATION
 
 
+      val flawSelector = searchConfiguration.flawSelector match {
+        case LCFR => LeastCostFlawRepair
+      }
 
       val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = searchConfiguration.searchAlgorithm match {
         case algo => algo match {
@@ -154,10 +166,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                                                   informationCapsule, timeCapsule)
           case DijkstraType | DFSType                         =>
             // just use the zero heuristic
-
-            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, addNumberOfPlanSteps = true, addDepth = false,
+            val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, flawSelector, addNumberOfPlanSteps = true, addDepth = false,
                                                                    continueOnSolution = searchConfiguration.continueOnSolution,
                                                                    invertCosts = searchConfiguration.searchAlgorithm == DFSType)
+
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                         searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
                                         searchConfiguration.printSearchInfo,
@@ -206,7 +218,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             val useDepthCosts = algo match {case AStarDepthType => true; case _ => false}
             val useActionCosts = algo match {case AStarActionsType => true; case _ => false}
 
-            val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts,
+            val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, flawSelector, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts,
                                                                    continueOnSolution = searchConfiguration.continueOnSolution)
             heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                         searchConfiguration.nodeLimit, searchConfiguration.timeLimit, releaseSemaphoreEvery,
@@ -280,6 +292,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case XMLParserType   => XMLParser.asParser.parseDomainAndProblem(domain, problem)
       case HDDLParserType  => HDDLParser.parseDomainAndProblem(domain, problem)
       case HPDDLParserType => HPDDLParser.parseDomainAndProblem(domain, problem)
+      case OldPDDLType => OldPDDLParser.parseDomainAndProblem(domain,problem)
+      case AutoDetectParserType => FileTypeDetector(info).parseDomainAndProblem(domain, problem)
     }
     timeCapsule stop FILEPARSER
     info("done\n")
@@ -305,8 +319,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     val simpleMethod = if (parsingConfiguration.compileSHOPMethods) SHOPMethodCompiler.transform(cwaApplied, ()) else cwaApplied
     timeCapsule stop PARSER_SHOP_METHODS
 
+    timeCapsule start PARSER_ELIMINATE_EQUALITY
+    val identity = if (parsingConfiguration.eliminateEquality) RemoveIdenticalVariables.transform(simpleMethod, ()) else simpleMethod
+    timeCapsule stop PARSER_ELIMINATE_EQUALITY
+
     timeCapsule start PARSER_FLATTEN_FORMULA
-    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(simpleMethod, ()) else simpleMethod
+    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(identity, ()) else simpleMethod
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule stop PARSING
@@ -344,6 +362,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     val tdg = tdgType match {
       case NaiveTDG   => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
       case TopDownTDG => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case TwoWayTDG => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
     }
 
     analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg)
@@ -398,10 +417,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       if (preprocessingConfiguration.groundedTaskDecompositionGraph contains NaiveTDG) info("Naive TDG ... ") else info("Top Down TDG ...")
       // get the reachability analysis, if there is none, just use the trivial one
       val newAnalysisMap = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, preprocessingConfiguration.groundedTaskDecompositionGraph.get)
-      val pruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
+      val methodsPruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
+      val removedTasks = groundedResult._1._1.tasks.toSet diff newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedActions.toSet
+      val tasksPruned = PruneHierarchy.transform(methodsPruned._1, methodsPruned._2, removedTasks)
+
+      //val pruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
       info("done.\n")
-      extra(pruned._1.statisticsString + "\n")
-      (pruned, newAnalysisMap)
+      extra(tasksPruned._1.statisticsString + "\n")
+      (tasksPruned, newAnalysisMap)
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
@@ -499,11 +522,16 @@ object HDDLParserType extends ParserType
 
 object HPDDLParserType extends ParserType
 
+object OldPDDLType extends ParserType
+
+object AutoDetectParserType extends ParserType
+
 case class ParsingConfiguration(
-                                 parserType: ParserType,
+                                 parserType: ParserType = AutoDetectParserType,
                                  expandSortHierarchy: Boolean = true,
                                  closedWorldAssumption: Boolean = true,
                                  compileSHOPMethods: Boolean = true,
+                                 eliminateEquality: Boolean = true,
                                  toPlainFormulaRepresentation: Boolean = true
                                ) {}
 
@@ -512,6 +540,8 @@ sealed trait TDGGeneration
 object NaiveTDG extends TDGGeneration
 
 object TopDownTDG extends TDGGeneration
+
+object TwoWayTDG extends TDGGeneration
 
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
@@ -570,15 +600,22 @@ object ADDReusing extends SearchHeuristic
 
 object Relax extends SearchHeuristic
 
+/**
+  * all available flaw selectors
+  */
+sealed trait SearchFlawSelector {}
+
+object LCFR extends SearchFlawSelector
 
 case class SearchConfiguration(
                                 nodeLimit: Option[Int],
                                 timeLimit: Option[Int],
-                                efficientSearch: Boolean,
                                 searchAlgorithm: SearchAlgorithmType,
                                 heuristic: Option[SearchHeuristic],
-                                continueOnSolution: Boolean,
-                                printSearchInfo: Boolean
+                                flawSelector: SearchFlawSelector,
+                                efficientSearch: Boolean = true,
+                                continueOnSolution: Boolean = false,
+                                printSearchInfo: Boolean = true
                               ) {}
 
 case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) {

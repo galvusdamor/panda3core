@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.efficient.plan.modification
 
 import de.uniulm.ki.panda3.efficient.csp.EfficientVariableConstraint
-import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
+import de.uniulm.ki.panda3.efficient.domain.{EfficientDecompositionMethod, EfficientExtractedMethodPlan}
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw.EfficientFlaw
@@ -12,7 +12,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class EfficientDecomposePlanStep(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, decomposePlanStep: Int,
+case class EfficientDecomposePlanStep(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, decomposePlanStep: Int, appliedDecompositonMethod: EfficientDecompositionMethod,
                                       override val addedPlanSteps: Array[(Int, Array[Int], Int, Int, Int)],
                                       override val addedVariableSorts: Array[Int],
                                       override val addedVariableConstraints: Array[EfficientVariableConstraint],
@@ -24,8 +24,8 @@ case class EfficientDecomposePlanStep(plan: EfficientPlan, resolvedFlaw: Efficie
 
   override val insertInOrderingRelativeToPlanStep = decomposePlanStep
 
-  def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientDecomposePlanStep(null, severedFlaw, decomposePlanStep, addedPlanSteps, addedVariableSorts,
-                                                                                                      addedVariableConstraints, addedCausalLinks,
+  def severLinkToPlan(severedFlaw: EfficientFlaw): EfficientModification = EfficientDecomposePlanStep(null, severedFlaw, decomposePlanStep, appliedDecompositonMethod, addedPlanSteps,
+                                                                                                      addedVariableSorts, addedVariableConstraints, addedCausalLinks,
                                                                                                       insertedPlanStepsOrderingMatrix, decomposedPlanStepsByMethod)
 
   /** returns a string by which this object may be referenced */
@@ -107,15 +107,15 @@ object EfficientDecomposePlanStep {
 
 
     // compute inherited ordering constraints
-   /* val inheritedOrderingConstraintsBuffer = new ArrayBuffer[Int]()
-    var planStep = 2
-    while (planStep < plan.numberOfAllPlanSteps) {
-      if (planStep != decomposedPS && plan.isPlanStepPresentInPlan(planStep)) {
-        if (plan.ordering.lt(planStep, decomposedPS)) inheritedOrderingConstraintsBuffer append -planStep
-        if (plan.ordering.lt(decomposedPS, planStep)) inheritedOrderingConstraintsBuffer append planStep
-      }
-      planStep += 1
-    }*/
+    /* val inheritedOrderingConstraintsBuffer = new ArrayBuffer[Int]()
+     var planStep = 2
+     while (planStep < plan.numberOfAllPlanSteps) {
+       if (planStep != decomposedPS && plan.isPlanStepPresentInPlan(planStep)) {
+         if (plan.ordering.lt(planStep, decomposedPS)) inheritedOrderingConstraintsBuffer append -planStep
+         if (plan.ordering.lt(decomposedPS, planStep)) inheritedOrderingConstraintsBuffer append planStep
+       }
+       planStep += 1
+     }*/
 
 
     //val inheritedOrderingConstraints = inheritedOrderingConstraintsBuffer.toArray
@@ -143,8 +143,8 @@ object EfficientDecomposePlanStep {
 
     // add the constructed modification to the buffer
     if (!cspWouldBeInconsistent) buffer append
-      EfficientDecomposePlanStep(plan, resolvedFlaw, decomposedPS, addedPlanSteps, addedVariableSorts, addedVariableConstraints, addedCausalLinks, Some(method.innerOrdering),
-                                 Array((decomposedPS, methodIndex)))
+      EfficientDecomposePlanStep(plan, resolvedFlaw, decomposedPS, method.originalMethod, addedPlanSteps, addedVariableSorts, addedVariableConstraints, addedCausalLinks,
+                                 Some(method.innerOrdering), Array((decomposedPS, methodIndex)))
   }
 
 

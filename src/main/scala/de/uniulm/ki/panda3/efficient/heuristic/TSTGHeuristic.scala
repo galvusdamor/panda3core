@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.efficient.heuristic
 import de.uniulm.ki.panda3.efficient.domain.{EfficientDecompositionMethod, EfficientTask, EfficientDomain}
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
-import de.uniulm.ki.util.SimpleAndOrGraph
+import de.uniulm.ki.util.{Dot2PdfCompiler, SimpleAndOrGraph}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -12,22 +12,16 @@ case class TSTGHeuristic(domain: EfficientDomain) extends EfficientHeuristic[Uni
 
   lazy val argumentRelaxedTDG = {
     // methods will be represented by negative numbers to avoid clashes
-    val methodsToSubTasks = domain.decompositionMethods.zipWithIndex map { case (m, i) => (-i, m.subPlan.planStepTasks.drop(2) toSet) }
-    val tasksToMethods = domain.tasks.zipWithIndex map { case (t, i) => i -> (domain.taskToPossibleMethods(i) map { -_._2 }).toSet }
+    val methodsToSubTasks = domain.decompositionMethods.zipWithIndex map { case (m, i) => (-i - 1, m.subPlan.planStepTasks.drop(2) toSet) }
+    val tasksToMethods = domain.tasks.zipWithIndex map { case (t, i) => i -> (domain.taskToPossibleMethods(i) map { -_._2 - 1 }).toSet }
 
-    SimpleAndOrGraph[Any, Int, Int](domain.tasks.indices.toSet, domain.decompositionMethods.indices map { case m => -m } toSet ,
+    SimpleAndOrGraph[Any, Int, Int](domain.tasks.indices.toSet, domain.decompositionMethods.indices map { case m => -m - 1 } toSet ,
                                     tasksToMethods.toMap.withDefaultValue(Set()),
                                     methodsToSubTasks.toMap.withDefaultValue(Set()))
   }
 
-
-  val taskValues: Map[Int, Int] = {
-    println("COMPUTE HEU")
-    val h = argumentRelaxedTDG.minSumTraversalMap({ domain.tasks(_).precondition.length }, 1) map { case (a, b) => a -> b.toInt }
-    println("DONE")
-
-    h
-  }
+  val taskValues: Map[Int, Int] =
+    argumentRelaxedTDG.minSumTraversalMap({ domain.tasks(_).precondition.length }, 1) map { case (a, b) => a -> b.toInt }
 
   override def computeHeuristic(plan: EfficientPlan, payload: Unit, appliedModification: EfficientModification): (Double, Unit) = {
     var h = 0

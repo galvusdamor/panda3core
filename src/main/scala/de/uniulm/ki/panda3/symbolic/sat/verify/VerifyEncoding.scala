@@ -31,7 +31,9 @@ trait VerifyEncoding {
 
   def offsetToK: Int
 
-  val K: Int = VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
+  def overrideK : Option[Int]
+
+  val K: Int = if (overrideK.isDefined) overrideK.get else VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
 
   def numberOfChildrenClauses: Int
 
@@ -248,7 +250,7 @@ object VerifyEncoding {
         else if (currentTask == sortedTasks.length) {if (remainingLength == 0) Some(0) else None } else {
           val firstTaskMap = map(sortedTasks(currentTask))
           val subValues = Range(0, remainingLength + 1) collect { case l if firstTaskMap contains l => (l, minimumByDistribution(currentTask + 1, remainingLength - l)) }
-          val definedSubValues = subValues filter { _._2.isDefined } map { case (l, Some(subHeight)) => Math.max(subHeight, firstTaskMap(l)) }
+          val definedSubValues = subValues collect { case (l, Some(subHeight)) => Math.max(subHeight, firstTaskMap(l)) }
           val result = if (definedSubValues.isEmpty) None else Some(definedSubValues max)
           cached((currentTask, remainingLength)) = result
           result
@@ -260,7 +262,7 @@ object VerifyEncoding {
     def recomputeTask(task: Task, m: Map[Task, Map[Int, Int]]): (Map[Task, Map[Int, Int]], Boolean) = if (task.isPrimitive) (m, false)
     else {
       val methodMaps = domain.methodsForAbstractTasks(task) map { method => recomputePlan(method.subPlan, m) }
-      val newMap: Map[Int, Int] = methodMaps reduce[Map[Int, Int]] { case (m1, m2) => m1 ++ m2.map({ case (l, h) => l -> accumulate(h, m1.getOrElse(l, initialValue)) }) }
+      val newMap: Map[Int, Int] = methodMaps.reduce[Map[Int, Int]]({ case (m1, m2) => m1 ++ m2.map({ case (l, h) => l -> accumulate(h, m1.getOrElse(l, initialValue)) }) })
 
       (m + (task -> newMap), newMap != m(task))
     }
@@ -289,7 +291,11 @@ object VerifyEncoding {
     val initialPlanMap = recomputePlan(initialPlan, expandedMap)
     val maximumLength = Range(0, taskSequenceLength + 1).reverse find initialPlanMap.contains
 
-    initialPlanMap(maximumLength.get)
+    maximumLength match {
+      case Some(length) => initialPlanMap(length)
+      case None => 0
+    }
+
   }
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {

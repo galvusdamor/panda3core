@@ -13,7 +13,12 @@ object Dot2PdfCompiler {
 
   def writeDotToFile[X](dotObject: DotPrintable[X], file: String): Unit = writeDotToFile(dotObject.dotString, file)
 
-  def writeDotToFile(dotString: String, file: String): Unit = {
+  def writeDotToFile(dotString: String, file: String): Unit = writeDotToFileWithType(dotString, file, "pdf")
+
+  def writeDotToFilePNG(dotString: String, file: String): Unit = writeDotToFileWithType(dotString, file, "png")
+
+
+  private def writeDotToFileWithType(dotString: String, file: String, plotType: String): Unit = {
     val tempFile = File.createTempFile("__panda_dot_print", "dot")
 
     de.uniulm.ki.util.writeStringToFile(dotString, tempFile)
@@ -21,9 +26,9 @@ object Dot2PdfCompiler {
     try {
       System.getProperty("os.name") match {
         case osname if osname.toLowerCase startsWith "windows" =>
-          ("cmd.exe /c dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
+          ("cmd.exe /c dot -T" + plotType + " " + tempFile.getAbsolutePath + " -o " + file + " -Nfontname=\"Monospace\"") !!
         case _                                                 => // Linux and all the others
-          ("dot -Tpdf " + tempFile.getAbsolutePath + " -o " + file) !!
+          ("dot -T" + plotType + " " + tempFile.getAbsolutePath + " -o " + file + " -Nfontname=\"Monospace\"") !!
       }
     } catch {
       case _: Throwable =>

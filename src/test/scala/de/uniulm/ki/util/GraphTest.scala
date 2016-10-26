@@ -90,7 +90,7 @@ class GraphTest extends FlatSpec {
     assert(reachabilityMap.size == 9)
 
     assert(reachabilityMap(6).size == 8)
-    assert((0 until 6) :+ 7 :+ 8 forall { reachabilityMap(6).contains(_) })
+    assert((0 until 6) :+ 7 :+ 8 forall reachabilityMap(6).contains)
 
     for (v <- 0 until 9) assert(reachabilityMap(v).size == reachabilityMap(v).toSet.size)
   }

@@ -11,7 +11,7 @@ import scala.collection.{mutable, Seq}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int) extends PathBasedEncoding {
+case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK : Option[Int] = None) extends PathBasedEncoding {
 
   val numberOfChildrenClauses: Int = 0
 

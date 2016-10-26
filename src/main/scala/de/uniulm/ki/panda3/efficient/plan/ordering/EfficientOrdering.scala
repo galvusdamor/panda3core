@@ -175,4 +175,40 @@ class EfficientOrdering(val orderingConstraints: Array[Array[Byte]] = Array(), v
     (for (from <- 2 until ord.length; to <- 2 until ord.length; if ord(from)(to) == BEFORE) yield (from, to)).toArray
   }
 
+
+  def existsLinearisationWithPropertyFold[A](initialValue: A, foldOperation: (A, Int) => (A, Boolean)): Boolean = {
+    // sources
+    val inDegree: Array[Int] = new Array[Int](orderingConstraints.length)
+    orderingConstraints.indices foreach { i => orderingConstraints(i).indices foreach { j => if (orderingConstraints(i)(j) == BEFORE)  inDegree(j) += 1 } }
+
+    def dfs(sources: Array[Int], value: A, processed: Int): Boolean = if (processed == inDegree.length) true
+    else {
+      var i = 0
+      var found = false
+      while (i < sources.length && !found) {
+        if (sources(i) == 0) {
+          // iterate through source i
+          val (newValue, ok) = foldOperation(value, i)
+          if (ok) {
+            val newSources = sources.clone()
+
+            var j = 0
+            while (j < sources.length) {
+              if (orderingConstraints(i)(j) == BEFORE) newSources(j) -= 1
+              j += 1
+            }
+            // not a source any more
+            newSources(i) = -1
+            // if there is a linearisation from here: we found one
+            found = dfs(newSources, newValue, processed + 1)
+          }
+        }
+        i += 1
+      }
+      found
+    }
+
+
+    dfs(inDegree, initialValue, 0)
+  }
 }

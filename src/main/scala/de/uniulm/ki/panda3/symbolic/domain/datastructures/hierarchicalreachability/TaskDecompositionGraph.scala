@@ -94,10 +94,10 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
         else pruneMethodsAndTasksIfPossible(stillSupportedTasks, stillSupportedMethods)
       }
     }
-
-
     val allGroundedActions: Set[GroundTask] = (abstractTaskGroundings.values.flatten ++ groundedReachabilityAnalysis.reachableGroundPrimitiveActions).toSet
     val (remainingGroundTasks, remainingGroundMethods) = pruneMethodsAndTasksIfPossible(allGroundedActions, groundedDecompositionMethods.values.flatten.toSet, firstRound = true)
+
+    //println((remainingGroundTasks groupBy { _.task } map { case (t, gts) => t.name + ": " + gts.size }).toSeq.sorted mkString "\n")
 
     val prunedTaskToMethodEdgesMaybeIncomplete = groundedDecompositionMethods collect { case (a, b) if remainingGroundTasks contains a => (a, b.toSet intersect remainingGroundMethods) }
     val notMappedTasks = remainingGroundTasks diff prunedTaskToMethodEdgesMaybeIncomplete.keySet
@@ -108,14 +108,14 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
     // reachability analysis
     //System.in.read()
     val allReachable = firstAndOrGraph.reachableFrom(topGrounded)
-    val rechableWithoutTop = allReachable partition {
+    val reachableWithoutTop = allReachable partition {
       case GroundedDecompositionMethod(m, _) => m.abstractTask == topTask
       case GroundTask(task, _)               => task == topTask
     }
 
-    val topMethods = rechableWithoutTop._1 collect { case x: GroundedDecompositionMethod => x }
+    val topMethods = reachableWithoutTop._1 collect { case x: GroundedDecompositionMethod => x }
 
-    (firstAndOrGraph pruneToEntities rechableWithoutTop._2, if (isInitialPlanGround) Nil else topGrounded :: GroundTask(initAndGoalNOOP, Nil) :: Nil,
+    (firstAndOrGraph pruneToEntities reachableWithoutTop._2, if (isInitialPlanGround) Nil else topGrounded :: GroundTask(initAndGoalNOOP, Nil) :: Nil,
       if (isInitialPlanGround) Nil else topMethods.toSeq)
   }
 

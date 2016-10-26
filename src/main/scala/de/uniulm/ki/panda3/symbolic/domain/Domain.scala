@@ -50,7 +50,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val taskSet                  : Set[Task]                 = tasks.toSet
 
   // producer and consumer
-  lazy val producersOf      : Map[Predicate, Seq[ReducedTask]]                     = producersOfPosNeg map { case (a, (b, c)) => a -> (b ++ c).toSeq }
+  lazy val producersOf      : Map[Predicate, Seq[ReducedTask]]                     = (producersOfPosNeg map { case (a, (b, c)) => a -> (b ++ c).toSeq }).withDefaultValue(Nil)
   lazy val producersOfPosNeg: Map[Predicate, (Set[ReducedTask], Set[ReducedTask])] =
     (tasks collect { case t: ReducedTask => t } flatMap { t => t.effect.conjuncts map { t -> _ } } groupBy { _._2.predicate } map { case (p, ts) =>
       p -> (ts partition { _._2.isPositive } match {case (a, b) => (a map { _._1 } toSet, b map { _._1 } toSet)})

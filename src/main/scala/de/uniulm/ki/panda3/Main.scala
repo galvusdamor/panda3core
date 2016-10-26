@@ -6,13 +6,11 @@ import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
-import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
+import de.uniulm.ki.panda3.symbolic.compiler.{AllOrderings, TotallyOrderingOption}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraphConfiguration, GroundedPlanningGraph}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
-import de.uniulm.ki.panda3.efficient.heuristic.AddHeuristic
 import de.uniulm.ki.util._
 
 import scala.collection.JavaConversions
@@ -79,11 +77,8 @@ object Main {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant3-hierarchical.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-Socs/problems/p02-variant4-hierarchical.xml"
 
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_domain.hddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/primitivereachability/planningGraphTest02_problem.hddl"
-
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p03.pddl"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
@@ -175,33 +170,14 @@ object Main {
     //val probFile = "problems/p-0061-plow-road.lisp"   // SOL 50
     //val probFile = "problems/p-0062-clear-road-hazard.lisp" // SOL 50
 
-    //val probFile = "p-0002-plow-road.lisp"
-    //val probFile = "p-0003-set-up-shelter.lisp"
-    //val probFile = "p-0005-clear-road-wreck.lisp"
-    //val domFile = "../panda3core_with_planning_graph/testDomain1.pddl"
-    //val probFile = "../panda3core_with_planning_graph/testProblem1.pddl"
-
-
-    //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/domain/domain.hpddl"
-    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/problems/pfile_03.pddl"
-
-    //val domFile =
-    //val probFile = "/home/gregor/p-0002-plow-road.lisp"
-    //val probFile = "p-0002-plow-road.lisp"
-
-    //val domFile = "/home/gregor/d-0111-plow-road-verify.hddl"
-    //val probFile = "/home/gregor/p-0111-plow-road-verify.hddl"
-    //val domFile = "/home/gregor/d-0009-quell-riot-4.hddl"
-    //val probFile = "/home/gregor/p-0009-quell-riot-4.hddltlt"
-
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                             ParsingConfiguration(HDDLParserType),
-                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = false,
+                                             ParsingConfiguration(),
+                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = None,
                                                                         liftedReachability = true, groundedReachability = true, planningGraph = false,
                                                                         groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
                                                                         iterateReachabilityAnalysis = true, groundDomain = true),
@@ -212,8 +188,9 @@ object Main {
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
-                                             SearchConfiguration(Some(-1), Some(1), efficientSearch = false, BFSType, None, false, true),
+                                             SearchConfiguration(Some(-1), Some(1), BFSType, None, LCFR),
                                              //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
+
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatus, SearchResult, AllFoundPlans, AllFoundSolutionPathsWithHStar,
                                                                              SearchStatistics,
@@ -250,9 +227,9 @@ object Main {
       //println(solution.planSteps.length)
       // write output
       if (outputPDF.endsWith("dot")) {
-        writeStringToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), new File(outputPDF))
+        writeStringToFile(solution.dotString(PlanDotOptions(showHierarchy = false)), new File(outputPDF))
       } else {
-        Dot2PdfCompiler.writeDotToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), outputPDF)
+        Dot2PdfCompiler.writeDotToFile(solution.dotString(PlanDotOptions(showHierarchy = false)), outputPDF)
       }
     }
 
