@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.efficient.domain
 import de.uniulm.ki.panda3.efficient.csp.{EfficientVariableConstraint}
 import de.uniulm.ki.panda3.efficient.logic.{EfficientGroundLiteral, EfficientLiteral}
 
+import scala.collection.BitSet
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -36,6 +37,17 @@ case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], const
       EfficientVariableConstraint(constraint.constraintType, taskArguments(constraint.variable), constraint.other)
   }
 
+  lazy val (positiveEffectPredicates, negativeEffectPredicates)             = effect partition { _.isPositive } match {case (a, b) => (a map { _.predicate }, b map { _.predicate })}
+  lazy val (positivePreconditionPredicates, negativePreconditionPredicates) = precondition partition { _.isPositive } match {case (a, b) => (a map { _.predicate }, b map { _.predicate })}
+
+  private def predicateListToBoolArray(predicates: Array[Int]): Array[Boolean] = Range(0, 1000) map { i =>
+    predicates contains i
+  } toArray
+
+  lazy val (positivePreconditionPredicatesArray, negativePreconditionPredicatesArray) =
+    (predicateListToBoolArray(positivePreconditionPredicates), predicateListToBoolArray(negativePreconditionPredicates))
+  lazy val (positiveEffectPredicatesArray, negativeEffectPredicatesArray)             =
+    (predicateListToBoolArray(positiveEffectPredicates), predicateListToBoolArray(negativeEffectPredicates))
 }
 
 
@@ -43,7 +55,7 @@ case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], const
 case class EfficientGroundTask(taskID: Int, arguments: Array[Int]) {
 
   // TODO we shouldn't do this as inefficiently as we do it .... we recomute the substituted precs and effs every time, but they can't change
-  def substitutedPrecondition(preconditionIndex : Int, domain : EfficientDomain) : EfficientGroundLiteral = {
+  def substitutedPrecondition(preconditionIndex: Int, domain: EfficientDomain): EfficientGroundLiteral = {
     val task = domain.tasks(taskID)
     val precondition = task.precondition(preconditionIndex)
     val openPreconditionArguments = task.getArgumentsOfLiteral(arguments, precondition)
@@ -51,13 +63,12 @@ case class EfficientGroundTask(taskID: Int, arguments: Array[Int]) {
   }
 
 
-  def substitutedEffect(effectIndex : Int, domain : EfficientDomain) : EfficientGroundLiteral = {
+  def substitutedEffect(effectIndex: Int, domain: EfficientDomain): EfficientGroundLiteral = {
     val task = domain.tasks(taskID)
     val effect = task.effect(effectIndex)
     val openPreconditionArguments = task.getArgumentsOfLiteral(arguments, effect)
     EfficientGroundLiteral(effect.predicate, isPositive = true, openPreconditionArguments)
   }
-
 
 
   // we need a special equals as we use arrays
