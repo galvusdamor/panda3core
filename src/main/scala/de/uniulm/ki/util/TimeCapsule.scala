@@ -30,12 +30,5 @@ class TimeCapsule extends DataCapsule {
     currentAccumulatedTime.put(activity, newTime)
   }
 
-  /**
-    * returns an immutable copy of the internally accumulated time
-    */
-  override def integralDataMap(): Map[String, Long] = currentAccumulatedTime.toMap
-
-  override def floatingDataMap(): Map[String, Double] = integralDataMap() map { case (a, b) => (a, b.toDouble) }
-
-  override def stringDataMap(): Map[String, String] = Map()
+  override def dataMap(): Map[String, String] = currentAccumulatedTime.toMap map {case (a,b) => a -> b.toString}
 }

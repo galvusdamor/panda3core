@@ -17,6 +17,8 @@ object MonroeMain {
 
   def main(args: Array[String]): Unit = {
 
+    assert(false)
+
     val run = args(0).toInt
 
     //val dir = new File("../02-translation/")
@@ -26,7 +28,7 @@ object MonroeMain {
 
     val resultStream = new PrintStream(new FileOutputStream("monroe" + run + ".csv"))
 
-    resultStream.print("instance,solvestate,toplevel,nump")
+    resultStream.print("instance,solvestate,toplevel,primitivePlan,nump")
 
     Timings.allTimings map { "," + _ } foreach resultStream.print
     resultStream.println()
@@ -34,7 +36,7 @@ object MonroeMain {
 
     //filter { _.getName contains "full-pref" }
     domains filter { d => d.getName.split("-")(1).toInt % 4 == run } foreach { domFile =>
-      val probFile = new File(domFile.getAbsolutePath.replaceAll("/d-", "/p-") + "tlt")
+      val probFile = new File(domFile.getAbsolutePath.replaceAll("/d-", "/p-"))
       println("\n\n\nDOMAIN: " + domFile.getName)
 
       val domInputStream = new FileInputStream(domFile)
@@ -74,7 +76,7 @@ object MonroeMain {
       println(results(ProcessingTimings).shortInfo)
 
       println("SOLUTION SEQUENCE")
-      val toplevelTask = if (results(SearchResult).nonEmpty) {
+      val (toplevelTask,primitiveSequence) = if (results(SearchResult).nonEmpty) {
         val plan = results(SearchResult).get
 
         // check executability
@@ -115,11 +117,13 @@ object MonroeMain {
 
         println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
 
-        psToString(realGoal)
-      } else "unknown"
+        val prim = ordering map psToString mkString ":"
+
+        (psToString(realGoal), prim)
+      } else ("unknown","none")
 
       val pActions = if (results.map contains PreprocessedDomainAndPlan) results(PreprocessedDomainAndPlan)._1.tasks count { _.name startsWith "p_" } else -1
-      resultStream.print(domFile.getName + "," + results(SearchStatus) + "," + toplevelTask + "," + pActions)
+      resultStream.print(domFile.getName + "," + results(SearchStatus) + "," + toplevelTask + "," + primitiveSequence + ", " + pActions)
       Timings.allTimings map { "," + results(ProcessingTimings).integralDataMap().getOrElse(_, Integer.MAX_VALUE) } foreach resultStream.print
       resultStream.println()
       resultStream.flush()

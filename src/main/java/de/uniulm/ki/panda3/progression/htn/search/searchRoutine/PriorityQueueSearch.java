@@ -20,18 +20,18 @@ import java.util.Random;
  * Created by dh on 15.09.16.
  */
 public class PriorityQueueSearch extends ProgressionSearchRoutine {
-    public static final String SEARCH_TIME = "99 progression:01:searchTime";
-    public static final String STATUS = "99 progression:01:status";
-    public static final String A_STAR = "99 progression:02:aStar";
-    public static final String HEURISTIC = "99 progression:03:heuristic";
-    public static final String NUM_SEARCH_NODES = "99 progression:04:numSearchNodes";
-    public static final String UNIT_PROPAGATION = "99 progression:05:unitPropagation";
-    public static final String NUM_PRIM_TASKS = "99 progression:06:numPrimTasks";
-    public static final String NUM_SHOP_TASKS = "99 progression:07:numShopTasks";
-    public static final String NUM_DECOMPOSITIONS = "99 progression:08:numDecompositions";
-    public static final String INFERRED_TLT = "99 progression:09:inferredTlt";
-    public static final String ENFORCED_PREFIX_LENGTH = "99 progression:10:enforcedPrefixLength";
-    public static final String SOLUTION = "99 progression:11:solution";
+    public static final String SEARCH_TIME = "30 progression:01:searchTime";
+    public static final String STATUS = "30 progression:01:status";
+    public static final String A_STAR = "30 progression:02:aStar";
+    public static final String HEURISTIC = "30 progression:03:heuristic";
+    public static final String NUM_SEARCH_NODES = "30 progression:04:numSearchNodes";
+    public static final String UNIT_PROPAGATION = "30 progression:05:unitPropagation";
+    public static final String NUM_PRIM_TASKS = "30 progression:06:numPrimTasks";
+    public static final String NUM_SHOP_TASKS = "30 progression:07:numShopTasks";
+    public static final String NUM_DECOMPOSITIONS = "30 progression:08:numDecompositions";
+    public static final String INFERRED_TLT = "30 progression:09:inferredTlt";
+    public static final String ENFORCED_PREFIX_LENGTH = "30 progression:10:enforcedPrefixLength";
+    public static final String SOLUTION = "30 progression:11:solution";
 
     private boolean findShortest = false;
     boolean aStar = true;
@@ -210,36 +210,36 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
 
         }
-        System.out.println("Number of nodes in final fringe: " + fringe.size());
+        System.out.println("30 progression:90:Number of nodes in final fringe: " + fringe.size());
         timing.stop(SEARCH_TIME);
 
         if (this.findShortest)
-            info.add("findShortestPlan", 1);
+            info.add("30 progression:91:findShortestPlan", 1);
         else
-            info.add("findShortestPlan", 0);
-        info.add("foundShortestPlanAfter", (int) (foundFirstPlanAfter - startedSearch));
-        info.add("foundFirstPlanAfter", (int) (foundShortestPlan - startedSearch));
-        info.add("foundPlans", foundPlans);
-        info.add("randomSeed", htnPlanningInstance.randomSeed);
+            info.add("30 progression:91:findShortestPlan", 0);
+        info.add("30 progression:92:foundShortestPlanAfter", (int) (foundFirstPlanAfter - startedSearch));
+        info.add("30 progression:93:foundFirstPlanAfter", (int) (foundShortestPlan - startedSearch));
+        info.add("30 progression:94:foundPlans", foundPlans);
+        info.add("30 progression:95:randomSeed", htnPlanningInstance.randomSeed);
 
         // write statistics
         if (solution != null)
-            info.add(STATUS, "solved");
+            info.set(STATUS, "solved");
         else if (exitDueToTimeLimit)
-            info.add(STATUS, "timeout");
+            info.set(STATUS, "timeout");
         else
-            info.add(STATUS, "proven_unsolvable");
+            info.set(STATUS, "proven_unsolvable");
 
         if (this.aStar) {
-            info.add(A_STAR, 1);
+            info.set(A_STAR, 1);
         } else {
-            info.add(A_STAR, 0);
+            info.set(A_STAR, 0);
         }
 
-        info.add(HEURISTIC, firstSearchNode.heuristic.getClass().toString());
+        info.set(HEURISTIC, firstSearchNode.heuristic.getClass().toString());
 
-        info.add(NUM_SEARCH_NODES, searchnodes);
-        info.add(UNIT_PROPAGATION, unitPropagation);
+        info.set(NUM_SEARCH_NODES, searchnodes);
+        info.set(UNIT_PROPAGATION, unitPropagation);
         setSolInfo(solution, info);
 
         if (output)
@@ -312,13 +312,13 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 }
             }
         }
-        ic.add(NUM_PRIM_TASKS, numPrim);
-        ic.add(NUM_SHOP_TASKS, numShop);
-        ic.add(NUM_DECOMPOSITIONS, numDec);
+        ic.set(NUM_PRIM_TASKS, numPrim);
+        ic.set(NUM_SHOP_TASKS, numShop);
+        ic.set(NUM_DECOMPOSITIONS, numDec);
         if (FirstDecTask.length() > 0) {
-            ic.add(INFERRED_TLT, FirstDecTask);
-            ic.add(ENFORCED_PREFIX_LENGTH, enforcedPrefLength);
+            ic.set(INFERRED_TLT, FirstDecTask);
+            ic.set(ENFORCED_PREFIX_LENGTH, enforcedPrefLength);
         }
-        ic.add(SOLUTION, PrimitivePlan);
+        ic.set(SOLUTION, PrimitivePlan);
     }
 }

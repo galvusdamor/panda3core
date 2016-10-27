@@ -6,10 +6,14 @@ import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod
 import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask}
+import de.uniulm.ki.panda3.efficient.Wrapping
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
+import de.uniulm.ki.panda3.efficient.heuristic.filter.TreeFF
 import de.uniulm.ki.panda3.symbolic.compiler.{AllOrderings, TotallyOrderingOption}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraphConfiguration, GroundedPlanningGraph}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
+import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util._
 
@@ -27,10 +31,9 @@ object Main {
 
     println("This is Panda3")
 
-
     /*if (args.length < 2) {
-      println("This programm needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the name of the output file. If the file extension is .dot a dot file will be" +
-                " written, else a pdf.")
+      println("This programm needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the random seed.")
+      //println("This programm needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
       System.exit(1)
     }
     val domFile = args(0)
@@ -67,8 +70,8 @@ object Main {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-AirplanesHub.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RegularTruck-4Locations.xml"
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--4--4.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/5--5--5.xml"
@@ -113,8 +116,8 @@ object Main {
 
     //val domFile ="/home/dh/Schreibtisch/debug-planner/d-0048-provide-temp-heat-4.hddl";
     //val probFile="/home/dh/Schreibtisch/debug-planner/p-0048-provide-temp-heat-4.hddl";
-    val domFile ="/home/dh/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    val probFile="/home/dh/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
+    //val domFile ="/home/dh/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    //val probFile="/home/dh/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
@@ -134,11 +137,11 @@ object Main {
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
                                              //PlanBasedSearch(Some(-1), Some(1), BFSType, None, LCFR),
-                                              ProgressionSearch(None),
+                                             ProgressionSearch(None),
                                              //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
-
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatistics,
+                                                                             SearchStatus,
                                                                              PreprocessedDomainAndPlan)))
 
     //System.in.read()
@@ -152,8 +155,8 @@ object Main {
     println(results(ProcessingTimings).shortInfo)
 
     // get all found plans
-    val foundPlans = results(AllFoundPlans)
-    println("Found in total " + foundPlans.length + " plans")
+    //val foundPlans = results(AllFoundPlans)
+    //println("Found in total " + foundPlans.length + " plans")
 
     /*// get all found plans
     val foundPaths = results(AllFoundSolutionPathsWithHStar)
@@ -170,7 +173,6 @@ object Main {
       }
     }
 
-    val wrapper = Wrapping(results(PreprocessedDomainAndPlan))
     val initialState = wrapper.initialPlan.groundedInitialStateOnlyPositive
     val planningGraph = GroundedPlanningGraph(wrapper.symbolicDomain, initialState.toSet, GroundedPlanningGraphConfiguration())
     val efficientPlanningGraph = EfficientGroundedPlanningGraphFromSymbolic(planningGraph, wrapper)
@@ -186,7 +188,7 @@ object Main {
         relaxHeuristic.computeHeuristic(wrapper.unwrap(node.plan), (), null)._1.toInt)) } }
 
     */
-    if (results(SearchResult).isDefined) {
+    if (results.map.contains(SearchResult) && results(SearchResult).isDefined) {
 
       println("SOLUTION SEQUENCE")
       val plan = results(SearchResult).get
@@ -200,19 +202,21 @@ object Main {
 
       println(plan.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive } map psToString mkString "\n")
 
-      println("FIRST DECOMPOSITION")
-      val initSchema = results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.head.schema
-      val initPS = plan.planStepsAndRemovedPlanSteps find { _.schema == initSchema } get
-      val realGoalSchema = plan.planStepDecomposedByMethod(initPS).subPlan.planStepsWithoutInitGoal.head.schema
-      val realGoal = plan.planStepsAndRemovedPlanSteps find { _.schema == realGoalSchema } get
+      if (results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.nonEmpty) {
+        println("FIRST DECOMPOSITION")
+        val initSchema = results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.head.schema
+        val initPS = plan.planStepsAndRemovedPlanSteps find { _.schema == initSchema } get
+        val realGoalSchema = plan.planStepDecomposedByMethod(initPS).subPlan.planStepsWithoutInitGoal.head.schema
+        val realGoal = plan.planStepsAndRemovedPlanSteps find { _.schema == realGoalSchema } get
 
-      println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
+        println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
 
-      //println("Longest Path " + results(PreprocessedDomainAndPlan)._1.taskSchemaTransitionGraph.longestPathLength.get)
-      //println("Maximum Method size " + results(PreprocessedDomainAndPlan)._1.maximumMethodSize)
+        //println("Longest Path " + results(PreprocessedDomainAndPlan)._1.taskSchemaTransitionGraph.longestPathLength.get)
+        //println("Maximum Method size " + results(PreprocessedDomainAndPlan)._1.maximumMethodSize)
+      }
     }
 
-    if (results(SearchStatus) == SearchState.SOLUTION) {
+    if (results.map.contains(SearchResult) && results(SearchStatus) == SearchState.SOLUTION) {
       val solution = results(SearchResult).get
       //println(solution.planSteps.length)
       // write output
@@ -226,12 +230,32 @@ object Main {
 
     var doneCounter = 0
     // check the tree
-    def dfs(searchNode: SearchNode): Unit = if (!searchNode.dirty) {
-      searchNode.plan
-      searchNode.plan.flaws
 
-      searchNode.plan.flaws map { _.resolvents(results(PreprocessedDomainAndPlan)._1) }
-      searchNode.modifications
+    val wrapper = Wrapping(results(PreprocessedDomainAndPlan))
+    val tff = TreeFF(wrapper.efficientDomain)
+
+    def dfs(searchNode: SearchNode): Unit = if (!searchNode.dirty) {
+      val effPlan = wrapper.unwrap(searchNode.plan)
+
+      if (searchNode.searchState == SearchState.SOLUTION && !tff.isPossiblySolvable(effPlan)) {
+        println("BÄÄ")
+
+        val parPlan = wrapper.unwrap(searchNode.parent.plan)
+        println("PARENT " + parPlan.numberOfAllPlanSteps)
+        println(tff.isPossiblySolvable(parPlan))
+
+        println("\n\n\nCHILD " + effPlan.numberOfAllPlanSteps)
+        println(tff.isPossiblySolvable(effPlan))
+
+
+        System exit 0
+      }
+
+      //searchNode.plan
+      //searchNode.plan.flaws
+
+      //searchNode.plan.flaws map { _.resolvents(results(PreprocessedDomainAndPlan)._1) }
+      //searchNode.modifications
 
       doneCounter += 1
       if (doneCounter % 10 == 0) println("traversed " + doneCounter)
@@ -242,9 +266,9 @@ object Main {
 
     //System.in.read()
 
-    /*if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) {
+    if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) {
       results(SearchSpace).recomputeSearchState()
       dfs(results(SearchSpace))
-    }*/
+    }
   }
 }

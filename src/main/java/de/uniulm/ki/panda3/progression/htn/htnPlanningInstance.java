@@ -54,7 +54,7 @@ public class htnPlanningInstance {
     public static Random random;
     public static int randomSeed = 42;
 
-    public void plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
+    public boolean plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
                      InformationCapsule ic, TimeCapsule tc) throws ExecutionException, InterruptedException {
         random = new Random(randomSeed);
         long totaltime = System.currentTimeMillis();
@@ -100,7 +100,7 @@ public class htnPlanningInstance {
                 if (ps.methods == null) {
                     System.out.println("No method for initial task " + ps.getTask().longInfo());
                     System.out.println("Problem unsolvable.");
-                    return;
+                    return false;
                 }
             }
             initialTasks.add(ps);
@@ -166,6 +166,8 @@ public class htnPlanningInstance {
             System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");*/
         } else System.out.println("Problem unsolvable.");
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
+
+        return solution != null;
     }
 
     private boolean isApplicable(List<Object> solution, BitSet state) {

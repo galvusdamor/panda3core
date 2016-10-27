@@ -56,7 +56,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   import Timings._
 
   /**
-    * Runs the complete planner (including the parser) and returs the results
+    * Runs the complete planner (including the parser) and returns the results
     */
   def runResultSearch(domain: InputStream, problem: InputStream, timeCapsule: TimeCapsule = new TimeCapsule()): ResultMap = runSearchHandle(domain, problem, None, timeCapsule)._6()
 
@@ -269,11 +269,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         }
 
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          progression.plan(domainAndPlan._2,JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),
+          val solutionFound = progression.plan(domainAndPlan._2,JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),
             JavaConversions.setAsJavaSet(groundLiterals.toSet),informationCapsule, timeCapsule)
 
           timeCapsule stop TOTAL_TIME
-          runPostProcessing(timeCapsule, informationCapsule, null, null, domainAndPlan, analysisMap)
+          runPostProcessing(timeCapsule, informationCapsule, null, if (solutionFound) null :: Nil else Nil, domainAndPlan, analysisMap)
         })
     }
   }

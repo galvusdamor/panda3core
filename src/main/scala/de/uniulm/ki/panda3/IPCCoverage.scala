@@ -15,8 +15,6 @@ import de.uniulm.ki.panda3.symbolic.search.SearchState
 object IPCCoverage {
   def main(args: Array[String]) {
 
-    //val ipc7Domains = new File("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7").listFiles() filterNot {_.getName contains "openstack"} map { d => ("IPC7", d) }
-    //val ipc6Domains = new File("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6").listFiles() filterNot {_.getName contains "openstack"} map { d => ("IPC6", d) }
     val ipc7Domains = new File("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7").listFiles() map { d => ("IPC7", d) }
     val ipc6Domains = new File("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6").listFiles() map { d => ("IPC6", d) }
     val ipc5Domains = new File("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC5").listFiles() map { d => ("IPC5", d) }
@@ -25,8 +23,6 @@ object IPCCoverage {
     val ipc2Domains = new File("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC2").listFiles() map { d => ("IPC2", d) }
     val ipc1Domains = new File("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC1").listFiles() map { d => ("IPC1", d) }
     val allICPs = "IPC1" :: "IPC2" :: "IPC3" :: "IPC4" :: "IPC5" :: "IPC6" :: "IPC7" :: Nil
-    //val ipc7Domains = new File("IPC7").listFiles() map { d => ("IPC7", d) }
-    //val ipc6Domains = new File("IPC6").listFiles() map { d => ("IPC6", d) }
 
 
     val results = ipc1Domains ++ ipc2Domains ++ ipc3Domains ++ ipc4Domains ++ ipc5Domains ++ ipc6Domains ++ ipc7Domains map { case (ipc, d) => {
