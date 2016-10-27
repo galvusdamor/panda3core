@@ -144,7 +144,6 @@ object Main {
                                                                              SearchStatistics,
                                                                              SearchStatus,
                                                                              PreprocessedDomainAndPlan)))
-
     //System.in.read()
 
 

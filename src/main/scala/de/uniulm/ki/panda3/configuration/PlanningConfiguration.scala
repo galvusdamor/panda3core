@@ -85,6 +85,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     val (domainAndPlanFullyParsed, _) = runParsingPostProcessing(domain, problem, timeCapsule)
     val ((domainAndPlan, preprocessedAnalysisMap), _) = runPreprocessing(domainAndPlanFullyParsed._1, domainAndPlanFullyParsed._2, timeCapsule)
 
+    // create the information container
+    val informationCapsule = new InformationCapsule
+
     // !!!! ATTENTION we use side effects for the sake of simplicity
     var analysisMap = preprocessedAnalysisMap
 
@@ -92,6 +95,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     if (analysisMap contains SymbolicGroundedTaskDecompositionGraph) {
       val tdg = analysisMap(SymbolicGroundedTaskDecompositionGraph)
       val domainStructureAnalysis = DomainPropertyAnalyser(domainAndPlan._1, tdg)
+
+      informationCapsule.set(Information.ACYCLIC, if (domainStructureAnalysis.isAcyclic) "true" else "false")
+      informationCapsule.set(Information.MOSTLY_ACYCLIC, if (domainStructureAnalysis.isMostlyAcyclic) "true" else "false")
+      informationCapsule.set(Information.REGULAR, if (domainStructureAnalysis.isRegular) "true" else "false")
+      informationCapsule.set(Information.TAIL_RECURSIVE, if (domainStructureAnalysis.isTailRecursive) "true" else "false")
+      informationCapsule.set(Information.TOTALLY_ORDERED, if (domainStructureAnalysis.isTotallyOrdered) "true" else "false")
 
       extra("Domain is acyclic: " + domainStructureAnalysis.isAcyclic + "\n")
       extra("Domain is mostly acyclic: " + domainStructureAnalysis.isMostlyAcyclic + "\n")
@@ -101,13 +110,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     }
 
-    // create the information container
-    val informationCapsule = new InformationCapsule
-
     searchConfiguration match {
       case search: PlanBasedSearch =>
-
-
         // some heuristics need additional preprocessing, e.g. to build datastructures they need
         timeCapsule start HEURISTICS_PREPARATION
         // TDG based heuristics need the TDG
