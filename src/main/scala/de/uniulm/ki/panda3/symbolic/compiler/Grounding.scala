@@ -57,8 +57,8 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
     } toMap
 
     val allTasksAnalysis = reachabilityAnalysis.reachableGroundedTasks ++ reachabilityAnalysis.additionalTaskNeededToGround ++ reachabilityAnalysis.reachableGroundMethodInitAndGoalActions
-    val initAndGoalInitialTask = GroundTask(plan.init.schema, plan.init.schema.parameters map alreadyGroundedVariableMapping) ::
-      GroundTask(plan.goal.schema, plan.goal.schema.parameters map alreadyGroundedVariableMapping) :: Nil
+    val initAndGoalInitialTask = GroundTask(plan.init.schema, plan.init.arguments map alreadyGroundedVariableMapping) ::
+      GroundTask(plan.goal.schema, plan.goal.arguments map alreadyGroundedVariableMapping) :: Nil
     val groundedTasks: Map[Task, Map[Seq[Constant], (Task, GroundTask)]] = (allTasksAnalysis ++ initAndGoalInitialTask).distinct groupBy { _.task } map { case (t, groundActs) =>
       val taskMap: Map[Seq[Constant], (Task, GroundTask)] = groundActs groupBy { _.arguments } map { case (args, taskList) =>
         assert(taskList.length == 1)

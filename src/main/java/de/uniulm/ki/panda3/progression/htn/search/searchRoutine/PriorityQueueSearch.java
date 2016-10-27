@@ -1,14 +1,17 @@
 package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
+import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
+import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Random;
@@ -29,20 +32,22 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
     public static final String INFERRED_TLT = "99 progression:09:inferredTlt";
     public static final String ENFORCED_PREFIX_LENGTH = "99 progression:10:enforcedPrefixLength";
     public static final String SOLUTION = "99 progression:11:solution";
+
+    private boolean findShortest = false;
     boolean aStar = true;
     boolean deleteRelaxed = false;
     boolean output = true;
-    //long wallTime = 300000; // 5 min
     boolean exitDueToTimeLimit = false;
 
     public PriorityQueueSearch() {
 
     }
 
-    public PriorityQueueSearch(boolean aStar, boolean deleteRelaxed, boolean output) {
+    public PriorityQueueSearch(boolean aStar, boolean deleteRelaxed, boolean output, boolean findShortest) {
         this.aStar = aStar;
         this.deleteRelaxed = deleteRelaxed;
         this.output = output;
+        this.findShortest = findShortest;
     }
 
     public List<Object> search(ProgressionNetwork firstSearchNode) {
@@ -54,8 +59,11 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
     public List<Object> search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
         if (output)
             System.out.println("\nStarting priority queue search");
-        Random ran = new Random(42);
         int searchnodes = 1;
+        int foundPlans = 0;
+        int planLength = -1;
+        long foundFirstPlanAfter = 0;
+        long foundShortestPlan = 0;
         int unitPropagation = 0;
         int bestMetric = Integer.MAX_VALUE;
         List<Object> solution = null;
@@ -65,6 +73,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         fringe.add(firstSearchNode);
 
         timing.start(SEARCH_TIME);
+        long startedSearch = System.currentTimeMillis();
 
         planningloop:
         while (!fringe.isEmpty()) {
@@ -100,14 +109,25 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 if (node.goalRelaxedReachable) {
                     // early goal test - NON-OPTIMAL
                     if (node.isGoal()) {
-                        solution = node.solution;
-                        if (node.progressionTrace != null)
-                            System.out.println(node.progressionTrace);
-
-                        break planningloop;
+                        int numSteps = getStepCount(node.solution);
+                        if ((foundPlans == 0) || (numSteps < planLength)) {
+                            if (foundPlans == 0) {
+                                foundFirstPlanAfter = System.currentTimeMillis();
+                            }
+                            System.out.println("Found solution " + (foundPlans + 1) + " length " + numSteps);
+                            solution = node.solution;
+                            foundShortestPlan = System.currentTimeMillis();
+                            planLength = numSteps;
+                            if (node.progressionTrace != null)
+                                System.out.println(node.progressionTrace);
+                        }
+                        foundPlans++;
+                        if (!this.findShortest) {
+                            break planningloop;
+                        }
+                    } else {
+                        fringe.add(node);
                     }
-
-                    fringe.add(node);
                     if (node.metric < bestMetric) {
                         bestMetric = node.metric;
                         if (output)
@@ -130,7 +150,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
             if (n.getFirstAbstractTasks().size() == 0) continue planningloop;
 
-            ProgressionPlanStep oneAbs = n.getFirstAbstractTasks().get(ran.nextInt(n.getFirstAbstractTasks().size()));
+            ProgressionPlanStep oneAbs = n.getFirstAbstractTasks().get(htnPlanningInstance.random.nextInt(n.getFirstAbstractTasks().size()));
             /*ProgressionPlanStep oneAbs = null;
             int minMethods = Integer.MAX_VALUE;
 
@@ -190,11 +210,23 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
 
         }
+        System.out.println("Number of nodes in final fringe: " + fringe.size());
         timing.stop(SEARCH_TIME);
+
+        if (this.findShortest)
+            info.add("findShortestPlan", 1);
+        else
+            info.add("findShortestPlan", 0);
+        info.add("foundShortestPlanAfter", (int) (foundFirstPlanAfter - startedSearch));
+        info.add("foundFirstPlanAfter", (int) (foundShortestPlan - startedSearch));
+        info.add("foundPlans", foundPlans);
+        info.add("randomSeed", htnPlanningInstance.randomSeed);
 
         // write statistics
         if (solution != null)
             info.add(STATUS, "solved");
+        else if (exitDueToTimeLimit)
+            info.add(STATUS, "timeout");
         else
             info.add(STATUS, "proven_unsolvable");
 
@@ -215,6 +247,17 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         if (output)
             System.out.println("Search time: " + (System.currentTimeMillis() - totalSearchTime) + " ms");
         return solution;
+    }
+
+    private int getStepCount(LinkedList<Object> solution) {
+        int count = 0;
+        for (Object a : solution) {
+            if ((a instanceof Integer) && (!operators.ShopPrecActions.contains(a))) {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     @Override

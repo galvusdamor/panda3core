@@ -25,13 +25,13 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val probInputStream = new FileInputStream(probFile)
 
     val (searchConfig, usePlanningGraph) = configNumber match {
-      case x if x < 0 => (SearchConfiguration(Some(0), Some(0), DFSType, None, LCFR, efficientSearch = false), false)
-      case 1          => (SearchConfiguration(None, None, AStarDepthType, Some(TDGMinimumModification), LCFR), true)
-      case 2          => (SearchConfiguration(None, None, DijkstraType, None, LCFR), true)
-      case 3          => (SearchConfiguration(None, None, AStarDepthType, Some(TDGMinimumAction), LCFR), true)
-      case 4          => (SearchConfiguration(None, None, AStarDepthType, Some(TDGMinimumModification), LCFR), false)
-      case 5          => (SearchConfiguration(None, None, DijkstraType, None, LCFR), false)
-      case 6          => (SearchConfiguration(None, None, GreedyType, Some(TDGMinimumModification), LCFR), false)
+      case x if x < 0 => (PlanBasedSearch(Some(0), Some(0), DFSType, None, LCFR, efficientSearch = false), false)
+      case 1          => (PlanBasedSearch(None, None, AStarDepthType, Some(TDGMinimumModification), LCFR), true)
+      case 2          => (PlanBasedSearch(None, None, DijkstraType, None, LCFR), true)
+      case 3          => (PlanBasedSearch(None, None, AStarDepthType, Some(TDGMinimumAction), LCFR), true)
+      case 4          => (PlanBasedSearch(None, None, AStarDepthType, Some(TDGMinimumModification), LCFR), false)
+      case 5          => (PlanBasedSearch(None, None, DijkstraType, None, LCFR), false)
+      case 6          => (PlanBasedSearch(None, None, GreedyType, Some(TDGMinimumModification), LCFR), false)
     }
 
     // create the configuration

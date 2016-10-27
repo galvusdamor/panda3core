@@ -51,8 +51,12 @@ public class htnPlanningInstance {
 
     final boolean verbose = false;
 
+    public static Random random;
+    public static int randomSeed = 42;
 
-    public void plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals) throws ExecutionException, InterruptedException {
+    public void plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
+                     InformationCapsule ic, TimeCapsule tc) throws ExecutionException, InterruptedException {
+        random = new Random(randomSeed);
         long totaltime = System.currentTimeMillis();
         long time = System.currentTimeMillis();
 
@@ -105,9 +109,9 @@ public class htnPlanningInstance {
 
         // todo: change heuristic here
         //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        initialNode.heuristic = new cRPG(operators.methods, allActions);
+        //initialNode.heuristic = new cRPG(operators.methods, allActions);
         //initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
-        //initialNode.heuristic = new greedyProgression();
+        initialNode.heuristic = new greedyProgression();
         //initialNode.heuristic = new delRelaxedHTN(operators.methods, allActions);
         //initialNode.heuristic = new proBFS();
 
@@ -118,9 +122,10 @@ public class htnPlanningInstance {
         boolean aStar = false;
         boolean deleteRelaxed = false;
         boolean printOutput = true;
-        long quitAfterMs = -1;
+        boolean findShortest = false;
+        long quitAfterMs = 300000;
 
-        routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput);
+        routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput, findShortest);
         //routine = new EnforcedHillClimbing();
         //routine = new CompleteEnforcedHillClimbing();
         routine.wallTime = quitAfterMs;
@@ -131,17 +136,18 @@ public class htnPlanningInstance {
         } else {
             System.out.println(" - Greedy search");
         }
-        System.out.println(" - " + initialNode.heuristic.getName()+" heuristic");
+        System.out.println(" - " + initialNode.heuristic.getName() + " heuristic");
 
         if (deleteRelaxed) {
             System.out.println(" - DELETE-RELAXED actions");
         }
+        if (quitAfterMs > 0) {
+            System.out.println(" - time limit for search is " + (quitAfterMs / 1000) + " sec");
+        }
 
-        InformationCapsule ic = new InformationCapsule();
-        TimeCapsule tc = new TimeCapsule();
         List<Object> solution = routine.search(initialNode, ic, tc);
         assert (isApplicable(solution, s0._1()));
-        System.out.println("###" + ic.keyValueListString() + ";" + tc.keyValueListString());
+        //System.out.println("###" + ic.keyValueListString() + ";" + tc.keyValueListString());
 
         int n = 1;
         if (solution != null) {
@@ -163,6 +169,8 @@ public class htnPlanningInstance {
     }
 
     private boolean isApplicable(List<Object> solution, BitSet state) {
+        if (solution == null)
+            return true;
         for (Object mod : solution) {
             if (mod instanceof Integer) {
                 int a = (Integer) mod;

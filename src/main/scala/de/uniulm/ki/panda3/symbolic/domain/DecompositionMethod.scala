@@ -1,12 +1,12 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
-import de.uniulm.ki.panda3.symbolic.csp.{NotOfSort, OfSort, NotEqual, Equal}
 import de.uniulm.ki.panda3.symbolic.domain.updates.{PropagateEquality, RemoveEffects, ExchangeLiteralsByPredicate, DomainUpdate}
+import de.uniulm.ki.panda3.symbolic.csp.{Equal, NotEqual, NotOfSort, OfSort}
+import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask}
+import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
 import de.uniulm.ki.util.HashMemo
 
 /**
@@ -44,7 +44,7 @@ trait DecompositionMethod extends DomainUpdatable {
   override def update(domainUpdate: DomainUpdate): DecompositionMethod
 
   def containsTask(task: Task): Boolean =
-    task == abstractTask || (subPlan.planSteps exists { _.schema == task })
+    task == abstractTask || (subPlan.planStepTasksSet contains task )
 
   def areParametersAllowed(instantiation: Map[Variable, Constant]): Boolean = subPlan.variableConstraints.constraints forall {
     case Equal(var1, var2: Variable)     => instantiation(var1) == instantiation(var2)
@@ -91,6 +91,11 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
     case PropagateEquality(empty) =>
       assert(empty.isEmpty)
       SimpleDecompositionMethod(abstractTask,subPlan update PropagateEquality(abstractTask.parameters.toSet), name)
+    case ExchangeTask(exchangeMap) =>
+      if (exchangeMap contains abstractTask){
+        val newVars = exchangeMap(abstractTask).parameters filterNot abstractTask.parameters.contains
+        SimpleDecompositionMethod(abstractTask, subPlan.update(domainUpdate) update AddVariables(newVars), name)
+      } else SimpleDecompositionMethod(abstractTask, subPlan.update(domainUpdate), name)
     case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
                                                                               name)
     case RemoveEffects(toRemove, false)          => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update RemoveEffects(toRemove, invertedTreatment = true), name)

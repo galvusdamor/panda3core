@@ -17,14 +17,14 @@ public class TestHddlVisitorParser {
         FileReader inDomain = null;
         FileReader inProblem = null;
         try {
-            //String domainFileName = System.getProperty("user.dir") + "/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/testdomain.pddl";
-            //String problemFileName = System.getProperty("user.dir") + "/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/testproblem.pddl";
+            String domainFileName = System.getProperty("user.dir") + "/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problem-from-ridder-paper/domain.lisp";
+            String problemFileName = System.getProperty("user.dir") + "/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problem-from-ridder-paper/prob-missing-road.lisp";
             //String domainFileName = System.getProperty("user.dir") + "/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/monroe-d.lisp";
             //String problemFileName = System.getProperty("user.dir") + "/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/monroe-p1.lisp";
             //String domainFileName = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/hddl-finalize/domain.lisp";
             //String problemFileName = "/home/dhoeller/Dokumente/repositories/private/evaluation-domains/monroe/hddl-finalize/problem2.lisp";
-            String domainFileName = "/home/dh/Schreibtisch/test-ron/domain-block.hpddl-2";
-            String problemFileName = "/home/dh/Schreibtisch/test-ron/pfile_005.pddl-2";
+            //String domainFileName = "/home/dh/Schreibtisch/test-ron/domain-block.hpddl";
+            //String problemFileName = "/home/dh/Schreibtisch/test-ron/pfile_005.pddl";
 
             inDomain = new FileReader(domainFileName);
             inProblem = new FileReader(problemFileName);
@@ -35,6 +35,7 @@ public class TestHddlVisitorParser {
             antlrHDDLParser pDomain = new antlrHDDLParser(new CommonTokenStream(lDomain));
             antlrHDDLParser pProblem = new antlrHDDLParser(new CommonTokenStream(lProblem));
 
+            pDomain.removeErrorListeners();
             Tuple2<Domain, Plan> tup = new hddlPanda3Visitor().visitInstance(pDomain.domain(), pProblem.problem());
 
 /*

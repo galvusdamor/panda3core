@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.csp
 
 import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
-import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
+import de.uniulm.ki.panda3.symbolic.domain.updates.{AddVariables, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, Sort, Value, Variable}
 import de.uniulm.ki.util.HashMemo
 
@@ -328,7 +328,10 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
     }
   }
 
-  override def update(domainUpdate: DomainUpdate): CSP = CSP(variables map { _.update(domainUpdate) }, constraints map { _.update(domainUpdate) } filterNot {_.isTautologic})
+  override def update(domainUpdate: DomainUpdate): CSP = domainUpdate match {
+    case AddVariables(newVars) => CSP(variables ++ newVars, constraints)
+    case _ => CSP(variables map { _.update(domainUpdate) }, constraints map { _.update(domainUpdate) } filterNot {_.isTautologic})
+  }
 
   /** determines whether two variables or constants must be equal in this CSP */
   def equal(v1: Value, v2: Value): Boolean = getRepresentative(v1) == getRepresentative(v2)

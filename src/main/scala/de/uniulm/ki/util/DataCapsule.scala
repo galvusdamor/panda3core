@@ -10,11 +10,14 @@ trait DataCapsule extends PrettyPrintable {
 
   def floatingDataMap(): Map[String, Double]
 
+  def stringDataMap(): Map[String, String]
+
   /** returns a string by which this object may be referenced */
   override def shortInfo: String = {
     val builder = new StringBuilder()
 
-    (floatingDataMap groupBy { _._1.split(":").head }).toSeq sortBy { _._1 } map { case (g, r) => (g.substring(3), r) } foreach { case (group, inner) =>
+    ((floatingDataMap ++ stringDataMap) groupBy { _._1.split(":").head }).toSeq sortBy { _._1 } map {
+      case (g, r) => (g.substring(3), r) } foreach { case (group, inner) =>
       builder append ("============ " + group + " ============\n")
       val reducedNamesWithPrefix = inner map { case (info, value) => info.substring(group.length + 4) -> value } toSeq
       val reducedNames = reducedNamesWithPrefix.sortBy({ _._1 }) map { case (info, value) => info.substring(3) -> value }
@@ -25,6 +28,7 @@ trait DataCapsule extends PrettyPrintable {
       castedIfPossibleMap foreach {
         case (info, value: Double) => builder append String.format("%-" + maxLen + "s = %f\n", info.asInstanceOf[Object], value.asInstanceOf[Object])
         case (info, value: Long)   => builder append String.format("%-" + maxLen + "s = %d\n", info.asInstanceOf[Object], value.asInstanceOf[Object])
+        case (info, value: String)   => builder append String.format("%-" + maxLen + "s = %s\n", info.asInstanceOf[Object], value.asInstanceOf[Object])
       }
     }
 
@@ -39,11 +43,22 @@ trait DataCapsule extends PrettyPrintable {
 
 
   def csvString(): String = {
-    (floatingDataMap groupBy { _._1.split(":").head }).toSeq sortBy { _._1 } map { case (g, r) => (g.substring(3), r) } flatMap { case (group, inner) =>
+    ((floatingDataMap ++ stringDataMap) groupBy { _._1.split(":").head }).toSeq sortBy { _._1 } map {
+      case (g, r) => (g.substring(3), r) } flatMap { case (group, inner) =>
       val reducedNamesWithPrefix = inner map { case (info, value) => info.substring(group.length + 4) -> value } toSeq
 
       reducedNamesWithPrefix.sortBy({ _._1 }) map { case (info, value) => value }
     } mkString ","
-
   }
+
+  def keyValueListString() : String = (floatingDataMap ++ stringDataMap) map { case (k,v) =>
+      DataCapsule.toOutputString(k) + "=" + DataCapsule.toOutputString(v.toString)
+  } mkString (""+DataCapsule.SEPARATOR)
+}
+
+object DataCapsule {
+  val SEPARATOR = ';'
+  val DELIMITER = '\"'
+
+  def toOutputString(s : String) : String = DELIMITER + s + DELIMITER
 }
