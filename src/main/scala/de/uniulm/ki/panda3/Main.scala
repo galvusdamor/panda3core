@@ -44,6 +44,7 @@ object Main {
     }*/
     //val outputPDF = args(2)
     val outputPDF = "dot.dot"
+    val randomseed = 42
 
     //val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
@@ -148,11 +149,20 @@ object Main {
 
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
+    // add general information
+    results(SearchStatistics).set(Information.DOMAIN_NAME,new File(domFile).getName)
+    results(SearchStatistics).set(Information.PROBLEM_NAME,new File(probFile).getName)
+    results(SearchStatistics).set(Information.RANDOM_SEED,randomseed)
 
     println("Panda says: " + results(SearchStatus))
     println(results(SearchStatistics).shortInfo)
     println("----------------- TIMINGS -----------------")
     println(results(ProcessingTimings).shortInfo)
+
+
+    // output data in a machine readable format
+    println("###" + results(SearchStatistics).keyValueListString() + DataCapsule.SEPARATOR + results(ProcessingTimings).keyValueListString())
+
 
     // get all found plans
     //val foundPlans = results(AllFoundPlans)

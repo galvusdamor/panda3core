@@ -82,6 +82,11 @@ object Timings {
 }
 
 object Information {
+  val DOMAIN_NAME  = "00 global:00:domain"
+  val PROBLEM_NAME = "00 global:01:problem"
+  val RANDOM_SEED  = "00 global:02:randomseed"
+
+
   val NUMBER_OF_NODES           = "10 search nodes:00:total"
   val NUMBER_OF_EXPANDED_NODES  = "10 search nodes:01:expanded"
   val NUMBER_OF_DISCARDED_NODES = "10 search nodes:02:discarded nodes"
