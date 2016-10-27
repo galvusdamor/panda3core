@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.progression.htn.search;
 
+import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance;
 import de.uniulm.ki.panda3.progression.htn.operators.*;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.htnGroundedProgressionHeuristic;
 
@@ -206,7 +207,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
         res.unconstraintPrimitiveTasks.remove(ps);
 
-        assert(isApplicable(res.state, ps.action));
+        assert (isApplicable(res.state, ps.action));
 
         // transfer state
         if (!deleteRelaxed) {
@@ -296,8 +297,11 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     @Override
     public int compareTo(ProgressionNetwork other) {
         int c = (this.metric - other.metric);
-        //if (c == 0)
-        //    c = (this.id - other.id);
+        if (c == 0) {
+            if (htnPlanningInstance.random.nextBoolean())
+                c = 1;
+            else c = -1;
+        }
         return c;
     }
 }

@@ -46,6 +46,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   }
 
   lazy val planSteps       : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
+  lazy val planStepTasksSet : Set[Task] = planSteps map {_.schema} toSet
   lazy val causalLinks     : Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter { cl => isPresent(cl.producer) && isPresent(cl.consumer) }
   lazy val removedPlanSteps: Seq[PlanStep]   = planStepsAndRemovedPlanSteps filterNot isPresent
 
@@ -261,7 +262,6 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
     case PropagateEquality(protectedVariables) =>
       // determine all variables that can be eliminated
-
       val initialRepresentatives = protectedVariables map { v => v -> v.sort.elements.toSet } toMap
       val (representatives, replacement) =
         (variableConstraints.variables -- protectedVariables).foldLeft[(Map[Variable, Set[Constant]], Seq[(Variable, Variable)])]((initialRepresentatives, Nil))(
@@ -278,7 +278,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       val newPlan = (replacement map { case (oldV, newV) => ExchangeVariable(oldV, newV) }).foldLeft(this)({ case (p, u) => p update u })
 
-      assert(newPlan.variableConstraints.constraints forall { case Equal(_, vari: Variable) => protectedVariables contains vari; case _ => true })
+      newPlan.variableConstraints.constraints foreach { case Equal(_, vari: Variable) => assert(protectedVariables contains vari, protectedVariables + " " + vari); case _ => ()}
 
       newPlan.copy(parameterVariableConstraints = newPlan.parameterVariableConstraints.addConstraints(newConstraints.toSeq))
     case _                                     =>

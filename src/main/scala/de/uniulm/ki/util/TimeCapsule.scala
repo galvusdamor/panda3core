@@ -36,4 +36,6 @@ class TimeCapsule extends DataCapsule {
   override def integralDataMap(): Map[String, Long] = currentAccumulatedTime.toMap
 
   override def floatingDataMap(): Map[String, Double] = integralDataMap() map { case (a, b) => (a, b.toDouble) }
+
+  override def stringDataMap(): Map[String, String] = Map()
 }

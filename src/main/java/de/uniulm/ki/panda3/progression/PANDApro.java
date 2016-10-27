@@ -105,7 +105,7 @@ public class PANDApro {
                 }
             }
 
-            pi.plan(instance._2(),gr.methodsByTask,rpg.getApplicableActions(),rpg.getReachableFacts());
+            //pi.plan(instance._2(),gr.methodsByTask,rpg.getApplicableActions(),rpg.getReachableFacts());
         } else {
             planningInstance pi = new planningInstance();
             pi.plan(instance._1(), instance._2());

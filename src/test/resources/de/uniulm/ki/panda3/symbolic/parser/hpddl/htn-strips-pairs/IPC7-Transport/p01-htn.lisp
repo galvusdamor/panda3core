@@ -70,6 +70,7 @@
   capacity-4 - capacity-number
  )
  (:htn
+  :parameters (?v - vehicle ?l2 ?l3 - location)
   :tasks (and
    (deliver package-1 city-loc-35)
    (deliver package-2 city-loc-6)

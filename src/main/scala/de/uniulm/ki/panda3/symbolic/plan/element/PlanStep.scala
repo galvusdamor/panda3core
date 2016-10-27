@@ -93,7 +93,9 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
   * A ground task is basically a planstep without an id.
   */
 case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo with Ordered[GroundTask] with PrettyPrintable {
-  assert(task.parameters.size == arguments.size)
+  task.parameters.size
+  arguments.size
+  assert(task.parameters.size == arguments.size, "Incorrect argument number " + task.name + " " + task.parameters.size + " != " + arguments.size)
   task.parameters.zipWithIndex foreach { case (p, i) =>
     if (!p.sort.elements.contains(arguments(i))) {
       println(p.sort.elements)

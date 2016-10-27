@@ -50,7 +50,7 @@ object IPCCoverage {
         val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                  ParsingConfiguration(OldPDDLType),
                                                  PreprocessingConfiguration(false, true, None, false, false, false, None, false, false),
-                                                 SearchConfiguration(Some(0), Some(0), AStarActionsType, Some(NumberOfFlaws), LCFR),
+                                                 PlanBasedSearch(Some(0), Some(0), AStarActionsType, Some(NumberOfFlaws), LCFR),
                                                  //SearchConfiguration(None, Some(60), efficientSearch = true, AStarType, Some(NumberOfFlaws), true),
                                                  //Some (TDGMinimumModification)
                                                  PostprocessingConfiguration(/*verifySolution = false,*/ Set(ProcessingTimings,
