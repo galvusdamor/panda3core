@@ -1,4 +1,6 @@
-package de.uniulm.ki.panda3.progression.proUtil;
+package de.uniulm.ki.util;
+
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -13,22 +15,25 @@ public class collectPlanningInfo {
     public static void main(String[] args) throws Exception {
         //String inputFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/verification.log";
 //        String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/verification.csv";
-        String inputFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random/greedy-imp-random.log";
-        String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random/greedy-imp-random.csv";
+        //String inputFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random/greedy-imp-random.log";
+        //String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random/greedy-imp-random.csv";
+        String inputFile = "foo";
+        String outFile = "foo.csv";
         FileReader fr = new FileReader(inputFile);
         BufferedReader br = new BufferedReader(fr);
 
         List<Map<String, String>> allExps = new LinkedList<>();
-        HashMap<String, String> oneExp = null;
+        HashMap<String, String> oneExp = new HashMap<>();
         while (br.ready()) {
             String line = br.readLine();
-            if (line.startsWith("Processing d-")) {
+            /*if (line.startsWith("Processing d-")) {
                 if (oneExp != null)
                     allExps.add(oneExp);
                 oneExp = new HashMap<>();
                 String expName = line.substring("Processing d-".length(), line.length() - 5);
                 oneExp.put("expName", expName);
-            } else if (line.startsWith("###")) {
+            } else */
+            if (line.startsWith("###")) {
                 String csv = line.substring("###\"".length(), line.length() - 1);
                 String[] elems = csv.split("\";\"");
                 for (String elem : elems) {
@@ -41,15 +46,17 @@ public class collectPlanningInfo {
                         assert (false);
                     }
                 }
-                String foundPlans = oneExp.get("foundPlans");
-                if (Double.parseDouble(foundPlans) > 0)
-                    oneExp.put("X99.progression.01.status", "solved");
-            } else if (line.startsWith("Domain is acyclic: ")) {
+                allExps.add(oneExp);
+                oneExp = new HashMap<>();
+
+                //String foundPlans = oneExp.get("foundPlans");
+                //if (Double.parseDouble(foundPlans) > 0)
+                //    oneExp.put("X99.progression.01.status", "solved");
+            } /*else if (line.startsWith("Domain is acyclic: ")) {
                 oneExp.put("acyclic", line.substring("Domain is acyclic: ".length()));
-            }
+            }*/
         }
-        if (oneExp != null)
-            allExps.add(oneExp);
+        //allExps.add(oneExp);
 
         br.close();
         fr.close();
@@ -80,7 +87,7 @@ public class collectPlanningInfo {
                 String val = "";
                 if (exp.containsKey(key)) {
                     val = exp.get(key);
-                } else if (key.equals("99 progression:01:status")) {
+                } else if (key.equals(PriorityQueueSearch.STATUS)) {
                     val = "no-search";
                 }
                 if (first) {
