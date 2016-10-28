@@ -22,7 +22,7 @@ object TotallyOrderAllMethods extends DecompositionMethodTransformer[TotallyOrde
     (methods :+ topMethod) flatMap {
       case SimpleDecompositionMethod(abstractTask, subPlan, methodName) =>
         val orderings = orderingOption match {
-          case AllOrderings() => subPlan .orderingConstraints.graph.allTotalOrderings.get
+          case AllOrderings => subPlan .orderingConstraints.graph.allTotalOrderings.get
           case AtMostKOrderings(1) => subPlan.orderingConstraints.graph.topologicalOrdering.get :: Nil
           case AtMostKOrderings(k) => subPlan .orderingConstraints.graph.allTotalOrderings.get take k
         }
@@ -42,7 +42,7 @@ object TotallyOrderAllMethods extends DecompositionMethodTransformer[TotallyOrde
 
 sealed trait TotallyOrderingOption
 
-case class AllOrderings() extends TotallyOrderingOption
+object AllOrderings extends TotallyOrderingOption
 
 case class AtMostKOrderings(k: Int) extends TotallyOrderingOption
 
