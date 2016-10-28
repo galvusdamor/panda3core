@@ -44,7 +44,7 @@ trait DecompositionMethod extends DomainUpdatable {
   override def update(domainUpdate: DomainUpdate): DecompositionMethod
 
   def containsTask(task: Task): Boolean =
-    task == abstractTask || (subPlan.planStepTasksSet contains task )
+    task == abstractTask || (subPlan.planStepTasksSet contains task)
 
   def areParametersAllowed(instantiation: Map[Variable, Constant]): Boolean = subPlan.variableConstraints.constraints forall {
     case Equal(var1, var2: Variable)     => instantiation(var1) == instantiation(var2)
@@ -88,13 +88,20 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
   }
 
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = domainUpdate match {
-    case PropagateEquality(empty) =>
+    case PropagateEquality(empty)                =>
       assert(empty.isEmpty)
-      SimpleDecompositionMethod(abstractTask,subPlan update PropagateEquality(abstractTask.parameters.toSet), name)
-    case ExchangeTask(exchangeMap) =>
-      if (exchangeMap contains abstractTask){
-        val newVars = exchangeMap(abstractTask).parameters filterNot abstractTask.parameters.contains
-        SimpleDecompositionMethod(abstractTask, subPlan.update(domainUpdate) update AddVariables(newVars), name)
+      SimpleDecompositionMethod(abstractTask, subPlan update PropagateEquality(abstractTask.parameters.toSet), name)
+    case ExchangeTask(exchangeMap)               =>
+      if (exchangeMap contains abstractTask) {
+        val newAbstract = exchangeMap(abstractTask)
+        val newVars = newAbstract.parameters filterNot abstractTask.parameters.contains
+
+        // rebuild init and goal
+        val newInitSchema: Task = GeneralTask("init", isPrimitive = true, newAbstract.parameters, Nil, Nil, And(Nil), exchangeMap(abstractTask).precondition)
+        val newGoalSchema: Task = GeneralTask("goal", isPrimitive = true, newAbstract.parameters, Nil, Nil, exchangeMap(abstractTask).effect, And(Nil))
+        val extendedExchangeMap = exchangeMap.+((subPlan.init.schema, newInitSchema)).+((subPlan.goal.schema, newGoalSchema))
+
+        SimpleDecompositionMethod(exchangeMap(abstractTask), subPlan.update(ExchangeTask(extendedExchangeMap)) update AddVariables(newVars), name)
       } else SimpleDecompositionMethod(abstractTask, subPlan.update(domainUpdate), name)
     case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
                                                                               name)
@@ -137,7 +144,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
         val methodInstantiations: Seq[Map[Variable, Constant]] = allInstantiations map { instantiation => expandedMapping ++ instantiation } filter areParametersAllowed
 
         // only take those methods that inherit correctly
-        methodInstantiations map { args => GroundedDecompositionMethod(this, args) } filter {_.isCorrentlyInheriting}
+        methodInstantiations map { args => GroundedDecompositionMethod(this, args) } filter { _.isCorrentlyInheriting }
     }
   }
 

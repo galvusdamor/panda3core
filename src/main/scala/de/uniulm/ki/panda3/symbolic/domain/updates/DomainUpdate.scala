@@ -56,4 +56,6 @@ case class ExchangeLiteralsByPredicate(replacement: Map[Predicate, (Predicate, P
 
 case class RemoveEffects(unnecessaryEffects: Set[(Predicate, Boolean)], invertedTreatment: Boolean) extends DomainUpdate
 
-case class PropagateEquality(protectedVariables : Set[Variable]) extends DomainUpdate
+case class PropagateEquality(protectedVariables: Set[Variable]) extends DomainUpdate
+
+object DeleteCausalLinks extends DomainUpdate

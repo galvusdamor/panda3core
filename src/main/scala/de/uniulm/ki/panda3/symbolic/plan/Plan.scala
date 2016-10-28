@@ -281,6 +281,9 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       newPlan.variableConstraints.constraints foreach { case Equal(_, vari: Variable) => assert(protectedVariables contains vari, protectedVariables + " " + vari); case _ => ()}
 
       newPlan.copy(parameterVariableConstraints = newPlan.parameterVariableConstraints.addConstraints(newConstraints.toSeq))
+
+    case DeleteCausalLinks =>
+      this.copy(causalLinksAndRemovedCausalLinks = Nil)
     case _                                     =>
       val newInit = init update domainUpdate
       val newGoal = goal update domainUpdate

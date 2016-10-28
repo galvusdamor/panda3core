@@ -47,7 +47,8 @@ object Timings {
   val PARSER_CWA                = "01 parsing:03:closed world assumption"
   val PARSER_SHOP_METHODS       = "01 parsing:04:shop methods"
   val PARSER_ELIMINATE_EQUALITY = "01 parsing:05:eliminate identical variables"
-  val PARSER_FLATTEN_FORMULA    = "01 parsing:06:flatten formula"
+  val PARSER_STRIP_HYBRID       = "01 parsing:06:strip domain of hybridity"
+  val PARSER_FLATTEN_FORMULA    = "01 parsing:07:flatten formula"
 
 
   val PREPROCESSING                   = "02 preprocessing:00:total"
@@ -59,7 +60,6 @@ object Timings {
   val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:13:grounded planning graph analysis"
   val GROUNDED_TDG_ANALYSIS           = "02 preprocessing:23:grounded task decomposition graph analysis"
   val GROUNDING                       = "02 preprocessing:84:grounding"
-
 
   val HEURISTICS_PREPARATION = "03 heuristics preparation:00:total"
 
@@ -75,10 +75,11 @@ object Timings {
   val SEARCH_COMPUTE_HEURISTIC        = "20 search:40:compute heuristic"
   val SEARCH_COMPUTE_FILTER           = "20 search:50:compute filter"
 
-  val allTimings = TOTAL_TIME :: PARSING :: FILEPARSER :: PARSER_SORT_EXPANSION :: PARSER_CWA :: PARSER_SHOP_METHODS :: PARSER_ELIMINATE_EQUALITY :: PARSER_FLATTEN_FORMULA ::
-    PREPROCESSING :: COMPILE_NEGATIVE_PRECONFITIONS :: COMPILE_UNIT_METHODS :: COMPILE_ORDER_IN_METHODS :: LIFTED_REACHABILITY_ANALYSIS :: GROUNDED_REACHABILITY_ANALYSIS ::
-    GROUNDED_PLANNINGGRAPH_ANALYSIS :: GROUNDED_TDG_ANALYSIS :: HEURISTICS_PREPARATION :: SEARCH_PREPARATION :: COMPUTE_EFFICIENT_REPRESENTATION :: SEARCH ::
-    SEARCH_FLAW_RESOLVER_ESTIMATION :: SEARCH_FLAW_COMPUTATION :: SEARCH_FLAW_SELECTOR :: SEARCH_FLAW_RESOLVER :: SEARCH_GENERATE_SUCCESSORS :: SEARCH_COMPUTE_HEURISTIC :: Nil
+  val VERIFY_TOTAL     = "40 sat:00:total"
+  val GENERATE_FORMULA = "40 sat:10:generate formula"
+  val TRANSFORM_DIMACS = "40 sat:20:transform to DIMACS"
+  val WRITE_FORMULA    = "40 sat:30:write formula"
+  val SAT_SOLVER       = "40 sat:40:SAT solver"
 }
 
 object Information {
@@ -96,6 +97,8 @@ object Information {
   val NUMBER_OF_EXPANDED_NODES  = "10 search nodes:01:expanded"
   val NUMBER_OF_DISCARDED_NODES = "10 search nodes:02:discarded nodes"
 
+  val PLAN_SIZE = "20 search plans:01:number of plansteps"
+
   val NUMBER_OF_CONSTANTS         = "30 problem:01:number of constants"
   val NUMBER_OF_PREDICATES        = "30 problem:02:number of predicates"
   val NUMBER_OF_ACTIONS           = "30 problem:03:number of actions"
@@ -103,7 +106,23 @@ object Information {
   val NUMBER_OF_PRIMITIVE_ACTIONS = "30 problem:05:number of primitive actions"
   val NUMBER_OF_METHODS           = "30 problem:06:number of methods"
 
-  val PLAN_SIZE = "20 search plans:01:number of plansteps"
+  val PLAN_LENGTH             = "40 sat:00:plan length"
+  val NUMBER_OF_VARIABLES     = "40 sat:01:number of variables"
+  val NUMBER_OF_CLAUSES       = "40 sat:02:number of clauses"
+  val ICAPS_K                 = "40 sat:10:K ICAPS"
+  val LOG_K                   = "40 sat:11:K LOG"
+  val TSTG_K                  = "40 sat:12:K task schema transition graph"
+  val DP_K                    = "40 sat:13:K DP"
+  val OFFSET_K                = "40 sat:14:K offset"
+  val ACTUAL_K                = "40 sat:15:K chosen value"
+  val STATE_FORMULA           = "40 sat:20:state formula"
+  val ORDER_CLAUSES           = "40 sat:21:order clauses"
+  val METHOD_CHILDREN_CLAUSES = "40 sat:22:method children clauses"
+  val NUMBER_OF_PATHS         = "40 sat:30:number of paths"
+  val MAX_PLAN_LENGTH         = "40 sat:31:maximum plan length"
+  val SOLVED                  = "40 sat:90:solved"
+  val TIMEOUT                 = "40 sat:91:timeout"
+
 }
 
 case class ResultMap(map: Map[ResultType, Any]) extends (ResultType => Any) {
