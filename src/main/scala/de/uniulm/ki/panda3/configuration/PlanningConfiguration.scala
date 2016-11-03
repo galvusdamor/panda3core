@@ -479,9 +479,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
     val tdgResult = if (preprocessingConfiguration.groundedTaskDecompositionGraph.isDefined) {
-      if (preprocessingConfiguration.groundedTaskDecompositionGraph contains NaiveTDG) info("Naive TDG ... ") else info("Top Down TDG ...")
+      val actualConfig = if (groundedResult._1._1.isGround) NaiveTDG else preprocessingConfiguration.groundedTaskDecompositionGraph.get
+      info(actualConfig.toString + " ... ")
       // get the reachability analysis, if there is none, just use the trivial one
-      val newAnalysisMap = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, preprocessingConfiguration.groundedTaskDecompositionGraph.get)
+      val newAnalysisMap = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, actualConfig)
       val methodsPruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
       val removedTasks = groundedResult._1._1.tasks.toSet diff newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedActions.toSet
       val tasksPruned = PruneHierarchy.transform(methodsPruned._1, methodsPruned._2, removedTasks)
@@ -603,11 +604,17 @@ case class ParsingConfiguration(
 
 sealed trait TDGGeneration
 
-object NaiveTDG extends TDGGeneration
+object NaiveTDG extends TDGGeneration {
+  override def toString: String = "Naive TDG"
+}
 
-object TopDownTDG extends TDGGeneration
+object TopDownTDG extends TDGGeneration{
+  override def toString: String = "Top Down TDG"
+}
 
-object TwoWayTDG extends TDGGeneration
+object TwoWayTDG extends TDGGeneration{
+  override def toString: String = "Two Way TDG"
+}
 
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
