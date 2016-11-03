@@ -54,6 +54,8 @@ trait DecompositionMethod extends DomainUpdatable {
     case OfSort(vari, sort)              => sort.elements contains instantiation(vari)
     case NotOfSort(vari, sort)           => !(sort.elements contains instantiation(vari))
   }
+
+  override final lazy val hashCode: Int = abstractTask.name.hashCode + subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode)*13 })
 }
 
 
@@ -63,7 +65,7 @@ trait DecompositionMethod extends DomainUpdatable {
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // scalastyle:off covariant.equals
-case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: String) extends DecompositionMethod with HashMemo {
+case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: String) extends DecompositionMethod {
 
   abstractTask match {
     case ReducedTask(_, _, _, _, _, prec, eff) =>
@@ -158,7 +160,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula, methodEffect: Formula, name: String) extends DecompositionMethod with HashMemo {
+case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula, methodEffect: Formula, name: String) extends DecompositionMethod {
   override def update(domainUpdate: DomainUpdate): SHOPDecompositionMethod = domainUpdate match {
     case ExchangeLiteralsByPredicate(map, false) =>
       SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
@@ -166,9 +168,10 @@ case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrec
     case _                                       => SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update domainUpdate,
                                                                             methodPrecondition update domainUpdate, methodEffect update domainUpdate, name)
   }
+
 }
 
-case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends HashMemo with PrettyPrintable {
+case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends PrettyPrintable {
   assert(decompositionMethod.areParametersAllowed(variableBinding))
 
   val groundAbstractTask: GroundTask = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
@@ -202,4 +205,9 @@ case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod,
     val that = o.asInstanceOf[GroundedDecompositionMethod]
     this.decompositionMethod.equals(that.decompositionMethod) && this.variableBinding == that.variableBinding
   } else false
+
+  override final lazy val hashCode: Int = decompositionMethod.abstractTask.name.hashCode + variableBinding.foldLeft(0)({ case (h, (v, c)) => ((h + c.hashCode)*13  + v.hashCode)*13 }) +
+    decompositionMethod.subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode)*13 })
+
+  //decompositionMethod.hashCode()
 }
