@@ -302,7 +302,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       val newCausalLinksAndRemovedCausalLinks = causalLinksAndRemovedCausalLinks map { _ update possiblyInvertedUpdate }
       val newOrderingConstraints = orderingConstraints update possiblyInvertedUpdate
-      val newVariableConstraint = variableConstraints update possiblyInvertedUpdate
+      val newVariableConstraint = parameterVariableConstraints update possiblyInvertedUpdate
       val newPlanStepDecomposedByMethod = planStepDecomposedByMethod map { case (ps, method) => (ps update possiblyInvertedUpdate, method update possiblyInvertedUpdate) }
       val newPlanStepParentInDecompositionTree = planStepParentInDecompositionTree map {
         case (ps, (parent, inPlan)) => (ps update possiblyInvertedUpdate, (parent update possiblyInvertedUpdate, inPlan update possiblyInvertedUpdate))
