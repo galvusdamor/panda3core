@@ -295,7 +295,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val solutionFound = progressionInstance.plan(domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),
                                                        JavaConversions.setAsJavaSet(groundLiterals.toSet), informationCapsule, timeCapsule,
-                                                       progression.timeLimit.getOrElse(Int.MaxValue.toLong) * 1000)
+                                                       progression.timeLimit.getOrElse(Int.MaxValue).toLong * 1000)
 
           timeCapsule stop TOTAL_TIME
           runPostProcessing(timeCapsule, informationCapsule, null, if (solutionFound) null :: Nil else Nil, domainAndPlan, analysisMap)

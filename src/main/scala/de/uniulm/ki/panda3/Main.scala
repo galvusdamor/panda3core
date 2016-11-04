@@ -32,13 +32,13 @@ object Main {
 
     println("This is Panda3")
 
-    /*if (args.length < 2) {
+    if (args.length < 2) {
       println("This program needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the random seed.")
       //println("This program needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
       System.exit(1)
     }
     val domFile = args(0)
-    val probFile = args(1)*/
+    val probFile = args(1)
 
     val randomseed = if (args.length == 3) args(2).toInt else 42
     val planLength = randomseed
@@ -119,8 +119,8 @@ object Main {
     //val probFile="/home/gregor/Workspace/AssemblyTask_problem.xml"
     //val domFile ="/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-fixed.xml"
     //val probFile="/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/p03-complete-hierarchical.xml"
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8--3--4.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8--3--4.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
 
     val domInputStream = new FileInputStream(domFile)
@@ -131,17 +131,18 @@ object Main {
                                              ParsingConfiguration(eliminateEquality = false, stripHybrid = false),
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                         compileOrderInMethods = None, //Some(OneRandomOrdering()),
-                                                                        splitIndependedParameters = true,
+                                                                        splitIndependedParameters = false,
                                                                         liftedReachability = true, groundedReachability = false, planningGraph = true,
                                                                         groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                                        iterateReachabilityAnalysis = false, groundDomain = true),
+                                                                        iterateReachabilityAnalysis = false, groundDomain = false),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumAction), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
-                                             PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute)),
+                                             PlanBasedSearch(None, Some(30 * 60), AStarActionsType,
+                                                             Some(TDGPreconditionRelaxation),
                                                              Nil, LCFR),
                                              //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(ADD), LCFR),
                                              //ProgressionSearch(Some(30 * 60)),
