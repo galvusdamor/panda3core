@@ -70,8 +70,6 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
 
     val topOrd = condensation.topologicalOrdering.get.reverse
 
-    Dot2PdfCompiler.writeDotToFile(this,"foo.pdf")
-
     topOrd foreach { scc =>
       scc foreach { x => seen(x) = Integer.MAX_VALUE }
       scc foreach {
@@ -106,6 +104,6 @@ case class SimpleAndOrGraph[T, A <: T, O <: T](andVertices: Set[A], orVertices: 
   orEdges foreach { o => assert(orVertices contains o._1) }
   andEdges foreach { _._2 foreach { o => assert(orVertices contains o) } }
   orEdges foreach { _._2 foreach { a => assert(andVertices contains a) } }
-  assert(andVertices.size == andEdges.size)
-  assert(orVertices.size == orEdges.size)
+  assert(andVertices.size == andEdges.size, andVertices.size + "!=" + andEdges.size)
+  assert(orVertices.size == orEdges.size, orVertices.size + "!=" + orEdges.size)
 }
