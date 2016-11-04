@@ -250,7 +250,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
                 // prepare filters
                 val filters = search.pruningTechniques map {
-                  case TreeFFFilter => filter.TreeFF(wrapper.efficientDomain)
+                  case TreeFFFilter                      => filter.TreeFF(wrapper.efficientDomain)
                   case RecomputeHierarchicalReachability => RecomputeHTN
                 } toArray
 
@@ -285,7 +285,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         }
       case progression: ProgressionSearch =>
 
-        val progression = new htnPlanningInstance()
+        val progressionInstance = new htnPlanningInstance()
         val groundTasks = domainAndPlan._1.primitiveTasks map { t => GroundTask(t, Nil) }
         val groundLiterals = domainAndPlan._1.predicates map { p => GroundLiteral(p, true, Nil) }
         val groundMethods = domainAndPlan._1.methodsForAbstractTasks map { case (at, ms) =>
@@ -293,8 +293,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         }
 
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val solutionFound = progression.plan(domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),
-                                               JavaConversions.setAsJavaSet(groundLiterals.toSet), informationCapsule, timeCapsule)
+          val solutionFound = progressionInstance.plan(domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),
+                                                       JavaConversions.setAsJavaSet(groundLiterals.toSet), informationCapsule, timeCapsule,
+                                                       progression.timeLimit.getOrElse(Int.MaxValue.toLong) * 1000)
 
           timeCapsule stop TOTAL_TIME
           runPostProcessing(timeCapsule, informationCapsule, null, if (solutionFound) null :: Nil else Nil, domainAndPlan, analysisMap)

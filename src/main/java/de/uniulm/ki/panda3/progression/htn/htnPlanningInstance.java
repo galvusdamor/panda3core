@@ -55,7 +55,7 @@ public class htnPlanningInstance {
     public static int randomSeed = 42;
 
     public boolean plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
-                     InformationCapsule ic, TimeCapsule tc) throws ExecutionException, InterruptedException {
+                     InformationCapsule ic, TimeCapsule tc, long timelimitinMilliSec) throws ExecutionException, InterruptedException {
         random = new Random(randomSeed);
         long totaltime = System.currentTimeMillis();
         long time = System.currentTimeMillis();
@@ -123,7 +123,7 @@ public class htnPlanningInstance {
         boolean deleteRelaxed = false;
         boolean printOutput = true;
         boolean findShortest = false;
-        long quitAfterMs = 30*60*1000; //300000;
+        long quitAfterMs = timelimitinMilliSec; //30*60*1000; //300000;
 
         routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput, findShortest);
         //routine = new EnforcedHillClimbing();
