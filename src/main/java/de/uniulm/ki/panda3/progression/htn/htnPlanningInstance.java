@@ -123,7 +123,7 @@ public class htnPlanningInstance {
         boolean deleteRelaxed = false;
         boolean printOutput = true;
         boolean findShortest = false;
-        long quitAfterMs = 300000;
+        long quitAfterMs = 30*60*1000; //300000;
 
         routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput, findShortest);
         //routine = new EnforcedHillClimbing();
