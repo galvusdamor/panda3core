@@ -38,7 +38,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph,
-                                                                          compileOrderInMethods = None,
+                                                                          compileOrderInMethods = None, splitIndependedParameters = false,
                                                                           liftedReachability = true, groundedReachability = !usePlanningGraph, planningGraph = usePlanningGraph,
                                                                           groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = true),

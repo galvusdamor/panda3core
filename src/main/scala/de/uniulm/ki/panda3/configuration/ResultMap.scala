@@ -55,6 +55,7 @@ object Timings {
   val COMPILE_NEGATIVE_PRECONFITIONS  = "02 preprocessing:01:compile negative preconditions"
   val COMPILE_UNIT_METHODS            = "02 preprocessing:02:compile unit methods"
   val COMPILE_ORDER_IN_METHODS        = "02 preprocessing:03:compile order in methods"
+  val SPLIT_PARAMETERS                = "02 preprocessing:04:split parameter"
   val LIFTED_REACHABILITY_ANALYSIS    = "02 preprocessing:11:lifted reachabiltiy analysis"
   val GROUNDED_REACHABILITY_ANALYSIS  = "02 preprocessing:12:grounded reachabiltiy analysis"
   val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:13:grounded planning graph analysis"
@@ -86,6 +87,7 @@ object Information {
   val DOMAIN_NAME  = "00 global:00:domain"
   val PROBLEM_NAME = "00 global:01:problem"
   val RANDOM_SEED  = "00 global:02:randomseed"
+  val SOLVED_STATE = "00 global:90:planner result"
 
   val ACYCLIC         = "02 properties:01:acyclic"
   val MOSTLY_ACYCLIC  = "02 properties:02:mostly acyclic"

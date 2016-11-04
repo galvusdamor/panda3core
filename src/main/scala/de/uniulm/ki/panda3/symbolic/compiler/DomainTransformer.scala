@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.compiler
 
-import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, SimpleDecompositionMethod, ReducedTask, Domain}
+import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
@@ -42,7 +42,7 @@ trait DomainTransformerWithOutInformation extends DomainTransformer[Unit] {
 
 trait DecompositionMethodTransformer[Information] extends DomainTransformer[Information] {
 
-  protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, info: Information): Seq[DecompositionMethod]
+  protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, info: Information): (Seq[DecompositionMethod],Seq[Task])
 
   protected val transformationName: String
 
@@ -57,13 +57,13 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
     val topTask = ReducedTask("__" + transformationName + "Compilation__top", isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
     val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top")
 
-    val extendedMethods: Seq[DecompositionMethod] = transformMethods(domain.decompositionMethods, topMethod, info)
+    val (extendedMethods,newTasks) = transformMethods(domain.decompositionMethods, topMethod, info)
 
     if ((extendedMethods count { _.abstractTask == topTask }) == 1) {
       // regenerate the initial plan, as it may have changed
       val remainingTopMethod = (extendedMethods find { _.abstractTask == topTask }).get.subPlan
       val newPlan = remainingTopMethod.replaceInitAndGoal(plan.init,plan.goal)
-      (domain.copy(decompositionMethods = extendedMethods filterNot { _.abstractTask == topTask }), newPlan)
+      (domain.copy(decompositionMethods = extendedMethods filterNot { _.abstractTask == topTask }, tasks = domain.tasks ++ newTasks), newPlan)
     } else {
       // generate a new
       val topPS = PlanStep(2, topTask, Nil)
@@ -71,7 +71,7 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
       val ordering = TaskOrdering(OrderingConstraint.allBetween(plan.init, plan.goal, topPS), planSteps)
       val initialPlan = Plan(planSteps, Nil, ordering, plan.variableConstraints, plan.init, plan.goal, plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map())
 
-      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks :+ topTask), initialPlan)
+      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks :+ topTask), initialPlan)
     }
   }
 }

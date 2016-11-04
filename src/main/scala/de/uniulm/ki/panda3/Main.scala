@@ -9,11 +9,12 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask}
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.TreeFF
-import de.uniulm.ki.panda3.symbolic.compiler.{AllOrderings, TotallyOrderingOption}
+import de.uniulm.ki.panda3.symbolic.compiler.{OneRandomOrdering, AllOrderings, TotallyOrderingOption}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraphConfiguration, GroundedPlanningGraph}
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.sat.verify.CRYPTOMINISAT
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util._
 
@@ -32,19 +33,18 @@ object Main {
     println("This is Panda3")
 
     /*if (args.length < 2) {
-      println("This programm needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the random seed.")
-      //println("This programm needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
+      println("This program needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the random seed.")
+      //println("This program needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
       System.exit(1)
     }
     val domFile = args(0)
-    val probFile = args(1)
-    if (args.length == 3) {
-      val randomseed = args(2)
-      htnPlanningInstance.randomSeed = Integer.parseInt(randomseed)
-    }*/
+    val probFile = args(1)*/
+
+    val randomseed = if (args.length == 3) args(2).toInt else 42
+    val planLength = randomseed
+    htnPlanningInstance.randomSeed = randomseed
     //val outputPDF = args(2)
     val outputPDF = "dot.dot"
-    val randomseed = 42
 
     //val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
@@ -71,8 +71,8 @@ object Main {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-AirplanesHub.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RegularTruck-4Locations.xml"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--4--4.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/5--5--5.xml"
@@ -115,20 +115,25 @@ object Main {
     //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp"
 
 
-    //val domFile ="/home/dh/Schreibtisch/debug-planner/d-0048-provide-temp-heat-4.hddl";
-    //val probFile="/home/dh/Schreibtisch/debug-planner/p-0048-provide-temp-heat-4.hddl";
-    //val domFile ="/home/dh/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    //val probFile="/home/dh/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
+    //val domFile ="/home/gregor/Workspace/AssemblyTask_domain.xml"
+    //val probFile="/home/gregor/Workspace/AssemblyTask_problem.xml"
+    //val domFile ="/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-fixed.xml"
+    //val probFile="/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/p03-complete-hierarchical.xml"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    val probFile="/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8--3--4.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                             ParsingConfiguration(eliminateEquality = true),
-                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = None,
-                                                                        liftedReachability = true, groundedReachability = true, planningGraph = false,
-                                                                        groundedTaskDecompositionGraph = Some(TopDownTDG), // None,
+                                             ParsingConfiguration(eliminateEquality = false, stripHybrid = false),
+                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                                        compileOrderInMethods = None, //Some(OneRandomOrdering()),
+                                                                        splitIndependedParameters = false,
+                                                                        liftedReachability = true, groundedReachability = false, planningGraph = true,
+                                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                         iterateReachabilityAnalysis = false, groundDomain = true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
@@ -136,22 +141,25 @@ object Main {
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
-                                             //PlanBasedSearch(Some(-1), Some(1), BFSType, None, LCFR),
-                                             ProgressionSearch(None),
+                                             PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(LiftedTDGMinimumModification), LCFR),
+                                             //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(ADD), LCFR),
+                                             //ProgressionSearch(None),
+                                             //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), planLength, Some(planLength)),
+                                             //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), 22, Some(9)),
                                              //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatistics,
                                                                              SearchStatus,
+                                                                             SearchResult,
                                                                              PreprocessedDomainAndPlan)))
     //System.in.read()
 
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
     // add general information
-    results(SearchStatistics).set(Information.DOMAIN_NAME,new File(domFile).getName)
-    results(SearchStatistics).set(Information.PROBLEM_NAME,new File(probFile).getName)
-    results(SearchStatistics).set(Information.RANDOM_SEED,randomseed)
+    results(SearchStatistics).set(Information.DOMAIN_NAME, new File(domFile).getName)
+    results(SearchStatistics).set(Information.PROBLEM_NAME, new File(probFile).getName)
+    results(SearchStatistics).set(Information.RANDOM_SEED, randomseed)
 
     println("Panda says: " + results(SearchStatus))
     println(results(SearchStatistics).shortInfo)
@@ -202,6 +210,8 @@ object Main {
       println("SOLUTION SEQUENCE")
       val plan = results(SearchResult).get
 
+      assert(plan.planSteps forall { _.schema.isPrimitive })
+
       def psToString(ps: PlanStep): String = {
         val name = ps.schema.name
         val args = ps.arguments map plan.variableConstraints.getRepresentative map { _.shortInfo }
@@ -209,7 +219,7 @@ object Main {
         name + args.mkString("(", ",", ")")
       }
 
-      println(plan.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive } map psToString mkString "\n")
+      println((plan.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive }).zipWithIndex map { case (ps, i) => i + ": " + psToString(ps) } mkString "\n")
 
       if (results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.nonEmpty) {
         println("FIRST DECOMPOSITION")

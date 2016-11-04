@@ -108,8 +108,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       extra("Domain is regular: " + domainStructureAnalysis.isRegular + "\n")
       extra("Domain is tail recursive: " + domainStructureAnalysis.isTailRecursive + "\n")
       extra("Domain is totally ordered: " + domainStructureAnalysis.isTotallyOrdered + "\n")
-
     }
+
+    // write domain statistics into the information capsule
+    informationCapsule.set(Information.NUMBER_OF_CONSTANTS, domain.constants.length)
+    informationCapsule.set(Information.NUMBER_OF_PREDICATES, domain.predicates.length)
+    informationCapsule.set(Information.NUMBER_OF_ACTIONS, domain.tasks.length)
+    informationCapsule.set(Information.NUMBER_OF_ABSTRACT_ACTIONS, domain.abstractTasks.length)
+    informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domain.primitiveTasks.length)
+    informationCapsule.set(Information.NUMBER_OF_METHODS, domain.decompositionMethods.length)
+
 
     searchConfiguration match {
       case search: PlanBasedSearch        =>
@@ -283,8 +291,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, timeCapsule, informationCapsule)
           val (solved, finished) = runner.runWithTimeLimit(satSearch.timeLimit.map({ a => 1000L * a }), satSearch.maximumPlanLength, 0, defineK = satSearch.overrideK)
 
-          informationCapsule.set(Information.SOLVED,if (solved) "true" else "false")
-          informationCapsule.set(Information.TIMEOUT,if (finished) "false" else "true")
+          informationCapsule.set(Information.SOLVED, if (solved) "true" else "false")
+          informationCapsule.set(Information.TIMEOUT, if (finished) "false" else "true")
 
           timeCapsule stop TOTAL_TIME
           runPostProcessing(timeCapsule, informationCapsule, null, if (solved) null :: Nil else Nil, domainAndPlan, analysisMap)
@@ -296,19 +304,24 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                         analysisMap: AnalysisMap): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings              => timeCapsule
-      case SearchStatus                   => if (result.nonEmpty) SearchState.SOLUTION
-      else if (timeCapsule.integralDataMap().contains(Timings.SEARCH) && timeCapsule.integralDataMap()(Timings.SEARCH) >= 1000 * searchConfiguration.timeLimit.getOrElse(Integer.MAX_VALUE /
-                                                                                                                                                                           1000))
-        SearchState.TIMEOUT
-      else {
-        searchConfiguration match {
-          case search: PlanBasedSearch =>
-            if (search.nodeLimit.isEmpty || search.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
-              SearchState.UNSOLVABLE
-            else SearchState.INSEARCH
-          case _                       => SearchState.INSEARCH
+      case SearchStatus                   =>
+        val determinedSearchSate = if (result.nonEmpty) SearchState.SOLUTION
+        else if (timeCapsule.integralDataMap().contains(Timings.SEARCH) && timeCapsule.integralDataMap()(Timings.SEARCH) >= 1000 * searchConfiguration.timeLimit.getOrElse(Integer.MAX_VALUE /
+                                                                                                                                                                             1000))
+          SearchState.TIMEOUT
+        else {
+          searchConfiguration match {
+            case search: PlanBasedSearch =>
+              if (search.nodeLimit.isEmpty || search.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
+                SearchState.UNSOLVABLE
+              else SearchState.INSEARCH
+            case _                       => SearchState.INSEARCH
+          }
         }
-      }
+        // write search state into the information capsule
+        informationCapsule.set(Information.SOLVED_STATE, determinedSearchSate.toString)
+
+        determinedSearchSate
       case SearchResult                   => result.headOption
       case AllFoundPlans                  => result
       case SearchStatistics               => informationCapsule
@@ -515,6 +528,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (if (preprocessingConfiguration.compileOrderInMethods.isDefined)
           CompilerConfiguration(TotallyOrderAllMethods, preprocessingConfiguration.compileOrderInMethods.get, "order in methods", COMPILE_ORDER_IN_METHODS) :: Nil
         else Nil) ::
+        (if (preprocessingConfiguration.splitIndependedParameters)
+          CompilerConfiguration(SplitIndependentParameters, (), "split parameters", SPLIT_PARAMETERS) :: Nil
+        else Nil) ::
         Nil flatten
 
     val (compiledDomain, compiledProblem) = compilerToBeApplied.foldLeft((domain, problem))(
@@ -608,11 +624,11 @@ object NaiveTDG extends TDGGeneration {
   override def toString: String = "Naive TDG"
 }
 
-object TopDownTDG extends TDGGeneration{
+object TopDownTDG extends TDGGeneration {
   override def toString: String = "Top Down TDG"
 }
 
-object TwoWayTDG extends TDGGeneration{
+object TwoWayTDG extends TDGGeneration {
   override def toString: String = "Two Way TDG"
 }
 
@@ -620,6 +636,7 @@ case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
                                        compileUnitMethods: Boolean,
                                        compileOrderInMethods: Option[TotallyOrderingOption],
+                                       splitIndependedParameters: Boolean,
                                        liftedReachability: Boolean,
                                        groundedReachability: Boolean,
                                        planningGraph: Boolean,

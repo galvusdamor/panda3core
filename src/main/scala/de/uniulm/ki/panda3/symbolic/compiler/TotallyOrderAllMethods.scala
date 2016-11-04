@@ -18,8 +18,9 @@ import de.uniulm.ki.util._
 object TotallyOrderAllMethods extends DecompositionMethodTransformer[TotallyOrderingOption] {
 
 
-  override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, orderingOption: TotallyOrderingOption): Seq[DecompositionMethod] =
-    (methods :+ topMethod) flatMap {
+  override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, orderingOption: TotallyOrderingOption):
+  (Seq[DecompositionMethod], Seq[Task]) =
+    ((methods :+ topMethod) flatMap {
       case SimpleDecompositionMethod(abstractTask, subPlan, methodName) =>
         val orderings = orderingOption match {
           case AllOrderings => subPlan .orderingConstraints.graph.allTotalOrderings.get
@@ -35,7 +36,7 @@ object TotallyOrderAllMethods extends DecompositionMethodTransformer[TotallyOrde
         orderingConstraints.zipWithIndex map { case (ordering, i) => SimpleDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering),
                                                                                              methodName + "_ordering_" + i)
         }
-    }
+    }, Nil)
 
   override protected val transformationName: String = "totalOrder"
 }

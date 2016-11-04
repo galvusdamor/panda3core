@@ -81,10 +81,13 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val methodsWithIndexForAbstractTasks: Map[Task, Seq[(DecompositionMethod, Int)]] = decompositionMethods.zipWithIndex.groupBy(_._1.abstractTask)
   lazy val methodsForAbstractTasks         : Map[Task, Seq[DecompositionMethod]]        = methodsWithIndexForAbstractTasks map { case (a, b) => a -> (b map { _._1 }) }
 
-  lazy val minimumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min
-  lazy val maximumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
-  lazy val isGround         : Boolean = predicates forall { _.argumentSorts.isEmpty }
-  lazy val isTotallyOrdered : Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
+  lazy val minimumMethodSize: Int = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min
+  lazy val maximumMethodSize: Int = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
+
+  lazy val isGround        : Boolean = predicates forall { _.argumentSorts.isEmpty }
+  lazy val isTotallyOrdered: Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
+  lazy val isHybrid        : Boolean = (decompositionMethods exists { _.subPlan.causalLinks.nonEmpty }) || (tasks exists { t => t.isAbstract && (t.precondition.isEmpty || t.effect.isEmpty)
+  })
 
   /**
     * Determines the sort a constant originally belonged to.

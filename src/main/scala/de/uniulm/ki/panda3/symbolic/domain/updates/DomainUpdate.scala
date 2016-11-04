@@ -34,6 +34,8 @@ case class AddPredicate(newPredicates: Seq[Predicate]) extends DomainUpdate
 
 case class AddVariables(newVariables: Seq[Variable]) extends DomainUpdate
 
+case class RemoveVariables(removedVariables: Seq[Variable]) extends DomainUpdate
+
 case class ExchangePlanSteps(exchangeMap: Map[PlanStep, PlanStep]) extends DomainUpdate
 
 object ExchangePlanSteps {
