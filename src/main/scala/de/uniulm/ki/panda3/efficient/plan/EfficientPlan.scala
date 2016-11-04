@@ -58,15 +58,19 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
   def isPlanStepPresentInPlan(planStep: Int): Boolean = planStepDecomposedByMethod(planStep) == -1
 
-  val numberOfAllPlanSteps: Int = planStepTasks.length
-  val numberOfPlanSteps   : Int = {
-    var number = 2
+  val numberOfAllPlanSteps: Int                                                  = planStepTasks.length
+  val (numberOfPlanSteps, numberOfPrimitivePlanSteps, numberOfAbstractPlanSteps) = {
+    var numberPS = 2
+    var numberPrimitive = 2
     var i = 2
     while (i < numberOfAllPlanSteps) {
-      if (isPlanStepPresentInPlan(i)) number += 1
+      if (isPlanStepPresentInPlan(i)) {
+        numberPS += 1
+        if (domain.tasks(planStepTasks(i)).isPrimitive) numberPrimitive += 1
+      }
       i += 1
     }
-    number
+    (numberPS, numberPrimitive, numberPS - numberPrimitive)
   }
 
   private var precomputedAbstractPlanStepFlaws: Option[Array[EfficientAbstractPlanStep]] = None
@@ -113,7 +117,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
   /** recomputes the open preconditions flaws */
   private def computeOpenPreconditions(planStep: Int, buffer: ArrayBuffer[EfficientOpenPrecondition]) = {
-    if (planStepDecomposedByMethod(planStep) == -1) {
+    if (isPlanStepPresentInPlan(planStep)) {
       var precondition = 0
       while (precondition < domain.tasks(planStepTasks(planStep)).precondition.length) {
         // check for a causal link

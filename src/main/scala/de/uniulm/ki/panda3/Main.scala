@@ -141,7 +141,7 @@ object Main {
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
-                                             PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(LiftedTDGMinimumModification), LCFR),
+                                             PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(TDGMinimumAction), LCFR),
                                              //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(ADD), LCFR),
                                              //ProgressionSearch(None),
                                              //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), planLength, Some(planLength)),

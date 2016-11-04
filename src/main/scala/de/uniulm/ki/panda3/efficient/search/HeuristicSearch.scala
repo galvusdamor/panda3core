@@ -8,7 +8,7 @@ import de.uniulm.ki.panda3.configuration.{PlanningConfiguration, EfficientSearch
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 import de.uniulm.ki.panda3.efficient.heuristic.filter.TreeFF
-import de.uniulm.ki.panda3.efficient.heuristic.{EfficientNumberOfFlaws, EfficientHeuristic}
+import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.flaw.{EfficientAbstractPlanStep, EfficientOpenPrecondition, EfficientCausalThreat}
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
@@ -38,6 +38,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
     import scala.math.Ordering.Implicits._
 
     val tff = TreeFF(domain)
+
 
     val semaphore: Semaphore = new Semaphore(0)
     val root = new EfficientSearchNode[Payload](0, initialPlan, null, Double.MaxValue)
@@ -89,8 +90,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
           val npsRecent = recentNodes.asInstanceOf[Double] / (nTime - lastReportTime) * 1000
           if (printSearchInfo) println("Plans Expanded: " + nodes + " node/sec avg: " + nps.toInt + " recent: " + npsRecent.toInt + " Queue size " + searchQueue.length + " Recently lowest" +
-                                         " " +
-                                         "Heuristic " + minHeuristicCurrentInterval + " Recently highest Heuristic " + maxHeuristicCurrentInterval)
+                                         " Heuristic " + minHeuristicCurrentInterval + " Recently highest Heuristic " + maxHeuristicCurrentInterval)
           minHeuristicCurrentInterval = Double.MaxValue
           maxHeuristicCurrentInterval = -Double.MaxValue
           lastReportTime = nTime
@@ -157,7 +157,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
 
                 timeCapsule start SEARCH_COMPUTE_HEURISTIC
                 //val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
-                val distanceValue = ((if (addNumberOfPlanSteps) newPlan.numberOfPlanSteps else 0) + (if (addDepth) depth + 1 else 0)) * (if (invertCosts) -1 else 1)
+                val distanceValue = ((if (addNumberOfPlanSteps) newPlan.numberOfPrimitivePlanSteps else 0) + (if (addDepth) depth + 1 else 0)) * (if (invertCosts) -1 else 1)
                 val (h, newPayload) = heuristic.computeHeuristic(newPlan, myNode.payload, actualModifications(modNum))
                 val heuristicValue = distanceValue + h
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
@@ -169,6 +169,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
                 val searchNode: EfficientSearchNode[Payload] = if (buildTree) new EfficientSearchNode[Payload](nodeNumber, newPlan, myNode, heuristicValue)
                 else new EfficientSearchNode[Payload](nodeNumber, newPlan, null, heuristicValue)
+                searchNode.payload = newPayload
 
                 if (h < Double.MaxValue)
                   searchQueue enqueue ((searchNode, depth + 1))

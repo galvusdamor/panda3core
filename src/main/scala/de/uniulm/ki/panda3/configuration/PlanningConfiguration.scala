@@ -9,7 +9,7 @@ import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability
 import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.domain.EfficientExtractedMethodPlan
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.{EfficientGroundedTaskDecompositionGraph, EfficientTDGFromGroundedSymbolic}
-import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps, MinimumModificationEffortHeuristic}
+import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps}
 import de.uniulm.ki.panda3.efficient.search.EfficientSearchNode
 import de.uniulm.ki.panda3.efficient.search.flawSelector.{AbstractFirstWithDeferred, EfficientFlawSelector, LeastCostFlawRepair}
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
@@ -124,7 +124,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         // some heuristics need additional preprocessing, e.g. to build datastructures they need
         timeCapsule start HEURISTICS_PREPARATION
         // TDG based heuristics need the TDG
-        if (search.heuristic contains TDGMinimumModification) if (!(analysisMap contains SymbolicGroundedTaskDecompositionGraph)) {
+        if (search.heuristic.exists { case x: TDGBasedHeuristic => true; case _ => false }) if (!(analysisMap contains SymbolicGroundedTaskDecompositionGraph)) {
           timeCapsule start GROUNDED_TDG_ANALYSIS
           analysisMap = runGroundedTaskDecompositionGraph(domainAndPlan._1, domainAndPlan._2, analysisMap, preprocessingConfiguration.groundedTaskDecompositionGraph.get)
           timeCapsule stop GROUNDED_TDG_ANALYSIS
@@ -162,8 +162,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           // in some cases we need to re-do some steps of the preparation as we have to transfer them into the efficient representation
           timeCapsule start HEURISTICS_PREPARATION
           // compute the efficient TDG if needed during search
-          if ((search.heuristic contains TDGMinimumModification) || (search.heuristic contains TDGMinimumADD) ||
-            (search.heuristic contains TDGMinimumAction))
+          if (search.heuristic.exists { case x: TDGBasedHeuristic => true; case _ => false })
             analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
 
           if ((search.heuristic contains ADD) || (search.heuristic contains ADDReusing) || (search.heuristic contains TDGMinimumADD) ||
@@ -204,13 +203,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 // prepare the heuristic
                 val heuristicInstance = search.heuristic match {
                   case Some(heuristic) => heuristic match {
-                    case NumberOfFlaws                => EfficientNumberOfFlaws
-                    case NumberOfPlanSteps            => EfficientNumberOfPlanSteps
-                    case WeightedFlaws                => ???
-                    case TDGMinimumModification       => MinimumModificationEffortHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
-                    case LiftedTDGMinimumModification => TSTGHeuristic(wrapper.efficientDomain)
-                    case TDGMinimumAction             => MinimumActionCount(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
-                    case TDGMinimumADD                =>
+                    case NumberOfFlaws                                  => EfficientNumberOfFlaws
+                    case NumberOfPlanSteps                              => EfficientNumberOfPlanSteps
+                    case WeightedFlaws                                  => ???
+                    case TDGMinimumModificationWithCycleDetection       => MinimumModificationEffortHeuristicWithCycleDetection(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                    case TDGPreconditionRelaxation                      => PreconditionRelaxationTDGHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                    case LiftedTDGMinimumModificationWithCycleDetection => LiftedMinimumModificationEffortHeuristicWithCycleDetection(wrapper.efficientDomain)
+                    case LiftedTDGPreconditionRelaxation                => LiftedPreconditionRelaxationTDGHeuristic(wrapper.efficientDomain)
+                    case LiftedTDGMinimumAction                         => LiftedMinimumActionCount(wrapper.efficientDomain)
+                    case TDGMinimumAction                               => MinimumActionCount(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                    case TDGMinimumADD                                  =>
                       // TODO experimental
                       val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
                       val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
@@ -670,20 +672,33 @@ object DijkstraType extends SearchAlgorithmType
   */
 sealed trait SearchHeuristic {}
 
+// general heuristics
 object NumberOfFlaws extends SearchHeuristic
 
 object NumberOfPlanSteps extends SearchHeuristic
 
 object WeightedFlaws extends SearchHeuristic
 
-object TDGMinimumModification extends SearchHeuristic
+// TDG heuristics
+sealed trait TDGBasedHeuristic extends SearchHeuristic
 
-object LiftedTDGMinimumModification extends SearchHeuristic
+object TDGMinimumModificationWithCycleDetection extends TDGBasedHeuristic
 
-object TDGMinimumADD extends SearchHeuristic
+object TDGPreconditionRelaxation extends TDGBasedHeuristic
 
-object TDGMinimumAction extends SearchHeuristic
+object TDGMinimumADD extends TDGBasedHeuristic
 
+object TDGMinimumAction extends TDGBasedHeuristic
+
+// works only with TSTG
+object LiftedTDGMinimumModificationWithCycleDetection extends SearchHeuristic
+
+object LiftedTDGPreconditionRelaxation extends SearchHeuristic
+
+object LiftedTDGMinimumAction extends SearchHeuristic
+
+
+// POCL heuristics
 object ADD extends SearchHeuristic
 
 object ADDReusing extends SearchHeuristic

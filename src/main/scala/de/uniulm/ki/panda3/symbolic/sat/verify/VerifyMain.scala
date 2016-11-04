@@ -26,12 +26,12 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
     val (searchConfig, usePlanningGraph) = configNumber match {
       case x if x < 0 => (PlanBasedSearch(Some(0), Some(0), DFSType, None, LCFR, efficientSearch = false), true)
-      case 1          => (PlanBasedSearch(None, None, AStarDepthType, Some(TDGMinimumModification), LCFR), true)
+      case 1          => (PlanBasedSearch(None, None, AStarDepthType, Some(TDGMinimumModificationWithCycleDetection), LCFR), true)
       case 2          => (PlanBasedSearch(None, None, DijkstraType, None, LCFR), true)
       case 3          => (PlanBasedSearch(None, None, AStarDepthType, Some(TDGMinimumAction), LCFR), true)
-      case 4          => (PlanBasedSearch(None, None, AStarDepthType, Some(TDGMinimumModification), LCFR), false)
+      case 4          => (PlanBasedSearch(None, None, AStarDepthType, Some(TDGMinimumModificationWithCycleDetection), LCFR), false)
       case 5          => (PlanBasedSearch(None, None, DijkstraType, None, LCFR), false)
-      case 6          => (PlanBasedSearch(None, None, GreedyType, Some(TDGMinimumModification), LCFR), false)
+      case 6          => (PlanBasedSearch(None, None, GreedyType, Some(TDGMinimumModificationWithCycleDetection), LCFR), false)
     }
 
     // create the configuration
