@@ -28,6 +28,14 @@ case class Variable(id: Int, name: String, sort: Sort) extends Value with Pretty
 
   /** returns a more detailed information about the object */
   override def longInfo: String = shortInfo + ":" + sort.shortInfo
+
+  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[Variable]){
+    val ov = o.asInstanceOf[Variable]
+    if (this.id != ov.id) false
+    else if (this.hashCode != o.hashCode()) false
+    else this.name == ov.name
+    //else this.sort == ov.sort
+  } else false
 }
 
 object Variable {
