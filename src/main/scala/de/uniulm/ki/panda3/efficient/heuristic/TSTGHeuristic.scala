@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.efficient.heuristic
 
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
+import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.util.SimpleAndOrGraph
 
@@ -28,22 +29,62 @@ trait TSTGHeuristic extends EfficientHeuristic[Unit] {
 
   protected def initialDeductionFromHeuristicValue(plan: EfficientPlan): Double
 
-  val taskValues: Map[Int, Int] = argumentRelaxedTDG.minSumTraversalMap(computeHeuristicForPrimitive, computeHeuristicForMethod) map { case (a, b) => a -> b.toInt }
+  protected def taskValue(plan: EfficientPlan): Int => Int
 
   override def computeHeuristic(plan: EfficientPlan, payload: Unit, appliedModification: EfficientModification): (Double, Unit) = {
     var h = -initialDeductionFromHeuristicValue(plan)
-    //println("INI " + h)
+
+    val valuation = taskValue(plan)
 
     var ps = 2
     while (ps < plan.planStepTasks.length) {
       if (plan.isPlanStepPresentInPlan(ps)) {
-        h += taskValues(plan.planStepTasks(ps))
-        //println("PS " + ps + ": " + taskValues(plan.planStepTasks(ps)))
+        h += valuation(ps)
       }
       ps += 1
     }
 
     (h, ())
+  }
+}
+
+trait PreComputationTSTGHeuristic extends TSTGHeuristic {
+
+  val taskValues: Map[Int, Int] = argumentRelaxedTDG.minSumTraversalMap(computeHeuristicForPrimitive, computeHeuristicForMethod) map { case (a, b) => a -> b.toInt }
+
+  protected def taskValue(plan: EfficientPlan) = { case planStep: Int => taskValues(plan.planStepTasks(planStep)) }
+}
+
+trait ReachabilityRecomputingTSTGHeuristic extends TSTGHeuristic {
+  protected def taskValue(plan: EfficientPlan) = {
+    val taskValues: Map[Int, Int] = argumentRelaxedTDG.minSumTraversalMap({ task => if (plan taskAllowed task) computeHeuristicForPrimitive(task) else Int.MaxValue },
+                                                                          computeHeuristicForMethod) map { case (a, b) => a -> b.toInt }
+
+    {case planStep: Int => taskValues(plan.planStepTasks(planStep))}
+  }
+}
+
+trait CausalLinkRecomputingTSTGHeuristic extends TSTGHeuristic {
+
+  assert(domain.noNegativePreconditions)
+
+  protected def taskValue(plan: EfficientPlan) = {
+    case planStep =>
+      // find all causal links which span over this planstep
+      val spanningLinks = plan.causalLinks filter { case EfficientCausalLink(prod, cons, _, _) =>
+        plan.isPlanStepPresentInPlan(prod) && plan.isPlanStepPresentInPlan(cons) && plan.ordering.lt(prod, planStep) && plan.ordering.gt(cons, planStep)
+      } map { case EfficientCausalLink(prod, _, prodIndex, _) => plan.taskOfPlanStep(prod).effect(prodIndex).predicate } toSet
+
+      val taskValues: Map[Int, Int] = argumentRelaxedTDG.minSumTraversalMap(
+        {
+          task =>
+            if ((plan taskAllowed task) && !(domain.tasks(task).negativeEffectPredicates exists spanningLinks)) {
+            computeHeuristicForPrimitive(task)
+          } else Int.MaxValue
+        }, computeHeuristicForMethod) map { case (a, b) => a -> b.toInt }
+
+
+      taskValues.getOrElse(plan.planStepTasks(planStep), Int.MaxValue)
   }
 }
 
@@ -65,22 +106,56 @@ trait DeduceCausalLinksTSTGHeuristic extends TSTGHeuristic {
 }
 
 
-case class LiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain) extends DeduceCausalLinksTSTGHeuristic {
-  protected def computeHeuristicForPrimitive(taskID: Int): Double = domain.tasks(taskID).precondition.length
+trait LiftedMinimumModificationEffortHeuristicWithCycleDetection extends DeduceCausalLinksTSTGHeuristic {
+  protected def computeHeuristicForPrimitive(taskID: Int): Double = {
+    assert(domain.tasks(taskID).isPrimitive)
+    domain.tasks(taskID).precondition.length
+  }
 
   protected def computeHeuristicForMethod(methodID: Int): Double = 1
 }
 
-case class LiftedPreconditionRelaxationTDGHeuristic(domain: EfficientDomain) extends DeduceCausalLinksTSTGHeuristic {
-  protected def computeHeuristicForPrimitive(taskID: Int): Double = domain.tasks(taskID).precondition.length
+trait LiftedPreconditionRelaxationTDGHeuristic extends DeduceCausalLinksTSTGHeuristic {
+  protected def computeHeuristicForPrimitive(taskID: Int): Double = {
+    assert(domain.tasks(taskID).isPrimitive)
+    domain.tasks(taskID).precondition.length
+  }
 
   protected def computeHeuristicForMethod(methodID: Int): Double = 1 - domain.decompositionMethods(-methodID - 1).subPlan.causalLinks.length
 }
 
-case class LiftedMinimumActionCount(domain: EfficientDomain) extends TSTGHeuristic {
+trait LiftedMinimumActionCount extends TSTGHeuristic {
   override protected def computeHeuristicForPrimitive(taskID: Int): Double = 1
 
   override protected def computeHeuristicForMethod(methodID: Int): Double = 0
 
   protected def initialDeductionFromHeuristicValue(plan: EfficientPlan): Double = plan.numberOfPrimitivePlanSteps - 2
 }
+
+case class PreComputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain) extends
+  PreComputationTSTGHeuristic with LiftedMinimumModificationEffortHeuristicWithCycleDetection
+
+case class PreComputingLiftedPreconditionRelaxationTDGHeuristic(domain: EfficientDomain) extends
+  PreComputationTSTGHeuristic with LiftedPreconditionRelaxationTDGHeuristic
+
+case class PreComputingLiftedMinimumActionCount(domain: EfficientDomain) extends
+  PreComputationTSTGHeuristic with LiftedMinimumActionCount
+
+case class ReachabilityRecomputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain) extends
+  ReachabilityRecomputingTSTGHeuristic with LiftedMinimumModificationEffortHeuristicWithCycleDetection
+
+case class ReachabilityRecomputingLiftedPreconditionRelaxationTDGHeuristic(domain: EfficientDomain) extends
+  ReachabilityRecomputingTSTGHeuristic with LiftedPreconditionRelaxationTDGHeuristic
+
+case class ReachabilityRecomputingLiftedMinimumActionCount(domain: EfficientDomain) extends
+  ReachabilityRecomputingTSTGHeuristic with LiftedMinimumActionCount
+
+
+case class CausalLinkRecomputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain) extends
+  CausalLinkRecomputingTSTGHeuristic with LiftedMinimumModificationEffortHeuristicWithCycleDetection
+
+case class CausalLinkRecomputingLiftedPreconditionRelaxationTDGHeuristic(domain: EfficientDomain) extends
+  CausalLinkRecomputingTSTGHeuristic with LiftedPreconditionRelaxationTDGHeuristic
+
+case class CausalLinkRecomputingLiftedMinimumActionCount(domain: EfficientDomain) extends
+  CausalLinkRecomputingTSTGHeuristic with LiftedMinimumActionCount

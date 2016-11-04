@@ -120,7 +120,7 @@ object Main {
     //val domFile ="/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-fixed.xml"
     //val probFile="/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/p03-complete-hierarchical.xml"
     val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
-    val probFile="/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8--3--4.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8--3--4.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
 
     val domInputStream = new FileInputStream(domFile)
@@ -141,7 +141,8 @@ object Main {
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
-                                             PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(TDGMinimumAction), LCFR),
+                                             PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute)),
+                                                             Nil, LCFR),
                                              //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(ADD), LCFR),
                                              //ProgressionSearch(None),
                                              //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), planLength, Some(planLength)),

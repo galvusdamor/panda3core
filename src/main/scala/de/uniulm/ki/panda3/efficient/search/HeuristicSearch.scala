@@ -7,7 +7,7 @@ import java.util.concurrent.Semaphore
 import de.uniulm.ki.panda3.configuration.{PlanningConfiguration, EfficientSearchAlgorithm, AbortFunction, ResultFunction}
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
-import de.uniulm.ki.panda3.efficient.heuristic.filter.TreeFF
+import de.uniulm.ki.panda3.efficient.heuristic.filter.{Filter, TreeFF}
 import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.flaw.{EfficientAbstractPlanStep, EfficientOpenPrecondition, EfficientCausalThreat}
@@ -27,7 +27,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flawSelector: EfficientFlawSelector, addNumberOfPlanSteps: Boolean, addDepth: Boolean,
+case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], pruning: Array[Filter], flawSelector: EfficientFlawSelector, addNumberOfPlanSteps: Boolean, addDepth: Boolean,
                                     continueOnSolution: Boolean, invertCosts: Boolean = false) extends EfficientSearchAlgorithm[Payload] {
 
   override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
@@ -62,9 +62,6 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
 
     informationCapsule increment NUMBER_OF_NODES
     informationCapsule.addToDistribution(PLAN_SIZE, initialPlan.numberOfPlanSteps)
-
-    println(domain.tasks.indices map {t => t + " -> " + domain.taskSchemaTransitionGraph.mutexes(t).mkString(",")} mkString "\n")
-    //System exit 0
 
 
     def heuristicSearch() = {
@@ -159,15 +156,19 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
               val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))
 
               timeCapsule start SEARCH_COMPUTE_FILTER
-              val treeff = if (depth % 1 == 1) tff.isPossiblySolvable(newPlan) else true
+              var planAllowed = true
+              var filterIndex = 0
+              while (filterIndex < pruning.length) {
+                planAllowed &= pruning(filterIndex).isPossiblySolvable(newPlan)
+                filterIndex += 1
+              }
               timeCapsule stop SEARCH_COMPUTE_FILTER
 
               //if (!newPlan.allContainedApplicable) println("DEAD CONTAINED")
               //if (!newPlan.allLandmarksApplicable) println("DEAD LANDMARKS")
               //if (!newPlan.allAbstractTasksAllowed) println("DEAD ALLOWED")
 
-              if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent && treeff &&
-                newPlan.goalPotentiallyReachable && newPlan.allLandmarksApplicable && newPlan.allContainedApplicable && newPlan.allAbstractTasksAllowed) {
+              if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent && planAllowed) {
                 informationCapsule increment NUMBER_OF_NODES
                 informationCapsule.addToDistribution(PLAN_SIZE, newPlan.numberOfPlanSteps)
 
@@ -178,8 +179,6 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
                 val heuristicValue = distanceValue + h
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
-                //println("HEURISTIC " + heuristicValue)
-
                 assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps)
 
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
@@ -187,8 +186,8 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], flaw
                 else new EfficientSearchNode[Payload](nodeNumber, newPlan, null, heuristicValue)
                 searchNode.payload = newPayload
 
-                if (h < Double.MaxValue)
-                  searchQueue enqueue ((searchNode, depth + 1))
+                if (h < Int.MaxValue) searchQueue enqueue ((searchNode, depth + 1)) else informationCapsule increment NUMBER_OF_DISCARDED_NODES
+
                 children append ((searchNode, modNum))
               } else informationCapsule increment NUMBER_OF_DISCARDED_NODES
               modNum += 1
