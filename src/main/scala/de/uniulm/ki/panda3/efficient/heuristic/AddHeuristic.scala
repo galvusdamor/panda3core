@@ -17,7 +17,7 @@ import scala.collection.mutable.ArrayBuffer
 case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: EfficientDomain, initialState: Array[(Int, Array[Int])],
                         resuingAsVHPOP: Boolean) extends MinimisationOverGroundingsBasedHeuristic[Unit] {
 
-  private val heuristicMap: Map[EfficientGroundLiteral, Double] =
+  val heuristicMap: Map[EfficientGroundLiteral, Double] =
     (planningGraph.actionLayer zip planningGraph.stateLayer).foldLeft(initialState map { case (predicate, args) => EfficientGroundLiteral(predicate, isPositive = true, args) -> 0.0 } toMap)(
       {
         case (initiallyComputedValues, (actions, _)) =>
@@ -93,7 +93,7 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
     heuristicEstimate
   }
 
-  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification): (Double, Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth : Int): (Double, Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = 0 // plan.openPreconditions.length // every flaw must be addressed
 
