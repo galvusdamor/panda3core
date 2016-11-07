@@ -3,22 +3,14 @@ package de.uniulm.ki.panda3
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
-import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
-import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod
-import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask}
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.TreeFF
-import de.uniulm.ki.panda3.symbolic.compiler.{OneRandomOrdering, AllOrderings, TotallyOrderingOption}
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{GroundedPlanningGraphConfiguration, GroundedPlanningGraph}
-import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
+import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
+import de.uniulm.ki.panda3.symbolic.compiler.AllOrderings
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
-import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
-import de.uniulm.ki.panda3.symbolic.sat.verify.CRYPTOMINISAT
+import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util._
-
-import scala.collection.JavaConversions
 
 
 /**
@@ -117,8 +109,8 @@ object Main {
 
     //val domFile ="/home/gregor/Workspace/AssemblyTask_domain.xml"
     //val probFile="/home/gregor/Workspace/AssemblyTask_problem.xml"
-    //val domFile ="/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-fixed.xml"
-    //val probFile="/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/p03-complete-hierarchical.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-AAAI/domains/woodworking-legal-fewer-htn-groundings.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking-AAAI/problems/p03-complete-hierarchical.xml"
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8--3--4.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
@@ -126,34 +118,46 @@ object Main {
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
-    // create the configuration
-    val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                             ParsingConfiguration(eliminateEquality = false, stripHybrid = false),
-                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                                        compileOrderInMethods = None, //Some(OneRandomOrdering()),
-                                                                        splitIndependedParameters = false,
-                                                                        liftedReachability = true, groundedReachability = false, planningGraph = true,
-                                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                                        iterateReachabilityAnalysis = false, groundDomain = false),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumAction), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
-                                             //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
-                                             PlanBasedSearch(None, Some(30 * 60), AStarActionsType,
-                                                             Some(TDGPreconditionRelaxation),
-                                                             Nil, LCFR),
-                                             //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(ADD), LCFR),
-                                             //ProgressionSearch(Some(30 * 60)),
-                                             //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), planLength, Some(planLength)),
-                                             //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), 22, Some(9)),
-                                             //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
-                                             PostprocessingConfiguration(Set(ProcessingTimings,
-                                                                             SearchStatistics,
-                                                                             SearchStatus,
-                                                                             SearchResult,
-                                                                             PreprocessedDomainAndPlan)))
+
+    val postprocessing = PostprocessingConfiguration(Set(ProcessingTimings,
+                                                         SearchStatistics,
+                                                         SearchStatus,
+                                                         SearchResult,
+                                                         PreprocessedDomainAndPlan))
+
+    // planning config is given via stdin
+    val searchConfig = if (args.length > 3) {
+      assert(args.length == 6, "PANDA needs exactly 6 arguments in this configuration")
+      PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
+                            PredefinedConfigurations.parsingConfigs(args(3)),
+                            PredefinedConfigurations.preprocessConfigs(args(4)),
+                            PredefinedConfigurations.searchConfigs(args(5)),
+                            postprocessing
+                           )
+
+
+    } else PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
+                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = true),
+                                 PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                            compileOrderInMethods = Some(AllOrderings),
+                                                            splitIndependedParameters = false,
+                                                            liftedReachability = true, groundedReachability = false, planningGraph = true,
+                                                            groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                            iterateReachabilityAnalysis = false, groundDomain = true),
+                                 //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
+                                 //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
+                                 //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumAction), true),
+                                 //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
+                                 //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
+                                 //PlanBasedSearch(None, None, BFSType, None, Nil, LCFR),
+                                 //PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(LiftedTDGMinimumADD(NeverRecompute)), Nil, UMCPFlaw),
+                                 PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(UMCPHeuristic), Nil, UMCPFlaw),
+                                 //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(ADD), LCFR),
+                                 //ProgressionSearch(Some(30 * 60)),
+                                 //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), planLength, Some(planLength)),
+                                 //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), 22, Some(10)),
+                                 //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
+                                 postprocessing)
     //System.in.read()
 
 
