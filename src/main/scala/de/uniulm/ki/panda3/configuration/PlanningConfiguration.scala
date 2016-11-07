@@ -9,7 +9,7 @@ import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.RecomputeHTN
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps}
-import de.uniulm.ki.panda3.efficient.search.flawSelector.LeastCostFlawRepair
+import de.uniulm.ki.panda3.efficient.search.flawSelector.{UMCPFlawSelection, LeastCostFlawRepair}
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
@@ -158,8 +158,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           if (search.heuristic.exists { case x: TDGBasedHeuristic => true; case _ => false })
             analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
 
-          if ((search.heuristic contains ADD) || (search.heuristic contains ADDReusing) || (search.heuristic contains TDGMinimumADD) ||
-            (search.heuristic contains Relax)) {
+          val efficientPGNeeded = search.heuristic match {
+            case Some(ADD) | Some(ADDReusing) | Some(Relax) | Some(TDGMinimumADD) | Some(LiftedTDGMinimumADD(_)) => true
+            case _                                                                                               => false
+          }
+
+          if (efficientPGNeeded) {
             // do the whole preparation, i.e. planning graph
             val initialState = domainAndPlan._2.groundedInitialState filter {
               _.isPositive
@@ -171,7 +175,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
           val flawSelector = search.flawSelector match {
-            case LCFR => LeastCostFlawRepair
+            case LCFR     => LeastCostFlawRepair
+            case UMCPFlaw => UMCPFlawSelection
           }
 
           val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = search.searchAlgorithm match {
@@ -195,56 +200,69 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               case AStarActionsType | AStarDepthType | GreedyType =>
                 // prepare the heuristic
                 val heuristicInstance: EfficientHeuristic[_] = search.heuristic match {
-                  case Some(heuristic) => heuristic match {
-                    case NumberOfFlaws                            => EfficientNumberOfFlaws
-                    case NumberOfPlanSteps                        => EfficientNumberOfPlanSteps
-                    case WeightedFlaws                            => ???
-                    case TDGMinimumModificationWithCycleDetection => MinimumModificationEffortHeuristicWithCycleDetection(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
-                    case TDGPreconditionRelaxation                => PreconditionRelaxationTDGHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
-
-                    case LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute) => PreComputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(wrapper.efficientDomain)
-                    case LiftedTDGPreconditionRelaxation(NeverRecompute)                => PreComputingLiftedPreconditionRelaxationTDGHeuristic(wrapper.efficientDomain)
-                    case LiftedTDGMinimumAction(NeverRecompute)                         => PreComputingLiftedMinimumActionCount(wrapper.efficientDomain)
-
-                    case LiftedTDGMinimumModificationWithCycleDetection(ReachabilityRecompute) =>
-                      ReachabilityRecomputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(wrapper.efficientDomain)
-                    case LiftedTDGPreconditionRelaxation(ReachabilityRecompute)                => ReachabilityRecomputingLiftedPreconditionRelaxationTDGHeuristic(wrapper.efficientDomain)
-                    case LiftedTDGMinimumAction(ReachabilityRecompute)                         => ReachabilityRecomputingLiftedMinimumActionCount(wrapper.efficientDomain)
-
-                    case LiftedTDGMinimumModificationWithCycleDetection(CausalLinkRecompute) =>
-                      CausalLinkRecomputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(wrapper.efficientDomain)
-                    case LiftedTDGPreconditionRelaxation(CausalLinkRecompute)                => CausalLinkRecomputingLiftedPreconditionRelaxationTDGHeuristic(wrapper.efficientDomain)
-                    case LiftedTDGMinimumAction(CausalLinkRecompute)                         => CausalLinkRecomputingLiftedMinimumActionCount(wrapper.efficientDomain)
+                  case Some(heuristic) =>
+                    // if we need the ADD heuristic as a building block create it
+                    val optionADD = heuristic match {
+                      case LiftedTDGMinimumADD(_) | TDGMinimumADD =>
+                        // TODO experimental
+                        val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
+                        val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
+                          (wrapper.unwrap(task), args map wrapper.unwrap toArray)
+                        }
+                        // TODO check that we have compiled negative preconditions away
+                        Some(AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray, resuingAsVHPOP = false))
+                      case _                                      => None
+                    }
 
 
-                    case TDGMinimumAction => MinimumActionCount(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
-                    case TDGMinimumADD    =>
-                      // TODO experimental
-                      val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
-                      val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
-                        (wrapper.unwrap(task), args map wrapper.unwrap toArray)
-                      }
-                      val reusing = if (heuristic == ADDReusing) true else false
-                      // TODO check that we have compiled negative preconditions away
-                      MinimumADDHeuristic(analysisMap(EfficientGroundedTDG), AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray, reusing), wrapper
-                        .efficientDomain)
+                    heuristic match {
+                      case NumberOfFlaws             => EfficientNumberOfFlaws
+                      case NumberOfOpenPreconditions => EfficientNumberOfOpenPreconditions
+                      case NumberOfPlanSteps         => EfficientNumberOfPlanSteps
+                      case NumberOfAbstractPlanSteps => EfficientNumberOfAbstractPlanSteps
+                      case UMCPHeuristic             => EfficientUMCPHeuristic
+                      case WeightedFlaws             => ???
+                      // HTN heuristics
+                      case TDGMinimumModificationWithCycleDetection => MinimumModificationEffortHeuristicWithCycleDetection(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                      case TDGPreconditionRelaxation                => PreconditionRelaxationTDGHeuristic(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+
+                      case LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute) => PreComputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(wrapper.efficientDomain)
+                      case LiftedTDGPreconditionRelaxation(NeverRecompute)                => PreComputingLiftedPreconditionRelaxationTDGHeuristic(wrapper.efficientDomain)
+                      case LiftedTDGMinimumAction(NeverRecompute)                         => PreComputingLiftedMinimumActionCount(wrapper.efficientDomain)
+                      case LiftedTDGMinimumADD(NeverRecompute)                            => PreComputingLiftedMinimumADD(wrapper.efficientDomain, optionADD.get)
+
+                      case LiftedTDGMinimumModificationWithCycleDetection(ReachabilityRecompute) =>
+                        ReachabilityRecomputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(wrapper.efficientDomain)
+                      case LiftedTDGPreconditionRelaxation(ReachabilityRecompute)                => ReachabilityRecomputingLiftedPreconditionRelaxationTDGHeuristic(wrapper.efficientDomain)
+                      case LiftedTDGMinimumAction(ReachabilityRecompute)                         => ReachabilityRecomputingLiftedMinimumActionCount(wrapper.efficientDomain)
+                      case LiftedTDGMinimumADD(ReachabilityRecompute)                            => ReachabilityRecomputingLiftedMinimumADD(wrapper.efficientDomain, optionADD.get)
+
+                      case LiftedTDGMinimumModificationWithCycleDetection(CausalLinkRecompute) =>
+                        CausalLinkRecomputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(wrapper.efficientDomain)
+                      case LiftedTDGPreconditionRelaxation(CausalLinkRecompute)                => CausalLinkRecomputingLiftedPreconditionRelaxationTDGHeuristic(wrapper.efficientDomain)
+                      case LiftedTDGMinimumAction(CausalLinkRecompute)                         => CausalLinkRecomputingLiftedMinimumActionCount(wrapper.efficientDomain)
+                      case LiftedTDGMinimumADD(CausalLinkRecompute)                            => CausalLinkRecomputingLiftedMinimumADD(wrapper.efficientDomain, optionADD.get)
 
 
-                    case ADD | ADDReusing | Relax =>
-                      val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
-                      val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
-                        (wrapper.unwrap(task), args map wrapper.unwrap toArray)
-                      }
+                      case TDGMinimumAction => MinimumActionCount(analysisMap(EfficientGroundedTDG), wrapper.efficientDomain)
+                      case TDGMinimumADD    => MinimumADDHeuristic(analysisMap(EfficientGroundedTDG), optionADD.get, wrapper.efficientDomain)
 
-                      search.heuristic.get match {
-                        case ADD | ADDReusing =>
-                          val reusing = if (heuristic == ADDReusing) true else false
-                          // TODO check that we have compiled negative preconditions away
-                          AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray, reusing)
-                        case Relax            =>
-                          RelaxHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray)
-                      }
-                  }
+                      // classical heuristics
+                      case ADD | ADDReusing | Relax =>
+                        val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
+                        val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
+                          (wrapper.unwrap(task), args map wrapper.unwrap toArray)
+                        }
+
+                        search.heuristic.get match {
+                          case ADD | ADDReusing =>
+                            val reusing = if (heuristic == ADDReusing) true else false
+                            // TODO check that we have compiled negative preconditions away
+                            AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray, reusing)
+                          case Relax            =>
+                            RelaxHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray)
+                        }
+                    }
                   case None            => throw new UnsupportedOperationException("In order to use a heuristic search procedure, a heuristic must be defined.")
                 }
 
@@ -688,9 +706,15 @@ sealed trait SearchHeuristic {}
 // general heuristics
 object NumberOfFlaws extends SearchHeuristic
 
+object NumberOfOpenPreconditions extends SearchHeuristic
+
 object NumberOfPlanSteps extends SearchHeuristic
 
+object NumberOfAbstractPlanSteps extends SearchHeuristic
+
 object WeightedFlaws extends SearchHeuristic
+
+object UMCPHeuristic extends SearchHeuristic
 
 // TDG heuristics
 sealed trait TDGBasedHeuristic extends SearchHeuristic
@@ -719,6 +743,8 @@ case class LiftedTDGPreconditionRelaxation(mode: RecomputationMode) extends Sear
 
 case class LiftedTDGMinimumAction(mode: RecomputationMode) extends SearchHeuristic
 
+case class LiftedTDGMinimumADD(mode: RecomputationMode) extends SearchHeuristic
+
 
 // POCL heuristics
 object ADD extends SearchHeuristic
@@ -740,6 +766,8 @@ object RecomputeHierarchicalReachability extends PruningTechnique
 sealed trait SearchFlawSelector {}
 
 object LCFR extends SearchFlawSelector
+
+object UMCPFlaw extends SearchFlawSelector
 
 
 sealed trait SearchConfiguration {
