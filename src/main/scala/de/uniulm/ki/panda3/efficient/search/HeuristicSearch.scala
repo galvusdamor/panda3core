@@ -1,25 +1,15 @@
 package de.uniulm.ki.panda3.efficient.search
 
-import java.io.FileInputStream
-import java.util
 import java.util.concurrent.Semaphore
 
-import de.uniulm.ki.panda3.configuration.{PlanningConfiguration, EfficientSearchAlgorithm, AbortFunction, ResultFunction}
-import de.uniulm.ki.panda3.efficient.Wrapping
+import de.uniulm.ki.panda3.configuration.{AbortFunction, EfficientSearchAlgorithm, ResultFunction}
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
-import de.uniulm.ki.panda3.efficient.heuristic.filter.{Filter, TreeFF}
 import de.uniulm.ki.panda3.efficient.heuristic._
+import de.uniulm.ki.panda3.efficient.heuristic.filter.{Filter, TreeFF}
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
-import de.uniulm.ki.panda3.efficient.plan.flaw.{EfficientAbstractPlanStep, EfficientOpenPrecondition, EfficientCausalThreat}
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
 import de.uniulm.ki.panda3.efficient.search.flawSelector.EfficientFlawSelector
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.PruneHierarchy
-import de.uniulm.ki.panda3.symbolic.compiler.{ToPlainFormulaRepresentation, SHOPMethodCompiler, ClosedWorldAssumption}
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.{LiftedForwardSearchReachabilityAnalysis, GroundedForwardSearchReachabilityAnalysis}
-import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
-import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
-import de.uniulm.ki.panda3.symbolic.search.SearchNode
-import de.uniulm.ki.util.{TimeCapsule, InformationCapsule, Dot2PdfCompiler}
+import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -33,9 +23,8 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], prun
   override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
                            buildTree: Boolean, informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
   (EfficientSearchNode[Payload], Semaphore, ResultFunction[EfficientPlan], AbortFunction) = {
-    import de.uniulm.ki.panda3.configuration.Timings._
     import de.uniulm.ki.panda3.configuration.Information._
-    import scala.math.Ordering.Implicits._
+    import de.uniulm.ki.panda3.configuration.Timings._
 
     val tff = TreeFF(domain)
 
@@ -175,7 +164,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], prun
                 timeCapsule start SEARCH_COMPUTE_HEURISTIC
                 //val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
                 val distanceValue = ((if (addNumberOfPlanSteps) newPlan.numberOfPrimitivePlanSteps else 0) + (if (addDepth) depth + 1 else 0)) * (if (invertCosts) -1 else 1)
-                val (h, newPayload) = heuristic.computeHeuristic(newPlan, myNode.payload, actualModifications(modNum))
+                val (h, newPayload) = heuristic.computeHeuristic(newPlan, myNode.payload, actualModifications(modNum), depth)
                 val heuristicValue = distanceValue + h
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
