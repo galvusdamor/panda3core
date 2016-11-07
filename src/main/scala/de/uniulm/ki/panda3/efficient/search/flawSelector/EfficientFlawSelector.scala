@@ -31,6 +31,35 @@ object LeastCostFlawRepair extends EfficientFlawSelector {
   }
 }
 
+
+/**
+  * UMCP's flaw selection strategy: Abstract first and LCFS as a tie-breaker
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
+object UMCPFlawSelection extends EfficientFlawSelector {
+
+  def selectFlaw(plan: EfficientPlan, flaws: Array[EfficientFlaw], numberOfModifications: Array[Int]): Int = {
+    var minFlaw = 0
+    var isAbstract = flaws(minFlaw).isInstanceOf[EfficientAbstractPlanStep]
+    var flawNum = 1
+    while (flawNum < flaws.length) {
+      val newFlawAbstract = flaws(flawNum).isInstanceOf[EfficientAbstractPlanStep]
+      val better = if (isAbstract != newFlawAbstract) !isAbstract else numberOfModifications(flawNum) < numberOfModifications(minFlaw)
+
+      if (better) {
+        minFlaw = flawNum
+        isAbstract = newFlawAbstract
+      }
+
+      flawNum += 1
+    }
+
+    minFlaw
+  }
+}
+
+
 case class AbstractFirstWithDeferred(deferred: Set[Int]) extends EfficientFlawSelector {
   override def selectFlaw(plan: EfficientPlan, flaws: Array[EfficientFlaw], numberOfModifications: Array[Int]): Int = {
 
