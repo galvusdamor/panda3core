@@ -38,7 +38,7 @@ case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends D
     }).toMap
   }
 
-  val mutexes: Array[Array[(Int, Int)]] = {
+  lazy val mutexes: Array[Array[(Int, Int)]] = {
     val mutex = new Array[Array[(Int, Int)]](domain.tasks.length)
     val topOrd = condensation.topologicalOrdering.get.reverse
 
