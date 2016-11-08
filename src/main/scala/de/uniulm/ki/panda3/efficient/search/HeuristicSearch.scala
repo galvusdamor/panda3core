@@ -17,8 +17,8 @@ import scala.collection.mutable.ArrayBuffer
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], pruning: Array[Filter], flawSelector: EfficientFlawSelector, addNumberOfPlanSteps: Boolean, addDepth: Boolean,
-                                    continueOnSolution: Boolean, invertCosts: Boolean = false) extends EfficientSearchAlgorithm[Payload] {
+case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], weight: Double, pruning: Array[Filter], flawSelector: EfficientFlawSelector, addNumberOfPlanSteps: Boolean,
+                                    addDepth: Boolean, continueOnSolution: Boolean, invertCosts: Boolean = false) extends EfficientSearchAlgorithm[Payload] {
 
   override def startSearch(domain: EfficientDomain, initialPlan: EfficientPlan, nodeLimit: Option[Int], timeLimit: Option[Int], releaseEvery: Option[Int], printSearchInfo: Boolean,
                            buildTree: Boolean, informationCapsule: InformationCapsule, timeCapsule: TimeCapsule):
@@ -165,7 +165,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], prun
                 //val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
                 val distanceValue = ((if (addNumberOfPlanSteps) newPlan.numberOfPrimitivePlanSteps else 0) + (if (addDepth) depth + 1 else 0)) * (if (invertCosts) -1 else 1)
                 val (h, newPayload) = heuristic.computeHeuristic(newPlan, myNode.payload, actualModifications(modNum), depth)
-                val heuristicValue = distanceValue + h
+                val heuristicValue = distanceValue + 2 * h
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
                 assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps)
@@ -206,10 +206,16 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], prun
     val resultSemaphore = new Semaphore(0)
 
 
-    new Thread(new Runnable {
+    val thread = new Thread(new Runnable {
       override def run(): Unit = {
         timeCapsule start SEARCH
-        heuristicSearch() // run the search, it will produce its results as side effects
+        try {
+          heuristicSearch() // run the search, it will produce its results as side effects
+        } catch {
+          case t: Throwable =>
+            t.printStackTrace()
+            informationCapsule.set(ERROR, "true")
+        }
         timeCapsule stop SEARCH
 
 
@@ -218,8 +224,28 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], prun
         semaphore.release()
 
       }
-    }).start()
+    })
 
-    (root, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result }), AbortFunction({ _ => abort = true }))
+    val resultFunction = ResultFunction(
+      { _ =>
+        // start the main worker thread which does the actual planning
+        thread.start()
+
+        new Thread(new Runnable {
+          override def run(): Unit = {
+            // wait timelimit + 10 seconds
+            Thread.sleep((timeLimit.getOrElse(Int.MaxValue).toLong + 10) * 1000)
+            resultSemaphore.release()
+          }
+        })
+
+        resultSemaphore.acquire()
+
+        result
+      })
+
+
+
+    (root, semaphore, resultFunction, AbortFunction({ _ => abort = true }))
   }
 }

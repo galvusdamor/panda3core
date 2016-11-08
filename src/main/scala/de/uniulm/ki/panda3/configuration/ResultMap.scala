@@ -88,6 +88,7 @@ object Information {
   val PROBLEM_NAME = "00 global:01:problem"
   val RANDOM_SEED  = "00 global:02:randomseed"
   val SOLVED_STATE = "00 global:90:planner result"
+  val ERROR        = "00 global:99:error"
 
   val ACYCLIC         = "02 properties:01:acyclic"
   val MOSTLY_ACYCLIC  = "02 properties:02:mostly acyclic"

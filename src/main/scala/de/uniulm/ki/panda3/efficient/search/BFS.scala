@@ -139,10 +139,17 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
     val resultSemaphore = new Semaphore(0)
 
 
-    new Thread(new Runnable {
+
+    val thread = new Thread(new Runnable {
       override def run(): Unit = {
         timeCapsule start SEARCH
-        bfs() // run the search, it will produce its results as side effects
+        try {
+          bfs() // run the search, it will produce its results as side effects
+        } catch {
+          case t: Throwable =>
+            t.printStackTrace()
+            informationCapsule.set(ERROR, "true")
+        }
         timeCapsule stop SEARCH
 
 
@@ -151,8 +158,28 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
         semaphore.release()
 
       }
-    }).start()
+    })
 
-    (root, semaphore, ResultFunction({ _ => resultSemaphore.acquire(); result match {case Some(p) => p :: Nil; case _ => Nil}}), AbortFunction({ _ => abort = true }))
+    val resultFunction = ResultFunction(
+      { _ =>
+        // start the main worker thread which does the actual planning
+        thread.start()
+
+        new Thread(new Runnable {
+          override def run(): Unit = {
+            // wait timelimit + 10 seconds
+            Thread.sleep((timeLimit.getOrElse(Int.MaxValue).toLong + 10) * 1000)
+            resultSemaphore.release()
+          }
+        })
+
+        resultSemaphore.acquire()
+
+        result match {case Some(p) => p :: Nil; case _ => Nil}
+      })
+
+
+
+    (root, semaphore, resultFunction, AbortFunction({ _ => abort = true }))
   }
 }

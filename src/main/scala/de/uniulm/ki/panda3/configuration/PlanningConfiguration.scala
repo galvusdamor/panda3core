@@ -188,7 +188,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                                                       informationCapsule, timeCapsule)
               case DijkstraType | DFSType                         =>
                 // just use the zero heuristic
-                val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, Array(), flawSelector, addNumberOfPlanSteps = true, addDepth = false,
+                val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, 0, Array(), flawSelector, addNumberOfPlanSteps = true, addDepth = false,
                                                                        continueOnSolution = search.continueOnSolution,
                                                                        invertCosts = search.searchAlgorithm == DFSType)
 
@@ -197,7 +197,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                             search.printSearchInfo,
                                             postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                             informationCapsule, timeCapsule)
-              case AStarActionsType | AStarDepthType | GreedyType =>
+              case AStarActionsType(_) | AStarDepthType(_) | GreedyType =>
                 // prepare the heuristic
                 val heuristicInstance: EfficientHeuristic[_] = search.heuristic match {
                   case Some(heuristic) =>
@@ -266,6 +266,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                   case None            => throw new UnsupportedOperationException("In order to use a heuristic search procedure, a heuristic must be defined.")
                 }
 
+                val weight = algo match {
+                  case AStarActionsType(w) => w
+                  case AStarDepthType(w)  => w
+                  case GreedyType => 1
+                }
+
                 // prepare filters
                 val filters = search.pruningTechniques map {
                   case TreeFFFilter                      => filter.TreeFF(wrapper.efficientDomain)
@@ -273,15 +279,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 } toArray
 
                 val useDepthCosts = algo match {
-                  case AStarDepthType => true;
+                  case AStarDepthType(_) => true
                   case _              => false
                 }
                 val useActionCosts = algo match {
-                  case AStarActionsType => true;
+                  case AStarActionsType(_) => true
                   case _                => false
                 }
 
-                val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, filters, flawSelector, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts,
+                val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, weight, filters, flawSelector, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts,
                                                                        continueOnSolution = search.continueOnSolution)
                 heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                             search.nodeLimit, search.timeLimit, releaseSemaphoreEvery,
@@ -338,19 +344,22 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings              => timeCapsule
       case SearchStatus                   =>
-        val determinedSearchSate = if (result.nonEmpty) SearchState.SOLUTION
-        else if (timeCapsule.integralDataMap().contains(Timings.SEARCH) && timeCapsule.integralDataMap()(Timings.SEARCH) >= 1000 * searchConfiguration.timeLimit.getOrElse(Integer.MAX_VALUE /
-                                                                                                                                                                             1000))
-          SearchState.TIMEOUT
-        else {
-          searchConfiguration match {
-            case search: PlanBasedSearch =>
-              if (search.nodeLimit.isEmpty || search.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
-                SearchState.UNSOLVABLE
-              else SearchState.INSEARCH
-            case _                       => SearchState.INSEARCH
+        val determinedSearchSate =
+          if (informationCapsule.dataMap().contains(Information.ERROR)) SearchState.INSEARCH
+          else if (result.nonEmpty) SearchState.SOLUTION
+          else if (timeCapsule.integralDataMap().contains(Timings.SEARCH) && timeCapsule.integralDataMap()(Timings.SEARCH) >= 1000 * searchConfiguration.timeLimit
+            .getOrElse(Integer.MAX_VALUE /
+                         1000))
+            SearchState.TIMEOUT
+          else {
+            searchConfiguration match {
+              case search: PlanBasedSearch =>
+                if (search.nodeLimit.isEmpty || search.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
+                  SearchState.UNSOLVABLE
+                else SearchState.INSEARCH
+              case _                       => SearchState.INSEARCH
+            }
           }
-        }
         // write search state into the information capsule
         informationCapsule.set(Information.SOLVED_STATE, determinedSearchSate.toString)
 
@@ -690,9 +699,11 @@ object BFSType extends SearchAlgorithmType
 
 object DFSType extends SearchAlgorithmType
 
-object AStarActionsType extends SearchAlgorithmType
+sealed trait WeightedSearchAlgorithmType extends SearchAlgorithmType{  def weight : Double}
 
-object AStarDepthType extends SearchAlgorithmType
+case class AStarActionsType(weight: Double) extends WeightedSearchAlgorithmType
+
+case class AStarDepthType(weight: Double) extends WeightedSearchAlgorithmType
 
 object GreedyType extends SearchAlgorithmType
 

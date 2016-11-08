@@ -137,9 +137,9 @@ object Main {
 
 
     } else PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = true),
+                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = false),
                                  PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                            compileOrderInMethods = Some(AllOrderings),
+                                                            compileOrderInMethods = None,
                                                             splitIndependedParameters = false,
                                                             liftedReachability = true, groundedReachability = false, planningGraph = true,
                                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
@@ -151,7 +151,9 @@ object Main {
                                  //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
                                  //PlanBasedSearch(None, None, BFSType, None, Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(LiftedTDGMinimumADD(NeverRecompute)), Nil, UMCPFlaw),
-                                 PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(UMCPHeuristic), Nil, UMCPFlaw),
+                                 //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(UMCPHeuristic), Nil, UMCPFlaw),
+                                 PlanBasedSearch(None, Some(30 * 60), AStarActionsType(1), Some(LiftedTDGMinimumAction(NeverRecompute)), Nil, LCFR),
+                                 //PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(TDGMinimumAction), Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(ADD), LCFR),
                                  //ProgressionSearch(Some(30 * 60)),
                                  //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), planLength, Some(planLength)),
