@@ -50,5 +50,13 @@ lazy val monroe = (project in (file("assembly") / "monroe")).settings(assemblySe
             mainClass in assembly := Some("de.uniulm.ki.panda3.MonroeMain")
           )
 
+lazy val csvExtractor = (project in (file("assembly") / "csvExtractor")).settings(assemblySettings: _*).
+  settings(
+            target := file("assembly") / "csvExtractor",
+            assemblyJarName in assembly := "panda3csvExtractor.jar",
+            mainClass in assembly := Some("de.uniulm.ki.util.collectPlanningInfo")
+          )
+
+
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 scalastyleConfig := baseDirectory.value / "project" / "scalastyle_config.xml"

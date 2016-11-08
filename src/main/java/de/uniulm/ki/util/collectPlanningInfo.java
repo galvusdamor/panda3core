@@ -17,8 +17,8 @@ public class collectPlanningInfo {
 //        String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/verification.csv";
         //String inputFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random/greedy-imp-random.log";
         //String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random/greedy-imp-random.csv";
-        String inputFile = "foo";
-        String outFile = "foo.csv";
+        String inputFile = args[0]; //"foo";
+        String outFile = args[1]; // "foo.csv";
         FileReader fr = new FileReader(inputFile);
         BufferedReader br = new BufferedReader(fr);
 
@@ -87,9 +87,9 @@ public class collectPlanningInfo {
                 String val = "";
                 if (exp.containsKey(key)) {
                     val = exp.get(key);
-                } else if (key.equals(PriorityQueueSearch.STATUS)) {
+                } /*else if (key.equals(PriorityQueueSearch.STATUS)) {
                     val = "no-search";
-                }
+                }*/
                 if (first) {
                     first = false;
                 } else {
