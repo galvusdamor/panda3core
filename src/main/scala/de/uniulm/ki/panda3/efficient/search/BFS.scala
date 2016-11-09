@@ -27,7 +27,6 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
     val root = new EfficientSearchNode[Unit](0, initialPlan, null, Double.MaxValue)
 
     // variables for the search
-    val initTime: Long = System.currentTimeMillis()
     var nodes: Int = 0 // count the nodes
     var d: Int = 0 // the depth
     var crap: Int = 0 // and how many dead ends we have encountered
@@ -46,8 +45,9 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
     informationCapsule increment NUMBER_OF_NODES
 
     def bfs() = {
+      val initTime: Long = System.currentTimeMillis()
       while (!stack.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
-        initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis()) {
+        initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis() - 50) {
         val (plan, myNode, depth) = stack.pop()
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
 
@@ -165,15 +165,20 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
         // start the main worker thread which does the actual planning
         thread.start()
 
-        new Thread(new Runnable {
+        val killerThread = new Thread(new Runnable {
           override def run(): Unit = {
             // wait timelimit + 10 seconds
             Thread.sleep((timeLimit.getOrElse(Int.MaxValue).toLong + 10) * 1000)
             resultSemaphore.release()
+            thread.stop()
           }
         })
+        killerThread.start()
 
         resultSemaphore.acquire()
+        // just to be on the safe side stop all worker and utility threads
+        killerThread.stop()
+        thread.stop()
 
         result match {case Some(p) => p :: Nil; case _ => Nil}
       })

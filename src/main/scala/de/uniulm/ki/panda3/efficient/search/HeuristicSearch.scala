@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.efficient.search
 
-import java.util.concurrent.Semaphore
+import java.util.concurrent.{TimeUnit, Executors, Semaphore}
 
 import de.uniulm.ki.panda3.configuration.{AbortFunction, EfficientSearchAlgorithm, ResultFunction}
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
@@ -33,7 +33,6 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], weig
     val root = new EfficientSearchNode[Payload](0, initialPlan, null, Double.MaxValue)
 
     // variables for the search
-    val initTime: Long = System.currentTimeMillis()
     var lastReportTime: Long = System.currentTimeMillis()
     var nodes: Int = 0 // count the nodes
     var recentNodes: Int = 0 // count the nodes
@@ -54,6 +53,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], weig
 
 
     def heuristicSearch() = {
+      val initTime: Long = System.currentTimeMillis()
       while (searchQueue.nonEmpty && (continueOnSolution || result.isEmpty) && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
         initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis() - 50) {
         val (myNode, depth) = searchQueue.dequeue()
@@ -203,6 +203,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], weig
       }
       semaphore.release()
     }
+
     val resultSemaphore = new Semaphore(0)
 
 
@@ -220,8 +221,8 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], weig
 
 
         // notify waiting threads
-        resultSemaphore.release()
         semaphore.release()
+        resultSemaphore.release()
 
       }
     })
@@ -231,15 +232,22 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], weig
         // start the main worker thread which does the actual planning
         thread.start()
 
-        new Thread(new Runnable {
+        val killerThread = new Thread(new Runnable {
           override def run(): Unit = {
             // wait timelimit + 10 seconds
             Thread.sleep((timeLimit.getOrElse(Int.MaxValue).toLong + 10) * 1000)
             resultSemaphore.release()
+            thread.stop()
           }
         })
+        killerThread.start()
+
 
         resultSemaphore.acquire()
+
+        // just to be on the safe side stop all worker and utility threads
+        killerThread.stop()
+        thread.stop()
 
         result
       })

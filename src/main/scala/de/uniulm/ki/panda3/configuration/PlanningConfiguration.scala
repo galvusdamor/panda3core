@@ -181,12 +181,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = search.searchAlgorithm match {
             case algo => algo match {
-              case BFSType                                        => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
-                                                                                                      search.nodeLimit, search.timeLimit, releaseSemaphoreEvery,
-                                                                                                      search.printSearchInfo,
-                                                                                                      postprocessingConfiguration.resultsToProduce contains SearchSpace,
-                                                                                                      informationCapsule, timeCapsule)
-              case DijkstraType | DFSType                         =>
+              case BFSType                                              => efficient.search.BFS.startSearch(wrapper.efficientDomain, efficientInitialPlan,
+                                                                                                            search.nodeLimit, search.timeLimit, releaseSemaphoreEvery,
+                                                                                                            search.printSearchInfo,
+                                                                                                            postprocessingConfiguration.resultsToProduce contains SearchSpace,
+                                                                                                            informationCapsule, timeCapsule)
+              case DijkstraType | DFSType                               =>
                 // just use the zero heuristic
                 val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, 0, Array(), flawSelector, addNumberOfPlanSteps = true, addDepth = false,
                                                                        continueOnSolution = search.continueOnSolution,
@@ -268,8 +268,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
                 val weight = algo match {
                   case AStarActionsType(w) => w
-                  case AStarDepthType(w)  => w
-                  case GreedyType => 1
+                  case AStarDepthType(w)   => w
+                  case GreedyType          => 1
                 }
 
                 // prepare filters
@@ -280,11 +280,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
                 val useDepthCosts = algo match {
                   case AStarDepthType(_) => true
-                  case _              => false
+                  case _                 => false
                 }
                 val useActionCosts = algo match {
                   case AStarActionsType(_) => true
-                  case _                => false
+                  case _                   => false
                 }
 
                 val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, weight, filters, flawSelector, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts,
@@ -294,7 +294,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                             search.printSearchInfo,
                                             postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                             informationCapsule, timeCapsule)
-              case _                                              => throw new UnsupportedOperationException("Any other efficient search algorithm besides BFS is not supported.")
+              case _                                                    => throw new UnsupportedOperationException("Any other efficient search algorithm besides BFS is not supported.")
             }
           }
 
@@ -347,9 +347,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         val determinedSearchSate =
           if (informationCapsule.dataMap().contains(Information.ERROR)) SearchState.INSEARCH
           else if (result.nonEmpty) SearchState.SOLUTION
-          else if (timeCapsule.integralDataMap().contains(Timings.SEARCH) && timeCapsule.integralDataMap()(Timings.SEARCH) >= 1000 * searchConfiguration.timeLimit
-            .getOrElse(Integer.MAX_VALUE /
-                         1000))
+          else if (timeCapsule.integralDataMap().contains(Timings.SEARCH) && timeCapsule.integralDataMap()(Timings.SEARCH) >=
+            1000 * searchConfiguration.timeLimit.getOrElse(Integer.MAX_VALUE / 1000))
             SearchState.TIMEOUT
           else {
             searchConfiguration match {
@@ -699,7 +698,7 @@ object BFSType extends SearchAlgorithmType
 
 object DFSType extends SearchAlgorithmType
 
-sealed trait WeightedSearchAlgorithmType extends SearchAlgorithmType{  def weight : Double}
+sealed trait WeightedSearchAlgorithmType extends SearchAlgorithmType {def weight: Double}
 
 case class AStarActionsType(weight: Double) extends WeightedSearchAlgorithmType
 
