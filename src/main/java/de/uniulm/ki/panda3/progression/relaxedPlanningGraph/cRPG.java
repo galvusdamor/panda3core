@@ -57,82 +57,86 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
     }
 
+    boolean topDownReachability = false;
+
     public cRPG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, Set<GroundTask> allActions) {
 
         long time = System.currentTimeMillis();
         System.out.print("Init composition RPG heuristic");
 
         cRPG.numOperators = createMethodLookupTable(methods);
-        this.reachability = new BitSet(cRPG.numOperators);
-        this.reachability.set(0, this.reachability.size() - 1, true);
+        if (topDownReachability) {
+            this.reachability = new BitSet(cRPG.numOperators);
+            this.reachability.set(0, this.reachability.size() - 1, true);
+        }
         createTaskLookupTable(allActions, getGroundTasks(methods));
 
         Map<GroundTask, Set<GroundTask>> reachableTasksFrom = new HashMap<>();
         //Map<GroundTask, Set<GroundTask>> parent = new HashMap<>();
         //LinkedList<GroundTask> doTasks = new LinkedList<>();
-
-        long time42 = System.currentTimeMillis();
-        for (Task k : methods.keySet()) {
-            HashMap<GroundTask, List<method>> methodLists = methods.get(k);
-            for (GroundTask t : methodLists.keySet()) {
-                if (!reachableTasksFrom.containsKey(t)) {
-                    reachableTasksFrom.put(t, new HashSet<>());
-                }
-                Set<GroundTask> subtasks = reachableTasksFrom.get(t);
-                List<method> methodsT = methodLists.get(t);
-                for (method mths : methodsT) {
-                    for (GroundTask gt : mths.tasks) {
-                        subtasks.add(gt);
+        if (topDownReachability) {
+            long time42 = System.currentTimeMillis();
+            for (Task k : methods.keySet()) {
+                HashMap<GroundTask, List<method>> methodLists = methods.get(k);
+                for (GroundTask t : methodLists.keySet()) {
+                    if (!reachableTasksFrom.containsKey(t)) {
+                        reachableTasksFrom.put(t, new HashSet<>());
+                    }
+                    Set<GroundTask> subtasks = reachableTasksFrom.get(t);
+                    List<method> methodsT = methodLists.get(t);
+                    for (method mths : methodsT) {
+                        for (GroundTask gt : mths.tasks) {
+                            subtasks.add(gt);
+                        }
                     }
                 }
             }
-        }
-        System.out.println("\nfirst " + (System.currentTimeMillis() - time42));
-        time42 = System.currentTimeMillis();
+            System.out.println("\nfirst " + (System.currentTimeMillis() - time42));
+            time42 = System.currentTimeMillis();
 
-        boolean changed = true;
-        while (changed) {
-            changed = false;
-            for (GroundTask k : reachableTasksFrom.keySet()) {
-                Set<GroundTask> tasks = reachableTasksFrom.get(k);
-                Set<GroundTask> temp = new HashSet<>();
-                int before = tasks.size();
-                for (GroundTask subT : tasks) {
-                    if (reachableTasksFrom.containsKey(subT)) {
-                        temp.addAll(reachableTasksFrom.get(subT));
+            boolean changed = true;
+            while (changed) {
+                changed = false;
+                for (GroundTask k : reachableTasksFrom.keySet()) {
+                    Set<GroundTask> tasks = reachableTasksFrom.get(k);
+                    Set<GroundTask> temp = new HashSet<>();
+                    int before = tasks.size();
+                    for (GroundTask subT : tasks) {
+                        if (reachableTasksFrom.containsKey(subT)) {
+                            temp.addAll(reachableTasksFrom.get(subT));
+                        }
                     }
-                }
-                tasks.addAll(temp);
-                if (before < tasks.size()) {
-                    changed = true;
-                }
-            }
-        }
-        System.out.println("sec " + (System.currentTimeMillis() - time42));
-        time42 = System.currentTimeMillis();
-
-        Map<GroundTask, Set<Integer>> reachableFrom = new HashMap<>();
-        for (GroundTask t : reachableTasksFrom.keySet()) {
-            Set<Integer> reachableOperators = new HashSet<>();
-            reachableFrom.put(t, reachableOperators);
-            Set<GroundTask> reachableTasks = reachableTasksFrom.get(t);
-            for (method m : methods.get(t.task()).get(t)) {
-                reachableOperators.add(MethodToIndex.get(m));
-            }
-            for (GroundTask reachableTask : reachableTasks) {
-                if (reachableTask.task().isPrimitive()) {
-                    reachableOperators.add(operators.ActionToIndex.get(reachableTask));
-                } else {
-                    for (method m : methods.get(reachableTask.task()).get(reachableTask)) {
-                        reachableOperators.add(MethodToIndex.get(m));
+                    tasks.addAll(temp);
+                    if (before < tasks.size()) {
+                        changed = true;
                     }
                 }
             }
+            System.out.println("sec " + (System.currentTimeMillis() - time42));
+            time42 = System.currentTimeMillis();
+
+            Map<GroundTask, Set<Integer>> reachableFrom = new HashMap<>();
+            for (GroundTask t : reachableTasksFrom.keySet()) {
+                Set<Integer> reachableOperators = new HashSet<>();
+                reachableFrom.put(t, reachableOperators);
+                Set<GroundTask> reachableTasks = reachableTasksFrom.get(t);
+                for (method m : methods.get(t.task()).get(t)) {
+                    reachableOperators.add(MethodToIndex.get(m));
+                }
+                for (GroundTask reachableTask : reachableTasks) {
+                    if (reachableTask.task().isPrimitive()) {
+                        reachableOperators.add(operators.ActionToIndex.get(reachableTask));
+                    } else {
+                        for (method m : methods.get(reachableTask.task()).get(reachableTask)) {
+                            reachableOperators.add(MethodToIndex.get(m));
+                        }
+                    }
+                }
+            }
+
+            System.out.println("third " + (System.currentTimeMillis() - time42));
+            cRPG.reachableFrom = reachableFrom;
         }
-
-        System.out.println("third " + (System.currentTimeMillis() - time42));
-        cRPG.reachableFrom = reachableFrom;
-
         cRPG.numHtnStateFeatures = operators.numStateFeatures + cRPG.numOperators; // action-task-facts are true one layer after the action, this can done due to the 1-to-1 correspondence
 
         cRPG.prec2task = new int[numHtnStateFeatures][]; // pointers from literals to tasks that have this literal as precondition
@@ -365,7 +369,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             while (!changedLiterals.isEmpty()) {
                 final int addedLiteral = changedLiterals.removeFirst();
                 for (int actionWithThisPrec : prec2task[addedLiteral]) {
-                    if (!this.reachability.get(actionWithThisPrec)) {
+                    if ((topDownReachability) && (!this.reachability.get(actionWithThisPrec))) {
                         continue; // unreachable via hierarchy
                     }
                     numOfUnfulfilledPrecs[actionWithThisPrec]--;
@@ -379,19 +383,21 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             // operator-loop
             for (int newlyApplicableAction : newlyApplicableActions) {
                 boolean reachable = false;
-                reachabilityloop:
-                for (GroundTask htnTask : allTasksInNet) {
-                    if (htnTask.task().isPrimitive()) {
-                        if (operators.ActionToIndex.get(htnTask) == newlyApplicableAction) {
+                if (topDownReachability) {
+                    reachabilityloop:
+                    for (GroundTask htnTask : allTasksInNet) {
+                        if (htnTask.task().isPrimitive()) {
+                            if (operators.ActionToIndex.get(htnTask) == newlyApplicableAction) {
+                                reachable = true;
+                                break reachabilityloop;
+                            }
+                        } else if (cRPG.reachableFrom.get(htnTask).contains(newlyApplicableAction)) {
                             reachable = true;
                             break reachabilityloop;
                         }
-                    } else if (cRPG.reachableFrom.get(htnTask).contains(newlyApplicableAction)) {
-                        reachable = true;
-                        break reachabilityloop;
                     }
                 }
-                if (reachable) {
+                if ((!topDownReachability) || (reachable)) {
                     for (int effect : addLists[newlyApplicableAction]) {
                         if (firstLayerWithFact[effect] < 0) {
                             changedLiterals.add(effect);
@@ -538,7 +544,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
     @Override
     public htnGroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps, method m) {
         cRPG crpg = new cRPG();
-        crpg.reachability = (BitSet) this.reachability.clone();
+        if (topDownReachability)
+            crpg.reachability = (BitSet) this.reachability.clone();
         crpg.build(tn);
         return crpg;
     }
@@ -546,7 +553,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
     @Override
     public htnGroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps) {
         cRPG crpg = new cRPG();
-        crpg.reachability = (BitSet) this.reachability.clone();
+        if (topDownReachability)
+            crpg.reachability = (BitSet) this.reachability.clone();
         crpg.build(tn);
         return crpg;
     }
