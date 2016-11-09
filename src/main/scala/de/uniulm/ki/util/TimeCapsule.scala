@@ -30,5 +30,10 @@ class TimeCapsule extends DataCapsule {
     currentAccumulatedTime.put(activity, newTime)
   }
 
-  override def dataMap(): Map[String, String] = currentAccumulatedTime.toMap map {case (a,b) => a -> b.toString}
+  def stopOrIgnore(activity: String): Unit = {
+    startOrLetRun(activity)
+    stop(activity)
+  }
+
+  override def dataMap(): Map[String, String] = currentAccumulatedTime.toMap map { case (a, b) => a -> b.toString }
 }
