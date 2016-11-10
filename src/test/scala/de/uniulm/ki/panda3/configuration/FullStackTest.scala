@@ -43,7 +43,9 @@ class FullStackTest extends FlatSpec {
       ("lifted-MMESCC", lifted, PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumModificationWithCycleDetection), Nil, LCFR)) ::
       ("lifted-ADD", lifted, PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD), Nil, LCFR)) ::
       ("lifted-ActionCount", lifted, PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumAction), Nil, LCFR)) ::
-      ("PRO", grounded, ProgressionSearch(Some(30 * 60))) ::
+      ("PRO-cRPG", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPG))) ::
+      ("PRO-cRPGHTN", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPGHTN))) ::
+      ("PRO-greedyProgression", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(GreedyProgression))) ::
       Nil
 
 
