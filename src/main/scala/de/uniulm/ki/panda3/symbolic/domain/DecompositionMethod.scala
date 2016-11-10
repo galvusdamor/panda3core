@@ -55,7 +55,7 @@ trait DecompositionMethod extends DomainUpdatable {
     case NotOfSort(vari, sort)           => !(sort.elements contains instantiation(vari))
   }
 
-  override final lazy val hashCode: Int = abstractTask.name.hashCode + subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode)*13 })
+  override final lazy val hashCode: Int = abstractTask.name.hashCode + subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode) * 13 })
 }
 
 
@@ -206,8 +206,8 @@ case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod,
     this.decompositionMethod.equals(that.decompositionMethod) && this.variableBinding == that.variableBinding
   } else false
 
-  override final lazy val hashCode: Int = decompositionMethod.abstractTask.name.hashCode + variableBinding.foldLeft(0)({ case (h, (v, c)) => ((h + c.hashCode)*13  + v.hashCode)*13 }) +
-    decompositionMethod.subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode)*13 })
+  override final lazy val hashCode: Int = decompositionMethod.abstractTask.name.hashCode + variableBinding.toSeq.sortBy({case (v,c) => v.hashCode}).foldLeft(0)(
+    { case (h, (v, c)) => ((h + c.hashCode) * 13 + v.hashCode) * 13 }) + decompositionMethod.subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode) * 13 })
 
   //decompositionMethod.hashCode()
 }
