@@ -72,7 +72,7 @@ case class BucketAccessMap(originalMap: Map[Array[Int], Double]) {
 
   def apply(key: Array[Int]): Double = {
     val index = getIndex(key)
-    if (index >= 0) finalArray(index) else Double.MaxValue
+    if (index >= 0 && finalArray.size > 0) finalArray(index) else Double.MaxValue
   }
 
 
