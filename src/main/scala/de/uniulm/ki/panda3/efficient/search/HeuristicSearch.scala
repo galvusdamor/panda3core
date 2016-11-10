@@ -249,6 +249,8 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], weig
         killerThread.stop()
         thread.stop()
 
+        timeCapsule stopOrIgnore SEARCH
+
         result
       })
 

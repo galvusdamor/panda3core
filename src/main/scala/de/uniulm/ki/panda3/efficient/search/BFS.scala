@@ -180,6 +180,8 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
         killerThread.stop()
         thread.stop()
 
+        timeCapsule stopOrIgnore SEARCH
+
         result match {case Some(p) => p :: Nil; case _ => Nil}
       })
 
