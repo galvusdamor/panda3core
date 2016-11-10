@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.progression.htn;
 
+import de.uniulm.ki.panda3.configuration.*;
 import de.uniulm.ki.panda3.progression.bottomUpGrounder.groundingUtil;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.*;
@@ -33,16 +34,16 @@ import java.util.concurrent.ExecutionException;
 
 /**
  * Created by dhoeller on 01.07.16.
- * <p/>
+ * <p>
  * - The representation of actions' preconditions and effects via Bit-Vectors might be suboptimal
  * whenever there are only a few state features effected - maybe implement a version that only
  * represents the states as Bit-Vectors, but uses Booleans for preconditions and effects.
  * (see also the efficientRPG-Class)
- * <p/>
+ * <p>
  * - Especially the Bit-Vector representation seems to be suboptimal since it needs to copy the
  * vector before applying an AND-Operator and a comparison - have a look at the respective class
  * and look for more efficient implementations (but have a look at the comment above, first).
- * <p/>
+ * <p>
  * - How to implement different search configurations? Via if-then-else? Or via factory-class to
  * help jump-prediction? A search node could produce its child by a next()-method this would
  * also be nice when having an iterative rpg-calculaton.
@@ -54,8 +55,11 @@ public class htnPlanningInstance {
     public static Random random;
     public static int randomSeed = 42;
 
+
     public boolean plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
-                     InformationCapsule ic, TimeCapsule tc, long timelimitinMilliSec) throws ExecutionException, InterruptedException {
+                        InformationCapsule ic, TimeCapsule tc,
+                        SearchHeuristic heuristic, boolean doBFS,
+                        boolean aStar, boolean deleteRelaxed, long quitAfterMs) throws ExecutionException, InterruptedException {
         random = new Random(randomSeed);
         long totaltime = System.currentTimeMillis();
         long time = System.currentTimeMillis();
@@ -107,23 +111,28 @@ public class htnPlanningInstance {
         }
         ProgressionNetwork initialNode = new ProgressionNetwork(s0._1(), initialTasks);
 
-        // todo: change heuristic here
-        //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        //initialNode.heuristic = new cRPG(operators.methods, allActions);
-        //initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
-        initialNode.heuristic = new greedyProgression();
-        //initialNode.heuristic = new delRelaxedHTN(operators.methods, allActions);
-        //initialNode.heuristic = new proBFS();
-
+        if (doBFS)
+            initialNode.heuristic = new proBFS();
+        else if (heuristic instanceof SimpleCompositionRPG$)
+            initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
+        else if (heuristic instanceof CompositionRPG$)
+            initialNode.heuristic = new cRPG(operators.methods, allActions);
+        else if (heuristic instanceof CompositionRPGHTN$)
+            initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
+        else if (heuristic instanceof GreedyProgression$)
+            initialNode.heuristic = new greedyProgression();
+        else if (heuristic instanceof DeleteRelaxedHTN$)
+            initialNode.heuristic = new delRelaxedHTN(operators.methods, allActions);
+        else {
+            throw new IllegalArgumentException("Heuristic " + heuristic + " is not supported");
+        }
         initialNode.heuristic.build(initialNode);
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
         ProgressionSearchRoutine routine;
-        boolean aStar = false;
-        boolean deleteRelaxed = false;
         boolean printOutput = true;
         boolean findShortest = false;
-        long quitAfterMs = timelimitinMilliSec; //30*60*1000; //300000;
+
 
         routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput, findShortest);
         //routine = new EnforcedHillClimbing();

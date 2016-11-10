@@ -316,9 +316,21 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           at -> JavaConversions.setAsJavaSet(ms map { m => GroundedDecompositionMethod(m, Map()) } toSet)
         }
 
+
+        val (doBFS, aStar) = progression.searchAlgorithm match {
+          case BFSType                          => (true, false)
+          case DFSType                          => assert(progression.heuristic.isEmpty); (false, false)
+          case AStarActionsType(weight: Double) => assert(weight == 1); (false, true)
+          case AStarDepthType(weight: Double)   => assert(false) ; (false, false)
+          case GreedyType                       => (false, false)
+          case DijkstraType                     => assert(false); (false, false)
+        }
+
+
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val solutionFound = progressionInstance.plan(domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),
                                                        JavaConversions.setAsJavaSet(groundLiterals.toSet), informationCapsule, timeCapsule,
+                                                       progression.heuristic.getOrElse(null), doBFS, aStar, progression.deleteRelaxed,
                                                        progression.timeLimit.getOrElse(Int.MaxValue).toLong * 1000)
 
           timeCapsule stop TOTAL_TIME
@@ -764,6 +776,18 @@ object ADDReusing extends SearchHeuristic
 object Relax extends SearchHeuristic
 
 
+// PANDAPRO heuristics
+object SimpleCompositionRPG extends SearchHeuristic
+
+object CompositionRPG extends SearchHeuristic
+
+object CompositionRPGHTN extends SearchHeuristic
+
+object GreedyProgression extends SearchHeuristic
+
+object DeleteRelaxedHTN extends SearchHeuristic
+
+
 sealed trait PruningTechnique
 
 object TreeFFFilter extends PruningTechnique
@@ -798,7 +822,10 @@ case class PlanBasedSearch(
                           ) extends SearchConfiguration {
 }
 
-case class ProgressionSearch(timeLimit: Option[Int]) extends SearchConfiguration {}
+case class ProgressionSearch(timeLimit: Option[Int],
+                             searchAlgorithm: SearchAlgorithmType,
+                             heuristic: Option[SearchHeuristic],
+                             deleteRelaxed : Boolean = false) extends SearchConfiguration {}
 
 case class SATSearch(timeLimit: Option[Int],
                      solverType: Solvertype,
