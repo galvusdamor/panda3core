@@ -83,7 +83,7 @@ case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends D
 
     def recomputeLandMarksFor(task: Int): Boolean = {
       val subLandmarks = (domain.taskToPossibleMethods(task) map { _._1.subPlan.planStepTasks.drop(2) } filter { _ forall allowed }).flatten map landmarks
-      val newLandmarks = (if (subLandmarks.isEmpty) BitSet() else (subLandmarks reduce[BitSet] { case (a, b) => a intersect b })) + task
+      val newLandmarks = (if (subLandmarks.isEmpty) BitSet() else subLandmarks.reduce[BitSet]({ case (a, b) => a intersect b })) + task
       val changed = if (newLandmarks.size != landmarks(task).size) true else false
       landmarks(task) = newLandmarks
       changed
