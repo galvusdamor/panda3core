@@ -39,10 +39,10 @@ class FullStackTest extends FlatSpec {
       ("TDGADD-Recompute-Reach", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2), Some(LiftedTDGMinimumADD(ReachabilityRecompute)), Nil, LCFR)) ::
       ("TDGADD-Recompute-CL", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2), Some(LiftedTDGMinimumADD(CausalLinkRecompute)), Nil, LCFR)) ::
       ("lifted-DFS", lifted, PlanBasedSearch(None, Some(30 * 60), DFSType, None, Nil, LCFR)) ::
-      ("lifted-PR", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGPreconditionRelaxation), Nil, LCFR)) ::
-      ("lifted-MMESCC", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGMinimumModificationWithCycleDetection), Nil, LCFR)) ::
-      ("lifted-ADD", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGMinimumADD), Nil, LCFR)) ::
-      ("lifted-ActionCount", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGMinimumAction), Nil, LCFR)) ::
+      ("lifted-PR", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGPreconditionRelaxation()), Nil, LCFR)) ::
+      ("lifted-MMESCC", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGMinimumModificationWithCycleDetection()), Nil, LCFR)) ::
+      ("lifted-ADD", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGMinimumADD()), Nil, LCFR)) ::
+      ("lifted-ActionCount", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGMinimumAction()), Nil, LCFR)) ::
       ("PRO-cRPG", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPG))) ::
       //("PRO-cRPGHTN", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPGHTN))) ::
       //("PRO-greedyProgression", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(GreedyProgression))) ::
