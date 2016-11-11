@@ -136,7 +136,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   /** returns a list containing all declared sorts (i.e. the sorts member of this class) and all sorts that are created ad hoc, e.g. for variables and parameters */
   lazy val declaredAndUnDeclaredSorts: Seq[Sort] = {
-    val taskSorts: Seq[Sort] = tasks flatMap { t => t.parameters map { _.sort } }
+    val taskSorts: Seq[Sort] = (tasks ++ hiddenTasks) flatMap { t => t.parameters map { _.sort } }
     val parameterConstraintSorts: Seq[Sort] = tasks flatMap { t => t.parameterConstraints collect {
       case OfSort(_, s)    => s
       case NotOfSort(_, s) => s

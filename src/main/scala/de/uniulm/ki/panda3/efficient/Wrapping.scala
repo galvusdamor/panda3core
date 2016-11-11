@@ -33,7 +33,10 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
   private val domainConstants           : BiMap[Constant, Int]            = BiMap(symbolicDomain.constants.zipWithIndex)
   private val domainSorts               : BiMap[Sort, Int]                = {
-    val allSorts = (symbolicDomain.declaredAndUnDeclaredSorts ++ (initialPlan.initAndGoal flatMap { _.arguments map { _.sort } })).distinct
+    val initialPlanSorts =
+      (initialPlan.planSteps flatMap { ps => (ps.arguments ++ ps.schema.parameters) map { _.sort } }) ++
+        (initialPlan.variableConstraints.constraints collect { case OfSort(_, s) => s; case NotOfSort(_, s) => s })
+    val allSorts = (symbolicDomain.declaredAndUnDeclaredSorts ++ initialPlanSorts).distinct
     BiMap(allSorts.zipWithIndex)
   }
   private val domainPredicates          : BiMap[Predicate, Int]           = BiMap(symbolicDomain.predicates.zipWithIndex)
@@ -62,7 +65,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
 
   private def computeEfficientTask(task: Task, isInitOrGoal: Boolean): EfficientTask = {
-    val parameterSorts = task.parameters map { v => domainSorts.toMap(v.sort) }
+    val parameterSorts = task.parameters.toArray map { v => domainSorts.toMap(v.sort) }
     val variableMap = task.parameters.zipWithIndex.toMap
     val variableConstraints = task.parameterConstraints map { computeEfficientVariableConstraint(_, variableMap) }
 
