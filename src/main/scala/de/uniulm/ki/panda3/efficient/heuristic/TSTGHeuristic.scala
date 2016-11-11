@@ -14,6 +14,8 @@ trait TSTGHeuristic extends EfficientHeuristic[Unit] {
 
   def domain: EfficientDomain
 
+  val primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]]
+
   lazy val argumentRelaxedTDG = {
     // methods will be represented by negative numbers to avoid clashes
     val methodsToSubTasks = domain.decompositionMethods.zipWithIndex map { case (m, i) => (-i - 1, m.subPlan.planStepTasks.drop(2) toSet) }
@@ -40,7 +42,10 @@ trait TSTGHeuristic extends EfficientHeuristic[Unit] {
     var ps = 1
     while (ps < plan.planStepTasks.length) {
       if (plan.isPlanStepPresentInPlan(ps)) {
-        h += valuation(ps)
+        if (plan.taskOfPlanStep(ps).isPrimitive && primitiveActionInPlanHeuristic.isDefined)
+          h += primitiveActionInPlanHeuristic.get.computeHeuristicByGrounding(ps, plan)
+        else
+          h += valuation(ps)
       }
       ps += 1
     }
@@ -176,39 +181,53 @@ trait LiftedMinimumADD extends TSTGHeuristic {
   }
 }
 
-case class PreComputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain) extends
+case class PreComputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain,
+                                                                                  primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   PreComputationTSTGHeuristic with LiftedMinimumModificationEffortHeuristicWithCycleDetection
 
-case class PreComputingLiftedPreconditionRelaxationTDGHeuristic(domain: EfficientDomain) extends
+case class PreComputingLiftedPreconditionRelaxationTDGHeuristic(domain: EfficientDomain,
+                                                                primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   PreComputationTSTGHeuristic with LiftedPreconditionRelaxationTDGHeuristic
 
-case class PreComputingLiftedMinimumActionCount(domain: EfficientDomain) extends
+case class PreComputingLiftedMinimumActionCount(domain: EfficientDomain,
+                                                primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   PreComputationTSTGHeuristic with LiftedMinimumActionCount
 
-case class PreComputingLiftedMinimumADD(domain: EfficientDomain, addHeuristic: AddHeuristic) extends
+case class PreComputingLiftedMinimumADD(domain: EfficientDomain, addHeuristic: AddHeuristic,
+                                        primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   PreComputationTSTGHeuristic with LiftedMinimumADD
 
-case class ReachabilityRecomputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain) extends
-  ReachabilityRecomputingTSTGHeuristic with LiftedMinimumModificationEffortHeuristicWithCycleDetection
+case class ReachabilityRecomputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain,
+                                                                                             primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None)
+  extends
+    ReachabilityRecomputingTSTGHeuristic with LiftedMinimumModificationEffortHeuristicWithCycleDetection
 
-case class ReachabilityRecomputingLiftedPreconditionRelaxationTDGHeuristic(domain: EfficientDomain) extends
+case class ReachabilityRecomputingLiftedPreconditionRelaxationTDGHeuristic(domain: EfficientDomain,
+                                                                           primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   ReachabilityRecomputingTSTGHeuristic with LiftedPreconditionRelaxationTDGHeuristic
 
-case class ReachabilityRecomputingLiftedMinimumActionCount(domain: EfficientDomain) extends
+case class ReachabilityRecomputingLiftedMinimumActionCount(domain: EfficientDomain,
+                                                           primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   ReachabilityRecomputingTSTGHeuristic with LiftedMinimumActionCount
 
-case class ReachabilityRecomputingLiftedMinimumADD(domain: EfficientDomain, addHeuristic: AddHeuristic) extends
+case class ReachabilityRecomputingLiftedMinimumADD(domain: EfficientDomain, addHeuristic: AddHeuristic,
+                                                   primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   ReachabilityRecomputingTSTGHeuristic with LiftedMinimumADD
 
 
-case class CausalLinkRecomputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain) extends
-  CausalLinkRecomputingTSTGHeuristic with LiftedMinimumModificationEffortHeuristicWithCycleDetection
+case class CausalLinkRecomputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain,
+                                                                                           primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None)
+  extends
+    CausalLinkRecomputingTSTGHeuristic with LiftedMinimumModificationEffortHeuristicWithCycleDetection
 
-case class CausalLinkRecomputingLiftedPreconditionRelaxationTDGHeuristic(domain: EfficientDomain) extends
+case class CausalLinkRecomputingLiftedPreconditionRelaxationTDGHeuristic(domain: EfficientDomain,
+                                                                         primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   CausalLinkRecomputingTSTGHeuristic with LiftedPreconditionRelaxationTDGHeuristic
 
-case class CausalLinkRecomputingLiftedMinimumActionCount(domain: EfficientDomain) extends
+case class CausalLinkRecomputingLiftedMinimumActionCount(domain: EfficientDomain,
+                                                         primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   CausalLinkRecomputingTSTGHeuristic with LiftedMinimumActionCount
 
-case class CausalLinkRecomputingLiftedMinimumADD(domain: EfficientDomain, addHeuristic: AddHeuristic) extends
+case class CausalLinkRecomputingLiftedMinimumADD(domain: EfficientDomain, addHeuristic: AddHeuristic,
+                                                 primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   CausalLinkRecomputingTSTGHeuristic with LiftedMinimumADD

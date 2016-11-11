@@ -19,9 +19,9 @@ object AlwaysZeroHeuristic extends EfficientHeuristic[Unit] {
 
 trait MinimisationOverGroundingsBasedHeuristic[Payload] extends EfficientHeuristic[Payload] {
 
-  protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double
+  def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double
 
-  protected def computeHeuristicByGrounding(planStep: Int, plan: EfficientPlan): Double =
+  def computeHeuristicByGrounding(planStep: Int, plan: EfficientPlan): Double =
     computeHeuristicByGrounding(planStep, new Array[Int](plan.planStepParameters(planStep).length), 0, plan)
 
   private def computeHeuristicByGrounding(planStep: Int, parameter: Array[Int], numberOfChosenParameters: Int, plan: EfficientPlan): Double =

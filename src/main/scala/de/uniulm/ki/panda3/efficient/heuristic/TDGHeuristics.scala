@@ -112,7 +112,7 @@ trait TDGPrimitiveActionValueHeuristic extends TDGHeuristics {
 
   def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double = {
     if (plan.taskOfPlanStep(planStep).isPrimitive && primitiveActionInPlanHeuristic.isDefined) {
-      println(primitiveActionInPlanHeuristic.get.groundingEstimator(plan, planStep, arguments))
+      primitiveActionInPlanHeuristic.get.groundingEstimator(plan, planStep, arguments)
     } else {
       val groundTask = EfficientGroundTask(plan.planStepTasks(planStep), arguments)
       if (!modificationEfforts.contains(groundTask) && planStep != 1) Double.MaxValue
