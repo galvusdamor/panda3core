@@ -58,7 +58,7 @@ object MonroeMain {
                                                                           liftedReachability = true, groundedReachability = false, planningGraph = false,
                                                                           groundedTaskDecompositionGraph = None, //Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = false),
-                                               PlanBasedSearch(None, Some(5 * 60), GreedyType, Some(LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute)), Nil, LCFR),
+                                               PlanBasedSearch(None, Some(5 * 60), GreedyType, LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute) :: Nil, Nil, LCFR),
                                                //SearchConfiguration(None, Some(5), efficientSearch = true, DFSType, None, printSearchInfo = true),
                                                //SearchConfiguration(None, Some(5 * 60), efficientSearch = true, GreedyType, Some(NumberOfFlaws), printSearchInfo =true),
                                                PostprocessingConfiguration(Set(ProcessingTimings,

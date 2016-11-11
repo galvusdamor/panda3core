@@ -27,25 +27,25 @@ class FullStackTest extends FlatSpec {
 
 
   val algos =
-    ("BFS", grounded, PlanBasedSearch(None, Some(30 * 60), BFSType, None, Nil, LCFR)) ::
-      ("DFS", grounded, PlanBasedSearch(None, Some(30 * 60), DFSType, None, Nil, LCFR)) ::
-      ("PR", grounded, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(LiftedTDGPreconditionRelaxation(NeverRecompute)), Nil, LCFR)) ::
-      ("PR-Recompute-Reach", grounded, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(LiftedTDGPreconditionRelaxation(ReachabilityRecompute)), Nil, LCFR)) ::
-      ("PR-Recompute-CL", grounded, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(LiftedTDGPreconditionRelaxation(CausalLinkRecompute)), Nil, LCFR)) ::
-      ("ActionCount", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2), Some(LiftedTDGMinimumAction(NeverRecompute)), Nil, LCFR)) ::
-      ("ActionCount-Recompute-Reach", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2), Some(LiftedTDGMinimumAction(ReachabilityRecompute)), Nil, LCFR)) ::
-      ("ActionCount-Recompute-CL", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2), Some(LiftedTDGMinimumAction(CausalLinkRecompute)), Nil, LCFR)) ::
-      ("TDGADD", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2), Some(LiftedTDGMinimumADD(NeverRecompute)), Nil, LCFR)) ::
-      ("TDGADD-Recompute-Reach", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2), Some(LiftedTDGMinimumADD(ReachabilityRecompute)), Nil, LCFR)) ::
-      ("TDGADD-Recompute-CL", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2), Some(LiftedTDGMinimumADD(CausalLinkRecompute)), Nil, LCFR)) ::
-      ("lifted-DFS", lifted, PlanBasedSearch(None, Some(30 * 60), DFSType, None, Nil, LCFR)) ::
-      ("lifted-PR", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGPreconditionRelaxation()), Nil, LCFR)) ::
-      ("lifted-MMESCC", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGMinimumModificationWithCycleDetection()), Nil, LCFR)) ::
-      ("lifted-ADD", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGMinimumADD()), Nil, LCFR)) ::
-      ("lifted-ActionCount", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2), Some(TDGMinimumAction()), Nil, LCFR)) ::
-      ("PRO-cRPG", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPG))) ::
-      //("PRO-cRPGHTN", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPGHTN))) ::
-      //("PRO-greedyProgression", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(GreedyProgression))) ::
+    ("BFS", grounded, PlanBasedSearch(None, Some(30 * 60), BFSType, Nil, Nil, LCFR)) ::
+      ("DFS", grounded, PlanBasedSearch(None, Some(30 * 60), DFSType, Nil, Nil, LCFR)) ::
+      ("PR", grounded, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2),LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)) ::
+      ("PR-Recompute-Reach", grounded, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2),LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)) ::
+      ("PR-Recompute-CL", grounded, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2),LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil, Nil, LCFR)) ::
+      ("ActionCount", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2),LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)) ::
+      ("ActionCount-Recompute-Reach", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2),LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)) ::
+      ("ActionCount-Recompute-CL", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2),LiftedTDGMinimumAction(CausalLinkRecompute) :: Nil, Nil, LCFR)) ::
+      ("TDGADD", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2),LiftedTDGMinimumADD(NeverRecompute) :: Nil, Nil, LCFR)) ::
+      ("TDGADD-Recompute-Reach", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2),LiftedTDGMinimumADD(ReachabilityRecompute) :: Nil, Nil, LCFR)) ::
+      ("TDGADD-Recompute-CL", grounded, PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2),LiftedTDGMinimumADD(CausalLinkRecompute) :: Nil, Nil, LCFR)) ::
+      ("lifted-DFS", lifted, PlanBasedSearch(None, Some(30 * 60), DFSType, Nil, Nil, LCFR)) ::
+      ("lifted-PR", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2),TDGPreconditionRelaxation() :: Nil, Nil, LCFR)) ::
+      ("lifted-MMESCC", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2),TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR)) ::
+      ("lifted-ADD", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2),TDGMinimumADD() :: Nil, Nil, LCFR)) ::
+      ("lifted-ActionCount", lifted, PlanBasedSearch(None, Some(30 * 60), AStarDepthType(2),TDGMinimumAction() :: Nil, Nil, LCFR)) ::
+      ("PRO-cRPG", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1),Some(CompositionRPG))) ::
+      //("PRO-cRPGHTN", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1),CompositionRPGHTN))) ::
+      //("PRO-greedyProgression", grounded, ProgressionSearch(Some(30 * 60), AStarActionsType(1),GreedyProgression))) ::
       Nil
 
 

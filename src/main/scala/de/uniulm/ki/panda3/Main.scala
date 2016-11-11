@@ -25,13 +25,13 @@ object Main {
 
     println("This is Panda3")
 
-    if (args.length < 2) {
+    /*if (args.length < 2) {
       println("This program needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the random seed.")
       //println("This program needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
       System.exit(1)
     }
     val domFile = args(0)
-    val probFile = args(1)
+    val probFile = args(1)*/
 
     val randomseed = if (args.length == 3) args(2).toInt else 42
     val planLength = randomseed
@@ -50,9 +50,9 @@ object Main {
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Large.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
@@ -149,15 +149,15 @@ object Main {
                                  //PlanBasedSearch(None, None, AStarActionsType(1), Some(TDGMinimumADD), Nil, LCFR),
                                  //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
                                  //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
-                                 PlanBasedSearch(None, None, DFSType, None, Nil, LCFR),
+                                 //PlanBasedSearch(None, None, DFSType, Nil, Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(UMCPHeuristic), Nil, UMCPFlaw),
                                  //PlanBasedSearch(None, Some(5000), AStarActionsType(1), Some(ADD), Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarActionsType(1), Some(NumberOfFlaws), Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(TDGMinimumAction), Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType(1), Some(ADD), Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD(Some(ADDReusing))), Nil, SequentialSelector(LCFR,RandomFlaw(6))),
-                                 //PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD(None)), Nil, LCFR),
-                                 //PlanBasedSearch(None, Some(30 * 60), AStarDepthType(1), Some(LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing))), Nil, LCFR),
+                                 PlanBasedSearch(None, None, AStarDepthType(1), TDGMinimumADD(None) :: Nil, Nil, LCFR),
+                                 //PlanBasedSearch(None, Some(30 * 60), AStarDepthType(1), LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing)) :: Nil, Nil, LCFR),
                                  //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPG)),
                                  //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPGHTN)),
                                  //ProgressionSearch(Some(2), AStarActionsType(1), Some(GreedyProgression)),

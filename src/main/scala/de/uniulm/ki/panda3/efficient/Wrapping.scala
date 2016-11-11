@@ -421,7 +421,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         assert(plan.flaws.size == efficientSearchNode.plan.flaws.length)
 
         plan
-      }, parent, efficientSearchNode.heuristic)
+      }, parent, if (efficientSearchNode.heuristic.length > 0)efficientSearchNode.heuristic(0) else 0)
 
       def computeContentIfNotDirty(unit: Unit): Unit = {
         searchNode.dirty = false

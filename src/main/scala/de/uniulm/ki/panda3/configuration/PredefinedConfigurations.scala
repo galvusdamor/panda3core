@@ -34,38 +34,38 @@ object PredefinedConfigurations {
                              )
 
 
-  val planSearchAStarPR            = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), Some(TDGPreconditionRelaxation()), Nil, LCFR)
-  val planSearchAStarTDGAction     = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(TDGMinimumAction()), Nil, LCFR)
-  val planSearchAStarTDGADD        = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(TDGMinimumADD()), Nil, LCFR)
-  val planSearchAStarTDGADDReusing = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(TDGMinimumADD(Some(ADDReusing))), Nil, LCFR)
+  val planSearchAStarPR            = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), TDGPreconditionRelaxation() :: Nil , Nil, LCFR)
+  val planSearchAStarTDGAction     = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGMinimumAction() :: Nil , Nil, LCFR)
+  val planSearchAStarTDGADD        = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGMinimumADD() :: Nil , Nil, LCFR)
+  val planSearchAStarTDGADDReusing = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGMinimumADD(Some(ADDReusing)) :: Nil , Nil, LCFR)
 
 
-  val planSearchAStarPRLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), Some(LiftedTDGPreconditionRelaxation(NeverRecompute)), Nil, LCFR)
-  val planSearchAStarPRLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), Some(LiftedTDGPreconditionRelaxation(ReachabilityRecompute)), Nil, LCFR)
-  val planSearchAStarPRLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), Some(LiftedTDGPreconditionRelaxation(CausalLinkRecompute)), Nil, LCFR)
+  val planSearchAStarPRLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil , Nil, LCFR)
+  val planSearchAStarPRLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil , Nil, LCFR)
+  val planSearchAStarPRLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil , Nil, LCFR)
 
-  val planSearchAStarActionLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(LiftedTDGMinimumAction(NeverRecompute)), Nil, LCFR)
-  val planSearchAStarActionLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(LiftedTDGMinimumAction(ReachabilityRecompute)), Nil, LCFR)
-  val planSearchAStarActionLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(LiftedTDGMinimumAction(CausalLinkRecompute)), Nil, LCFR)
+  val planSearchAStarActionLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumAction(NeverRecompute) :: Nil , Nil, LCFR)
+  val planSearchAStarActionLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil , Nil, LCFR)
+  val planSearchAStarActionLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumAction(CausalLinkRecompute) :: Nil , Nil, LCFR)
 
-  val planSearchAStarADDLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(LiftedTDGMinimumADD(NeverRecompute)), Nil, LCFR)
-  val planSearchAStarADDLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(LiftedTDGMinimumADD(ReachabilityRecompute)), Nil, LCFR)
-  val planSearchAStarADDLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(LiftedTDGMinimumADD(CausalLinkRecompute)), Nil, LCFR)
+  val planSearchAStarADDLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumADD(NeverRecompute) :: Nil , Nil, LCFR)
+  val planSearchAStarADDLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumADD(ReachabilityRecompute) :: Nil , Nil, LCFR)
+  val planSearchAStarADDLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumADD(CausalLinkRecompute) :: Nil , Nil, LCFR)
 
-  val planSearchAStarADDReusingLiftedPR = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing))), Nil, LCFR)
+  val planSearchAStarADDReusingLiftedPR = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing)) :: Nil , Nil, LCFR)
 
-  val planSearchDijkstra               = PlanBasedSearch(None, Some(globalTimelimit), DijkstraType, None, Nil, LCFR)
-  val planSearchDFS                    = PlanBasedSearch(None, Some(globalTimelimit), DFSType, None, Nil, LCFR)
-  val planSearchBFS                    = PlanBasedSearch(None, Some(globalTimelimit), BFSType, None, Nil, LCFR)
-  val planSearchAStarOpenPreconditions = PlanBasedSearch(None, Some(globalTimelimit), DijkstraType, Some(NumberOfOpenPreconditions), Nil, LCFR)
+  val planSearchDijkstra               = PlanBasedSearch(None, Some(globalTimelimit), DijkstraType, Nil, Nil, LCFR)
+  val planSearchDFS                    = PlanBasedSearch(None, Some(globalTimelimit), DFSType, Nil, Nil, LCFR)
+  val planSearchBFS                    = PlanBasedSearch(None, Some(globalTimelimit), BFSType, Nil, Nil, LCFR)
+  val planSearchAStarOpenPreconditions = PlanBasedSearch(None, Some(globalTimelimit), DijkstraType, NumberOfOpenPreconditions :: Nil , Nil, LCFR)
 
-  val umcpBF = PlanBasedSearch(None, Some(globalTimelimit), BFSType, None, Nil, UMCPFlaw)
-  val umcpDF = PlanBasedSearch(None, Some(globalTimelimit), DFSType, None, Nil, UMCPFlaw)
-  val umcpH  = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Some(UMCPHeuristic), Nil, UMCPFlaw)
+  val umcpBF = PlanBasedSearch(None, Some(globalTimelimit), BFSType, Nil, Nil, UMCPFlaw)
+  val umcpDF = PlanBasedSearch(None, Some(globalTimelimit), DFSType, Nil, Nil, UMCPFlaw)
+  val umcpH  = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, UMCPHeuristic :: Nil , Nil, UMCPFlaw)
 
-  val planSearchAStarADD        = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(ADD), Nil, LCFR)
-  val planSearchAStarADDReusing = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(ADDReusing), Nil, LCFR)
-  val planSearchAStarRelax      = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Some(Relax), Nil, LCFR)
+  val planSearchAStarADD        = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), ADD :: Nil , Nil, LCFR)
+  val planSearchAStarADDReusing = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), ADDReusing :: Nil , Nil, LCFR)
+  val planSearchAStarRelax      = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Relax :: Nil , Nil, LCFR)
 
 
   val searchConfigs = Map(
@@ -105,21 +105,21 @@ object PredefinedConfigurations {
                          )
 
 
-  val planSearchAStarMMESCC           = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), Some(TDGMinimumModificationWithCycleDetection()), Nil, LCFR)
-  val planSearchAStarPRLiftedPRFilter = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), Some(LiftedTDGPreconditionRelaxation(NeverRecompute)),
+  val planSearchAStarMMESCC           = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), TDGMinimumModificationWithCycleDetection() :: Nil , Nil, LCFR)
+  val planSearchAStarPRLiftedPRFilter = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil,
                                                         RecomputeHierarchicalReachability :: Nil, LCFR)
-  val planSearchAStarMMESCCLifted     = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), Some(LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute)), Nil, LCFR)
-  val planSearchAStarActionsLifted    = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), Some(LiftedTDGMinimumAction(NeverRecompute)), Nil, LCFR)
+  val planSearchAStarMMESCCLifted     = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute) :: Nil , Nil, LCFR)
+  val planSearchAStarActionsLifted    = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil , Nil, LCFR)
 
 
-  val planSearchGreedyPR                     = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Some(TDGPreconditionRelaxation()), Nil, LCFR)
-  val planSearchGreedyMMESCC                 = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Some(TDGMinimumModificationWithCycleDetection()), Nil, LCFR)
-  val planSearchGreedyTDGADD                 = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Some(TDGMinimumADD()), Nil, LCFR)
-  val planSearchGreedyPRLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Some(LiftedTDGPreconditionRelaxation(NeverRecompute)), Nil, LCFR)
-  val planSearchGreedyPRLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Some(LiftedTDGPreconditionRelaxation(ReachabilityRecompute)), Nil, LCFR)
-  val planSearchGreedyPRLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Some(LiftedTDGPreconditionRelaxation(CausalLinkRecompute)), Nil, LCFR)
-  val planSearchGreedyPRLiftedPRFilter       = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Some(LiftedTDGPreconditionRelaxation(NeverRecompute)),
+  val planSearchGreedyPR                     = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, TDGPreconditionRelaxation() :: Nil , Nil, LCFR)
+  val planSearchGreedyMMESCC                 = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, TDGMinimumModificationWithCycleDetection() :: Nil , Nil, LCFR)
+  val planSearchGreedyTDGADD                 = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, TDGMinimumADD() :: Nil , Nil, LCFR)
+  val planSearchGreedyPRLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil , Nil, LCFR)
+  val planSearchGreedyPRLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil , Nil, LCFR)
+  val planSearchGreedyPRLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil , Nil, LCFR)
+  val planSearchGreedyPRLiftedPRFilter       = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil,
                                                                RecomputeHierarchicalReachability :: Nil, LCFR)
-  val planSearchGreedyMMESCCLifted           = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Some(LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute)), Nil, LCFR)
-  val planSearchGreedyActionsLifted          = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Some(LiftedTDGMinimumAction(NeverRecompute)), Nil, LCFR)
+  val planSearchGreedyMMESCCLifted           = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute) :: Nil , Nil, LCFR)
+  val planSearchGreedyActionsLifted          = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, LiftedTDGMinimumAction(NeverRecompute) :: Nil , Nil, LCFR)
 }

@@ -7,14 +7,14 @@ import de.uniulm.ki.panda3.symbolic.search.SearchState
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-class EfficientSearchNode[Payload](nodeID: Int, nodePlan: EfficientPlan, nodeParent: EfficientSearchNode[Payload], nodeHeuristic: Double, nodeModHist: String = "")
+class EfficientSearchNode[Payload](nodeID: Int, nodePlan: EfficientPlan, nodeParent: EfficientSearchNode[Payload], nodeHeuristic: Array[Double], nodeModHist: String = "")
   extends Ordered[EfficientSearchNode[Payload]] {
   /** the plan contained in this search node, if it has no flaws this is a solution */
   val plan     : EfficientPlan                = nodePlan
   /** the nodes parent */
   val parent   : EfficientSearchNode[Payload] = nodeParent
   /** the computed heuristic of this node. This might be -1 if the search procedure does not use a heuristic */
-  val heuristic: Double                       = nodeHeuristic
+  val heuristic: Array[Double]                = nodeHeuristic
   /** a unique ID for this search node */
   val id       : Int                          = nodeID
 
@@ -48,10 +48,16 @@ class EfficientSearchNode[Payload](nodeID: Int, nodePlan: EfficientPlan, nodePar
   /** the successors based on the list of modifications. The pair (sn,i) indicates that the child sn was generated based on the modification modifications(selectedFlaw)(i) */
   var children     : Array[(EfficientSearchNode[Payload], Int)] = Array()
   /** any possible further payload */
-  var payload      : Payload                                    = _
+  var payload      : Array[Payload]                                    = _
 
   override def compare(that: EfficientSearchNode[Payload]): Int = {
-    val heuristicCompare = Math.signum(that.heuristic - this.heuristic).toInt
+    var heuristicCompare = 0
+    var hPos = 0
+    while (heuristicCompare == 0 && hPos < heuristic.length){
+      heuristicCompare = Math.signum(that.heuristic(hPos) - this.heuristic(hPos)).toInt
+      hPos += 1
+    }
+    // tiebreaker of last resort: FIFO
     if (heuristicCompare != 0) heuristicCompare else Math.signum(that.id - this.id).toInt
   }
 }

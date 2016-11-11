@@ -161,9 +161,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           if (search.heuristic.exists { case x: TDGBasedHeuristic => true; case _ => false })
             analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
 
-          val efficientPGNeeded = search.heuristic match {
-            case Some(ADD) | Some(ADDReusing) | Some(Relax) | Some(TDGMinimumADD(_)) | Some(LiftedTDGMinimumADD(_, _)) => true
-            case f: TDGBasedHeuristic                                                                                  =>
+          val efficientPGNeeded = search.heuristic exists {
+            case ADD | ADDReusing | Relax | TDGMinimumADD(_) | LiftedTDGMinimumADD(_, _) => true
+            case f: TDGBasedHeuristic                                                    =>
               f.innerHeuristic.exists({ case ADD | ADDReusing | Relax | TDGMinimumADD(_) | LiftedTDGMinimumADD(_, _) => true; case _ => false })
 
             case _ => false
@@ -181,10 +181,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
           val flawSelector = search.flawSelector match {
-            case LCFR                    => LeastCostFlawRepair
-            case RandomFlaw(seed)        => RandomFlawSelector(new Random(seed))
-            case UMCPFlaw                => UMCPFlawSelection
-            case s : SequentialSelector =>
+            case LCFR                  => LeastCostFlawRepair
+            case RandomFlaw(seed)      => RandomFlawSelector(new Random(seed))
+            case UMCPFlaw              => UMCPFlawSelection
+            case s: SequentialSelector =>
               val subSelectorArray = s.sequence map {
                 case LCFR             => LeastCostFlawRepair
                 case RandomFlaw(seed) => RandomFlawSelector(new Random(seed))
@@ -202,7 +202,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                                                             informationCapsule, timeCapsule)
               case DijkstraType | DFSType                               =>
                 // just use the zero heuristic
-                val heuristicSearch = efficient.search.HeuristicSearch(AlwaysZeroHeuristic, 0, Array(), flawSelector, addNumberOfPlanSteps = true, addDepth = false,
+                val heuristicSearch = efficient.search.HeuristicSearch(Array[EfficientHeuristic[Unit]](AlwaysZeroHeuristic), 0, Array(), flawSelector,
+                                                                       addNumberOfPlanSteps = true, addDepth = false,
                                                                        continueOnSolution = search.continueOnSolution,
                                                                        invertCosts = search.searchAlgorithm == DFSType)
 
@@ -213,10 +214,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                             informationCapsule, timeCapsule)
               case AStarActionsType(_) | AStarDepthType(_) | GreedyType =>
                 // prepare the heuristic
-                val heuristicInstance: EfficientHeuristic[_] = search.heuristic match {
-                  case Some(h) => constructEfficientHeuristic(h, wrapper, analysisMap, domainAndPlan)
-                  case None    => throw new UnsupportedOperationException("In order to use a heuristic search procedure, a heuristic must be defined.")
-                }
+                val heuristicInstance: Array[EfficientHeuristic[AnyVal]] =
+                  search.heuristic map { h => constructEfficientHeuristic(h, wrapper, analysisMap, domainAndPlan).asInstanceOf[EfficientHeuristic[AnyVal]] } toArray
                 val weight = algo match {
                   case AStarActionsType(w) => w
                   case AStarDepthType(w)   => w
@@ -238,8 +237,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                   case _                   => false
                 }
 
-                val heuristicSearch = efficient.search.HeuristicSearch(heuristicInstance, weight, filters, flawSelector, addNumberOfPlanSteps = useActionCosts, addDepth = useDepthCosts,
-                                                                       continueOnSolution = search.continueOnSolution)
+                val heuristicSearch = efficient.search.HeuristicSearch[AnyVal](heuristicInstance, weight, filters, flawSelector, addNumberOfPlanSteps = useActionCosts,
+                                                                               addDepth = useDepthCosts, continueOnSolution = search.continueOnSolution)
                 heuristicSearch.startSearch(wrapper.efficientDomain, efficientInitialPlan,
                                             search.nodeLimit, search.timeLimit, releaseSemaphoreEvery,
                                             search.printSearchInfo,
@@ -334,6 +333,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     }
 
     heuristicConfig match {
+      case RandomHeuristic(seed)     => EfficientRandomHeuristic(new Random(seed))
       case NumberOfFlaws             => EfficientNumberOfFlaws
       case NumberOfOpenPreconditions => EfficientNumberOfOpenPreconditions
       case NumberOfPlanSteps         => EfficientNumberOfPlanSteps
@@ -773,6 +773,8 @@ sealed trait SearchHeuristic {}
 
 sealed trait SearchHeuristicWithInner extends SearchHeuristic {def innerHeuristic: Option[SearchHeuristic]}
 
+case class RandomHeuristic(seed: Long) extends SearchHeuristic
+
 // general heuristics
 object NumberOfFlaws extends SearchHeuristic
 
@@ -865,7 +867,7 @@ case class PlanBasedSearch(
                             nodeLimit: Option[Int],
                             timeLimit: Option[Int],
                             searchAlgorithm: SearchAlgorithmType,
-                            heuristic: Option[SearchHeuristic],
+                            heuristic: Seq[SearchHeuristic],
                             pruningTechniques: Seq[PruningTechnique],
                             flawSelector: SearchFlawSelector,
                             efficientSearch: Boolean = true,
