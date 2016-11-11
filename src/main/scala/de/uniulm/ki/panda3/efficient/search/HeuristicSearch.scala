@@ -217,7 +217,7 @@ case class HeuristicSearch[Payload](heuristic: EfficientHeuristic[Payload], weig
             t.printStackTrace()
             informationCapsule.set(ERROR, "true")
         }
-        timeCapsule stop SEARCH
+        timeCapsule stopOrIgnore SEARCH
 
 
         // notify waiting threads
