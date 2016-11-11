@@ -60,7 +60,7 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
     BucketAccessMap(literals map { case (k, v) => (k.arguments, v) })
   }
 
-  protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double = {
+  def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double = {
     var heuristicEstimate = 0.0
     val planStepTask = domain.tasks(plan.planStepTasks(planStep))
     val planStepPreconditions = planStepTask.precondition
