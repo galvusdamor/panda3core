@@ -54,6 +54,7 @@ object Main {
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Large.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
     //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
@@ -135,28 +136,26 @@ object Main {
                             PredefinedConfigurations.searchConfigs(args(5)),
                             postprocessing
                            )
-
-
     } else PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = false),
+                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = true),
                                  PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                             compileOrderInMethods = None,
                                                             splitIndependedParameters = false,
                                                             liftedReachability = true, groundedReachability = false, planningGraph = true,
                                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                            iterateReachabilityAnalysis = false, groundDomain = true),
+                                                            iterateReachabilityAnalysis = false, groundDomain = false),
                                  //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
                                  //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
                                  //PlanBasedSearch(None, None, AStarActionsType(1), Some(TDGMinimumADD), Nil, LCFR),
                                  //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
                                  //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
-                                 //PlanBasedSearch(None, None, BFSType, None, Nil, LCFR),
+                                 PlanBasedSearch(None, None, DFSType, None, Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(UMCPHeuristic), Nil, UMCPFlaw),
                                  //PlanBasedSearch(None, Some(5000), AStarActionsType(1), Some(ADD), Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarActionsType(1), Some(NumberOfFlaws), Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(TDGMinimumAction), Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType(1), Some(ADD), Nil, LCFR),
-                                 PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD(Some(ADDReusing))), Nil, LCFR),
+                                 //PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD(Some(ADDReusing))), Nil, SequentialSelector(LCFR,RandomFlaw(6))),
                                  //PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD(None)), Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), AStarDepthType(1), Some(LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing))), Nil, LCFR),
                                  //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPG)),

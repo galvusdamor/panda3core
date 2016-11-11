@@ -11,7 +11,7 @@ import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachabili
 import de.uniulm.ki.panda3.efficient.heuristic.filter.RecomputeHTN
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps}
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
-import de.uniulm.ki.panda3.efficient.search.flawSelector.{UMCPFlawSelection, LeastCostFlawRepair}
+import de.uniulm.ki.panda3.efficient.search.flawSelector.{SequentialEfficientFlawSelector, RandomFlawSelector, UMCPFlawSelection, LeastCostFlawRepair}
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
@@ -33,6 +33,7 @@ import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 import scala.collection.JavaConversions
+import scala.util.Random
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -180,8 +181,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
           val flawSelector = search.flawSelector match {
-            case LCFR     => LeastCostFlawRepair
-            case UMCPFlaw => UMCPFlawSelection
+            case LCFR                    => LeastCostFlawRepair
+            case RandomFlaw(seed)        => RandomFlawSelector(new Random(seed))
+            case UMCPFlaw                => UMCPFlawSelection
+            case s : SequentialSelector =>
+              val subSelectorArray = s.sequence map {
+                case LCFR             => LeastCostFlawRepair
+                case RandomFlaw(seed) => RandomFlawSelector(new Random(seed))
+              } toArray
+
+              SequentialEfficientFlawSelector(subSelectorArray)
           }
 
           val (searchTreeRoot, nodesProcessed, resultfunction, abortFunction) = search.searchAlgorithm match {
@@ -841,6 +850,10 @@ sealed trait SearchFlawSelector {}
 object LCFR extends SearchFlawSelector
 
 object UMCPFlaw extends SearchFlawSelector
+
+case class RandomFlaw(seed: Long) extends SearchFlawSelector
+
+case class SequentialSelector(sequence: SearchFlawSelector*) extends SearchFlawSelector
 
 
 sealed trait SearchConfiguration {
