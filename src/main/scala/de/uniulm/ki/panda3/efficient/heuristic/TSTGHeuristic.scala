@@ -172,9 +172,10 @@ trait LiftedMinimumADD extends TSTGHeuristic {
     var cl = 0
     while (cl < plan.causalLinks.length) {
       val link = plan.causalLinks(cl)
-      if (plan.isPlanStepPresentInPlan(link.consumer) && plan.isPlanStepPresentInPlan(link.producer)) {
-        deduction += 1 + addValuesPerPredicate(plan.taskOfPlanStep(link.consumer).precondition(link.conditionIndexOfConsumer).predicate)
-      }
+      if (plan.isPlanStepPresentInPlan(link.consumer) && plan.isPlanStepPresentInPlan(link.producer))
+        if (!(plan.taskOfPlanStep(link.consumer).isPrimitive && primitiveActionInPlanHeuristic.isDefined)) {
+          deduction += 1 + addValuesPerPredicate(plan.taskOfPlanStep(link.consumer).precondition(link.conditionIndexOfConsumer).predicate)
+        }
       cl += 1
     }
     deduction
