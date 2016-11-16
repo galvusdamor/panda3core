@@ -57,7 +57,7 @@ object PredefinedConfigurations {
   val planSearchDijkstra               = PlanBasedSearch(None, Some(globalTimelimit), DijkstraType, Nil, Nil, LCFR)
   val planSearchDFS                    = PlanBasedSearch(None, Some(globalTimelimit), DFSType, Nil, Nil, LCFR)
   val planSearchBFS                    = PlanBasedSearch(None, Some(globalTimelimit), BFSType, Nil, Nil, LCFR)
-  val planSearchAStarOpenPreconditions = PlanBasedSearch(None, Some(globalTimelimit), DijkstraType, NumberOfOpenPreconditions :: Nil , Nil, LCFR)
+  val planSearchAStarOpenPreconditions = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), NumberOfOpenPreconditions :: Nil , Nil, LCFR)
 
   val umcpBF = PlanBasedSearch(None, Some(globalTimelimit), BFSType, Nil, Nil, UMCPFlaw)
   val umcpDF = PlanBasedSearch(None, Some(globalTimelimit), DFSType, Nil, Nil, UMCPFlaw)
