@@ -35,6 +35,7 @@ object PredefinedConfigurations {
 
 
   val planSearchAStarPR            = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), TDGPreconditionRelaxation() :: Nil , Nil, LCFR)
+  val planSearchAStarAPR            = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGPreconditionRelaxation() :: Nil , Nil, LCFR)
   val planSearchAStarTDGAction     = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGMinimumAction() :: Nil , Nil, LCFR)
   val planSearchAStarTDGADD        = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGMinimumADD() :: Nil , Nil, LCFR)
   val planSearchAStarTDGADDReusing = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGMinimumADD(Some(ADDReusing)) :: Nil , Nil, LCFR)
@@ -43,6 +44,10 @@ object PredefinedConfigurations {
   val planSearchAStarPRLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil , Nil, LCFR)
   val planSearchAStarPRLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil , Nil, LCFR)
   val planSearchAStarPRLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil , Nil, LCFR)
+
+  val planSearchAStarAPRLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil , Nil, LCFR)
+  val planSearchAStarAPRLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil , Nil, LCFR)
+  val planSearchAStarAPRLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil , Nil, LCFR)
 
   val planSearchAStarActionLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumAction(NeverRecompute) :: Nil , Nil, LCFR)
   val planSearchAStarActionLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil , Nil, LCFR)
@@ -58,6 +63,7 @@ object PredefinedConfigurations {
   val planSearchDFS                    = PlanBasedSearch(None, Some(globalTimelimit), DFSType, Nil, Nil, LCFR)
   val planSearchBFS                    = PlanBasedSearch(None, Some(globalTimelimit), BFSType, Nil, Nil, LCFR)
   val planSearchAStarOpenPreconditions = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), NumberOfOpenPreconditions :: Nil , Nil, LCFR)
+  val planSearchAStarAOpenPreconditions = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), NumberOfOpenPreconditions :: Nil , Nil, LCFR)
 
   val umcpBF = PlanBasedSearch(None, Some(globalTimelimit), BFSType, Nil, Nil, UMCPFlaw)
   val umcpDF = PlanBasedSearch(None, Some(globalTimelimit), DFSType, Nil, Nil, UMCPFlaw)
@@ -70,6 +76,7 @@ object PredefinedConfigurations {
 
   val searchConfigs = Map(
                            "-AStarPR" -> planSearchAStarPR,
+                           "-AStarAPR" -> planSearchAStarAPR,
                            "-AStarTDGAction" -> planSearchAStarTDGAction,
                            "-AStarTDGADD" -> planSearchAStarTDGADD,
                            "-planSearchAStarTDGADDReusing" -> planSearchAStarTDGADDReusing,
@@ -77,6 +84,10 @@ object PredefinedConfigurations {
                            "-AStarPRLiftedPR" -> planSearchAStarPRLiftedPR,
                            "-AStarPRLiftedPRReachability" -> planSearchAStarPRLiftedPRReachability,
                            "-AStarPRLiftedPRCausalLink" -> planSearchAStarPRLiftedPRCausalLink,
+
+                           "-AStarAPRLiftedPR" -> planSearchAStarAPRLiftedPR,
+                           "-AStarAPRLiftedPRReachability" -> planSearchAStarAPRLiftedPRReachability,
+                           "-AStarAPRLiftedPRCausalLink" -> planSearchAStarAPRLiftedPRCausalLink,
 
                            "-AStarActionLiftedPR" -> planSearchAStarActionLiftedPR,
                            "-AStarActionLiftedPRReachability" -> planSearchAStarActionLiftedPRReachability,
@@ -93,6 +104,7 @@ object PredefinedConfigurations {
                            "-BFS" -> planSearchBFS,
 
                            "-AStarOpenPreconditions" -> planSearchAStarOpenPreconditions,
+                           "-AStarAOpenPreconditions" -> planSearchAStarAOpenPreconditions,
 
                            "-umcpBF" -> umcpBF,
                            "-umcpDF" -> umcpDF,
