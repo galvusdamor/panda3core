@@ -50,9 +50,9 @@ object Main {
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
+    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
+    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Large.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
@@ -86,8 +86,8 @@ object Main {
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p05.pddl"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/domain/driverlog.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problems/pfile2"
+    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/domain/driverlog.pddl"
+    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problems/pfile2"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/domain/zenotravelStrips.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/problems/pfile2"
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/domain/stripsSat.pddl"
@@ -125,6 +125,7 @@ object Main {
                                                          SearchStatistics,
                                                          SearchStatus,
                                                          SearchResult,
+                                                         FinalGroundedReachability,
                                                          PreprocessedDomainAndPlan))
 
     // planning config is given via stdin
@@ -142,7 +143,7 @@ object Main {
                                                             compileOrderInMethods = None,
                                                             splitIndependedParameters = false,
                                                             liftedReachability = true, groundedReachability = false, planningGraph = true,
-                                                            groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                            groundedTaskDecompositionGraph = None,
                                                             iterateReachabilityAnalysis = false, groundDomain = false),
                                  //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
                                  //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
@@ -156,7 +157,8 @@ object Main {
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(TDGMinimumAction), Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType(1), Some(ADD), Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD(Some(ADDReusing))), Nil, SequentialSelector(LCFR,RandomFlaw(6))),
-                                 PlanBasedSearch(None, None, AStarDepthType(1), TDGMinimumADD(None) :: Nil, Nil, LCFR),
+                                 //PlanBasedSearch(None, None, AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR),
+                                 NoSearch,
                                  //PlanBasedSearch(None, Some(30 * 60), AStarDepthType(1), LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing)) :: Nil, Nil, LCFR),
                                  //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPG)),
                                  //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPGHTN)),
@@ -183,6 +185,11 @@ object Main {
     // output data in a machine readable format
     println("###" + results(SearchStatistics).keyValueListString() + DataCapsule.SEPARATOR + results(ProcessingTimings).keyValueListString())
 
+
+    val (usedDomain, usedPlan) = results(PreprocessedDomainAndPlan)
+    val groundedReachability = results(FinalGroundedReachability)
+
+    println("FOO")
     // get all found plans
     //val foundPlans = results(AllFoundPlans)
     //println("Found in total " + foundPlans.length + " plans")

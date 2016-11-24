@@ -298,6 +298,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           timeCapsule stop TOTAL_TIME
           runPostProcessing(timeCapsule, informationCapsule, null, if (solved) null :: Nil else Nil, domainAndPlan, analysisMap)
         })
+
+      case NoSearch => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+        timeCapsule stop TOTAL_TIME
+        runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, analysisMap)
+      })
     }
   }
 
@@ -428,6 +433,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case SolutionInternalString         => if (result.nonEmpty) Some(result.head.longInfo) else None
       case SolutionDotString              => if (result.nonEmpty) Some(result.head.dotString) else None
       case FinalTaskDecompositionGraph    => analysisMap(SymbolicGroundedTaskDecompositionGraph)
+      case FinalGroundedReachability      => analysisMap(SymbolicGroundedReachability)
       case PreprocessedDomainAndPlan      => domainAndPlan
       case AllFoundSolutionPathsWithHStar =>
         // we have to find all solutions paths, so first compute the solution state of each node to only traverse the paths to the actual solutions
@@ -886,6 +892,9 @@ case class SATSearch(timeLimit: Option[Int],
                      maximumPlanLength: Int,
                      overrideK: Option[Int]) extends SearchConfiguration {}
 
+object NoSearch extends SearchConfiguration {
+  override val timeLimit: Option[Int] = Some(0)
+}
 
 case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) {
   if (resultsToProduce contains AllFoundSolutionPathsWithHStar) assert(resultsToProduce contains SearchSpace,

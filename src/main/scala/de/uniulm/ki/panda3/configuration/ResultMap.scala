@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
@@ -36,6 +37,8 @@ object SolutionDotString extends ResultType {type ResultType = Option[String]}
 object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain, Plan)}
 
 object FinalTaskDecompositionGraph extends ResultType {type ResultType = TaskDecompositionGraph}
+
+object FinalGroundedReachability extends ResultType {type ResultType = GroundedPrimitiveReachabilityAnalysis}
 
 
 object Timings {
