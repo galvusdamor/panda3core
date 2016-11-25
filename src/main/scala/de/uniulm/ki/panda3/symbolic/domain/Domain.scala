@@ -38,7 +38,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
     decompositionMethods foreach { dm =>
       assert(tasks contains dm.abstractTask)
-      dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task => assert(tasks contains task) }
+      dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task => assert(tasks contains task, "Task " + task.name + " is missing in the domain") }
     }
 
     tasks foreach { t => (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map { _._1 } foreach { p => assert(predicates contains p) } }
