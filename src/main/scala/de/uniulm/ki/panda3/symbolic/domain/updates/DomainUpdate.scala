@@ -61,3 +61,6 @@ case class RemoveEffects(unnecessaryEffects: Set[(Predicate, Boolean)], inverted
 case class PropagateEquality(protectedVariables: Set[Variable]) extends DomainUpdate
 
 object DeleteCausalLinks extends DomainUpdate
+
+
+object NoUpdate extends DomainUpdate

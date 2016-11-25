@@ -502,9 +502,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     val identity = if (parsingConfiguration.eliminateEquality) RemoveIdenticalVariables.transform(simpleMethod, ()) else simpleMethod
     timeCapsule stop PARSER_ELIMINATE_EQUALITY
 
-    timeCapsule start PARSER_ELIMINATE_EQUALITY
+    timeCapsule start PARSER_STRIP_HYBRID
     val noHybrid = if (parsingConfiguration.stripHybrid) StripHybrid.transform(identity, ()) else simpleMethod
-    timeCapsule stop PARSER_ELIMINATE_EQUALITY
+    timeCapsule stop PARSER_STRIP_HYBRID
 
     timeCapsule start PARSER_FLATTEN_FORMULA
     val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(noHybrid, ()) else simpleMethod

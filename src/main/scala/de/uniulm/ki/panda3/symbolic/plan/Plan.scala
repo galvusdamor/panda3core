@@ -283,7 +283,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       newPlan.copy(parameterVariableConstraints = newPlan.parameterVariableConstraints.addConstraints(newConstraints.toSeq))
 
     case DeleteCausalLinks =>
-      this.copy(causalLinksAndRemovedCausalLinks = Nil)
+      // need to run noupdate to simplify tasks
+      this.copy(causalLinksAndRemovedCausalLinks = Nil).update(NoUpdate)
     case _                                     =>
       val newInit = init update domainUpdate
       val newGoal = goal update domainUpdate
