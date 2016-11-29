@@ -40,13 +40,8 @@ require_defs : REQUIRE_NAME+;
 // type-definition
 //
 // @PDDL
-<<<<<<< HEAD
-type_def : '(' ':types' one_def+ ')';
-one_def : new_types ('-' var_type)?;
-=======
 type_def : '(' ':types' type_def_list ')';
 type_def_list : NAME* | (new_types '-' var_type type_def_list) ;
->>>>>>> coremaster/master
 new_types : NAME+;
 
 //
