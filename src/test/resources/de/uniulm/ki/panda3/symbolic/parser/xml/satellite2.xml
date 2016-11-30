@@ -1,0 +1,625 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE domainModel SYSTEM "domain-2.0.dtd">
+
+<domain name="satellite2" type="pure-hierarchical">
+    <documentation>This is a hierarchical version of the IPC satellite domain.</documentation>
+
+    <sortDeclaration name="instrument" type="concrete"/>
+    <sortDeclaration name="satellite" type="concrete"/>
+    <sortDeclaration name="mode" type="concrete"/>
+    <sortDeclaration name="calib_direction" type="concrete">
+        <documentation>These directions are used for instrument calibration only.</documentation>
+    </sortDeclaration>
+    <sortDeclaration name="image_direction" type="concrete"/>
+    <sortDeclaration name="direction" type="abstract">
+        <documentation>Directions are all kinds of phenomenons and targets to which the satellite and its instruments
+            can be directed.
+        </documentation>
+        <subSort sort="calib_direction"/>
+        <subSort sort="image_direction"/>
+    </sortDeclaration>
+
+    <relationDeclaration name="on_board" type="rigid">
+        <argumentSort sort="instrument"/>
+        <argumentSort sort="satellite"/>
+    </relationDeclaration>
+    <relationDeclaration name="supports" type="rigid">
+        <argumentSort sort="instrument"/>
+        <argumentSort sort="mode"/>
+    </relationDeclaration>
+    <relationDeclaration name="pointing" type="flexible">
+        <argumentSort sort="satellite"/>
+        <argumentSort sort="direction"/>
+    </relationDeclaration>
+    <relationDeclaration name="power_avail" type="flexible">
+        <argumentSort sort="satellite"/>
+    </relationDeclaration>
+    <relationDeclaration name="power_on" type="flexible">
+        <argumentSort sort="instrument"/>
+    </relationDeclaration>
+    <relationDeclaration name="calibrated" type="flexible">
+        <argumentSort sort="instrument"/>
+    </relationDeclaration>
+    <relationDeclaration name="have_image" type="flexible">
+        <argumentSort sort="image_direction"/>
+        <argumentSort sort="mode"/>
+    </relationDeclaration>
+    <!-- changed calibration target to rigid -bs -->
+    <relationDeclaration name="calibration_target" type="rigid">
+        <documentation>This relation models targets that are used for calibrating a specific instrument.</documentation>
+        <argumentSort sort="instrument"/>
+        <argumentSort sort="calib_direction"/>
+    </relationDeclaration>
+
+    <taskSchemaDeclaration name="turn_to" type="primitive">
+        <documentation>
+            The parameters of turning are:
+            1. the satellite that is turning
+            2. the direction the satellite is pointing to after turning
+            3. the direction the satellite is pointing to before turning
+        </documentation>
+        <variableDeclaration name="t_s" sort="satellite"/>
+        <variableDeclaration name="t_d_new" sort="direction"/>
+        <variableDeclaration name="t_d_prev" sort="direction"/>
+
+        <atomic relation="pointing">
+            <variable name="t_s"/>
+            <variable name="t_d_prev"/>
+        </atomic>
+        <and>
+            <atomic relation="pointing">
+                <variable name="t_s"/>
+                <variable name="t_d_new"/>
+            </atomic>
+            <not>
+                <atomic relation="pointing">
+                    <variable name="t_s"/>
+                    <variable name="t_d_prev"/>
+                </atomic>
+            </not>
+        </and>
+    </taskSchemaDeclaration>
+
+    <taskSchemaDeclaration name="switch_on" type="primitive">
+        <documentation>
+            This action turns on the power supply for a satellite's instrument. Please note that switching on an
+            on-board unit de-calibrates it and allocates all energy resources on the satellite.
+        </documentation>
+        <variableDeclaration name="so_i" sort="instrument"/>
+        <variableDeclaration name="so_s" sort="satellite"/>
+
+        <and>
+            <atomic relation="on_board">
+                <variable name="so_i"/>
+                <variable name="so_s"/>
+            </atomic>
+            <atomic relation="power_avail">
+                <variable name="so_s"/>
+            </atomic>
+        </and>
+        <and>
+            <atomic relation="power_on">
+                <variable name="so_i"/>
+            </atomic>
+            <not>
+                <atomic relation="calibrated">
+                    <variable name="so_i"/>
+                </atomic>
+            </not>
+            <not>
+                <atomic relation="power_avail">
+                    <variable name="so_s"/>
+                </atomic>
+            </not>
+        </and>
+    </taskSchemaDeclaration>
+
+    <taskSchemaDeclaration name="switch_off" type="primitive">
+        <documentation>
+            This action turns off the power supply for a satellite's instrument. Switching off an
+            on-board unit makes all energy resources on the satellite available again.
+        </documentation>
+        <variableDeclaration name="sof_i" sort="instrument"/>
+        <variableDeclaration name="sof_s" sort="satellite"/>
+
+        <and>
+            <atomic relation="on_board">
+                <variable name="sof_i"/>
+                <variable name="sof_s"/>
+            </atomic>
+            <atomic relation="power_on">
+                <variable name="sof_i"/>
+            </atomic>
+        </and>
+        <and>
+            <not>
+                <atomic relation="power_on">
+                    <variable name="sof_i"/>
+                </atomic>
+            </not>
+            <atomic relation="power_avail">
+                <variable name="sof_s"/>
+            </atomic>
+        </and>
+    </taskSchemaDeclaration>
+
+    <taskSchemaDeclaration name="calibrate" type="primitive">
+        <variableDeclaration name="c_s" sort="satellite"/>
+        <variableDeclaration name="c_i" sort="instrument"/>
+        <variableDeclaration name="c_d" sort="calib_direction"/>
+
+        <and>
+            <atomic relation="on_board">
+                <variable name="c_i"/>
+                <variable name="c_s"/>
+            </atomic>
+            <atomic relation="calibration_target">
+                <variable name="c_i"/>
+                <variable name="c_d"/>
+            </atomic>
+            <atomic relation="pointing">
+                <variable name="c_s"/>
+                <variable name="c_d"/>
+            </atomic>
+            <atomic relation="power_on">
+                <variable name="c_i"/>
+            </atomic>
+
+        </and>
+        <and>
+            <atomic relation="calibrated">
+                <variable name="c_i"/>
+            </atomic>
+        </and>
+    </taskSchemaDeclaration>
+
+    <taskSchemaDeclaration name="take_image" type="primitive">
+        <variableDeclaration name="ti_s" sort="satellite"/>
+        <variableDeclaration name="ti_d" sort="image_direction"/>
+        <variableDeclaration name="ti_i" sort="instrument"/>
+        <variableDeclaration name="ti_m" sort="mode"/>
+
+        <and>
+            <atomic relation="calibrated">
+                <variable name="ti_i"/>
+            </atomic>
+            <atomic relation="pointing">
+                <variable name="ti_s"/>
+                <variable name="ti_d"/>
+            </atomic>
+            <atomic relation="on_board">
+                <variable name="ti_i"/>
+                <variable name="ti_s"/>
+            </atomic>
+            <atomic relation="power_on">
+                <variable name="ti_i"/>
+            </atomic>
+            <atomic relation="supports">
+                <variable name="ti_i"/>
+                <variable name="ti_m"/>
+            </atomic>
+        </and>
+        <atomic relation="have_image">
+            <variable name="ti_d"/>
+            <variable name="ti_m"/>
+        </atomic>
+    </taskSchemaDeclaration>
+
+    <!-- ############# Komplexe Taks #################-->
+
+    <!-- holt bild von gegebenen direction im gegebenen mode macht dabei:
+    [ai]							value restriction: ?s muss bei allen 3 gleich sein
+    [tt]								[] = nicht immer noetig
+    take_image
+    -->
+    <taskSchemaDeclaration name="do_observation" type="complex">
+        <variableDeclaration name="do_d" sort="image_direction"/>
+        <variableDeclaration name="do_m" sort="mode"/>
+
+        <!-- vorbed oder von einem subtask erfuellt fuer alle vorbedingungen der subtasks -->
+        <true/>
+        <atomic relation="have_image">
+            <variable name="do_d"/>
+            <variable name="do_m"/>
+        </atomic>
+    </taskSchemaDeclaration>
+
+    <!-- setz power on fuer gegebenes instrument auf einem gegebenen satelliten macht dabei:
+    [s_off]				[] = nicht immer noetig
+    s_on
+    auto_calibrate
+    -->
+    <taskSchemaDeclaration name="activate_instrument" type="complex">
+        <documentation>
+            Activating an instrument optionally includes turning off other instruments on the same satellite in order
+            to provide energy, followed by turning on the instrument.
+        </documentation>
+        <variableDeclaration name="ai_s" sort="satellite"/>
+        <variableDeclaration name="ai_i" sort="instrument"/>
+
+        <atomic relation="on_board">
+            <variable name="ai_i"/>
+            <variable name="ai_s"/>
+        </atomic>
+        <atomic relation="power_on">
+            <variable name="ai_i"/>
+        </atomic>
+    </taskSchemaDeclaration>
+
+    <!-- dreht und kalibriert oder kalibriert sich auf ein kalibrierungs target ein instrument eines gegebenen satelliten
+    [turn_to]
+    calibrate
+
+    value restriction
+    tt ?d = cal ?d
+    und cal ?d = calibration target
+    -->
+    <taskSchemaDeclaration name="auto_calibrate" type="complex">
+        <documentation>
+            Manages the calibration of the given instrument. This may include turning the satellite's instrument to the
+            calibration target first.
+        </documentation>
+        <variableDeclaration name="ac_s" sort="satellite"/>
+        <variableDeclaration name="ac_i" sort="instrument"/>
+
+        <and>
+            <atomic relation="on_board">
+                <variable name="ac_i"/>
+                <variable name="ac_s"/>
+            </atomic>
+            <atomic relation="power_on">
+                <variable name="ac_i"/>
+            </atomic>
+        </and>
+        <atomic relation="calibrated">
+            <variable name="ac_i"/>
+        </atomic>
+    </taskSchemaDeclaration>
+
+    <!-- #################### method_do_observation #################-->
+
+    <methodDeclaration name="method_do_observation_ai_tt_ti" taskSchema="do_observation">
+        <documentation>
+            Performs an observation task in three steps: it activates the instrument (must support the specified mode),
+            then turns the satellite into desired image direction and finally takes the image.
+
+            Doing an observation depends on two parameters: the phenomenon to be observed and the mode in which the
+            image of the phenomenon is to be taken.
+
+            Regarding the ordering between instrument activation and the turning operation: Instrument activation is a
+            complex task, a causal link will therefore not imply an ordering immediately.
+
+            Regarding the sort restriction: This constraint is not really necessary, because the value restriction
+            already implies the co-typing. We added this for plausibility.
+        </documentation>
+        <variableDeclaration name="mdoatt_d" sort="image_direction"/>
+        <variableDeclaration name="mdoatt_m" sort="mode"/>
+
+        <taskNode name="mdoatt_activate_instrument" taskSchema="activate_instrument">
+            <variableDeclaration name="mdoatt_ai_s" sort="satellite"/>
+            <variableDeclaration name="mdoatt_ai_i" sort="instrument"/>
+        </taskNode>
+        <taskNode name="mdoatt_turn_to" taskSchema="turn_to">
+            <variableDeclaration name="mdoatt_t_s" sort="satellite"/>
+            <variableDeclaration name="mdoatt_t_d_new" sort="direction"/>
+            <variableDeclaration name="mdoatt_t_d_prev" sort="direction"/>
+        </taskNode>
+        <taskNode name="mdoatt_take_image" taskSchema="take_image">
+            <variableDeclaration name="mdoatt_ti_s" sort="satellite"/>
+            <variableDeclaration name="mdoatt_ti_d" sort="image_direction"/>
+            <variableDeclaration name="mdoatt_ti_i" sort="instrument"/>
+            <variableDeclaration name="mdoatt_ti_m" sort="mode"/>
+        </taskNode>
+
+        <orderingConstraint predecessor="mdoatt_activate_instrument" successor="mdoatt_turn_to"/>
+        <orderingConstraint predecessor="mdoatt_turn_to" successor="mdoatt_take_image"/>
+
+        <!-- parameter -->
+        <valueRestriction type="eq" variable="mdoatt_d">
+            <variable name="mdoatt_t_d_new"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mdoatt_d">
+            <variable name="mdoatt_ti_d"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mdoatt_m">
+            <variable name="mdoatt_ti_m"/>
+        </valueRestriction>
+
+        <sortRestriction type="eq" variable="mdoatt_t_d_new" sort="image_direction"/>
+
+        <!-- zwischen den taskNodes -->
+        <valueRestriction type="eq" variable="mdoatt_ai_s">
+            <variable name="mdoatt_ti_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mdoatt_ai_s">
+            <variable name="mdoatt_t_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mdoatt_ai_i">
+            <variable name="mdoatt_ti_i"/>
+        </valueRestriction>
+        <valueRestriction type="neq" variable="mdoatt_t_d_new">
+            <variable name="mdoatt_t_d_prev"/>
+        </valueRestriction>
+
+        <!-- activate_instrument liefert power_on und nicht calibrated -bs -->
+        <causalLink producer="mdoatt_activate_instrument" consumer="mdoatt_take_image">
+            <atomic relation="power_on">
+                <variable name="mdoatt_ai_i"/>
+            </atomic>
+        </causalLink>
+        <causalLink producer="mdoatt_turn_to" consumer="mdoatt_take_image">
+            <atomic relation="pointing">
+                <variable name="mdoatt_t_s"/>
+                <variable name="mdoatt_t_d_new"/>
+            </atomic>
+        </causalLink>
+    </methodDeclaration>
+
+    <methodDeclaration name="method_do_observation_tt_ti" taskSchema="do_observation">
+        <variableDeclaration name="mdott_d" sort="image_direction"/>
+        <variableDeclaration name="mdott_m" sort="mode"/>
+
+        <taskNode name="mdott_turn_to" taskSchema="turn_to">
+            <variableDeclaration name="mdott_t_s" sort="satellite"/>
+            <variableDeclaration name="mdott_t_d_new" sort="direction"/>
+            <variableDeclaration name="mdott_t_d_prev" sort="direction"/>
+        </taskNode>
+        <taskNode name="mdott_take_image" taskSchema="take_image">
+            <variableDeclaration name="mdott_ti_s" sort="satellite"/>
+            <variableDeclaration name="mdott_ti_d" sort="image_direction"/>
+            <variableDeclaration name="mdott_ti_i" sort="instrument"/>
+            <variableDeclaration name="mdott_ti_m" sort="mode"/>
+        </taskNode>
+
+        <orderingConstraint predecessor="mdott_turn_to" successor="mdott_take_image"/>
+
+        <!-- parameter -->
+        <valueRestriction type="eq" variable="mdott_d">
+            <variable name="mdott_t_d_new"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mdott_d">
+            <variable name="mdott_ti_d"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mdott_m">
+            <variable name="mdott_ti_m"/>
+        </valueRestriction>
+
+        <sortRestriction type="eq" variable="mdott_t_d_new" sort="image_direction"/>
+
+        <!-- zwischen den taskNodes -->
+        <valueRestriction type="eq" variable="mdott_ti_s">
+            <variable name="mdott_t_s"/>
+        </valueRestriction>
+        <valueRestriction type="neq" variable="mdott_t_d_new">
+            <variable name="mdott_t_d_prev"/>
+        </valueRestriction>
+
+        <causalLink producer="mdott_turn_to" consumer="mdott_take_image">
+            <atomic relation="pointing">
+                <variable name="mdott_t_s"/>
+                <variable name="mdott_t_d_new"/>
+            </atomic>
+        </causalLink>
+    </methodDeclaration>
+
+    <methodDeclaration name="method_do_observation_ai_ti" taskSchema="do_observation">
+        <variableDeclaration name="mdoat_d" sort="image_direction"/>
+        <variableDeclaration name="mdoat_m" sort="mode"/>
+
+        <taskNode name="mdoat_activate_instrument" taskSchema="activate_instrument">
+            <variableDeclaration name="mdoat_ai_s" sort="satellite"/>
+            <variableDeclaration name="mdoat_ai_i" sort="instrument"/>
+        </taskNode>
+
+        <taskNode name="mdoat_take_image" taskSchema="take_image">
+            <variableDeclaration name="mdoat_ti_s" sort="satellite"/>
+            <variableDeclaration name="mdoat_ti_d" sort="image_direction"/>
+            <variableDeclaration name="mdoat_ti_i" sort="instrument"/>
+            <variableDeclaration name="mdoat_ti_m" sort="mode"/>
+        </taskNode>
+
+        <orderingConstraint predecessor="mdoat_activate_instrument" successor="mdoat_take_image"/>
+
+        <!-- parameter -->
+        <valueRestriction type="eq" variable="mdoat_d">
+            <variable name="mdoat_ti_d"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mdoat_m">
+            <variable name="mdoat_ti_m"/>
+        </valueRestriction>
+
+        <!-- zwischen den taskNodes -->
+        <valueRestriction type="eq" variable="mdoat_ai_s">
+            <variable name="mdoat_ti_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mdoat_ai_i">
+            <variable name="mdoat_ti_i"/>
+        </valueRestriction>
+
+        <!-- activate_instrument liefert power_on und nicht calibrated -bs -->
+        <causalLink producer="mdoat_activate_instrument" consumer="mdoat_take_image">
+            <atomic relation="power_on">
+                <variable name="mdoat_ai_i"/>
+            </atomic>
+        </causalLink>
+    </methodDeclaration>
+
+    <methodDeclaration name="method_do_observation_ti" taskSchema="do_observation">
+        <variableDeclaration name="mdot_d" sort="image_direction"/>
+        <variableDeclaration name="mdot_m" sort="mode"/>
+
+        <taskNode name="mdot_take_image" taskSchema="take_image">
+            <variableDeclaration name="mdot_ti_s" sort="satellite"/>
+            <variableDeclaration name="mdot_ti_d" sort="image_direction"/>
+            <variableDeclaration name="mdot_ti_i" sort="instrument"/>
+            <variableDeclaration name="mdot_ti_m" sort="mode"/>
+        </taskNode>
+
+        <!-- parameter -->
+        <valueRestriction type="eq" variable="mdot_d">
+            <variable name="mdot_ti_d"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mdot_m">
+            <variable name="mdot_ti_m"/>
+        </valueRestriction>
+    </methodDeclaration>
+
+    <!-- #################### method_activate_instrument #################-->
+
+    <methodDeclaration name="method_activate_instrument_soff_son_ac" taskSchema="activate_instrument">
+        <variableDeclaration name="maissa_s" sort="satellite"/>
+        <variableDeclaration name="maissa_i" sort="instrument"/>
+
+        <!-- switch_off anstelle switch_on -bs -->
+        <taskNode name="maissa_switch_off" taskSchema="switch_off">
+            <variableDeclaration name="maissa_sof_i" sort="instrument"/>
+            <variableDeclaration name="maissa_sof_s" sort="satellite"/>
+        </taskNode>
+        <taskNode name="maissa_switch_on" taskSchema="switch_on">
+            <variableDeclaration name="maissa_son_i" sort="instrument"/>
+            <variableDeclaration name="maissa_son_s" sort="satellite"/>
+        </taskNode>
+        <taskNode name="maissa_auto_calibrate" taskSchema="auto_calibrate">
+            <variableDeclaration name="maissa_ac_s" sort="satellite"/>
+            <variableDeclaration name="maissa_ac_i" sort="instrument"/>
+        </taskNode>
+
+        <orderingConstraint predecessor="maissa_switch_off" successor="maissa_switch_on"/>
+        <orderingConstraint predecessor="maissa_switch_on" successor="maissa_auto_calibrate"/>
+
+        <!-- parameter -->
+        <valueRestriction type="eq" variable="maissa_s">
+            <variable name="maissa_sof_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="maissa_s">
+            <variable name="maissa_son_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="maissa_i">
+            <variable name="maissa_son_i"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="maissa_s">
+            <variable name="maissa_ac_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="maissa_i">
+            <variable name="maissa_ac_i"/>
+        </valueRestriction>
+        <valueRestriction type="neq" variable="maissa_sof_i">
+            <variable name="maissa_son_i"/>
+        </valueRestriction>
+
+        <causalLink producer="maissa_switch_off" consumer="maissa_switch_on">
+            <atomic relation="power_avail">
+                <variable name="maissa_sof_s"/>
+            </atomic>
+        </causalLink>
+        <causalLink producer="maissa_switch_on" consumer="maissa_auto_calibrate">
+            <atomic relation="power_on">
+                <variable name="maissa_son_i"/>
+            </atomic>
+        </causalLink>
+    </methodDeclaration>
+
+    <methodDeclaration name="method_activate_instrument_son_ac" taskSchema="activate_instrument">
+        <variableDeclaration name="maisa_s" sort="satellite"/>
+        <variableDeclaration name="maisa_i" sort="instrument"/>
+
+        <taskNode name="maisa_switch_on" taskSchema="switch_on">
+            <variableDeclaration name="maisa_son_i" sort="instrument"/>
+            <variableDeclaration name="maisa_son_s" sort="satellite"/>
+        </taskNode>
+        <taskNode name="maisa_auto_calibrate" taskSchema="auto_calibrate">
+            <variableDeclaration name="maisa_ac_s" sort="satellite"/>
+            <variableDeclaration name="maisa_ac_i" sort="instrument"/>
+        </taskNode>
+
+        <orderingConstraint predecessor="maisa_switch_on" successor="maisa_auto_calibrate"/>
+
+        <!-- parameter -->
+        <valueRestriction type="eq" variable="maisa_s">
+            <variable name="maisa_son_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="maisa_i">
+            <variable name="maisa_son_i"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="maisa_s">
+            <variable name="maisa_ac_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="maisa_i">
+            <variable name="maisa_ac_i"/>
+        </valueRestriction>
+
+        <causalLink producer="maisa_switch_on" consumer="maisa_auto_calibrate">
+            <atomic relation="power_on">
+                <variable name="maisa_son_i"/>
+            </atomic>
+        </causalLink>
+    </methodDeclaration>
+
+    <!-- #################### method_auto_calibrate #################-->
+
+    <!-- variation mit drehen: -->
+    <methodDeclaration name="method_auto_calibrate_tt_cal" taskSchema="auto_calibrate">
+        <variableDeclaration name="mactc_s" sort="satellite"/>
+        <variableDeclaration name="mactc_i" sort="instrument"/>
+
+        <taskNode name="mactc_turn_to" taskSchema="turn_to">
+            <variableDeclaration name="mactc_tt_s" sort="satellite"/>
+            <variableDeclaration name="mactc_tt_d_new" sort="direction"/>
+            <variableDeclaration name="mactc_tt_d_prev" sort="direction"/>
+        </taskNode>
+        <taskNode name="mactc_calibrate" taskSchema="calibrate">
+            <variableDeclaration name="mactc_c_s" sort="satellite"/>
+            <variableDeclaration name="mactc_c_i" sort="instrument"/>
+            <variableDeclaration name="mactc_c_d" sort="calib_direction"/>
+        </taskNode>
+
+        <orderingConstraint predecessor="mactc_turn_to" successor="mactc_calibrate"/>
+
+        <!-- parameter -->
+        <valueRestriction type="eq" variable="mactc_s">
+            <variable name="mactc_tt_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mactc_s">
+            <variable name="mactc_c_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="mactc_i">
+            <variable name="mactc_c_i"/>
+        </valueRestriction>
+
+        <sortRestriction type="eq" variable="mactc_tt_d_new" sort="calib_direction"/>
+
+        <!-- zwischen den taskNodes -->
+        <valueRestriction type="eq" variable="mactc_tt_d_new">
+            <variable name="mactc_c_d"/>
+        </valueRestriction>
+        <valueRestriction type="neq" variable="mactc_tt_d_new">
+            <variable name="mactc_tt_d_prev"/>
+        </valueRestriction>
+
+        <causalLink producer="mactc_turn_to" consumer="mactc_calibrate">
+            <atomic relation="pointing">
+                <variable name="mactc_tt_s"/>
+                <variable name="mactc_tt_d_new"/>
+            </atomic>
+        </causalLink>
+    </methodDeclaration>
+
+    <methodDeclaration name="method_auto_calibrate_cal" taskSchema="auto_calibrate">
+        <variableDeclaration name="macc_s" sort="satellite"/>
+        <variableDeclaration name="macc_i" sort="instrument"/>
+
+        <taskNode name="macc_calibrate" taskSchema="calibrate">
+            <variableDeclaration name="macc_c_s" sort="satellite"/>
+            <variableDeclaration name="macc_c_i" sort="instrument"/>
+            <variableDeclaration name="macc_c_d" sort="calib_direction"/>
+        </taskNode>
+
+        <!-- parameter -->
+        <valueRestriction type="eq" variable="macc_s">
+            <variable name="macc_c_s"/>
+        </valueRestriction>
+        <valueRestriction type="eq" variable="macc_i">
+            <variable name="macc_c_i"/>
+        </valueRestriction>
+    </methodDeclaration>
+</domain>

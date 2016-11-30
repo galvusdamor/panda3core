@@ -140,7 +140,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                        releaseSemaphoreEvery, search.printSearchInfo,
                                        postprocessingConfiguration.resultsToProduce contains SearchSpace,
                                        informationCapsule, timeCapsule)
-            case _                 => throw new UnsupportedOperationException("Any other symbolic search algorithm besides DFS is not supported.")
+            case _                 => throw new UnsupportedOperationException("Any other symbolic search algorithm besides DFS or BFS is not supported.")
           }
 
           (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>

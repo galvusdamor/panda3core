@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE problem SYSTEM "problem-2.0.dtd">
+<problem domain="satellite2" name="abstract_2_observations_2_satellites_2_modes" type="pure-hierarchical">
+   <documentation>
+        This problem is intended to have two solutions: either observations are performed in parallel
+        or both are performed on one satellite that has to switch its instrument.
+        We can find a solution with 13 primitive tasks (including initial and goal tasks) after 28 cycles
+        in manual mode (with 1 backtracking, fringe contains two plans at the end of the search). This solution
+        is obtained when one satellite takes two images in series.
+        We can find a solution with 12 primitive tasks (including initial and goal tasks) after 25 cycles
+        in manual mode (without backtracking, fringe contains two plans at the end of the search). This solution
+        is obtained when images are taken in parallel.
+    </documentation>
+   <constantDeclaration name="instrument01" sort="instrument"/>
+   <constantDeclaration name="satellite0" sort="satellite"/>
+   <constantDeclaration name="thermograph" sort="mode"/>
+   <constantDeclaration name="GroundStation0" sort="calib_direction"/>
+   <constantDeclaration name="instrument02" sort="instrument"/>
+   <constantDeclaration name="x_ray" sort="mode"/>
+   <constantDeclaration name="Phenomenon6" sort="image_direction"/>
+   <constantDeclaration name="instrument1" sort="instrument"/>
+   <constantDeclaration name="satellite1" sort="satellite"/>
+   <constantDeclaration name="GroundStation1" sort="calib_direction"/>
+   <constantDeclaration name="Phenomenon7" sort="image_direction"/>
+   <constantDeclaration name="Phenomenon4" sort="image_direction"/>
+   <constantDeclaration name="Star5" sort="image_direction"/>
+   <initialState>
+      <!-- instruments on board the first satellite -->
+      <fact relation="on_board">
+         <constant name="instrument01"/>
+         <constant name="satellite0"/>
+      </fact>
+      <fact relation="supports">
+         <constant name="instrument01"/>
+         <constant name="thermograph"/>
+      </fact>
+      <fact relation="calibration_target">
+         <constant name="instrument01"/>
+         <constant name="GroundStation0"/>
+      </fact>
+      <fact relation="on_board">
+         <constant name="instrument02"/>
+         <constant name="satellite0"/>
+      </fact>
+      <fact relation="supports">
+         <constant name="instrument02"/>
+         <constant name="x_ray"/>
+      </fact>
+      <fact relation="calibration_target">
+         <constant name="instrument02"/>
+         <constant name="GroundStation0"/>
+      </fact>
+      <fact relation="power_avail">
+         <constant name="satellite0"/>
+      </fact>
+      <fact relation="pointing">
+         <constant name="satellite0"/>
+         <constant name="Phenomenon6"/>
+      </fact>
+      <!-- instrument on board the second satellite -->
+      <fact relation="on_board">
+         <constant name="instrument1"/>
+         <constant name="satellite1"/>
+      </fact>
+      <fact relation="supports">
+         <constant name="instrument1"/>
+         <constant name="thermograph"/>
+      </fact>
+      <fact relation="calibration_target">
+         <constant name="instrument1"/>
+         <constant name="GroundStation1"/>
+      </fact>
+      <fact relation="power_avail">
+         <constant name="satellite1"/>
+      </fact>
+      <fact relation="pointing">
+         <constant name="satellite1"/>
+         <constant name="Phenomenon7"/>
+      </fact>
+   </initialState>
+   <initialTaskNetwork>
+      <taskNode name="observation1" taskSchema="do_observation">
+         <variableDeclaration name="direction1" sort="image_direction"/>
+         <variableDeclaration name="mode1" sort="mode"/>
+      </taskNode>
+      <taskNode name="observation2" taskSchema="do_observation">
+         <variableDeclaration name="direction2" sort="image_direction"/>
+         <variableDeclaration name="mode2" sort="mode"/>
+      </taskNode>
+      <valueRestriction type="eq" variable="direction1">
+         <constant name="Phenomenon4"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="mode1">
+         <constant name="thermograph"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="direction2">
+         <constant name="Star5"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="mode2">
+         <constant name="x_ray"/>
+      </valueRestriction>
+   </initialTaskNetwork>
+</problem>
