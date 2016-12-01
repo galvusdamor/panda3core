@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.compiler.pruning
 
 import de.uniulm.ki.panda3.symbolic.compiler.DomainTransformer
-import de.uniulm.ki.panda3.symbolic.domain.updates.RemoveEffects
+import de.uniulm.ki.panda3.symbolic.domain.updates.{RemovePredicate, RemoveEffects}
 import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Task, Domain}
 import de.uniulm.ki.panda3.symbolic.logic.{Predicate, Literal}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -20,8 +20,11 @@ object PruneEffects extends DomainTransformer[Set[Task]] {
       case _                 => noSupport(FORUMLASNOTSUPPORTED)
     }
 
-    val unnecessaryPredicates = domain.predicates flatMap { p => (p, true) ::(p, false) :: Nil } filterNot necessaryPredicates.contains
-    val update = RemoveEffects(unnecessaryPredicates.toSet, invertedTreatment = false)
-    (domain update update, plan update update)
+    val unnecessaryPredicatesWithSign = (domain.predicates flatMap { p => (p, true) ::(p, false) :: Nil } filterNot necessaryPredicates.contains).toSet
+    val unnecessaryPredicates = domain.predicates filter { p => (p, true) ::(p, false) :: Nil forall unnecessaryPredicatesWithSign.contains } toSet
+    val effectUpdate = RemoveEffects(unnecessaryPredicatesWithSign, invertedTreatment = false)
+    val predicateUpdate = RemovePredicate(unnecessaryPredicates)
+
+     (domain update effectUpdate update predicateUpdate, plan update effectUpdate update predicateUpdate)
   }
 }

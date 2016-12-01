@@ -162,6 +162,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     case ExchangeLiteralsByPredicate(map, _) =>
       val newPredicates = map.values flatMap { case (a, b) => a :: b :: Nil }
       Domain(sorts, newPredicates.toSeq, tasks map { _.update(domainUpdate) }, decompositionMethods map { _.update(domainUpdate) }, decompositionAxioms)
+    case RemovePredicate(predicatesToRemove) => copy(predicates = predicates filterNot predicatesToRemove)
     case _                                   => Domain(sorts map { _.update(domainUpdate) }, predicates map { _.update(domainUpdate) }, tasks map { _.update(domainUpdate) },
                                                        decompositionMethods map { _.update(domainUpdate) },
                                                        decompositionAxioms)
