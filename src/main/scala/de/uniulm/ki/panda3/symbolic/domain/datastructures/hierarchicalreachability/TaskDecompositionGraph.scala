@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReac
 import de.uniulm.ki.panda3.symbolic.logic.{GroundLiteral, Sort, And, Constant}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep, GroundTask}
+import de.uniulm.ki.panda3.symbolic.plan.modification.InsertPlanStepWithLink
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.util._
 
@@ -97,17 +98,21 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
     val allGroundedActions: Set[GroundTask] = (abstractTaskGroundings.values.flatten ++ groundedReachabilityAnalysis.reachableGroundPrimitiveActions).toSet
     val (remainingGroundTasks, remainingGroundMethods) = pruneMethodsAndTasksIfPossible(allGroundedActions, groundedDecompositionMethods.values.flatten.toSet, firstRound = true)
 
+    val alwaysNecessaryPrimitiveTasks =
+      if (initialPlan.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) groundedReachabilityAnalysis.reachableGroundPrimitiveActions else Nil
+
     //println((remainingGroundTasks groupBy { _.task } map { case (t, gts) => t.name + ": " + gts.size }).toSeq.sorted mkString "\n")
 
     val prunedTaskToMethodEdgesMaybeIncomplete = groundedDecompositionMethods collect { case (a, b) if remainingGroundTasks contains a => (a, b.toSet intersect remainingGroundMethods) }
-    val notMappedTasks = remainingGroundTasks diff prunedTaskToMethodEdgesMaybeIncomplete.keySet
-    val prunedTaskToMethodEdges = prunedTaskToMethodEdgesMaybeIncomplete ++ (notMappedTasks map { _ -> Set[GroundedDecompositionMethod]() })
+    val notMappedTasks = (remainingGroundTasks ++ alwaysNecessaryPrimitiveTasks) diff prunedTaskToMethodEdgesMaybeIncomplete.keySet
+    val prunedTaskToMethodEdges = (prunedTaskToMethodEdgesMaybeIncomplete) ++ (notMappedTasks map { _ -> Set[GroundedDecompositionMethod]() })
     val prunedMethodToTaskEdges = remainingGroundMethods map { case m => (m, m.subPlanGroundedTasksWithoutInitAndGoal.toSet) }
-    val firstAndOrGraph = SimpleAndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod](remainingGroundTasks, remainingGroundMethods, prunedTaskToMethodEdges,
-                                                                                            prunedMethodToTaskEdges.toMap)
+    val firstAndOrGraph = SimpleAndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod](remainingGroundTasks ++ alwaysNecessaryPrimitiveTasks, remainingGroundMethods,
+                                                                                            prunedTaskToMethodEdges, prunedMethodToTaskEdges.toMap)
     // reachability analysis
     //System.in.read()
-    val allReachable = firstAndOrGraph.reachableFrom(topGrounded)
+    val allReachable = firstAndOrGraph.reachableFrom(topGrounded) ++ alwaysNecessaryPrimitiveTasks
+
     val reachableWithoutTop = allReachable partition {
       case GroundedDecompositionMethod(m, _) => m.abstractTask == topTask
       case GroundTask(task, _)               => task == topTask
