@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.compiler
 
 import de.uniulm.ki.panda3.symbolic.csp.CSP
 import de.uniulm.ki.panda3.symbolic.domain.updates.{RemoveVariables, ExchangePlanSteps}
-import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, SimpleDecompositionMethod, Task, DecompositionMethod}
+import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.logic.{And, Variable}
@@ -12,7 +12,7 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 object SplitIndependentParameters extends DecompositionMethodTransformer[Unit] {
-  override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, info: Unit): (Seq[DecompositionMethod], Seq[Task]) = {
+  override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, info: Unit, originalDomain : Domain): (Seq[DecompositionMethod], Seq[Task]) = {
     // TODO assert non-hybridity
     val splittedMethods = (methods :+ topMethod) map { case om@SimpleDecompositionMethod(abstractTask, subPlan, methodName) =>
       // determine splittable variables
