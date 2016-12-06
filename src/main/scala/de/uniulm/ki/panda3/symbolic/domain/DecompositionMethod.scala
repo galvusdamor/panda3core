@@ -150,7 +150,9 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
     }
   }
 
-  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[SimpleDecompositionMethod] && this.hashCode == o.hashCode()) super.equals(o) else false
+  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[SimpleDecompositionMethod] && this.hashCode == o.hashCode())
+    abstractTask == o.asInstanceOf[SimpleDecompositionMethod].abstractTask && subPlan == o.asInstanceOf[SimpleDecompositionMethod].subPlan
+  else false
 }
 
 // scalastyle:on
@@ -201,13 +203,14 @@ case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod,
   /** returns a detailed information about the object */
   override def longInfo: String = mediumInfo + (variableBinding map { case (v, c) => v.name + "->" + c.name }).mkString("{", ",", "}")
 
-  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[GroundedDecompositionMethod] && this.hashCode == o.hashCode()) {
-    val that = o.asInstanceOf[GroundedDecompositionMethod]
-    this.decompositionMethod.equals(that.decompositionMethod) && this.variableBinding == that.variableBinding
-  } else false
+  override def equals(o: scala.Any): Boolean =
+    if (o.isInstanceOf[GroundedDecompositionMethod] && this.hashCode == o.hashCode()) {
+      val that = o.asInstanceOf[GroundedDecompositionMethod]
+      this.decompositionMethod.equals(that.decompositionMethod) && this.variableBinding == that.variableBinding
+    } else false
 
-  override final lazy val hashCode: Int = decompositionMethod.abstractTask.name.hashCode + variableBinding.toSeq.sortBy({case (v,c) => v.hashCode}).foldLeft(0)(
-    { case (h, (v, c)) => ((h + c.hashCode) * 13 + v.hashCode) * 13 }) + decompositionMethod.subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode) * 13 })
-
-  //decompositionMethod.hashCode()
+  override final lazy val hashCode: Int =
+    decompositionMethod.abstractTask.name.hashCode + variableBinding.toSeq.sortBy({ case (v, c) => v.hashCode }).foldLeft(0)(
+      { case (h, (v, c)) => ((h + c.hashCode) * 13 + v.hashCode) * 13 }) + decompositionMethod.subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode) * 13 }) +
+      decompositionMethod.subPlan.orderingConstraints.arrangementHash
 }
