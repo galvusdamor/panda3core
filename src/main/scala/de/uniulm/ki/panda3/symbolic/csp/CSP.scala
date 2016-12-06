@@ -21,6 +21,8 @@ import scala.collection.mutable
   */
 case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends DomainUpdatable with HashMemo {
 
+  constraints foreach { _.getVariables foreach { v => assert(variables contains v)}}
+
   // holds equivalent variables
   private val unionFind      : SymbolicUnionFind                            = new SymbolicUnionFind
   // contains information about unequal variables
@@ -330,7 +332,7 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
 
   override def update(domainUpdate: DomainUpdate): CSP = domainUpdate match {
     case AddVariables(newVars) => CSP(variables ++ newVars, constraints)
-    case RemoveVariables(deletedVariables) => CSP(variables -- deletedVariables, constraints)
+    case RemoveVariables(deletedVariables) => CSP(variables -- deletedVariables, constraints filterNot {_.getVariables exists deletedVariables.contains})
     case _ => CSP(variables map { _.update(domainUpdate) }, constraints map { _.update(domainUpdate) } filterNot {_.isTautologic})
   }
 
