@@ -46,7 +46,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   }
 
   lazy val planSteps       : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
-  lazy val planStepTasksSet : Set[Task] = planSteps map {_.schema} toSet
+  lazy val planStepTasksSet: Set[Task]       = planSteps map { _.schema } toSet
   lazy val causalLinks     : Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter { cl => isPresent(cl.producer) && isPresent(cl.consumer) }
   lazy val removedPlanSteps: Seq[PlanStep]   = planStepsAndRemovedPlanSteps filterNot isPresent
 
@@ -278,14 +278,14 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       val newPlan = (replacement map { case (oldV, newV) => ExchangeVariable(oldV, newV) }).foldLeft(this)({ case (p, u) => p update u })
 
-      newPlan.variableConstraints.constraints foreach { case Equal(_, vari: Variable) => assert(protectedVariables contains vari, protectedVariables + " " + vari); case _ => ()}
+      newPlan.variableConstraints.constraints foreach { case Equal(_, vari: Variable) => assert(protectedVariables contains vari, protectedVariables + " " + vari); case _ => () }
 
       newPlan.copy(parameterVariableConstraints = newPlan.parameterVariableConstraints.addConstraints(newConstraints.toSeq))
 
     case DeleteCausalLinks =>
       // need to run noupdate to simplify tasks
       this.copy(causalLinksAndRemovedCausalLinks = Nil).update(NoUpdate)
-    case _                                     =>
+    case _                 =>
       val newInit = init update domainUpdate
       val newGoal = goal update domainUpdate
 
@@ -312,7 +312,12 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
            newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree)
   }
 
-  def replaceInitAndGoal(newInit: PlanStep, newGoal: PlanStep): Plan = {
+  def replaceInitAndGoal(newInit: PlanStep, newGoal: PlanStep, variablesToKeep: Seq[Variable]): Plan = {
+
+    val newInitGoalArguments = newInit.argumentSet ++ newGoal.argumentSet
+    val variablesToRemove = (init.arguments ++ goal.arguments) filterNot { v => planStepsWithoutInitGoal exists { _.arguments.contains(v) } } filterNot
+      variablesToKeep.contains filterNot newInitGoalArguments
+
     val topPlanTasks = planStepsAndRemovedPlanStepsWithoutInitGoal :+ newInit :+ newGoal
     val initialPlanInternalOrderings = orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(initAndGoal: _*) }
     val topOrdering = TaskOrdering(initialPlanInternalOrderings ++ OrderingConstraint.allBetween(newInit, newGoal, planStepsAndRemovedPlanStepsWithoutInitGoal: _*), topPlanTasks)
@@ -320,9 +325,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       def replace(ps: PlanStep): PlanStep = if (ps == init) newInit else if (ps == goal) newGoal else ps
       CausalLink(replace(p), replace(c), cond)
     }
-    Plan(topPlanTasks, newCausalLinks, topOrdering, variableConstraints, newInit, newGoal,
+    Plan(topPlanTasks, newCausalLinks, topOrdering, parameterVariableConstraints update RemoveVariables(variablesToRemove), newInit, newGoal,
          isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
-
   }
 
   def isPresent(planStep: PlanStep): Boolean = !planStepDecomposedByMethod.contains(planStep)
@@ -493,7 +497,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     })
   }
 
-  lazy val groundedInitialStateOnlyPositive: Seq[GroundLiteral] = groundedInitialState filter { _.isPositive }
+  lazy val groundedInitialStateOnlyPositive   : Seq[GroundLiteral] = groundedInitialState filter { _.isPositive }
   lazy val groundedInitialStateOnlyPositiveSet: Set[GroundLiteral] = groundedInitialStateOnlyPositive toSet
 
   lazy val groundedGoalState: Seq[GroundLiteral] = goal.substitutedPreconditions map { case Literal(predicate, isPositive, parameters) =>
