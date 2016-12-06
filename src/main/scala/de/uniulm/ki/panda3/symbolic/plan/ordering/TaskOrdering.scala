@@ -248,13 +248,13 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
     }
   }
 
-  def allOrderingConstraints() : Seq[OrderingConstraint] = {
+  def allOrderingConstraints(): Seq[OrderingConstraint] = {
     ensureTransitiveHull()
     if (!isConsistent) Nil
     else getOrderingConstraintsOfArrangement(innerArrangement)
   }
 
-  private def getOrderingConstraintsOfArrangement(arrangement : Array[Array[Byte]]) : Seq[OrderingConstraint] = {
+  private def getOrderingConstraintsOfArrangement(arrangement: Array[Array[Byte]]): Seq[OrderingConstraint] = {
     val allPairs = for (from <- arrangement.indices; to <- from + 1 until arrangement.length) yield (from, to)
 
 
@@ -309,6 +309,12 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
     }
 
     DirectedGraphWithInternalMapping(tasksWithoutInitAndGoal, edges)
+  }
+
+  lazy val arrangementHash: Int = {
+    ensureTransitiveHull()
+    val psList = planStepToArrangementIndex.keys.flatMap({ x => planStepToArrangementIndex.keys.map({ y => (x, y) }).toSeq.sortBy(_._2.id) }).toSeq.sortBy(_._1.id)
+    psList.foldLeft(1)({ case (h, (a, b)) => 31 * h + (innerArrangement(planStepToArrangementIndex(a))(planStepToArrangementIndex(b)) + 2) })
   }
 }
 
