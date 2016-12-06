@@ -276,7 +276,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           case DijkstraType                     => assert(false); (false, false)
         }
 
-
+        // scalastyle:off null
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val solutionFound = progressionInstance.plan(domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),
                                                        JavaConversions.setAsJavaSet(groundLiterals.toSet), informationCapsule, timeCapsule,
@@ -290,7 +290,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case satSearch: SATSearch =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, timeCapsule, informationCapsule)
-          val (solved, finished) = runner.runWithTimeLimit(satSearch.timeLimit.map({ a => 1000L * a }), satSearch.maximumPlanLength, 0, defineK = satSearch.overrideK)
+          val (solved, finished) = runner.runWithTimeLimit(satSearch.timeLimit.map({ a => 1000L * a }), satSearch.maximumPlanLength, 0, defineK = satSearch.overrideK, checkSolution =
+            satSearch.checkResult)
 
           informationCapsule.set(Information.SOLVED, if (solved) "true" else "false")
           informationCapsule.set(Information.TIMEOUT, if (finished) "false" else "true")
@@ -890,7 +891,9 @@ case class ProgressionSearch(timeLimit: Option[Int],
 case class SATSearch(timeLimit: Option[Int],
                      solverType: Solvertype,
                      maximumPlanLength: Int,
-                     overrideK: Option[Int]) extends SearchConfiguration {}
+                     overrideK: Option[Int] = None,
+                     checkResult: Boolean = false
+                    ) extends SearchConfiguration {}
 
 object NoSearch extends SearchConfiguration {
   override val timeLimit: Option[Int] = Some(0)
