@@ -24,6 +24,9 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
 
   lazy val reversedEdgesSet: Map[T, Set[T]] = vertices map { v => v -> (vertices filter { v2 => edgesSet(v2) contains v } toSet) } toMap
 
+  /** Replace all edges by non-edges and vice versa */
+  def complementGraph: DirectedGraph[T]
+
   /** list of all edges as a list of pairs */
   def edgeList: Seq[(T, T)]
 
@@ -62,7 +65,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   def topologicalOrdering: Option[Seq[T]]
 
   /** Only implemented for acyclic graphs. Therefore Option[Int] as return type
-    * For cyclic graphs the problem becomes NP-comlete instead of P for acyclic graphs
+    * For cyclic graphs the problem becomes NP-complete instead of P for acyclic graphs
     */
   def longestPathLength: Option[Int]
 
@@ -111,6 +114,8 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
 
   /** list of all edges as a list of pairs */
   final lazy val edgeList: Seq[(T, T)] = edges.toSeq flatMap { case (node1, neighbours) => neighbours map { (node1, _) } }
+
+  final lazy val complementGraph: DirectedGraph[T] = SimpleDirectedGraph(vertices, edges map { case (v, ns) => v -> (vertices filterNot ns.contains) })
 
   /** in- and out- degrees of all nodes */
   lazy val degrees: Map[T, (Int, Int)] = {
@@ -306,6 +311,114 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
   }
 }
 
+object DirectedGraph {
+
+  private final def defaultMappingPreference[T](v: T, s: Seq[(Int, Seq[T])]): Seq[Int] = s map { _._1 }
+
+  /**
+    * given a finite family of graphs G_i, this function returns the smallest graph G, s.t. all G_i are induced subgraphs of G.
+    *
+    * @param graphs            a finite family of graphs
+    * @param mappingPreference (optionally) provide a preference, which nodes should be mapped to which other
+    * @return The vertices of G are integral numbers, newly created and starting from zero
+    */
+  def minimalInducedSuperGraph[T](graphs: Seq[DirectedGraph[T]], mappingPreference: ((T, Seq[(Int, Seq[T])]) => Seq[Int]) = defaultMappingPreference _):
+  (DirectedGraph[Int], Seq[Map[T, Int]]) = if (graphs.isEmpty) (SimpleDirectedGraph(Nil, Nil), Nil)
+  else {
+
+    val defaultGraph = SimpleDirectedGraph[Int](0 until 2 + (graphs map { _.vertices.size } sum), Nil)
+
+    var ncall = 0
+    var smallestFound = Int.MaxValue
+
+    def mappingDFS(currentGraph: DirectedGraph[Int], currentAntiGraph: DirectedGraph[Int], currentMapping: Seq[Map[T, Int]]): (DirectedGraph[Int], Seq[Map[T, Int]]) = {
+      ncall += 1
+      //println(currentMapping map {_.size})
+      //println(graphs map {_.vertices.size})
+      val nextGraphToMap = currentMapping.zipWithIndex zip graphs find { case ((m, _), g) => m.size != g.vertices.size }
+      if (nextGraphToMap.isEmpty) {
+        //if (smallestFound > currentGraph.vertices.length)
+        //  smallestFound = currentGraph.vertices.length
+        smallestFound = 0
+        //println("F " + currentGraph.vertices.length)
+        (currentGraph, currentMapping)
+      }
+      else {
+        val nextNodeToMap = (nextGraphToMap map { case ((m, _), g) => g.vertices filterNot m.contains }).get.head
+        val ((thisMapping, mappingIndex), thisGraph) = nextGraphToMap.get
+
+        val (conntectedNodes, unconntectedNodes) = thisMapping.keys.toSeq partition { ov => thisGraph.edgesSet(ov).contains(nextNodeToMap) || thisGraph.edgesSet(nextNodeToMap).contains(ov) }
+
+        // find all already existing nodes we can map this one possibly to
+        val mappabileExistingNodes = currentGraph.vertices filter { v =>
+          val dontMapTwoNodesToTheSameNode = !(thisMapping.values.toSet contains v)
+          val allUnconnectedMappedNodesAreUnconnected = unconntectedNodes forall { uv =>
+            val mappedUV = thisMapping(uv)
+            !(currentGraph.edgesSet(mappedUV).contains(v) || currentGraph.edgesSet(v).contains(mappedUV))
+          }
+
+          val allConnectedMappedNodesAreNotUnconnected = conntectedNodes forall { uv =>
+            val mappedUV = thisMapping(uv)
+
+            val caseOutGoing = if (thisGraph.edgesSet(nextNodeToMap).contains(uv)) currentAntiGraph.edgesSet(v).contains(mappedUV) else currentGraph.edgesSet(v).contains(mappedUV)
+            val caseInGoing = if (thisGraph.edgesSet(uv).contains(nextNodeToMap)) currentAntiGraph.edgesSet(mappedUV).contains(v) else currentGraph.edgesSet(mappedUV).contains(v)
+
+            !caseInGoing && !caseOutGoing
+          }
+
+          dontMapTwoNodesToTheSameNode && allUnconnectedMappedNodesAreUnconnected && allConnectedMappedNodesAreNotUnconnected
+        }
+
+        // we can always add a new node
+        val newNode = currentGraph.vertices.size
+
+        // get selection preference
+        val preferenceOrdering = mappingPreference(nextNodeToMap,
+                                                   (mappabileExistingNodes map { v => (v, currentMapping flatMap { m => m collect { case (a, b) if b == v => a } }) }) :+(newNode, Nil))
+
+        val (minGraph, minMapping) = preferenceOrdering.foldLeft[(DirectedGraph[Int], Seq[Map[T, Int]])]((defaultGraph, currentMapping))(
+          {
+            case ((minimalGraph, minimalMapping), node) =>
+              val newVertices = currentGraph.vertices :+ node distinct
+
+              if (newVertices.length >= smallestFound) (minimalGraph, minimalMapping)
+              else {
+
+                val newEdges = currentGraph.edgeList ++ (conntectedNodes flatMap { cn =>
+                  val before = if (thisGraph.edgesSet(cn).contains(nextNodeToMap)) (thisMapping(cn), node) :: Nil else Nil
+                  val after = if (thisGraph.edgesSet(nextNodeToMap).contains(cn)) (node, thisMapping(cn)) :: Nil else Nil
+
+                  before ++ after
+                }) distinct
+                val newAntiEdges = currentAntiGraph.edgeList ++ (
+                  unconntectedNodes flatMap { cn =>
+                    val before = if (!thisGraph.edgesSet(cn).contains(nextNodeToMap)) (thisMapping(cn), node) :: Nil else Nil
+                    val after = if (!thisGraph.edgesSet(nextNodeToMap).contains(cn)) (node, thisMapping(cn)) :: Nil else Nil
+
+                    before ++ after
+                  }) distinct
+
+                val newGraph = SimpleDirectedGraph(newVertices, newEdges)
+                val newAntiGraph = SimpleDirectedGraph(newVertices, newAntiEdges)
+
+                val newMapping = currentMapping.zipWithIndex map { case (m, i) => if (i != mappingIndex) m else thisMapping.+((nextNodeToMap, node)) }
+
+                val (recursiveGraph, recursiveMapping) = mappingDFS(newGraph, newAntiGraph, newMapping)
+
+                if (recursiveGraph.vertices.size < minimalGraph.vertices.size) (recursiveGraph, recursiveMapping) else (minimalGraph, minimalMapping)
+              }
+          })
+        (minGraph, minMapping)
+      }
+
+    }
+
+    val r = mappingDFS(SimpleDirectedGraph[Int](Nil, Nil), SimpleDirectedGraph[Int](Nil, Nil), graphs map { _ => Map[T, Int]() })
+
+    println(ncall)
+    r
+  }
+}
 
 case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraph[T] {
 
@@ -315,9 +428,11 @@ case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, S
   })
 
   /** Only implemented for acyclic graphs. Therefore Option[Int] as return type
-    * For cyclic graphs the problem becomes NP-comlete instead of P for acyclic graphs
+    * For cyclic graphs the problem becomes NP-complete instead of P for acyclic graphs
     */
   override lazy val longestPathLength: Option[Int] = internalGraph.longestPathLength
+
+  override lazy val complementGraph: DirectedGraphWithInternalMapping[T] = DirectedGraphWithInternalMapping(vertices, edges map { case (v, ns) => v -> (vertices filterNot ns.contains) })
 
   /**
     * This is not a fast implementation^^

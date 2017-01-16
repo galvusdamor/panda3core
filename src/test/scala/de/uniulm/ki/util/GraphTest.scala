@@ -112,4 +112,27 @@ class GraphTest extends FlatSpec {
 
     for ((v1, v2) <- g4.edgeList) assert(g4Ordering.indexOf(v1) < g4Ordering.indexOf(v2))
   }
+
+  val g5 = SimpleDirectedGraph(0 until 4, (0,1) :: (1,2) :: (1,3) :: (0,2) :: (0,3):: Nil)
+  val g6 = SimpleDirectedGraph(0 until 4, (0,1) :: (0,2) :: (0,3) :: (1,2) :: (1,3) :: (2,3) :: Nil)
+  val g7 = SimpleDirectedGraph(0 until 4, (0,1) :: (0,2) :: (0,3) :: Nil)
+  val g8 = SimpleDirectedGraph(0 until 5, Nil)
+  val g9 = SimpleDirectedGraph(0 until 5, Nil)
+
+
+  val gp1 = SimpleDirectedGraph(0 until 4, (0,1) :: (0,2) :: (0,3) :: (1,2) :: (1,3) :: (2,3) :: Nil)
+  val gp2 = SimpleDirectedGraph(0 until 4, (0,1) :: (0,2) :: (0,3) :: (1,2) :: (1,3) :: (2,3) :: Nil)
+  val gp3 = SimpleDirectedGraph(0 until 5, (0,1) :: (0,2) :: (0,3) :: (0,4) :: (1,2) :: (1,3) :: (1,4) :: (2,3) :: (2,4) :: (3,4) :: Nil)
+  val gp4 = SimpleDirectedGraph(0 until 5, (0,1) :: (0,2) :: (0,3) :: (0,4) :: (1,2) :: (1,3) :: (1,4) :: (2,3) :: (2,4) :: (3,4) :: Nil)
+  val gp5 = SimpleDirectedGraph(0 until 5, (0,1) :: (0,2) :: (0,3) :: (0,4) :: (1,2) :: (1,3) :: (1,4) :: (2,3) :: (2,4) :: (3,4) :: Nil)
+  val gp6 = SimpleDirectedGraph(0 until 5, (0,1) :: (0,2) :: (0,3) :: (0,4) :: (1,2) :: (1,3) :: (1,4) :: (2,3) :: (2,4) :: (3,4) :: Nil)
+
+  "Minimal Supergraph" must "be computed correctly" in {
+    //val (miniSuper, miniMap) = DirectedGraph.minimalInducedSuperGraph(g5 :: g6 :: g7 :: g8 /* :: g9 */:: Nil)
+    val (miniSuper, miniMap) = DirectedGraph.minimalInducedSuperGraph(gp1 :: gp2 :: gp3 :: gp4 :: gp5 :: gp6 :: Nil)
+    println("Run Dot2PDF")
+    Dot2PdfCompiler.writeDotToFile(miniSuper, "foo.pdf")
+    //println(miniSuper)
+    println(miniMap)
+  }
 }
