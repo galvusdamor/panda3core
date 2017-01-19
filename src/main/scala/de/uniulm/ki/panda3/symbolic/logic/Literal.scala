@@ -73,13 +73,14 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 
   def ground(totalSubstitution: TotalSubstitution[Variable, Constant]): GroundLiteral = GroundLiteral(predicate, isPositive, parameterVariables map totalSubstitution)
 
-  def compileQuantors() : (Formula, Seq[Variable]) = (this,Nil)
+  def compileQuantors(): (Formula, Seq[Variable]) = (this, Nil)
 }
 
 case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo with Ordered[GroundLiteral] {
   assert(predicate.argumentSorts.length == parameter.length)
-  predicate.argumentSorts.zipWithIndex zip parameter foreach { case ((s,i), p) => assert(s.elements contains p, "Predicate " + predicate.name + " argument " + i + " value " + p.name + " " +
-    "not contained in sort " + s.name) }
+  predicate.argumentSorts.zipWithIndex zip parameter foreach { case ((s, i), p) => assert(s.elements contains p, "Predicate " + predicate.name + " argument " + i + " value " + p.name + " " +
+    "not contained in sort " + s.name)
+  }
 
   lazy val negate = copy(isPositive = !isPositive)
 
@@ -103,13 +104,14 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
   override def longInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameter map { _.longInfo }).mkString("(", ", ", ")")
 
   override def compare(that: GroundLiteral): Int = {
-    this.predicate compare that.predicate match {
-      case 0 => this.isPositive compare that.isPositive match {
-        case 0 => ((this.parameter zip that.parameter) map { case (x, y) => x compare y }) find ((i: Int) => i != 0) getOrElse 0
-        case _ => this.isPositive compare that.isPositive
+      this.predicate compare that.predicate match {
+        case 0 => this.isPositive compare that.isPositive match {
+          case 0 => ((this.parameter zip that.parameter) map { case (x, y) => x compare y }) find ((i: Int) => i != 0) getOrElse 0
+          case _ => this.isPositive compare that.isPositive
+        }
+        case _ => this.predicate compare that.predicate
       }
-      case _ => this.predicate compare that.predicate
-    }
   }
-  def compileQuantors() : (Formula, Seq[Variable]) = (this,Nil)
+
+  def compileQuantors(): (Formula, Seq[Variable]) = (this, Nil)
 }
