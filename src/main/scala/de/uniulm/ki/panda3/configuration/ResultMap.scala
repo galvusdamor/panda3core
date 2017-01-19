@@ -92,11 +92,12 @@ object Information {
   val SOLVED_STATE = "00 global:90:planner result"
   val ERROR        = "00 global:99:error"
 
-  val ACYCLIC         = "02 properties:01:acyclic"
-  val MOSTLY_ACYCLIC  = "02 properties:02:mostly acyclic"
-  val REGULAR         = "02 properties:03:regular"
-  val TAIL_RECURSIVE  = "02 properties:04:tail recursive"
-  val TOTALLY_ORDERED = "02 properties:05:totally ordered"
+  val ACYCLIC                      = "02 properties:01:acyclic"
+  val MOSTLY_ACYCLIC               = "02 properties:02:mostly acyclic"
+  val REGULAR                      = "02 properties:03:regular"
+  val TAIL_RECURSIVE               = "02 properties:04:tail recursive"
+  val TOTALLY_ORDERED              = "02 properties:05:totally ordered"
+  val MINIMUM_DECOMPOSITION_HEIGHT = "02 properties:10:minimum decomposition height"
 
   val NUMBER_OF_NODES           = "10 search nodes:00:total"
   val NUMBER_OF_EXPANDED_NODES  = "10 search nodes:01:expanded"

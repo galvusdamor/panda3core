@@ -111,6 +111,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       extra("Domain is totally ordered: " + domainStructureAnalysis.isTotallyOrdered + "\n")
     }
 
+    informationCapsule.set(Information.MINIMUM_DECOMPOSITION_HEIGHT, domainAndPlan._1.minimumDecompositionHeightToPrimitiveForPlan(domainAndPlan._2))
+
 
     // write domain statistics into the information capsule
     informationCapsule.set(Information.NUMBER_OF_CONSTANTS, domain.constants.length)
