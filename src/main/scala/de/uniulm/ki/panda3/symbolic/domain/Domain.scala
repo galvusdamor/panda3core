@@ -4,6 +4,7 @@ import de.uniulm.ki.panda3.symbolic.csp.{OfSort, NotOfSort}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.TaskSchemaTransitionGraph
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.logic._
+import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraph}
 
@@ -90,6 +91,32 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     .isEmpty)
   })
   lazy val hasNegativePreconditions: Boolean = tasks exists { _.preconditionsAsPredicateBool exists { !_._2 } }
+
+
+  /** A map showing for each task how deep the decomposition tree has to be, to be able to reach a primitive decomposition*/
+  lazy val minimumDecompositionHeightToPrimitive: Map[Task, Int] =
+    taskSchemaTransitionGraph.condensation.topologicalOrdering.get.reverse.foldLeft(Map[Task, Int]().withDefaultValue(Integer.MAX_VALUE))(
+      {
+        case (minima, newTasks) if newTasks.size == 1 && newTasks.head.isPrimitive => minima.+((newTasks.head, 0))
+        case (minima, newTasks)                                                    =>
+
+          def iterate(currentMinima: Map[Task, Int]): Map[Task, Int] = {
+            val newPairs = newTasks map { t =>
+              // minimise over all methods
+              t -> (methodsForAbstractTasks(t) map { m =>
+                // take maximum within a method
+                m.subPlan.planStepsWithoutInitGoal map { _.schema } map currentMinima max
+              } min)
+            } filter {_._2 != Integer.MAX_VALUE} map {case (a,b) => (a,b+1)}
+
+            val newMinima = currentMinima ++ newPairs
+            if (newMinima == currentMinima) currentMinima else iterate(newMinima)
+          }
+
+          iterate(minima)
+      })
+
+  def minimumDecompositionHeightToPrimitiveForPlan(plan : Plan) : Int = plan.planStepsWithoutInitGoal map {ps => minimumDecompositionHeightToPrimitive(ps.schema)} max
 
   /**
     * Determines the sort a constant originally belonged to.
