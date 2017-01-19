@@ -17,7 +17,7 @@ object MonroeMain {
 
   val allTimings = Timings.TOTAL_TIME :: Timings.PARSING :: Timings.FILEPARSER :: Timings.PARSER_SORT_EXPANSION :: Timings.PARSER_CWA :: Timings.PARSER_SHOP_METHODS ::
     Timings.PARSER_ELIMINATE_EQUALITY :: Timings.PARSER_FLATTEN_FORMULA :: Timings.PREPROCESSING :: Timings.COMPILE_NEGATIVE_PRECONFITIONS :: Timings.COMPILE_UNIT_METHODS ::
-    Timings.COMPILE_ORDER_IN_METHODS :: Timings.LIFTED_REACHABILITY_ANALYSIS :: Timings.GROUNDED_REACHABILITY_ANALYSIS ::
+    Timings.COMPILE_ORDER_IN_METHODS :: Timings.LIFTED_REACHABILITY_ANALYSIS ::
     Timings.GROUNDED_PLANNINGGRAPH_ANALYSIS :: Timings.GROUNDED_TDG_ANALYSIS :: Timings.HEURISTICS_PREPARATION :: Timings.SEARCH_PREPARATION :: Timings.COMPUTE_EFFICIENT_REPRESENTATION ::
     Timings.SEARCH :: Timings.SEARCH_FLAW_RESOLVER_ESTIMATION :: Timings.SEARCH_FLAW_COMPUTATION :: Timings.SEARCH_FLAW_SELECTOR :: Timings.SEARCH_FLAW_RESOLVER ::
     Timings.SEARCH_GENERATE_SUCCESSORS :: Timings.SEARCH_COMPUTE_HEURISTIC :: Nil
@@ -55,7 +55,7 @@ object MonroeMain {
                                                ParsingConfiguration(),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = None,
                                                                           splitIndependedParameters = false,
-                                                                          liftedReachability = true, groundedReachability = false, planningGraph = false,
+                                                                          liftedReachability = true, groundedReachability = None,
                                                                           groundedTaskDecompositionGraph = None, //Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = false),
                                                PlanBasedSearch(None, Some(5 * 60), GreedyType, LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute) :: Nil, Nil, LCFR),

@@ -45,7 +45,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                  postprocessingConfiguration: PostprocessingConfiguration) {
 
   searchConfiguration match {
-    case search: PlanBasedSearch => assert(!(search.heuristic contains ADD) || preprocessingConfiguration.planningGraph)
+    case search: PlanBasedSearch => assert(!(search.heuristic contains ADD) || preprocessingConfiguration.groundedReachability.contains(PlanningGraph) ||
+                                             preprocessingConfiguration.groundedReachability.contains(PlanningGraphWithMutexes))
     case _                       => ()
   }
 
@@ -267,20 +268,20 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         }
 
 
-        val (doBFS, aStar) = progression.searchAlgorithm match {
-          case BFSType                          => (true, false)
-          case DFSType                          => assert(progression.heuristic.isEmpty); (false, false)
-          case AStarActionsType(weight: Double) => assert(weight == 1); (false, true)
-          case AStarDepthType(weight: Double)   => assert(false); (false, false)
-          case GreedyType                       => (false, false)
-          case DijkstraType                     => assert(false); (false, false)
+        val (doBFS, doDFS, aStar) = progression.searchAlgorithm match {
+          case BFSType                          => (true, false, false)
+          case DFSType                          => assert(progression.heuristic.isEmpty); (false, true, false)
+          case AStarActionsType(weight: Double) => assert(weight == 1); (false, false, true)
+          case AStarDepthType(weight: Double)   => assert(false); (false, false, false)
+          case GreedyType                       => (false, false, false)
+          case DijkstraType                     => assert(false); (false, false, false)
         }
 
         // scalastyle:off null
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val solutionFound = progressionInstance.plan(domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),
                                                        JavaConversions.setAsJavaSet(groundLiterals.toSet), informationCapsule, timeCapsule,
-                                                       progression.heuristic.getOrElse(null), doBFS, aStar, progression.deleteRelaxed,
+                                                       progression.heuristic.getOrElse(null), doBFS, doDFS, aStar, progression.deleteRelaxed,
                                                        progression.timeLimit.getOrElse(Int.MaxValue).toLong * 1000)
 
           timeCapsule stop TOTAL_TIME
@@ -531,9 +532,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }
 
-  private def runGroundedPlanningGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
+  private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap): AnalysisMap = {
     val groundedInitialState = problem.groundedInitialState filter { _.isPositive }
-    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, GroundedPlanningGraphConfiguration())
+    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet,
+                                                                                                    GroundedPlanningGraphConfiguration(computeMutexes = useMutexes))
     // add analysis to map
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }
@@ -579,12 +581,28 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
     // grounded reachability analysis
-    timeCapsule start (if (preprocessingConfiguration.groundedReachability) GROUNDED_REACHABILITY_ANALYSIS else GROUNDED_PLANNINGGRAPH_ANALYSIS)
-    val groundedResult = if (preprocessingConfiguration.groundedReachability || preprocessingConfiguration.planningGraph) {
-      if (preprocessingConfiguration.groundedReachability) info("Grounded reachability analysis ... ") else info("Grounded planning graph analysis ... ")
+    if (preprocessingConfiguration.groundedReachability.isDefined) timeCapsule start GROUNDED_PLANNINGGRAPH_ANALYSIS
+    val groundedResult = if (preprocessingConfiguration.groundedReachability.isDefined) {
+
+      // output info text
+      val infoText = preprocessingConfiguration.groundedReachability.get match {
+        case NaiveGroundedReachability => "Naive grounded reachability analysis"
+        case PlanningGraph             => "Grounded planning graph"
+        case PlanningGraphWithMutexes  => "Grounded planning graph with mutexes"
+      }
+      info(infoText + " ... ")
+
+      // run the actual analysis
       val newAnalysisMap =
-        if (preprocessingConfiguration.groundedReachability) runGroundedForwardSearchReachabilityAnalysis(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
-        else runGroundedPlanningGraph(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
+        preprocessingConfiguration.groundedReachability.get match {
+          case NaiveGroundedReachability                => runGroundedForwardSearchReachabilityAnalysis(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
+          case PlanningGraph | PlanningGraphWithMutexes =>
+            val useMutexes = preprocessingConfiguration.groundedReachability.get match {
+              case PlanningGraph            => false
+              case PlanningGraphWithMutexes => true
+            }
+            runGroundedPlanningGraph(liftedResult._1._1, liftedResult._1._2, useMutexes, liftedResult._2)
+        }
 
       val reachable = newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = liftedResult._1._1.primitiveTasks filterNot reachable.contains
@@ -593,7 +611,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
     } else liftedResult
-    timeCapsule stop (if (preprocessingConfiguration.groundedReachability) GROUNDED_REACHABILITY_ANALYSIS else GROUNDED_PLANNINGGRAPH_ANALYSIS)
+    if (preprocessingConfiguration.groundedReachability.isDefined) timeCapsule stop GROUNDED_PLANNINGGRAPH_ANALYSIS
 
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
@@ -738,20 +756,26 @@ object TwoWayTDG extends TDGGeneration {
   override def toString: String = "Two Way TDG"
 }
 
+sealed trait GroundedReachabilityMode
+
+object NaiveGroundedReachability extends GroundedReachabilityMode
+
+object PlanningGraph extends GroundedReachabilityMode
+
+object PlanningGraphWithMutexes extends GroundedReachabilityMode
+
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
                                        compileUnitMethods: Boolean,
                                        compileOrderInMethods: Option[TotallyOrderingOption],
                                        splitIndependedParameters: Boolean,
                                        liftedReachability: Boolean,
-                                       groundedReachability: Boolean,
-                                       planningGraph: Boolean,
+                                       groundedReachability: Option[GroundedReachabilityMode],
                                        groundedTaskDecompositionGraph: Option[TDGGeneration],
                                        iterateReachabilityAnalysis: Boolean,
                                        groundDomain: Boolean
                                      ) {
   //assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
-  assert(!(planningGraph && groundedReachability), "Don't use both the naive grounded reachability and the planning graph.")
 }
 
 /**

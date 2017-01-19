@@ -60,8 +60,7 @@ object Timings {
   val COMPILE_ORDER_IN_METHODS        = "02 preprocessing:03:compile order in methods"
   val SPLIT_PARAMETERS                = "02 preprocessing:04:split parameter"
   val LIFTED_REACHABILITY_ANALYSIS    = "02 preprocessing:11:lifted reachabiltiy analysis"
-  val GROUNDED_REACHABILITY_ANALYSIS  = "02 preprocessing:12:grounded reachabiltiy analysis"
-  val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:13:grounded planning graph analysis"
+  val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:12:grounded planning graph analysis"
   val GROUNDED_TDG_ANALYSIS           = "02 preprocessing:23:grounded task decomposition graph analysis"
   val GROUNDING                       = "02 preprocessing:84:grounding"
 
