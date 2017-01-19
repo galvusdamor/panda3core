@@ -37,10 +37,11 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
     // these are maps because its indices do not start with 0
     private static HashMap<method, Integer> MethodToIndex;
-    private static HashMap<Integer, method> IndexToMethod; // todo replace by array
+    private static method[] IndexToMethod;
+
 
     private static HashMap<GroundTask, Integer> TaskToIndex;
-    private static HashMap<Integer, GroundTask> IndexToTask; // todo replace by array
+    private static GroundTask[] IndexToTask;
 
     private static Map<GroundTask, Set<Integer>> reachableFrom;
 
@@ -131,8 +132,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             numprecs[i] = operators.precList[i].length;
         }
 
-        for (int methodI : cRPG.IndexToMethod.keySet()) {
-            method m = cRPG.IndexToMethod.get(methodI);
+        for (int methodI = operators.numActions; methodI < numOperators; methodI++) {
+            method m = cRPG.IndexToMethodGet(methodI);
             numprecs[methodI] = m.numDistinctTasks;
             precLists[methodI] = new int[m.tasks.length];
 
@@ -190,6 +191,22 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
         // every action makes the corresponding task-fact true
         System.out.println(" (" + (System.currentTimeMillis() - time) + " ms)");
+    }
+
+    private static method IndexToMethodGet(int index) {
+        return IndexToMethod[index - operators.numActions];
+    }
+
+    private static GroundTask IndexToTaskGet(int index) {
+        return IndexToTask[index - operators.numStateFeatures];
+    }
+
+    private static void IndexToTaskPut(int index, GroundTask t) {
+        IndexToTask[index - operators.numStateFeatures] = t;
+    }
+
+    private static void IndexToMethodPut(int index, method m) {
+        IndexToMethod[index - operators.numActions] = m;
     }
 
     public Map<GroundTask, Set<Integer>> initTopDownReachability(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
@@ -270,17 +287,17 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
     private int createTaskLookupTable(Set<GroundTask> allActions, Set<GroundTask> allTasks) {
         int taskNo = operators.numStateFeatures;
-        cRPG.IndexToTask = new HashMap<>();
+        cRPG.IndexToTask = new GroundTask[allActions.size() + allTasks.size()];
         cRPG.TaskToIndex = new HashMap<>();
 
         for (GroundTask a : allActions) {
-            cRPG.IndexToTask.put(taskNo, a);
+            cRPG.IndexToTaskPut(taskNo, a);
             cRPG.TaskToIndex.put(a, taskNo);
             taskNo++;
         }
 
         for (GroundTask t : allTasks) {
-            cRPG.IndexToTask.put(taskNo, t);
+            cRPG.IndexToTaskPut(taskNo, t);
             cRPG.TaskToIndex.put(t, taskNo);
             taskNo++;
         }
@@ -306,13 +323,22 @@ public class cRPG implements htnGroundedProgressionHeuristic {
     private int createMethodLookupTable(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
         int methodID = operators.numActions;
         cRPG.MethodToIndex = new HashMap<>();
-        cRPG.IndexToMethod = new HashMap<>();
+
+        // count methods, create array
+        int anzMethods = 0;
+        for (HashMap<GroundTask, List<method>> val : methods.values()) {
+            for (List<method> val2 : val.values()) {
+                anzMethods += val2.size();
+            }
+        }
+        cRPG.IndexToMethod = new method[anzMethods];
+
         for (HashMap<GroundTask, List<method>> val : methods.values()) {
             for (List<method> val2 : val.values()) {
                 for (method m : val2) {
                     assert (!cRPG.MethodToIndex.containsKey(m));
                     cRPG.MethodToIndex.put(m, methodID);
-                    cRPG.IndexToMethod.put(methodID, m);
+                    cRPG.IndexToMethodPut(methodID, m);
                     methodID++;
                 }
             }
@@ -551,7 +577,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                     if (action < operators.numActions) {
                         sb.append(operators.IndexToAction[action].mediumInfo());
                     } else
-                        sb.append(cRPG.IndexToMethod.get(action).m.mediumInfo());
+                        sb.append(cRPG.IndexToMethodGet(action).m.mediumInfo());
                 }
             }
 
@@ -567,7 +593,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                     if (j < operators.numStateFeatures) {
                         sb.append(operators.IndexToLiteral[j].mediumInfo());
                     } else
-                        sb.append(cRPG.IndexToTask.get(j).mediumInfo());
+                        sb.append(cRPG.IndexToTaskGet(j).mediumInfo());
                 }
             }
 
@@ -584,7 +610,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                 if (fact < operators.numStateFeatures) {
                     sb.append(operators.IndexToLiteral[fact].mediumInfo());
                 } else
-                    sb.append(cRPG.IndexToTask.get(fact).mediumInfo());
+                    sb.append(cRPG.IndexToTaskGet(fact).mediumInfo());
                 if (goalDelta.get(i).get(fact) > 1) {
                     sb.append(" * " + goalDelta.get(i).get(fact));
                 }
