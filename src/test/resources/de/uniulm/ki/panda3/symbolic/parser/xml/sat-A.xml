@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE problem SYSTEM "problem-2.0.dtd">
+<problem domain="satellite2" name="sat-A-simple" type="pure-hierarchical">
+   <constantDeclaration name="instrument0" sort="instrument"/>
+   <constantDeclaration name="satellite0" sort="satellite"/>
+   <constantDeclaration name="thermograph0" sort="mode"/>
+   <constantDeclaration name="GroundStation2" sort="calib_direction"/>
+   <constantDeclaration name="Phenomenon6" sort="image_direction"/>
+   <constantDeclaration name="Phenomenon4" sort="image_direction"/>
+   <initialState>
+      <fact relation="on_board">
+         <constant name="instrument0"/>
+         <constant name="satellite0"/>
+      </fact>
+      <fact relation="supports">
+         <constant name="instrument0"/>
+         <constant name="thermograph0"/>
+      </fact>
+      <fact relation="calibration_target">
+         <constant name="instrument0"/>
+         <constant name="GroundStation2"/>
+      </fact>
+      <fact relation="power_avail">
+         <constant name="satellite0"/>
+      </fact>
+      <fact relation="pointing">
+         <constant name="satellite0"/>
+         <constant name="Phenomenon6"/>
+      </fact>
+   </initialState>
+   <initialTaskNetwork>
+      <taskNode name="observation1" taskSchema="do_observation">
+         <variableDeclaration name="direction1" sort="image_direction"/>
+         <variableDeclaration name="mode1" sort="mode"/>
+      </taskNode>
+      <valueRestriction type="eq" variable="direction1">
+         <constant name="Phenomenon4"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="mode1">
+         <constant name="thermograph0"/>
+      </valueRestriction>
+   </initialTaskNetwork>
+</problem>

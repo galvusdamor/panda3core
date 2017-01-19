@@ -17,16 +17,16 @@ class NaiveVSTopDownTDG extends FlatSpec {
 
 
   val testInstanes = ("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml",
-    "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml", "Smartphone VerySall") ::
+    "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml", "Smartphone VerySmall") ::
     ("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml",
-      "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml", "Smartphone Sall") ::
+      "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml", "Smartphone Small") ::
     ("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp",
       "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp", "HTN Transport 00") :: Nil
 
   testInstanes foreach { case (domFile, probFile, name) =>
     "Both TDGs" must "yield the same result on the " + name + " domain" in {
 
-      val parsedDomainAndProblem = FileTypeDetector({_ => ()}).parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
+      val parsedDomainAndProblem = FileTypeDetector({ _ => () }).parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
       val sortExpanded = ExpandSortHierarchy.transform(parsedDomainAndProblem, ())
       val cwaApplied = ClosedWorldAssumption.transform(sortExpanded, true)
       val simpleMethod = SHOPMethodCompiler.transform(cwaApplied, ())
@@ -44,17 +44,20 @@ class NaiveVSTopDownTDG extends FlatSpec {
       topDownTDG.taskDecompositionGraph
       twoWayTDG.taskDecompositionGraph
 
+      naiveTDG.reachableGroundMethods
+      twoWayTDG.reachableGroundMethods
+
       assert(naiveTDG.reachableGroundedTasks.size == topDownTDG.reachableGroundedTasks.size)
       assert(naiveTDG.reachableGroundAbstractActions.size == topDownTDG.reachableGroundAbstractActions.size)
       assert(naiveTDG.reachableGroundPrimitiveActions.size == topDownTDG.reachableGroundPrimitiveActions.size)
       assert(naiveTDG.reachableGroundMethods.size == topDownTDG.reachableGroundMethods.size)
       assert(naiveTDG.reachableGroundLiterals.size == topDownTDG.reachableGroundLiterals.size)
 
-      assert(naiveTDG.reachableGroundedTasks.toSet == topDownTDG.reachableGroundedTasks.toSet)
-      assert(naiveTDG.reachableGroundAbstractActions.toSet == topDownTDG.reachableGroundAbstractActions.toSet)
-      assert(naiveTDG.reachableGroundPrimitiveActions == topDownTDG.reachableGroundPrimitiveActions)
-      assert(naiveTDG.reachableGroundMethods.toSet === topDownTDG.reachableGroundMethods.toSet)
-      assert(naiveTDG.reachableGroundLiterals.toSet === topDownTDG.reachableGroundLiterals.toSet)
+      assert(naiveTDG.reachableGroundedTasks.toSet == topDownTDG.reachableGroundedTasks.toSet, "Lifted Tasks not equal")
+      assert(naiveTDG.reachableGroundAbstractActions.toSet == topDownTDG.reachableGroundAbstractActions.toSet, "Lifted Abstract Tasks not equal")
+      assert(naiveTDG.reachableGroundPrimitiveActions == topDownTDG.reachableGroundPrimitiveActions, "Lifted Primitive Tasks not equal")
+      assert(naiveTDG.reachableGroundMethods.toSet === topDownTDG.reachableGroundMethods.toSet, "Lifted Methods not equal")
+      assert(naiveTDG.reachableGroundLiterals.toSet === topDownTDG.reachableGroundLiterals.toSet, "Lifted Literals not equal")
 
 
       assert(naiveTDG.reachableGroundedTasks.size == twoWayTDG.reachableGroundedTasks.size)
@@ -63,11 +66,13 @@ class NaiveVSTopDownTDG extends FlatSpec {
       assert(naiveTDG.reachableGroundMethods.size == twoWayTDG.reachableGroundMethods.size)
       assert(naiveTDG.reachableGroundLiterals.size == twoWayTDG.reachableGroundLiterals.size)
 
-      assert(naiveTDG.reachableGroundedTasks.toSet == twoWayTDG.reachableGroundedTasks.toSet)
-      assert(naiveTDG.reachableGroundAbstractActions.toSet == twoWayTDG.reachableGroundAbstractActions.toSet)
-      assert(naiveTDG.reachableGroundPrimitiveActions == twoWayTDG.reachableGroundPrimitiveActions)
-      assert(naiveTDG.reachableGroundMethods.toSet === twoWayTDG.reachableGroundMethods.toSet)
-      assert(naiveTDG.reachableGroundLiterals.toSet === twoWayTDG.reachableGroundLiterals.toSet)
+      assert(naiveTDG.reachableGroundedTasks.toSet == twoWayTDG.reachableGroundedTasks.toSet, "Ground Tasks not equal")
+      assert(naiveTDG.reachableGroundAbstractActions.toSet == twoWayTDG.reachableGroundAbstractActions.toSet, "Ground Abstract Tasks not equal")
+      assert(naiveTDG.reachableGroundPrimitiveActions == twoWayTDG.reachableGroundPrimitiveActions, "Ground Primitive Tasks not equal")
+      val x = naiveTDG.reachableGroundMethods filterNot twoWayTDG.reachableGroundMethods.toSet
+      val y = twoWayTDG.reachableGroundMethods filterNot naiveTDG.reachableGroundMethods.toSet
+      assert(naiveTDG.reachableGroundMethods.toSet === twoWayTDG.reachableGroundMethods.toSet, "Ground Methods not equal")
+      assert(naiveTDG.reachableGroundLiterals.toSet === twoWayTDG.reachableGroundLiterals.toSet, "Ground Literals not equal")
     }
   }
 }

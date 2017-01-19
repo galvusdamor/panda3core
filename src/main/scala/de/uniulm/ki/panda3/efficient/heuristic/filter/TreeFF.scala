@@ -9,7 +9,7 @@ import scala.collection.{mutable, BitSet}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TreeFF(domain: EfficientDomain) {
+case class TreeFF(domain: EfficientDomain) extends Filter {
 
   // we assume that negative preconditions have been compiled and that we are ground
   assert(domain.isGround)
@@ -110,14 +110,14 @@ case class TreeFF(domain: EfficientDomain) {
         else {
           // update the state
           val deleteEffect: Array[Int] = psTask.effect filter { _.isNegative } map { _.predicate }
-          val addEffect : Array[Int] = psTask.effect filter { _.isPositive } map { _.predicate }
+          val addEffect: Array[Int] = psTask.effect filter { _.isPositive } map { _.predicate }
           var i = 0
-          while (i < deleteEffect.length){
+          while (i < deleteEffect.length) {
             updatedState(deleteEffect(i)) = false
             i += 1
           }
           i = 0
-          while (i < addEffect.length){
+          while (i < addEffect.length) {
             updatedState(addEffect(i)) = true
             i += 1
           }

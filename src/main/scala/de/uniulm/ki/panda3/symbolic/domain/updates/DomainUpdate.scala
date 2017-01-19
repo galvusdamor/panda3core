@@ -34,6 +34,8 @@ case class AddPredicate(newPredicates: Seq[Predicate]) extends DomainUpdate
 
 case class AddVariables(newVariables: Seq[Variable]) extends DomainUpdate
 
+case class RemoveVariables(removedVariables: Seq[Variable]) extends DomainUpdate
+
 case class ExchangePlanSteps(exchangeMap: Map[PlanStep, PlanStep]) extends DomainUpdate
 
 object ExchangePlanSteps {
@@ -56,4 +58,11 @@ case class ExchangeLiteralsByPredicate(replacement: Map[Predicate, (Predicate, P
 
 case class RemoveEffects(unnecessaryEffects: Set[(Predicate, Boolean)], invertedTreatment: Boolean) extends DomainUpdate
 
-case class PropagateEquality(protectedVariables : Set[Variable]) extends DomainUpdate
+case class RemovePredicate(unnecessaryPredicates : Set[Predicate]) extends DomainUpdate
+
+case class PropagateEquality(protectedVariables: Set[Variable]) extends DomainUpdate
+
+object DeleteCausalLinks extends DomainUpdate
+
+
+object NoUpdate extends DomainUpdate

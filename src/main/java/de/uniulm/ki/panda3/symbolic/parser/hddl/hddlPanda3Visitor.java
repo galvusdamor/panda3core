@@ -1,9 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.parser.hddl;
 
-import de.uniulm.ki.panda3.symbolic.csp.CSP;
-import de.uniulm.ki.panda3.symbolic.csp.Equal;
-import de.uniulm.ki.panda3.symbolic.csp.NotEqual;
-import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
+import de.uniulm.ki.panda3.symbolic.csp.*;
 import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalSortsAndConsts;
@@ -213,18 +210,48 @@ public class hddlPanda3Visitor {
         if (tnCtx.constraint_defs() != null) {
             for (antlrHDDLParser.Constraint_defContext constraint : tnCtx.constraint_defs().constraint_def()) {
 
+                // variables for equals constraint
                 List<Variable> constrainedVars = new ArrayList<>();
                 for (antlrHDDLParser.Var_or_constContext vName : constraint.var_or_const()) {
                     Variable v = getVariable(vName, variables, constraints, sorts);
                     constrainedVars.add(v);
                 }
-                assert (constrainedVars.size() == 2);
+
+                // variable and sort for ofSort constraint
+                antlrHDDLParser.Typed_varContext typedVarContext = constraint.typed_var();
+                Sort sort = null;
+                Variable vari = null;
+                if (typedVarContext != null){
+                    vari  = getVariableByName(typedVarContext.VAR_NAME(),variables);
+                    String sortName = typedVarContext.var_type().NAME().toString();
+                    for (int i = 0; i < sorts.length(); i++) {
+                        Sort that = sorts.apply(i);
+                        if (that.name().equals(sortName)) {
+                            sort = that;
+                            break;
+                        }
+                    }
+                    assert(sort != null);
+                }
+
+                boolean isEquallity = constraint.equallity() != null;
+                assert ((isEquallity && constrainedVars.size() == 2) || (!isEquallity && constrainedVars.size() == 0));
+
 
                 VariableConstraint vc;
-                if (constraint.children.get(1).toString().equals("not")) { // this is an unequal constraint
-                    vc = new NotEqual(constrainedVars.get(0), constrainedVars.get(1));
-                } else {// this is an equal constraint
-                    vc = new Equal(constrainedVars.get(0), constrainedVars.get(1));
+                if (isEquallity) {
+                    if (constraint.children.get(1).toString().equals("not")) { // this is an unequal constraint
+                        vc = new NotEqual(constrainedVars.get(0), constrainedVars.get(1));
+                    } else {// this is an equal constraint
+                        vc = new Equal(constrainedVars.get(0), constrainedVars.get(1));
+                    }
+                } else {
+                    // ofSort constraint
+                    if (constraint.children.get(1).toString().equals("not")) { // this is an NotOfSort constraint
+                        vc = new NotOfSort(vari, sort);
+                    } else {// this is an ofSort constraint
+                        vc = new OfSort(vari, sort);
+                    }
                 }
                 constraints.add(vc);
             }
@@ -696,6 +723,29 @@ public class hddlPanda3Visitor {
         return new Literal(predicate, isPositive, parameterVariables.result());
     }
 
+
+    /**
+     * This method gets the parse tree of a variable and returns a variable that represents it in the given
+     * context.
+     *
+     * @param variableName       (in) The parse tree containing the object or variable
+     * @param parameters  (in/out) The parameter list in the given context (e.g. action/method parameters).
+     *                    It may be updated
+     * @return Method returns a variable that may be out of the parameter list, or the initial state definition
+     */
+    private Variable getVariableByName(TerminalNode variableName, seqProviderList<Variable> parameters) {
+        Variable var = null;
+        // this is a variable
+        String pname = variableName.getText();
+        for (int i = 0; i < parameters.size(); i++) {
+            Variable v = parameters.get(i);
+            if (v.name().equals(pname)) {
+                var = v;
+                break;
+            }
+        }
+        return var;
+    }
     /**
      * This method gets the parse tree of a variable or constant and returns a variable that represents it in the given
      * context. There are several cases to distinguish: ir may be (1) a variable in the given context (e.g. a parameter
@@ -822,18 +872,24 @@ public class hddlPanda3Visitor {
         // Extract type hierarchy from domain file
         internalSortsAndConsts internalSortModel = new internalSortsAndConsts(); // do not pass out, use only here
 
-        List<antlrHDDLParser.One_defContext> typeDefs = ctxDomain.type_def().one_def(); // the "one_def" tag might appear more than once
+        antlrHDDLParser.Type_def_listContext typeDefList = ctxDomain.type_def().type_def_list();
 
-        for (antlrHDDLParser.One_defContext typeDef : typeDefs) {
-
-            antlrHDDLParser.New_typesContext newTypes = typeDef.new_types();
-
-            final String parent_type = typeDef.var_type() == null ? ARTIFICIAL_ROOT_SORT : typeDef.var_type().NAME().toString();
+        // types with parents
+        while (typeDefList.new_types() != null) {
+            antlrHDDLParser.New_typesContext newTypes = typeDefList.new_types();
+            assert (typeDefList.var_type() != null);
+            final String parent_type = typeDefList.var_type().NAME().toString();
             for (int j = 0; j < newTypes.getChildCount(); j++) {
                 final String child_type = newTypes.NAME(j).toString();
                 internalSortModel.addParent(child_type, parent_type);
             }
+            // recursion
+            typeDefList = typeDefList.type_def_list();
         }
+        // types without parent
+        for (TerminalNode singletonType : typeDefList.NAME())
+            internalSortModel.addParent(singletonType.toString(), ARTIFICIAL_ROOT_SORT);
+
 
         // Extract constant symbols from domain and problem file
         if (ctxDomain.const_def() != null) {

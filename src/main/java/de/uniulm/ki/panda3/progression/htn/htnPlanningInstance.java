@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.progression.htn;
 
+import de.uniulm.ki.panda3.configuration.*;
 import de.uniulm.ki.panda3.progression.bottomUpGrounder.groundingUtil;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.*;
@@ -7,12 +8,9 @@ import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.ProgressionSearchRoutine;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.cRPG;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.greedyProgression;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.*;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.cRpgHtn;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.delRelaxedHTN;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.proBFS;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.simpleCompositionRPG;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
@@ -33,16 +31,16 @@ import java.util.concurrent.ExecutionException;
 
 /**
  * Created by dhoeller on 01.07.16.
- * <p/>
+ * <p>
  * - The representation of actions' preconditions and effects via Bit-Vectors might be suboptimal
  * whenever there are only a few state features effected - maybe implement a version that only
  * represents the states as Bit-Vectors, but uses Booleans for preconditions and effects.
  * (see also the efficientRPG-Class)
- * <p/>
+ * <p>
  * - Especially the Bit-Vector representation seems to be suboptimal since it needs to copy the
  * vector before applying an AND-Operator and a comparison - have a look at the respective class
  * and look for more efficient implementations (but have a look at the comment above, first).
- * <p/>
+ * <p>
  * - How to implement different search configurations? Via if-then-else? Or via factory-class to
  * help jump-prediction? A search node could produce its child by a next()-method this would
  * also be nice when having an iterative rpg-calculaton.
@@ -54,8 +52,11 @@ public class htnPlanningInstance {
     public static Random random;
     public static int randomSeed = 42;
 
-    public void plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
-                     InformationCapsule ic, TimeCapsule tc) throws ExecutionException, InterruptedException {
+
+    public boolean plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
+                        InformationCapsule ic, TimeCapsule tc,
+                        SearchHeuristic heuristic, boolean doBFS, boolean doDFS,
+                        boolean aStar, boolean deleteRelaxed, long quitAfterMs) throws ExecutionException, InterruptedException {
         random = new Random(randomSeed);
         long totaltime = System.currentTimeMillis();
         long time = System.currentTimeMillis();
@@ -100,30 +101,36 @@ public class htnPlanningInstance {
                 if (ps.methods == null) {
                     System.out.println("No method for initial task " + ps.getTask().longInfo());
                     System.out.println("Problem unsolvable.");
-                    return;
+                    return false;
                 }
             }
             initialTasks.add(ps);
         }
         ProgressionNetwork initialNode = new ProgressionNetwork(s0._1(), initialTasks);
 
-        // todo: change heuristic here
-        //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        initialNode.heuristic = new cRPG(operators.methods, allActions);
-        //initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
-        //initialNode.heuristic = new greedyProgression();
-        //initialNode.heuristic = new delRelaxedHTN(operators.methods, allActions);
-        //initialNode.heuristic = new proBFS();
-
+        if (doBFS)
+            initialNode.heuristic = new proBFS();
+        else if (doDFS)
+            initialNode.heuristic = new proDFS();
+        else if (heuristic instanceof SimpleCompositionRPG$)
+            initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
+        else if (heuristic instanceof CompositionRPG$)
+            initialNode.heuristic = new cRPG(operators.methods, allActions);
+        else if (heuristic instanceof CompositionRPGHTN$)
+            initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
+        else if (heuristic instanceof GreedyProgression$)
+            initialNode.heuristic = new greedyProgression();
+        else if (heuristic instanceof DeleteRelaxedHTN$)
+            initialNode.heuristic = new delRelaxedHTN(operators.methods, allActions);
+        else {
+            throw new IllegalArgumentException("Heuristic " + heuristic + " is not supported");
+        }
         initialNode.heuristic.build(initialNode);
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
         ProgressionSearchRoutine routine;
-        boolean aStar = false;
-        boolean deleteRelaxed = false;
         boolean printOutput = true;
         boolean findShortest = false;
-        long quitAfterMs = -1;//300000/5;
 
         routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput, findShortest);
         //routine = new EnforcedHillClimbing();
@@ -166,6 +173,8 @@ public class htnPlanningInstance {
             System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms");*/
         } else System.out.println("Problem unsolvable.");
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
+
+        return solution != null;
     }
 
     private boolean isApplicable(List<Object> solution, BitSet state) {

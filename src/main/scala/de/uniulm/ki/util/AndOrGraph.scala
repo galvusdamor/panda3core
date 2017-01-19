@@ -20,8 +20,8 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
   /** adjacency list of the graph */
   lazy val edges: Map[T, Seq[T]] = {
     val edg = (andEdges ++ orEdges) map { case (a, b) => (a, b.toSeq) }
-    edg.keys foreach {x => assert(vertices contains x)}
-    edg.values.flatten foreach { x => assert(vertices contains x) }
+    //edg.keys foreach {x => assert(vertices contains x)}
+    //edg.values.flatten foreach { x => assert(vertices contains x) }
     edg
   }
 
@@ -35,10 +35,9 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
     SimpleAndOrGraph(prunedAndVertices, prunedOrVertices, prunedAndEdges, prunedOrEdges)
   }
 
-  def minSumTraversal(root: A, evaluate: (A => Double), sumInitialValue: Int): Double = minSumTraversalMap(evaluate, sumInitialValue)(root)
+  def minSumTraversal(root: A, evaluate: (A => Double), sumInitialValue: (O => Double)): Double = minSumTraversalMap(evaluate, sumInitialValue)(root)
 
-
-  def minSumTraversalMap(evaluate: (A => Double), sumInitialValue: Int): Map[A, Double] = {
+  def minSumTraversalMap(evaluate: (A => Double), sumInitialValue: (O => Double)): Map[A, Double] = {
     val seen: scala.collection.mutable.Map[T, Double] = mutable.HashMap[T, Double]()
 
     def mini(root: A): Boolean =
@@ -60,7 +59,7 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
 
     def sum(root: O): Boolean = {
       val it = orEdges(root).iterator
-      var value = sumInitialValue.toDouble
+      var value = sumInitialValue(root)
       while (it.hasNext) value += seen(it.next())
       if (seen(root) != value) {
         seen(root) = value
@@ -73,6 +72,10 @@ trait AndOrGraph[T, A <: T, O <: T] extends DirectedGraphWithAlgorithms[T] {
 
     topOrd foreach { scc =>
       scc foreach { x => seen(x) = Integer.MAX_VALUE }
+      scc foreach {
+        case a: A if andEdges.contains(a) => andEdges(a) foreach { x => assert(seen contains x, "EDGE " + a + "->" + x) }
+        case o: O if orEdges.contains(o)  => orEdges(o) foreach { x => assert(seen contains x, "EDGE " + o + "->" + x) }
+      }
 
       var changed = true
       while (changed) {
@@ -101,6 +104,6 @@ case class SimpleAndOrGraph[T, A <: T, O <: T](andVertices: Set[A], orVertices: 
   orEdges foreach { o => assert(orVertices contains o._1) }
   andEdges foreach { _._2 foreach { o => assert(orVertices contains o) } }
   orEdges foreach { _._2 foreach { a => assert(andVertices contains a) } }
-  assert(andVertices.size == andEdges.size)
-  assert(orVertices.size == orEdges.size)
+  assert(andVertices.size == andEdges.size, andVertices.size + "!=" + andEdges.size)
+  assert(orVertices.size == orEdges.size, orVertices.size + "!=" + orEdges.size)
 }

@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE problem SYSTEM "problem-2.0.dtd">
+<problem domain="woodworking" name="woodworking01-hierarchical" type="pure-hierarchical">
+   <constantDeclaration name="grinder0" sort="grinder"/>
+   <constantDeclaration name="planer0" sort="planer"/>
+   <constantDeclaration name="spray-varnisher0" sort="spray-varnisher"/>
+   <constantDeclaration name="red" sort="acolour"/>
+   <constantDeclaration name="black" sort="acolour"/>
+   <constantDeclaration name="pine" sort="awood"/>
+   <constantDeclaration name="teak" sort="awood"/>
+   <constantDeclaration name="p0" sort="part"/>
+   <constantDeclaration name="p2" sort="part"/>
+   <constantDeclaration name="s0" sort="aboardsize"/>
+   <constantDeclaration name="s1" sort="aboardsize"/>
+   <constantDeclaration name="s2" sort="aboardsize"/>
+   <constantDeclaration name="s3" sort="aboardsize"/>
+   <constantDeclaration name="glazer0" sort="glazer"/>
+   <constantDeclaration name="highspeed-saw0" sort="highspeed-saw"/>
+   <constantDeclaration name="p1" sort="part"/>
+   <constantDeclaration name="b0" sort="board"/>
+   <initialState>
+      <fact relation="grind-treatment-change">
+         <constant name="varnished"/>
+         <constant name="colourfragments"/>
+      </fact>
+      <fact relation="grind-treatment-change">
+         <constant name="glazed"/>
+         <constant name="untreated"/>
+      </fact>
+      <fact relation="grind-treatment-change">
+         <constant name="untreated"/>
+         <constant name="untreated"/>
+      </fact>
+      <fact relation="grind-treatment-change">
+         <constant name="colourfragments"/>
+         <constant name="untreated"/>
+      </fact>
+      <fact relation="grind-treatment-change">
+         <constant name="varnished"/>
+         <constant name="untreated"/>
+      </fact>
+      <fact relation="machine-present">
+         <constant name="grinder0"/>
+      </fact>
+      <fact relation="machine-present">
+         <constant name="planer0"/>
+      </fact>
+      <fact relation="boardsize-successor">
+         <constant name="s0"/>
+         <constant name="s1"/>
+      </fact>
+      <fact relation="boardsize-successor">
+         <constant name="s1"/>
+         <constant name="s2"/>
+      </fact>
+      <fact relation="boardsize-successor">
+         <constant name="s2"/>
+         <constant name="s3"/>
+      </fact>
+      <fact relation="is-smooth">
+         <constant name="smooth"/>
+      </fact>
+      <fact relation="is-smooth">
+         <constant name="verysmooth"/>
+      </fact>
+      <fact relation="has-colour">
+         <constant name="glazer0"/>
+         <constant name="natural"/>
+      </fact>
+      <fact relation="has-colour">
+         <constant name="glazer0"/>
+         <constant name="red"/>
+      </fact>
+      <fact relation="has-colour">
+         <constant name="spray-varnisher0"/>
+         <constant name="red"/>
+      </fact>
+      <fact relation="empty">
+         <constant name="highspeed-saw0"/>
+      </fact>
+      <fact relation="available">
+         <constant name="p0"/>
+      </fact>
+      <fact relation="colour">
+         <constant name="p0"/>
+         <constant name="red"/>
+      </fact>
+      <fact relation="wood">
+         <constant name="p0"/>
+         <constant name="pine"/>
+      </fact>
+      <fact relation="surface-condition">
+         <constant name="p0"/>
+         <constant name="smooth"/>
+      </fact>
+      <fact relation="treatment">
+         <constant name="p0"/>
+         <constant name="varnished"/>
+      </fact>
+      <fact relation="goalsize">
+         <constant name="p0"/>
+         <constant name="small"/>
+      </fact>
+      <fact relation="unused">
+         <constant name="p1"/>
+      </fact>
+      <fact relation="goalsize">
+         <constant name="p1"/>
+         <constant name="medium"/>
+      </fact>
+      <fact relation="boardsize">
+         <constant name="b0"/>
+         <constant name="s3"/>
+      </fact>
+      <fact relation="wood">
+         <constant name="b0"/>
+         <constant name="pine"/>
+      </fact>
+      <fact relation="surface-condition">
+         <constant name="b0"/>
+         <constant name="rough"/>
+      </fact>
+      <fact relation="available">
+         <constant name="b0"/>
+      </fact>
+      <fact relation="available">
+         <constant name="p2"/>
+      </fact>
+      <fact relation="colour">
+         <constant name="p2"/>
+         <constant name="natural"/>
+      </fact>
+      <fact relation="wood">
+         <constant name="p2"/>
+         <constant name="teak"/>
+      </fact>
+      <fact relation="surface-condition">
+         <constant name="p2"/>
+         <constant name="verysmooth"/>
+      </fact>
+      <fact relation="treatment">
+         <constant name="p2"/>
+         <constant name="varnished"/>
+      </fact>
+      <fact relation="goalsize">
+         <constant name="p2"/>
+         <constant name="large"/>
+      </fact>
+   </initialState>
+   <goals>
+      <fact relation="available">
+         <constant name="p0"/>
+      </fact>
+      <fact relation="colour">
+         <constant name="p0"/>
+         <constant name="red"/>
+      </fact>
+      <fact relation="wood">
+         <constant name="p0"/>
+         <constant name="pine"/>
+      </fact>
+      <fact relation="available">
+         <constant name="p1"/>
+      </fact>
+      <fact relation="wood">
+         <constant name="p1"/>
+         <constant name="pine"/>
+      </fact>
+      <fact relation="available">
+         <constant name="p2"/>
+      </fact>
+      <fact relation="colour">
+         <constant name="p2"/>
+         <constant name="red"/>
+      </fact>
+      <fact relation="wood">
+         <constant name="p2"/>
+         <constant name="teak"/>
+      </fact>
+      <fact relation="wood">
+         <constant name="p0"/>
+         <constant name="pine"/>
+      </fact>
+      <!--
+      <fact relation="available">
+         <constant name="p1"/>
+      </fact>
+      <fact relation="colour">
+         <constant name="p1"/>
+         <constant name="natural"/>
+      </fact>
+      <fact relation="wood">
+         <constant name="p1"/>
+         <constant name="pine"/>
+      </fact>
+      <fact relation="surface-condition">
+         <constant name="p1"/>
+         <constant name="smooth"/>
+      </fact>
+      <fact relation="treatment">
+         <constant name="p1"/>
+         <constant name="varnished"/>
+      </fact>
+-->
+   </goals>
+   <initialTaskNetwork>
+      <taskNode name="process-p1" taskSchema="process">
+         <variableDeclaration name="process-p1_process_partVar" sort="part"/>
+         <variableDeclaration name="process-p1_process_colourVar" sort="acolour"/>
+         <variableDeclaration name="process-p1_process_oldSurfaceVar" sort="surface"/>
+         <variableDeclaration name="process-p1_process_newSurfaceVar" sort="surface"/>
+      </taskNode>
+      <taskNode name="process-p2" taskSchema="process">
+         <variableDeclaration name="process-p2_process_partVar" sort="part"/>
+         <variableDeclaration name="process-p2_process_colourVar" sort="acolour"/>
+         <variableDeclaration name="process-p2_process_oldSurfaceVar" sort="surface"/>
+         <variableDeclaration name="process-p2_process_newSurfaceVar" sort="surface"/>
+      </taskNode>
+      <taskNode name="process-p0" taskSchema="process">
+         <variableDeclaration name="process-p0_process_partVar" sort="part"/>
+         <variableDeclaration name="process-p0_process_colourVar" sort="acolour"/>
+         <variableDeclaration name="process-p0_process_oldSurfaceVar" sort="surface"/>
+         <variableDeclaration name="process-p0_process_newSurfaceVar" sort="surface"/>
+      </taskNode>
+      <valueRestriction type="eq" variable="process-p0_process_partVar">
+         <constant name="p0"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="process-p1_process_partVar">
+         <constant name="p1"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="process-p0_process_colourVar">
+         <constant name="red"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="process-p1_process_colourVar">
+         <constant name="red"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="process-p1_process_newSurfaceVar">
+         <constant name="smooth"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="process-p2_process_partVar">
+         <constant name="p2"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="process-p2_process_colourVar">
+         <constant name="red"/>
+      </valueRestriction>
+      <!--
+      <taskNode name="b:grindNPlane" taskSchema="grindNplane">
+         <variableDeclaration name="b:grindNPlane_part" sort="part"/>
+         <variableDeclaration name="b:grindNPlane_grindNplane_variable1" sort="surface"/>
+         <variableDeclaration name="b:grindNPlane_grindNplane_variable2" sort="acolour"/>
+         <variableDeclaration name="b:grindNPlane_grindNplane_variable3" sort="treatmentstatus"/>
+         <variableDeclaration name="b:grindNPlane_grindNplane_variable4" sort="surface"/>
+         <variableDeclaration name="b:grindNPlane_grindNplane_variable5" sort="acolour"/>
+         <variableDeclaration name="b:grindNPlane_grindNplane_variable6" sort="treatmentstatus"/>
+      </taskNode>
+-->
+      <!--
+      <taskNode name="d:saw" taskSchema="do-saw">
+         <variableDeclaration name="d:saw_board" sort="board"/>
+         <variableDeclaration name="d:saw_part" sort="part"/>
+         <variableDeclaration name="d:saw_do-saw_variable2" sort="awood"/>
+         <variableDeclaration name="d:saw_do-saw_variable3" sort="surface"/>
+      </taskNode>
+      <taskNode name="e:colour" taskSchema="do-colour">
+         <variableDeclaration name="e:colour_part" sort="part"/>
+         <variableDeclaration name="e:colour_do-colour_variable1" sort="acolour"/>
+         <variableDeclaration name="e:colour_do-colour_variable2" sort="machine"/>
+      </taskNode>
+-->
+      <!--
+      <valueRestriction type="eq" variable="b:grindNPlane_part">
+         <constant name="p1"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="d:saw_part">
+         <constant name="p1"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="d:saw_board">
+         <constant name="b0"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="e:colour_part">
+         <constant name="p1"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="f:colour_part">
+         <constant name="p2"/>
+      </valueRestriction>
+-->
+   </initialTaskNetwork>
+</problem>

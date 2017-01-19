@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE problem SYSTEM "problem-2.0.dtd">
+<problem domain="UMTranslog" name="umtranslog_1_AirplanesHub" type="pure-hierarchical">
+   <documentation>
+        There is a solution (with 28 primitive tasks) to this problem after 2466 cycles
+        (without using the agent in charge of inserting tasks).
+        We can find a solution with 28 primitive tasks (including initial and goal tasks) after 1450 cycles
+        in manual mode (with 1372 backtrackings and 5 plans in fringe).
+    </documentation>
+   <constantDeclaration name="Stuttgart" sort="City"/>
+   <constantDeclaration name="BadenWuerttemberg" sort="Region"/>
+   <constantDeclaration name="London" sort="City"/>
+   <constantDeclaration name="LondonRegion" sort="Region"/>
+   <constantDeclaration name="FlughafenStuttgart" sort="Airport"/>
+   <constantDeclaration name="Plane_RampStuttgart" sort="Plane_Ramp"/>
+   <constantDeclaration name="HeathrowAirport" sort="Airport"/>
+   <constantDeclaration name="Plane_RampHeathrow" sort="Plane_Ramp"/>
+   <constantDeclaration name="FlughafenParis" sort="Airport_Hub"/>
+   <constantDeclaration name="Plane_RampParis" sort="Plane_Ramp"/>
+   <constantDeclaration name="FlugzeugLufthansa" sort="Airplane"/>
+   <constantDeclaration name="FlugzeugAirFrance" sort="Airplane"/>
+   <constantDeclaration name="Stuttgart_Paris_Air_Route"
+      sort="Air_Route"/>
+   <constantDeclaration name="Paris_London_Air_Route" sort="Air_Route"/>
+   <constantDeclaration name="Drucker" sort="Parcels"/>
+   <initialState>
+      <fact relation="In_Region">
+         <constant name="Stuttgart"/>
+         <constant name="BadenWuerttemberg"/>
+      </fact>
+      <fact relation="In_Region">
+         <constant name="London"/>
+         <constant name="LondonRegion"/>
+      </fact>
+      <fact relation="In_City">
+         <constant name="FlughafenStuttgart"/>
+         <constant name="Stuttgart"/>
+      </fact>
+      <fact relation="Available">
+         <constant name="FlughafenStuttgart"/>
+      </fact>
+      <fact relation="At_Equipment">
+         <constant name="Plane_RampStuttgart"/>
+         <constant name="FlughafenStuttgart"/>
+      </fact>
+      <fact relation="Available">
+         <constant name="Plane_RampStuttgart"/>
+      </fact>
+      <fact relation="In_City">
+         <constant name="HeathrowAirport"/>
+         <constant name="London"/>
+      </fact>
+      <fact relation="Available">
+         <constant name="HeathrowAirport"/>
+      </fact>
+      <fact relation="At_Equipment">
+         <constant name="Plane_RampHeathrow"/>
+         <constant name="HeathrowAirport"/>
+      </fact>
+      <fact relation="Available">
+         <constant name="Plane_RampHeathrow"/>
+      </fact>
+      <fact relation="Available">
+         <constant name="FlughafenParis"/>
+      </fact>
+      <fact relation="At_Equipment">
+         <constant name="Plane_RampParis"/>
+         <constant name="FlughafenParis"/>
+      </fact>
+      <fact relation="Available">
+         <constant name="Plane_RampParis"/>
+      </fact>
+      <fact relation="Serves">
+         <constant name="FlughafenParis"/>
+         <constant name="BadenWuerttemberg"/>
+      </fact>
+      <fact relation="Serves">
+         <constant name="FlughafenParis"/>
+         <constant name="LondonRegion"/>
+      </fact>
+      <fact relation="At_Vehicle">
+         <constant name="FlugzeugLufthansa"/>
+         <constant name="FlughafenStuttgart"/>
+      </fact>
+      <fact relation="At_Vehicle">
+         <constant name="FlugzeugAirFrance"/>
+         <constant name="FlughafenParis"/>
+      </fact>
+      <fact relation="Connects">
+         <constant name="Stuttgart_Paris_Air_Route"/>
+         <constant name="FlughafenStuttgart"/>
+         <constant name="FlughafenParis"/>
+      </fact>
+      <fact relation="Connects">
+         <constant name="Paris_London_Air_Route"/>
+         <constant name="FlughafenParis"/>
+         <constant name="HeathrowAirport"/>
+      </fact>
+      <fact relation="Available">
+         <constant name="Stuttgart_Paris_Air_Route"/>
+      </fact>
+      <fact relation="Available">
+         <constant name="Paris_London_Air_Route"/>
+      </fact>
+      <fact relation="Available">
+         <constant name="FlugzeugAirFrance"/>
+      </fact>
+      <fact relation="Available">
+         <constant name="FlugzeugLufthansa"/>
+      </fact>
+      <fact relation="PV_Compatible">
+         <constant name="Drucker"/>
+         <constant name="FlugzeugAirFrance"/>
+      </fact>
+      <fact relation="PV_Compatible">
+         <constant name="Drucker"/>
+         <constant name="FlugzeugLufthansa"/>
+      </fact>
+      <fact relation="RV_Compatible">
+         <constant name="Stuttgart_Paris_Air_Route"/>
+         <constant name="FlugzeugLufthansa"/>
+      </fact>
+      <fact relation="RV_Compatible">
+         <constant name="Paris_London_Air_Route"/>
+         <constant name="FlugzeugAirFrance"/>
+      </fact>
+      <fact relation="At_Package">
+         <constant name="Drucker"/>
+         <constant name="FlughafenStuttgart"/>
+      </fact>
+   </initialState>
+   <goals>
+      <fact relation="Delivered">
+         <constant name="Drucker"/>
+      </fact>
+   </goals>
+   <initialTaskNetwork>
+      <taskNode name="transport_Kunde1" taskSchema="transport">
+         <variableDeclaration name="tk1_p" sort="Package"/>
+         <variableDeclaration name="tk1_from" sort="Location"/>
+         <variableDeclaration name="tk1_to" sort="Location"/>
+      </taskNode>
+      <valueRestriction type="eq" variable="tk1_p">
+         <constant name="Drucker"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="tk1_from">
+         <constant name="FlughafenStuttgart"/>
+      </valueRestriction>
+      <valueRestriction type="eq" variable="tk1_to">
+         <constant name="HeathrowAirport"/>
+      </valueRestriction>
+   </initialTaskNetwork>
+</problem>

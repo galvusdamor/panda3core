@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.csp
 
 import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
-import de.uniulm.ki.panda3.symbolic.domain.updates.{AddVariables, DomainUpdate}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{RemoveVariables, AddVariables, DomainUpdate}
 import de.uniulm.ki.panda3.symbolic.logic.{Constant, Sort, Value, Variable}
 import de.uniulm.ki.util.HashMemo
 
@@ -20,6 +20,8 @@ import scala.collection.mutable
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends DomainUpdatable with HashMemo {
+
+  constraints foreach { _.getVariables foreach { v => assert(variables contains v)}}
 
   // holds equivalent variables
   private val unionFind      : SymbolicUnionFind                            = new SymbolicUnionFind
@@ -330,6 +332,7 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
 
   override def update(domainUpdate: DomainUpdate): CSP = domainUpdate match {
     case AddVariables(newVars) => CSP(variables ++ newVars, constraints)
+    case RemoveVariables(deletedVariables) => CSP(variables -- deletedVariables, constraints filterNot {_.getVariables exists deletedVariables.contains})
     case _ => CSP(variables map { _.update(domainUpdate) }, constraints map { _.update(domainUpdate) } filterNot {_.isTautologic})
   }
 

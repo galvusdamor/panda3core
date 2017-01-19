@@ -38,7 +38,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
     decompositionMethods foreach { dm =>
       assert(tasks contains dm.abstractTask)
-      dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task => assert(tasks contains task) }
+      dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task => assert(tasks contains task, "Task " + task.name + " is missing in the domain") }
     }
 
     tasks foreach { t => (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map { _._1 } foreach { p => assert(predicates contains p) } }
@@ -81,10 +81,15 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val methodsWithIndexForAbstractTasks: Map[Task, Seq[(DecompositionMethod, Int)]] = decompositionMethods.zipWithIndex.groupBy(_._1.abstractTask)
   lazy val methodsForAbstractTasks         : Map[Task, Seq[DecompositionMethod]]        = methodsWithIndexForAbstractTasks map { case (a, b) => a -> (b map { _._1 }) }
 
-  lazy val minimumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min
-  lazy val maximumMethodSize: Int     = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
-  lazy val isGround         : Boolean = predicates forall { _.argumentSorts.isEmpty }
-  lazy val isTotallyOrdered : Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
+  lazy val minimumMethodSize: Int = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min
+  lazy val maximumMethodSize: Int = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
+
+  lazy val isGround                : Boolean = predicates forall { _.argumentSorts.isEmpty }
+  lazy val isTotallyOrdered        : Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
+  lazy val isHybrid                : Boolean = (decompositionMethods exists { _.subPlan.causalLinks.nonEmpty }) || (tasks exists { t => t.isAbstract && (t.precondition.isEmpty || t.effect
+    .isEmpty)
+  })
+  lazy val hasNegativePreconditions: Boolean = tasks exists { _.preconditionsAsPredicateBool exists { !_._2 } }
 
   /**
     * Determines the sort a constant originally belonged to.
@@ -133,7 +138,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   /** returns a list containing all declared sorts (i.e. the sorts member of this class) and all sorts that are created ad hoc, e.g. for variables and parameters */
   lazy val declaredAndUnDeclaredSorts: Seq[Sort] = {
-    val taskSorts: Seq[Sort] = tasks flatMap { t => t.parameters map { _.sort } }
+    val taskSorts: Seq[Sort] = (tasks ++ hiddenTasks) flatMap { t => t.parameters map { _.sort } }
     val parameterConstraintSorts: Seq[Sort] = tasks flatMap { t => t.parameterConstraints collect {
       case OfSort(_, s)    => s
       case NotOfSort(_, s) => s
@@ -159,6 +164,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     case ExchangeLiteralsByPredicate(map, _) =>
       val newPredicates = map.values flatMap { case (a, b) => a :: b :: Nil }
       Domain(sorts, newPredicates.toSeq, tasks map { _.update(domainUpdate) }, decompositionMethods map { _.update(domainUpdate) }, decompositionAxioms)
+    case RemovePredicate(predicatesToRemove) => copy(predicates = predicates filterNot predicatesToRemove)
     case _                                   => Domain(sorts map { _.update(domainUpdate) }, predicates map { _.update(domainUpdate) }, tasks map { _.update(domainUpdate) },
                                                        decompositionMethods map { _.update(domainUpdate) },
                                                        decompositionAxioms)

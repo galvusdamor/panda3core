@@ -106,7 +106,8 @@ case class OfSort(left: Variable, right: Sort) extends VariableConstraint {
 
   override def update(domainUpdate: DomainUpdate): OfSort = OfSort(left.update(domainUpdate), right.update(domainUpdate))
 
-  lazy val isTautologic : Boolean = left.sort.elements forall right.elements.contains
+  // TODO interacts with the XML parser
+  lazy val isTautologic : Boolean = false // left.sort.elements forall right.elements.contains
 }
 
 /**
@@ -118,5 +119,7 @@ case class NotOfSort(left: Variable, right: Sort) extends VariableConstraint {
   override def substitute(sub: PartialSubstitution[Variable]): VariableConstraint = NotOfSort(sub(left), right)
 
   override def update(domainUpdate: DomainUpdate): NotOfSort = NotOfSort(left.update(domainUpdate), right.update(domainUpdate))
-  lazy val isTautologic : Boolean = !(left.sort.elements exists right.elements.contains)
+
+  // TODO interacts with the XML parser
+  lazy val isTautologic : Boolean = false // !(left.sort.elements exists right.elements.contains)
 }

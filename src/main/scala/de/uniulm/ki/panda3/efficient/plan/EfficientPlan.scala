@@ -58,15 +58,19 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
   def isPlanStepPresentInPlan(planStep: Int): Boolean = planStepDecomposedByMethod(planStep) == -1
 
-  val numberOfAllPlanSteps: Int = planStepTasks.length
-  val numberOfPlanSteps   : Int = {
-    var number = 2
+  val numberOfAllPlanSteps: Int                                                  = planStepTasks.length
+  val (numberOfPlanSteps, numberOfPrimitivePlanSteps, numberOfAbstractPlanSteps) = {
+    var numberPS = 2
+    var numberPrimitive = 2
     var i = 2
     while (i < numberOfAllPlanSteps) {
-      if (isPlanStepPresentInPlan(i)) number += 1
+      if (isPlanStepPresentInPlan(i)) {
+        numberPS += 1
+        if (domain.tasks(planStepTasks(i)).isPrimitive) numberPrimitive += 1
+      }
       i += 1
     }
-    number
+    (numberPS, numberPrimitive, numberPS - numberPrimitive)
   }
 
   private var precomputedAbstractPlanStepFlaws: Option[Array[EfficientAbstractPlanStep]] = None
@@ -113,7 +117,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
   /** recomputes the open preconditions flaws */
   private def computeOpenPreconditions(planStep: Int, buffer: ArrayBuffer[EfficientOpenPrecondition]) = {
-    if (planStepDecomposedByMethod(planStep) == -1) {
+    if (isPlanStepPresentInPlan(planStep)) {
       var precondition = 0
       while (precondition < domain.tasks(planStepTasks(planStep)).precondition.length) {
         // check for a causal link
@@ -493,6 +497,81 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
   val firstFreePlanStepID: Int = planStepTasks.length
 
   lazy val possibleSupportersByDecompositionPerLiteral: Array[Array[Int]] = EfficientPlan.computeDecompositionSupportersPerLiteral(domain, planStepTasks, planStepDecomposedByMethod)
+
+
+  lazy val remainingAccessiblePrimitiveTasks: Array[Int] = {
+    val reachable = new mutable.BitSet()
+    val (primitives, abstracts) = Range(2, numberOfAllPlanSteps) filter isPlanStepPresentInPlan map planStepTasks partition { domain.tasks(_).isPrimitive }
+    reachable ++= primitives
+
+    reachable ++= (abstracts flatMap domain.taskSchemaTransitionGraph.reachable filter { domain.tasks(_).isPrimitive })
+
+    reachable.toArray
+  }
+
+  lazy val (reachablePositivePredicatesBasesOnPrimitives, reachablePrimitives) = {
+    val state = new mutable.BitSet()
+    val applicable = new mutable.BitSet()
+    val init = domain.tasks(planStepTasks(0))
+
+
+    init.effect filter { _.isPositive } foreach { state add _.predicate }
+    var potentialActions: Set[(EfficientTask, Int)] = Set(remainingAccessiblePrimitiveTasks map { t => (domain.tasks(t), t) }: _*)
+
+
+    var changed = true
+    while (changed) {
+      val (applicableActions, nonapplicable) = potentialActions partition { t => t._1.precondition filter { _.isPositive } forall { prec => state.contains(prec.predicate) } }
+
+      val oldStateSize = state.size
+      applicableActions foreach { _._1.effect filter { _.isPositive } foreach { state add _.predicate } }
+      applicableActions foreach { case (a, b) => applicable.add(b) }
+
+      potentialActions = nonapplicable
+      changed = oldStateSize != state.size
+    }
+
+    (state.toArray, applicable.toArray)
+  }
+
+  lazy val goalPotentiallyReachable: Boolean = {
+    val goalPredicates = domain.tasks(planStepTasks(1)).precondition filter { _.isPositive } map { _.predicate } toSet
+
+    goalPredicates subsetOf reachablePositivePredicatesBasesOnPrimitives.toSet
+  }
+
+  lazy val allContainedApplicable: Boolean = {
+    val primitives = Range(2, numberOfAllPlanSteps) filter isPlanStepPresentInPlan map planStepTasks filter { domain.tasks(_).isPrimitive }
+
+    primitives forall { reachablePrimitives.contains }
+  }
+
+
+  lazy val (landmarkMap, taskAllowed) = domain.taskSchemaTransitionGraph.landMarkFromAndAllowedTasks(BitSet(reachablePrimitives: _*))
+
+  lazy val allLandmarks: BitSet = {
+    val abstracts = Range(2, numberOfAllPlanSteps) filter isPlanStepPresentInPlan map planStepTasks filter { domain.tasks(_).isAbstract }
+    BitSet(abstracts flatMap landmarkMap: _*)
+  }
+
+  lazy val simpleLandMark: BitSet = {
+    val lm = domain.taskSchemaTransitionGraph.landMarkFromAndAllowedTasks(BitSet(domain.tasks.indices:_*))._1
+
+    //println((lm zip landmarkMap zip taskAllowed) map {case ((a,b),all) => if (all) b.size - a.size else 0} sum)
+
+    val abstracts = Range(2, numberOfAllPlanSteps) filter isPlanStepPresentInPlan map planStepTasks filter { domain.tasks(_).isAbstract }
+    BitSet(abstracts flatMap lm: _*)
+  }
+
+  lazy val allAbstractTasksAllowed: Boolean = {
+    val abstracts = Range(2, numberOfAllPlanSteps) filter isPlanStepPresentInPlan map planStepTasks filter { domain.tasks(_).isAbstract }
+    abstracts forall taskAllowed
+  }
+
+
+  lazy val allLandmarksApplicable: Boolean = {
+    allLandmarks filter { domain.tasks(_).isPrimitive } forall reachablePrimitives.contains
+  }
 }
 
 object EfficientPlan {

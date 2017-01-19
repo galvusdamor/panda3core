@@ -15,7 +15,17 @@ import de.uniulm.ki.util.{TimeCapsule, InformationCapsule}
   */
 object MonroeMain {
 
+  val allTimings = Timings.TOTAL_TIME :: Timings.PARSING :: Timings.FILEPARSER :: Timings.PARSER_SORT_EXPANSION :: Timings.PARSER_CWA :: Timings.PARSER_SHOP_METHODS ::
+    Timings.PARSER_ELIMINATE_EQUALITY :: Timings.PARSER_FLATTEN_FORMULA :: Timings.PREPROCESSING :: Timings.COMPILE_NEGATIVE_PRECONFITIONS :: Timings.COMPILE_UNIT_METHODS ::
+    Timings.COMPILE_ORDER_IN_METHODS :: Timings.LIFTED_REACHABILITY_ANALYSIS ::
+    Timings.GROUNDED_PLANNINGGRAPH_ANALYSIS :: Timings.GROUNDED_TDG_ANALYSIS :: Timings.HEURISTICS_PREPARATION :: Timings.SEARCH_PREPARATION :: Timings.COMPUTE_EFFICIENT_REPRESENTATION ::
+    Timings.SEARCH :: Timings.SEARCH_FLAW_RESOLVER_ESTIMATION :: Timings.SEARCH_FLAW_COMPUTATION :: Timings.SEARCH_FLAW_SELECTOR :: Timings.SEARCH_FLAW_RESOLVER ::
+    Timings.SEARCH_GENERATE_SUCCESSORS :: Timings.SEARCH_COMPUTE_HEURISTIC :: Nil
+
+
   def main(args: Array[String]): Unit = {
+
+    assert(false)
 
     val run = args(0).toInt
 
@@ -26,15 +36,15 @@ object MonroeMain {
 
     val resultStream = new PrintStream(new FileOutputStream("monroe" + run + ".csv"))
 
-    resultStream.print("instance,solvestate,toplevel,nump")
+    resultStream.print("instance,solvestate,toplevel,primitivePlan,nump")
 
-    Timings.allTimings map { "," + _ } foreach resultStream.print
+    allTimings map { "," + _ } foreach resultStream.print
     resultStream.println()
     resultStream.flush()
 
     //filter { _.getName contains "full-pref" }
     domains filter { d => d.getName.split("-")(1).toInt % 4 == run } foreach { domFile =>
-      val probFile = new File(domFile.getAbsolutePath.replaceAll("/d-", "/p-") + "tlt")
+      val probFile = new File(domFile.getAbsolutePath.replaceAll("/d-", "/p-"))
       println("\n\n\nDOMAIN: " + domFile.getName)
 
       val domInputStream = new FileInputStream(domFile)
@@ -44,10 +54,11 @@ object MonroeMain {
       val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = None,
-                                                                          liftedReachability = true, groundedReachability = false, planningGraph = false,
+                                                                          splitIndependedParameters = false,
+                                                                          liftedReachability = true, groundedReachability = None,
                                                                           groundedTaskDecompositionGraph = None, //Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = false),
-        PlanBasedSearch(None, Some(5 * 60), GreedyType, Some(LiftedTDGMinimumModification), LCFR),
+                                               PlanBasedSearch(None, Some(5 * 60), GreedyType, LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute) :: Nil, Nil, LCFR),
                                                //SearchConfiguration(None, Some(5), efficientSearch = true, DFSType, None, printSearchInfo = true),
                                                //SearchConfiguration(None, Some(5 * 60), efficientSearch = true, GreedyType, Some(NumberOfFlaws), printSearchInfo =true),
                                                PostprocessingConfiguration(Set(ProcessingTimings,
@@ -74,7 +85,7 @@ object MonroeMain {
       println(results(ProcessingTimings).shortInfo)
 
       println("SOLUTION SEQUENCE")
-      val toplevelTask = if (results(SearchResult).nonEmpty) {
+      val (toplevelTask, primitiveSequence) = if (results(SearchResult).nonEmpty) {
         val plan = results(SearchResult).get
 
         // check executability
@@ -115,12 +126,14 @@ object MonroeMain {
 
         println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
 
-        psToString(realGoal)
-      } else "unknown"
+        val prim = ordering map psToString mkString ":"
+
+        (psToString(realGoal), prim)
+      } else ("unknown", "none")
 
       val pActions = if (results.map contains PreprocessedDomainAndPlan) results(PreprocessedDomainAndPlan)._1.tasks count { _.name startsWith "p_" } else -1
-      resultStream.print(domFile.getName + "," + results(SearchStatus) + "," + toplevelTask + "," + pActions)
-      Timings.allTimings map { "," + results(ProcessingTimings).integralDataMap().getOrElse(_, Integer.MAX_VALUE) } foreach resultStream.print
+      resultStream.print(domFile.getName + "," + results(SearchStatus) + "," + toplevelTask + "," + primitiveSequence + ", " + pActions)
+      allTimings map { "," + results(ProcessingTimings).integralDataMap().getOrElse(_, Integer.MAX_VALUE) } foreach resultStream.print
       resultStream.println()
       resultStream.flush()
     }

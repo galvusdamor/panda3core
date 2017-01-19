@@ -41,13 +41,15 @@ trait PathBasedEncoding extends VerifyEncoding {
     // write myself
     val possibleTasksClauses: Seq[Clause] = atMostOneOf(possibleTasksToActions)
 
-    if (layer == K || (possibleTaskOrder forall {_.isPrimitive})) {
+    if (layer == K || (possibleTaskOrder forall { _.isPrimitive })) {
       //val notAnyNonPossibleTask = domain.tasks filterNot possibleTasks map { action(layer, path, _) } map { a => Clause((a, false) :: Nil) }
       //(possibleTasksClauses ++ notAnyNonPossibleTask, Set((path, possibleTasks)))
+      //println("Terminal path with " + possibleTasks.size + " tasks")
       (possibleTasksClauses, Set((path, possibleTasks)))
     } else {
       val (possibleAbstracts, possiblePrimitives) = possibleTaskOrder.zipWithIndex partition { _._1.isAbstract }
 
+      //println(possibleAbstracts map {_._1.name})
       //println("compute children")
 
       // compute per position all possible child tasks
@@ -65,6 +67,14 @@ trait PathBasedEncoding extends VerifyEncoding {
         }
       }
 
+      // TODO TEST
+      /*val allMethods = possibleAbstracts flatMap { case (abstractTask, _) => domain.methodsForAbstractTasks(abstractTask) }
+      println("Number of Methods " + allMethods.size)
+      val start = System.currentTimeMillis()
+      val g = DirectedGraph.minimalInducedSuperGraph(allMethods map {_.subPlan.orderingConstraints.fullGraph})
+      val end = System.currentTimeMillis()
+      println("Time " + (end - start) + " Size " + g._1.vertices.length + " " + g._1.edgeList.size + " " + (allMethods forall {_.subPlan.orderingConstraints.isTotalOrder()}))
+*/
       val maxMethodLength = optimiseTaskSequenceArrangement(possibleSubTaskSequences, possibleTasksPerChildPosition)
       val methodRange = Range(0, maxMethodLength)
 
@@ -89,6 +99,7 @@ trait PathBasedEncoding extends VerifyEncoding {
       val decomposeAbstract: Seq[Clause] = possibleAbstracts flatMap { case (abstractTask, abstractIndex) =>
         // select a method
         val possibleMethods = domain.methodsWithIndexForAbstractTasks(abstractTask) map { case (m, idx) => (m, method(layer, path, idx)) }
+        //println(possibleMethods.length)
 
         // one method must be applied
         val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, possibleMethods map { _._2 })
@@ -104,7 +115,7 @@ trait PathBasedEncoding extends VerifyEncoding {
 
           methodRange.foldLeft(taskOrdering)(
             {
-              case (Nil,_) => Nil
+              case (Nil, _)            => Nil
               case (remainingTasks, i) =>
                 if (possibleTasksPerChildPosition(i) contains remainingTasks.head) {
                   usedPositions add i
@@ -140,6 +151,12 @@ trait PathBasedEncoding extends VerifyEncoding {
       }
       //println("NON APL: " + noneApplied.length)
 
+      //println("Clauses possibleTasks " + possibleTasksClauses.size)
+      //println("Clauses keepPrim " + keepPrimitives.size)
+      //println("Clauses decomp " + decomposeAbstract.size)
+      //println("Clauses nonApplied " + noneApplied.size)
+
+
       // run recursive decent to get the formula for the downwards layers
       val subFormulas = possibleTasksPerChildPosition.zipWithIndex filter { _._1.nonEmpty } map { case (childPossibleTasks, index) =>
         generateDecompositionFormula(layer + 1, path :+ index, childPossibleTasks.toSet)
@@ -163,7 +180,7 @@ trait PathBasedEncoding extends VerifyEncoding {
     sorted foreach { seq =>
       range.foldLeft(seq)(
         {
-          case (Nil,_) => Nil
+          case (Nil, _)            => Nil
           case (remainingTasks, i) => if (possibleTasksPerChildPosition(i) contains remainingTasks.head) remainingTasks.tail
           else if (remainingTasks.length == maxLen - i) {possibleTasksPerChildPosition(i) += remainingTasks.head; remainingTasks.tail }
           else remainingTasks
@@ -183,15 +200,15 @@ trait PathBasedEncoding extends VerifyEncoding {
     val assertedTasks = initialPlanOrdering.zipWithIndex map { case (task, index) => Clause(pathAction(0, index :: Nil, task.schema)) }
 
     val paths = initialPlanClauses flatMap { _._2 }
-//    paths.foreach { p => assert(p._1.length == paths.head._1.length) }
+    //    paths.foreach { p => assert(p._1.length == paths.head._1.length) }
     val dec = initialPlanClauses flatMap { _._1 }
 
     //println(dec.length)
     (dec ++ assertedTasks, initialPlanClauses flatMap { _._2 } sortWith { case ((p1, _), (p2, _)) => PathBasedEncoding.pathSortingFunction(p1, p2) })
   }
 
-  protected final val primitivePathArray = primitivePaths.toArray
-  protected final val primitivePathsOnlyPathArray = primitivePathArray map {_._1}
+  protected final val primitivePathArray          = primitivePaths.toArray
+  protected final val primitivePathsOnlyPathArray = primitivePathArray map { _._1 }
 
   override lazy val decompositionFormula: Seq[Clause] = computedDecompositionFormula
 }

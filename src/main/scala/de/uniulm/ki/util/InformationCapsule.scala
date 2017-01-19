@@ -18,17 +18,17 @@ class Distribution() {
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 class InformationCapsule extends DataCapsule {
-  private val internalInformation            : mutable.Map[String, Int]          = new mutable.HashMap[String, Int]().withDefaultValue(0)
-  private val internalStringInformation      : mutable.Map[String, String]       = new mutable.HashMap[String, String]().withDefaultValue("")
+  private val internalInformationInt         : mutable.Map[String, Int]          = new mutable.HashMap[String, Int]().withDefaultValue(0)
+  private val internalInformationString      : mutable.Map[String, String]       = new mutable.HashMap[String, String]().withDefaultValue("")
   private val internalInformationDistribution: mutable.Map[String, Distribution] = new mutable.HashMap[String, Distribution]().withDefaultValue(new Distribution())
 
   // set
-  def set(key: String, value: Int): Unit = internalInformation.put(key, value)
+  def set(key: String, value: Int): Unit = internalInformationInt.put(key, value)
+
+  def set(key: String, value: String): Unit = internalInformationString.put(key, value)
 
   // basic arithmetics
-  def add(key: String, value: Int): Unit = internalInformation.put(key, value + internalInformation(key))
-
-  def add(key: String, value: String): Unit = internalStringInformation.put(key, value + internalStringInformation(key))
+  def add(key: String, value: Int): Unit = internalInformationInt.put(key, value + internalInformationInt(key))
 
   def subtract(key: String, value: Int): Unit = add(key, -value)
 
@@ -38,15 +38,15 @@ class InformationCapsule extends DataCapsule {
 
 
   // min, max
-  def min(key: String, value: Int): Unit = internalInformation.put(key, math.min(value, internalInformation(key)))
+  def min(key: String, value: Int): Unit = internalInformationInt.put(key, math.min(value, internalInformationInt(key)))
 
-  def max(key: String, value: Int): Unit = internalInformation.put(key, math.max(value, internalInformation(key)))
+  def max(key: String, value: Int): Unit = internalInformationInt.put(key, math.max(value, internalInformationInt(key)))
 
   def apply (key : String) :Int = apply(key, classOf[Int])
 
   def apply[T](key: String, returnType : Class[T]): T = returnType match {
-    case t if t == classOf[Int] => internalInformation(key).asInstanceOf[T]
-    case t if t == classOf[String] => internalStringInformation(key).asInstanceOf[T]
+    case t if t == classOf[Int] => internalInformationInt(key).asInstanceOf[T]
+    case t if t == classOf[String] => internalInformationString(key).asInstanceOf[T]
   }
 
 
@@ -57,11 +57,9 @@ class InformationCapsule extends DataCapsule {
     internalInformationDistribution.put(key, distribution)
   }
 
-  // access through immutable datastructures
-  override def floatingDataMap(): Map[String, Double] =
-    (internalInformation.toMap map { case (a, b) => (a, b.toDouble) }) ++ (internalInformationDistribution map { case (a, b) => (a, b.mean()) } toMap)
-
-  override def integralDataMap(): Map[String, Long] = floatingDataMap map { case (a, b) => (a, b.round) }
-
-  def stringDataMap(): Map[String, String] = internalStringInformation.toMap
+  override def dataMap(): Map[String, String] = {
+    internalInformationString.toMap ++ (
+      internalInformationInt.toMap map { case (a, b) => (a, b.toString) }) ++
+      (internalInformationDistribution map { case (a, b) => (a + "-mean", b.mean().toString) })
+  }
 }

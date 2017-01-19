@@ -10,7 +10,7 @@ import scala.collection.{mutable, Seq}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK : Option[Int] = None)
+case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
   extends PathBasedEncoding with LinearPrimitivePlanEncoding {
   override val numberOfChildrenClauses: Int = 0
 
@@ -74,7 +74,7 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
     println("A " + atMostOneConstraints.size)
 
     val selected = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
-      val actionAtoms = tasks.toSeq map { pathAction(K, path, _) }
+      val actionAtoms = tasks.toSeq map { pathAction(path.length - 1, path, _) }
       val pathString = pathActive(path)
       notImpliesAllNot(pathString :: Nil, actionAtoms).+:(impliesRightOr(pathString :: Nil, actionAtoms))
     }
@@ -96,7 +96,7 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
     println("D " + onlyPrimitiveIfChosen.length)
 
     val sameAction = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
-      tasks.toSeq map { t => (t, pathAction(K, path, t)) } flatMap { case (t, actionAtom) =>
+      tasks.toSeq map { t => (t, pathAction(path.length - 1, path, t)) } flatMap { case (t, actionAtom) =>
         positionsPerPath(pindex) map { case (_, position, connectionAtom) =>
           impliesRightAndSingle(actionAtom :: connectionAtom :: Nil, action(K - 1, position, t))
         }
@@ -115,11 +115,11 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
     println("F " + nextPossible.length)
 
     val nextValid = primitivePathsOnlyPathArray.+:(Integer.MAX_VALUE :: Nil).+:(-1 :: Nil) flatMap { path =>
-      val successor = primitivePaths.+:((Integer.MAX_VALUE :: Nil, Set[Task]())) collect { case (next, _) if next != path=> nextPath(path, next) }
+      val successor = primitivePaths.+:((Integer.MAX_VALUE :: Nil, Set[Task]())) collect { case (next, _) if next != path => nextPath(path, next) }
       val predecessor = primitivePaths.+:((-1 :: Nil, Set[Task]())) collect { case (next, _) if next != path => nextPath(next, path) }
 
-      val atMostSuccessor = if (path.head != Integer.MAX_VALUE) atMostOneOf(successor) else successor map {s =>  Clause((s, false)) }
-      val atMostPredecessor = if (path.head != -1) atMostOneOf(predecessor) else predecessor map {s =>  Clause((s, false)) }
+      val atMostSuccessor = if (path.head != Integer.MAX_VALUE) atMostOneOf(successor) else successor map { s => Clause((s, false)) }
+      val atMostPredecessor = if (path.head != -1) atMostOneOf(predecessor) else predecessor map { s => Clause((s, false)) }
       val activeCheck =
         if (path.head != Integer.MAX_VALUE && path.head != -1) impliesRightOr(pathActive(path) :: Nil, successor) :: impliesRightOr(pathActive(path) :: Nil, predecessor) :: Nil else Nil
 

@@ -9,19 +9,19 @@ import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
   */
 trait EfficientHeuristic[Payload] {
 
-  def computeHeuristic(plan: EfficientPlan, payload: Payload, appliedModification: EfficientModification): (Double, Payload)
+  def computeHeuristic(plan: EfficientPlan, payload: Payload, appliedModification: EfficientModification, depth : Int): (Double, Payload)
 }
 
 
 object AlwaysZeroHeuristic extends EfficientHeuristic[Unit] {
-  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification): (Double, Unit) = (0, ())
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification,depth : Int): (Double, Unit) = (0, ())
 }
 
 trait MinimisationOverGroundingsBasedHeuristic[Payload] extends EfficientHeuristic[Payload] {
 
-  protected def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double
+  def groundingEstimator(plan: EfficientPlan, planStep: Int, arguments: Array[Int]): Double
 
-  protected def computeHeuristicByGrounding(planStep: Int, plan: EfficientPlan): Double =
+  def computeHeuristicByGrounding(planStep: Int, plan: EfficientPlan): Double =
     computeHeuristicByGrounding(planStep, new Array[Int](plan.planStepParameters(planStep).length), 0, plan)
 
   private def computeHeuristicByGrounding(planStep: Int, parameter: Array[Int], numberOfChosenParameters: Int, plan: EfficientPlan): Double =

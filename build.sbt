@@ -3,7 +3,7 @@ lazy val commonSettings = Seq(
                                description := "A planning system for partial-order causal-link, hierarchical and hybrid planning.",
                                homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/gregor-behnke.html")),
                                organization := "de.uni-ulm.ki",
-                               version := "0.2.0",
+                               version := "0.2.0-SNAPSHOT",
                                scalaVersion := "2.11.8",
                                resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
                                libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.5" % "test",
@@ -64,6 +64,14 @@ lazy val monroe = (project in (file("assembly") / "monroe")).settings(assemblySe
             assemblyJarName in assembly := "panda3monroe.jar",
             mainClass in assembly := Some("de.uniulm.ki.panda3.MonroeMain")
           )
+
+lazy val csvExtractor = (project in (file("assembly") / "csvExtractor")).settings(assemblySettings: _*).
+  settings(
+            target := file("assembly") / "csvExtractor",
+            assemblyJarName in assembly := "panda3csvExtractor.jar",
+            mainClass in assembly := Some("de.uniulm.ki.util.collectPlanningInfo")
+          )
+
 
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 scalastyleConfig := baseDirectory.value / "project" / "scalastyle_config.xml"

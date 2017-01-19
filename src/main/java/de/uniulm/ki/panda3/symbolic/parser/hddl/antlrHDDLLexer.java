@@ -1,4 +1,4 @@
-// Generated from /home/dh/IdeaProjects/panda3core_with_planning_graph/src/main/java/de/uniulm/ki/panda3/symbolic/parser/hddl/antlrHDDL.g4 by ANTLR 4.5.3
+// Generated from /home/gregor/Workspace/Panda3/panda3core/src/main/java/de/uniulm/ki/panda3/symbolic/parser/hddl/antlrHDDL.g4 by ANTLR 4.5.3
 package de.uniulm.ki.panda3.symbolic.parser.hddl;
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;

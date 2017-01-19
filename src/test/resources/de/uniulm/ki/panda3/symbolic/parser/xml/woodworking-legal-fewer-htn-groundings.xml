@@ -1,0 +1,1990 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE domain SYSTEM "domain-2.0.dtd">
+<domain name="woodworking" type="pure-hierarchical">
+		<documentation>Import of the IPC woodworking domain (IPC 6 (2008) / seq-sat Track / wookworking-strips).
+				Based on Constant-conversion of "domain-06-no-unused-variables.pddl".
+		</documentation>
+		<sortDeclaration name="acolour"/>
+		<sortDeclaration name="awood"/>
+		<sortDeclaration name="surface"/>
+		<sortDeclaration name="treatmentstatus"/>
+		<sortDeclaration name="aboardsize"/>
+		<sortDeclaration name="apartsize"/>
+		<sortDeclaration name="highspeed-saw"/>
+		<sortDeclaration name="glazer"/>
+		<sortDeclaration name="grinder"/>
+		<sortDeclaration name="immersion-varnisher"/>
+		<sortDeclaration name="planer"/>
+		<sortDeclaration name="saw"/>
+		<sortDeclaration name="spray-varnisher"/>
+		<sortDeclaration name="machine" type="concrete">
+				<subSort sort="immersion-varnisher"/>
+				<subSort sort="grinder"/>
+				<subSort sort="saw"/>
+				<subSort sort="glazer"/>
+				<subSort sort="spray-varnisher"/>
+				<subSort sort="planer"/>
+				<subSort sort="highspeed-saw"/>
+		</sortDeclaration>
+		<sortDeclaration name="board"/>
+		<sortDeclaration name="part"/>
+		<sortDeclaration name="woodobj" type="concrete">
+				<subSort sort="part"/>
+				<subSort sort="board"/>
+		</sortDeclaration>
+		<sortDeclaration name="object" type="concrete">
+				<subSort sort="treatmentstatus"/>
+				<subSort sort="surface"/>
+				<subSort sort="awood"/>
+				<subSort sort="acolour"/>
+				<subSort sort="aboardsize"/>
+				<subSort sort="woodobj"/>
+				<subSort sort="apartsize"/>
+				<subSort sort="machine"/>
+		</sortDeclaration>
+		<constantDeclaration name="verysmooth" sort="surface"/>
+		<constantDeclaration name="smooth" sort="surface"/>
+		<constantDeclaration name="rough" sort="surface"/>
+		<constantDeclaration name="varnished" sort="treatmentstatus"/>
+		<constantDeclaration name="glazed" sort="treatmentstatus"/>
+		<constantDeclaration name="untreated" sort="treatmentstatus"/>
+		<constantDeclaration name="colourfragments" sort="treatmentstatus"/>
+		<constantDeclaration name="natural" sort="acolour"/>
+		<constantDeclaration name="small" sort="apartsize"/>
+		<constantDeclaration name="medium" sort="apartsize"/>
+		<constantDeclaration name="large" sort="apartsize"/>
+		<relationDeclaration name="machine-present" type="rigid">
+				<argumentSort sort="machine"/>
+		</relationDeclaration>
+		<relationDeclaration name="unused" type="flexible">
+				<argumentSort sort="part"/>
+		</relationDeclaration>
+		<relationDeclaration name="available" type="flexible">
+				<argumentSort sort="woodobj"/>
+		</relationDeclaration>
+		<relationDeclaration name="surface-condition" type="flexible">
+				<argumentSort sort="woodobj"/>
+				<argumentSort sort="surface"/>
+		</relationDeclaration>
+		<relationDeclaration name="treatment" type="flexible">
+				<argumentSort sort="part"/>
+				<argumentSort sort="treatmentstatus"/>
+		</relationDeclaration>
+		<relationDeclaration name="colour" type="flexible">
+				<argumentSort sort="part"/>
+				<argumentSort sort="acolour"/>
+		</relationDeclaration>
+		<relationDeclaration name="wood" type="flexible">
+				<argumentSort sort="woodobj"/>
+				<argumentSort sort="awood"/>
+		</relationDeclaration>
+		<relationDeclaration name="boardsize" type="flexible">
+				<argumentSort sort="board"/>
+				<argumentSort sort="aboardsize"/>
+		</relationDeclaration>
+		<relationDeclaration name="goalsize" type="rigid">
+				<argumentSort sort="part"/>
+				<argumentSort sort="apartsize"/>
+		</relationDeclaration>
+		<relationDeclaration name="boardsize-successor" type="rigid">
+				<argumentSort sort="aboardsize"/>
+				<argumentSort sort="aboardsize"/>
+		</relationDeclaration>
+		<relationDeclaration name="in-highspeed-saw" type="flexible">
+				<argumentSort sort="board"/>
+				<argumentSort sort="highspeed-saw"/>
+		</relationDeclaration>
+		<relationDeclaration name="empty" type="flexible">
+				<argumentSort sort="highspeed-saw"/>
+		</relationDeclaration>
+		<relationDeclaration name="has-colour" type="rigid">
+				<argumentSort sort="machine"/>
+				<argumentSort sort="acolour"/>
+		</relationDeclaration>
+		<relationDeclaration name="contains-part" type="rigid">
+				<argumentSort sort="board"/>
+				<argumentSort sort="part"/>
+		</relationDeclaration>
+		<relationDeclaration name="grind-treatment-change" type="rigid">
+				<argumentSort sort="treatmentstatus"/>
+				<argumentSort sort="treatmentstatus"/>
+		</relationDeclaration>
+		<relationDeclaration name="is-smooth" type="rigid">
+				<argumentSort sort="surface"/>
+		</relationDeclaration>
+		<taskSchemaDeclaration name="do-immersion-varnish" type="primitive">
+				<variableDeclaration displayName="x" name="do-immersion-varnish_x" sort="part"/>
+				<variableDeclaration displayName="m" name="do-immersion-varnish_m" sort="immersion-varnisher"/>
+				<variableDeclaration displayName="newcolour"
+						name="do-immersion-varnish_newcolour" sort="acolour"/>
+				<variableDeclaration displayName="surface"
+						name="do-immersion-varnish_surface" sort="surface"/>
+				<and>
+						<atomic relation="available">
+								<variable name="do-immersion-varnish_x"/>
+						</atomic>
+						<atomic relation="has-colour">
+								<variable name="do-immersion-varnish_m"/>
+								<variable name="do-immersion-varnish_newcolour"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-immersion-varnish_x"/>
+								<variable name="do-immersion-varnish_surface"/>
+						</atomic>
+						<atomic relation="is-smooth">
+								<variable name="do-immersion-varnish_surface"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="do-immersion-varnish_x"/>
+								<constant name="untreated"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="treatment">
+										<variable name="do-immersion-varnish_x"/>
+										<constant name="untreated"/>
+								</atomic>
+						</not>
+						<atomic relation="treatment">
+								<variable name="do-immersion-varnish_x"/>
+								<constant name="varnished"/>
+						</atomic>
+						<not>
+								<atomic relation="colour">
+										<variable name="do-immersion-varnish_x"/>
+										<constant name="natural"/>
+								</atomic>
+						</not>
+						<atomic relation="colour">
+								<variable name="do-immersion-varnish_x"/>
+								<variable name="do-immersion-varnish_newcolour"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-spray-varnish" type="primitive">
+				<variableDeclaration displayName="x" name="do-spray-varnish_x" sort="part"/>
+				<variableDeclaration displayName="m" name="do-spray-varnish_m" sort="spray-varnisher"/>
+				<variableDeclaration displayName="newcolour"
+						name="do-spray-varnish_newcolour" sort="acolour"/>
+				<variableDeclaration displayName="surface"
+						name="do-spray-varnish_surface" sort="surface"/>
+				<and>
+						<atomic relation="available">
+								<variable name="do-spray-varnish_x"/>
+						</atomic>
+						<atomic relation="has-colour">
+								<variable name="do-spray-varnish_m"/>
+								<variable name="do-spray-varnish_newcolour"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-spray-varnish_x"/>
+								<variable name="do-spray-varnish_surface"/>
+						</atomic>
+						<atomic relation="is-smooth">
+								<variable name="do-spray-varnish_surface"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="do-spray-varnish_x"/>
+								<constant name="untreated"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="treatment">
+										<variable name="do-spray-varnish_x"/>
+										<constant name="untreated"/>
+								</atomic>
+						</not>
+						<atomic relation="treatment">
+								<variable name="do-spray-varnish_x"/>
+								<constant name="varnished"/>
+						</atomic>
+						<not>
+								<atomic relation="colour">
+										<variable name="do-spray-varnish_x"/>
+										<constant name="natural"/>
+								</atomic>
+						</not>
+						<atomic relation="colour">
+								<variable name="do-spray-varnish_x"/>
+								<variable name="do-spray-varnish_newcolour"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-glaze" type="primitive">
+				<variableDeclaration displayName="x" name="do-glaze_x" sort="part"/>
+				<variableDeclaration displayName="m" name="do-glaze_m" sort="glazer"/>
+				<variableDeclaration displayName="newcolour"
+						name="do-glaze_newcolour" sort="acolour"/>
+				<and>
+						<atomic relation="available">
+								<variable name="do-glaze_x"/>
+						</atomic>
+						<atomic relation="has-colour">
+								<variable name="do-glaze_m"/>
+								<variable name="do-glaze_newcolour"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="do-glaze_x"/>
+								<constant name="untreated"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="treatment">
+										<variable name="do-glaze_x"/>
+										<constant name="untreated"/>
+								</atomic>
+						</not>
+						<atomic relation="treatment">
+								<variable name="do-glaze_x"/>
+								<constant name="glazed"/>
+						</atomic>
+						<not>
+								<atomic relation="colour">
+										<variable name="do-glaze_x"/>
+										<constant name="natural"/>
+								</atomic>
+						</not>
+						<atomic relation="colour">
+								<variable name="do-glaze_x"/>
+								<variable name="do-glaze_newcolour"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-grind" type="primitive">
+				<variableDeclaration displayName="x" name="do-grind_x" sort="part"/>
+				<variableDeclaration displayName="oldsurface"
+						name="do-grind_oldsurface" sort="surface"/>
+				<variableDeclaration displayName="oldcolour"
+						name="do-grind_oldcolour" sort="acolour"/>
+				<variableDeclaration displayName="oldtreatment"
+						name="do-grind_oldtreatment" sort="treatmentstatus"/>
+				<variableDeclaration displayName="newtreatment"
+						name="do-grind_newtreatment" sort="treatmentstatus"/>
+				<and>
+						<atomic relation="available">
+								<variable name="do-grind_x"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-grind_x"/>
+								<variable name="do-grind_oldsurface"/>
+						</atomic>
+						<atomic relation="is-smooth">
+								<variable name="do-grind_oldsurface"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="do-grind_x"/>
+								<variable name="do-grind_oldcolour"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="do-grind_x"/>
+								<variable name="do-grind_oldtreatment"/>
+						</atomic>
+						<atomic relation="grind-treatment-change">
+								<variable name="do-grind_oldtreatment"/>
+								<variable name="do-grind_newtreatment"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="surface-condition">
+										<variable name="do-grind_x"/>
+										<variable name="do-grind_oldsurface"/>
+								</atomic>
+						</not>
+						<atomic relation="surface-condition">
+								<variable name="do-grind_x"/>
+								<constant name="verysmooth"/>
+						</atomic>
+						<not>
+								<atomic relation="treatment">
+										<variable name="do-grind_x"/>
+										<variable name="do-grind_oldtreatment"/>
+								</atomic>
+						</not>
+						<atomic relation="treatment">
+								<variable name="do-grind_x"/>
+								<variable name="do-grind_newtreatment"/>
+						</atomic>
+						<not>
+								<atomic relation="colour">
+										<variable name="do-grind_x"/>
+										<variable name="do-grind_oldcolour"/>
+								</atomic>
+						</not>
+						<atomic relation="colour">
+								<variable name="do-grind_x"/>
+								<constant name="natural"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-grind-untreated" type="primitive">
+				<variableDeclaration displayName="x" name="newObj_variable57" sort="part"/>
+				<variableDeclaration displayName="m" name="newObj_variable64" sort="grinder"/>
+				<variableDeclaration displayName="oldsurface"
+						name="newObj_variable65" sort="surface"/>
+				<variableDeclaration displayName="oldcolour"
+						name="newObj_variable66" sort="acolour"/>
+				<and>
+						<atomic relation="available">
+								<variable name="newObj_variable57"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="newObj_variable57"/>
+								<variable name="newObj_variable65"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="newObj_variable57"/>
+								<variable name="newObj_variable66"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="newObj_variable57"/>
+								<constant name="untreated"/>
+						</atomic>
+						<atomic relation="grind-treatment-change">
+								<constant name="untreated"/>
+								<constant name="untreated"/>
+						</atomic>
+						<atomic relation="machine-present">
+								<variable name="newObj_variable64"/>
+						</atomic>
+				</and>
+				<and>
+						<not>			
+								<atomic relation="treatment">
+										<variable name="newObj_variable57"/>
+										<constant name="untreated"/>
+								</atomic>
+
+						</not>
+						<atomic relation="treatment">
+								<variable name="newObj_variable57"/>
+								<constant name="untreated"/>
+						</atomic>
+						<not> 
+								<atomic relation="surface-condition">
+										<variable name="newObj_variable57"/>
+										<variable name="newObj_variable65"/>
+								</atomic>
+						</not>
+						<atomic relation="surface-condition">
+								<variable name="newObj_variable57"/>
+								<constant name="verysmooth"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="newObj_variable57"/>
+								<constant name="natural"/>
+						</atomic>
+						<not>
+								<atomic relation="colour">
+										<variable name="newObj_variable57"/>
+										<variable name="newObj_variable66"/>
+								</atomic>
+						</not>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-plane" type="primitive">
+				<variableDeclaration displayName="x" name="do-plane_x" sort="part"/>
+				<variableDeclaration displayName="oldsurface"
+						name="do-plane_oldsurface" sort="surface"/>
+				<variableDeclaration displayName="oldcolour"
+						name="do-plane_oldcolour" sort="acolour"/>
+				<variableDeclaration displayName="oldtreatment"
+						name="do-plane_oldtreatment" sort="treatmentstatus"/>
+				<and>
+						<atomic relation="available">
+								<variable name="do-plane_x"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-plane_x"/>
+								<variable name="do-plane_oldsurface"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="do-plane_x"/>
+								<variable name="do-plane_oldtreatment"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="do-plane_x"/>
+								<variable name="do-plane_oldcolour"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="surface-condition">
+										<variable name="do-plane_x"/>
+										<variable name="do-plane_oldsurface"/>
+								</atomic>
+						</not>
+						<atomic relation="surface-condition">
+								<variable name="do-plane_x"/>
+								<constant name="smooth"/>
+						</atomic>
+						<not>
+								<atomic relation="treatment">
+										<variable name="do-plane_x"/>
+										<variable name="do-plane_oldtreatment"/>
+								</atomic>
+						</not>
+						<atomic relation="treatment">
+								<variable name="do-plane_x"/>
+								<constant name="untreated"/>
+						</atomic>
+						<not>
+								<atomic relation="colour">
+										<variable name="do-plane_x"/>
+										<variable name="do-plane_oldcolour"/>
+								</atomic>
+						</not>
+						<atomic relation="colour">
+								<variable name="do-plane_x"/>
+								<constant name="natural"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-plane-untreated" type="primitive">
+				<variableDeclaration displayName="x" name="newObj_variable75" sort="part"/>
+				<variableDeclaration displayName="m" name="newObj_variable76" sort="planer"/>
+				<variableDeclaration displayName="plane-u-oldsurface"
+						name="newObj_variable77" sort="surface"/>
+				<variableDeclaration displayName="plane-u-oldcolour"
+						name="newObj_variable79" sort="acolour"/>
+				<and>
+						<atomic relation="available">
+								<variable name="newObj_variable75"/>
+						</atomic>
+						<atomic relation="machine-present">
+								<variable name="newObj_variable76"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="newObj_variable75"/>
+								<variable name="newObj_variable77"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="newObj_variable75"/>
+								<constant name="untreated"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="newObj_variable75"/>
+								<variable name="newObj_variable79"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="treatment">
+										<variable name="newObj_variable75"/>
+										<constant name="untreated"/>
+								</atomic>
+						</not>
+						<atomic relation="treatment">
+								<variable name="newObj_variable75"/>
+								<constant name="untreated"/>
+						</atomic>
+
+						<atomic relation="surface-condition">
+								<variable name="newObj_variable75"/>
+								<constant name="smooth"/>
+						</atomic>
+						<not>
+								<atomic relation="surface-condition">
+										<variable name="newObj_variable75"/>
+										<variable name="newObj_variable77"/>
+								</atomic>
+						</not>
+						<not>
+								<atomic relation="colour">
+										<variable name="newObj_variable75"/>
+										<variable name="newObj_variable79"/>
+								</atomic>
+						</not>
+						<atomic relation="colour">
+								<variable name="newObj_variable75"/>
+								<constant name="natural"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="load-highspeed-saw" type="primitive">
+				<variableDeclaration displayName="b" name="load-highspeed-saw_b" sort="board"/>
+				<variableDeclaration displayName="m" name="load-highspeed-saw_m" sort="highspeed-saw"/>
+				<and>
+						<atomic relation="empty">
+								<variable name="load-highspeed-saw_m"/>
+						</atomic>
+						<atomic relation="available">
+								<variable name="load-highspeed-saw_b"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="available">
+										<variable name="load-highspeed-saw_b"/>
+								</atomic>
+						</not>
+						<not>
+								<atomic relation="empty">
+										<variable name="load-highspeed-saw_m"/>
+								</atomic>
+						</not>
+						<atomic relation="in-highspeed-saw">
+								<variable name="load-highspeed-saw_b"/>
+								<variable name="load-highspeed-saw_m"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="unload-highspeed-saw" type="primitive">
+				<variableDeclaration displayName="b" name="unload-highspeed-saw_b" sort="board"/>
+				<variableDeclaration displayName="m" name="unload-highspeed-saw_m" sort="highspeed-saw"/>
+				<atomic relation="in-highspeed-saw">
+						<variable name="unload-highspeed-saw_b"/>
+						<variable name="unload-highspeed-saw_m"/>
+				</atomic>
+				<and>
+						<atomic relation="available">
+								<variable name="unload-highspeed-saw_b"/>
+						</atomic>
+						<not>
+								<atomic relation="in-highspeed-saw">
+										<variable name="unload-highspeed-saw_b"/>
+										<variable name="unload-highspeed-saw_m"/>
+								</atomic>
+						</not>
+						<atomic relation="empty">
+								<variable name="unload-highspeed-saw_m"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="cut-board-small" type="primitive">
+				<variableDeclaration displayName="b" name="cut-board-small_b" sort="board"/>
+				<variableDeclaration displayName="p" name="cut-board-small_p" sort="part"/>
+				<variableDeclaration displayName="m" name="cut-board-small_m" sort="highspeed-saw"/>
+				<variableDeclaration displayName="w" name="cut-board-small_w" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="cut-board-small_surface" sort="surface"/>
+				<variableDeclaration displayName="size_before"
+						name="cut-board-small_size_before" sort="aboardsize"/>
+				<variableDeclaration displayName="size_after"
+						name="cut-board-small_size_after" sort="aboardsize"/>
+				<and>
+						<atomic relation="unused">
+								<variable name="cut-board-small_p"/>
+						</atomic>
+						<atomic relation="goalsize">
+								<variable name="cut-board-small_p"/>
+								<constant name="small"/>
+						</atomic>
+						<atomic relation="in-highspeed-saw">
+								<variable name="cut-board-small_b"/>
+								<variable name="cut-board-small_m"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="cut-board-small_b"/>
+								<variable name="cut-board-small_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="cut-board-small_b"/>
+								<variable name="cut-board-small_surface"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="cut-board-small_b"/>
+								<variable name="cut-board-small_size_before"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="cut-board-small_size_after"/>
+								<variable name="cut-board-small_size_before"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="unused">
+										<variable name="cut-board-small_p"/>
+								</atomic>
+						</not>
+						<atomic relation="available">
+								<variable name="cut-board-small_p"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="cut-board-small_p"/>
+								<variable name="cut-board-small_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="cut-board-small_p"/>
+								<variable name="cut-board-small_surface"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="cut-board-small_p"/>
+								<constant name="natural"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="cut-board-small_p"/>
+								<constant name="untreated"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="cut-board-small_b"/>
+								<variable name="cut-board-small_size_after"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="cut-board-medium" type="primitive">
+				<variableDeclaration displayName="b" name="cut-board-medium_b" sort="board"/>
+				<variableDeclaration displayName="p" name="cut-board-medium_p" sort="part"/>
+				<variableDeclaration displayName="m" name="cut-board-medium_m" sort="highspeed-saw"/>
+				<variableDeclaration displayName="w" name="cut-board-medium_w" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="cut-board-medium_surface" sort="surface"/>
+				<variableDeclaration displayName="size_before"
+						name="cut-board-medium_size_before" sort="aboardsize"/>
+				<variableDeclaration displayName="s1" name="cut-board-medium_s1" sort="aboardsize"/>
+				<variableDeclaration displayName="size_after"
+						name="cut-board-medium_size_after" sort="aboardsize"/>
+				<and>
+						<atomic relation="unused">
+								<variable name="cut-board-medium_p"/>
+						</atomic>
+						<atomic relation="goalsize">
+								<variable name="cut-board-medium_p"/>
+								<constant name="medium"/>
+						</atomic>
+						<atomic relation="in-highspeed-saw">
+								<variable name="cut-board-medium_b"/>
+								<variable name="cut-board-medium_m"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="cut-board-medium_b"/>
+								<variable name="cut-board-medium_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="cut-board-medium_b"/>
+								<variable name="cut-board-medium_surface"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="cut-board-medium_b"/>
+								<variable name="cut-board-medium_size_before"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="cut-board-medium_size_after"/>
+								<variable name="cut-board-medium_s1"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="cut-board-medium_s1"/>
+								<variable name="cut-board-medium_size_before"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="unused">
+										<variable name="cut-board-medium_p"/>
+								</atomic>
+						</not>
+						<atomic relation="available">
+								<variable name="cut-board-medium_p"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="cut-board-medium_p"/>
+								<variable name="cut-board-medium_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="cut-board-medium_p"/>
+								<variable name="cut-board-medium_surface"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="cut-board-medium_p"/>
+								<constant name="natural"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="cut-board-medium_p"/>
+								<constant name="untreated"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="cut-board-medium_b"/>
+								<variable name="cut-board-medium_size_after"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="cut-board-large" type="primitive">
+				<variableDeclaration displayName="b" name="cut-board-large_b" sort="board"/>
+				<variableDeclaration displayName="p" name="cut-board-large_p" sort="part"/>
+				<variableDeclaration displayName="m" name="cut-board-large_m" sort="highspeed-saw"/>
+				<variableDeclaration displayName="w" name="cut-board-large_w" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="cut-board-large_surface" sort="surface"/>
+				<variableDeclaration displayName="size_before"
+						name="cut-board-large_size_before" sort="aboardsize"/>
+				<variableDeclaration displayName="s1" name="cut-board-large_s1" sort="aboardsize"/>
+				<variableDeclaration displayName="s2" name="cut-board-large_s2" sort="aboardsize"/>
+				<variableDeclaration displayName="size_after"
+						name="cut-board-large_size_after" sort="aboardsize"/>
+				<and>
+						<atomic relation="unused">
+								<variable name="cut-board-large_p"/>
+						</atomic>
+						<atomic relation="goalsize">
+								<variable name="cut-board-large_p"/>
+								<constant name="large"/>
+						</atomic>
+						<atomic relation="in-highspeed-saw">
+								<variable name="cut-board-large_b"/>
+								<variable name="cut-board-large_m"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="cut-board-large_b"/>
+								<variable name="cut-board-large_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="cut-board-large_b"/>
+								<variable name="cut-board-large_surface"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="cut-board-large_b"/>
+								<variable name="cut-board-large_size_before"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="cut-board-large_size_after"/>
+								<variable name="cut-board-large_s1"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="cut-board-large_s1"/>
+								<variable name="cut-board-large_s2"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="cut-board-large_s2"/>
+								<variable name="cut-board-large_size_before"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="unused">
+										<variable name="cut-board-large_p"/>
+								</atomic>
+						</not>
+						<atomic relation="available">
+								<variable name="cut-board-large_p"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="cut-board-large_p"/>
+								<variable name="cut-board-large_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="cut-board-large_p"/>
+								<variable name="cut-board-large_surface"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="cut-board-large_p"/>
+								<constant name="natural"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="cut-board-large_p"/>
+								<constant name="untreated"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="cut-board-large_b"/>
+								<variable name="cut-board-large_size_after"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-saw-small" type="primitive">
+				<variableDeclaration displayName="b" name="do-saw-small_b" sort="board"/>
+				<variableDeclaration displayName="p" name="do-saw-small_p" sort="part"/>
+				<variableDeclaration displayName="w" name="do-saw-small_w" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="do-saw-small_surface" sort="surface"/>
+				<variableDeclaration displayName="size_before"
+						name="do-saw-small_size_before" sort="aboardsize"/>
+				<variableDeclaration displayName="size_after"
+						name="do-saw-small_size_after" sort="aboardsize"/>
+				<and>
+						<atomic relation="unused">
+								<variable name="do-saw-small_p"/>
+						</atomic>
+						<atomic relation="goalsize">
+								<variable name="do-saw-small_p"/>
+								<constant name="small"/>
+						</atomic>
+						<atomic relation="available">
+								<variable name="do-saw-small_b"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="do-saw-small_b"/>
+								<variable name="do-saw-small_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-saw-small_b"/>
+								<variable name="do-saw-small_surface"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="do-saw-small_b"/>
+								<variable name="do-saw-small_size_before"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="do-saw-small_size_after"/>
+								<variable name="do-saw-small_size_before"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="unused">
+										<variable name="do-saw-small_p"/>
+								</atomic>
+						</not>
+						<atomic relation="available">
+								<variable name="do-saw-small_p"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="do-saw-small_p"/>
+								<variable name="do-saw-small_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-saw-small_p"/>
+								<variable name="do-saw-small_surface"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="do-saw-small_p"/>
+								<constant name="natural"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="do-saw-small_p"/>
+								<constant name="untreated"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="do-saw-small_b"/>
+								<variable name="do-saw-small_size_after"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-saw-medium" type="primitive">
+				<variableDeclaration displayName="b" name="do-saw-medium_b" sort="board"/>
+				<variableDeclaration displayName="p" name="do-saw-medium_p" sort="part"/>
+				<variableDeclaration displayName="w" name="do-saw-medium_w" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="do-saw-medium_surface" sort="surface"/>
+				<variableDeclaration displayName="size_before"
+						name="do-saw-medium_size_before" sort="aboardsize"/>
+				<variableDeclaration displayName="s1" name="do-saw-medium_s1" sort="aboardsize"/>
+				<variableDeclaration displayName="size_after"
+						name="do-saw-medium_size_after" sort="aboardsize"/>
+				<and>
+						<atomic relation="unused">
+								<variable name="do-saw-medium_p"/>
+						</atomic>
+						<atomic relation="goalsize">
+								<variable name="do-saw-medium_p"/>
+								<constant name="medium"/>
+						</atomic>
+						<atomic relation="available">
+								<variable name="do-saw-medium_b"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="do-saw-medium_b"/>
+								<variable name="do-saw-medium_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-saw-medium_b"/>
+								<variable name="do-saw-medium_surface"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="do-saw-medium_b"/>
+								<variable name="do-saw-medium_size_before"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="do-saw-medium_size_after"/>
+								<variable name="do-saw-medium_s1"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="do-saw-medium_s1"/>
+								<variable name="do-saw-medium_size_before"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="unused">
+										<variable name="do-saw-medium_p"/>
+								</atomic>
+						</not>
+						<atomic relation="available">
+								<variable name="do-saw-medium_p"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="do-saw-medium_p"/>
+								<variable name="do-saw-medium_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-saw-medium_p"/>
+								<variable name="do-saw-medium_surface"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="do-saw-medium_p"/>
+								<constant name="natural"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="do-saw-medium_p"/>
+								<constant name="untreated"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="do-saw-medium_b"/>
+								<variable name="do-saw-medium_size_after"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-saw-large" type="primitive">
+				<variableDeclaration displayName="b" name="do-saw-large_b" sort="board"/>
+				<variableDeclaration displayName="p" name="do-saw-large_p" sort="part"/>
+				<variableDeclaration displayName="w" name="do-saw-large_w" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="do-saw-large_surface" sort="surface"/>
+				<variableDeclaration displayName="size_before"
+						name="do-saw-large_size_before" sort="aboardsize"/>
+				<variableDeclaration displayName="s1" name="do-saw-large_s1" sort="aboardsize"/>
+				<variableDeclaration displayName="s2" name="do-saw-large_s2" sort="aboardsize"/>
+				<variableDeclaration displayName="size_after"
+						name="do-saw-large_size_after" sort="aboardsize"/>
+				<and>
+						<atomic relation="unused">
+								<variable name="do-saw-large_p"/>
+						</atomic>
+						<atomic relation="goalsize">
+								<variable name="do-saw-large_p"/>
+								<constant name="large"/>
+						</atomic>
+						<atomic relation="available">
+								<variable name="do-saw-large_b"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="do-saw-large_b"/>
+								<variable name="do-saw-large_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-saw-large_b"/>
+								<variable name="do-saw-large_surface"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="do-saw-large_b"/>
+								<variable name="do-saw-large_size_before"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="do-saw-large_size_after"/>
+								<variable name="do-saw-large_s1"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="do-saw-large_s1"/>
+								<variable name="do-saw-large_s2"/>
+						</atomic>
+						<atomic relation="boardsize-successor">
+								<variable name="do-saw-large_s2"/>
+								<variable name="do-saw-large_size_before"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="unused">
+										<variable name="do-saw-large_p"/>
+								</atomic>
+						</not>
+						<atomic relation="available">
+								<variable name="do-saw-large_p"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="do-saw-large_p"/>
+								<variable name="do-saw-large_w"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-saw-large_p"/>
+								<variable name="do-saw-large_surface"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="do-saw-large_p"/>
+								<constant name="natural"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="do-saw-large_p"/>
+								<constant name="untreated"/>
+						</atomic>
+						<atomic relation="boardsize">
+								<variable name="do-saw-large_b"/>
+								<variable name="do-saw-large_size_after"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="grindNplane" type="complex">
+				<documentation>Grinding or planing parts</documentation>
+				<variableDeclaration displayName="part" name="newObj_variable10" sort="part"/>
+				<variableDeclaration displayName="oldsurface"
+						name="grindNplane_variable1" sort="surface"/>
+				<variableDeclaration displayName="oldcolour"
+						name="grindNplane_variable2" sort="acolour"/>
+				<variableDeclaration displayName="oldtreatment"
+						name="grindNplane_variable3" sort="treatmentstatus"/>
+				<variableDeclaration displayName="newsurface"
+						name="grindNplane_variable4" sort="surface"/>
+				<variableDeclaration displayName="newcolour"
+						name="grindNplane_variable5" sort="acolour"/>
+				<variableDeclaration displayName="newtreatment"
+						name="grindNplane_variable6" sort="treatmentstatus"/>
+				<and>
+						<atomic relation="available">
+								<variable name="newObj_variable10"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="newObj_variable10"/>
+								<variable name="grindNplane_variable1"/>
+						</atomic>
+						<atomic relation="colour">
+								<variable name="newObj_variable10"/>
+								<variable name="grindNplane_variable2"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="newObj_variable10"/>
+								<variable name="grindNplane_variable3"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="surface-condition">
+										<variable name="newObj_variable10"/>
+										<variable name="grindNplane_variable1"/>
+								</atomic>
+						</not>
+						<atomic relation="surface-condition">
+								<variable name="newObj_variable10"/>
+								<variable name="grindNplane_variable4"/>
+						</atomic>
+						<not>
+								<atomic relation="colour">
+										<variable name="newObj_variable10"/>
+										<variable name="grindNplane_variable2"/>
+								</atomic>
+						</not>
+						<atomic relation="colour">
+								<variable name="newObj_variable10"/>
+								<variable name="grindNplane_variable5"/>
+						</atomic>
+						<not>
+								<atomic relation="treatment">
+										<variable name="newObj_variable10"/>
+										<variable name="grindNplane_variable3"/>
+								</atomic>
+						</not>
+						<atomic relation="treatment">
+								<variable name="newObj_variable10"/>
+								<variable name="grindNplane_variable6"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-colour" type="complex">
+				<documentation>Changing the colour of a part by varnishing or glazing</documentation>
+				<variableDeclaration displayName="part" name="newObj_variable1" sort="part"/>
+				<variableDeclaration displayName="newcolour"
+						name="do-colour_variable1" sort="acolour"/>
+				<variableDeclaration displayName="machine"
+						name="do-colour_variable2" sort="machine"/>
+				<and>
+						<atomic relation="available">
+								<variable name="newObj_variable1"/>
+						</atomic>
+						<atomic relation="has-colour">
+								<variable name="do-colour_variable2"/>
+								<variable name="do-colour_variable1"/>
+						</atomic>
+						<atomic relation="treatment">
+								<variable name="newObj_variable1"/>
+								<constant name="untreated"/>
+						</atomic>
+				</and>
+				<and>
+						<atomic relation="colour">
+								<variable name="newObj_variable1"/>
+								<variable name="do-colour_variable1"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="cut-board" type="complex">
+				<documentation>Cutting boards</documentation>
+				<variableDeclaration displayName="board" name="newObj_variable2" sort="board"/>
+				<variableDeclaration displayName="part" name="cut-board_variable1" sort="part"/>
+				<variableDeclaration displayName="highspeed-saw"
+						name="cut-board_variable2" sort="highspeed-saw"/>
+				<variableDeclaration displayName="awood"
+						name="cut-board_variable3" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="cut-board_variable4" sort="surface"/>
+				<and>
+						<atomic relation="unused">
+								<variable name="cut-board_variable1"/>
+						</atomic>
+						<atomic relation="in-highspeed-saw">
+								<variable name="newObj_variable2"/>
+								<variable name="cut-board_variable2"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="newObj_variable2"/>
+								<variable name="cut-board_variable3"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="newObj_variable2"/>
+								<variable name="cut-board_variable4"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="unused">
+										<variable name="cut-board_variable1"/>
+								</atomic>
+						</not>
+						<atomic relation="available">
+								<variable name="cut-board_variable1"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="cut-board_variable1"/>
+								<variable name="cut-board_variable3"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="cut-board_variable1"/>
+								<variable name="cut-board_variable4"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="cut-and-saw" type="complex">
+				<documentation>cutting and/or sawing</documentation>
+				<variableDeclaration displayName="board" name="newObj_variable25" sort="board"/>
+				<variableDeclaration displayName="part" name="newObj_variable26" sort="part"/>
+				<variableDeclaration displayName="awood" name="newObj_variable27" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="newObj_variable28" sort="surface"/>
+				<and>
+						<atomic relation="unused">
+								<variable name="newObj_variable26"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="newObj_variable25"/>
+								<variable name="newObj_variable27"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="newObj_variable25"/>
+								<variable name="newObj_variable28"/>
+						</atomic>
+						<atomic relation="available">
+								<variable name="newObj_variable25"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="unused">
+										<variable name="newObj_variable26"/>
+								</atomic>
+						</not>
+						<atomic relation="available">
+								<variable name="newObj_variable26"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="newObj_variable26"/>
+								<variable name="newObj_variable27"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="newObj_variable26"/>
+								<variable name="newObj_variable28"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="do-saw" type="complex">
+				<documentation>Sawing boards.</documentation>
+				<variableDeclaration displayName="board" name="newObj_variable3" sort="board"/>
+				<variableDeclaration displayName="part" name="do-saw_variable1" sort="part"/>
+				<variableDeclaration displayName="awood" name="do-saw_variable2" sort="awood"/>
+				<variableDeclaration displayName="surface" name="do-saw_variable3" sort="surface"/>
+				<and>
+						<atomic relation="unused">
+								<variable name="do-saw_variable1"/>
+						</atomic>
+						<atomic relation="available">
+								<variable name="newObj_variable3"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="newObj_variable3"/>
+								<variable name="do-saw_variable2"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="newObj_variable3"/>
+								<variable name="do-saw_variable3"/>
+						</atomic>
+				</and>
+				<and>
+						<not>
+								<atomic relation="unused">
+										<variable name="do-saw_variable1"/>
+								</atomic>
+						</not>
+						<atomic relation="available">
+								<variable name="do-saw_variable1"/>
+						</atomic>
+						<atomic relation="wood">
+								<variable name="do-saw_variable1"/>
+								<variable name="do-saw_variable2"/>
+						</atomic>
+						<atomic relation="surface-condition">
+								<variable name="do-saw_variable1"/>
+								<variable name="do-saw_variable3"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<taskSchemaDeclaration name="process" type="complex">
+				<documentation>A complete woodworking process.</documentation>
+				<variableDeclaration displayName="part" name="process_partVar" sort="part"/>
+				<variableDeclaration displayName="newColour"
+						name="process_colourVar" sort="acolour"/>
+				<variableDeclaration displayName="oldSurface"
+						name="process_oldSurfaceVar" sort="surface"/>
+				<variableDeclaration displayName="newSurface"
+						name="process_newSurfaceVar" sort="surface"/>
+				<true/>
+				<and>
+						<atomic relation="colour">
+								<variable name="process_partVar"/>
+								<variable name="process_colourVar"/>
+						</atomic>
+				</and>
+		</taskSchemaDeclaration>
+		<methodDeclaration name="immersionVarnish" taskSchema="do-colour">
+				<variableDeclaration displayName="part" name="newObj_variable4" sort="part"/>
+				<variableDeclaration displayName="newcolour"
+						name="newObj_variable5" sort="acolour"/>
+				<variableDeclaration displayName="machine"
+						name="newObj_variable18" sort="machine"/>
+				<taskNode displayName="do-immersion-varnish"
+						name="immersionVarnish_taskNode1" taskSchema="do-immersion-varnish">
+						<variableDeclaration displayName="x"
+								name="immersionVarnish_variable1" sort="part"/>
+						<variableDeclaration displayName="m"
+								name="immersionVarnish_variable2" sort="immersion-varnisher"/>
+						<variableDeclaration displayName="newcolour"
+								name="immersionVarnish_variable3" sort="acolour"/>
+						<variableDeclaration displayName="surface"
+								name="immersionVarnish_variable4" sort="surface"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="immersionVarnish_variable1">
+						<variable name="newObj_variable4"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="immersionVarnish_variable3">
+						<variable name="newObj_variable5"/>
+				</valueRestriction>
+				<sortRestriction sort="immersion-varnisher" type="eq" variable="newObj_variable18"/>
+		</methodDeclaration>
+		<methodDeclaration name="sprayVarnish" taskSchema="do-colour">
+				<variableDeclaration displayName="part" name="newObj_variable6" sort="part"/>
+				<variableDeclaration displayName="newcolour"
+						name="newObj_variable7" sort="acolour"/>
+				<variableDeclaration displayName="machine"
+						name="newObj_variable19" sort="machine"/>
+				<taskNode displayName="do-spray-varnish"
+						name="sprayVarnish_taskNode1" taskSchema="do-spray-varnish">
+						<variableDeclaration displayName="x"
+								name="sprayVarnish_variable1" sort="part"/>
+						<variableDeclaration displayName="m"
+								name="sprayVarnish_variable2" sort="spray-varnisher"/>
+						<variableDeclaration displayName="newcolour"
+								name="sprayVarnish_variable3" sort="acolour"/>
+						<variableDeclaration displayName="surface"
+								name="sprayVarnish_variable4" sort="surface"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="sprayVarnish_variable1">
+						<variable name="newObj_variable6"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="sprayVarnish_variable3">
+						<variable name="newObj_variable7"/>
+				</valueRestriction>
+				<sortRestriction sort="spray-varnisher" type="eq" variable="newObj_variable19"/>
+		</methodDeclaration>
+		<methodDeclaration name="glaze" taskSchema="do-colour">
+				<variableDeclaration displayName="part" name="newObj_variable8" sort="part"/>
+				<variableDeclaration displayName="newcolour"
+						name="newObj_variable9" sort="acolour"/>
+				<variableDeclaration displayName="machine"
+						name="newObj_variable20" sort="machine"/>
+				<taskNode displayName="do-glaze" name="glaze_taskNode1" taskSchema="do-glaze">
+						<variableDeclaration displayName="x" name="glaze_variable1" sort="part"/>
+						<variableDeclaration displayName="m" name="glaze_variable2" sort="glazer"/>
+						<variableDeclaration displayName="newcolour"
+								name="glaze_variable3" sort="acolour"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="glaze_variable1">
+						<variable name="newObj_variable8"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="glaze_variable3">
+						<variable name="newObj_variable9"/>
+				</valueRestriction>
+				<sortRestriction sort="glazer" type="eq" variable="newObj_variable20"/>
+		</methodDeclaration>
+		<methodDeclaration name="grindIt" taskSchema="grindNplane">
+				<variableDeclaration displayName="part" name="newObj_variable11" sort="part"/>
+				<variableDeclaration displayName="oldsurface"
+						name="newObj_variable12" sort="surface"/>
+				<variableDeclaration displayName="oldcolour"
+						name="newObj_variable13" sort="acolour"/>
+				<variableDeclaration displayName="oldtreatment"
+						name="newObj_variable14" sort="treatmentstatus"/>
+				<variableDeclaration displayName="newsurface"
+						name="newObj_variable15" sort="surface"/>
+				<variableDeclaration displayName="newcolour"
+						name="newObj_variable16" sort="acolour"/>
+				<variableDeclaration displayName="newtreatment"
+						name="newObj_variable17" sort="treatmentstatus"/>
+				<taskNode displayName="do-grind" name="grindIt_taskNode2" taskSchema="do-grind">
+						<variableDeclaration displayName="x" name="grindIt_variable1" sort="part"/>
+						<variableDeclaration displayName="oldsurface"
+								name="grindIt_variable2" sort="surface"/>
+						<variableDeclaration displayName="oldcolour"
+								name="grindIt_variable3" sort="acolour"/>
+						<variableDeclaration displayName="oldtreatment"
+								name="grindIt_variable4" sort="treatmentstatus"/>
+						<variableDeclaration displayName="newtreatment"
+								name="grindIt_variable5" sort="treatmentstatus"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="grindIt_variable1">
+						<variable name="newObj_variable11"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="grindIt_variable2">
+						<variable name="newObj_variable12"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="grindIt_variable3">
+						<variable name="newObj_variable13"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="grindIt_variable4">
+						<variable name="newObj_variable14"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="grindIt_variable5">
+						<variable name="newObj_variable17"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable15">
+						<constant name="verysmooth"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable16">
+						<constant name="natural"/>
+				</valueRestriction>
+		</methodDeclaration>
+		<methodDeclaration name="cutBoardSmall" taskSchema="cut-board">
+				<variableDeclaration displayName="board" name="newObj_variable38" sort="board"/>
+				<variableDeclaration displayName="part" name="newObj_variable39" sort="part"/>
+				<variableDeclaration displayName="highspeed-saw"
+						name="newObj_variable40" sort="highspeed-saw"/>
+				<variableDeclaration displayName="awood" name="newObj_variable41" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="newObj_variable42" sort="surface"/>
+				<taskNode displayName="cut-board-small"
+						name="cutBoardSmall_taskNode1" taskSchema="cut-board-small">
+						<variableDeclaration displayName="b"
+								name="cutBoardSmall_variable6" sort="board"/>
+						<variableDeclaration displayName="p"
+								name="cutBoardSmall_variable7" sort="part"/>
+						<variableDeclaration displayName="m"
+								name="cutBoardSmall_variable8" sort="highspeed-saw"/>
+						<variableDeclaration displayName="w"
+								name="cutBoardSmall_variable9" sort="awood"/>
+						<variableDeclaration displayName="surface"
+								name="cutBoardSmall_variable10" sort="surface"/>
+						<variableDeclaration displayName="size_before"
+								name="cutBoardSmall_variable11" sort="aboardsize"/>
+						<variableDeclaration displayName="size_after"
+								name="cutBoardSmall_variable12" sort="aboardsize"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="newObj_variable38">
+						<variable name="cutBoardSmall_variable6"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable39">
+						<variable name="cutBoardSmall_variable7"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable40">
+						<variable name="cutBoardSmall_variable8"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable41">
+						<variable name="cutBoardSmall_variable9"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable42">
+						<variable name="cutBoardSmall_variable10"/>
+				</valueRestriction>
+		</methodDeclaration>
+		<methodDeclaration name="sawSmall" taskSchema="do-saw">
+				<variableDeclaration displayName="board" name="newObj_variable21" sort="board"/>
+				<variableDeclaration displayName="part" name="newObj_variable22" sort="part"/>
+				<variableDeclaration displayName="awood" name="newObj_variable23" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="newObj_variable24" sort="surface"/>
+				<taskNode displayName="do-saw-small" name="sawSmall_taskNode1" taskSchema="do-saw-small">
+						<variableDeclaration displayName="b" name="sawSmall_variable5" sort="board"/>
+						<variableDeclaration displayName="p" name="sawSmall_variable6" sort="part"/>
+						<variableDeclaration displayName="w" name="sawSmall_variable7" sort="awood"/>
+						<variableDeclaration displayName="surface"
+								name="sawSmall_variable8" sort="surface"/>
+						<variableDeclaration displayName="size_before"
+								name="sawSmall_variable9" sort="aboardsize"/>
+						<variableDeclaration displayName="size_after"
+								name="sawSmall_variable10" sort="aboardsize"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="newObj_variable21">
+						<variable name="sawSmall_variable5"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable22">
+						<variable name="sawSmall_variable6"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable23">
+						<variable name="sawSmall_variable7"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable24">
+						<variable name="sawSmall_variable8"/>
+				</valueRestriction>
+		</methodDeclaration>
+		<methodDeclaration name="doTheCutWay" taskSchema="cut-and-saw">
+				<variableDeclaration displayName="board" name="newObj_variable29" sort="board"/>
+				<variableDeclaration displayName="part" name="newObj_variable30" sort="part"/>
+				<variableDeclaration displayName="awood" name="newObj_variable31" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="newObj_variable32" sort="surface"/>
+				<taskNode displayName="cut-board" name="doTheCutWay_taskNode1" taskSchema="cut-board">
+						<variableDeclaration displayName="board"
+								name="doTheCutWay_variable1" sort="board"/>
+						<variableDeclaration displayName="part"
+								name="doTheCutWay_variable2" sort="part"/>
+						<variableDeclaration displayName="highspeed-saw"
+								name="doTheCutWay_variable3" sort="highspeed-saw"/>
+						<variableDeclaration displayName="awood"
+								name="doTheCutWay_variable4" sort="awood"/>
+						<variableDeclaration displayName="surface"
+								name="doTheCutWay_variable5" sort="surface"/>
+				</taskNode>
+				<taskNode displayName="load-highspeed-saw"
+						name="doTheCutWay_taskNode2" taskSchema="load-highspeed-saw">
+						<variableDeclaration displayName="b"
+								name="doTheCutWay_variable8" sort="board"/>
+						<variableDeclaration displayName="m"
+								name="doTheCutWay_variable9" sort="highspeed-saw"/>
+				</taskNode>
+				<taskNode displayName="unload-highspeed-saw"
+						name="doTheCutWay_taskNode3" taskSchema="unload-highspeed-saw">
+						<variableDeclaration displayName="b"
+								name="doTheCutWay_variable12" sort="board"/>
+						<variableDeclaration displayName="m"
+								name="doTheCutWay_variable13" sort="highspeed-saw"/>
+				</taskNode>
+				<orderingConstraint predecessor="doTheCutWay_taskNode2" successor="doTheCutWay_taskNode1"/>
+				<orderingConstraint predecessor="doTheCutWay_taskNode1" successor="doTheCutWay_taskNode3"/>
+				<valueRestriction type="eq" variable="newObj_variable29">
+						<variable name="doTheCutWay_variable1"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable30">
+						<variable name="doTheCutWay_variable2"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable31">
+						<variable name="doTheCutWay_variable4"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable32">
+						<variable name="doTheCutWay_variable5"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="doTheCutWay_variable12">
+						<variable name="doTheCutWay_variable8"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="doTheCutWay_variable8">
+						<variable name="doTheCutWay_variable1"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="doTheCutWay_variable13">
+						<variable name="doTheCutWay_variable9"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="doTheCutWay_variable3">
+						<variable name="doTheCutWay_variable9"/>
+				</valueRestriction>
+				<causalLink consumer="doTheCutWay_taskNode1" producer="doTheCutWay_taskNode2">
+						<atomic relation="in-highspeed-saw">
+								<variable name="doTheCutWay_variable1"/>
+								<variable name="doTheCutWay_variable3"/>
+						</atomic>
+				</causalLink>
+		</methodDeclaration>
+		<methodDeclaration name="planteIt" taskSchema="grindNplane">
+				<variableDeclaration displayName="part" name="newObj_variable33" sort="part"/>
+				<variableDeclaration displayName="oldsurface"
+						name="newObj_variable34" sort="surface"/>
+				<variableDeclaration displayName="oldcolour"
+						name="newObj_variable35" sort="acolour"/>
+				<variableDeclaration displayName="oldtreatment"
+						name="newObj_variable36" sort="treatmentstatus"/>
+				<variableDeclaration displayName="newsurface"
+						name="newObj_variable37" sort="surface"/>
+				<variableDeclaration displayName="newcolour"
+						name="newObj_variable43" sort="acolour"/>
+				<variableDeclaration displayName="newtreatment"
+						name="newObj_variable44" sort="treatmentstatus"/>
+				<taskNode displayName="do-plane" name="planteIt_taskNode1" taskSchema="do-plane">
+						<variableDeclaration displayName="x" name="planteIt_variable1" sort="part"/>
+						<variableDeclaration displayName="oldsurface"
+								name="planteIt_variable2" sort="surface"/>
+						<variableDeclaration displayName="oldcolour"
+								name="planteIt_variable3" sort="acolour"/>
+						<variableDeclaration displayName="oldtreatment"
+								name="planteIt_variable4" sort="treatmentstatus"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="newObj_variable33">
+						<variable name="planteIt_variable1"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable34">
+						<variable name="planteIt_variable2"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable35">
+						<variable name="planteIt_variable3"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable36">
+						<variable name="planteIt_variable4"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable43">
+						<constant name="natural"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable37">
+						<constant name="smooth"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable44">
+						<constant name="untreated"/>
+				</valueRestriction>
+		</methodDeclaration>
+		<methodDeclaration name="sawMedium" taskSchema="do-saw">
+				<variableDeclaration displayName="board" name="newObj_variable45" sort="board"/>
+				<variableDeclaration displayName="part" name="newObj_variable46" sort="part"/>
+				<variableDeclaration displayName="awood" name="newObj_variable47" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="newObj_variable48" sort="surface"/>
+				<taskNode displayName="do-saw-medium" name="sawMedium_taskNode1" taskSchema="do-saw-medium">
+						<variableDeclaration displayName="b" name="sawMedium_variable1" sort="board"/>
+						<variableDeclaration displayName="p" name="sawMedium_variable2" sort="part"/>
+						<variableDeclaration displayName="w" name="sawMedium_variable3" sort="awood"/>
+						<variableDeclaration displayName="surface"
+								name="sawMedium_variable4" sort="surface"/>
+						<variableDeclaration displayName="size_before"
+								name="sawMedium_variable5" sort="aboardsize"/>
+						<variableDeclaration displayName="s1"
+								name="sawMedium_variable6" sort="aboardsize"/>
+						<variableDeclaration displayName="size_after"
+								name="sawMedium_variable7" sort="aboardsize"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="newObj_variable45">
+						<variable name="sawMedium_variable1"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable46">
+						<variable name="sawMedium_variable2"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable47">
+						<variable name="sawMedium_variable3"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable48">
+						<variable name="sawMedium_variable4"/>
+				</valueRestriction>
+		</methodDeclaration>
+		<methodDeclaration name="sawLarge" taskSchema="do-saw">
+				<variableDeclaration displayName="board" name="newObj_variable49" sort="board"/>
+				<variableDeclaration displayName="part" name="newObj_variable50" sort="part"/>
+				<variableDeclaration displayName="awood" name="newObj_variable51" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="newObj_variable52" sort="surface"/>
+				<taskNode displayName="do-saw-large" name="sawLarge_taskNode1" taskSchema="do-saw-large">
+						<variableDeclaration displayName="b" name="sawLarge_variable5" sort="board"/>
+						<variableDeclaration displayName="p" name="sawLarge_variable6" sort="part"/>
+						<variableDeclaration displayName="w" name="sawLarge_variable7" sort="awood"/>
+						<variableDeclaration displayName="surface"
+								name="sawLarge_variable8" sort="surface"/>
+						<variableDeclaration displayName="size_before"
+								name="sawLarge_variable9" sort="aboardsize"/>
+						<variableDeclaration displayName="s1"
+								name="sawLarge_variable10" sort="aboardsize"/>
+						<variableDeclaration displayName="s2"
+								name="sawLarge_variable11" sort="aboardsize"/>
+						<variableDeclaration displayName="size_after"
+								name="sawLarge_variable12" sort="aboardsize"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="newObj_variable49">
+						<variable name="sawLarge_variable5"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable50">
+						<variable name="sawLarge_variable6"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable51">
+						<variable name="sawLarge_variable7"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable52">
+						<variable name="sawLarge_variable8"/>
+				</valueRestriction>
+		</methodDeclaration>
+		<methodDeclaration name="doTheSawWay" taskSchema="cut-and-saw">
+				<variableDeclaration displayName="board" name="newObj_variable53" sort="board"/>
+				<variableDeclaration displayName="part" name="newObj_variable54" sort="part"/>
+				<variableDeclaration displayName="awood" name="newObj_variable55" sort="awood"/>
+				<variableDeclaration displayName="surface"
+						name="newObj_variable56" sort="surface"/>
+				<taskNode displayName="do-saw" name="doTheSawWay_taskNode1" taskSchema="do-saw">
+						<variableDeclaration displayName="board"
+								name="doTheSawWay_variable1" sort="board"/>
+						<variableDeclaration displayName="part"
+								name="doTheSawWay_variable2" sort="part"/>
+						<variableDeclaration displayName="awood"
+								name="doTheSawWay_variable3" sort="awood"/>
+						<variableDeclaration displayName="surface"
+								name="doTheSawWay_variable4" sort="surface"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="newObj_variable53">
+						<variable name="doTheSawWay_variable1"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable54">
+						<variable name="doTheSawWay_variable2"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable55">
+						<variable name="doTheSawWay_variable3"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable56">
+						<variable name="doTheSawWay_variable4"/>
+				</valueRestriction>
+		</methodDeclaration>
+		<methodDeclaration name="rawProcess" taskSchema="process">
+				<variableDeclaration displayName="part" name="newObj_variable58" sort="part"/>
+				<variableDeclaration displayName="newColour"
+						name="newObj_variable61" sort="acolour"/>
+				<variableDeclaration displayName="oldSurface"
+						name="newnewObj_variable62" sort="surface"/>
+				<variableDeclaration displayName="newSurface" name="variable8" sort="surface"/>
+				<taskNode displayName="cut-and-saw" name="rawProcess_taskNode1" taskSchema="cut-and-saw">
+						<variableDeclaration displayName="board"
+								name="rawProcess_variable5" sort="board"/>
+						<variableDeclaration displayName="part"
+								name="rawProcess_variable6" sort="part"/>
+						<variableDeclaration displayName="awood"
+								name="rawProcess_variable7" sort="awood"/>
+						<variableDeclaration displayName="surface"
+								name="rawProcess_variable8" sort="surface"/>
+				</taskNode>
+				<taskNode displayName="do-colour" name="rawProcess_taskNode2" taskSchema="do-colour">
+						<variableDeclaration displayName="part"
+								name="rawProcess_variable9" sort="part"/>
+						<variableDeclaration displayName="newcolour"
+								name="rawProcess_variable10" sort="acolour"/>
+						<variableDeclaration displayName="machine"
+								name="rawProcess_variable11" sort="machine"/>
+				</taskNode>
+				<orderingConstraint predecessor="rawProcess_taskNode1" successor="rawProcess_taskNode2"/>
+				<valueRestriction type="eq" variable="rawProcess_variable6">
+						<variable name="rawProcess_variable9"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable58">
+						<variable name="rawProcess_variable6"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable61">
+						<variable name="rawProcess_variable10"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="rawProcess_variable8">
+						<variable name="variable8"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="rawProcess_variable8">
+						<variable name="newnewObj_variable62"/>
+				</valueRestriction>
+				<causalLink consumer="rawProcess_taskNode2" producer="rawProcess_taskNode1">
+						<atomic relation="available">
+								<variable name="rawProcess_variable6"/>
+						</atomic>
+				</causalLink>
+		</methodDeclaration>
+		<methodDeclaration name="reusePartProcess" taskSchema="process">
+				<variableDeclaration displayName="part" name="newObj_variable59" sort="part"/>
+				<variableDeclaration displayName="newColour"
+						name="newObj_variable62" sort="acolour"/>
+				<variableDeclaration displayName="oldsurface"
+						name="newnewObj_variable42" sort="surface"/>
+				<variableDeclaration displayName="newsurface"
+						name="newnewObj_variable43" sort="surface"/>
+				<taskNode displayName="grindNplane"
+						name="reusePartProcess_taskNode1" taskSchema="grindNplane">
+						<variableDeclaration displayName="part"
+								name="reusePartProcess_variable8" sort="part"/>
+						<variableDeclaration displayName="oldsurface"
+								name="reusePartProcess_variable9" sort="surface"/>
+						<variableDeclaration displayName="oldcolour"
+								name="reusePartProcess_variable10" sort="acolour"/>
+						<variableDeclaration displayName="oldtreatment"
+								name="reusePartProcess_variable11" sort="treatmentstatus"/>
+						<variableDeclaration displayName="newsurface"
+								name="reusePartProcess_variable12" sort="surface"/>
+						<variableDeclaration displayName="newcolour"
+								name="reusePartProcess_variable13" sort="acolour"/>
+						<variableDeclaration displayName="newtreatment"
+								name="reusePartProcess_variable14" sort="treatmentstatus"/>
+				</taskNode>
+				<taskNode displayName="do-colour"
+						name="reusePartProcess_taskNode2" taskSchema="do-colour">
+						<variableDeclaration displayName="part"
+								name="reusePartProcess_variable15" sort="part"/>
+						<variableDeclaration displayName="newcolour"
+								name="reusePartProcess_variable16" sort="acolour"/>
+						<variableDeclaration displayName="machine"
+								name="reusePartProcess_variable17" sort="machine"/>
+				</taskNode>
+				<orderingConstraint predecessor="reusePartProcess_taskNode1" successor="reusePartProcess_taskNode2"/>
+				<valueRestriction type="eq" variable="newObj_variable59">
+						<variable name="reusePartProcess_variable8"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="reusePartProcess_variable15">
+						<variable name="reusePartProcess_variable8"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable62">
+						<variable name="reusePartProcess_variable16"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newnewObj_variable42">
+						<variable name="reusePartProcess_variable9"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newnewObj_variable43">
+						<variable name="reusePartProcess_variable12"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="reusePartProcess_variable14">
+						<constant name="untreated"/>
+				</valueRestriction>
+		</methodDeclaration>
+		<methodDeclaration name="grindItUntreated" taskSchema="grindNplane">
+				<variableDeclaration displayName="part" name="newObj_variable68" sort="part"/>
+				<variableDeclaration displayName="oldsurface"
+						name="newObj_variable69" sort="surface"/>
+				<variableDeclaration displayName="oldcolour"
+						name="newObj_variable70" sort="acolour"/>
+				<variableDeclaration displayName="oldtreatment"
+						name="newObj_variable71" sort="treatmentstatus"/>
+				<variableDeclaration displayName="newsurface"
+						name="newObj_variable72" sort="surface"/>
+				<variableDeclaration displayName="newcolour"
+						name="newObj_variable73" sort="acolour"/>
+				<variableDeclaration displayName="newtreatment"
+						name="newObj_variable74" sort="treatmentstatus"/>
+				<taskNode displayName="do-grind-untreated"
+						name="grindItUntreated_taskNode1" taskSchema="do-grind-untreated">
+						<variableDeclaration displayName="x"
+								name="grindItUntreated_variable6" sort="part"/>
+						<variableDeclaration displayName="m"
+								name="grindItUntreated_variable7" sort="grinder"/>
+						<variableDeclaration displayName="oldsurface"
+								name="grindItUntreated_variable8" sort="surface"/>
+						<variableDeclaration displayName="oldcolour"
+								name="grindItUntreated_variable9" sort="acolour"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="grindItUntreated_variable6">
+						<variable name="newObj_variable68"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="grindItUntreated_variable9">
+						<variable name="newObj_variable70"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="grindItUntreated_variable8">
+						<variable name="newObj_variable69"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable72">
+						<constant name="verysmooth"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable73">
+						<constant name="natural"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable74">
+						<constant name="untreated"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable71">
+						<constant name="untreated"/>
+				</valueRestriction>
+		</methodDeclaration>
+		<methodDeclaration name="fullProcess" taskSchema="process">
+				<variableDeclaration displayName="part" name="newObj_variable85" sort="part"/>
+				<variableDeclaration displayName="newColour"
+						name="newObj_variable86" sort="acolour"/>
+				<variableDeclaration displayName="oldSurface"
+						name="newObj_variable87" sort="surface"/>
+				<variableDeclaration displayName="newSurface"
+						name="newObj_variable88" sort="surface"/>
+				<taskNode displayName="cut-and-saw" name="fullProcess_taskNode3" taskSchema="cut-and-saw">
+						<variableDeclaration displayName="board"
+								name="fullProcess_variable1" sort="board"/>
+						<variableDeclaration displayName="part"
+								name="fullProcess_variable2" sort="part"/>
+						<variableDeclaration displayName="awood"
+								name="fullProcess_variable3" sort="awood"/>
+						<variableDeclaration displayName="surface"
+								name="fullProcess_variable4" sort="surface"/>
+				</taskNode>
+				<taskNode displayName="grindNplane" name="fullProcess_taskNode4" taskSchema="grindNplane">
+						<variableDeclaration displayName="part"
+								name="fullProcess_variable5" sort="part"/>
+						<variableDeclaration displayName="oldsurface"
+								name="fullProcess_variable6" sort="surface"/>
+						<variableDeclaration displayName="oldcolour"
+								name="fullProcess_variable7" sort="acolour"/>
+						<variableDeclaration displayName="oldtreatment"
+								name="fullProcess_variable8" sort="treatmentstatus"/>
+						<variableDeclaration displayName="newsurface"
+								name="fullProcess_variable9" sort="surface"/>
+						<variableDeclaration displayName="newcolour"
+								name="fullProcess_variable10" sort="acolour"/>
+						<variableDeclaration displayName="newtreatment"
+								name="fullProcess_variable11" sort="treatmentstatus"/>
+				</taskNode>
+				<taskNode displayName="do-colour" name="fullProcess_taskNode5" taskSchema="do-colour">
+						<variableDeclaration displayName="part"
+								name="fullProcess_variable12" sort="part"/>
+						<variableDeclaration displayName="newcolour"
+								name="fullProcess_variable13" sort="acolour"/>
+						<variableDeclaration displayName="machine"
+								name="fullProcess_variable14" sort="machine"/>
+				</taskNode>
+				<orderingConstraint predecessor="fullProcess_taskNode3" successor="fullProcess_taskNode4"/>
+				<orderingConstraint predecessor="fullProcess_taskNode4" successor="fullProcess_taskNode5"/>
+				<valueRestriction type="eq" variable="fullProcess_variable2">
+						<variable name="newObj_variable85"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="fullProcess_variable5">
+						<variable name="fullProcess_variable2"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="fullProcess_variable12">
+						<variable name="fullProcess_variable5"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="fullProcess_variable13">
+						<variable name="newObj_variable86"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable88">
+						<variable name="fullProcess_variable9"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable87">
+						<variable name="fullProcess_variable6"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="fullProcess_variable4">
+						<variable name="fullProcess_variable6"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="fullProcess_variable11">
+						<constant name="untreated"/>
+				</valueRestriction>
+				<causalLink consumer="fullProcess_taskNode4" producer="fullProcess_taskNode3">
+						<atomic relation="available">
+								<variable name="fullProcess_variable5"/>
+						</atomic>
+				</causalLink>
+				<causalLink consumer="fullProcess_taskNode5" producer="fullProcess_taskNode3">
+						<atomic relation="available">
+								<variable name="fullProcess_variable12"/>
+						</atomic>
+				</causalLink>
+				<causalLink consumer="fullProcess_taskNode4" producer="fullProcess_taskNode3">
+						<atomic relation="surface-condition">
+								<variable name="fullProcess_variable5"/>
+								<variable name="fullProcess_variable6"/>
+						</atomic>
+				</causalLink>
+		</methodDeclaration>
+		<methodDeclaration name="planeItUntreated" taskSchema="grindNplane">
+				<variableDeclaration displayName="part" name="newObj_variable91" sort="part"/>
+				<variableDeclaration displayName="oldsurface"
+						name="newObj_variable92" sort="surface"/>
+				<variableDeclaration displayName="oldcolour"
+						name="newObj_variable93" sort="acolour"/>
+				<variableDeclaration displayName="oldtreatment"
+						name="newObj_variable94" sort="treatmentstatus"/>
+				<variableDeclaration displayName="newsurface"
+						name="newObj_variable95" sort="surface"/>
+				<variableDeclaration displayName="newcolour"
+						name="newObj_variable96" sort="acolour"/>
+				<variableDeclaration displayName="newtreatment"
+						name="newObj_variable97" sort="treatmentstatus"/>
+				<taskNode displayName="do-plane-untreated"
+						name="planeItUntreated_taskNode1" taskSchema="do-plane-untreated">
+						<variableDeclaration displayName="x"
+								name="planeItUntreated_variable5" sort="part"/>
+						<variableDeclaration displayName="m"
+								name="planeItUntreated_variable6" sort="planer"/>
+						<variableDeclaration displayName="plane-u-oldsurface"
+								name="planeItUntreated_variable7" sort="surface"/>
+						<variableDeclaration displayName="plane-u-oldcolour"
+								name="planeItUntreated_variable8" sort="acolour"/>
+				</taskNode>
+				<valueRestriction type="eq" variable="planeItUntreated_variable5">
+						<variable name="newObj_variable91"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="planeItUntreated_variable8">
+						<variable name="newObj_variable93"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="planeItUntreated_variable7">
+						<variable name="newObj_variable92"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable97">
+						<constant name="untreated"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable94">
+						<constant name="untreated"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable95">
+						<constant name="smooth"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable96">
+						<constant name="natural"/>
+				</valueRestriction>
+		</methodDeclaration>
+		<methodDeclaration name="reusePartProcessThorough" taskSchema="process">
+				<variableDeclaration displayName="part" name="newObj_variable98" sort="part"/>
+				<variableDeclaration displayName="newColour"
+						name="newObj_variable99" sort="acolour"/>
+				<variableDeclaration displayName="oldSurface"
+						name="newObj_variable100" sort="surface"/>
+				<variableDeclaration displayName="newSurface"
+						name="newObj_variable101" sort="surface"/>
+				<taskNode displayName="do-grind-untreated"
+						name="reusePartProcessThorough_taskNode2" taskSchema="do-grind-untreated">
+						<variableDeclaration displayName="x"
+								name="reusePartProcessThorough_variable10" sort="part"/>
+						<variableDeclaration displayName="m"
+								name="reusePartProcessThorough_variable11" sort="grinder"/>
+						<variableDeclaration displayName="oldsurface"
+								name="reusePartProcessThorough_variable12" sort="surface"/>
+						<variableDeclaration displayName="oldcolour"
+								name="reusePartProcessThorough_variable13" sort="acolour"/>
+				</taskNode>
+				<taskNode displayName="do-colour"
+						name="reusePartProcessThorough_taskNode3" taskSchema="do-colour">
+						<variableDeclaration displayName="part"
+								name="reusePartProcessThorough_variable14" sort="part"/>
+						<variableDeclaration displayName="newcolour"
+								name="reusePartProcessThorough_variable15" sort="acolour"/>
+						<variableDeclaration displayName="machine"
+								name="reusePartProcessThorough_variable16" sort="machine"/>
+				</taskNode>
+				<taskNode displayName="grindNplane"
+						name="reusePartProcessThorough_taskNode4" taskSchema="grindNplane">
+						<variableDeclaration displayName="part"
+								name="reusePartProcessThorough_variable17" sort="part"/>
+						<variableDeclaration displayName="oldsurface"
+								name="reusePartProcessThorough_variable18" sort="surface"/>
+						<variableDeclaration displayName="oldcolour"
+								name="reusePartProcessThorough_variable19" sort="acolour"/>
+						<variableDeclaration displayName="oldtreatment"
+								name="reusePartProcessThorough_variable20" sort="treatmentstatus"/>
+						<variableDeclaration displayName="newsurface"
+								name="reusePartProcessThorough_variable21" sort="surface"/>
+						<variableDeclaration displayName="newcolour"
+								name="reusePartProcessThorough_variable22" sort="acolour"/>
+						<variableDeclaration displayName="newtreatment"
+								name="reusePartProcessThorough_variable23" sort="treatmentstatus"/>
+				</taskNode>
+				<orderingConstraint
+						predecessor="reusePartProcessThorough_taskNode2" successor="reusePartProcessThorough_taskNode3"/>
+				<orderingConstraint
+						predecessor="reusePartProcessThorough_taskNode4" successor="reusePartProcessThorough_taskNode2"/>
+				<valueRestriction type="eq" variable="reusePartProcessThorough_variable15">
+						<variable name="newObj_variable99"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable101">
+						<constant name="verysmooth"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="reusePartProcessThorough_variable13">
+						<constant name="natural"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="newObj_variable98">
+						<variable name="reusePartProcessThorough_variable17"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="reusePartProcessThorough_variable17">
+						<variable name="reusePartProcessThorough_variable10"/>
+				</valueRestriction>
+				<valueRestriction type="eq" variable="reusePartProcessThorough_variable18">
+						<variable name="newObj_variable100"/>
+				</valueRestriction>
+				<sortRestriction sort="grinder" type="eq" variable="reusePartProcessThorough_variable11"/>
+				<valueRestriction type="eq" variable="reusePartProcessThorough_variable23">
+						<constant name="untreated"/>
+				</valueRestriction>
+		</methodDeclaration>
+</domain>

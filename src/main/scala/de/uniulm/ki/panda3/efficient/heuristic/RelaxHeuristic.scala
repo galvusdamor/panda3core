@@ -30,7 +30,7 @@ case class RelaxHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain:
   } toMap
 
 
-  override def computeHeuristic(plan: EfficientPlan, payload: Unit, appliedModification: EfficientModification): (Double, Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, payload: Unit, appliedModification: EfficientModification, depth : Int): (Double, Unit) = {
     // gather all open preconditions
     val conditions = mutable.BitSet()
     val planActions = mutable.BitSet()
@@ -94,25 +94,3 @@ case class RelaxHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain:
     (h, ())
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

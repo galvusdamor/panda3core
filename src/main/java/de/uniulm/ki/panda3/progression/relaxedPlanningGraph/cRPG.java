@@ -46,9 +46,9 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
     // Members of the current object
     private boolean goalRelaxedReachable;
+    private BitSet reachability; // set of tasks that is top-down-reachable from the current network
     private int heuristicValue;
 
-    private BitSet reachability; // set of tasks that is top-down-reachable from the current network
 
     public cRPG() {
 

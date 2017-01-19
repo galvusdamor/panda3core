@@ -27,14 +27,19 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
 
     lazy val abstractTask: CartesianGroundTask = CartesianGroundTask(method.abstractTask, method.abstractTask.parameters map parameter)
 
-    private def areParametersAllowed(instantiation: Map[Variable, Constant]): Boolean = method.subPlan.variableConstraints.constraints forall {
-      case Equal(var1, var2: Variable)     => if (instantiation.contains(var1) && instantiation.contains(var2)) instantiation(var1) == instantiation(var2) else true
-      case Equal(vari, const: Constant)    => if (instantiation.contains(vari)) instantiation(vari) == const else true
-      case NotEqual(var1, var2: Variable)  => if (instantiation.contains(var1) && instantiation.contains(var2)) instantiation(var1) != instantiation(var2) else true
-      case NotEqual(vari, const: Constant) => if (instantiation.contains(vari)) instantiation(vari) != const else true
-      case OfSort(vari, sort)              => if (instantiation.contains(vari)) sort.elements contains instantiation(vari) else true
-      case NotOfSort(vari, sort)           => if (instantiation.contains(vari)) !(sort.elements contains instantiation(vari)) else true
-    }
+    private val constraintsPerVariable: Map[Variable, Seq[VariableConstraint]] = method.subPlan.variableConstraints.variables.toSeq map { v =>
+      v -> (method.subPlan.variableConstraints.constraints filter { _.getVariables contains v })
+    } toMap
+
+    private def areParametersAllowed(newBindings: Seq[(Variable, Constant)], instantiation: Map[Variable, Constant]): Boolean =
+      newBindings flatMap { case (v, _) => constraintsPerVariable(v) } forall {
+        case Equal(var1, var2: Variable)     => if (instantiation.contains(var1) && instantiation.contains(var2)) instantiation(var1) == instantiation(var2) else true
+        case Equal(vari, const: Constant)    => instantiation(vari) == const
+        case NotEqual(var1, var2: Variable)  => if (instantiation.contains(var1) && instantiation.contains(var2)) instantiation(var1) != instantiation(var2) else true
+        case NotEqual(vari, const: Constant) => instantiation(vari) != const
+        case OfSort(vari, sort)              => sort.elements contains instantiation(vari)
+        case NotOfSort(vari, sort)           => !(sort.elements contains instantiation(vari))
+      }
 
     // : Seq[(Variable, Seq[Constant])]
     private val (nonBindableVariables, boundByEquality) = {
@@ -91,14 +96,15 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
           //println("POSS groundings " + possibleGroundings.size)
 
           possibleGroundings flatMap { groundTask =>
-            val newVariableBinding = nextPlanStep.arguments zip groundTask.arguments toMap
+            val newVariableBindingList = nextPlanStep.arguments zip groundTask.arguments
+            val newVariableBinding = newVariableBindingList.toMap
 
             if (nextPlanStep.arguments exists { nv => if (newVariableBinding.contains(nv) && variableBinding.contains(nv)) newVariableBinding(nv) != variableBinding(nv) else false })
               Nil
             else {
               val newBinding = variableBinding ++ newVariableBinding
               // inefficient, actually we only have to check the constraints pertaining to newly added variables
-              if (areParametersAllowed(newBinding)) matchRecursively(position + 1, newBinding) else Nil
+              if (areParametersAllowed(newVariableBindingList, newBinding)) matchRecursively(position + 1, newBinding) else Nil
             }
           } toSeq
         }
@@ -139,7 +145,7 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
       // if the task is abstract, we have to ground it
       // we have a partial variable binding from the abstract task
       val possibleMethods: Seq[(SimpleDecompositionMethod, CartesianGroundMethod)] =
-        (domain.methodsForAbstractTasks.getOrElse(currentGroundTask.task, Nil) ++ (if (topMethod.abstractTask == currentGroundTask.task) topMethod :: Nil else Nil)) flatMap {
+        (domain.methodsForAbstractTasks.getOrElse(currentGroundTask.task, Nil) ++ (if (topMethod.abstractTask == currentGroundTask.task) topMethod :: Nil else Nil)) map {
           case simpleMethod: SimpleDecompositionMethod =>
             //println("Method " + simpleMethod.name)
             val setParameter: mutable.Map[Variable, Set[Constant]] = new mutable.HashMap()
@@ -165,9 +171,9 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
                   innerChanged
               } exists { x => x }
 
-            if (setParameter exists { _._2.isEmpty }) {/*println("REJECT");*/ Nil } else (simpleMethod, CartesianGroundMethod(simpleMethod, setParameter.toMap)) :: Nil
+            if (setParameter exists { _._2.isEmpty }) None else Some((simpleMethod, CartesianGroundMethod(simpleMethod, setParameter.toMap)))
           case _                                       => noSupport(NONSIMPLEMETHOD)
-        }
+        } collect {case Some(x) => x}
 
       // add the new methods to the map
       val flattenedPossibleMethods = possibleMethods map { _._2 }
@@ -207,11 +213,11 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
     // run the actual grounding procedure
     taskOrdering foreach {
       scc => if (scc.size != 1 || scc.head.isAbstract) {
-        //println("\n\n\n\n\nSCC " + (scc map {          _.name        }))
+        //println("\n\n\n\n\nSCC " + (scc map { _.name }))
 
         def groundNew(cartesianGroundMethod: CartesianGroundMethod): Seq[(Task, GroundTask)] = {
-          //println("GROUND A NEW " + cartesianGroundMethod.method.name + " " +
-          //          (cartesianGroundMethod.subTasks map { gt => gt.shortInfo + " " + possibleGroundInstances(gt).size }).mkString("  "))
+          //println("GROUND A NEW " + cartesianGroundMethod.method.name + " " + (cartesianGroundMethod.subTasks map { gt => gt.shortInfo + " " + possibleGroundInstances(gt).size })
+          //  .mkString("  "))
 
           var nc = 0
 
@@ -231,13 +237,13 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
 
               if (!(methodsMap contains newMethod.groundAbstractTask)) {
                 methodsMap(newMethod.groundAbstractTask) = Set(newMethod)
-                //println("START " + newMethod.groundAbstractTask.task.name + " " + cartesianGroundMethod.abstractTask.shortInfo)
+                //println("START " + (newMethod.variableBinding map { case (v,c) => v.name + "->" + c.name} mkString " "))
                 actuallyNew += 1
                 (newMethod.groundAbstractTask.task, newMethod.groundAbstractTask) :: Nil
               } else if (!(methodsMap(newMethod.groundAbstractTask) contains newMethod)) {
                 methodsMap(newMethod.groundAbstractTask) = methodsMap(newMethod.groundAbstractTask) + newMethod
                 actuallyNew += 1
-                //println("ADD "  + newMethod.groundAbstractTask.task.name  + " " + cartesianGroundMethod.abstractTask.shortInfo)
+                //println("ADD "  + (newMethod.variableBinding map { case (v,c) => v.name + "->" + c.name} mkString " "))
                 Nil
               } else Nil
           }

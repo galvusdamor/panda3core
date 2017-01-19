@@ -44,7 +44,7 @@ trait DecompositionMethod extends DomainUpdatable {
   override def update(domainUpdate: DomainUpdate): DecompositionMethod
 
   def containsTask(task: Task): Boolean =
-    task == abstractTask || (subPlan.planStepTasksSet contains task )
+    task == abstractTask || (subPlan.planStepTasksSet contains task)
 
   def areParametersAllowed(instantiation: Map[Variable, Constant]): Boolean = subPlan.variableConstraints.constraints forall {
     case Equal(var1, var2: Variable)     => instantiation(var1) == instantiation(var2)
@@ -54,6 +54,8 @@ trait DecompositionMethod extends DomainUpdatable {
     case OfSort(vari, sort)              => sort.elements contains instantiation(vari)
     case NotOfSort(vari, sort)           => !(sort.elements contains instantiation(vari))
   }
+
+  override final lazy val hashCode: Int = abstractTask.name.hashCode + subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode) * 13 })
 }
 
 
@@ -63,7 +65,7 @@ trait DecompositionMethod extends DomainUpdatable {
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // scalastyle:off covariant.equals
-case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: String) extends DecompositionMethod with HashMemo {
+case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: String) extends DecompositionMethod {
 
   abstractTask match {
     case ReducedTask(_, _, _, _, _, prec, eff) =>
@@ -88,13 +90,21 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
   }
 
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = domainUpdate match {
-    case PropagateEquality(empty) =>
+    case PropagateEquality(empty)                =>
       assert(empty.isEmpty)
-      SimpleDecompositionMethod(abstractTask,subPlan update PropagateEquality(abstractTask.parameters.toSet), name)
-    case ExchangeTask(exchangeMap) =>
-      if (exchangeMap contains abstractTask){
-        val newVars = exchangeMap(abstractTask).parameters filterNot abstractTask.parameters.contains
-        SimpleDecompositionMethod(abstractTask, subPlan.update(domainUpdate) update AddVariables(newVars), name)
+
+      SimpleDecompositionMethod(abstractTask, subPlan update PropagateEquality(abstractTask.parameters.toSet), name)
+    case ExchangeTask(exchangeMap)               =>
+      if (exchangeMap contains abstractTask) {
+        val newAbstract = exchangeMap(abstractTask)
+        val newVars = newAbstract.parameters filterNot abstractTask.parameters.contains
+
+        // rebuild init and goal
+        val newInitSchema: Task = GeneralTask("init", isPrimitive = true, newAbstract.parameters, Nil, Nil, And(Nil), exchangeMap(abstractTask).precondition)
+        val newGoalSchema: Task = GeneralTask("goal", isPrimitive = true, newAbstract.parameters, Nil, Nil, exchangeMap(abstractTask).effect, And(Nil))
+        val extendedExchangeMap = exchangeMap.+((subPlan.init.schema, newInitSchema)).+((subPlan.goal.schema, newGoalSchema))
+
+        SimpleDecompositionMethod(exchangeMap(abstractTask), subPlan.update(ExchangeTask(extendedExchangeMap)) update AddVariables(newVars), name)
       } else SimpleDecompositionMethod(abstractTask, subPlan.update(domainUpdate), name)
     case ExchangeLiteralsByPredicate(map, false) => SimpleDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
                                                                               name)
@@ -137,11 +147,13 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
         val methodInstantiations: Seq[Map[Variable, Constant]] = allInstantiations map { instantiation => expandedMapping ++ instantiation } filter areParametersAllowed
 
         // only take those methods that inherit correctly
-        methodInstantiations map { args => GroundedDecompositionMethod(this, args) } filter {_.isCorrentlyInheriting}
+        methodInstantiations map { args => GroundedDecompositionMethod(this, args) } filter { _.isCorrentlyInheriting }
     }
   }
 
-  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[SimpleDecompositionMethod] && this.hashCode == o.hashCode()) super.equals(o) else false
+  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[SimpleDecompositionMethod] && this.hashCode == o.hashCode())
+    abstractTask == o.asInstanceOf[SimpleDecompositionMethod].abstractTask && subPlan == o.asInstanceOf[SimpleDecompositionMethod].subPlan
+  else false
 }
 
 // scalastyle:on
@@ -151,7 +163,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula, methodEffect: Formula, name: String) extends DecompositionMethod with HashMemo {
+case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrecondition: Formula, methodEffect: Formula, name: String) extends DecompositionMethod {
   override def update(domainUpdate: DomainUpdate): SHOPDecompositionMethod = domainUpdate match {
     case ExchangeLiteralsByPredicate(map, false) =>
       SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
@@ -159,9 +171,10 @@ case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrec
     case _                                       => SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update domainUpdate,
                                                                             methodPrecondition update domainUpdate, methodEffect update domainUpdate, name)
   }
+
 }
 
-case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends HashMemo with PrettyPrintable {
+case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends PrettyPrintable {
   assert(decompositionMethod.areParametersAllowed(variableBinding))
 
   val groundAbstractTask: GroundTask = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
@@ -191,8 +204,14 @@ case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod,
   /** returns a detailed information about the object */
   override def longInfo: String = mediumInfo + (variableBinding map { case (v, c) => v.name + "->" + c.name }).mkString("{", ",", "}")
 
-  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[GroundedDecompositionMethod] && this.hashCode == o.hashCode()) {
-    val that = o.asInstanceOf[GroundedDecompositionMethod]
-    this.decompositionMethod.equals(that.decompositionMethod) && this.variableBinding == that.variableBinding
-  } else false
+  override def equals(o: scala.Any): Boolean =
+    if (o.isInstanceOf[GroundedDecompositionMethod] && this.hashCode == o.hashCode()) {
+      val that = o.asInstanceOf[GroundedDecompositionMethod]
+      this.decompositionMethod.equals(that.decompositionMethod) && this.variableBinding == that.variableBinding
+    } else false
+
+  override final lazy val hashCode: Int =
+    decompositionMethod.abstractTask.name.hashCode + variableBinding.toSeq.sortBy({ case (v, c) => v.hashCode }).foldLeft(0)(
+      { case (h, (v, c)) => ((h + c.hashCode) * 13 + v.hashCode) * 13 }) + decompositionMethod.subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode) * 13 }) +
+      decompositionMethod.subPlan.orderingConstraints.arrangementHash
 }
