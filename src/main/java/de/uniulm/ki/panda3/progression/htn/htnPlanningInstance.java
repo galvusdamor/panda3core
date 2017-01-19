@@ -8,12 +8,9 @@ import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.ProgressionSearchRoutine;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.cRPG;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.greedyProgression;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.*;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.cRpgHtn;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.delRelaxedHTN;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.proBFS;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.simpleCompositionRPG;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
@@ -58,7 +55,7 @@ public class htnPlanningInstance {
 
     public boolean plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
                         InformationCapsule ic, TimeCapsule tc,
-                        SearchHeuristic heuristic, boolean doBFS,
+                        SearchHeuristic heuristic, boolean doBFS, boolean doDFS,
                         boolean aStar, boolean deleteRelaxed, long quitAfterMs) throws ExecutionException, InterruptedException {
         random = new Random(randomSeed);
         long totaltime = System.currentTimeMillis();
@@ -113,6 +110,8 @@ public class htnPlanningInstance {
 
         if (doBFS)
             initialNode.heuristic = new proBFS();
+        else if (doDFS)
+            initialNode.heuristic = new proDFS();
         else if (heuristic instanceof SimpleCompositionRPG$)
             initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
         else if (heuristic instanceof CompositionRPG$)
