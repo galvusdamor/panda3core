@@ -27,7 +27,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
     // [f1, f2, ..., fm, a1, a2, c1, a3, ..., an, c2, ..., co]
     public static int[][] prec2task; // [1][4, 5, 7] means that the tasks 4, 5 and 7 all have precondition 1
     public static Set<Integer>[] add2task; // 1 -> [4, 5, 7] means that the tasks 4, 5 and 7 all add fact no. 1
-    public static int[] numprecs; // todo: be aware that there might be an HTN-Task that has teh same prec two times!
+    public static int[] numprecs;
 
     public static List<Integer> operatorsWithoutPrec;
 
@@ -133,8 +133,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
         for (int methodI : cRPG.IndexToMethod.keySet()) {
             method m = cRPG.IndexToMethod.get(methodI);
-            numprecs[methodI] = m.tasks.length;
-            precLists[methodI] = new int[numprecs[methodI]];
+            numprecs[methodI] = m.numDistinctTasks;
+            precLists[methodI] = new int[m.tasks.length];
 
             for (int subtaskId = 0; subtaskId < m.tasks.length; subtaskId++) {
                 GroundTask t = m.tasks[subtaskId];

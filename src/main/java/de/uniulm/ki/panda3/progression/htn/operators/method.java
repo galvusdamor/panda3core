@@ -50,6 +50,7 @@ public class method {
 
     public final GroundedDecompositionMethod m; // this is the original method that is saved for printing the solution
     public GroundTask[] tasks;
+    public int numDistinctTasks = 0;
 
     // these are the modifications for the SUB-tasks
     int[] actionID;
@@ -104,6 +105,11 @@ public class method {
     }
 
     public void finalizeMethod() {
+        Set<GroundTask> distinctTasks = new HashSet<>();
+        for(GroundTask t : this.tasks){
+            distinctTasks.add(t);
+        }
+        this.numDistinctTasks = distinctTasks.size();
         for (int i = 0; i < tasks.length; i++) {
             if (tasks[i].task().isPrimitive()) {
                 actionID[i] = operators.ActionToIndex.get(tasks[i]);
