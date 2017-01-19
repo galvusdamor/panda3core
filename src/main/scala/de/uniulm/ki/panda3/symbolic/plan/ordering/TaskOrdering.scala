@@ -311,6 +311,16 @@ case class TaskOrdering(originalOrderingConstraints: Seq[OrderingConstraint], ta
     DirectedGraphWithInternalMapping(tasksWithoutInitAndGoal, edges)
   }
 
+  lazy val fullGraph: DirectedGraph[PlanStep] = {
+    val tasksWithoutInitAndGoal = tasks filterNot { t => tasks forall { ot => lteq(t, ot) } } filterNot { t => tasks forall { ot => gteq(t, ot) } }
+    val edges = allOrderingConstraints() map { case OrderingConstraint(before, after) => (before, after) } filter {
+      case (a, b) => (tasksWithoutInitAndGoal contains a) && (tasksWithoutInitAndGoal contains b)
+    }
+
+    DirectedGraphWithInternalMapping(tasksWithoutInitAndGoal, edges)
+  }
+
+
   lazy val arrangementHash: Int = {
     ensureTransitiveHull()
     val psList = planStepToArrangementIndex.keys.flatMap({ x => planStepToArrangementIndex.keys.map({ y => (x, y) }).toSeq.sortBy(_._2.id) }).toSeq.sortBy(_._1.id)
