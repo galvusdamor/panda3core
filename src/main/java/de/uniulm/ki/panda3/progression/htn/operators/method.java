@@ -58,16 +58,10 @@ public class method {
     List<int[]> orderings;
     HashSet<Integer> firsts;
     HashSet<Integer> lasts;
+    public int numberOfPrimSubtasks = 0;
+    public int numberOfAbsSubtasks;
 
     public method(GroundedDecompositionMethod dm) {
-        /*if (dm.groundAbstractTask().toString().toLowerCase().contains("call")) {
-            for (int i = 0; i < dm.decompositionMethod().subPlan().planSteps().size(); i++) {
-                System.out.println(dm.decompositionMethod().subPlan().planSteps().apply(i).longInfo());
-            }
-            for (int i = 0; i < dm.decompositionMethod().subPlan().planStepsWithoutInitGoal().size(); i++) {
-                System.out.println(dm.decompositionMethod().subPlan().planStepsWithoutInitGoal().apply(i).longInfo());
-            }
-        }*/
         this.m = dm;
         Seq<PlanStep> steps = dm.decompositionMethod().subPlan().planStepsWithoutInitGoal();
         this.tasks = new GroundTask[steps.size()];
@@ -76,7 +70,10 @@ public class method {
 
         for (int i = 0; i < steps.size(); i++) {
             tasks[i] = dm.subPlanPlanStepsToGrounded().get(steps.apply(i)).get();
+            if (tasks[i].task().isPrimitive())
+                numberOfPrimSubtasks++;
         }
+        numberOfAbsSubtasks = steps.size() - numberOfPrimSubtasks;
 
         this.orderings = new ArrayList<>();
         Seq<OrderingConstraint> orderings = dm.decompositionMethod().subPlan().orderingConstraints().minimalOrderingConstraints();

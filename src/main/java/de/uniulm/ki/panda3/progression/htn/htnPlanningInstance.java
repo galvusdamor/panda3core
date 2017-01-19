@@ -109,9 +109,9 @@ public class htnPlanningInstance {
 
         // todo: change heuristic here
         //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        //initialNode.heuristic = new cRPG(operators.methods, allActions);
+        initialNode.heuristic = new cRPG(operators.methods, allActions);
         //initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
-        initialNode.heuristic = new greedyProgression();
+        //initialNode.heuristic = new greedyProgression();
         //initialNode.heuristic = new delRelaxedHTN(operators.methods, allActions);
         //initialNode.heuristic = new proBFS();
 
@@ -123,7 +123,7 @@ public class htnPlanningInstance {
         boolean deleteRelaxed = false;
         boolean printOutput = true;
         boolean findShortest = false;
-        long quitAfterMs = 300000;
+        long quitAfterMs = -1;//300000/5;
 
         routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput, findShortest);
         //routine = new EnforcedHillClimbing();

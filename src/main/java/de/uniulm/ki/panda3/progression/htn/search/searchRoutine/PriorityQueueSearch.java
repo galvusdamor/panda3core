@@ -5,16 +5,17 @@ import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
+import de.uniulm.ki.panda3.progression.htn.search.loopDetection.VisitedList;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Random;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Created by dh on 15.09.16.
@@ -75,6 +76,17 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         timing.start(SEARCH_TIME);
         long startedSearch = System.currentTimeMillis();
 
+        boolean collectTlts = false;
+        LinkedList<Long> timeStamps = new LinkedList<>();
+        LinkedList<String> tlts = new LinkedList<>();
+
+        int restartCount = -1;
+        long restart = -1;// (2 * 60 * 1000);
+        long nextRestart = -1;//restartCount * restart;
+
+        //VisitedList visited = new VisitedList();
+        //visited.addIfNotIn(firstSearchNode);
+
         planningloop:
         while (!fringe.isEmpty()) {
             ProgressionNetwork n = fringe.poll();
@@ -88,14 +100,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 }
 
                 ProgressionNetwork node = n.apply(ps, deleteRelaxed);
-                /* // Precondition!
-                while ((node.getFirstAbstractTasks().size() == 0)
-                        && (node.getFirstPrimitiveTasks().size() == 1)) {
-                    ps = node.getFirstPrimitiveTasks().get(0);
-                    node = node.apply(ps, deleteRelaxed);
-                    unitPropagation++;
-                    searchnodes++;
-                }*/
+                //if (visited.addIfNotIn(node))
+                //    continue actionloop;
 
                 node.id = searchnodes;
                 node.heuristic = n.heuristic.update(node, ps);
@@ -121,8 +127,25 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                             if (node.progressionTrace != null)
                                 System.out.println(node.progressionTrace);
                         }
+                        if (collectTlts) {
+                            timeStamps.add(System.currentTimeMillis());
+                            findTlt:
+                            for (Object a : node.solution) {
+                                if (a instanceof Integer)
+                                    continue;
+                                GroundedDecompositionMethod dm = (GroundedDecompositionMethod) a;
+                                if (dm.groundAbstractTask().task().name().startsWith("tlt") && (dm.subPlanGroundedTasksWithoutInitAndGoal().size() > 0)) {
+                                    for (int i = 0; i < dm.subPlanGroundedTasksWithoutInitAndGoal().size(); i++) {
+                                        GroundTask ps2 = dm.subPlanGroundedTasksWithoutInitAndGoal().apply(i);
+                                        tlts.add(ps2.longInfo());
+                                        break findTlt;
+                                    }
+                                }
+                            }
+
+                        }
                         foundPlans++;
-                        if (!this.findShortest) {
+                        if (!this.findShortest && !collectTlts) {
                             break planningloop;
                         }
                     } else {
@@ -136,6 +159,16 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 }
                 searchnodes++;
                 if ((System.currentTimeMillis() - lastInfo) > 1000) {
+                    if ((restart > 0) && ((System.currentTimeMillis() - totalSearchTime) > nextRestart)) {
+                        restartCount++;
+                        nextRestart = restartCount * restart;
+                        System.out.println("Seems to be a bad run, let's try again! -> restart");
+                        fringe.clear();
+                        fringe.add(firstSearchNode);
+                        htnPlanningInstance.randomSeed += 100;
+                        htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                        continue planningloop;
+                    }
                     if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
                         System.out.println("Reached time limit, search will stop.");
                         exitDueToTimeLimit = true;
@@ -165,8 +198,11 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 }
             }*/
 
+            methodloop:
             for (method m : oneAbs.methods) {
                 ProgressionNetwork node = n.decompose(oneAbs, m);
+                //if (visited.addIfNotIn(node))
+                //    continue methodloop;
 
                 // todo: add unit propagation here
                 node.heuristic = n.heuristic.update(node, oneAbs, m);
@@ -197,6 +233,16 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 }
                 searchnodes++;
                 if ((System.currentTimeMillis() - lastInfo) > 1000) {
+                    if ((restart > 0) && ((System.currentTimeMillis() - totalSearchTime) > nextRestart)) {
+                        restartCount++;
+                        nextRestart = restartCount * restart;
+                        System.out.println("Seems to be a bad run, let's try again! -> restart");
+                        fringe.clear();
+                        fringe.add(firstSearchNode);
+                        htnPlanningInstance.randomSeed += 100;
+                        htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                        continue planningloop;
+                    }
                     if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
                         System.out.println("Reached time limit, search will stop.");
                         exitDueToTimeLimit = true;
@@ -212,6 +258,22 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         }
         System.out.println("Number of nodes in final fringe: " + fringe.size());
         timing.stop(SEARCH_TIME);
+
+        try {
+            BufferedWriter bwAllSols = new BufferedWriter(new FileWriter("/home/dh/Schreibtisch/anytime/times.txt"));
+            Iterator<Long> iter1 = timeStamps.iterator();
+            Iterator<String> iter2 = tlts.iterator();
+            while (iter1.hasNext()) {
+                int time = (int) (iter1.next() - startedSearch);
+                bwAllSols.write(" " + time);
+                bwAllSols.write(" ");
+                bwAllSols.write(iter2.next());
+                bwAllSols.write("\n");
+            }
+            bwAllSols.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         if (this.findShortest)
             info.add("findShortestPlan", 1);

@@ -13,8 +13,8 @@ public class collectPlanningInfo {
     public static void main(String[] args) throws Exception {
         //String inputFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/verification.log";
 //        String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/verification.csv";
-        String inputFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random/greedy-imp-random.log";
-        String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random/greedy-imp-random.csv";
+        String inputFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random-1-10/data.log";
+        String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random-1-10/single-tlt.csv";
         FileReader fr = new FileReader(inputFile);
         BufferedReader br = new BufferedReader(fr);
 
@@ -26,7 +26,9 @@ public class collectPlanningInfo {
                 if (oneExp != null)
                     allExps.add(oneExp);
                 oneExp = new HashMap<>();
-                String expName = line.substring("Processing d-".length(), line.length() - 5);
+                String[] split = line.split(" ");
+                String expName = split[1].substring("d-".length(), split[1].length() - 5);
+                oneExp.put("randomSeedSh",  split[2]);
                 oneExp.put("expName", expName);
             } else if (line.startsWith("###")) {
                 String csv = line.substring("###\"".length(), line.length() - 1);

@@ -36,6 +36,8 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public int metric = 0;
     public boolean goalRelaxedReachable = true;
     public int id = 0;
+    private int numberOfTasks = 0;
+    private int numberOfPrimitiveTasks = 0;
 
     private ProgressionNetwork() {
     }
@@ -46,8 +48,11 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         for (ProgressionPlanStep p : ps) {
             if (p.isPrimitive) {
                 unconstraintPrimitiveTasks.add(p);
+                numberOfTasks++;
+                numberOfPrimitiveTasks++;
             } else {
                 unconstraintAbstractTasks.add(p);
+                numberOfTasks++;
             }
         }
         this.solution = new LinkedList<>();
@@ -81,16 +86,20 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
     @Override
     public String toString() {
+        return networkToString(unconstraintAbstractTasks, unconstraintPrimitiveTasks);
+    }
+
+    public static String networkToString(List<ProgressionPlanStep> abstractTasks, List<ProgressionPlanStep> primitiveTasks) {
         int taskid = 0;
         HashMap<ProgressionPlanStep, Integer> tasks = new HashMap<>();
         List<int[]> orderings = new LinkedList<>();
         LinkedList<ProgressionPlanStep> pss = new LinkedList<>();
 
-        for (ProgressionPlanStep ps : unconstraintAbstractTasks) {
+        for (ProgressionPlanStep ps : abstractTasks) {
             pss.add(ps);
             tasks.put(ps, taskid++);
         }
-        for (ProgressionPlanStep ps : unconstraintPrimitiveTasks) {
+        for (ProgressionPlanStep ps : primitiveTasks) {
             pss.add(ps);
             tasks.put(ps, taskid++);
         }
@@ -143,14 +152,14 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         }
         first = true;
         sb.append("}\nnext={");
-        for (ProgressionPlanStep ps : unconstraintAbstractTasks) {
+        for (ProgressionPlanStep ps : abstractTasks) {
             if (first)
                 first = false;
             else
                 sb.append(", ");
             sb.append(tasks.get(ps));
         }
-        for (ProgressionPlanStep ps : unconstraintPrimitiveTasks) {
+        for (ProgressionPlanStep ps : primitiveTasks) {
             if (first)
                 first = false;
             else
@@ -164,6 +173,11 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
     public ProgressionNetwork decompose(ProgressionPlanStep ps, method m) {
         ProgressionNetwork res = this.clone();
+
+        res.numberOfTasks--; // some task will be decomposed
+        res.numberOfTasks += m.numberOfAbsSubtasks;
+        res.numberOfTasks += m.numberOfPrimSubtasks;
+
         res.state = this.state;
         res.solution.add(m.m);
         res.numDecompositionSteps++;
@@ -198,6 +212,8 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
     public ProgressionNetwork apply(ProgressionPlanStep ps, boolean deleteRelaxed) {
         ProgressionNetwork res = this.clone();
+        res.numberOfTasks--;
+        res.numberOfPrimitiveTasks--;
         res.state = (BitSet) this.state.clone();
         res.solution.add(ps.action);
         if (operators.ShopPrecActions.contains(ps.action))
@@ -280,6 +296,8 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     @Override
     protected ProgressionNetwork clone() {
         ProgressionNetwork res = new ProgressionNetwork();
+        res.numberOfPrimitiveTasks = this.numberOfPrimitiveTasks;
+        res.numberOfTasks = this.numberOfTasks;
         res.unconstraintPrimitiveTasks = new LinkedList<>(); // todo: array or linkedList?
         res.unconstraintAbstractTasks = new LinkedList<>(); // todo: array or linkedList?
         res.unconstraintPrimitiveTasks.addAll(this.unconstraintPrimitiveTasks);
@@ -298,10 +316,21 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public int compareTo(ProgressionNetwork other) {
         int c = (this.metric - other.metric);
         if (c == 0) {
+            //c = (other.numDecompositionSteps - this.numDecompositionSteps);
+            //if (c == 0) {
             if (htnPlanningInstance.random.nextBoolean())
                 c = 1;
             else c = -1;
+            //}
         }
         return c;
+    }
+
+    public int getNumberOfTasks() {
+        return this.numberOfTasks;
+    }
+
+    public int getNumberOfPrimitiveTasks() {
+        return this.numberOfPrimitiveTasks;
     }
 }

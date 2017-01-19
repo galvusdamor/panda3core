@@ -6,32 +6,28 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
+import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 
 import java.util.*;
 
 /**
  * Created by dhoeller on 26.07.16.
- * <p/>
- * (iter) The rpg gets its set of grounded actions from the symbolic graph. So it does not ground
- * itself. This might cause the algorithm to test to much actions. It is planned to implement
- * a version that iteratively adapts the existing structures - this should also overcome the
- * problem given here
- * <p/>
- * (ac-rep) The representation of actions' preconditions and effects via Bit-Vectors might be suboptimal
- * whenever there are only a few state features effected - maybe implement a version that only
- * represents the states as Bit-Vectors, but uses Booleans for preconditions and effects.
- * (see also the planningInstance-Class)
  */
 public class cRPG implements htnGroundedProgressionHeuristic {
 
-    // STATIC STUFF
-    private static int numOperators;
-    private static int numHtnStateFeatures;
+    /**
+     * Define "Operator": An operator is either an action or a method
+     * Define "Task": A task is either an action or an abstract task(-name)
+     */
+
+    private static int numOperators; // number of actions + number of methods
+    private static int numTasks; // number of actions + number of ground abstract tasks
+    private static int numExtenedStateFeatures; // number of original state features + one feature for every task
 
     // [f1, f2, ..., fm, a1, a2, c1, a3, ..., an, c2, ..., co]
     public static int[][] prec2task; // [1][4, 5, 7] means that the tasks 4, 5 and 7 all have precondition 1
     public static Set<Integer>[] add2task; // 1 -> [4, 5, 7] means that the tasks 4, 5 and 7 all add fact no. 1
-    public static int[] numprecs;
+    public static int[] numprecs; // todo: be aware that there might be an HTN-Task that has teh same prec two times!
 
     public static List<Integer> operatorsWithoutPrec;
 
@@ -39,25 +35,27 @@ public class cRPG implements htnGroundedProgressionHeuristic {
     private static int[][] precLists;
     public static int[][] addLists;  // [1][2, 5] means that action 1 adds state-features 2 and 5
 
-    // these are maps because its indices to not start with 0
+    // these are maps because its indices do not start with 0
     private static HashMap<method, Integer> MethodToIndex;
-    private static HashMap<Integer, method> IndexToMethod;
+    private static HashMap<Integer, method> IndexToMethod; // todo replace by array
 
-    private static HashMap<GroundTask, Integer> TaskLiteralToIndex;
-    private static HashMap<Integer, GroundTask> IndexToTaskLiteral;
+    private static HashMap<GroundTask, Integer> TaskToIndex;
+    private static HashMap<Integer, GroundTask> IndexToTask; // todo replace by array
 
     private static Map<GroundTask, Set<Integer>> reachableFrom;
 
     // Members of the current object
     private boolean goalRelaxedReachable;
-    private BitSet reachability;
     private int heuristicValue;
+
+    private BitSet reachability; // set of tasks that is top-down-reachable from the current network
 
     public cRPG() {
 
     }
 
     boolean topDownReachability = false;
+    boolean orderingInvariants = false;
 
     public cRPG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, Set<GroundTask> allActions) {
 
@@ -65,95 +63,65 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         System.out.print("Init composition RPG heuristic");
 
         cRPG.numOperators = createMethodLookupTable(methods);
-        if (topDownReachability) {
-            this.reachability = new BitSet(cRPG.numOperators);
-            this.reachability.set(0, this.reachability.size() - 1, true);
+        cRPG.numTasks = createTaskLookupTable(allActions, getGroundTasks(methods));
+
+        if (topDownReachability || orderingInvariants) {
+            cRPG.reachableFrom = initTopDownReachability(methods);
         }
-        createTaskLookupTable(allActions, getGroundTasks(methods));
 
-        Map<GroundTask, Set<GroundTask>> reachableTasksFrom = new HashMap<>();
-        //Map<GroundTask, Set<GroundTask>> parent = new HashMap<>();
-        //LinkedList<GroundTask> doTasks = new LinkedList<>();
-        if (topDownReachability) {
-            long time42 = System.currentTimeMillis();
-            for (Task k : methods.keySet()) {
-                HashMap<GroundTask, List<method>> methodLists = methods.get(k);
-                for (GroundTask t : methodLists.keySet()) {
-                    if (!reachableTasksFrom.containsKey(t)) {
-                        reachableTasksFrom.put(t, new HashSet<>());
-                    }
-                    Set<GroundTask> subtasks = reachableTasksFrom.get(t);
-                    List<method> methodsT = methodLists.get(t);
-                    for (method mths : methodsT) {
-                        for (GroundTask gt : mths.tasks) {
-                            subtasks.add(gt);
+        if (topDownReachability && orderingInvariants) {
+            long ordTime = System.currentTimeMillis();
+            System.out.println("Calculating global ordering invariants...");
+            BitSet[] aBeforeB = new BitSet[numOperators];
+            for (int i = 0; i < numOperators; i++) {
+                aBeforeB[i] = new BitSet(numOperators);
+                aBeforeB[i].set(0, numOperators - 1, true);
+            }
+            for (Task t : methods.keySet()) {
+                HashMap<GroundTask, List<method>> gts = methods.get(t);
+                for (GroundTask gt : gts.keySet()) {
+                    for (method m : gts.get(gt)) {
+                        scala.collection.Iterator<PlanStep> iter1 = m.m.decompositionMethod().subPlan().planStepsWithoutInitGoal().iterator();
+                        while (iter1.hasNext()) {
+                            PlanStep ps1 = iter1.next();
+                            scala.collection.Iterator<PlanStep> iter2 = m.m.decompositionMethod().subPlan().planStepsWithoutInitGoal().iterator();
+                            while (iter2.hasNext()) {
+                                PlanStep ps2 = iter2.next();
+                                if (!m.m.decompositionMethod().subPlan().orderingConstraints().lteq(ps1, ps2)) {
+                                    GroundTask gt1 = m.m.subPlanPlanStepsToGrounded().get(ps1).get();
+                                    GroundTask gt2 = m.m.subPlanPlanStepsToGrounded().get(ps2).get();
+                                    int taskID1 = TaskToIndex.get(gt1);
+                                    int taskID2 = TaskToIndex.get(gt2);
+
+                                    //for()
+                                }
+                            }
                         }
+
                     }
                 }
             }
-            System.out.println("\nfirst " + (System.currentTimeMillis() - time42));
-            time42 = System.currentTimeMillis();
-
-            boolean changed = true;
-            while (changed) {
-                changed = false;
-                for (GroundTask k : reachableTasksFrom.keySet()) {
-                    Set<GroundTask> tasks = reachableTasksFrom.get(k);
-                    Set<GroundTask> temp = new HashSet<>();
-                    int before = tasks.size();
-                    for (GroundTask subT : tasks) {
-                        if (reachableTasksFrom.containsKey(subT)) {
-                            temp.addAll(reachableTasksFrom.get(subT));
-                        }
-                    }
-                    tasks.addAll(temp);
-                    if (before < tasks.size()) {
-                        changed = true;
-                    }
-                }
-            }
-            System.out.println("sec " + (System.currentTimeMillis() - time42));
-            time42 = System.currentTimeMillis();
-
-            Map<GroundTask, Set<Integer>> reachableFrom = new HashMap<>();
-            for (GroundTask t : reachableTasksFrom.keySet()) {
-                Set<Integer> reachableOperators = new HashSet<>();
-                reachableFrom.put(t, reachableOperators);
-                Set<GroundTask> reachableTasks = reachableTasksFrom.get(t);
-                for (method m : methods.get(t.task()).get(t)) {
-                    reachableOperators.add(MethodToIndex.get(m));
-                }
-                for (GroundTask reachableTask : reachableTasks) {
-                    if (reachableTask.task().isPrimitive()) {
-                        reachableOperators.add(operators.ActionToIndex.get(reachableTask));
-                    } else {
-                        for (method m : methods.get(reachableTask.task()).get(reachableTask)) {
-                            reachableOperators.add(MethodToIndex.get(m));
-                        }
-                    }
-                }
-            }
-
-            System.out.println("third " + (System.currentTimeMillis() - time42));
-            cRPG.reachableFrom = reachableFrom;
+            System.out.println("Ordering invariants calculated in " + (System.currentTimeMillis() - ordTime) + " ms.");
         }
-        cRPG.numHtnStateFeatures = operators.numStateFeatures + cRPG.numOperators; // action-task-facts are true one layer after the action, this can done due to the 1-to-1 correspondence
 
-        cRPG.prec2task = new int[numHtnStateFeatures][]; // pointers from literals to tasks that have this literal as precondition
-        cRPG.add2task = new Set[numHtnStateFeatures]; // pointers from literals to tasks that add it
+        // action-task-facts are true one layer after the action, this can done due to the 1-to-1 correspondence
+        cRPG.numExtenedStateFeatures = operators.numStateFeatures + cRPG.numTasks;
+
+        cRPG.prec2task = new int[numExtenedStateFeatures][]; // pointers from literals to tasks that have this literal as precondition
         cRPG.precLists = new int[numOperators][];
+        cRPG.add2task = new Set[numExtenedStateFeatures]; // pointers from literals to tasks that add it
         cRPG.addLists = new int[numOperators][];
 
-        List<Integer>[] invertedMapping = new List[numHtnStateFeatures];
+        List<Integer>[] inverseMapping = new List[numExtenedStateFeatures];
 
-        for (int i = 0; i < cRPG.numHtnStateFeatures; i++) {
-            invertedMapping[i] = new ArrayList<>();
+        for (int i = 0; i < cRPG.numExtenedStateFeatures; i++) {
+            inverseMapping[i] = new ArrayList<>();
         }
 
         for (int actionI = 0; actionI < operators.numActions; actionI++) {
             precLists[actionI] = operators.precList[actionI];
             for (int precI = 0; precI < operators.precList[actionI].length; precI++) {
-                invertedMapping[operators.precList[actionI][precI]].add(actionI);
+                inverseMapping[operators.precList[actionI][precI]].add(actionI);
             }
         }
 
@@ -170,24 +138,29 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
             for (int subtaskId = 0; subtaskId < m.tasks.length; subtaskId++) {
                 GroundTask t = m.tasks[subtaskId];
-                int taskIndex = cRPG.TaskLiteralToIndex.get(t);
+                int taskIndex = cRPG.TaskToIndex.get(t);
                 precLists[methodI][subtaskId] = taskIndex;
-                invertedMapping[taskIndex].add(methodI);
+                inverseMapping[taskIndex].add(methodI);
             }
-            int compTaskIndex = cRPG.TaskLiteralToIndex.get(m.m.groundAbstractTask());
+            int compTaskIndex = cRPG.TaskToIndex.get(m.m.groundAbstractTask());
             addLists[methodI] = new int[1];
             addLists[methodI][0] = compTaskIndex;
         }
 
+        /*
+        BitSet effectsOfPrecFreeActions = new BitSet(operators.numStateFeatures);
+        effectsOfPrecFreeActions.set(0, operators.numStateFeatures - 1, false);
+        */
         operatorsWithoutPrec = new ArrayList<>();
         for (int i = 0; i < cRPG.numOperators; i++) {
-            if (cRPG.precLists[i].length == 0)
+            if (cRPG.precLists[i].length == 0) {
                 operatorsWithoutPrec.add(i);
+            }
         }
 
         // copy temporal lists to array
-        for (int i = 0; i < invertedMapping.length; i++) {
-            List<Integer> mapping = invertedMapping[i];
+        for (int i = 0; i < inverseMapping.length; i++) {
+            List<Integer> mapping = inverseMapping[i];
             prec2task[i] = new int[mapping.size()];
             for (int j = 0; j < mapping.size(); j++) {
                 prec2task[i][j] = mapping.get(j);
@@ -205,7 +178,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         }
 
         // generate lists mapping literal to lists of operators having it as add-effect
-        for (int i = 0; i < numHtnStateFeatures; i++) {
+        for (int i = 0; i < numExtenedStateFeatures; i++) {
             cRPG.add2task[i] = new HashSet<>();
         }
 
@@ -219,22 +192,99 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         System.out.println(" (" + (System.currentTimeMillis() - time) + " ms)");
     }
 
-    private void createTaskLookupTable(Set<GroundTask> allActions, Set<GroundTask> allTasks) {
+    public Map<GroundTask, Set<Integer>> initTopDownReachability(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
+        // this structures are used during search and must be initialized
+        this.reachability = new BitSet(cRPG.numOperators);
+        this.reachability.set(0, this.reachability.size() - 1, true);
+
+        // here the reachability is calculated
+        // (1) first, the direct children, defined by the methods, are added
+        System.out.println("Calculating top down reachability of tasks...");
+        Map<GroundTask, Set<GroundTask>> reachableTasksFrom = new HashMap<>();
+        long time = System.currentTimeMillis();
+        for (Task k : methods.keySet()) {
+            HashMap<GroundTask, List<method>> methodLists = methods.get(k);
+            for (GroundTask t : methodLists.keySet()) {
+                Set<GroundTask> subtasks = reachableTasksFrom.get(t);
+                if (subtasks == null) {
+                    subtasks = new HashSet<>();
+                    reachableTasksFrom.put(t, subtasks);
+                }
+                List<method> methodsT = methodLists.get(t);
+                for (method mths : methodsT) {
+                    for (GroundTask gt : mths.tasks) {
+                        subtasks.add(gt);
+                    }
+                }
+            }
+        }
+
+        System.out.println("\n- Processed direct children " + (System.currentTimeMillis() - time));
+        time = System.currentTimeMillis();
+
+        // (2) now it has to be calculated which tasks are reachable transitively
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (GroundTask k : reachableTasksFrom.keySet()) {
+                Set<GroundTask> tasks = reachableTasksFrom.get(k);
+                Set<GroundTask> temp = new HashSet<>();
+                int before = tasks.size();
+                for (GroundTask subT : tasks) {
+                    if (reachableTasksFrom.containsKey(subT)) {
+                        temp.addAll(reachableTasksFrom.get(subT));
+                    }
+                }
+                tasks.addAll(temp);
+                if (before < tasks.size()) {
+                    changed = true;
+                }
+            }
+        }
+        System.out.println("- Calculated transitive reachability " + (System.currentTimeMillis() - time));
+        time = System.currentTimeMillis();
+
+        // Calculate reachable methods
+        Map<GroundTask, Set<Integer>> reachableFrom = new HashMap<>();
+        for (GroundTask t : reachableTasksFrom.keySet()) {
+            Set<Integer> reachableOperators = new HashSet<>();
+            reachableFrom.put(t, reachableOperators);
+            Set<GroundTask> reachableTasks = reachableTasksFrom.get(t);
+            for (method m : methods.get(t.task()).get(t)) {
+                reachableOperators.add(MethodToIndex.get(m));
+            }
+            for (GroundTask reachableTask : reachableTasks) {
+                if (reachableTask.task().isPrimitive()) {
+                    reachableOperators.add(operators.ActionToIndex.get(reachableTask));
+                } else {
+                    for (method m : methods.get(reachableTask.task()).get(reachableTask)) {
+                        reachableOperators.add(MethodToIndex.get(m));
+                    }
+                }
+            }
+        }
+
+        System.out.println("- Calculated reachable operators " + (System.currentTimeMillis() - time));
+        return reachableFrom;
+    }
+
+    private int createTaskLookupTable(Set<GroundTask> allActions, Set<GroundTask> allTasks) {
         int taskNo = operators.numStateFeatures;
-        cRPG.IndexToTaskLiteral = new HashMap<>();
-        cRPG.TaskLiteralToIndex = new HashMap<>();
+        cRPG.IndexToTask = new HashMap<>();
+        cRPG.TaskToIndex = new HashMap<>();
 
         for (GroundTask a : allActions) {
-            cRPG.IndexToTaskLiteral.put(taskNo, a);
-            cRPG.TaskLiteralToIndex.put(a, taskNo);
+            cRPG.IndexToTask.put(taskNo, a);
+            cRPG.TaskToIndex.put(a, taskNo);
             taskNo++;
         }
 
         for (GroundTask t : allTasks) {
-            cRPG.IndexToTaskLiteral.put(taskNo, t);
-            cRPG.TaskLiteralToIndex.put(t, taskNo);
+            cRPG.IndexToTask.put(taskNo, t);
+            cRPG.TaskToIndex.put(t, taskNo);
             taskNo++;
         }
+        return taskNo;
     }
 
     private Set<GroundTask> getGroundTasks(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
@@ -247,6 +297,12 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         return allTasks;
     }
 
+    /**
+     * Assigns an index to each method and fills the data structures that are used for the translation.
+     *
+     * @param methods
+     * @return
+     */
     private int createMethodLookupTable(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
         int methodID = operators.numActions;
         cRPG.MethodToIndex = new HashMap<>();
@@ -274,7 +330,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         // [6, 1, 0, -1] means that there are 4 facts, the first one has been made true in layer 6
         // the second in layer 1... The -1 for fact 4 means that this fact has never been made true
         // contains STRIPS as well as HTN facts
-        int[] firstLayerWithFact = new int[cRPG.numHtnStateFeatures];
+        int[] firstLayerWithFact = new int[cRPG.numExtenedStateFeatures];
 
         // operatorDelta is a list of lists. Each inner list contains those actions that are applicable
         // in this layer for the *first time*, i.e. it is the delta of applicable actions
@@ -303,42 +359,43 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                 firstLayerWithFact[i] = -1;
         }
         // init facts concerning reachable task
-        for (int i = operators.numStateFeatures; i < cRPG.numHtnStateFeatures; i++) {
+        for (int i = operators.numStateFeatures; i < cRPG.numExtenedStateFeatures; i++) {
             firstLayerWithFact[i] = -1;
         }
 
         // prepare goal - it contains the STRIPS-goal as well as all tasks that appear in the initial HTN
-        List<Integer> htnGoal = new LinkedList<>();
+        List<Integer> stripsAndHtnGoals = new LinkedList<>();
         for (int i = 0; i < operators.goalList.length; i++) { // these are the state-based goals
-            htnGoal.add(operators.goalList[i]);
+            stripsAndHtnGoals.add(operators.goalList[i]);
         }
 
         // add all tasks in the current network as goal
-        Set<GroundTask> allTasksInNet = new HashSet<>();
+        Set<GroundTask> tasksInTNI = new HashSet<>(); // these are used for the top-down reachability analysis
 
-        LinkedList<ProgressionPlanStep> tasksInHtn = new LinkedList<>();
-        tasksInHtn.addAll(tn.getFirstAbstractTasks());
-        tasksInHtn.addAll(tn.getFirstPrimitiveTasks());
-        while (!tasksInHtn.isEmpty()) {
-            ProgressionPlanStep ps = tasksInHtn.removeFirst();
-            allTasksInNet.add(ps.getTask());
-            htnGoal.add(cRPG.TaskLiteralToIndex.get(ps.getTask()));
-            tasksInHtn.addAll(ps.successorList);
+        LinkedList<ProgressionPlanStep> temp = new LinkedList<>();
+        temp.addAll(tn.getFirstAbstractTasks());
+        temp.addAll(tn.getFirstPrimitiveTasks());
+        while (!temp.isEmpty()) {
+            ProgressionPlanStep ps = temp.removeFirst();
+            tasksInTNI.add(ps.getTask());
+            stripsAndHtnGoals.add(cRPG.TaskToIndex.get(ps.getTask()));
+            temp.addAll(ps.successorList);
         }
 
         //LinkedList<Integer> unfulfilledGoals = new LinkedList<>();
+        // a map from an int representing a goal fact to the number of times it is needed
         Map<Integer, Integer> unfulfilledGoals = new HashMap<>();
 
         // todo !evaluate!: this might be a set or a list
-        //List<Integer> newGoals = new ArrayList<>();
-        //HashSet<Integer> newGoals = new HashSet<>();
-        HashMap<Integer, Integer> newGoals = new HashMap<>();
+        //List<Integer> newGoalDelta = new ArrayList<>();
+        //HashSet<Integer> newGoalDelta = new HashSet<>();
+        HashMap<Integer, Integer> newGoalDelta = new HashMap<>();
 
-        goalDelta.add(newGoals); // todo: (operator-facts are not marked applicable yet) should only test non-operator-facts
-        for (int goalFact : htnGoal) {
+        goalDelta.add(newGoalDelta); // todo: (operator-facts are not marked applicable yet) should only test non-operator-facts
+        for (int goalFact : stripsAndHtnGoals) {
             if (firstLayerWithFact[goalFact] == 0) {
-                int count = newGoals.containsKey(goalFact) ? newGoals.get(goalFact) : 0;
-                newGoals.put(goalFact, count + 1);
+                int count = newGoalDelta.containsKey(goalFact) ? newGoalDelta.get(goalFact) : 0;
+                newGoalDelta.put(goalFact, count + 1);
             } else {
                 int count = unfulfilledGoals.containsKey(goalFact) ? unfulfilledGoals.get(goalFact) : 0;
                 unfulfilledGoals.put(goalFact, count + 1);
@@ -351,18 +408,22 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         int layerId = 1;
         this.goalRelaxedReachable = true;
         while (!unfulfilledGoals.isEmpty()) {
-            newGoals = new HashMap<>();
-            goalDelta.add(newGoals);
+
+            // if there are unfulfilled goals, but the state did not change -> relaxed unsolvable
             if (changedLiterals.isEmpty()) {
-                // there are unfulfilled goals, but the state did not change -> relaxed unsolvable
                 this.goalRelaxedReachable = false;
                 break;
             }
 
-            List<Integer> newlyApplicableActions = new LinkedList<>();
-            operatorDelta.add(newlyApplicableActions);
-            if (layerId == 1) { // there might be actions without preconditions
-                newlyApplicableActions.addAll(cRPG.operatorsWithoutPrec);
+            // initil data structures
+            newGoalDelta = new HashMap<>();
+            goalDelta.add(newGoalDelta);
+            List<Integer> newOperatorDelta = new LinkedList<>();
+            operatorDelta.add(newOperatorDelta);
+
+            // in first layer, add actions without preconditions
+            if (layerId == 1) {
+                newOperatorDelta.addAll(cRPG.operatorsWithoutPrec);
             }
 
             // fact-loop
@@ -375,17 +436,17 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                     numOfUnfulfilledPrecs[actionWithThisPrec]--;
                     actionDifficulty[actionWithThisPrec] += layerId;
                     if (numOfUnfulfilledPrecs[actionWithThisPrec] == 0) {
-                        newlyApplicableActions.add(actionWithThisPrec);
+                        newOperatorDelta.add(actionWithThisPrec);
                     }
                 }
             }
 
             // operator-loop
-            for (int newlyApplicableAction : newlyApplicableActions) {
+            for (int newlyApplicableAction : newOperatorDelta) {
                 boolean reachable = false;
                 if (topDownReachability) {
                     reachabilityloop:
-                    for (GroundTask htnTask : allTasksInNet) {
+                    for (GroundTask htnTask : tasksInTNI) {
                         if (htnTask.task().isPrimitive()) {
                             if (operators.ActionToIndex.get(htnTask) == newlyApplicableAction) {
                                 reachable = true;
@@ -406,8 +467,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                             // test if fact is in goal-list
                             if (unfulfilledGoals.containsKey(effect)) {
                                 int add = unfulfilledGoals.remove(effect);
-                                int count = newGoals.containsKey(effect) ? newGoals.get(effect) : 0;
-                                newGoals.put(effect, count + add);
+                                int count = newGoalDelta.containsKey(effect) ? newGoalDelta.get(effect) : 0;
+                                newGoalDelta.put(effect, count + add);
                             }
                         }
                     }
@@ -422,7 +483,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             }
             layerId++;
         }
-        //printLayerDelta(operatorDelta, firstLayerWithFact);
+        //printLayerDelta(operatorDelta, firstLayerWithFact, goalDelta);
 
         if (goalRelaxedReachable) {
             this.heuristicValue = calcHeu(firstLayerWithFact, operatorDelta, actionDifficulty, goalDelta);
@@ -475,7 +536,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         return numactions;
     }
 
-    private String printLayerDelta(List<List<Integer>> operatorDelta, int[] firstLayerWithFact, List<List<Integer>> goalDelta) {
+    private String printLayerDelta(List<List<Integer>> operatorDelta, int[] firstLayerWithFact, List<Map<Integer, Integer>> goalDelta) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < operatorDelta.size(); i++) {
             if (i >= 0) {
@@ -507,14 +568,15 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                     if (j < operators.numStateFeatures) {
                         sb.append(operators.IndexToLiteral[j].mediumInfo());
                     } else
-                        sb.append(cRPG.IndexToTaskLiteral.get(j).mediumInfo());
+                        sb.append(cRPG.IndexToTask.get(j).mediumInfo());
                 }
             }
 
             sb.append("\n    Goal Delta " + i + ": ");
             first = true;
-            for (int j = 0; j < goalDelta.get(i).size(); j++) {
-                int fact = goalDelta.get(i).get(j);
+            Iterator<Integer> goalIter = goalDelta.get(i).keySet().iterator();
+            while (goalIter.hasNext()) {
+                int fact = goalIter.next();
                 if (first) {
                     first = false;
                 } else {
@@ -523,7 +585,10 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                 if (fact < operators.numStateFeatures) {
                     sb.append(operators.IndexToLiteral[fact].mediumInfo());
                 } else
-                    sb.append(cRPG.IndexToTaskLiteral.get(fact).mediumInfo());
+                    sb.append(cRPG.IndexToTask.get(fact).mediumInfo());
+                if (goalDelta.get(i).get(fact) > 1) {
+                    sb.append(" * " + goalDelta.get(i).get(fact));
+                }
             }
 
             sb.append("\n\n");

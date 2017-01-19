@@ -27,4 +27,9 @@ public class ProgressionPlanStep {
         this.task = task;
         this.isPrimitive = task.task().isPrimitive();
     }
+
+    @Override
+    public String toString() {
+        return super.toString() + "-" + task.shortInfo();
+    }
 }
