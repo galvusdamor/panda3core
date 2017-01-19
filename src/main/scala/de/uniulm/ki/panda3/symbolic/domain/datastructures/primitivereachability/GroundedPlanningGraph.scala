@@ -671,11 +671,11 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     * @param potentialProposition Proposition that is potentially part of a mutex pair.
     * @return Returns true if the grounded literals are mutex free, otherwise false.
     */
-  private def isMutexFree(propositions: Seq[GroundLiteral], mutexes: Set[(GroundLiteral, GroundLiteral)], potentialProposition: GroundLiteral): Boolean = {
+  private def isMutexFree(propositions: Seq[GroundLiteral], mutexes: Set[(GroundLiteral, GroundLiteral)], potentialProposition: GroundLiteral): Boolean = if (mutexes.nonEmpty) {
     val propositionPairs = for (proposition <- propositions) yield if ((proposition compare potentialProposition) < 0) (proposition, potentialProposition)
     else (potentialProposition, proposition)
     propositionPairs forall { potentialMutex => !(mutexes contains potentialMutex) }
-  }
+  } else true
 
   /**
     * Create actions based on lifted tasks that don't have any preconditions.
