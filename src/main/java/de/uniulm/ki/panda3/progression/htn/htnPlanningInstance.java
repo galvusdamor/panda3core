@@ -52,7 +52,6 @@ public class htnPlanningInstance {
     public static Random random;
     public static int randomSeed = 42;
 
-
     public boolean plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
                         InformationCapsule ic, TimeCapsule tc,
                         SearchHeuristic heuristic, boolean doBFS, boolean doDFS,

@@ -408,7 +408,6 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         int layerId = 1;
         this.goalRelaxedReachable = true;
         while (!unfulfilledGoals.isEmpty()) {
-
             // if there are unfulfilled goals, but the state did not change -> relaxed unsolvable
             if (changedLiterals.isEmpty()) {
                 this.goalRelaxedReachable = false;
