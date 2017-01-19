@@ -60,7 +60,7 @@ public class hddlPanda3Visitor {
     public final static scala.collection.immutable.Map<PlanStep, Tuple2<PlanStep, PlanStep>> planStepsDecompositionParents =
             scala.collection.immutable.Map$.MODULE$.<PlanStep, Tuple2<PlanStep, PlanStep>>empty();
 
-    private boolean warningOutput;
+    private boolean warningOutput = true;
 
     public hddlPanda3Visitor() {
         this(true);
@@ -156,6 +156,7 @@ public class hddlPanda3Visitor {
         planSteps.add(psGoal);
         taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal);
 
+
         if (tnCtx.subtask_defs() != null) {
             for (int i = 0; i < tnCtx.subtask_defs().subtask_def().size(); i++) {
                 antlrHDDLParser.Subtask_defContext psCtx = tnCtx.subtask_defs().subtask_def().get(i);
@@ -191,7 +192,8 @@ public class hddlPanda3Visitor {
 
                 Seq<Variable> psVarsSeq = psVars.result();
                 if (schema.parameters().size() != psVarsSeq.size()) {
-                    if (warningOutput) System.out.println("The task schema " + schema.name() + " is defined with " + schema.parameters().size() + " but used with " + psVarsSeq.size() + " parameters.");
+                    if (warningOutput)
+                        System.out.println("The task schema " + schema.name() + " is defined with " + schema.parameters().size() + " but used with " + psVarsSeq.size() + " parameters.");
                     if (warningOutput) System.out.println(schema.parameters());
                     report.reportSkippedMethods();
                     continue;
@@ -240,9 +242,11 @@ public class hddlPanda3Visitor {
                     String idLeft = o.subtask_id(0).NAME().toString();
                     String idRight = o.subtask_id(1).NAME().toString();
                     if (!idMap.containsKey(idLeft)) {
-                        if (warningOutput) System.out.println("ERROR: The ID \"" + idLeft + "\" is not a subtask ID, but used in the ordering constraints.");
+                        if (warningOutput)
+                            System.out.println("ERROR: The ID \"" + idLeft + "\" is not a subtask ID, but used in the ordering constraints.");
                     } else if (!idMap.containsKey(idRight)) {
-                        if (warningOutput) System.out.println("ERROR: The ID \"" + idRight + "\" is not a subtask ID, but used in the ordering constraints.");
+                        if (warningOutput)
+                            System.out.println("ERROR: The ID \"" + idRight + "\" is not a subtask ID, but used in the ordering constraints.");
                     } else {
                         PlanStep left = idMap.get(idLeft);
                         PlanStep right = idMap.get(idRight);
@@ -264,7 +268,8 @@ public class hddlPanda3Visitor {
                 if (producerID.toLowerCase().equals("init")) {
                     producer = psInit;
                 } else if (!idMap.containsKey(producerID)) {
-                    if (warningOutput) System.out.println("The task id " + producerID + " is used in causal link definition, but no task is definied with this id.");
+                    if (warningOutput)
+                        System.out.println("The task id " + producerID + " is used in causal link definition, but no task is definied with this id.");
                     report.reportSkippedMethods();
                     continue;
                 } else {
@@ -274,7 +279,8 @@ public class hddlPanda3Visitor {
                 if (consumerID.toLowerCase().equals("goal")) {
                     consumer = psGoal;
                 } else if (!idMap.containsKey(consumerID)) {
-                    if (warningOutput) System.out.println("The task id " + consumerID + " is used in causal link definition, but no task is definied with this id.");
+                    if (warningOutput)
+                        System.out.println("The task id " + consumerID + " is used in causal link definition, but no task is definied with this id.");
                     report.reportSkippedMethods();
                     continue;
                 } else {
@@ -351,15 +357,19 @@ public class hddlPanda3Visitor {
             Task abstractTask = parserUtil.taskByName(taskname, tasks);
 
             if (abstractTask == null) {
-                if (warningOutput) System.out.println("ERROR: compound task given in method definition is undefined: " + taskname);
+                if (warningOutput)
+                    System.out.println("ERROR: compound task given in method definition is undefined: " + taskname);
                 continue;
             } else if (abstractTask.isPrimitive()) {
-                if (warningOutput) System.out.println("ERROR: compound task given in method definition is not compound, but a primitive task: " + taskname);
+                if (warningOutput)
+                    System.out.println("ERROR: compound task given in method definition is not compound, but a primitive task: " + taskname);
                 continue;
             }
 
             // Read method's name and parameters
             String nameStr = m.method_symbol().NAME().toString();
+            if (nameStr.equals("m1"))
+                System.out.println();
             seqProviderList<Variable> methodParams = typedParamsToVars(sorts, abstractTask.parameters().size(), m.typed_var_list().typed_vars());
 
             seqProviderList<Variable> tnVars = new seqProviderList<>();
@@ -425,12 +435,14 @@ public class hddlPanda3Visitor {
             antlrHDDLParser.Var_or_constContext param = givenParamsCtx.get(i);
 
             if (param.NAME() != null) { // this is a consts
-                if (warningOutput) System.out.println("ERROR: not yet implemented - a const is used in task definition");
+                if (warningOutput)
+                    System.out.println("ERROR: not yet implemented - a const is used in task definition");
             }
 
             Variable methodVar = parserUtil.getVarByName(methodParams, param.VAR_NAME().toString());
             if (methodVar == null) {
-                if (warningOutput) System.out.println("ERROR: parameter used in method definition has not been found in method's parameter definition.");
+                if (warningOutput)
+                    System.out.println("ERROR: parameter used in method definition has not been found in method's parameter definition.");
                 paramsOk = false;
                 break;
             }
@@ -566,7 +578,8 @@ public class hddlPanda3Visitor {
         }
 
         if (quantifiedVars.size() > 1) {
-            if (warningOutput) System.out.println("ERROR: More than one quantified Variable - this is not yet implemented.");
+            if (warningOutput)
+                System.out.println("ERROR: More than one quantified Variable - this is not yet implemented.");
         }
 
         // read inner formula
@@ -665,7 +678,8 @@ public class hddlPanda3Visitor {
             }
         }
         if (predicate == null) {
-            if (warningOutput) System.out.println("ERROR: a precondition or effect in action definition refers to predicate \"" + predName + "\" that can't be found in predicate declaration.");
+            if (warningOutput)
+                System.out.println("ERROR: a precondition or effect in action definition refers to predicate \"" + predName + "\" that can't be found in predicate declaration.");
         }
 
         //
@@ -742,8 +756,10 @@ public class hddlPanda3Visitor {
             }
         }
         if (var == null) {
-            if (warningOutput) System.out.println("ERROR: The variable name \"" + param.getText() + "\" is used in a precondition or effect definition, but is not defined in the actions parameter definition.");
-            if (warningOutput) System.out.println("Maybe it is a constant, then it is not your fault, but just a not yet implemented feature, but anyway...");
+            if (warningOutput)
+                System.out.println("ERROR: The variable name \"" + param.getText() + "\" is used in a precondition or effect definition, but is not defined in the actions parameter definition.");
+            if (warningOutput)
+                System.out.println("Maybe it is a constant, then it is not your fault, but just a not yet implemented feature, but anyway...");
         }
         return var;
     }
@@ -788,7 +804,8 @@ public class hddlPanda3Visitor {
                 }
             }
             if (s == null) {
-                if (warningOutput) System.out.println("ERROR: " + ErrorMsgWhoIsReader + " refers to sort \"" + sortName + "\" that can't be found in sort declaration.");
+                if (warningOutput)
+                    System.out.println("ERROR: " + ErrorMsgWhoIsReader + " refers to sort \"" + sortName + "\" that can't be found in sort declaration.");
             }
 
             for (TerminalNode oneName : varList.VAR_NAME()) {
