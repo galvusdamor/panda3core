@@ -14,7 +14,9 @@ import java.util.*;
  * Created by dhoeller on 26.07.16.
  */
 public class cRPG implements htnGroundedProgressionHeuristic {
+    enum producerSelection {numOfPreconditions, actionDifficulty}
 
+    ;
     /**
      * Define "Operator": An operator is either an action or a method
      * Define "Task": A task is either an action or an abstract task(-name)
@@ -58,7 +60,9 @@ public class cRPG implements htnGroundedProgressionHeuristic {
     boolean topDownReachability = false;
     boolean orderingInvariants = false;
 
-    public cRPG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, Set<GroundTask> allActions) {
+    producerSelection prod = producerSelection.numOfPreconditions;
+
+    public cRPG(HashMap<Task, HashMap<GroundTask, List<method>>> methods,List<ProgressionPlanStep> initialTasks, Set<GroundTask> allActions) {
 
         long time = System.currentTimeMillis();
         System.out.print("Init composition RPG heuristic");
@@ -68,6 +72,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
         if (topDownReachability || orderingInvariants) {
             cRPG.reachableFrom = initTopDownReachability(methods);
+
+            TopDownReachabilityGraph g = new TopDownReachabilityGraph(methods, initialTasks, numTasks, operators.numActions, TaskToIndex);
         }
 
         if (topDownReachability && orderingInvariants) {
@@ -408,27 +414,17 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             temp.addAll(ps.successorList);
         }
 
-        //LinkedList<Integer> unfulfilledGoals = new LinkedList<>();
         // a map from an int representing a goal fact to the number of times it is needed
         Map<Integer, Integer> unfulfilledGoals = new HashMap<>();
-
-        // todo !evaluate!: this might be a set or a list
-        //List<Integer> newGoalDelta = new ArrayList<>();
-        //HashSet<Integer> newGoalDelta = new HashSet<>();
-        HashMap<Integer, Integer> newGoalDelta = new HashMap<>();
-
-        goalDelta.add(newGoalDelta); // todo: (operator-facts are not marked applicable yet) should only test non-operator-facts
         for (int goalFact : stripsAndHtnGoals) {
-            if (firstLayerWithFact[goalFact] == 0) {
-                int count = newGoalDelta.containsKey(goalFact) ? newGoalDelta.get(goalFact) : 0;
-                newGoalDelta.put(goalFact, count + 1);
-            } else {
+            if (firstLayerWithFact[goalFact] < 0) {
                 int count = unfulfilledGoals.containsKey(goalFact) ? unfulfilledGoals.get(goalFact) : 0;
                 unfulfilledGoals.put(goalFact, count + 1);
             }
         }
 
-        operatorDelta.add(new LinkedList<Integer>()); // dummy list to make indices easier
+        operatorDelta.add(new LinkedList<>()); // dummy list to make indices easier
+        goalDelta.add(new HashMap<>());
 
         // start building the graph
         int layerId = 1;
@@ -441,7 +437,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             }
 
             // initil data structures
-            newGoalDelta = new HashMap<>();
+            Map<Integer, Integer> newGoalDelta = new HashMap<>();
             goalDelta.add(newGoalDelta);
             List<Integer> newOperatorDelta = new LinkedList<>();
             operatorDelta.add(newOperatorDelta);
@@ -492,8 +488,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                             // test if fact is in goal-list
                             if (unfulfilledGoals.containsKey(effect)) {
                                 int add = unfulfilledGoals.remove(effect);
-                                int count = newGoalDelta.containsKey(effect) ? newGoalDelta.get(effect) : 0;
-                                newGoalDelta.put(effect, count + add);
+                                //int count = newGoalDelta.containsKey(effect) ? newGoalDelta.get(effect) : 0; // DH: I think this is nonsense
+                                newGoalDelta.put(effect, add);
                             }
                         }
                     }
@@ -531,16 +527,17 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                 for (int maybeProducer : operatorDelta.get(layer)) {
                     if (add2task[goalFact].contains(maybeProducer)) {
 
-                        if (numprecs[maybeProducer] < bestDifficulty) {
-                            bestDifficulty = numprecs[maybeProducer];
-                            producer = maybeProducer;
+                        if (prod == producerSelection.numOfPreconditions) {
+                            if (numprecs[maybeProducer] < bestDifficulty) {
+                                bestDifficulty = cRPG.precLists[maybeProducer].length;
+                                producer = maybeProducer;
+                            }
+                        } else {
+                            if (actionDifficulty[maybeProducer] < bestDifficulty) {
+                                bestDifficulty = actionDifficulty[maybeProducer];
+                                producer = maybeProducer;
+                            }
                         }
-
-                        /*
-                        if (actionDifficulty[maybeProducer] < bestDifficulty) {
-                            bestDifficulty = actionDifficulty[maybeProducer];
-                            producer = maybeProducer;
-                        }*/
                     }
                 }
 
@@ -549,11 +546,16 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                 }
 
                 for (Integer aPrec : cRPG.precLists[producer]) {
-                    int fl = firstLayerWithFact[aPrec];
-                    if (fl > 0) {
-                        Map<Integer, Integer> precDel = goalDelta.get(fl);//.add(aPrec);
-                        int precCount = precDel.containsKey(aPrec) ? precDel.get(aPrec) : 0;
-                        precDel.put(aPrec, precCount + count);
+                    int flayer = firstLayerWithFact[aPrec];
+                    if (flayer > 0) {
+                        Map<Integer, Integer> delta = goalDelta.get(flayer);
+                        int precCount = delta.containsKey(aPrec) ? delta.get(aPrec) : 0;
+                        if (aPrec > operators.numActions) // this is an HTN-precondition
+                            precCount += count;
+                        else // a normal precondition
+                            precCount++;
+                        delta.put(aPrec, precCount);
+
                     }
                 }
             }
