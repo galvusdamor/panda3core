@@ -10,6 +10,7 @@ import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.ProgressionSearc
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.*;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.cRpgHtn;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.dRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.delRelaxedHTN;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -83,7 +84,6 @@ public class htnPlanningInstance {
             }
         }
 
-
         // todo: this will only work with ground initial tn and without any ordering
         Set<GroundTask> initialGroundings = groundingUtil.getFullyGroundTN(p);
         assert (initialGroundings.size() == p.planStepsWithoutInitGoal().size());
@@ -114,7 +114,7 @@ public class htnPlanningInstance {
         else if (heuristic instanceof SimpleCompositionRPG$)
             initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
         else if (heuristic instanceof CompositionRPG$)
-            initialNode.heuristic = new cRPG(operators.methods, allActions);
+            initialNode.heuristic = new cRPG(operators.methods, initialTasks, allActions);
         else if (heuristic instanceof CompositionRPGHTN$)
             initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
         else if (heuristic instanceof GreedyProgression$)

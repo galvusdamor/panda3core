@@ -20,14 +20,14 @@ public class method {
         sb.append("task ");
         sb.append(this.m.groundAbstractTask().longInfo());
         sb.append("\n t { 0: ");
-        if (tasks.length > 0) {
-            sb.append(tasks[0].longInfo());
+        if (subtasks.length > 0) {
+            sb.append(subtasks[0].longInfo());
         }
-        for (int i = 1; i < tasks.length; i++) {
+        for (int i = 1; i < subtasks.length; i++) {
             sb.append("\n     ");
             sb.append(i);
             sb.append(": ");
-            sb.append(tasks[i].longInfo());
+            sb.append(subtasks[i].longInfo());
         }
         sb.append("}\n < { ");
         if (orderings.size() > 0) {
@@ -49,8 +49,8 @@ public class method {
     }
 
     public final GroundedDecompositionMethod m; // this is the original method that is saved for printing the solution
-    public GroundTask[] tasks;
-    public int numDistinctTasks = 0;
+    public GroundTask[] subtasks; // these are the subtasks
+    public int numDistinctSubTasks = 0;
 
     // these are the modifications for the SUB-tasks
     int[] actionID;
@@ -65,13 +65,13 @@ public class method {
     public method(GroundedDecompositionMethod dm) {
         this.m = dm;
         Seq<PlanStep> steps = dm.decompositionMethod().subPlan().planStepsWithoutInitGoal();
-        this.tasks = new GroundTask[steps.size()];
+        this.subtasks = new GroundTask[steps.size()];
         this.actionID = new int[steps.size()];
         this.methods = new List[steps.size()];
 
         for (int i = 0; i < steps.size(); i++) {
-            tasks[i] = dm.subPlanPlanStepsToGrounded().get(steps.apply(i)).get();
-            if (tasks[i].task().isPrimitive())
+            subtasks[i] = dm.subPlanPlanStepsToGrounded().get(steps.apply(i)).get();
+            if (subtasks[i].task().isPrimitive())
                 numberOfPrimSubtasks++;
         }
         numberOfAbsSubtasks = steps.size() - numberOfPrimSubtasks;
@@ -93,7 +93,7 @@ public class method {
         firsts = new HashSet<>();
         lasts = new HashSet<>();
 
-        for (int i = 0; i < tasks.length; i++) {
+        for (int i = 0; i < subtasks.length; i++) {
             firsts.add(i);
             lasts.add(i);
         }
@@ -106,15 +106,15 @@ public class method {
 
     public void finalizeMethod() {
         Set<GroundTask> distinctTasks = new HashSet<>();
-        for(GroundTask t : this.tasks){
+        for(GroundTask t : this.subtasks){
             distinctTasks.add(t);
         }
-        this.numDistinctTasks = distinctTasks.size();
-        for (int i = 0; i < tasks.length; i++) {
-            if (tasks[i].task().isPrimitive()) {
-                actionID[i] = operators.ActionToIndex.get(tasks[i]);
+        this.numDistinctSubTasks = distinctTasks.size();
+        for (int i = 0; i < subtasks.length; i++) {
+            if (subtasks[i].task().isPrimitive()) {
+                actionID[i] = operators.ActionToIndex.get(subtasks[i]);
             } else {
-                this.methods[i] = operators.methods.get(tasks[i].task()).get(tasks[i]);
+                this.methods[i] = operators.methods.get(subtasks[i].task()).get(subtasks[i]);
 
                 assert (this.methods[i] != null);
                 assert (this.methods[i].size() > 0);
@@ -124,9 +124,9 @@ public class method {
     }
 
     public subtaskNetwork instantiate() {
-        ProgressionPlanStep[] steps = new ProgressionPlanStep[this.tasks.length];
+        ProgressionPlanStep[] steps = new ProgressionPlanStep[this.subtasks.length];
         for (int i = 0; i < steps.length; i++) {
-            steps[i] = new ProgressionPlanStep(this.tasks[i]);
+            steps[i] = new ProgressionPlanStep(this.subtasks[i]);
             steps[i].action = this.actionID[i];
             steps[i].methods = this.methods[i];
         }

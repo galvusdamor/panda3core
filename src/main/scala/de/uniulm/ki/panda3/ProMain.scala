@@ -48,7 +48,7 @@ object ProMain {
     //val probFile="/home/dh/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
 
     val domFile ="/home/dh/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp";
-    val probFile = "/home/dh/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport//p00-htn.lisp";
+    val probFile = "/home/dh/IdeaProjects/panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport//p01-htn.lisp";
 
     //val domFile = "/media/dh/Volume/repositories/private-documents/papers/2017-panda-pro/domains/simple-finite-domain-2.lisp";
     //val probFile = "/media/dh/Volume/repositories/private-documents/papers/2017-panda-pro/domains/simple-finite-problem-2.lisp";
@@ -73,7 +73,7 @@ object ProMain {
       //SearchConfiguration(None, None, efficientSearch = true, DijkstraType, None, true),
       //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(ADD), printSearchInfo = true),
       //PlanBasedSearch(Some(-1), Some(1), BFSType, None, LCFR),
-      ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(SimpleCompositionRPG)),
+      ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPG)),
       //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
 
       PostprocessingConfiguration(Set(ProcessingTimings,

@@ -6,15 +6,11 @@ import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.loopDetection.VisitedList;
-import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.*;
 
 /**
@@ -128,21 +124,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                                 System.out.println(node.progressionTrace);
                         }
                         if (collectTlts) {
-                            timeStamps.add(System.currentTimeMillis());
-                            findTlt:
-                            for (Object a : node.solution) {
-                                if (a instanceof Integer)
-                                    continue;
-                                GroundedDecompositionMethod dm = (GroundedDecompositionMethod) a;
-                                if (dm.groundAbstractTask().task().name().startsWith("tlt") && (dm.subPlanGroundedTasksWithoutInitAndGoal().size() > 0)) {
-                                    for (int i = 0; i < dm.subPlanGroundedTasksWithoutInitAndGoal().size(); i++) {
-                                        GroundTask ps2 = dm.subPlanGroundedTasksWithoutInitAndGoal().apply(i);
-                                        tlts.add(ps2.longInfo());
-                                        break findTlt;
-                                    }
-                                }
-                            }
-
+                            collectPlanRecData(timeStamps, tlts, node);
                         }
                         foundPlans++;
                         if (!this.findShortest && !collectTlts) {
@@ -310,6 +292,23 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         if (output)
             System.out.println("Search time: " + (System.currentTimeMillis() - totalSearchTime) + " ms");
         return solution;
+    }
+
+    public void collectPlanRecData(LinkedList<Long> timeStamps, LinkedList<String> tlts, ProgressionNetwork node) {
+        timeStamps.add(System.currentTimeMillis());
+        findTlt:
+        for (Object a : node.solution) {
+            if (a instanceof Integer)
+                continue;
+            GroundedDecompositionMethod dm = (GroundedDecompositionMethod) a;
+            if (dm.groundAbstractTask().task().name().startsWith("tlt") && (dm.subPlanGroundedTasksWithoutInitAndGoal().size() > 0)) {
+                for (int i = 0; i < dm.subPlanGroundedTasksWithoutInitAndGoal().size(); i++) {
+                    GroundTask ps2 = dm.subPlanGroundedTasksWithoutInitAndGoal().apply(i);
+                    tlts.add(ps2.longInfo());
+                    break findTlt;
+                }
+            }
+        }
     }
 
     private int getStepCount(LinkedList<Object> solution) {
