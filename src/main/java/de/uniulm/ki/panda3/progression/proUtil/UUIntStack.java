@@ -5,7 +5,7 @@ package de.uniulm.ki.panda3.progression.proUtil;
  */
 public class UUIntStack {
 
-    private int size = 100;
+    private int size;
     private intContainer currentContainer;
 
     private int iIter;
@@ -13,6 +13,11 @@ public class UUIntStack {
 
 
     public UUIntStack() {
+        this(100);
+    }
+
+    public UUIntStack(int size) {
+        this.size = size;
         this.currentContainer = new intContainer();
         this.currentContainer.elements = new int[size];
     }
