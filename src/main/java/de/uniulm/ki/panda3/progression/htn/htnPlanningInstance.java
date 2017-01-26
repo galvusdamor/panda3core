@@ -10,7 +10,6 @@ import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.ProgressionSearc
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.*;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.cRpgHtn;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.dRPG;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.delRelaxedHTN;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
