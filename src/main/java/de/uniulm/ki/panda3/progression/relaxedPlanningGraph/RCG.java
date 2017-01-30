@@ -13,8 +13,8 @@ import java.util.*;
 /**
  * Created by dhoeller on 26.07.16.
  */
-public class cRPG implements htnGroundedProgressionHeuristic {
-    enum producerSelection {numOfPreconditions, actionDifficulty}
+public class RCG implements htnGroundedProgressionHeuristic {
+    enum producerSelection {numOfPreconditions, actionDifficulty, firstCome}
 
     ;
     /**
@@ -66,37 +66,38 @@ public class cRPG implements htnGroundedProgressionHeuristic {
     private boolean goalRelaxedReachable;
     private int heuristicValue;
 
-    private cRPG() { // only used by factory methods -> private
+    private RCG() { // only used by factory methods -> private
     }
 
-    boolean topDownReachability = true;
+    public static boolean topDownReachability = true;
     boolean orderingInvariants = false;
 
     producerSelection prod = producerSelection.numOfPreconditions;
 
-    public cRPG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, List<ProgressionPlanStep> initialTasks, Set<GroundTask> allActions) {
+    public RCG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, List<ProgressionPlanStep> initialTasks, Set<GroundTask> allActions, boolean useTDReachability) {
+        RCG.topDownReachability = useTDReachability;
 
         long time = System.currentTimeMillis();
         System.out.println("Init Relaxed Composition Graph (RCG) heuristic");
 
-        cRPG.numOperators = createMethodLookupTable(methods);
-        cRPG.numTasks = createTaskLookupTable(allActions, getGroundTasks(methods)) - operators.numStateFeatures;
+        RCG.numOperators = createMethodLookupTable(methods);
+        RCG.numTasks = createTaskLookupTable(allActions, getGroundTasks(methods)) - operators.numStateFeatures;
 
         if (topDownReachability || orderingInvariants) {
-            tdRechability = new TopDownReachabilityGraph(methods, initialTasks, cRPG.numTasks, operators.numActions, TaskToIndex);
+            tdRechability = new TopDownReachabilityGraph(methods, initialTasks, RCG.numTasks, operators.numActions, TaskToIndex);
         }
 
         // action-task-facts are true one layer after the action, this can done due to the 1-to-1 correspondence
-        cRPG.numExtenedStateFeatures = operators.numStateFeatures + cRPG.numTasks;
+        RCG.numExtenedStateFeatures = operators.numStateFeatures + RCG.numTasks;
 
-        cRPG.prec2task = new int[numExtenedStateFeatures][]; // pointers from literals to tasks that have this literal as precondition
-        cRPG.precLists = new int[numOperators][];
-        cRPG.add2task = new Set[numExtenedStateFeatures]; // pointers from literals to tasks that add it
-        cRPG.addLists = new int[numOperators][];
+        RCG.prec2task = new int[numExtenedStateFeatures][]; // pointers from literals to tasks that have this literal as precondition
+        RCG.precLists = new int[numOperators][];
+        RCG.add2task = new Set[numExtenedStateFeatures]; // pointers from literals to tasks that add it
+        RCG.addLists = new int[numOperators][];
 
         List<Integer>[] inverseMapping = new List[numExtenedStateFeatures];
 
-        for (int i = 0; i < cRPG.numExtenedStateFeatures; i++) {
+        for (int i = 0; i < RCG.numExtenedStateFeatures; i++) {
             inverseMapping[i] = new ArrayList<>();
         }
 
@@ -108,32 +109,32 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         }
 
         // set number of operator (i.e. action and method) preconditions
-        numprecs = new int[cRPG.numOperators];
+        numprecs = new int[RCG.numOperators];
         for (int i = 0; i < operators.numActions; i++) {
             numprecs[i] = operators.precList[i].length;
         }
 
         for (int methodI = operators.numActions; methodI < numOperators; methodI++) {
-            method m = cRPG.IndexToMethodGet(methodI);
+            method m = RCG.IndexToMethodGet(methodI);
             numprecs[methodI] = m.numDistinctSubTasks;
             precLists[methodI] = new int[m.subtasks.length];
 
             for (int subtaskId = 0; subtaskId < m.subtasks.length; subtaskId++) {
                 GroundTask t = m.subtasks[subtaskId];
-                int taskIndex = cRPG.TaskToIndex.get(t);
+                int taskIndex = RCG.TaskToIndex.get(t);
                 precLists[methodI][subtaskId] = taskIndex;
                 if (!inverseMapping[taskIndex].contains(methodI)) // this is necessary since there might be methods that have the same subtask twice
                     inverseMapping[taskIndex].add(methodI);
             }
 
-            int compTaskIndex = cRPG.TaskToIndex.get(m.m.groundAbstractTask());
+            int compTaskIndex = RCG.TaskToIndex.get(m.m.groundAbstractTask());
             addLists[methodI] = new int[1];
             addLists[methodI][0] = compTaskIndex;
         }
 
         operatorsWithoutPrec = new UUIntStack();
-        for (int i = 0; i < cRPG.numOperators; i++) {
-            if (cRPG.precLists[i].length == 0) {
+        for (int i = 0; i < RCG.numOperators; i++) {
+            if (RCG.precLists[i].length == 0) {
                 operatorsWithoutPrec.push(i);
             }
         }
@@ -152,17 +153,17 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             addLists[i] = new int[operators.addList[i].length + 1];
             int j;
             for (j = 0; j < operators.addList[i].length; j++) {
-                cRPG.addLists[i][j] = operators.addList[i][j];
+                RCG.addLists[i][j] = operators.addList[i][j];
             }
-            cRPG.addLists[i][j] = operators.numStateFeatures + i; // actions are located after the original state features and this is the i-th action
+            RCG.addLists[i][j] = operators.numStateFeatures + i; // actions are located after the original state features and this is the i-th action
         }
 
         // generate lists mapping literal to lists of operators having it as add-effect
         for (int i = 0; i < numExtenedStateFeatures; i++) {
-            cRPG.add2task[i] = new HashSet<>();
+            RCG.add2task[i] = new HashSet<>();
         }
 
-        for (int i = 0; i < cRPG.numOperators; i++) {
+        for (int i = 0; i < RCG.numOperators; i++) {
             for (int addEffect : addLists[i]) {
                 add2task[addEffect].add(i);
             }
@@ -174,18 +175,18 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
     private int createTaskLookupTable(Set<GroundTask> allActions, Set<GroundTask> allTasks) {
         int taskNo = operators.numStateFeatures;
-        cRPG.IndexToTask = new GroundTask[allActions.size() + allTasks.size()];
-        cRPG.TaskToIndex = new HashMap<>();
+        RCG.IndexToTask = new GroundTask[allActions.size() + allTasks.size()];
+        RCG.TaskToIndex = new HashMap<>();
 
         for (GroundTask a : allActions) {
-            cRPG.IndexToTaskPut(taskNo, a);
-            cRPG.TaskToIndex.put(a, taskNo);
+            RCG.IndexToTaskPut(taskNo, a);
+            RCG.TaskToIndex.put(a, taskNo);
             taskNo++;
         }
 
         for (GroundTask t : allTasks) {
-            cRPG.IndexToTaskPut(taskNo, t);
-            cRPG.TaskToIndex.put(t, taskNo);
+            RCG.IndexToTaskPut(taskNo, t);
+            RCG.TaskToIndex.put(t, taskNo);
             taskNo++;
         }
         return taskNo;
@@ -209,7 +210,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
      */
     private int createMethodLookupTable(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
         int methodID = operators.numActions;
-        cRPG.MethodToIndex = new HashMap<>();
+        RCG.MethodToIndex = new HashMap<>();
 
         // count methods, create array
         int anzMethods = 0;
@@ -218,14 +219,14 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                 anzMethods += val2.size();
             }
         }
-        cRPG.IndexToMethod = new method[anzMethods];
+        RCG.IndexToMethod = new method[anzMethods];
 
         for (HashMap<GroundTask, List<method>> val : methods.values()) {
             for (List<method> val2 : val.values()) {
                 for (method m : val2) {
-                    assert (!cRPG.MethodToIndex.containsKey(m));
-                    cRPG.MethodToIndex.put(m, methodID);
-                    cRPG.IndexToMethodPut(methodID, m);
+                    assert (!RCG.MethodToIndex.containsKey(m));
+                    RCG.MethodToIndex.put(m, methodID);
+                    RCG.IndexToMethodPut(methodID, m);
                     methodID++;
                 }
             }
@@ -243,7 +244,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         // [6, 1, 0, -1] means that there are 4 facts, the first one has been made true in layer 6
         // the second in layer 1... The -1 for fact 4 means that this fact has never been made true
         // contains STRIPS as well as HTN facts
-        int[] firstLayerWithFact = new int[cRPG.numExtenedStateFeatures];
+        int[] firstLayerWithFact = new int[RCG.numExtenedStateFeatures];
 
         // operatorDelta is a list of lists. Each inner list contains those actions that are applicable
         // in this layer for the *first time*, i.e. it is the delta of applicable actions
@@ -252,15 +253,16 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         // goalDelta is a list of lists. Each inner list contains those goal facts that hold in the layer
         // for the *first time*, i.e. it is the delta of fulfilled goal conditions. Be aware that
         // goalDelta is *changed* during heuristic calculation.
-        //List<List<Integer>> goalDelta = new ArrayList<>();
-        List<Map<Integer, Integer>> goalDelta = new ArrayList<>();
+        //List<Map<Integer, Integer>> goalDelta = new ArrayList<>();
+        List<UUIntStack> goalDelta = new ArrayList<>();
+        int[] goalWeight = new int[numExtenedStateFeatures]; // due to the HTN setting, goals may be necessary more than once
 
         // is used to track how may preconditions are unfulfilled yet
         int[] numOfUnfulfilledPrecs = numprecs.clone();
 
         // Jörg Hoffmanns measure for choosing a supporter
         // an action's difficulty is the sum of the layers of its preconditions
-        int[] actionDifficulty = new int[cRPG.numOperators];
+        int[] actionDifficulty = new int[RCG.numOperators];
 
         // add literals in s0 to fringe
         UUIntStack changedLiterals = new UUIntStack();
@@ -272,7 +274,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                 firstLayerWithFact[i] = -1;
         }
         // init facts concerning reachable task
-        for (int i = operators.numStateFeatures; i < cRPG.numExtenedStateFeatures; i++) {
+        for (int i = operators.numStateFeatures; i < RCG.numExtenedStateFeatures; i++) {
             firstLayerWithFact[i] = -1;
         }
 
@@ -296,10 +298,10 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         while (!temp.isEmpty()) {
             ProgressionPlanStep ps = temp.removeFirst();
             tasksInTNI.add(ps.getTask());
-            int t = cRPG.TaskToIndex.get(ps.getTask());
+            int t = RCG.TaskToIndex.get(ps.getTask());
             stripsAndHtnGoals.push(t);
             if (topDownReachability) {
-                reachableActions.or(cRPG.tdRechability.getReachableActions(t));
+                reachableActions.or(RCG.tdRechability.getReachableActions(t));
             }
             temp.addAll(ps.successorList);
         }
@@ -316,7 +318,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         }
 
         operatorDelta.add(new UUIntStack()); // dummy list to make indices easier
-        goalDelta.add(new HashMap<>());
+        goalDelta.add(new UUIntStack(0));
 
         // start building the graph
         int layerId = 1;
@@ -329,16 +331,16 @@ public class cRPG implements htnGroundedProgressionHeuristic {
             }
 
             // initil data structures
-            Map<Integer, Integer> newGoalDelta = new HashMap<>();
+            UUIntStack newGoalDelta = new UUIntStack();
             goalDelta.add(newGoalDelta);
             UUIntStack newOperatorDelta = new UUIntStack();
             operatorDelta.add(newOperatorDelta);
 
             // in first layer, add actions without preconditions
             if (layerId == 1) {
-                cRPG.operatorsWithoutPrec.resetIterator();
-                while (cRPG.operatorsWithoutPrec.hasNext()) {
-                    int op = cRPG.operatorsWithoutPrec.next();
+                RCG.operatorsWithoutPrec.resetIterator();
+                while (RCG.operatorsWithoutPrec.hasNext()) {
+                    int op = RCG.operatorsWithoutPrec.next();
                     if ((!topDownReachability) ||
                             (op >= operators.numActions) // it is a method
                             || (reachableActions.get(op)) // or a reachable action
@@ -378,8 +380,8 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                         // test if fact is in goal-list
                         if (unfulfilledGoals.containsKey(effect)) {
                             int add = unfulfilledGoals.remove(effect);
-                            //int count = newGoalDelta.containsKey(effect) ? newGoalDelta.get(effect) : 0; // DH: I think this is nonsense
-                            newGoalDelta.put(effect, add);
+                            goalWeight[effect] += add;
+                            newGoalDelta.push(effect);
                         }
                     }
                 }
@@ -389,18 +391,21 @@ public class cRPG implements htnGroundedProgressionHeuristic {
         //printLayerDelta(operatorDelta, firstLayerWithFact, goalDelta);
 
         if (goalRelaxedReachable) {
-            this.heuristicValue = calcHeu(firstLayerWithFact, operatorDelta, actionDifficulty, goalDelta);
+            this.heuristicValue = calcHeu(firstLayerWithFact, operatorDelta, goalWeight, actionDifficulty, goalDelta);
         } else {
             this.heuristicValue = Integer.MAX_VALUE;
         }
     }
 
-    private int calcHeu(int[] firstLayerWithFact, List<UUIntStack> operatorDelta, int[] actionDifficulty, List<Map<Integer, Integer>> goalDelta) {
+    private int calcHeu(int[] firstLayerWithFact, List<UUIntStack> operatorDelta, int[] goalWeight, int[] actionDifficulty, List<UUIntStack> goalDelta) {
         int numactions = 0;
         for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
-            Map<Integer, Integer> oneGoalDelta = goalDelta.get(layer);
-            for (int goalFact : oneGoalDelta.keySet()) {
-                int count = oneGoalDelta.get(goalFact);
+            UUIntStack oneGoalDelta = goalDelta.get(layer);
+
+            oneGoalDelta.resetIterator();
+            while (oneGoalDelta.hasNext()) {
+                int goalFact = oneGoalDelta.next();
+                int count = goalWeight[goalFact];
                 int bestDifficulty = Integer.MAX_VALUE;
                 int producer = -1;
 
@@ -412,14 +417,17 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
                         if (prod == producerSelection.numOfPreconditions) {
                             if (numprecs[maybeProducer] < bestDifficulty) {
-                                bestDifficulty = cRPG.precLists[maybeProducer].length;
+                                bestDifficulty = RCG.precLists[maybeProducer].length;
                                 producer = maybeProducer;
                             }
-                        } else {
+                        } else if (prod == producerSelection.actionDifficulty) {
                             if (actionDifficulty[maybeProducer] < bestDifficulty) {
                                 bestDifficulty = actionDifficulty[maybeProducer];
                                 producer = maybeProducer;
                             }
+                        } else {
+                            producer = maybeProducer;
+                            break;
                         }
                     }
                 }
@@ -428,17 +436,17 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                     numactions += count;
                 }
 
-                for (Integer aPrec : cRPG.precLists[producer]) {
+                for (int aPrec : RCG.precLists[producer]) {
                     int flayer = firstLayerWithFact[aPrec];
                     if (flayer > 0) {
-                        Map<Integer, Integer> delta = goalDelta.get(flayer);
-                        int precCount = delta.containsKey(aPrec) ? delta.get(aPrec) : 0;
+                        if (goalWeight[aPrec] == 0) {
+                            UUIntStack delta = goalDelta.get(flayer);
+                            delta.push(aPrec);
+                        }
                         if (aPrec > operators.numActions) // this is an HTN-precondition
-                            precCount += count;
+                            goalWeight[aPrec] += count;
                         else // a normal precondition
-                            precCount++;
-                        delta.put(aPrec, precCount);
-
+                            goalWeight[aPrec]++;
                     }
                 }
             }
@@ -465,7 +473,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                     if (action < operators.numActions) {
                         sb.append(operators.IndexToAction[action].mediumInfo());
                     } else
-                        sb.append(cRPG.IndexToMethodGet(action).m.mediumInfo());
+                        sb.append(RCG.IndexToMethodGet(action).m.mediumInfo());
                 }
             }
 
@@ -482,7 +490,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                     if (j < operators.numStateFeatures) {
                         sb.append(operators.IndexToLiteral[j].mediumInfo());
                     } else
-                        sb.append(cRPG.IndexToTaskGet(j).mediumInfo());
+                        sb.append(RCG.IndexToTaskGet(j).mediumInfo());
                 }
             }
 
@@ -499,7 +507,7 @@ public class cRPG implements htnGroundedProgressionHeuristic {
                 if (fact < operators.numStateFeatures) {
                     sb.append(operators.IndexToLiteral[fact].mediumInfo());
                 } else
-                    sb.append(cRPG.IndexToTaskGet(fact).mediumInfo());
+                    sb.append(RCG.IndexToTaskGet(fact).mediumInfo());
                 if (goalDelta.get(i).get(fact) > 1) {
                     sb.append(" * " + goalDelta.get(i).get(fact));
                 }
@@ -522,14 +530,14 @@ public class cRPG implements htnGroundedProgressionHeuristic {
 
     @Override
     public htnGroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps, method m) {
-        cRPG crpg = new cRPG();
+        RCG crpg = new RCG();
         crpg.build(tn);
         return crpg;
     }
 
     @Override
     public htnGroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps) {
-        cRPG crpg = new cRPG();
+        RCG crpg = new RCG();
         crpg.build(tn);
         return crpg;
     }

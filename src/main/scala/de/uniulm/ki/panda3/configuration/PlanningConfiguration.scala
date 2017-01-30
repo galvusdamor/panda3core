@@ -866,7 +866,7 @@ object Relax extends SearchHeuristic
 // PANDAPRO heuristics
 object SimpleCompositionRPG extends SearchHeuristic
 
-object CompositionRPG extends SearchHeuristic
+case class RelaxedCompositionGraph(useTDReachability: Boolean) extends SearchHeuristic
 
 object CompositionRPGHTN extends SearchHeuristic
 

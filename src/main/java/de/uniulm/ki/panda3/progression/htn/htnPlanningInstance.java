@@ -112,9 +112,10 @@ public class htnPlanningInstance {
             initialNode.heuristic = new proDFS();
         else if (heuristic instanceof SimpleCompositionRPG$)
             initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        else if (heuristic instanceof CompositionRPG$)
-            initialNode.heuristic = new cRPG(operators.methods, initialTasks, allActions);
-        else if (heuristic instanceof CompositionRPGHTN$)
+        else if (heuristic instanceof RelaxedCompositionGraph) {
+            RelaxedCompositionGraph heu = (RelaxedCompositionGraph)heuristic;
+            initialNode.heuristic = new RCG(operators.methods, initialTasks, allActions, heu.useTDReachability());
+        } else if (heuristic instanceof CompositionRPGHTN$)
             initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
         else if (heuristic instanceof GreedyProgression$)
             initialNode.heuristic = new greedyProgression();
