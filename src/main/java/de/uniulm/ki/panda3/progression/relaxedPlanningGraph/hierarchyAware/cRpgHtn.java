@@ -89,11 +89,11 @@ public class cRpgHtn implements htnGroundedProgressionHeuristic {
 
         for (int methodI : cRpgHtn.IndexToMethod.keySet()) {
             method m = cRpgHtn.IndexToMethod.get(methodI);
-            numprecs[methodI] = m.tasks.length;
+            numprecs[methodI] = m.subtasks.length;
             precLists[methodI] = new int[numprecs[methodI]];
 
-            for (int subtaskId = 0; subtaskId < m.tasks.length; subtaskId++) {
-                GroundTask t = m.tasks[subtaskId];
+            for (int subtaskId = 0; subtaskId < m.subtasks.length; subtaskId++) {
+                GroundTask t = m.subtasks[subtaskId];
                 int taskIndex = cRpgHtn.TaskLiteralToIndex.get(t);
                 precLists[methodI][subtaskId] = taskIndex;
                 invertedMapping[taskIndex].add(methodI);

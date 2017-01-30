@@ -1,13 +1,10 @@
 package de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware;
 
 import de.uniulm.ki.panda3.progression.htn.operators.method;
-import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.ProgressionSearchRoutine;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.cRPG;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.greedyProgression;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.htnGroundedProgressionHeuristic;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.proBFS;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -40,7 +37,7 @@ public class delRelaxedHTN implements htnGroundedProgressionHeuristic {
     public void build(ProgressionNetwork initialNode) {
         //initialNode = initialNode.clone();
         //initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
-        //initialNode.heuristic = new cRPG(methods, this.allActions);
+        //initialNode.heuristic = new RCG(methods, this.allActions);
         //initialNode.heuristic = new greedyProgression();
         initialNode.heuristic = new proBFS();
         initialNode.heuristic.build(initialNode);

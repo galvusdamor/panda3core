@@ -115,7 +115,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
             simpleCompositionRPG.add[methodI].add(taskID);
 
             // the precondition contains all subtasks
-            for (GroundTask subtask : someMethod.tasks) {
+            for (GroundTask subtask : someMethod.subtasks) {
                 taskID = simpleCompositionRPG.TaskLiteralToIndex.get(subtask);
                 simpleCompositionRPG.prec[methodI].add(taskID);
             }
