@@ -28,7 +28,7 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
     lazy val abstractTask: CartesianGroundTask = CartesianGroundTask(method.abstractTask, method.abstractTask.parameters map parameter)
 
     private val constraintsPerVariable: Map[Variable, Seq[VariableConstraint]] = method.subPlan.variableConstraints.variables.toSeq map { v =>
-      v -> (method.subPlan.variableConstraints.constraints filter { _.getVariables contains v })
+      v -> (method.subPlan.variableConstraints.constraints filter { _ containsVariable v })
     } toMap
 
     private def areParametersAllowed(newBindings: Seq[(Variable, Constant)], instantiation: Map[Variable, Constant]): Boolean =
@@ -117,6 +117,11 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
       res
     }
 
+    override def equals(o: scala.Any): Boolean =
+      if (o.isInstanceOf[CartesianGroundMethod] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[CartesianGroundMethod].productIterator) } else false
+
+    override val hashCode: Int = method.hashCode + parameter.toSeq.sortBy({ case (v, c) => v.hashCode }).foldLeft(0)(
+      { case (h, (v, cs)) => ((h + cs.map(_.hashCode).sum) * 13 + v.hashCode) * 13 })
   }
 
   private case class CartesianGroundTask(task: Task, parameter: Seq[Set[Constant]]) extends PrettyPrintable {
@@ -173,14 +178,16 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
 
             if (setParameter exists { _._2.isEmpty }) None else Some((simpleMethod, CartesianGroundMethod(simpleMethod, setParameter.toMap)))
           case _                                       => noSupport(NONSIMPLEMETHOD)
-        } collect {case Some(x) => x}
+        } collect { case Some(x) => x }
 
       // add the new methods to the map
       val flattenedPossibleMethods = possibleMethods map { _._2 }
       cartMethodsMap(currentGroundTask) = cartMethodsMap(currentGroundTask) ++ flattenedPossibleMethods
       flattenedPossibleMethods foreach {
         cartMethod => cartMethod.subTasks foreach {
-          subTask => cartTaskInMethodsMap(subTask) = cartTaskInMethodsMap(subTask) + cartMethod
+          subTask =>
+            cartTaskInMethodsMap(subTask) = cartTaskInMethodsMap(subTask) + cartMethod
+            //println(cartTaskInMethodsMap(subTask).size)
         }
       }
 

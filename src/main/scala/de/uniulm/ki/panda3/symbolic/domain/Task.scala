@@ -169,4 +169,6 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
   lazy val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)] = (precondition.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
   lazy val effectsAsPredicateBool      : Seq[(Predicate, Boolean)] = (effect.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
 
+  override def equals(o: scala.Any): Boolean =
+    if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[ReducedTask].productIterator) } else false
 }

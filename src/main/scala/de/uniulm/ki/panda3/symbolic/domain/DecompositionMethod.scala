@@ -55,7 +55,7 @@ trait DecompositionMethod extends DomainUpdatable {
     case NotOfSort(vari, sort)           => !(sort.elements contains instantiation(vari))
   }
 
-  override final lazy val hashCode: Int = abstractTask.name.hashCode + subPlan.planSteps.foldLeft(0)({ case (h, ps) => (h + ps.schema.name.hashCode) * 13 })
+  override final lazy val hashCode: Int = abstractTask.name.hashCode + subPlan.hashCode
 }
 
 
@@ -151,9 +151,10 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
     }
   }
 
-  override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[SimpleDecompositionMethod] && this.hashCode == o.hashCode())
-    abstractTask == o.asInstanceOf[SimpleDecompositionMethod].abstractTask && subPlan == o.asInstanceOf[SimpleDecompositionMethod].subPlan
-  else false
+  override def equals(o: scala.Any): Boolean =
+    if (o.isInstanceOf[SimpleDecompositionMethod] && this.hashCode == o.hashCode()) {
+      abstractTask == o.asInstanceOf[SimpleDecompositionMethod].abstractTask && subPlan == o.asInstanceOf[SimpleDecompositionMethod].subPlan
+    } else false
 }
 
 // scalastyle:on
