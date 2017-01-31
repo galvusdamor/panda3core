@@ -289,13 +289,8 @@ object VerifyEncoding {
       })
 
     val initialPlanMap = recomputePlan(initialPlan, expandedMap)
-    val maximumLength = Range(0, taskSequenceLength + 1).reverse find initialPlanMap.contains
 
-    maximumLength match {
-      case Some(length) => initialPlanMap(length)
-      case None => 0
-    }
-
+    if (initialPlanMap.isEmpty) 0 else initialPlanMap.values.max
   }
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
