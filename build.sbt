@@ -36,6 +36,13 @@ lazy val main = (project in (file("assembly") / "main")).settings(assemblySettin
             mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
           )
 
+lazy val pro = (project in (file("assembly") / "pro")).settings(assemblySettings: _*).
+  settings(
+            target := file("assembly") / "pro",
+            assemblyJarName in assembly := "panda3pro.jar",
+            mainClass in assembly := Some("de.uniulm.ki.panda3.ProMain")
+          )
+
 lazy val sat = (project in (file("assembly") / "sat")).settings(assemblySettings: _*).
   settings(
             target := file("assembly") / "sat",
@@ -64,6 +71,8 @@ lazy val monroe = (project in (file("assembly") / "monroe")).settings(assemblySe
             assemblyJarName in assembly := "panda3monroe.jar",
             mainClass in assembly := Some("de.uniulm.ki.panda3.MonroeMain")
           )
+
+
 
 lazy val csvExtractor = (project in (file("assembly") / "csvExtractor")).settings(assemblySettings: _*).
   settings(
