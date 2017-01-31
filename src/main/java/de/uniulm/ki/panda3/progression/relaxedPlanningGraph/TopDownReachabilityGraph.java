@@ -24,11 +24,13 @@ public class TopDownReachabilityGraph {
     private int[] taskToScc; // maps a task to its SCC
     private BitSet[] scc2reachableTasks; // maps an SCC to all TASKS reachable from it
 
-    private final HashMap<GroundTask, Integer> internalMap;
+    static private HashMap<GroundTask, Integer> internalMap;
 
-    private int mappingget(GroundTask gt) {
+    static public int mappingget(GroundTask gt) {
         return internalMap.get(gt) - operators.numStateFeatures;
     }
+
+    static public int[] maxDecompDepth; // this is the maximum decomposition depth that is left before tasks are primitive
 
     public TopDownReachabilityGraph(HashMap<Task, HashMap<GroundTask, List<method>>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions, HashMap<GroundTask, Integer> mapping) {
         System.out.println("Calculating top down reachability...");
@@ -121,6 +123,7 @@ public class TopDownReachabilityGraph {
         }
 
         // calculate transitive reachability
+        this.maxDecompDepth = new int[scc.length];
         v = root.nextSetBit(0);
         while (v > -1) {
             makeTransitive(taskToScc[v]);
@@ -129,9 +132,12 @@ public class TopDownReachabilityGraph {
 
 
         // set the reachability of every task to the reachability of the SCC it belongs to and set also the reachable actions
+        int[] temp = this.maxDecompDepth;
+        this.maxDecompDepth = new int[numTasks];
         this.reachableActions = new BitSet[numTasks]; // these are the reachable actions
         for (int i = 0; i < reachableTasks.length; i++) {
             reachableTasks[i] = scc2reachableTasks[taskToScc[i]];
+            maxDecompDepth[i] = temp[taskToScc[i]];
             this.reachableActions[i] = new BitSet(operators.numActions);
             this.reachableActions[i].set(0, operators.numActions - 1, false);
             v = reachableTasks[i].nextSetBit(0);
@@ -150,6 +156,7 @@ public class TopDownReachabilityGraph {
         int v = scc2reachableTasks[scc].nextSetBit(0);
         BitSet accumulated = (BitSet) scc2reachableTasks[scc].clone();
 
+        int curDepth = 0;
         while (v > -1) {
             int childScc = taskToScc[v];
             if (childScc != scc) {
@@ -158,9 +165,12 @@ public class TopDownReachabilityGraph {
                 }
                 accumulated.or(scc2reachableTasks[childScc]);
             }
+            if (curDepth < maxDecompDepth[v])
+                curDepth = maxDecompDepth[v];
             v = scc2reachableTasks[scc].nextSetBit(v + 1);
         }
         scc2reachableTasks[scc] = accumulated;
+        maxDecompDepth[scc] = curDepth;
         finished.set(scc, true);
     }
 

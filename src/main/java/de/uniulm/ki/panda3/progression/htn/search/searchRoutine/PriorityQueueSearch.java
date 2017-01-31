@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.loopDetection.VisitedList;
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.TopDownReachabilityGraph;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.util.InformationCapsule;
@@ -17,6 +18,8 @@ import java.util.*;
  * Created by dh on 15.09.16.
  */
 public class PriorityQueueSearch extends ProgressionSearchRoutine {
+    enum abstractTaskSelection {random, methodCount, decompDepth}
+
     public static final String SEARCH_TIME = "30 progression:01:searchTime";
     public static final String STATUS = "30 progression:01:status";
     public static final String A_STAR = "30 progression:02:aStar";
@@ -52,6 +55,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         TimeCapsule tc = new TimeCapsule();
         return search(firstSearchNode, ic, tc);
     }
+
+    abstractTaskSelection taskSelection = abstractTaskSelection.random;
 
     public List<Object> search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
         if (output)
@@ -165,20 +170,34 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
             if (n.getFirstAbstractTasks().size() == 0) continue planningloop;
 
-            ProgressionPlanStep oneAbs = n.getFirstAbstractTasks().get(htnPlanningInstance.random.nextInt(n.getFirstAbstractTasks().size()));
-            /*ProgressionPlanStep oneAbs = null;
-            int minMethods = Integer.MAX_VALUE;
-
-            for (ProgressionPlanStep ps : n.getFirstAbstractTasks()) {
-                int sum = 0;
-                for(method x : ps.methods){
-                    sum += x.tasks.length;
+            // which task shall be decomposed?
+            ProgressionPlanStep oneAbs = null;
+            if (taskSelection == abstractTaskSelection.random)
+                oneAbs = n.getFirstAbstractTasks().get(htnPlanningInstance.random.nextInt(n.getFirstAbstractTasks().size()));
+            else if (taskSelection == abstractTaskSelection.methodCount) { // minimize branching
+                int minMethods = Integer.MAX_VALUE;
+                for (ProgressionPlanStep ps : n.getFirstAbstractTasks()) {
+                    if (ps.methods.size() < minMethods) {
+                        minMethods = ps.methods.size();
+                        oneAbs = ps;
+                    } else if ((ps.methods.size() == minMethods) && (htnPlanningInstance.random.nextBoolean())) {
+                        minMethods = ps.methods.size();
+                        oneAbs = ps;
+                    }
                 }
-                if (sum < minMethods) {
-                    minMethods = sum;
-                    oneAbs = ps;
+            } else {
+                int minDepth = Integer.MAX_VALUE;
+                for (ProgressionPlanStep ps : n.getFirstAbstractTasks()) {
+                    int depth = TopDownReachabilityGraph.maxDecompDepth[TopDownReachabilityGraph.mappingget(ps.getTask())];
+                    if (depth < minDepth) {
+                        minDepth = depth;
+                        oneAbs = ps;
+                    } else if ((ps.methods.size() == minDepth) && (htnPlanningInstance.random.nextBoolean())) {
+                        minDepth = ps.methods.size();
+                        oneAbs = ps;
+                    }
                 }
-            }*/
+            }
 
             methodloop:
             for (method m : oneAbs.methods) {
