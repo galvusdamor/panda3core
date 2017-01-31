@@ -64,7 +64,7 @@ case class TreeFF(domain: EfficientDomain) extends Filter {
               // decrement respective precondition counters
               var k = 0
               while (k < actions.length) {
-                if (domain.tasks(k).positivePreconditionPredicatesArray(addEffects(j)))
+                if (domain.positivePreconditionPredicatesArrays(k)(addEffects(j)))
                   actions(k) -= 1
                 k += 1
               }
@@ -135,7 +135,7 @@ case class TreeFF(domain: EfficientDomain) extends Filter {
               // if the action as the link's literal as an effect reduce the number of currently forbidden negative effects
               var j = 0
               while (j < newEffectProtection.length) {
-                if (newEffectProtection(j) > 0 && domain.tasks(j).negativeEffectPredicatesArray(endingLinks(i)))
+                if (newEffectProtection(j) > 0 && domain.negativeEffectPredicatesArrays(j)(endingLinks(i)))
                   newEffectProtection(j) -= 1
                 j += 1
               }
@@ -150,7 +150,7 @@ case class TreeFF(domain: EfficientDomain) extends Filter {
               // if the action as the link's literal as an effect increase the number of currently forbidden negative effects
               var j = 0
               while (j < newEffectProtection.length) {
-                if (newEffectProtection(j) >= 0 && domain.tasks(j).negativeEffectPredicatesArray(startingLinks(i)))
+                if (newEffectProtection(j) >= 0 && domain.negativeEffectPredicatesArrays(j)(startingLinks(i)))
                   newEffectProtection(j) += 1
                 j += 1
               }

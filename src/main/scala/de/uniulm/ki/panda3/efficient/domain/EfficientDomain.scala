@@ -183,4 +183,14 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
         effectMap.getOrElse(_, Array())
       } toArray
   } toArray
+
+  private def predicateListToBoolArray(predicates: Array[Int]): Array[Boolean] = predicates.indices map { i => predicates contains i } toArray
+
+  lazy val positivePreconditionPredicatesArrays: Array[Array[Boolean]] = tasks map { t => predicateListToBoolArray(t.positivePreconditionPredicates) }
+
+  lazy val negativePreconditionPredicatesArrays: Array[Array[Boolean]] = tasks map { t => predicateListToBoolArray(t.negativePreconditionPredicates) }
+
+  lazy val positiveEffectPredicatesArrays : Array[Array[Boolean]] = tasks map { t => predicateListToBoolArray(t.positiveEffectPredicates) }
+
+  lazy val negativeEffectPredicatesArrays : Array[Array[Boolean]] = tasks map { t => predicateListToBoolArray(t.negativeEffectPredicates) }
 }

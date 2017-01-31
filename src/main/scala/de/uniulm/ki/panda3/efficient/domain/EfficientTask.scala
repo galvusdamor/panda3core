@@ -40,14 +40,6 @@ case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], const
   lazy val (positiveEffectPredicates, negativeEffectPredicates)             = effect partition { _.isPositive } match {case (a, b) => (a map { _.predicate }, b map { _.predicate })}
   lazy val (positivePreconditionPredicates, negativePreconditionPredicates) = precondition partition { _.isPositive } match {case (a, b) => (a map { _.predicate }, b map { _.predicate })}
 
-  private def predicateListToBoolArray(predicates: Array[Int]): Array[Boolean] = Range(0, 1000) map { i =>
-    predicates contains i
-  } toArray
-
-  lazy val (positivePreconditionPredicatesArray, negativePreconditionPredicatesArray) =
-    (predicateListToBoolArray(positivePreconditionPredicates), predicateListToBoolArray(negativePreconditionPredicates))
-  lazy val (positiveEffectPredicatesArray, negativeEffectPredicatesArray)             =
-    (predicateListToBoolArray(positiveEffectPredicates), predicateListToBoolArray(negativeEffectPredicates))
 }
 
 
