@@ -54,6 +54,7 @@ public class htnPlanningInstance {
 
     public boolean plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
                         InformationCapsule ic, TimeCapsule tc,
+                        PriorityQueueSearch.abstractTaskSelection taskSelectionStrategy,
                         SearchHeuristic heuristic, boolean doBFS, boolean doDFS,
                         boolean aStar, boolean deleteRelaxed, long quitAfterMs) throws ExecutionException, InterruptedException {
         random = new Random(randomSeed);
@@ -114,7 +115,7 @@ public class htnPlanningInstance {
             initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
         else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph)heuristic;
-            initialNode.heuristic = new RCG(operators.methods, initialTasks, allActions, heu.useTDReachability());
+            initialNode.heuristic = new RCG(operators.methods, initialTasks, allActions, heu.useTDReachability(), heu.producerSelectionStrategy());
         } else if (heuristic instanceof CompositionRPGHTN$)
             initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
         else if (heuristic instanceof GreedyProgression$)
@@ -131,7 +132,7 @@ public class htnPlanningInstance {
         boolean printOutput = true;
         boolean findShortest = false;
 
-        routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput, findShortest);
+        routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput, findShortest, taskSelectionStrategy);
         //routine = new EnforcedHillClimbing();
         //routine = new CompleteEnforcedHillClimbing();
         routine.wallTime = quitAfterMs;

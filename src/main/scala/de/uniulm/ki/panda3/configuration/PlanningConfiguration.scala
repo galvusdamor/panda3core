@@ -14,6 +14,8 @@ import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNu
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.search.flawSelector.{SequentialEfficientFlawSelector, RandomFlawSelector, UMCPFlawSelection, LeastCostFlawRepair}
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.sat.verify.{Solvertype, SATRunner}
@@ -288,6 +290,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val solutionFound = progressionInstance.plan(domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),
                                                        JavaConversions.setAsJavaSet(groundLiterals.toSet), informationCapsule, timeCapsule,
+                                                       progression.abstractTaskSelectionStrategy,
                                                        progression.heuristic.getOrElse(null), doBFS, doDFS, aStar, progression.deleteRelaxed,
                                                        progression.timeLimit.getOrElse(Int.MaxValue).toLong * 1000)
 
@@ -414,7 +417,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Seq[Plan], domainAndPlan: (Domain, Plan),
                         analysisMap: AnalysisMap): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
-      case ProcessingTimings              => timeCapsule
+      case ProcessingTimings => timeCapsule
 
       case SearchStatus                   =>
         val determinedSearchSate =
@@ -868,7 +871,7 @@ object Relax extends SearchHeuristic
 // PANDAPRO heuristics
 object SimpleCompositionRPG extends SearchHeuristic
 
-case class RelaxedCompositionGraph(useTDReachability: Boolean) extends SearchHeuristic
+case class RelaxedCompositionGraph(useTDReachability: Boolean, producerSelectionStrategy: RCG.producerSelection) extends SearchHeuristic
 
 object CompositionRPGHTN extends SearchHeuristic
 
@@ -918,6 +921,7 @@ case class PlanBasedSearch(
 case class ProgressionSearch(timeLimit: Option[Int],
                              searchAlgorithm: SearchAlgorithmType,
                              heuristic: Option[SearchHeuristic],
+                             abstractTaskSelectionStrategy: PriorityQueueSearch.abstractTaskSelection,
                              deleteRelaxed: Boolean = false) extends SearchConfiguration {}
 
 case class SATSearch(timeLimit: Option[Int],

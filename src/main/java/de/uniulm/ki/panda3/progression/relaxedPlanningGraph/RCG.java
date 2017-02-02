@@ -14,9 +14,9 @@ import java.util.*;
  * Created by dhoeller on 26.07.16.
  */
 public class RCG implements htnGroundedProgressionHeuristic {
-    enum producerSelection {numOfPreconditions, actionDifficulty, firstCome}
+    public static enum producerSelection {numOfPreconditions, actionDifficulty, firstCome}
 
-    ;
+
     /**
      * Define "Operator": An operator is either an action or a method
      * Define "Task": A task is either an action or an abstract task(-name)
@@ -72,9 +72,11 @@ public class RCG implements htnGroundedProgressionHeuristic {
     public static boolean topDownReachability = true;
     boolean orderingInvariants = false;
 
-    producerSelection prod = producerSelection.numOfPreconditions;
+    producerSelection prod = producerSelection.actionDifficulty;
 
-    public RCG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, List<ProgressionPlanStep> initialTasks, Set<GroundTask> allActions, boolean useTDReachability) {
+    public RCG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, List<ProgressionPlanStep> initialTasks, Set<GroundTask> allActions, boolean useTDReachability,
+               producerSelection selectionStrategy) {
+        this.prod = selectionStrategy;
         RCG.topDownReachability = useTDReachability;
 
         long time = System.currentTimeMillis();

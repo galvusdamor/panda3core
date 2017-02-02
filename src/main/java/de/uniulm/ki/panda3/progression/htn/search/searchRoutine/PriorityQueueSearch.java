@@ -18,7 +18,7 @@ import java.util.*;
  * Created by dh on 15.09.16.
  */
 public class PriorityQueueSearch extends ProgressionSearchRoutine {
-    enum abstractTaskSelection {random, methodCount, decompDepth}
+    static public enum abstractTaskSelection {random, methodCount, decompDepth}
 
     public static final String SEARCH_TIME = "30 progression:01:searchTime";
     public static final String STATUS = "30 progression:01:status";
@@ -43,11 +43,13 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
     }
 
-    public PriorityQueueSearch(boolean aStar, boolean deleteRelaxed, boolean output, boolean findShortest) {
+    public PriorityQueueSearch(boolean aStar, boolean deleteRelaxed, boolean output, boolean findShortest,
+                               abstractTaskSelection taskSelectionStrategy) {
         this.aStar = aStar;
         this.deleteRelaxed = deleteRelaxed;
         this.output = output;
         this.findShortest = findShortest;
+        this.taskSelection = taskSelectionStrategy;
     }
 
     public List<Object> search(ProgressionNetwork firstSearchNode) {

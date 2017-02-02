@@ -18,13 +18,13 @@ object PredefinedConfigurations {
   val groundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                        compileOrderInMethods = None,
                                                        splitIndependedParameters = false,
-                                                       liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                       liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                        iterateReachabilityAnalysis = false, groundDomain = true)
   val liftedPreprocess    = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                        compileOrderInMethods = None,
                                                        splitIndependedParameters = false,
-                                                       liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                       liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                        iterateReachabilityAnalysis = false, groundDomain = false)
 
