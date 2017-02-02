@@ -6,7 +6,7 @@ import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.heuristic.filter.TreeFF
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
-import de.uniulm.ki.panda3.symbolic.compiler.{AllNecessaryOrderings, AllOrderings}
+import de.uniulm.ki.panda3.symbolic.compiler.{OneRandomOrdering, AllNecessaryOrderings, AllOrderings}
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.sat.verify.{MINISAT, CRYPTOMINISAT}
@@ -27,7 +27,6 @@ object Main {
 
     println("This is Panda3")
 
-
     if (args.length < 2) {
       println("This program needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the random seed.")
       //println("This program needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
@@ -36,11 +35,11 @@ object Main {
     val domFile = args(0)
     val probFile = args(1)
 
-    val randomseed = if (args.length == 3) args(2).toInt else 42
+    val randomseed = if (args.length == 3) args(2).toInt else 10
     val planLength = randomseed
     htnPlanningInstance.randomSeed = randomseed
     //val outputPDF = args(2)
-    val outputPDF = "dot.dot"
+    val outputPDF = "dot.pdf"
 
     //val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
@@ -71,12 +70,11 @@ object Main {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/satellite2.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/satellite2-P-abstract-2obs-2sat-2mod.xml"
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/domains/satellite2.hddl"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--4--4.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/5--5--5.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8obs-3sat-4mod.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4obs-4sat-4mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/problems/2obs-2sat-2mod.hddl"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-legal-fewer-htn-groundings.xml"
@@ -116,6 +114,9 @@ object Main {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/domains/verkabelung_domain_noComplexOperations.pddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/problems/genericLinearProblem_depth30.pddl"
 
+    //val domFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
+    //val probFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p01-htn.lisp"
+
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
 
@@ -138,9 +139,10 @@ object Main {
                             postprocessing
                            )
     } else PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = true),
+                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = false),
                                  PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                            compileOrderInMethods = Some(AllNecessaryOrderings),
+                                                            //compileOrderInMethods = Some(AllNecessaryOrderings),
+                                                            compileOrderInMethods = Some(OneRandomOrdering()),
                                                             splitIndependedParameters = true,
                                                             liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
@@ -151,7 +153,7 @@ object Main {
                                  //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
                                  //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
                                  //PlanBasedSearch(None, None, DijkstraType, Nil, Nil, LCFR),
-                                 //PlanBasedSearch(None, Some(30 * 60), GreedyType, Some(UMCPHeuristic), Nil, UMCPFlaw),
+                                 //PlanBasedSearch(None, Some(30 * 60), GreedyType, UMCPHeuristic :: Nil, Nil, UMCPFlaw),
                                  //PlanBasedSearch(None, Some(5000), AStarActionsType(1), ADD :: Nil, Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarActionsType(1), Some(NumberOfFlaws), Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(TDGMinimumAction), Nil, LCFR),
@@ -160,12 +162,12 @@ object Main {
                                  //PlanBasedSearch(None, None, AStarDepthType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR),
                                  //NoSearch,
                                  //PlanBasedSearch(None, Some(30 * 60), AStarDepthType(1), LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing)) :: Nil, Nil, LCFR),
-                                 ProgressionSearch(Some(30 * 60), DFSType, None),
+                                 //ProgressionSearch(Some(30 * 60), DFSType, None),
                                  //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPGHTN)),
                                  //ProgressionSearch(Some(200), AStarActionsType(1), Some(GreedyProgression)),
-                                 //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), planLength, Some(planLength)),
-                                 //SATSearch(Some(30 * 60 * 1000), CRYPTOMINISAT(), 10, Some(10)),
-                                 //SATSearch(Some(30 * 60 * 1000), MINISAT(), 10, None/*, Some(11)*/),
+                                 //SATSearch(Some(30 * 60), CRYPTOMINISAT(), planLength, Some(planLength)),
+                                 SATSearch(Some(100000), CRYPTOMINISAT(), 7, Some(7)),
+                                 //SATSearch(Some(30 * 60 * 1000), MINISAT(), 0, Some(20)),
                                  //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
                                  postprocessing)
     //System.in.read()
@@ -261,7 +263,7 @@ object Main {
       if (outputPDF.endsWith("dot")) {
         writeStringToFile(solution.dotString(PlanDotOptions(showHierarchy = false)), new File(outputPDF))
       } else {
-        Dot2PdfCompiler.writeDotToFile(solution.dotString(PlanDotOptions(showHierarchy = false)), outputPDF)
+        Dot2PdfCompiler.writeDotToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), outputPDF)
       }
     }
 
