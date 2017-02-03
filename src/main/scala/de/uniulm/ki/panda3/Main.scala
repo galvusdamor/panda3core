@@ -46,6 +46,14 @@ object Main {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
 
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/domains/CyberSecurity.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/AufbewahrungDesPasswortsMitITN.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/AufbewahrungDesPasswortsOhneITN.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/SicherheitslückenInProgrammenMitITN.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/SicherheitslückenInProgrammenOhneITN.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/VernetzungVonRechnernMitMitITN.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/VernetzungVonRechnernMitOhneITN.xml"
+
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
     //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
     //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
@@ -125,7 +133,7 @@ object Main {
     val postprocessing = PostprocessingConfiguration(Set(ProcessingTimings,
                                                          SearchStatistics,
                                                          SearchStatus,
-                                                         //SearchResult,
+                                                         SearchResult,
                                                          //FinalGroundedReachability,
                                                          PreprocessedDomainAndPlan))
 
@@ -139,12 +147,12 @@ object Main {
                             postprocessing
                            )
     } else PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = false),
+                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = true),
                                  PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                            //compileOrderInMethods = Some(AllNecessaryOrderings),
-                                                            compileOrderInMethods = Some(OneRandomOrdering()),
+                                                            compileOrderInMethods = Some(AllNecessaryOrderings),
+                                                            //compileOrderInMethods = None, //Some(OneRandomOrdering()),
                                                             splitIndependedParameters = true,
-                                                            liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                            liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
                                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                             iterateReachabilityAnalysis = false, groundDomain = true),
                                  //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
@@ -159,15 +167,17 @@ object Main {
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(TDGMinimumAction), Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType(1), ADD :: Nil, Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD(Some(ADDReusing))), Nil, SequentialSelector(LCFR,RandomFlaw(6))),
-                                 //PlanBasedSearch(None, None, AStarDepthType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR),
+                                 //PlanBasedSearch(None, None, AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
+                                 PlanBasedSearch(None, None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
+                                 //PlanBasedSearch(None, None, AStarDepthType(1), LiftedTDGPreconditionRelaxation(NeverRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
                                  //NoSearch,
                                  //PlanBasedSearch(None, Some(30 * 60), AStarDepthType(1), LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing)) :: Nil, Nil, LCFR),
                                  //ProgressionSearch(Some(30 * 60), DFSType, None),
                                  //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPGHTN)),
                                  //ProgressionSearch(Some(200), AStarActionsType(1), Some(GreedyProgression)),
                                  //SATSearch(Some(30 * 60), CRYPTOMINISAT(), planLength, Some(planLength)),
-                                 SATSearch(Some(100000), CRYPTOMINISAT(), 7, Some(7)),
-                                 //SATSearch(Some(30 * 60 * 1000), MINISAT(), 0, Some(20)),
+                                 //SATSearch(Some(100000), CRYPTOMINISAT(), 7, Some(7)),
+                                 //SATSearch(Some(30 * 60 * 1000), MINISAT(), 30, Some(10)),
                                  //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
                                  postprocessing)
     //System.in.read()

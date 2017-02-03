@@ -26,8 +26,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val probInputStream = new FileInputStream(probFile)
 
     val (searchConfig, usePlanningGraph) = configNumber match {
-
-      case x if x < 0 => (PlanBasedSearch(Some(0), Some(0), DFSType, Nil, Nil, LCFR, efficientSearch = false), true)
+      case x if x < 0 => (PlanBasedSearch(Some(0), Some(0), DFSType, Nil, Nil, LCFR, efficientSearch = false), false)
       case 1          => (PlanBasedSearch(None, None, AStarDepthType(1), TDGMinimumModificationWithCycleDetection() :: Nil, Nil,LCFR), true)
       case 2          => (PlanBasedSearch(None, None, DijkstraType, Nil, Nil,LCFR), true)
       case 3          => (PlanBasedSearch(None, None, AStarDepthType(1), TDGMinimumAction()  :: Nil, Nil,LCFR), true)
@@ -41,7 +40,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
                                                ParsingConfiguration(stripHybrid = false, eliminateEquality = false),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph,
                                                                           compileOrderInMethods = None, splitIndependedParameters = false,
-                                                                          liftedReachability = true, groundedReachability = Some(if (usePlanningGraph) PlanningGraphWithMutexes else PlanningGraph),
+                                                                          liftedReachability = true,
+                                                                          groundedReachability = Some(if (usePlanningGraph) PlanningGraphWithMutexes else PlanningGraph),
                                                                           groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = true),
                                                searchConfig,
@@ -162,7 +162,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     timeCapsule start VerifyRunner.GENERATE_FORMULA
     //println("READY")
     //System.in.read()
-    val stateFormula = /*encoder.stateTransitionFormula ++ encoder.initialState ++*/ (if (includeGoal) encoder.goalState else Nil) ++ (
+    val stateFormula = encoder.stateTransitionFormula ++ encoder.initialState ++ (if (includeGoal) encoder.goalState else Nil) ++ (
       if (verify) encoder.givenActionsFormula else encoder.noAbstractsFormula)
     val usedFormula = encoder.decompositionFormula ++ stateFormula
     //println("Done")
@@ -855,10 +855,12 @@ object VerifyRunner {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RefrigeratedTankerTraincarHub.xml"
 
-    val domFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/robot/domain/domain.hpddl"
+    //val domFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/domain/domain.hpddl"
+    val domFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/blocksworld/domain/domain.hpddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
-    val probFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/robot/problems/pfile_05_010.pddl"
+    //val probFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/towers/problems/pfile_06.pddl"
+    val probFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hddl/blocksworld/problems/pfile_015.pddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_Large.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
 
@@ -890,10 +892,11 @@ object VerifyRunner {
     //val probFile = "pfile_020.pddl"
     //val probFile = "pfile_005.pddl-2"
 
+    // 3 -> 12
 
     //runPlanner(domFile, probFile, len, offset)
-    //runPlanner(domFile, probFile, 30, 0)
-    runEvaluation()
+    runPlanner(domFile, probFile, 40, 0)
+    //runEvaluation()
     //runPlannerEvaluation()
   }
 
