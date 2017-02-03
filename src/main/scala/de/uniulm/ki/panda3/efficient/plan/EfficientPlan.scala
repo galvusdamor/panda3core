@@ -515,19 +515,59 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     val init = domain.tasks(planStepTasks(0))
 
 
-    init.effect filter { _.isPositive } foreach { state add _.predicate }
-    var potentialActions: Set[(EfficientTask, Int)] = Set(remainingAccessiblePrimitiveTasks map { t => (domain.tasks(t), t) }: _*)
+    var i = 0
+    while (i < init.effect.length) {
+      if (init.effect(i).isPositive)
+        state.add(init.effect(i).predicate)
+      i += 1
+    }
 
+    var potentialActions: Array[Int] = remainingAccessiblePrimitiveTasks
+    var numberOfPotentialActions = potentialActions.length
 
     var changed = true
     while (changed) {
-      val (applicableActions, nonapplicable) = potentialActions partition { t => t._1.precondition filter { _.isPositive } forall { prec => state.contains(prec.predicate) } }
+      val newPotentialActions = new Array[Int](numberOfPotentialActions)
+      var newNumberOfPotentialActions = 0
 
       val oldStateSize = state.size
-      applicableActions foreach { _._1.effect filter { _.isPositive } foreach { state add _.predicate } }
-      applicableActions foreach { case (a, b) => applicable.add(b) }
 
-      potentialActions = nonapplicable
+      // iterate through all
+      i = 0
+      while (i < numberOfPotentialActions) {
+        val taskIndex = potentialActions(i)
+        val task = domain.tasks(taskIndex)
+
+        // check for executability
+        var allPreconditionsTrue = true
+        var prec = 0
+        while (prec < task.precondition.length && allPreconditionsTrue) {
+          allPreconditionsTrue &= state.contains(task.precondition(prec).predicate)
+          prec += 1
+        }
+
+        if (allPreconditionsTrue) {
+          // apply the task
+          applicable.add(taskIndex)
+          // add effects to the state
+          var eff = 0
+          while (eff < task.effect.length) {
+            if (task.effect(eff).isPositive) state.add(task.effect(eff).predicate)
+            eff += 1
+          }
+
+        } else {
+          // keep it for the next round
+          newPotentialActions(newNumberOfPotentialActions) = taskIndex
+          newNumberOfPotentialActions += 1
+        }
+
+
+        i += 1
+      }
+
+      potentialActions = newPotentialActions
+      numberOfPotentialActions = newNumberOfPotentialActions
       changed = oldStateSize != state.size
     }
 
@@ -547,7 +587,9 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
   }
 
 
-  lazy val (landmarkMap, taskAllowed) = domain.taskSchemaTransitionGraph.landMarkFromAndAllowedTasks(BitSet(reachablePrimitives: _*))
+  lazy val taskAllowed = domain.taskSchemaTransitionGraph.allowedTasksFromPrimitives(BitSet(reachablePrimitives: _*))
+
+  lazy val landmarkMap = domain.taskSchemaTransitionGraph.landMarkFromPrimitives(BitSet(reachablePrimitives: _*))(taskAllowed)
 
   lazy val allLandmarks: BitSet = {
     val abstracts = Range(2, numberOfAllPlanSteps) filter isPlanStepPresentInPlan map planStepTasks filter { domain.tasks(_).isAbstract }
@@ -555,7 +597,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
   }
 
   lazy val simpleLandMark: BitSet = {
-    val lm = domain.taskSchemaTransitionGraph.landMarkFromAndAllowedTasks(BitSet(domain.tasks.indices:_*))._1
+    val lm = domain.taskSchemaTransitionGraph.landMarkFromPrimitives(BitSet(domain.tasks.indices: _*))()
 
     //println((lm zip landmarkMap zip taskAllowed) map {case ((a,b),all) => if (all) b.size - a.size else 0} sum)
 

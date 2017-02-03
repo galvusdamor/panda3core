@@ -24,6 +24,10 @@ case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends D
   }).toMap
 
 
+  private lazy val reversedCondensedTopologicalOrdering                         = condensation.topologicalOrdering.get.reverse
+  private lazy val reversedCondensedTopologicalOrderingArray: Array[Array[Int]] = condensation.topologicalOrdering.get.reverse map { _.toArray } toArray
+
+
   lazy val taskCanSupportByDecomposition: Map[Int, Array[(Int, Boolean)]] = {
     val startT = System.currentTimeMillis()
     (vertices map { task =>
@@ -76,9 +80,69 @@ case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends D
   }
 
 
-  def landMarkFromAndAllowedTasks(allowedPrimitives: BitSet): (Array[BitSet], Array[Boolean]) = {
-    val landmarks = new Array[BitSet](domain.tasks.length)
+  def allowedTasksFromPrimitives(allowedPrimitives: BitSet): Array[Boolean] = {
     val allowed = new Array[Boolean](domain.tasks.length)
+
+    def recomputeAllowed(task: Int): Boolean =
+      if (domain.tasks(task).isPrimitive) {
+        allowed(task) = allowedPrimitives contains task
+        false
+      } else {
+        var newAllowed = false
+        val methods = domain.taskToPossibleMethods(task)
+
+        var i = 0
+        while (i < methods.length && !newAllowed) {
+          var allAllowed = true
+          val containedTasks = methods(i)._1.subPlan.planStepTasks
+          var j = 2 // don't look at init and goal
+          while (j < containedTasks.length && allAllowed) {
+            allAllowed &= allowed(containedTasks(j))
+            j += 1
+          }
+          newAllowed |= allAllowed
+
+          i += 1
+        }
+
+        val change = allowed(task) != newAllowed
+        allowed(task) = newAllowed
+        change
+      }
+
+
+    var sccIndex = 0
+    while (sccIndex < reversedCondensedTopologicalOrderingArray.length) {
+      val scc = reversedCondensedTopologicalOrderingArray(sccIndex)
+
+      // set all elements as allowed by default
+      var sccElement = 0
+      while (sccElement < scc.length) {
+        allowed(scc(sccElement)) = true
+        sccElement += 1
+      }
+
+      var changed = true
+      while (changed) {
+        // reset
+        changed = false
+
+        sccElement = 0
+        while (sccElement < scc.length) {
+          val task = scc(sccElement)
+          changed |= recomputeAllowed(task)
+          sccElement += 1
+        }
+      }
+      sccIndex += 1
+    }
+
+    allowed
+  }
+
+
+  def landMarkFromPrimitives(allowedPrimitives: BitSet)(allowed: Array[Boolean] = allowedTasksFromPrimitives(allowedPrimitives)): Array[BitSet] = {
+    val landmarks = new Array[BitSet](domain.tasks.length)
     val topOrd = condensation.topologicalOrdering.get.reverse
 
     def recomputeLandMarksFor(task: Int): Boolean = {
@@ -89,32 +153,14 @@ case class EfficientTaskSchemaTransitionGraph(domain: EfficientDomain) extends D
       changed
     }
 
-    def recomputeAllowed(task: Int): Boolean =
-      if (domain.tasks(task).isPrimitive) {
-        allowed(task) = allowedPrimitives contains task
-        false
-      } else {
-        val newAllowed = domain.taskToPossibleMethods(task) exists { _._1.subPlan.planStepTasks.drop(2) forall allowed }
-        val change = allowed(task) != newAllowed
-        allowed(task) = newAllowed
-        change
-      }
-
-
     topOrd foreach { scc =>
       scc foreach { t => landmarks(t) = BitSet(scc.toSeq: _*) }
-      scc foreach { t => allowed(t) = true }
 
       var changed = true
-      // recomputed allowed tasks
       while (changed)
-        changed = scc map recomputeAllowed forall { x => x }
-
-      changed = true
-      while (changed)
-        changed = scc map recomputeLandMarksFor forall { x => x }
+        changed = scc map recomputeLandMarksFor exists { x => x }
     }
 
-    (landmarks, allowed)
+    landmarks
   }
 }
