@@ -5,6 +5,7 @@ import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
+import de.uniulm.ki.util.InformationCapsule
 
 import scala.collection.{mutable, BitSet}
 
@@ -30,7 +31,8 @@ case class RelaxHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain:
   } toMap
 
 
-  override def computeHeuristic(plan: EfficientPlan, payload: Unit, appliedModification: EfficientModification, depth : Int): (Double, Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, payload: Unit, appliedModification: EfficientModification, depth: Int, oldHeuristic: Double,
+                                informationCapsule: InformationCapsule): (Double, Unit) = {
     // gather all open preconditions
     val conditions = mutable.BitSet()
     val planActions = mutable.BitSet()

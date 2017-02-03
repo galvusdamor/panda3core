@@ -3,18 +3,21 @@ package de.uniulm.ki.panda3.efficient.heuristic
 import de.uniulm.ki.panda3.efficient.domain.EfficientGroundTask
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
+import de.uniulm.ki.util.InformationCapsule
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 trait EfficientHeuristic[Payload] {
 
-  def computeHeuristic(plan: EfficientPlan, payload: Payload, appliedModification: EfficientModification, depth : Int): (Double, Payload)
+  def computeHeuristic(plan: EfficientPlan, payload: Payload, appliedModification: EfficientModification, depth: Int, oldHeuristic: Double,
+                       informationCapsule: InformationCapsule): (Double, Payload)
 }
 
 
 object AlwaysZeroHeuristic extends EfficientHeuristic[Unit] {
-  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification,depth : Int): (Double, Unit) = (0, ())
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth: Int, oldHeuristic: Double,
+                                informationCapsule: InformationCapsule): (Double, Unit) = (0, ())
 }
 
 trait MinimisationOverGroundingsBasedHeuristic[Payload] extends EfficientHeuristic[Payload] {
