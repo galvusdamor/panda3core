@@ -2,6 +2,8 @@ package de.uniulm.ki.panda3.configuration
 
 import java.io.FileInputStream
 
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
 import de.uniulm.ki.panda3.symbolic.search.SearchState
 import org.scalatest.FlatSpec
 
@@ -27,9 +29,9 @@ class FullStackTest extends FlatSpec {
 
 
   val algos =
-    ("symbolic-BFS", grounded, PlanBasedSearch(None, Some(60 * 60), BFSType, Nil, Nil, LCFR,efficientSearch = false)) ::
-      ("symbolic-DFS", grounded, PlanBasedSearch(None, Some(60 * 60), DFSType, Nil, Nil, LCFR,efficientSearch = false)) ::
-    ("BFS", grounded, PlanBasedSearch(None, Some(60 * 60), BFSType, Nil, Nil, LCFR)) ::
+    ("symbolic-BFS", grounded, PlanBasedSearch(None, Some(60 * 60), BFSType, Nil, Nil, LCFR, efficientSearch = false)) ::
+      ("symbolic-DFS", grounded, PlanBasedSearch(None, Some(60 * 60), DFSType, Nil, Nil, LCFR, efficientSearch = false)) ::
+      ("BFS", grounded, PlanBasedSearch(None, Some(60 * 60), BFSType, Nil, Nil, LCFR)) ::
       ("DFS", grounded, PlanBasedSearch(None, Some(60 * 60), DFSType, Nil, Nil, LCFR)) ::
       ("PR", grounded, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)) ::
       ("PR-Recompute-Reach", grounded, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)) ::
@@ -45,7 +47,9 @@ class FullStackTest extends FlatSpec {
       ("lifted-MMESCC", lifted, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR)) ::
       ("lifted-ADD", lifted, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), TDGMinimumADD() :: Nil, Nil, LCFR)) ::
       ("lifted-ActionCount", lifted, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), TDGMinimumAction() :: Nil, Nil, LCFR)) ::
-      ("PRO-RCG", grounded, ProgressionSearch(Some(60 * 60), AStarActionsType(1), Some(RelaxedCompositionGraph(useTDReachability = true)))) ::
+      ("PRO-RCG", grounded, ProgressionSearch(Some(60 * 60), AStarActionsType(1),
+                                              Some(RelaxedCompositionGraph(useTDReachability = true, producerSelectionStrategy = RCG.producerSelection.firstCome)),
+                                              abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.decompDepth)) ::
       //("PRO-cRPGHTN", grounded, ProgressionSearch(Some(60 * 60), AStarActionsType(1),CompositionRPGHTN))) ::
       //("PRO-greedyProgression", grounded, ProgressionSearch(Some(60 * 60), AStarActionsType(1),GreedyProgression))) ::
       Nil
