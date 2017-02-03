@@ -92,6 +92,8 @@ object Information {
   val SOLVED_STATE = "00 global:90:planner result"
   val ERROR        = "00 global:99:error"
 
+  val SOLUTION_LENGTH = "01 solution:01:number of primitive plan steps"
+
   val ACYCLIC                      = "02 properties:01:acyclic"
   val MOSTLY_ACYCLIC               = "02 properties:02:mostly acyclic"
   val REGULAR                      = "02 properties:03:regular"
@@ -103,7 +105,9 @@ object Information {
   val NUMBER_OF_EXPANDED_NODES  = "10 search nodes:01:expanded"
   val NUMBER_OF_DISCARDED_NODES = "10 search nodes:02:discarded nodes"
 
-  val PLAN_SIZE = "20 search plans:01:number of plansteps"
+  val PLAN_SIZE              = "20 search plans:01:number of plansteps"
+  val TDG_COMPUTED_HEURISTIC = "20 search plans:11:TDG computed heuristic"
+  val ONLY_ONE_DECOMPOSITION = "20 search plans:12:only one decomposition"
 
   val NUMBER_OF_CONSTANTS         = "30 problem:01:number of constants"
   val NUMBER_OF_PREDICATES        = "30 problem:02:number of predicates"
