@@ -4,13 +4,15 @@ import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
-import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
-import de.uniulm.ki.util.SimpleAndOrGraph
+import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientDecomposePlanStep, EfficientInsertCausalLink, EfficientAddOrdering, EfficientModification}
+import de.uniulm.ki.util.{Dot2PdfCompiler, InformationCapsule, IntegerAntOrGraph, SimpleAndOrGraph}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 trait TSTGHeuristic extends EfficientHeuristic[Unit] {
+
+  import de.uniulm.ki.panda3.configuration.Information._
 
   def domain: EfficientDomain
 
@@ -21,9 +23,9 @@ trait TSTGHeuristic extends EfficientHeuristic[Unit] {
     val methodsToSubTasks = domain.decompositionMethods.zipWithIndex map { case (m, i) => (-i - 1, m.subPlan.planStepTasks.drop(2) toSet) }
     val tasksToMethods = domain.tasks.zipWithIndex map { case (t, i) => i -> (domain.taskToPossibleMethods(i) map { -_._2 - 1 }).toSet }
 
-    SimpleAndOrGraph[Any, Int, Int](domain.tasks.indices.toSet, domain.decompositionMethods.indices map { case m => -m - 1 } toSet,
-                                    tasksToMethods.toMap.withDefaultValue(Set()),
-                                    methodsToSubTasks.toMap.withDefaultValue(Set()))
+    IntegerAntOrGraph(domain.tasks.indices.toSet, domain.decompositionMethods.indices map { case m => -m - 1 } toSet,
+                              tasksToMethods.toMap.withDefaultValue(Set()),
+                              methodsToSubTasks.toMap.withDefaultValue(Set()))
   }
 
   protected def computeHeuristicForPrimitive(taskID: Int): Double
@@ -32,46 +34,86 @@ trait TSTGHeuristic extends EfficientHeuristic[Unit] {
 
   protected def initialDeductionFromHeuristicValue(plan: EfficientPlan): Double
 
-  protected def taskValue(plan: EfficientPlan): Int => Int
+  protected def deductionForInsertedCausalLink: Int
 
-  override def computeHeuristic(plan: EfficientPlan, payload: Unit, appliedModification: EfficientModification, depth: Int): (Double, Unit) = {
-    var h = -initialDeductionFromHeuristicValue(plan)
+  protected def deductionForDecomposition: Int
 
-    val valuation = taskValue(plan)
-
-    var ps = 1
-    while (ps < plan.planStepTasks.length) {
-      if (plan.isPlanStepPresentInPlan(ps)) {
-        if (plan.taskOfPlanStep(ps).isPrimitive && primitiveActionInPlanHeuristic.isDefined)
-          h += primitiveActionInPlanHeuristic.get.computeHeuristicByGrounding(ps, plan)
-        else
-          h += valuation(ps)
-      }
-      ps += 1
-    }
-
-    assert(h >= 0, "TSTG heuristics can never be negative! h = " + h + " " + (-initialDeductionFromHeuristicValue(plan)))
-
-    (h, ())
+  protected abstract class TaskValuation {
+    def apply(planStep: Int): Int
   }
+
+  protected def taskValue(plan: EfficientPlan): TaskValuation
+
+  override def computeHeuristic(plan: EfficientPlan, payload: Unit, appliedModification: EfficientModification, depth: Int, oldHeuristic: Double,
+                                informationCapsule: InformationCapsule): (Double, Unit) =
+    if (appliedModification.isInstanceOf[EfficientAddOrdering])
+      (oldHeuristic, payload)
+    else if (appliedModification.isInstanceOf[EfficientInsertCausalLink])
+      (oldHeuristic - deductionForInsertedCausalLink, payload)
+    else if (appliedModification.isInstanceOf[EfficientDecomposePlanStep]) {
+      val modificationAsDecompose = appliedModification.asInstanceOf[EfficientDecomposePlanStep]
+
+      val decomposedTaskIndex = plan.planStepTasks(modificationAsDecompose.decomposePlanStep)
+
+      if (domain.taskToPossibleMethods(decomposedTaskIndex).length == 1) {
+        informationCapsule increment ONLY_ONE_DECOMPOSITION
+        var reductionForNewPrimitives = 0.0
+        var i = 0
+        while (i < modificationAsDecompose.addedPlanSteps.length) {
+          val newTask = modificationAsDecompose.addedPlanSteps(i)._1
+          if (domain.tasks(newTask).isPrimitive)
+            reductionForNewPrimitives += computeHeuristicForPrimitive(newTask)
+
+          i += 1
+        }
+        (oldHeuristic - deductionForDecomposition - reductionForNewPrimitives, payload)
+      } else {
+        informationCapsule increment TDG_COMPUTED_HEURISTIC
+        var h = -initialDeductionFromHeuristicValue(plan)
+        val valuation = taskValue(plan)
+
+        var ps = 1
+        while (ps < plan.planStepTasks.length) {
+          if (plan.isPlanStepPresentInPlan(ps)) {
+            if (plan.taskOfPlanStep(ps).isPrimitive && primitiveActionInPlanHeuristic.isDefined)
+              h += primitiveActionInPlanHeuristic.get.computeHeuristicByGrounding(ps, plan)
+            else
+              h += valuation(ps)
+          }
+          ps += 1
+        }
+
+        assert(h >= 0, "TSTG heuristics can never be negative! h = " + h + " " + (-initialDeductionFromHeuristicValue(plan)))
+
+        (h, ())
+      }
+
+    } else (Integer.MIN_VALUE, ())
 }
 
 trait PreComputationTSTGHeuristic extends TSTGHeuristic {
 
-  val taskValues: Map[Int, Int] = argumentRelaxedTDG.minSumTraversalMap(computeHeuristicForPrimitive, computeHeuristicForMethod) map { case (a, b) => a -> b.toInt }
+  val taskValues: Array[Int] = {
+    val m = argumentRelaxedTDG.minSumTraversalMap(computeHeuristicForPrimitive, computeHeuristicForMethod) map { case (a, b) => a -> b.toInt }
+    domain.tasks.indices map m toArray
+  }
 
-  protected def taskValue(plan: EfficientPlan) = { case planStep: Int => taskValues(plan.planStepTasks(planStep)) }
+  protected def taskValue(plan: EfficientPlan) = new TaskValuation {
+    def apply(planStep: Int): Int = taskValues(plan.planStepTasks(planStep))
+  }
 }
 
 trait ReachabilityRecomputingTSTGHeuristic extends TSTGHeuristic {
-  protected def taskValue(plan: EfficientPlan) = {
-    val taskValues: Map[Int, Int] = argumentRelaxedTDG.minSumTraversalMap(
+  protected def taskValue(plan: EfficientPlan) = new TaskValuation {
+
+    val taskValues: Array[Double] = argumentRelaxedTDG.minSumTraversalArray(
       {
         task => if ((plan taskAllowed task) || (task == plan.planStepTasks(1))) computeHeuristicForPrimitive(task) else Int.MaxValue
       },
-      computeHeuristicForMethod) map { case (a, b) => a -> b.toInt }
+      computeHeuristicForMethod)
 
-    {case planStep: Int => taskValues(plan.planStepTasks(planStep))}
+
+    def apply(planStep: Int): Int = taskValues(plan.planStepTasks(planStep)).toInt
   }
 }
 
@@ -79,8 +121,8 @@ trait CausalLinkRecomputingTSTGHeuristic extends TSTGHeuristic {
 
   assert(domain.noNegativePreconditions)
 
-  protected def taskValue(plan: EfficientPlan) = {
-    case planStep =>
+  protected def taskValue(plan: EfficientPlan) = new TaskValuation {
+    def apply(planStep: Int): Int = {
       // find all causal links which span over this planstep
       val spanningLinks = plan.causalLinks filter { case EfficientCausalLink(prod, cons, _, _) =>
         plan.isPlanStepPresentInPlan(prod) && plan.isPlanStepPresentInPlan(cons) && plan.ordering.lt(prod, planStep) && plan.ordering.gt(cons, planStep)
@@ -96,6 +138,7 @@ trait CausalLinkRecomputingTSTGHeuristic extends TSTGHeuristic {
 
 
       taskValues.getOrElse(plan.planStepTasks(planStep), Int.MaxValue)
+    }
   }
 }
 
@@ -114,6 +157,10 @@ trait DeduceCausalLinksTSTGHeuristic extends TSTGHeuristic {
 
     deduction
   }
+
+  protected def deductionForInsertedCausalLink: Int = 1
+
+  protected def deductionForDecomposition: Int = 1
 }
 
 
@@ -141,6 +188,11 @@ trait LiftedMinimumActionCount extends TSTGHeuristic {
   override protected def computeHeuristicForMethod(methodID: Int): Double = 0
 
   protected def initialDeductionFromHeuristicValue(plan: EfficientPlan): Double = plan.numberOfPrimitivePlanSteps - 1
+
+  protected def deductionForInsertedCausalLink: Int = 0
+
+  protected def deductionForDecomposition: Int = 0
+
 }
 
 trait LiftedMinimumADD extends TSTGHeuristic {
@@ -148,7 +200,8 @@ trait LiftedMinimumADD extends TSTGHeuristic {
   def addHeuristic: AddHeuristic
 
   lazy val addValuesPerPredicate: Array[Double] =
-    domain.predicates.indices map { pred => (addHeuristic.heuristicMap collect { case (grounding, v) if pred == grounding.predicate => v }).toSeq.:+(Integer.MAX_VALUE.toDouble) min } toArray
+    domain.predicates.indices map { pred => (addHeuristic.heuristicMap collect { case (grounding, v) if pred == grounding.predicate => v }).toSeq.:+(Integer.MAX_VALUE.toDouble) min
+    } toArray
 
   override protected def computeHeuristicForPrimitive(taskID: Int): Double = {
     val task = domain.tasks(taskID)
@@ -180,6 +233,11 @@ trait LiftedMinimumADD extends TSTGHeuristic {
     }
     deduction
   }
+
+  protected def deductionForInsertedCausalLink: Int = throw new IllegalStateException("bää")
+
+  protected def deductionForDecomposition: Int = throw new IllegalStateException("bää")
+
 }
 
 case class PreComputingLiftedMinimumModificationEffortHeuristicWithCycleDetection(domain: EfficientDomain,
