@@ -26,6 +26,10 @@ public class TopDownReachabilityGraph {
 
     static private HashMap<GroundTask, Integer> internalMap;
 
+    static public boolean isInitialized() {
+        return (internalMap != null);
+    }
+
     static public int mappingget(GroundTask gt) {
         return internalMap.get(gt) - operators.numStateFeatures;
     }

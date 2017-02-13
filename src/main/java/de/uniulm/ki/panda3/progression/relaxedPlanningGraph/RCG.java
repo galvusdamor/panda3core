@@ -198,7 +198,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
         return taskNo;
     }
 
-    private Set<GroundTask> getGroundTasks(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
+    public static Set<GroundTask> getGroundTasks(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
         Set<GroundTask> allTasks = new HashSet<>();
         for (HashMap<GroundTask, List<method>> val : methods.values()) {
             for (GroundTask t : val.keySet()) {

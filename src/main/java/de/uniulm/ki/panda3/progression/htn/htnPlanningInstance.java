@@ -126,6 +126,25 @@ public class htnPlanningInstance {
         else {
             throw new IllegalArgumentException("Heuristic " + heuristic + " is not supported");
         }
+
+        // todo: this is hacky!
+        if((taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.decompDepth) &&(!TopDownReachabilityGraph.isInitialized())){
+            int taskNo = operators.numStateFeatures;
+            HashMap<GroundTask, Integer> TaskToIndex = new HashMap<>();
+
+            for (GroundTask a : allActions) {
+                TaskToIndex.put(a, taskNo);
+                taskNo++;
+            }
+
+            for (GroundTask t : RCG.getGroundTasks(operators.methods)) {
+                TaskToIndex.put(t, taskNo);
+                taskNo++;
+            }
+
+            new TopDownReachabilityGraph(operators.methods, initialTasks, taskNo, operators.numActions, TaskToIndex);
+
+        }
         initialNode.heuristic.build(initialNode);
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
