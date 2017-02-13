@@ -36,6 +36,7 @@ lazy val main = (project in (file("assembly") / "main")).settings(assemblySettin
             mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
           )
 
+// sbt pro/assembly
 lazy val pro = (project in (file("assembly") / "pro")).settings(assemblySettings: _*).
   settings(
             target := file("assembly") / "pro",

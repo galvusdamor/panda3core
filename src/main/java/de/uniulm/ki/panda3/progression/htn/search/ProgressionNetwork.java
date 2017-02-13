@@ -316,12 +316,9 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public int compareTo(ProgressionNetwork other) {
         int c = (this.metric - other.metric);
         if (c == 0) {
-            //c = (other.numDecompositionSteps - this.numDecompositionSteps);
-            //if (c == 0) {
             if (htnPlanningInstance.random.nextBoolean())
                 c = 1;
             else c = -1;
-            //}
         }
         return c;
     }

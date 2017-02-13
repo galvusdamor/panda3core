@@ -165,8 +165,8 @@ public class TopDownReachabilityGraph {
                 }
                 accumulated.or(scc2reachableTasks[childScc]);
             }
-            if (curDepth < maxDecompDepth[v])
-                curDepth = maxDecompDepth[v];
+            if (curDepth < maxDecompDepth[taskToScc[v]])
+                curDepth = maxDecompDepth[taskToScc[v]];
             v = scc2reachableTasks[scc].nextSetBit(v + 1);
         }
         scc2reachableTasks[scc] = accumulated;

@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.proUtil.UUIntStack;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
+import jdk.nashorn.internal.runtime.BitVector;
 
 import java.util.*;
 
@@ -16,6 +17,7 @@ import java.util.*;
 public class RCG implements htnGroundedProgressionHeuristic {
     public static enum producerSelection {numOfPreconditions, actionDifficulty, firstCome}
 
+    public static enum heuristicExtraction {ff, multicount}
 
     /**
      * Define "Operator": An operator is either an action or a method
@@ -72,11 +74,13 @@ public class RCG implements htnGroundedProgressionHeuristic {
     public static boolean topDownReachability = true;
     boolean orderingInvariants = false;
 
-    producerSelection prod = producerSelection.actionDifficulty;
+    static producerSelection prod = producerSelection.actionDifficulty;
+    static heuristicExtraction heuEx = heuristicExtraction.multicount;
 
     public RCG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, List<ProgressionPlanStep> initialTasks, Set<GroundTask> allActions, boolean useTDReachability,
-               producerSelection selectionStrategy) {
-        this.prod = selectionStrategy;
+               producerSelection selectionStrategy, heuristicExtraction heuEx) {
+        RCG.prod = selectionStrategy;
+        RCG.heuEx = heuEx;
         RCG.topDownReachability = useTDReachability;
 
         long time = System.currentTimeMillis();
@@ -401,12 +405,48 @@ public class RCG implements htnGroundedProgressionHeuristic {
 
     private int calcHeu(int[] firstLayerWithFact, List<UUIntStack> operatorDelta, int[] goalWeight, int[] actionDifficulty, List<UUIntStack> goalDelta) {
         int numactions = 0;
-        for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
-            UUIntStack oneGoalDelta = goalDelta.get(layer);
 
+        BitVector trueI;
+        BitVector trueImm = new BitVector(numExtenedStateFeatures);
+        for (int layer = goalDelta.size() - 1; layer >= 1; layer--) {
+            trueI = trueImm;
+            trueImm = new BitVector(numExtenedStateFeatures);
+            UUIntStack oneGoalDelta = goalDelta.get(layer);
+            UUIntStack postponed = new UUIntStack();
             oneGoalDelta.resetIterator();
-            while (oneGoalDelta.hasNext()) {
-                int goalFact = oneGoalDelta.next();
+
+            boolean switched = false;
+            boolean loop = true;
+            while (loop) {
+                int goalFact;
+                if (heuEx == heuristicExtraction.ff) { // ordinary FF extraction
+                    goalFact = oneGoalDelta.next();
+                    loop = oneGoalDelta.hasNext();
+                    if (trueI.isSet(goalFact))
+                        continue;
+                } else { // count HTN actions more than once
+                    if (oneGoalDelta.hasNext()) {
+                        goalFact = oneGoalDelta.next();
+                        if (goalFact < operators.numStateFeatures) {
+                            postponed.push(goalFact);
+                            continue;
+                        }
+                    } else {
+                        if (!switched) { // at first time, there must be an initialization
+                            postponed.resetIterator();
+                            switched = true;
+                        }
+                        if (postponed.hasNext()) {
+                            goalFact = postponed.next();
+                            if ((goalFact < operators.numStateFeatures) && (trueI.isSet(goalFact)))
+                                continue; // fact already there
+                        } else {
+                            loop = false;
+                            continue;
+                        }
+                    }
+                }
+
                 int count = goalWeight[goalFact];
                 int bestDifficulty = Integer.MAX_VALUE;
                 int producer = -1;
@@ -416,7 +456,6 @@ public class RCG implements htnGroundedProgressionHeuristic {
                 while (opDelta.hasNext()) {
                     int maybeProducer = opDelta.next();
                     if (add2task[goalFact].contains(maybeProducer)) {
-
                         if (prod == producerSelection.numOfPreconditions) {
                             if (numprecs[maybeProducer] < bestDifficulty) {
                                 bestDifficulty = RCG.precLists[maybeProducer].length;
@@ -435,17 +474,29 @@ public class RCG implements htnGroundedProgressionHeuristic {
                 }
 
                 if (!operators.ShopPrecActions.contains(producer)) {
-                    numactions += count;
+                    for (int i = 0; i < addLists[producer].length; i++) {
+                        if ((goalFact < operators.numStateFeatures) || (heuEx == heuristicExtraction.ff)) {
+                            trueI.set(addLists[producer][i]);
+                            trueImm.set(addLists[producer][i]);
+                        }
+                    }
+
+                    if (heuEx == heuristicExtraction.ff)
+                        numactions++;
+                    else
+                        numactions += count;
                 }
 
                 for (int aPrec : RCG.precLists[producer]) {
+                    if (trueImm.isSet(aPrec))
+                        continue;
                     int flayer = firstLayerWithFact[aPrec];
                     if (flayer > 0) {
                         if (goalWeight[aPrec] == 0) {
                             UUIntStack delta = goalDelta.get(flayer);
                             delta.push(aPrec);
                         }
-                        if (aPrec > operators.numActions) // this is an HTN-precondition
+                        if (aPrec > operators.numStateFeatures) // this is an HTN-related precondition
                             goalWeight[aPrec] += count;
                         else // a normal precondition
                             goalWeight[aPrec]++;

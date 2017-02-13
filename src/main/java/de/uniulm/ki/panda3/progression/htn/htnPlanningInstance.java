@@ -61,6 +61,7 @@ public class htnPlanningInstance {
         long totaltime = System.currentTimeMillis();
         long time = System.currentTimeMillis();
 
+        System.out.println("Calculating efficient representation...");
         // translate to efficient representation
         operators.numStateFeatures = allLiterals.size();
         operators.numActions = allActions.size();
@@ -114,8 +115,8 @@ public class htnPlanningInstance {
         else if (heuristic instanceof SimpleCompositionRPG$)
             initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
         else if (heuristic instanceof RelaxedCompositionGraph) {
-            RelaxedCompositionGraph heu = (RelaxedCompositionGraph)heuristic;
-            initialNode.heuristic = new RCG(operators.methods, initialTasks, allActions, heu.useTDReachability(), heu.producerSelectionStrategy());
+            RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
+            initialNode.heuristic = new RCG(operators.methods, initialTasks, allActions, heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
         } else if (heuristic instanceof CompositionRPGHTN$)
             initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
         else if (heuristic instanceof GreedyProgression$)
@@ -144,6 +145,14 @@ public class htnPlanningInstance {
             System.out.println(" - Greedy search");
         }
         System.out.println(" - " + initialNode.heuristic.getName() + " heuristic");
+
+        if (taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.random) {
+            System.out.println(" - Abstract task choice: randomly");
+        } else if (taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.decompDepth) {
+            System.out.println(" - Abstract task choice: via min decomposition depth left");
+        } else if (taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.methodCount) {
+            System.out.println(" - Abstract task choice: via min number of decomposition methods");
+        }
 
         if (deleteRelaxed) {
             System.out.println(" - DELETE-RELAXED actions");

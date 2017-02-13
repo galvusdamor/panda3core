@@ -67,7 +67,12 @@ object ProMain {
         case "-decomDepthSelection"  => PriorityQueueSearch.abstractTaskSelection.decompDepth
       }
 
-      val producerSelector = if (args.length >= 6) args(5) match {
+      val heuristicExtraction = if (args.length >= 6) args(5) match {
+        case "-ff"    => RCG.heuristicExtraction.ff
+        case "-multicount" => RCG.heuristicExtraction.multicount
+      } else RCG.heuristicExtraction.multicount
+
+      val producerSelector = if (args.length >= 7) args(6) match {
         case "-numPrec"    => RCG.producerSelection.numOfPreconditions
         case "-difficulty" => RCG.producerSelection.actionDifficulty
         case "-fcfs"       => RCG.producerSelection.firstCome
@@ -76,15 +81,15 @@ object ProMain {
 
       args(3) match {
         case "-greedyProgression" => ProgressionSearch(Some(30 * 60), GreedyType, Some(GreedyProgression), abstractTaskSelectionStrategy = abstractSelector)
-        case "-greedyRCG"         => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = false, producerSelectionStrategy = producerSelector)),
+        case "-greedyRCG"         => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
-        case "-greedyRCGTDR"      => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = true, producerSelectionStrategy = producerSelector)),
+        case "-greedyRCGTDR"      => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
         case "-astarRCG"          => ProgressionSearch(Some(30 * 60), AStarActionsType(1),
-                                                       Some(RelaxedCompositionGraph(useTDReachability = false, producerSelectionStrategy = producerSelector)),
+                                                       Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
         case "-astarRCGTDR"       => ProgressionSearch(Some(30 * 60), AStarActionsType(1),
-                                                       Some(RelaxedCompositionGraph(useTDReachability = true, producerSelectionStrategy = producerSelector)),
+                                                       Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
       }
     } else NoSearch
@@ -98,7 +103,7 @@ object ProMain {
                                                                         splitIndependedParameters = true,
                                                                         liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                                         groundedTaskDecompositionGraph = Some(TwoWayTDG), // None,
-                                                                        iterateReachabilityAnalysis = true, groundDomain = true),
+                                                                        iterateReachabilityAnalysis = false, groundDomain = true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumAction), true),

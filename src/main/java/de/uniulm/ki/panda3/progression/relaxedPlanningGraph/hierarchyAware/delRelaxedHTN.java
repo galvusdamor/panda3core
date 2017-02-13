@@ -44,7 +44,7 @@ public class delRelaxedHTN implements htnGroundedProgressionHeuristic {
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
         ProgressionSearchRoutine routine;
-        routine = new PriorityQueueSearch(false, true, true, false);
+        routine = new PriorityQueueSearch(false, true, true, false, PriorityQueueSearch.abstractTaskSelection.random);
         //routine = new EnforcedHillClimbing();
         //routine = new CompleteEnforcedHillClimbing();
 

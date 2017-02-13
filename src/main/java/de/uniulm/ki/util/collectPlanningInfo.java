@@ -17,8 +17,10 @@ public class collectPlanningInfo {
 //        String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/verification.csv";
         //String inputFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random/greedy-imp-random.log";
         //String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/greedy-imp-random/greedy-imp-random.csv";
-        String inputFile = args[0]; //"foo";
-        String outFile = args[1]; // "foo.csv";
+        String inputFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/07-partial-observable/04-results-rcg-greedy/all.log";
+        String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/07-partial-observable/04-results-rcg-greedy/all.out";
+        //String inputFile = args[0]; //"foo";
+        //String outFile = args[1]; // "foo.csv";
         FileReader fr = new FileReader(inputFile);
         BufferedReader br = new BufferedReader(fr);
 
@@ -52,7 +54,11 @@ public class collectPlanningInfo {
                 //String foundPlans = oneExp.get("foundPlans");
                 //if (Double.parseDouble(foundPlans) > 0)
                 //    oneExp.put("X99.progression.01.status", "solved");
-            } /*else if (line.startsWith("Domain is acyclic: ")) {
+            } else if (line.startsWith("3 method-")) {
+                String[] temp = line.split(" ");
+                oneExp.put("postProcTLT", temp[temp.length - 1]);
+            }
+            /*else if (line.startsWith("Domain is acyclic: ")) {
                 oneExp.put("acyclic", line.substring("Domain is acyclic: ".length()));
             }*/
         }
