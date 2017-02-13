@@ -34,7 +34,8 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
     val initialPlanHeuristic = new Array[Double](heuristic.length)
     val initialPlanPayload = new Array[Payload](heuristic.length)
     util.Arrays.fill(initialPlanHeuristic, Double.MaxValue)
-    val root = new EfficientSearchNode[Payload](0, initialPlan, null, initialPlanHeuristic)
+    val rootDistanceValue = ((if (addNumberOfPlanSteps) initialPlan.numberOfPrimitivePlanSteps else 0) + (if (addDepth) 1 else 0)) * (if (invertCosts) -1 else 1)
+    val root = new EfficientSearchNode[Payload](0, initialPlan, null, initialPlanHeuristic, rootDistanceValue)
     root.payload = initialPlanPayload
 
     // variables for the search
@@ -107,6 +108,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
         if (flaws.length == 0) {
           result = result :+ plan
           myNode.setNotDirty()
+          informationCapsule.set(SOLUTION_LENGTH, plan.numberOfPrimitivePlanSteps - 2)
           println("Found solution at depth " + depth + " with " + (plan.numberOfPlanSteps - 2) + " actions and heuristic " + myNode.heuristic)
         } else {
           timeCapsule start (if (buildTree) SEARCH_FLAW_RESOLVER else SEARCH_FLAW_RESOLVER_ESTIMATION)
@@ -176,7 +178,8 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
                 var hPos = 0
                 var anyInfinity = false
                 while (hPos < h.length) {
-                  val (hVal, pay) = heuristic(hPos).computeHeuristic(newPlan, myNode.payload(hPos), actualModifications(modNum), depth)
+                  val (hVal, pay) = heuristic(hPos).computeHeuristic(newPlan, myNode.payload(hPos), actualModifications(modNum), depth,
+                                                                     (myNode.heuristic(hPos) - myNode.distanceValue) / weight, informationCapsule)
                   h(hPos) = distanceValue + weight * hVal
                   newPayload(hPos) = pay
                   anyInfinity &= h(hPos) < Int.MaxValue
@@ -188,8 +191,8 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
                 assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps)
 
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
-                val searchNode: EfficientSearchNode[Payload] = if (buildTree) new EfficientSearchNode[Payload](nodeNumber, newPlan, myNode, h)
-                else new EfficientSearchNode[Payload](nodeNumber, newPlan, null, h)
+                val searchNode: EfficientSearchNode[Payload] = if (buildTree) new EfficientSearchNode[Payload](nodeNumber, newPlan, myNode, h, distanceValue)
+                else new EfficientSearchNode[Payload](nodeNumber, newPlan, null, h, distanceValue)
                 searchNode.payload = newPayload
 
                 if (!anyInfinity) searchQueue enqueue ((searchNode, depth + 1)) else informationCapsule increment NUMBER_OF_DISCARDED_NODES

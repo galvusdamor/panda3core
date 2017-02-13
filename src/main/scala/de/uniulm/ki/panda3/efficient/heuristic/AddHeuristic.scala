@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.logic.EfficientGroundLiteral
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
-import de.uniulm.ki.util.BucketAccessMap
+import de.uniulm.ki.util.{InformationCapsule, BucketAccessMap}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -93,7 +93,7 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
     heuristicEstimate
   }
 
-  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth : Int): (Double, Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule): (Double, Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = 0 // plan.openPreconditions.length // every flaw must be addressed
 

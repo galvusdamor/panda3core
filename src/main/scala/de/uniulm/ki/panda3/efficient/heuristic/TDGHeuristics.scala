@@ -4,7 +4,7 @@ import de.uniulm.ki.panda3.efficient.domain.{EfficientDomain, EfficientGroundTas
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientGroundedTaskDecompositionGraph
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
-import de.uniulm.ki.util.DotPrintable
+import de.uniulm.ki.util.{InformationCapsule, DotPrintable}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -63,7 +63,7 @@ trait ModificationTDGHeuristic extends TDGHeuristics {
       if (!modificationEfforts.contains(groundTask)) Double.MaxValue else modificationEfforts(groundTask)
     }
 
-  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth: Int): (Double, Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule): (Double, Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = domain.tasks(plan.planStepTasks(1)).precondition.length // every flaw must be addressed
 
@@ -138,7 +138,7 @@ trait TDGPrimitiveActionValueHeuristic extends TDGHeuristics {
     }
   }
 
-  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth: Int): (Double, Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule): (Double, Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = -initialDeductionFromHeuristicValue(plan)
 
