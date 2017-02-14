@@ -416,7 +416,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
             oneGoalDelta.resetIterator();
 
             boolean switched = false;
-            boolean loop = true;
+            boolean loop = oneGoalDelta.hasNext();
             while (loop) {
                 int goalFact;
                 if (heuEx == heuristicExtraction.ff) { // ordinary FF extraction
