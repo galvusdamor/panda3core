@@ -62,6 +62,7 @@ object ProMain {
     val proConfig: SearchConfiguration = if (args.length >= 4) {
 
       val abstractSelector = args(4) match {
+        case "-branchOverAll"        => PriorityQueueSearch.abstractTaskSelection.branchOverAll
         case "-randomSelection"      => PriorityQueueSearch.abstractTaskSelection.random
         case "-methodCountSelection" => PriorityQueueSearch.abstractTaskSelection.methodCount
         case "-decomDepthSelection"  => PriorityQueueSearch.abstractTaskSelection.decompDepth

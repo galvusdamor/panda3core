@@ -18,7 +18,7 @@ import java.util.*;
  * Created by dh on 15.09.16.
  */
 public class PriorityQueueSearch extends ProgressionSearchRoutine {
-    static public enum abstractTaskSelection {random, methodCount, decompDepth}
+    static public enum abstractTaskSelection {branchOverAll, random, methodCount, decompDepth}
 
     public static final String SEARCH_TIME = "30 progression:01:searchTime";
     public static final String STATUS = "30 progression:01:status";
@@ -278,6 +278,197 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         } catch (Exception e) {
             e.printStackTrace();
         }*/
+
+        if (this.findShortest)
+            info.add("30 progression:91:findShortestPlan", 1);
+        else
+            info.add("30 progression:91:findShortestPlan", 0);
+        info.add("30 progression:92:foundShortestPlanAfter", (int) (foundFirstPlanAfter - startedSearch));
+        info.add("30 progression:93:foundFirstPlanAfter", (int) (foundShortestPlan - startedSearch));
+        info.add("30 progression:94:foundPlans", foundPlans);
+        info.add("30 progression:95:randomSeed", htnPlanningInstance.randomSeed);
+
+        // write statistics
+        if (solution != null)
+            info.set(STATUS, "solved");
+        else if (exitDueToTimeLimit)
+            info.set(STATUS, "timeout");
+        else
+            info.set(STATUS, "proven_unsolvable");
+
+        if (this.aStar) {
+            info.set(A_STAR, 1);
+        } else {
+            info.set(A_STAR, 0);
+        }
+
+        info.set(HEURISTIC, firstSearchNode.heuristic.getClass().toString());
+
+        info.set(NUM_SEARCH_NODES, searchnodes);
+        info.set(UNIT_PROPAGATION, unitPropagation);
+        setSolInfo(solution, info);
+
+        if (output)
+            System.out.println("Generated search nodes (total): " + searchnodes);
+        if (output)
+            System.out.println("Search time: " + (System.currentTimeMillis() - totalSearchTime) + " ms");
+        return solution;
+    }
+
+    // ABSTRACT CHOICE
+    public List<Object> searchWithAbstractBranching(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
+        if (output)
+            System.out.println("\nStarting priority queue search");
+        int searchnodes = 1;
+        int foundPlans = 0;
+        int planLength = -1;
+        long foundFirstPlanAfter = 0;
+        long foundShortestPlan = 0;
+        int unitPropagation = 0;
+        int bestMetric = Integer.MAX_VALUE;
+        List<Object> solution = null;
+        long totalSearchTime = System.currentTimeMillis();
+        long lastInfo = System.currentTimeMillis();
+        PriorityQueue<ProgressionNetwork> fringe = new PriorityQueue<>();
+        fringe.add(firstSearchNode);
+
+        timing.start(SEARCH_TIME);
+        long startedSearch = System.currentTimeMillis();
+
+        boolean collectTlts = false;
+        LinkedList<Long> timeStamps = new LinkedList<>();
+        LinkedList<String> tlts = new LinkedList<>();
+
+        int restartCount = -1;
+        long restart = -1;// (2 * 60 * 1000);
+        long nextRestart = -1;//restartCount * restart;
+
+        planningloop:
+        while (!fringe.isEmpty()) {
+            ProgressionNetwork n = fringe.poll();
+            actionloop:
+            for (ProgressionPlanStep ps : n.getFirstPrimitiveTasks()) {
+                int pre = operators.prec[ps.action].nextSetBit(0);
+                while (pre > -1) {
+                    if (!n.state.get(pre))
+                        continue actionloop;
+                    pre = operators.prec[ps.action].nextSetBit(pre + 1);
+                }
+
+                ProgressionNetwork node = n.apply(ps, deleteRelaxed);
+
+                node.id = searchnodes;
+                node.heuristic = n.heuristic.update(node, ps);
+                node.metric = node.heuristic.getHeuristic();
+                if (aStar) {
+                    node.metric += node.solution.size();
+                }
+
+                node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
+
+                if (node.goalRelaxedReachable) {
+                    // early goal test - NON-OPTIMAL
+                    if (node.isGoal()) {
+                        int numSteps = getStepCount(node.solution);
+                        if ((foundPlans == 0) || (numSteps < planLength)) {
+                            if (foundPlans == 0) {
+                                foundFirstPlanAfter = System.currentTimeMillis();
+                            }
+                            System.out.println("Found solution " + (foundPlans + 1) + " length " + numSteps);
+                            solution = node.solution;
+                            foundShortestPlan = System.currentTimeMillis();
+                            planLength = numSteps;
+                            if (node.progressionTrace != null)
+                                System.out.println(node.progressionTrace);
+                        }
+                        if (collectTlts) {
+                            collectPlanRecData(timeStamps, tlts, node);
+                        }
+                        foundPlans++;
+                        if (!this.findShortest && !collectTlts) {
+                            break planningloop;
+                        }
+                    } else {
+                        fringe.add(node);
+                    }
+                    if (node.metric < bestMetric) {
+                        bestMetric = node.metric;
+                        if (output)
+                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                    }
+                }
+                searchnodes++;
+                if ((System.currentTimeMillis() - lastInfo) > 1000) {
+                    if ((restart > 0) && ((System.currentTimeMillis() - totalSearchTime) > nextRestart)) {
+                        restartCount++;
+                        nextRestart = restartCount * restart;
+                        System.out.println("Seems to be a bad run, let's try again! -> restart");
+                        fringe.clear();
+                        fringe.add(firstSearchNode);
+                        htnPlanningInstance.randomSeed += 100;
+                        htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                        continue planningloop;
+                    }
+                    if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
+                        System.out.println("Reached time limit, search will stop.");
+                        exitDueToTimeLimit = true;
+                        break planningloop;
+                    }
+                    lastInfo = System.currentTimeMillis();
+                    if (output)
+                        System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                }
+            }
+
+            for (ProgressionPlanStep oneAbs : n.getFirstAbstractTasks()) {
+                methodloop:
+                for (method m : oneAbs.methods) {
+                    ProgressionNetwork node = n.decompose(oneAbs, m);
+
+                    // todo: add unit propagation here
+                    node.heuristic = n.heuristic.update(node, oneAbs, m);
+                    node.metric = node.heuristic.getHeuristic();
+                    if (aStar) {
+                        node.metric += node.solution.size();
+                    }
+
+                    node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
+
+                    if (node.goalRelaxedReachable) {
+
+                        fringe.add(node);
+                        if (node.metric < bestMetric) {
+                            bestMetric = node.metric;
+                            if (output)
+                                System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                        }
+                    }
+                    searchnodes++;
+                    if ((System.currentTimeMillis() - lastInfo) > 1000) {
+                        if ((restart > 0) && ((System.currentTimeMillis() - totalSearchTime) > nextRestart)) {
+                            restartCount++;
+                            nextRestart = restartCount * restart;
+                            System.out.println("Seems to be a bad run, let's try again! -> restart");
+                            fringe.clear();
+                            fringe.add(firstSearchNode);
+                            htnPlanningInstance.randomSeed += 100;
+                            htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                            continue planningloop;
+                        }
+                        if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
+                            System.out.println("Reached time limit, search will stop.");
+                            exitDueToTimeLimit = true;
+                            break planningloop;
+                        }
+                        lastInfo = System.currentTimeMillis();
+                        if (output)
+                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                    }
+                }
+            }
+        }
+        System.out.println("Number of nodes in final fringe: " + fringe.size());
+        timing.stop(SEARCH_TIME);
 
         if (this.findShortest)
             info.add("30 progression:91:findShortestPlan", 1);

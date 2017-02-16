@@ -128,7 +128,7 @@ public class htnPlanningInstance {
         }
 
         // todo: this is hacky!
-        if((taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.decompDepth) &&(!TopDownReachabilityGraph.isInitialized())){
+        if ((taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.decompDepth) && (!TopDownReachabilityGraph.isInitialized())) {
             int taskNo = operators.numStateFeatures;
             HashMap<GroundTask, Integer> TaskToIndex = new HashMap<>();
 
@@ -171,6 +171,8 @@ public class htnPlanningInstance {
             System.out.println(" - Abstract task choice: via min decomposition depth left");
         } else if (taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.methodCount) {
             System.out.println(" - Abstract task choice: via min number of decomposition methods");
+        } else if (taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.branchOverAll) {
+            System.out.println(" - Abstract task choice: branch over all abstract tasks");
         }
 
         if (deleteRelaxed) {
@@ -180,7 +182,15 @@ public class htnPlanningInstance {
             System.out.println(" - time limit for search is " + (quitAfterMs / 1000) + " sec");
         }
 
-        List<Object> solution = routine.search(initialNode, ic, tc);
+        List<Object> solution;
+        if ((routine instanceof PriorityQueueSearch) && (taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.branchOverAll)) {
+            System.out.println(" - This is not a good configuration -- it BRANCHES over ALL abstract tasks. " +
+                    "One should only only do that for evaluation purposes.");
+            solution = ((PriorityQueueSearch) routine).searchWithAbstractBranching(initialNode, ic, tc);
+        } else {
+            solution = routine.search(initialNode, ic, tc);
+        }
+
         assert (isApplicable(solution, s0._1()));
         //System.out.println("###" + ic.keyValueListString() + ";" + tc.keyValueListString());
 
