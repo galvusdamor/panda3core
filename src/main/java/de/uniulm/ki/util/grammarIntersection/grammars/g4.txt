@@ -1,0 +1,13 @@
+# L(G) = {aaaabbbb}
+
+# Terminal Alphabet
+T = {a, b}
+
+# Nonterminal Alphabet
+N = {S, Y, X, Z}
+
+# Production Rules
+P = {S->a-Z-b, Z->a-Y-b, Y->a-X-b, X->a-b}
+
+# Start Symbol
+S = S

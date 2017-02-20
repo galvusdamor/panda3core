@@ -71,7 +71,13 @@ public class hddlPanda3Visitor {
 
     public Tuple2<Domain, Plan> visitInstance(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
 
-        Seq<Sort> sorts = visitTypeAndObjDef(ctxDomain, ctxProblem);
+        Seq<Sort> sorts;
+        if ((ctxDomain.type_def() != null) && (ctxDomain.type_def().type_def_list() != null)) {
+            sorts = visitTypeAndObjDef(ctxDomain, ctxProblem);
+        } else {
+            sorts = new seqProviderList<Sort>().result();
+        }
+
         Seq<Predicate> predicates = visitPredicateDeclaration(sorts, ctxDomain.predicates_def());
 
         Task init = visitInitialState(sorts, predicates, ctxProblem.p_init());
@@ -221,8 +227,8 @@ public class hddlPanda3Visitor {
                 antlrHDDLParser.Typed_varContext typedVarContext = constraint.typed_var();
                 Sort sort = null;
                 Variable vari = null;
-                if (typedVarContext != null){
-                    vari  = getVariableByName(typedVarContext.VAR_NAME(),variables);
+                if (typedVarContext != null) {
+                    vari = getVariableByName(typedVarContext.VAR_NAME(), variables);
                     String sortName = typedVarContext.var_type().NAME().toString();
                     for (int i = 0; i < sorts.length(); i++) {
                         Sort that = sorts.apply(i);
@@ -231,7 +237,7 @@ public class hddlPanda3Visitor {
                             break;
                         }
                     }
-                    assert(sort != null);
+                    assert (sort != null);
                 }
 
                 boolean isEquallity = constraint.equallity() != null;
@@ -728,9 +734,9 @@ public class hddlPanda3Visitor {
      * This method gets the parse tree of a variable and returns a variable that represents it in the given
      * context.
      *
-     * @param variableName       (in) The parse tree containing the object or variable
-     * @param parameters  (in/out) The parameter list in the given context (e.g. action/method parameters).
-     *                    It may be updated
+     * @param variableName (in) The parse tree containing the object or variable
+     * @param parameters   (in/out) The parameter list in the given context (e.g. action/method parameters).
+     *                     It may be updated
      * @return Method returns a variable that may be out of the parameter list, or the initial state definition
      */
     private Variable getVariableByName(TerminalNode variableName, seqProviderList<Variable> parameters) {
@@ -746,6 +752,7 @@ public class hddlPanda3Visitor {
         }
         return var;
     }
+
     /**
      * This method gets the parse tree of a variable or constant and returns a variable that represents it in the given
      * context. There are several cases to distinguish: ir may be (1) a variable in the given context (e.g. a parameter

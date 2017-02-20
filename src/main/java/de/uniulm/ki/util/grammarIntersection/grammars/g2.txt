@@ -1,0 +1,13 @@
+# L(G) = {a^nb^n | n >= 0}
+
+# Terminal Alphabet
+T = {a, b}
+
+# Nonterminal Alphabet
+N = {S}
+
+# Production Rules
+P = {S->a-S-b, S->epsilon}
+
+# Start Symbol
+S = S
