@@ -19,14 +19,14 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
   arguments foreach {v => assert(v != null)}
 
 
-  // TODO: this might cause problems in the wrapper (two decompositon methods might be judges as equal if they really are not), but is necessary to achieve at least a decent performance
+  // TODO: this might cause problems in the wrapper (two decompositon methods might be judged as equal if they really are not), but is necessary to achieve at least a decent performance
   // for the symbolic planner
   override def equals(o: Any): Boolean = o match {
     case step: PlanStep => id == step.id && schema.name == step.schema.name
     case _              => false
   }
 
-  override val hashCode: Int = id
+  override val hashCode: Int = id + 31*schema.hashCode()
 
   lazy val argumentSet = arguments.toSet
 
