@@ -82,9 +82,11 @@ object ProMain {
 
       args(3) match {
         case "-greedyProgression" => ProgressionSearch(Some(30 * 60), GreedyType, Some(GreedyProgression), abstractTaskSelectionStrategy = abstractSelector)
-        case "-greedyRCG"         => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
+        case "-greedyRCG"         => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction,
+                                                                                                               producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
-        case "-greedyRCGTDR"      => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
+        case "-greedyRCGTDR"      => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction,
+                                                                                                               producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
         case "-astarRCG"          => ProgressionSearch(Some(30 * 60), AStarActionsType(1),
                                                        Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
