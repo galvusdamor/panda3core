@@ -48,7 +48,8 @@ class FullStackTest extends FlatSpec {
       ("lifted-ADD", lifted, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), TDGMinimumADD() :: Nil, Nil, LCFR)) ::
       ("lifted-ActionCount", lifted, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), TDGMinimumAction() :: Nil, Nil, LCFR)) ::
       ("PRO-RCG", grounded, ProgressionSearch(Some(60 * 60), AStarActionsType(1),
-                                              Some(RelaxedCompositionGraph(useTDReachability = true, producerSelectionStrategy = RCG.producerSelection.firstCome)),
+                                              Some(RelaxedCompositionGraph(useTDReachability = true, producerSelectionStrategy = RCG.producerSelection.firstCome,
+                                                                           heuristicExtraction = RCG.heuristicExtraction.ff)),
                                               abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.decompDepth)) ::
       //("PRO-cRPGHTN", grounded, ProgressionSearch(Some(60 * 60), AStarActionsType(1),CompositionRPGHTN))) ::
       //("PRO-greedyProgression", grounded, ProgressionSearch(Some(60 * 60), AStarActionsType(1),GreedyProgression))) ::
