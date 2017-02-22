@@ -75,6 +75,8 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
         if (flaws.length == 0) {
           result = Some(plan)
           myNode.setNotDirty()
+          informationCapsule.set(SOLUTION_LENGTH, plan.numberOfPrimitivePlanSteps - 2)
+          println("Found solution at depth " + depth + " with " + (plan.numberOfPlanSteps - 2) + " actions and heuristic " + myNode.heuristic)
         } else {
           if (buildTree) myNode.modifications = new Array[Array[EfficientModification]](flaws.length)
           var flawnum = 0
