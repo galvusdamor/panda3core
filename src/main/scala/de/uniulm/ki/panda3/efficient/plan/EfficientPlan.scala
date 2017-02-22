@@ -498,10 +498,11 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
   lazy val possibleSupportersByDecompositionPerLiteral: Array[Array[Int]] = EfficientPlan.computeDecompositionSupportersPerLiteral(domain, planStepTasks, planStepDecomposedByMethod)
 
+  lazy val tasksOfPresentPlanSteps = (Range(2, numberOfAllPlanSteps) filter isPlanStepPresentInPlan map planStepTasks).distinct.toArray
 
   lazy val remainingAccessiblePrimitiveTasks: Array[Int] = {
     val reachable = new mutable.BitSet()
-    val (primitives, abstracts) = Range(2, numberOfAllPlanSteps) filter isPlanStepPresentInPlan map planStepTasks partition { domain.tasks(_).isPrimitive }
+    val (primitives, abstracts) = tasksOfPresentPlanSteps partition { domain.tasks(_).isPrimitive }
     reachable ++= primitives
 
     reachable ++= (abstracts flatMap domain.taskSchemaTransitionGraph.reachable filter { domain.tasks(_).isPrimitive })

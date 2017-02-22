@@ -134,11 +134,43 @@ case class IntegerAntOrGraph(andVertices: Set[Int], orVertices: Set[Int], andEdg
     edges(actualIndex).toArray
   } toArray
 
-  def minSumTraversalArray(evaluate: (Int => Double), sumInitialValue: (Int => Double)): Array[Double] = {
+  private lazy val reachabilityBitSet: Array[mutable.BitSet] = {
+    val reachabilities: Array[mutable.BitSet] = new Array[mutable.BitSet](indexArrayLength)
+
+    def dfs(scc: Set[Int]): Unit = {
+      // if any node of the scc is already in the map, simply ignore it
+      if (reachabilities(scc.head + offset) == null) {
+        condensation.edges(scc) foreach dfs
+
+        val allReachable = new mutable.BitSet()
+        scc foreach { i => allReachable add (i + offset) }
+
+        condensation.edges(scc) foreach { neighbour =>
+          allReachable ++= reachabilities(neighbour.head + offset)
+          if (neighbour.size == 1) allReachable add (neighbour.head + offset)
+        }
+
+        scc foreach { i => reachabilities(i + offset) = allReachable }
+      }
+    }
+    // run the dfs on all source SCCs of the condensation
+    condensation.sources foreach dfs
+
+    reachabilities
+  }
+
+  def minSumTraversalArray(rootNodes: Array[Int], evaluate: (Int => Double), sumInitialValue: (Int => Double)): Array[Double] = {
     val seen: Array[Double] = new Array[Double](indexArrayLength)
+    val computeValueFor: Array[Boolean] = new Array[Boolean](indexArrayLength)
     var i = 0
     while (i < indexArrayLength) {
       seen(i) = -1
+      computeValueFor(i) = false
+      var j = 0
+      while (j < rootNodes.length && !computeValueFor(i)) {
+        computeValueFor(i) |= reachabilityBitSet(rootNodes(j) + offset)(i)
+        j += 1
+      }
       i += 1
     }
 
@@ -168,13 +200,13 @@ case class IntegerAntOrGraph(andVertices: Set[Int], orVertices: Set[Int], andEdg
         value += seen(adjacencyList(root + offset)(pos) + offset)
         pos += 1
       }
+      if (value > Integer.MAX_VALUE) value = Integer.MAX_VALUE
 
       if (seen(root + offset) != value) {
         seen(root + offset) = value
         true
       } else false
     }
-
 
     var sccIndex = 0
     while (sccIndex < reversedCondensedTopologicalOrderingArray.length) {
@@ -194,8 +226,11 @@ case class IntegerAntOrGraph(andVertices: Set[Int], orVertices: Set[Int], andEdg
         sccElement = 0
         while (sccElement < scc.length) {
           val task = scc(sccElement)
-          if (isAndVertex(task + offset)) changed |= mini(task)
-          else if(isOrVertex(task + offset)) changed |= sum (task)
+          // ignore element if not reachable from root
+          if (computeValueFor(task + offset)) {
+            if (isAndVertex(task + offset)) changed |= mini(task)
+            else if (isOrVertex(task + offset)) changed |= sum(task)
+          }
           sccElement += 1
         }
       }

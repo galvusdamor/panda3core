@@ -1,11 +1,10 @@
 package de.uniulm.ki.panda3.efficient.heuristic
 
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
-import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientDecomposePlanStep, EfficientInsertCausalLink, EfficientAddOrdering, EfficientModification}
-import de.uniulm.ki.util.{Dot2PdfCompiler, InformationCapsule, IntegerAntOrGraph, SimpleAndOrGraph}
+import de.uniulm.ki.util.{InformationCapsule, IntegerAntOrGraph}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -24,8 +23,8 @@ trait TSTGHeuristic extends EfficientHeuristic[Unit] {
     val tasksToMethods = domain.tasks.zipWithIndex map { case (t, i) => i -> (domain.taskToPossibleMethods(i) map { -_._2 - 1 }).toSet }
 
     IntegerAntOrGraph(domain.tasks.indices.toSet, domain.decompositionMethods.indices map { case m => -m - 1 } toSet,
-                              tasksToMethods.toMap.withDefaultValue(Set()),
-                              methodsToSubTasks.toMap.withDefaultValue(Set()))
+                      tasksToMethods.toMap.withDefaultValue(Set()),
+                      methodsToSubTasks.toMap.withDefaultValue(Set()))
   }
 
   protected def computeHeuristicForPrimitive(taskID: Int): Double
@@ -106,11 +105,9 @@ trait PreComputationTSTGHeuristic extends TSTGHeuristic {
 trait ReachabilityRecomputingTSTGHeuristic extends TSTGHeuristic {
   protected def taskValue(plan: EfficientPlan) = new TaskValuation {
 
-    val taskValues: Array[Double] = argumentRelaxedTDG.minSumTraversalArray(
-      {
-        task => if ((plan taskAllowed task) || (task == plan.planStepTasks(1))) computeHeuristicForPrimitive(task) else Int.MaxValue
-      },
-      computeHeuristicForMethod)
+    val taskValues: Array[Double] = argumentRelaxedTDG.minSumTraversalArray(plan.tasksOfPresentPlanSteps :+ plan.planStepTasks(1), {
+      task => if ((plan taskAllowed task) || (task == plan.planStepTasks(1))) computeHeuristicForPrimitive(task) else Int.MaxValue
+    }, computeHeuristicForMethod)
 
 
     def apply(planStep: Int): Int = taskValues(plan.planStepTasks(planStep)).toInt
