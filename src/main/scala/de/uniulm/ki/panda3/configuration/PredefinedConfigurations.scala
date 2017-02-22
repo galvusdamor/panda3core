@@ -1,11 +1,13 @@
 package de.uniulm.ki.panda3.configuration
 
+import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
+
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 object PredefinedConfigurations {
 
-  val globalTimelimit = 10 * 60
+  val globalTimelimit = 30 * 60
 
   val hybridParsing = ParsingConfiguration(eliminateEquality = true, stripHybrid = false)
   val htnParsing    = ParsingConfiguration(eliminateEquality = true, stripHybrid = true)
@@ -15,20 +17,28 @@ object PredefinedConfigurations {
                             "-htn" -> htnParsing
                           )
 
-  val groundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                       compileOrderInMethods = None,
-                                                       splitIndependedParameters = false,
-                                                       liftedReachability = true, groundedReachability = Some(PlanningGraph),
-                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                       iterateReachabilityAnalysis = false, groundDomain = true)
-  val liftedPreprocess    = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                       compileOrderInMethods = None,
-                                                       splitIndependedParameters = false,
-                                                       liftedReachability = true, groundedReachability = Some(PlanningGraph),
-                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                       iterateReachabilityAnalysis = false, groundDomain = false)
+  val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                               compileOrderInMethods = Some(AllNecessaryOrderings),
+                                                               //compileOrderInMethods = None, //Some(OneRandomOrdering()),
+                                                               splitIndependedParameters = true,
+                                                               liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                               groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                               iterateReachabilityAnalysis = false, groundDomain = true)
+  val groundingPreprocess         = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                               compileOrderInMethods = None,
+                                                               splitIndependedParameters = true,
+                                                               liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                               groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                               iterateReachabilityAnalysis = false, groundDomain = true)
+  val liftedPreprocess            = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                               compileOrderInMethods = None,
+                                                               splitIndependedParameters = true,
+                                                               liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                               groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                               iterateReachabilityAnalysis = false, groundDomain = false)
 
   val preprocessConfigs = Map(
+                               "-ordering" -> orderingGroundingPreprocess,
                                "-ground" -> groundingPreprocess,
                                "-lifted" -> liftedPreprocess
                              )
@@ -152,7 +162,7 @@ object PredefinedConfigurations {
                            "-AStarActionLiftedPR" -> AStarActionLiftedPR,
                            "-AStarActionLiftedPRReachability" -> AStarActionLiftedPRReachability,
 
-                           // A*
+                           // Greedy
                            "-GreedyADD" -> GreedyADD,
                            "-GreedyADDReusing" -> GreedyADDReusing,
                            "-GreedyRelax" -> GreedyRelax,
@@ -162,6 +172,6 @@ object PredefinedConfigurations {
                            "-GreedyActionLiftedPR" -> GreedyActionLiftedPR,
                            "-GreedyActionLiftedPRReachability" -> GreedyActionLiftedPRReachability
 
-                           )
+                         )
 
 }
