@@ -73,13 +73,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       else TreeEncoding(domain, initialPlan, planLength, offSetToK, defineK)
 
     // (3)
-    println("K " + encoder.K)
+    /*println("K " + encoder.K)
     informationCapsule.set(Information.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, planLength))
     informationCapsule.set(Information.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, planLength))
     informationCapsule.set(Information.DP_K, VerifyEncoding.computeTDG(domain, initialPlan, planLength, Math.max, 0))
     informationCapsule.set(Information.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, planLength))
     informationCapsule.set(Information.OFFSET_K, offSetToK)
-    informationCapsule.set(Information.ACTUAL_K, encoder.K)
+    informationCapsule.set(Information.ACTUAL_K, encoder.K)*/
     println(informationCapsule.longInfo)
 
     timeCapsule start Timings.VERIFY_TOTAL
