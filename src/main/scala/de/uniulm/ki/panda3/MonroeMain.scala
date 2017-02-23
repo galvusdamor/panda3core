@@ -54,7 +54,7 @@ object MonroeMain {
       val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = None,
-                                                                          splitIndependedParameters = false,
+                                                                          compileInitialPlan = false,splitIndependedParameters = false,
                                                                           liftedReachability = true, groundedReachability = None,
                                                                           groundedTaskDecompositionGraph = None, //Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = false),

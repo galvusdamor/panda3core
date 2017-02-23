@@ -47,6 +47,8 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
 
   protected val transformationName: String
 
+  protected val allowToRemoveTopMethod = true
+
 
   override def transform(domain: Domain, plan: Plan, info: Information): (Domain, Plan) = {
     // create an artificial method
@@ -60,7 +62,7 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
 
     val (extendedMethods, newTasks) = transformMethods(domain.decompositionMethods, topMethod, info, domain)
 
-    if ((extendedMethods count { _.abstractTask == topTask }) == 1) {
+    if ((extendedMethods count { _.abstractTask == topTask }) == 1 && allowToRemoveTopMethod) {
       // regenerate the initial plan, as it may have changed
       val remainingTopMethod = (extendedMethods find { _.abstractTask == topTask }).get.subPlan
       val newPlan = remainingTopMethod.replaceInitAndGoal(plan.init, plan.goal, Nil)

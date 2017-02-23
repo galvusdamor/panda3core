@@ -39,7 +39,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                ParsingConfiguration(stripHybrid = false, eliminateEquality = false),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph,
-                                                                          compileOrderInMethods = None, splitIndependedParameters = false,
+                                                                          compileOrderInMethods = None, compileInitialPlan = false, splitIndependedParameters = false,
                                                                           liftedReachability = true,
                                                                           groundedReachability = Some(if (usePlanningGraph) PlanningGraphWithMutexes else PlanningGraph),
                                                                           groundedTaskDecompositionGraph = Some(TwoWayTDG),
@@ -180,7 +180,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     timeCapsule stop VerifyRunner.TRANSFORM_DIMACS
 
     encoder match {
-      case pathbased: PathBasedEncoding =>
+      case pathbased: PathBasedEncoding[_,_] =>
         //println(tot.primitivePaths map { case (a, b) => (a, b map { _.name }) } mkString "\n")
         informationCapsule.set(VerifyRunner.NUMBER_OF_PATHS, pathbased.primitivePaths.length)
         println("NUMBER OF PATHS " + pathbased.primitivePaths.length)

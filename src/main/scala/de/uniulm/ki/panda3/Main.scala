@@ -6,6 +6,8 @@ import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.heuristic.filter.TreeFF
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
 import de.uniulm.ki.panda3.symbolic.compiler.{OneRandomOrdering, AllNecessaryOrderings, AllOrderings}
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
@@ -27,13 +29,13 @@ object Main {
 
     println("This is Panda3")
 
-    if (args.length < 2) {
+    /*if (args.length < 2) {
       println("This program needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the random seed.")
       //println("This program needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
       System.exit(1)
     }
     val domFile = args(0)
-    val probFile = args(1)
+    val probFile = args(1)*/
 
     val randomseed = if (args.length == 3) args(2).toInt else 10
     val planLength = randomseed
@@ -70,23 +72,18 @@ object Main {
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-AirplanesHub.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-RegularTruck-4Locations.xml"
-
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/satellite2.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/satellite2-P-abstract-2obs-2sat-2mod.xml"
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4--4--4.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/2obs-2sat-2mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4obs-4sat-4mod.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/problems/2obs-2sat-2mod.hddl"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/2obs-2sat-2mod.xml"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-legal-fewer-htn-groundings.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/07--p03-part1.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/00--p01-variant.xml"
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p02-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p02.pddl"
@@ -118,7 +115,8 @@ object Main {
 
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-legal-fewer-htn-groundings.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/00--p01-variant.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/07--p03-part1.xml"
+
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/domains/verkabelung_domain_noComplexOperations.pddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/problems/genericLinearProblem_depth30.pddl"
 
@@ -133,7 +131,7 @@ object Main {
     val postprocessing = PostprocessingConfiguration(Set(ProcessingTimings,
                                                          SearchStatistics,
                                                          SearchStatus,
-                                                         SearchResult,
+                                                         //SearchResult,
                                                          //FinalGroundedReachability,
                                                          PreprocessedDomainAndPlan))
 
@@ -149,8 +147,9 @@ object Main {
     } else PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                  ParsingConfiguration(eliminateEquality = false, stripHybrid = true),
                                  PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                            compileOrderInMethods = Some(AllNecessaryOrderings),
-                                                            //compileOrderInMethods = None, //Some(OneRandomOrdering()),
+                                                            compileInitialPlan = true,
+                                                            //compileOrderInMethods = Some(AllNecessaryOrderings),
+                                                            compileOrderInMethods = None, //Some(OneRandomOrdering()),
                                                             splitIndependedParameters = true,
                                                             liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
                                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
@@ -168,15 +167,17 @@ object Main {
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType(1), ADD :: Nil, Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD(Some(ADDReusing))), Nil, SequentialSelector(LCFR,RandomFlaw(6))),
                                  //PlanBasedSearch(None, None, AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
-                                 PlanBasedSearch(None, None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
+                                 //PlanBasedSearch(None, None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarDepthType(1), LiftedTDGPreconditionRelaxation(NeverRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
                                  //NoSearch,
                                  //PlanBasedSearch(None, Some(30 * 60), AStarDepthType(1), LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing)) :: Nil, Nil, LCFR),
-                                 //ProgressionSearch(Some(30 * 60), DFSType, None),
-                                 //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(CompositionRPGHTN)),
+                                 //ProgressionSearch(Some(30 * 60), DFSType, None, abstractTaskSelectionStrategy =  PriorityQueueSearch.abstractTaskSelection.branchOverAll),
+                                 //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(RelaxedCompositionGraph(true,RCG.heuristicExtraction.ff, RCG.producerSelection
+                                 //  .numOfPreconditions)),
+                                 //                  PriorityQueueSearch.abstractTaskSelection.random),
                                  //ProgressionSearch(Some(200), AStarActionsType(1), Some(GreedyProgression)),
                                  //SATSearch(Some(30 * 60), CRYPTOMINISAT(), planLength, Some(planLength)),
-                                 //SATSearch(Some(100000), CRYPTOMINISAT(), 7, Some(7)),
+                                 SATSearch(Some(100000), MINISAT(), 12, Some(12)),
                                  //SATSearch(Some(30 * 60 * 1000), MINISAT(), 30, Some(10)),
                                  //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
                                  postprocessing)

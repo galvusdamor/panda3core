@@ -103,6 +103,7 @@ object ProMain {
                                              ParsingConfiguration(eliminateEquality = true, stripHybrid = true),
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                         compileOrderInMethods = None,
+                                                                        compileInitialPlan = false,
                                                                         splitIndependedParameters = true,
                                                                         liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                                         groundedTaskDecompositionGraph = Some(TwoWayTDG), // None,
