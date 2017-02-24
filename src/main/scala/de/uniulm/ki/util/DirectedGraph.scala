@@ -76,18 +76,36 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
 
   lazy val isAcyclic: Boolean = condensation.vertices.length == vertices.length
 
+  /** Remove as many edges as possible as long as the transitive hull stays the same */
+  lazy val transitiveReduction: DirectedGraph[T] = {
+    val changingEdgeMap = edges map { case (k, v) => val h = new mutable.HashSet[T](); h ++= v; (k, h) }
+
+    for (i <- vertices; j <- vertices
+         if edges(i).contains(j);
+         k <- vertices
+         if edges(j).contains(k) && changingEdgeMap(i).contains(k)
+    ) {
+      changingEdgeMap(i).remove(k)
+    }
+
+
+    SimpleDirectedGraph(vertices, changingEdgeMap map { case (k, v) => (k, v.toSeq) })
+  }
+
 
   override lazy val dotString: String = dotString(DirectedGraphDotOptions())
 
   /** The DOT representation of the object with options */
-  override def dotString(options: DirectedGraphDotOptions): String = {
+  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString })
+
+  def dotString(options: DirectedGraphDotOptions, nodeRenderer: T => String): String = {
     val dotStringBuilder = new StringBuilder()
 
     dotStringBuilder append "digraph someDirectedGraph{\n"
     edgeList foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + ";\n" }
     dotStringBuilder append "\n"
     vertices.zipWithIndex foreach { case (obj, index) =>
-      val string = (if (options.labelNodesWithNumbers) index.toString else obj match {case pp: PrettyPrintable => pp.shortInfo; case x => x.toString}).replace('\"', '\'')
+      val string = (if (options.labelNodesWithNumbers) index.toString else obj match {case pp: PrettyPrintable => pp.shortInfo; case x => nodeRenderer(x)}).replace('\"', '\'')
       dotStringBuilder append ("\ta" + index + "[label=\"" + string + "\"" + dotVertexStyleRenderer(obj) + "];\n")
     }
     dotStringBuilder append "}"
@@ -309,11 +327,14 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
 
     dfs(Set())
   }
+
 }
 
 object DirectedGraph {
 
   private final def defaultMappingPreference[T](v: T, s: Seq[(Int, Seq[T])]): Seq[Int] = s map { _._1 }
+
+  final def defaultMetric[T](g: DirectedGraph[Int], m: Seq[Map[T, Int]]): Int = g.vertices.length
 
   /**
     * given a finite family of graphs G_i, this function returns the smallest graph G, s.t. all G_i are induced subgraphs of G.
@@ -322,68 +343,74 @@ object DirectedGraph {
     * @param mappingPreference (optionally) provide a preference, which nodes should be mapped to which other
     * @return The vertices of G are integral numbers, newly created and starting from zero
     */
-  def minimalInducedSuperGraph[T](graphs: Seq[DirectedGraph[T]], mappingPreference: ((T, Seq[(Int, Seq[T])]) => Seq[Int]) = defaultMappingPreference _):
+  def minimalInducedSuperGraph[T](graphs: Seq[DirectedGraph[T]],
+                                  metric: ((DirectedGraph[Int], Seq[Map[T, Int]]) => Int) = defaultMetric[T] _,
+                                  lowerBoundOnMetric: Int = 0,
+                                  mappingPreference: ((T, Seq[(Int, Seq[T])]) => Seq[Int]) = defaultMappingPreference[T] _):
   (DirectedGraph[Int], Seq[Map[T, Int]]) = if (graphs.isEmpty) (SimpleDirectedGraph(Nil, Nil), Nil)
   else {
 
-    val defaultGraph = SimpleDirectedGraph[Int](0 until 2 + (graphs map { _.vertices.size } sum), Nil)
+    //println("GRAPH OPT " + (graphs map { _.vertices.length }).mkString(" "))
 
     var ncall = 0
     var smallestFound = Int.MaxValue
 
-    def mappingDFS(currentGraph: DirectedGraph[Int], currentAntiGraph: DirectedGraph[Int], currentMapping: Seq[Map[T, Int]]): (DirectedGraph[Int], Seq[Map[T, Int]]) = {
-      ncall += 1
-      //println(currentMapping map {_.size})
-      //println(graphs map {_.vertices.size})
-      val nextGraphToMap = currentMapping.zipWithIndex zip graphs find { case ((m, _), g) => m.size != g.vertices.size }
-      if (nextGraphToMap.isEmpty) {
-        //if (smallestFound > currentGraph.vertices.length)
-        //  smallestFound = currentGraph.vertices.length
-        smallestFound = 0
-        //println("F " + currentGraph.vertices.length)
-        (currentGraph, currentMapping)
-      }
-      else {
-        val nextNodeToMap = (nextGraphToMap map { case ((m, _), g) => g.vertices filterNot m.contains }).get.head
-        val ((thisMapping, mappingIndex), thisGraph) = nextGraphToMap.get
-
-        val (conntectedNodes, unconntectedNodes) = thisMapping.keys.toSeq partition { ov => thisGraph.edgesSet(ov).contains(nextNodeToMap) || thisGraph.edgesSet(nextNodeToMap).contains(ov) }
-
-        // find all already existing nodes we can map this one possibly to
-        val mappabileExistingNodes = currentGraph.vertices filter { v =>
-          val dontMapTwoNodesToTheSameNode = !(thisMapping.values.toSet contains v)
-          val allUnconnectedMappedNodesAreUnconnected = unconntectedNodes forall { uv =>
-            val mappedUV = thisMapping(uv)
-            !(currentGraph.edgesSet(mappedUV).contains(v) || currentGraph.edgesSet(v).contains(mappedUV))
-          }
-
-          val allConnectedMappedNodesAreNotUnconnected = conntectedNodes forall { uv =>
-            val mappedUV = thisMapping(uv)
-
-            val caseOutGoing = if (thisGraph.edgesSet(nextNodeToMap).contains(uv)) currentAntiGraph.edgesSet(v).contains(mappedUV) else currentGraph.edgesSet(v).contains(mappedUV)
-            val caseInGoing = if (thisGraph.edgesSet(uv).contains(nextNodeToMap)) currentAntiGraph.edgesSet(mappedUV).contains(v) else currentGraph.edgesSet(mappedUV).contains(v)
-
-            !caseInGoing && !caseOutGoing
-          }
-
-          dontMapTwoNodesToTheSameNode && allUnconnectedMappedNodesAreUnconnected && allConnectedMappedNodesAreNotUnconnected
+    def mappingDFS(currentGraph: DirectedGraph[Int], currentAntiGraph: DirectedGraph[Int], currentMapping: Seq[Map[T, Int]]): (Option[DirectedGraph[Int]], Seq[Map[T, Int]]) =
+      if (!currentGraph.isAcyclic) {
+        //println("CYC")
+        (None, currentMapping)
+      } else {
+        ncall += 1
+        //println(currentMapping map { _.size })
+        //println("M " + metric(currentGraph, currentMapping))
+        //println(graphs map { _.vertices.size })
+        val nextGraphToMap = currentMapping.zipWithIndex zip graphs find { case ((m, _), g) => m.size != g.vertices.size }
+        if (nextGraphToMap.isEmpty) {
+          //if (smallestFound > currentGraph.vertices.length)
+          smallestFound = metric(currentGraph, currentMapping)
+          //smallestFound = 0
+          //println("F " + currentGraph.vertices.length + " " + smallestFound)
+          (Some(currentGraph), currentMapping)
         }
+        else {
+          val nextNodeToMap = (nextGraphToMap map { case ((m, _), g) => g.vertices filterNot m.contains }).get.head
+          val ((thisMapping, mappingIndex), thisGraph) = nextGraphToMap.get
 
-        // we can always add a new node
-        val newNode = currentGraph.vertices.size
+          val (conntectedNodes, unconntectedNodes) = thisMapping.keys.toSeq partition { ov => thisGraph.edgesSet(ov).contains(nextNodeToMap) || thisGraph.edgesSet(nextNodeToMap)
+            .contains(ov)
+          }
 
-        // get selection preference
-        val preferenceOrdering = mappingPreference(nextNodeToMap,
-                                                   (mappabileExistingNodes map { v => (v, currentMapping flatMap { m => m collect { case (a, b) if b == v => a } }) }) :+(newNode, Nil))
+          // find all already existing nodes we can map this one possibly to
+          val mappabileExistingNodes = currentGraph.vertices filter { v =>
+            val dontMapTwoNodesToTheSameNode = !(thisMapping.values.toSet contains v)
+            val allUnconnectedMappedNodesAreUnconnected = unconntectedNodes forall { uv =>
+              val mappedUV = thisMapping(uv)
+              !(currentGraph.edgesSet(mappedUV).contains(v) || currentGraph.edgesSet(v).contains(mappedUV))
+            }
 
-        val (minGraph, minMapping) = preferenceOrdering.foldLeft[(DirectedGraph[Int], Seq[Map[T, Int]])]((defaultGraph, currentMapping))(
-          {
-            case ((minimalGraph, minimalMapping), node) =>
-              val newVertices = currentGraph.vertices :+ node distinct
+            val allConnectedMappedNodesAreNotUnconnected = conntectedNodes forall { uv =>
+              val mappedUV = thisMapping(uv)
 
-              if (newVertices.length >= smallestFound) (minimalGraph, minimalMapping)
-              else {
+              val caseOutGoing = if (thisGraph.edgesSet(nextNodeToMap).contains(uv)) currentAntiGraph.edgesSet(v).contains(mappedUV) else currentGraph.edgesSet(v).contains(mappedUV)
+              val caseInGoing = if (thisGraph.edgesSet(uv).contains(nextNodeToMap)) currentAntiGraph.edgesSet(mappedUV).contains(v) else currentGraph.edgesSet(mappedUV).contains(v)
 
+              !caseInGoing && !caseOutGoing
+            }
+
+            dontMapTwoNodesToTheSameNode && allUnconnectedMappedNodesAreUnconnected && allConnectedMappedNodesAreNotUnconnected
+          }
+
+          // we can always add a new node
+          val newNode = currentGraph.vertices.length
+
+          // get selection preference
+          val preferenceOrdering = mappingPreference(nextNodeToMap,
+                                                     (mappabileExistingNodes map { v => (v, currentMapping flatMap { m => m collect { case (a, b) if b == v => a } }) }) :+(newNode, Nil))
+
+          val (minGraph, minMapping) = preferenceOrdering.foldLeft[(Option[DirectedGraph[Int]], Seq[Map[T, Int]])]((None, currentMapping))(
+            {
+              case ((optionMinimalGraph, minimalMapping), node) =>
+                val newVertices = currentGraph.vertices :+ node distinct
                 val newEdges = currentGraph.edgeList ++ (conntectedNodes flatMap { cn =>
                   val before = if (thisGraph.edgesSet(cn).contains(nextNodeToMap)) (thisMapping(cn), node) :: Nil else Nil
                   val after = if (thisGraph.edgesSet(nextNodeToMap).contains(cn)) (node, thisMapping(cn)) :: Nil else Nil
@@ -400,23 +427,26 @@ object DirectedGraph {
 
                 val newGraph = SimpleDirectedGraph(newVertices, newEdges)
                 val newAntiGraph = SimpleDirectedGraph(newVertices, newAntiEdges)
-
                 val newMapping = currentMapping.zipWithIndex map { case (m, i) => if (i != mappingIndex) m else thisMapping.+((nextNodeToMap, node)) }
 
-                val (recursiveGraph, recursiveMapping) = mappingDFS(newGraph, newAntiGraph, newMapping)
+                if (lowerBoundOnMetric == smallestFound || metric(newGraph, newMapping) >= smallestFound) (optionMinimalGraph, minimalMapping)
+                else {
+                  val (recursiveGraphOption, recursiveMapping) = mappingDFS(newGraph, newAntiGraph, newMapping)
+                  if (recursiveGraphOption.isDefined && (
+                    optionMinimalGraph.isEmpty || metric(recursiveGraphOption.get, recursiveMapping) < metric(optionMinimalGraph.get, minimalMapping)))
+                    (recursiveGraphOption, recursiveMapping)
+                  else (optionMinimalGraph, minimalMapping)
+                }
+            })
+          (minGraph, minMapping)
+        }
 
-                if (recursiveGraph.vertices.size < minimalGraph.vertices.size) (recursiveGraph, recursiveMapping) else (minimalGraph, minimalMapping)
-              }
-          })
-        (minGraph, minMapping)
       }
 
-    }
-
-    val r = mappingDFS(SimpleDirectedGraph[Int](Nil, Nil), SimpleDirectedGraph[Int](Nil, Nil), graphs map { _ => Map[T, Int]() })
-
-    println(ncall)
-    r
+    val (g, m) = mappingDFS(SimpleDirectedGraph[Int](Nil, Nil), SimpleDirectedGraph[Int](Nil, Nil), graphs map { _ => Map[T, Int]() })
+    assert(g.isDefined)
+    //println(ncall)
+    (g.get, m)
   }
 }
 
@@ -477,8 +507,13 @@ case class SimpleDirectedGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) exten
 
 object SimpleDirectedGraph {
   def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): SimpleDirectedGraph[T] = {
-    edges flatMap { case (a, b) => a :: b :: Nil } foreach { n => assert(nodes contains n) }
-    SimpleDirectedGraph(nodes, (nodes zip (nodes map { n => edges.filter({ _._1 == n }).map({ _._2 }) })).toMap)
+    //edges flatMap { case (a, b) => a :: b :: Nil } foreach { n => assert(nodes contains n) }
+    //println("SDG " + nodes.length + " " + edges.length)
+    val baseEdgeMap: Map[T, Seq[T]] = edges.groupBy(_._1) map { case (a, b) => a -> (b map { _._2 }) }
+    val edgeMap: Map[T, Seq[T]] = nodes map { n => n -> baseEdgeMap.getOrElse(n, Nil) } toMap
+
+    //SimpleDirectedGraph(nodes, (nodes zip (nodes map { n => edges.filter({ _._1 == n }).map({ _._2 }) })).toMap)
+    SimpleDirectedGraph(nodes, edgeMap)
   }
 }
 
