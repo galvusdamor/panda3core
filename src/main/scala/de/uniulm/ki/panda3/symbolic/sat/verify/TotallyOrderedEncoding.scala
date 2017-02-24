@@ -4,6 +4,7 @@ import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, DecompositionMethod, Task, Domain}
 import de.uniulm.ki.panda3.symbolic.logic.{Predicate, Literal}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.util._
 
 import scala.collection.{mutable, Seq}
@@ -11,7 +12,7 @@ import scala.collection.{mutable, Seq}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK : Option[Int] = None) extends PathBasedEncoding {
+case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK : Option[Int] = None) extends PathBasedEncoding[Unit,Unit] {
 
   val numberOfChildrenClauses: Int = 0
 
@@ -83,4 +84,48 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
   }
 
   override lazy val givenActionsFormula: Seq[Clause] = ???
+
+  override protected def initialPayload(possibleTasks: Set[Task], path: scala.Seq[Int]): Unit = ()
+
+  override protected def combinePayloads(childrenPayload: Seq[Unit], intermediate : Unit): Unit = ()
+
+  override protected def computeTaskSequenceArrangement(possibleMethods: Array[DecompositionMethod],
+                                                        possiblePrimitives: scala.Seq[Task]): (Array[Array[Int]], Array[Int], Array[Set[Task]], Unit) = {
+    val methodTaskGraphs = (possibleMethods map { _.subPlan.orderingConstraints.fullGraph }) ++ (
+      possiblePrimitives map { t => SimpleDirectedGraph(PlanStep(-1, t, Nil) :: Nil, Nil) })
+
+    assert(methodTaskGraphs forall {_.allTotalOrderings.get.length == 1})
+
+    // TODO we are currently mapping plansteps, maybe we should prefer plansteps with identical tasks to be mapped together
+    println("MINI " + possibleMethods.length + " " + possiblePrimitives.length)
+    val lb = methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max
+    val g = DirectedGraph.minimalInducedSuperGraph[PlanStep](methodTaskGraphs) //, minimiseAbstractTaskOccurencesMetric)
+    println("done")
+    val minimalSuperGraph = g._1
+    val planStepToIndexMappings: Seq[Map[PlanStep, Int]] = g._2
+    val topologicalOrdering = minimalSuperGraph.topologicalOrdering.get
+
+    val (methodMappings, primitiveMappings) = planStepToIndexMappings map {m => m map {case (ps, node) => (ps, topologicalOrdering.indexOf(node))}} splitAt possibleMethods.length
+
+    val childrenIndicesToPossibleTasks = minimalSuperGraph.vertices map { _ => new mutable.HashSet[Task]() }
+
+    val tasksPerMethodToChildrenMapping = methodMappings.zipWithIndex map { case (mapping, methodIndex) =>
+      val methodPlanSteps = possibleMethods(methodIndex).subPlan.planStepsWithoutInitGoal
+      (methodPlanSteps map { ps =>
+        childrenIndicesToPossibleTasks(mapping(ps)) add ps.schema
+        mapping(ps)
+      }).toArray
+    } toArray
+
+    val childrenForPrimitives = primitiveMappings.zipWithIndex map { case (mapping, primitiveIndex) =>
+      assert(mapping.size == 1)
+      childrenIndicesToPossibleTasks(mapping.head._2) add mapping.head._1.schema
+      mapping.head._2
+    } toArray
+
+    //println("\n\nGraph minisation")
+    //println(childrenIndicesToPossibleTasks map {s => s map {t => t.name + " " + t.isAbstract} mkString " "} mkString "\n")
+
+    (tasksPerMethodToChildrenMapping, childrenForPrimitives, childrenIndicesToPossibleTasks map { _.toSet } toArray, ())
+  }
 }

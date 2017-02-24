@@ -52,6 +52,7 @@ trait VerifyEncoding {
     (methodIndices(method), method.subPlan.planStepsWithoutInitGoal.zipWithIndex.toMap)
   }).toMap
 
+
   protected def methodIndex(method: DecompositionMethod): Int = methodIndices(method)
 
   def predicateIndex(predicate: Predicate): Int = predicateIndices(predicate)

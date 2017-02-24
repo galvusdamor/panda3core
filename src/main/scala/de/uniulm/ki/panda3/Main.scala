@@ -29,17 +29,18 @@ object Main {
 
     println("This is Panda3")
 
-    /*if (args.length < 2) {
+    if (args.length < 2) {
       println("This program needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the random seed.")
       //println("This program needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
       System.exit(1)
     }
     val domFile = args(0)
-    val probFile = args(1)*/
+    val probFile = args(1)
 
-    val randomseed = if (args.length == 3) args(2).toInt else 10
+    val randomseed = if (args.length >= 3) args(2).toInt else 10
     val planLength = randomseed
     htnPlanningInstance.randomSeed = randomseed
+    val overrideK = if (args.length >= 4) args(3).toInt else 10
     //val outputPDF = args(2)
     val outputPDF = "dot.pdf"
 
@@ -75,15 +76,17 @@ object Main {
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/satellite2.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/satellite2-P-abstract-2obs-2sat-2mod.xml"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/2obs-2sat-2mod.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/4obs-4sat-4mod.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/2obs-2sat-2mod.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8obs-3sat-4mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/2obs-2sat-2mod.xml"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-legal-fewer-htn-groundings.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/00--p01-variant.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/09--p03-complete.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/10--p04-part1.xml"
 
     //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p02-domain.pddl"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p02.pddl"
@@ -117,8 +120,11 @@ object Main {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-legal-fewer-htn-groundings.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/07--p03-part1.xml"
 
+    //val domFile = "pkp/pkp4-dom.lisp"
+    //val probFile = "pkp/pkp4-prob.lisp"
+
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/domains/verkabelung_domain_noComplexOperations.pddl"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/problems/genericLinearProblem_depth30.pddl"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/problems/genericLinearProblem_depth2.pddl"
 
     //val domFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
     //val probFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p01-htn.lisp"
@@ -136,7 +142,7 @@ object Main {
                                                          PreprocessedDomainAndPlan))
 
     // planning config is given via stdin
-    val searchConfig = if (args.length > 3) {
+    val searchConfig = if (args.length > 10) {
       assert(args.length == 6, "PANDA needs exactly 6 arguments in this configuration")
       PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                             PredefinedConfigurations.parsingConfigs(args(3)),
@@ -151,7 +157,7 @@ object Main {
                                                             //compileOrderInMethods = Some(AllNecessaryOrderings),
                                                             compileOrderInMethods = None, //Some(OneRandomOrdering()),
                                                             splitIndependedParameters = true,
-                                                            liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                            liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                             iterateReachabilityAnalysis = false, groundDomain = true),
                                  //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
@@ -172,12 +178,11 @@ object Main {
                                  //NoSearch,
                                  //PlanBasedSearch(None, Some(30 * 60), AStarDepthType(1), LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing)) :: Nil, Nil, LCFR),
                                  //ProgressionSearch(Some(30 * 60), DFSType, None, abstractTaskSelectionStrategy =  PriorityQueueSearch.abstractTaskSelection.branchOverAll),
-                                 //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(RelaxedCompositionGraph(true,RCG.heuristicExtraction.ff, RCG.producerSelection
-                                 //  .numOfPreconditions)),
-                                 //                  PriorityQueueSearch.abstractTaskSelection.random),
+                                 //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(RelaxedCompositionGraph(true, RCG.heuristicExtraction.multicount, RCG.producerSelection
+                                 //  .numOfPreconditions)), PriorityQueueSearch.abstractTaskSelection.random),
                                  //ProgressionSearch(Some(200), AStarActionsType(1), Some(GreedyProgression)),
-                                 //SATSearch(Some(30 * 60), CRYPTOMINISAT(), planLength, Some(planLength)),
-                                 SATSearch(Some(100000), MINISAT(), 12, Some(12)),
+                                 SATSearch(Some(2 * 60), CRYPTOMINISAT(), planLength, Some(overrideK), checkResult = true),
+                                 //SATSearch(Some(1000000), CRYPTOMINISAT(), 8, Some(8), checkResult = true),
                                  //SATSearch(Some(30 * 60 * 1000), MINISAT(), 30, Some(10)),
                                  //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
                                  postprocessing)

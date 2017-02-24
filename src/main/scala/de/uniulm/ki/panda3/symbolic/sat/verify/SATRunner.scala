@@ -9,7 +9,7 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.util._
 
-import scala.collection.Seq
+import scala.collection.{JavaConversions, Seq}
 import scala.io.Source
 
 /**
@@ -23,6 +23,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
   import sys.process._
 
+  var satProcess: Process = null
+
   def runWithTimeLimit(timelimit: Option[Long], planLength: Int, offsetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false):
   (Boolean, Boolean) = {
     val runner = new Runnable {
@@ -33,15 +35,27 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       }
     }
     // start thread
-    val thread = new Thread(runner)
+    val threadGroup = new ThreadGroup("sat group")
+    val thread = new Thread(threadGroup, runner)
     thread.start()
 
     // wait
     val startTime = System.currentTimeMillis()
     while (System.currentTimeMillis() - startTime <= timelimit.getOrElse(Long.MaxValue) && runner.result.isEmpty && thread.isAlive) Thread.sleep(1000)
-    thread.stop()
+    if (satProcess != null) {
+      println("Kill SAT solver")
+      satProcess.destroy()
+    }
+    JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t =>
+      //try {
+        t.stop()
+      /*} catch {
+        case td: Throwable => println("SAT Runner was aborted after timelimit ( " + timelimit.getOrElse(Long.MaxValue) + " ms) was reached.")
+      }*/
+    }
 
-    if (runner.result.isEmpty) (false, false) else (runner.result.get, true)
+
+    if (runner.result.isEmpty) {Thread.sleep(500) ; (false, false) } else (runner.result.get, true)
   }
 
 
@@ -69,8 +83,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
     // start verification
     val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
-      if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, planLength, offSetToK, defineK)
-      else TreeEncoding(domain, initialPlan, planLength, offSetToK, defineK)
+    if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, planLength, offSetToK, defineK)
+    //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+    else SOGEncoding(domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
 
     // (3)
     /*println("K " + encoder.K)
@@ -80,6 +95,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     informationCapsule.set(Information.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, planLength))
     informationCapsule.set(Information.OFFSET_K, offSetToK)
     informationCapsule.set(Information.ACTUAL_K, encoder.K)*/
+
     println(informationCapsule.longInfo)
 
     timeCapsule start Timings.VERIFY_TOTAL
@@ -91,6 +107,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     //println("Done")
     //System.in.read()
     timeCapsule stop Timings.GENERATE_FORMULA
+
+    writeStringToFile(usedFormula map {c => c.disjuncts map {case (a,p) => (if (!p) "not " else "") + a} mkString "\t"} mkString "\n", "formula.txt")
 
     timeCapsule start Timings.TRANSFORM_DIMACS
     println("READY TO WRITE")
@@ -105,11 +123,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     timeCapsule stop Timings.TRANSFORM_DIMACS
 
     encoder match {
-      case pathbased: PathBasedEncoding =>
+      case pathbased: PathBasedEncoding[_, _] =>
         //println(tot.primitivePaths map { case (a, b) => (a, b map { _.name }) } mkString "\n")
         informationCapsule.set(Information.NUMBER_OF_PATHS, pathbased.primitivePaths.length)
         println("NUMBER OF PATHS " + pathbased.primitivePaths.length)
-      case _                            =>
+      case _                                  =>
     }
 
     encoder match {
@@ -133,11 +151,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       satSolver match {
         case MINISAT()       =>
           println("Starting minisat")
-          ("minisat " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+          satProcess = ("minisat " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt").run()
         case CRYPTOMINISAT() =>
           println("Starting cryptominisat5")
-          ("cryptominisat5 --verb 0 " + fileDir + "__cnfString" + uniqFileIdentifier) #> new File(fileDir + "__res" + uniqFileIdentifier + ".txt") !
+          satProcess = (("cryptominisat5 --verb 0 " + fileDir + "__cnfString" + uniqFileIdentifier) #> new File(fileDir + "__res" + uniqFileIdentifier + ".txt")).run()
       }
+      // wait for termination
+      satProcess.exitValue()
     } catch {
       case rt: RuntimeException => println("Minisat exitcode problem ...")
     }
@@ -213,7 +233,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
           (nodes, edges)
 
-        case pbe: PathBasedEncoding =>
+        case pbe: PathBasedEncoding[_, _] =>
           val nodes = formulaVariables filter { _.startsWith("action!") } filter allTrueAtoms.contains
 
           val edges = nodes flatMap { parent => nodes flatMap { child =>
@@ -233,7 +253,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
             }
           }
           }
-          val primitiveSolution = pbe match {
+          val primitiveSolution = encoder match {
             case tot: TotallyOrderedEncoding =>
               // check executability of the plan
 
@@ -245,12 +265,15 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
                 PathBasedEncoding.pathSortingFunction(path1, path2)
               } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
-            case tree: TreeEncoding =>
+            case tree: SOGEncoding =>
               val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
-              println(primitiveActions mkString "\n")
+              println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
               val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
               val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
               val taskSequence = actionSequence map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
+
+              println("Primitive Sequence with paths")
+              println(actionSequence map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX).name + " " + t } mkString "\n")
 
               val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
               println(pathToPos mkString "\n")
@@ -261,10 +284,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
               val graph = SimpleDirectedGraph(nodes, edges)
               println(graph.sinks mkString "\n")
-              assert(graph.sinks.length == taskSequence.length, "SINKS " + graph.sinks.length + " vs " + taskSequence.length)
+              //assert(graph.sinks.length == taskSequence.length, "SINKS " + graph.sinks.length + " vs " + taskSequence.length)
               val nextPredicates = allTrueAtoms filter { _.startsWith("next") }
               println(nextPredicates mkString "\n")
-              assert(nextPredicates.size == taskSequence.length + 1, "NEXT " + nextPredicates.size + " vs " + (taskSequence.length + 1))
+              //assert(nextPredicates.size == taskSequence.length + 1, "NEXT " + nextPredicates.size + " vs " + (taskSequence.length + 1))
 
               val nextRel: Seq[(Array[Int], Array[Int])] =
                 nextPredicates map { n => n.split("_").drop(1) } map { case l => (l.head, l(1)) } map { case (a, b) => (a.split(";") map { _.toInt }, b.split(";") map { _.toInt }) } toSeq
@@ -282,7 +305,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
                   (nextNext.head._2, remaining)
                 })
 
-              assert(lastPath._1 sameElements Integer.MAX_VALUE :: Nil)
+              //assert(lastPath._1 sameElements Integer.MAX_VALUE :: Nil)
 
               taskSequence
           }
@@ -314,7 +337,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
         assert(indeg + outdeg != 0, "unconnected action " + v)
       }
 
-      if (encoder.isInstanceOf[PathBasedEncoding]) {
+      if (encoder.isInstanceOf[PathBasedEncoding[_, _]]) {
         // check integrity of the methods
         decompGraphNames.vertices filter { v => decompGraphNames.degrees(v)._2 != 0 } foreach { v =>
           // either it is primitive

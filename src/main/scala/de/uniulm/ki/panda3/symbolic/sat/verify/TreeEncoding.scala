@@ -11,7 +11,7 @@ import scala.collection.{mutable, Seq}
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
-  extends PathBasedEncoding with LinearPrimitivePlanEncoding {
+  extends PathBasedEncoding[Unit, Unit] with LinearPrimitivePlanEncoding {
   override val numberOfChildrenClauses: Int = 0
 
   protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position
@@ -168,4 +168,11 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
   override def goalState: Seq[Clause] = goalStateOfLength(taskSequenceLength)
 
   override def givenActionsFormula: Seq[Clause] = ???
+
+  override protected def initialPayload(possibleTasks: Set[Task], path: scala.Seq[Int]): Unit = ()
+
+  override protected def combinePayloads(childrenPayload: scala.Seq[Unit], intermediate: Unit): Unit = ()
+
+  override protected def computeTaskSequenceArrangement(possibleMethods: Array[DecompositionMethod],
+                                                        possiblePrimitives: scala.Seq[Task]): (Array[Array[Int]], Array[Int], Array[Set[Task]], Unit) = ???
 }
