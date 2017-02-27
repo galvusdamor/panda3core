@@ -20,7 +20,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   def edges: Map[T, Seq[T]]
 
   /** adjacency list of the graph */
-  private lazy val edgesSet: Map[T, Set[T]] = edges map { case (a, b) => (a, b.toSet) }
+  lazy val edgesSet: Map[T, Set[T]] = edges map { case (a, b) => (a, b.toSet) }
 
   lazy val reversedEdgesSet: Map[T, Set[T]] = vertices map { v => v -> (vertices filter { v2 => edgesSet(v2) contains v } toSet) } toMap
 
