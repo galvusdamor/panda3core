@@ -1,4 +1,4 @@
-package de.uniulm.ki.util.grammarIntersection;
+package de.uniulm.ki.util.problemGenerators;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -10,13 +10,13 @@ import java.util.Set;
 /**
  * Created by dh on 22.02.17.
  */
-public class PKP {
+public class PostCorrespondenceProblem {
     List<String> x = new ArrayList<>();
     List<String> y = new ArrayList<>();
-    private Grammar grammar1;
-    private Grammar grammar2;
+    private CfGrammar grammar1;
+    private CfGrammar grammar2;
 
-    public PKP(String path) throws Exception {
+    public PostCorrespondenceProblem(String path) throws Exception {
 
         BufferedReader br = new BufferedReader(new FileReader(path));
         while (br.ready()) {
@@ -33,7 +33,7 @@ public class PKP {
         this.grammar2 = makeGrammar(y);
     }
 
-    public Grammar makeGrammar(List<String> seq) {
+    public CfGrammar makeGrammar(List<String> seq) {
         Set<String> characters = new HashSet<>();
 
         List<String> terminal = new ArrayList<>();
@@ -76,14 +76,14 @@ public class PKP {
         for (String c : characters) {
             terminal.add(c);
         }
-        return new Grammar(terminal, nonterminal, rulesLeft, rulesRight, start);
+        return new CfGrammar(terminal, nonterminal, rulesLeft, rulesRight, start);
     }
 
-    public Grammar grammar1() {
+    public CfGrammar grammar1() {
         return grammar1;
     }
 
-    public Grammar grammar2() {
+    public CfGrammar grammar2() {
         return grammar2;
     }
 }

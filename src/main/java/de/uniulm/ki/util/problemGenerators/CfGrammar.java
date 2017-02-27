@@ -1,4 +1,4 @@
-package de.uniulm.ki.util.grammarIntersection;
+package de.uniulm.ki.util.problemGenerators;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -8,14 +8,14 @@ import java.util.List;
 /**
  * Created by dh on 20.02.17.
  */
-public class Grammar {
+public class CfGrammar {
     List<String> terminal = null;
     List<String> nonterminal = null;
     List<String> rulesLeft = null;
     List<List<String>> rulesRight = null;
     String start = null;
 
-    public Grammar(String path) throws Exception {
+    public CfGrammar(String path) throws Exception {
         BufferedReader br = new BufferedReader(new FileReader(path));
         while (br.ready()) {
             String line = br.readLine().trim();
@@ -65,7 +65,7 @@ public class Grammar {
         br.close();
     }
 
-    public Grammar(List<String> terminal, List<String> nonterminal, List<String> rulesLeft, List<List<String>> rulesRight, String start) {
+    public CfGrammar(List<String> terminal, List<String> nonterminal, List<String> rulesLeft, List<List<String>> rulesRight, String start) {
         this.terminal = terminal;
         this.nonterminal = nonterminal;
         this.rulesLeft = rulesLeft;

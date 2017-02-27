@@ -1,4 +1,4 @@
-package de.uniulm.ki.util.grammarIntersection;
+package de.uniulm.ki.util.problemGenerators;
 
 import de.uniulm.ki.panda3.symbolic.csp.CSP;
 import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
@@ -33,7 +33,7 @@ import java.util.List;
 /**
  * Created by dh on 20.02.17.
  */
-public class GrammarIntersection {
+public class CfGrammarIntersectionToHTN {
 
     private final static List<Class<?>> alwaysAllowedModificationsClasses = new LinkedList<>();
     private final static List<Class<?>> alwaysAllowedFlawClasses = new LinkedList<>();
@@ -56,15 +56,19 @@ public class GrammarIntersection {
             scala.collection.immutable.Map$.MODULE$.<PlanStep, Tuple2<PlanStep, PlanStep>>empty();
 
     public static void main(String[] args) throws Exception {
-        String path = "/media/dh/Volume/repositories/private-documents/papers/2017-TR-Grammaik-Schnitt/Gammars/";
-        String g1_path = path + "g4.txt";
-        String g2_path = path + "g2.txt";
+        if (args.length != 4){
+            System.out.println("Please provide the two grammars to be intersected and two files for the output (that will be overwritten!)." +
+                    "\n program gr1.txt gr2.txt out-domain.txt out-problem.txt");
+            return;
+        }
+        String g1_path = args[0];
+        String g2_path = args[1];
 
-        Grammar g1 = new Grammar(g1_path);
-        Grammar g2 = new Grammar(g2_path);
+        CfGrammar g1 = new CfGrammar(g1_path);
+        CfGrammar g2 = new CfGrammar(g2_path);
 
         Tuple2<Domain, Plan> prob = grammerInterProb(g1, g2);
-        FileHandler.writeHDDLToFiles(prob, path + "g1-g2-dom.lisp", path + "g1-g2-prob.lisp");
+        FileHandler.writeHDDLToFiles(prob, args[2], args[3]);
     }
 
     static String sG1 = "G1";
@@ -74,7 +78,7 @@ public class GrammarIntersection {
     static Task epsilon = new ReducedTask("epsilon", true, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<>(new Vector<Literal>(0, 0, 0)), new And<>(new Vector<Literal>(0, 0, 0)));
     ;
 
-    public static Tuple2<Domain, Plan> grammerInterProb(Grammar g1, Grammar g2) {
+    public static Tuple2<Domain, Plan> grammerInterProb(CfGrammar g1, CfGrammar g2) {
 
 
         List<Class<?>> allowedModificationsClasses = new LinkedList<Class<?>>();
@@ -200,7 +204,7 @@ public class GrammarIntersection {
         return new Tuple2<>(d, p);
     }
 
-    private static void addMethods(Grammar gr, IsModificationAllowed allowedModifications, IsFlawAllowed allowedFlaws, HashMap<String, Task> tasksMap, String grammarStr, seqProviderList<DecompositionMethod> decompositionMethods) {
+    private static void addMethods(CfGrammar gr, IsModificationAllowed allowedModifications, IsFlawAllowed allowedFlaws, HashMap<String, Task> tasksMap, String grammarStr, seqProviderList<DecompositionMethod> decompositionMethods) {
         for (int j = 0; j < gr.rulesLeft.size(); j++) {
             String name = grammarStr + "-" + gr.rulesLeft.get(j) + "2";
 
