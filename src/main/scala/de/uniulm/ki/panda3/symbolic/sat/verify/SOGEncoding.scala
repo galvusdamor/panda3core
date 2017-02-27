@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 import de.uniulm.ki.panda3.symbolic.domain.{Task, DecompositionMethod, Domain}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
+import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.{GreedyNumberOfAbstractChildrenOptimiser, OptimalBranchAndBoundOptimiser}
 import de.uniulm.ki.util.{DirectedGraphDotOptions, Dot2PdfCompiler, SimpleDirectedGraph, DirectedGraph}
 
 import scala.collection.{mutable, Seq}
@@ -13,9 +14,10 @@ import scala.collection.{mutable, Seq}
 case class SOGEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
   extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrimitivePlanEncoding {
 
-  lazy val taskSequenceLength: Int = primitivePaths.length
+  //lazy val taskSequenceLength: Int = primitivePaths.length
+  lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
-  private final val useImplicationForbiddenness = true
+  private final val useImplicationForbiddenness = false
 
   assert(initialPlan.planStepsWithoutInitGoal.length == 1, "This formula is only correct if the initial plan has been replaced by an artificial top task")
 
@@ -108,7 +110,8 @@ case class SOGEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: 
     }
     println("F " + forbiddenConnections.length)
 
-    val forbiddennessImplications : Seq[Clause] = if (useImplicationForbiddenness) Nil else primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
+    val forbiddennessImplications: Seq[Clause] = if (useImplicationForbiddenness) Nil
+    else primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
       val successors = if (useImplicationForbiddenness) sog.reachable((path, tasks)).toSeq else sog.edges((path, tasks))
 
       // start from 1 as we have to access the predecessor position
@@ -182,8 +185,18 @@ case class SOGEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: 
     // TODO we are currently mapping plansteps, maybe we should prefer plansteps with identical tasks to be mapped together
     print("MINI " + possibleMethods.length + " " + possiblePrimitives.length + " ... ")
     val lb = methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max
-    val g = DirectedGraph.minimalInducedSuperGraph(methodTaskGraphs, minimiseChildrenWithAbstractTasks, lowerBoundOnMetric = lb) //, minimiseAbstractTaskOccurencesMetric)
+    val optimiser =
+      //OptimalBranchAndBoundOptimiser(minimiseChildrenWithAbstractTasks, lowerBound = lb) //, minimiseAbstractTaskOccurencesMetric)
+      GreedyNumberOfAbstractChildrenOptimiser
+
+    val g = optimiser.minimalSOG(methodTaskGraphs)
+    //val met = minimiseChildrenWithAbstractTasks(g._1,g._2)
+
+    //val check = OptimalBranchAndBoundOptimiser(minimiseChildrenWithAbstractTasks, lowerBound = lb).minimalSOG(methodTaskGraphs)
+    //val metOp = minimiseChildrenWithAbstractTasks(check._1,check._2)
+
     println("done")
+    //println("OP " + met + " of " + metOp)
     val minimalSuperGraph = g._1
     val planStepToIndexMappings: Seq[Map[PlanStep, Int]] = g._2
 
@@ -207,6 +220,9 @@ case class SOGEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: 
 
     //println("\n\nGraph minisation")
     //println(childrenIndicesToPossibleTasks map {s => s map {t => t.name + " " + t.isAbstract} mkString " "} mkString "\n")
+
+    val maxVertex = minimalSuperGraph.vertices.max
+    assert(minimalSuperGraph.vertices.length - 1 == maxVertex, "SOG has " + minimalSuperGraph.vertices.length + " vertices, but maximum vertex is " + maxVertex)
 
     (tasksPerMethodToChildrenMapping, childrenForPrimitives, childrenIndicesToPossibleTasks map { _.toSet } toArray, NonExpandedSOG(minimalSuperGraph))
   }

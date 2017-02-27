@@ -48,14 +48,14 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     }
     JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t =>
       //try {
-        t.stop()
+      t.stop()
       /*} catch {
         case td: Throwable => println("SAT Runner was aborted after timelimit ( " + timelimit.getOrElse(Long.MaxValue) + " ms) was reached.")
       }*/
     }
 
 
-    if (runner.result.isEmpty) {Thread.sleep(500) ; (false, false) } else (runner.result.get, true)
+    if (runner.result.isEmpty) {Thread.sleep(500); (false, false) } else (runner.result.get, true)
   }
 
 
@@ -84,16 +84,17 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     // start verification
     val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
     if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, planLength, offSetToK, defineK)
-    else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+    //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+    else SOGEncoding(domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
 
     // (3)
     /*println("K " + encoder.K)
     informationCapsule.set(Information.ICAPS_K, VerifyEncoding.computeICAPSK(domain, initialPlan, planLength))
     informationCapsule.set(Information.TSTG_K, VerifyEncoding.computeTSTGK(domain, initialPlan, planLength))
     informationCapsule.set(Information.DP_K, VerifyEncoding.computeTDG(domain, initialPlan, planLength, Math.max, 0))
-    informationCapsule.set(Information.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, planLength))
+    informationCapsule.set(Information.LOG_K, VerifyEncoding.computeMethodSize(domain, initialPlan, planLength))*/
     informationCapsule.set(Information.OFFSET_K, offSetToK)
-    informationCapsule.set(Information.ACTUAL_K, encoder.K)*/
+    informationCapsule.set(Information.ACTUAL_K, encoder.K)
 
     println(informationCapsule.longInfo)
 
@@ -107,7 +108,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     //System.in.read()
     timeCapsule stop Timings.GENERATE_FORMULA
 
-    writeStringToFile(usedFormula map {c => c.disjuncts map {case (a,p) => (if (!p) "not " else "") + a} mkString "\t"} mkString "\n", "formula.txt")
+    //writeStringToFile(usedFormula map {c => c.disjuncts map {case (a,p) => (if (!p) "not " else "") + a} mkString "\t"} mkString "\n", "formula.txt")
 
     timeCapsule start Timings.TRANSFORM_DIMACS
     println("READY TO WRITE")
@@ -199,7 +200,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       val literals: Set[Int] = (assignment.split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet
 
       val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-      writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+      //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
       val (graphNodes, graphEdges) = encoder match {
         case g: GeneralEncoding =>
@@ -264,7 +265,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
                 PathBasedEncoding.pathSortingFunction(path1, path2)
               } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
-            case tree: PathBasedEncoding[_,_] =>
+            case tree: SOGEncoding =>
               val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
               println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
               val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
