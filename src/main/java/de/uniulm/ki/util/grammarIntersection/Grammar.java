@@ -65,6 +65,14 @@ public class Grammar {
         br.close();
     }
 
+    public Grammar(List<String> terminal, List<String> nonterminal, List<String> rulesLeft, List<List<String>> rulesRight, String start) {
+        this.terminal = terminal;
+        this.nonterminal = nonterminal;
+        this.rulesLeft = rulesLeft;
+        this.rulesRight = rulesRight;
+        this.start = start;
+    }
+
     private List<String> readSet(String rightHandSide) {
         List<String> res = new ArrayList<>();
         String[] split = rightHandSide.split(",");

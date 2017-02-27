@@ -63,7 +63,7 @@ public class GrammarIntersection {
         Grammar g1 = new Grammar(g1_path);
         Grammar g2 = new Grammar(g2_path);
 
-        Tuple2<Domain, Plan> prob = makeProblem(g1, g2);
+        Tuple2<Domain, Plan> prob = grammerInterProb(g1, g2);
         FileHandler.writeHDDLToFiles(prob, path + "g1-g2-dom.lisp", path + "g1-g2-prob.lisp");
     }
 
@@ -71,8 +71,10 @@ public class GrammarIntersection {
     static String sG2 = "G2";
 
     static int id = 0;
-    static Task epsilon = new ReducedTask("epsilon", true, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<>(new Vector<Literal>(0, 0, 0)), new And<>(new Vector<Literal>(0, 0, 0)));;
-    private static Tuple2<Domain, Plan> makeProblem(Grammar g1, Grammar g2) {
+    static Task epsilon = new ReducedTask("epsilon", true, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<>(new Vector<Literal>(0, 0, 0)), new And<>(new Vector<Literal>(0, 0, 0)));
+    ;
+
+    public static Tuple2<Domain, Plan> grammerInterProb(Grammar g1, Grammar g2) {
 
 
         List<Class<?>> allowedModificationsClasses = new LinkedList<Class<?>>();
@@ -105,7 +107,7 @@ public class GrammarIntersection {
         HashMap<String, Task> tasksMap = new HashMap<>();
         HashMap<String, Predicate> predMap = new HashMap<>();
         for (String tname : g1.terminal) {
-            Predicate tPred = new Predicate(tname + sG1, new Vector<>(0, 0, 0));
+            Predicate tPred = new Predicate("l" + tname, new Vector<>(0, 0, 0));
             predMap.put(tPred.name(), tPred);
             predicates.add(tPred);
 
@@ -125,10 +127,11 @@ public class GrammarIntersection {
         }
 
         for (String tname : g2.terminal) {
-            Predicate tPred = predMap.get(tname + sG1);
+            Predicate tPred = predMap.get("l" + tname);
 
             seqProviderList<Literal> precLits = new seqProviderList<>();
             precLits.add(turnBPos);
+            precLits.add(new Literal(tPred, true, new Vector<Variable>(0, 0, 0)));
             And<Literal> prec = new And<Literal>(precLits.result());
 
             seqProviderList<Literal> effLits = new seqProviderList<>();
@@ -214,8 +217,8 @@ public class GrammarIntersection {
                 PlanStep ps = new PlanStep(id++, subT, new Vector<Variable>(0, 0, 0));
                 subtasks.add(ps);
             }
-            if(subtasks.size() ==0){
-                PlanStep ps = new PlanStep(id++,epsilon,new Vector<Variable>(0, 0, 0));
+            if (subtasks.size() == 0) {
+                PlanStep ps = new PlanStep(id++, epsilon, new Vector<Variable>(0, 0, 0));
                 subtasks.add(ps);
             }
             seqProviderList<OrderingConstraint> ordSeq = new seqProviderList<>();
