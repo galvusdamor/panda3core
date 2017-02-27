@@ -29,13 +29,13 @@ object Main {
 
     println("This is Panda3")
 
-    if (args.length < 2) {
+    /*if (args.length < 2) {
       println("This program needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the random seed.")
       //println("This program needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
       System.exit(1)
     }
     val domFile = args(0)
-    val probFile = args(1)
+    val probFile = args(1)*/
 
     val randomseed = if (args.length >= 3) args(2).toInt else 10
     val planLength = randomseed
@@ -69,6 +69,7 @@ object Main {
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/04-OrganizeMeeting_Large.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_with_preferences_hasPhoneNumber.xml"
     //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
     //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
@@ -120,8 +121,12 @@ object Main {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-legal-fewer-htn-groundings.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/07--p03-part1.xml"
 
-    //val domFile = "pkp/pkp4-dom.lisp"
-    //val probFile = "pkp/pkp4-prob.lisp"
+    //val domFile = "pkp/pkp2-dom.lisp"
+    //val probFile = "pkp/pkp2-prob.lisp"
+    //val domFile = "miconic.hddl"
+    //val probFile = "miconic06.hddl"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/domains/zenotravel.hddl"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/problems/zenotravel05.hddl"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/domains/verkabelung_domain_noComplexOperations.pddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/problems/genericLinearProblem_depth2.pddl"
@@ -151,11 +156,11 @@ object Main {
                             postprocessing
                            )
     } else PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = true),
+                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = true,parserType = HDDLParserType),
                                  PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                             compileInitialPlan = true,
-                                                            //compileOrderInMethods = Some(AllNecessaryOrderings),
-                                                            compileOrderInMethods = None, //Some(OneRandomOrdering()),
+                                                            compileOrderInMethods = Some(AllNecessaryOrderings),
+                                                            //compileOrderInMethods = None, //Some(OneRandomOrdering()),
                                                             splitIndependedParameters = true,
                                                             liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
@@ -181,8 +186,8 @@ object Main {
                                  //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(RelaxedCompositionGraph(true, RCG.heuristicExtraction.multicount, RCG.producerSelection
                                  //  .numOfPreconditions)), PriorityQueueSearch.abstractTaskSelection.random),
                                  //ProgressionSearch(Some(200), AStarActionsType(1), Some(GreedyProgression)),
-                                 SATSearch(Some(2 * 60), CRYPTOMINISAT(), planLength, Some(overrideK), checkResult = true),
-                                 //SATSearch(Some(1000000), CRYPTOMINISAT(), 8, Some(8), checkResult = true),
+                                 //SATSearch(Some(30 * 60), CRYPTOMINISAT(), planLength, Some(overrideK), checkResult = true),
+                                 SATSearch(Some(100000), CRYPTOMINISAT(), 30, Some(8), checkResult = true),
                                  //SATSearch(Some(30 * 60 * 1000), MINISAT(), 30, Some(10)),
                                  //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
                                  postprocessing)
