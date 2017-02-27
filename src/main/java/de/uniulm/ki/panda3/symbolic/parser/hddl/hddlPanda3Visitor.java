@@ -475,7 +475,7 @@ public class hddlPanda3Visitor {
             Variable methodVar = parserUtil.getVarByName(methodParams, param.VAR_NAME().toString());
             if (methodVar == null) {
                 if (warningOutput)
-                    System.out.println("ERROR: parameter used in method definition has not been found in method's parameter definition.");
+                    System.out.println("ERROR: parameter used in method definition has not been found in method's parameter definition. (abstract task " + abstractTask.name()+ ")");
                 paramsOk = false;
                 break;
             }
