@@ -197,6 +197,8 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                        decompositionAxioms)
   }
 
+  lazy val classicalDomain : Domain = Domain(sorts,predicates,tasks filter {_.isPrimitive},Nil,Nil)
+
   lazy val statistics      : Map[String, Any] = Map(
                                                      "number of constants" -> constants.size,
                                                      "number of sorts" -> sorts.size,
