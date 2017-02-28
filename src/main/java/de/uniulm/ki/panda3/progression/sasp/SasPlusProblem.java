@@ -341,7 +341,10 @@ public class SasPlusProblem {
 
                 sb.append(varNames[effectVar[i][j]]);
                 sb.append("=");
-                sb.append(values[effectVar[i][j]][effectVarPrec[i][j]]);
+                if (effectVar[i][j] != -1 && effectVarPrec[i][j] != -1)
+                    sb.append(values[effectVar[i][j]][effectVarPrec[i][j]]);
+                else
+                    sb.append("none-of-them");
             }
             sb.append("}\n");
             sb.append("Effects:      {");
