@@ -1,6 +1,6 @@
 package de.uniulm.ki
 
-import java.io.{PrintWriter, File}
+import java.io.{FileWriter, BufferedWriter, PrintWriter, File}
 
 import scala.collection.mutable
 
@@ -10,9 +10,7 @@ import scala.collection.mutable
 package object util {
   def writeStringToFile(s: String, file: String): Unit = writeStringToFile(s, new File(file))
 
-  def writeStringToFile(s: String, file: File): Unit = {
-    Some(new PrintWriter(file)).foreach { p => p.write(s); p.close() }
-  }
+  def writeStringToFile(s: String, file: File): Unit = Some(new BufferedWriter(new PrintWriter(file))).foreach { p => p.write(s); p.close() }
 
 
   def allMappings[A, B](listA: Seq[A], listB: Seq[B]): Seq[Seq[(A, B)]] = if (listA.isEmpty || listB.isEmpty) Nil :: Nil
@@ -48,7 +46,7 @@ package object util {
     val memoisationMap = new mutable.HashMap[Input, Output]()
 
     def apply(input: Input): Output = {
-      if (memoisationMap contains input){ memoisationMap(input)}
+      if (memoisationMap contains input) {memoisationMap(input) }
       else {
         val newValue = function(input)
         memoisationMap(input) = newValue

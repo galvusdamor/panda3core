@@ -130,7 +130,6 @@ object Main {
     val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/domains/zenotravel.hddl"
     val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/problems/zenotravel01.hddl"
 
-
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/domains/verkabelung_domain_noComplexOperations.pddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/problems/genericLinearProblem_depth4.pddl"
 
@@ -161,9 +160,10 @@ object Main {
     } else PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                  ParsingConfiguration(eliminateEquality = false, stripHybrid = true),
                                  PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                            compileInitialPlan = true,
                                                             //compileOrderInMethods = Some(AllNecessaryOrderings),
                                                             compileOrderInMethods = None, //Some(OneRandomOrdering()),
+                                                            convertToSASP = true,
+                                                            compileInitialPlan = false,
                                                             splitIndependedParameters = true,
                                                             liftedReachability = true, groundedReachability = None, //Some(PlanningGraph),
                                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),

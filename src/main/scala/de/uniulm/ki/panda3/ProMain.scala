@@ -104,6 +104,7 @@ object ProMain {
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                         compileOrderInMethods = None,
                                                                         compileInitialPlan = false,
+                                                                        convertToSASP = false,
                                                                         splitIndependedParameters = true,
                                                                         liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                                         groundedTaskDecompositionGraph = Some(TwoWayTDG), // None,

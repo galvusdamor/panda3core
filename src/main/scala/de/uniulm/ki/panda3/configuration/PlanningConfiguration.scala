@@ -16,24 +16,30 @@ import de.uniulm.ki.panda3.efficient.search.flawSelector.{SequentialEfficientFla
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
+import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem
+import de.uniulm.ki.panda3.symbolic.domain.updates.ExchangeTask
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
+import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{Solvertype, SATRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, DomainPropertyAnalyser, GroundedDecompositionMethod}
-import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral
+import de.uniulm.ki.panda3.symbolic.domain._
+import de.uniulm.ki.panda3.symbolic.logic.{Literal, And, Predicate, GroundLiteral}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.hpddl.HPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
+import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, GroundTask}
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
+import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
+
+import de.uniulm.ki.util._
 
 import scala.collection.JavaConversions
 import scala.util.Random
@@ -599,6 +605,58 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else ((domain, problem), emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
+
+    // convert to SAS+
+    val sasPlusResult = if (preprocessingConfiguration.convertToSASP) {
+
+
+      // 1. step write pddl part of the domain to file
+      val classicalDomain = liftedResult._1._1.classicalDomain
+
+      val artificialGoal = Predicate("__goal", Nil)
+      val goalLiteral = Literal(artificialGoal,true,Nil)
+
+      val pddlDomain =       Domain(classicalDomain.sorts, classicalDomain.predicates :+ artificialGoal,
+               classicalDomain.tasks map {case rt : ReducedTask => rt.copy(effect = And(rt.effect.conjuncts :+ goalLiteral)) }, Nil,Nil)
+
+      val withGoalPlan = {
+        val oldGoal = liftedResult._1._2.goal.schema match {case rt : ReducedTask => rt}
+        val newGoal = oldGoal.copy(precondition = And(oldGoal.precondition.conjuncts :+ goalLiteral))
+
+        liftedResult._1._2.update(ExchangeTask(Map(oldGoal -> newGoal)))
+      }
+
+      val pddlPlan = Plan(withGoalPlan.initAndGoal, Nil, TaskOrdering(OrderingConstraint(withGoalPlan.init, withGoalPlan.goal) :: Nil, withGoalPlan.initAndGoal),
+                          withGoalPlan.variableConstraints, withGoalPlan.init, withGoalPlan.goal, withGoalPlan.isModificationAllowed, withGoalPlan.isFlawAllowed, Map(), Map())
+
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain), "__sasdomain.pddl")
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan), "__sasproblem.pddl")
+
+      val sasPlusParser = {
+        import sys.process._
+        "../../fd/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl" !
+        // semantic empty line
+
+        "rm __sasdomain.pddl __sasproblem.pddl" !
+        // semantic empty line
+
+        val sasreader = new SasPlusProblem("output.sas")
+        "rm output.sas" !
+        // semantic empty line
+
+        sasreader
+      }
+
+
+
+      println(sasPlusParser.toString)
+      System exit 0
+
+      // for now
+      liftedResult
+    } else liftedResult
+
+
     // grounded reachability analysis
     if (preprocessingConfiguration.groundedReachability.isDefined) timeCapsule start GROUNDED_PLANNINGGRAPH_ANALYSIS
     val groundedResult = if (preprocessingConfiguration.groundedReachability.isDefined) {
@@ -614,22 +672,22 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       // run the actual analysis
       val newAnalysisMap =
         preprocessingConfiguration.groundedReachability.get match {
-          case NaiveGroundedReachability                => runGroundedForwardSearchReachabilityAnalysis(liftedResult._1._1, liftedResult._1._2, liftedResult._2)
+          case NaiveGroundedReachability                => runGroundedForwardSearchReachabilityAnalysis(sasPlusResult._1._1, sasPlusResult._1._2, sasPlusResult._2)
           case PlanningGraph | PlanningGraphWithMutexes =>
             val useMutexes = preprocessingConfiguration.groundedReachability.get match {
               case PlanningGraph            => false
               case PlanningGraphWithMutexes => true
             }
-            runGroundedPlanningGraph(liftedResult._1._1, liftedResult._1._2, useMutexes, liftedResult._2)
+            runGroundedPlanningGraph(sasPlusResult._1._1, sasPlusResult._1._2, useMutexes, sasPlusResult._2)
         }
 
       val reachable = newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.toSet
-      val disallowedTasks = liftedResult._1._1.primitiveTasks filterNot reachable.contains
-      val pruned = PruneHierarchy.transform(liftedResult._1._1, liftedResult._1._2, disallowedTasks.toSet)
+      val disallowedTasks = sasPlusResult._1._1.primitiveTasks filterNot reachable.contains
+      val pruned = PruneHierarchy.transform(sasPlusResult._1._1, sasPlusResult._1._2, disallowedTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
-    } else liftedResult
+    } else sasPlusResult
     if (preprocessingConfiguration.groundedReachability.isDefined) timeCapsule stop GROUNDED_PLANNINGGRAPH_ANALYSIS
 
     // naive task decomposition graph
@@ -792,6 +850,7 @@ case class PreprocessingConfiguration(
                                        compileUnitMethods: Boolean,
                                        compileOrderInMethods: Option[TotallyOrderingOption],
                                        compileInitialPlan: Boolean,
+                                       convertToSASP: Boolean,
                                        splitIndependedParameters: Boolean,
                                        liftedReachability: Boolean,
                                        groundedReachability: Option[GroundedReachabilityMode],
@@ -799,6 +858,8 @@ case class PreprocessingConfiguration(
                                        iterateReachabilityAnalysis: Boolean,
                                        groundDomain: Boolean
                                      ) {
+  assert(!convertToSASP || groundedReachability.isEmpty, "You can't use both SAS+ and a grouded PG")
+  assert(!convertToSASP || !compileNegativePreconditions, "You can't use both SAS+ and remove negative preconditions")
   //assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
 }
 
