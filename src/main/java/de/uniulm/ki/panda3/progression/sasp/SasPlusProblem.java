@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.progression.sasp;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.*;
 
 /**
  * Created by Daniel Höller on 24.02.17.
@@ -49,7 +50,7 @@ public class SasPlusProblem {
     private int[][][] prevailConditions; // operator-index, condition-index -> pair [variable-index, value]
 
     // effect conditions (aka STRIPS-conditional-effects)
-    private int[][] numberOfEffectConditions; // operator-index -> number of effect-conditions
+    private int[][] numOfEffectConditions; // operator-index, effect-index -> number of effect-conditions
     private int[][][] effectConditions; // operator-index, effect-index -> pair [variable-index, value]
 
     /* effects
@@ -63,17 +64,39 @@ public class SasPlusProblem {
 
     private int[] costs; // operator-index -> action costs
 
-    // our representation
-    private int numOfStateFeatures; // num of features used in our representation
-    private int[] firstIndex; // maps a mutex-group-index to the first index in the vector of state features
-    private int[] lastIndex; // maps a mutex-group-index to the last index in the vector of state features
+    // ********************
+    //  our representation
+    // ********************
+    public int numOfStateFeatures; // num of features used in our representation
+    public int[] firstIndex; // maps a mutex-group-index to the first index in the vector of state features
+    public int[] lastIndex; // maps a mutex-group-index to the last index in the vector of state features
+    public int[] indexToMutexGroup; // maps some feature-index to the corresponding mutex group
+
+    // maps an action-index to an array of preconditions. The array contains the indices of state features that need
+    // to be set
+    public int[][] precLists;
+
+    // maps an action-index to an array of add-effects. The array contains the indices of state features that are
+    // added
+    public int[][] addLists;
+
+    // maps an action-index to an array of del-effects. The array contains the indices of state features that are
+    // deleted
+    public int[][] delLists;
+
+    public int[][] precToTask; // 1 -> [4, 5, 7] means that the tasks 4, 5 and 7 all have precondition 1
+    public int[][] addToTask; // 1 -> [4, 5, 7] means that the tasks 4, 5 and 7 all add fact no. 1
+    public int[] numPrecs; // gives the number of preconditions for each action
+
+    public int[] s0List;
+    public int[] gList;
 
     // translations
     // int -> Object
     // Object -> int
     // action in old model <-> action in new model
 
-    public void prepareInteralRep() {
+    public void prepareEfficientRep() {
         numOfStateFeatures = 0;
         firstIndex = new int[numOfVars];
         lastIndex = new int[numOfVars];
@@ -82,6 +105,136 @@ public class SasPlusProblem {
             firstIndex[ivar] = numOfStateFeatures;
             numOfStateFeatures += ranges[ivar];
             lastIndex[ivar] = numOfStateFeatures - 1;
+        }
+
+        indexToMutexGroup = new int[numOfStateFeatures];
+        for (int i = 0; i < numOfVars; i++) {
+            for (int j = firstIndex[i]; j <= lastIndex[i]; j++) {
+                indexToMutexGroup[j] = i;
+            }
+        }
+
+        // prepare action-related stuff
+        precLists = new int[numOfOperators][];
+        addLists = new int[numOfOperators][];
+        delLists = new int[numOfOperators][];
+        numPrecs = new int[numOfOperators];
+
+        Map<Integer, List<Integer>> precToTaskTemp = new HashMap<>();
+        Map<Integer, List<Integer>> addEffToTaskTemp = new HashMap<>();
+
+        for (int i = 0; i < numOfOperators; i++) {
+            List<Integer> precList = new ArrayList<>();
+            List<Integer> addList = new ArrayList<>();
+            List<Integer> delList = new ArrayList<>();
+
+            // proceed prevail conditions
+            for (int j = 0; j < numPrevailConditions[i]; j++) {
+                int varIndex = prevailConditions[i][j][0];
+                int valIndex = prevailConditions[i][j][1];
+                precList.add(firstIndex[varIndex] + valIndex);
+            }
+
+            // proceed effects
+            for (int j = 0; j < numEffects[i]; j++) {
+                int varIndex = effectVar[i][j];
+                int valFromIndex = effectVarPrec[i][j];
+                int valToIndex = effectVarEff[i][j];
+                if (valFromIndex > -1) { // the variable needs to have a certain value before the application
+                    precList.add(firstIndex[varIndex] + valFromIndex);
+                    delList.add(firstIndex[varIndex] + valFromIndex);
+                } else { // the variable does NOT need to have a certain value before the application
+                    int added = firstIndex[varIndex] + valToIndex;
+                    for (int k = firstIndex[varIndex]; k <= lastIndex[varIndex]; k++) {
+                        if (k != added) {
+                            delList.add(firstIndex[varIndex] + k);
+                        }
+                    }
+                }
+                // anyway, the value is set
+                addList.add(firstIndex[varIndex] + valToIndex);
+
+                // todo implement conditional effects
+                if (this.numOfEffectConditions[i][j] > 0) {
+                    this.error = 1;
+                    System.out.println("Error: (SAS+ parser) Found conditional effects - this feature is not (yet) supported.");
+                }
+            }
+
+            numPrecs[i] = precList.size();
+
+            // fill reverse precondition list
+            for (int absoluteIndex : precList) {
+                List<Integer> tasksWithPrec;
+                if (precToTaskTemp.containsKey(absoluteIndex)) {
+                    tasksWithPrec = precToTaskTemp.get(absoluteIndex);
+                } else {
+                    tasksWithPrec = new ArrayList<>();
+                    precToTaskTemp.put(absoluteIndex, tasksWithPrec);
+                }
+                tasksWithPrec.add(i);
+            }
+
+            // fill reverse add list
+            for (int absoluteIndex : addList) {
+                List<Integer> tasksWithAddEff;
+                if (addEffToTaskTemp.containsKey(absoluteIndex)) {
+                    tasksWithAddEff = addEffToTaskTemp.get(absoluteIndex);
+                } else {
+                    tasksWithAddEff = new ArrayList<>();
+                    addEffToTaskTemp.put(absoluteIndex, tasksWithAddEff);
+                }
+                tasksWithAddEff.add(i);
+            }
+
+            // copy temporal structures to arrays
+            this.precLists[i] = new int[precList.size()];
+            this.addLists[i] = new int[addList.size()];
+            this.delLists[i] = new int[delList.size()];
+            for (int j = 0; j < precList.size(); j++) {
+                this.precLists[i][j] = precList.get(j);
+            }
+            for (int j = 0; j < addList.size(); j++) {
+                this.addLists[i][j] = addList.get(j);
+            }
+            for (int j = 0; j < delList.size(); j++) {
+                this.delLists[i][j] = delList.get(j);
+            }
+        }
+
+        // copy temporal structures to arrays
+        this.precToTask = new int[numOfOperators][];
+        this.addToTask = new int[numOfOperators][];
+        for (int i = 0; i < numOfOperators; i++) {
+            // fill precToTask-list
+            if (precToTaskTemp.containsKey(i)) {
+                List<Integer> tasks = precToTaskTemp.get(i);
+                this.precToTask[i] = new int[tasks.size()];
+                for (int j = 0; j < tasks.size(); j++)
+                    this.precToTask[i][j] = tasks.get(j);
+            } else {
+                this.precToTask[i] = new int[0];
+            }
+
+            // fill precToAdd-list
+            if (addEffToTaskTemp.containsKey(i)) {
+                List<Integer> tasks = addEffToTaskTemp.get(i);
+                this.addToTask[i] = new int[tasks.size()];
+                for (int j = 0; j < tasks.size(); j++)
+                    this.addToTask[i][j] = tasks.get(j);
+            } else {
+                this.addToTask[i] = new int[0];
+            }
+        }
+
+        s0List = new int[numOfVars];
+        for (int i = 0; i < numOfVars; i++) {
+            s0List[i] = firstIndex[i] + s0[i];
+        }
+
+        gList = new int[goal.length];
+        for (int i = 0; i < goal.length; i++) {
+            gList[i] = firstIndex[goal[i][0]] + goal[i][1];
         }
     }
 
@@ -145,7 +298,7 @@ public class SasPlusProblem {
         this.numEffects = new int[this.numOfOperators];
         this.numPrevailConditions = new int[this.numOfOperators];
         this.prevailConditions = new int[this.numOfOperators][][];
-        this.numberOfEffectConditions = new int[this.numOfOperators][];
+        this.numOfEffectConditions = new int[this.numOfOperators][];
         this.effectConditions = new int[this.numOfOperators][][];
         this.effectVar = new int[this.numOfOperators][];
         this.effectVarPrec = new int[this.numOfOperators][];
@@ -175,7 +328,7 @@ public class SasPlusProblem {
         }
 
         this.numEffects[i] = Integer.parseInt(br.readLine());
-        numberOfEffectConditions[i] = new int[this.numEffects[i]];
+        numOfEffectConditions[i] = new int[this.numEffects[i]];
         effectVar[i] = new int[this.numEffects[i]];
         effectVarPrec[i] = new int[this.numEffects[i]]; // this may be -1, which means that there is no specific value needed
         effectVarEff[i] = new int[this.numEffects[i]];
@@ -183,8 +336,8 @@ public class SasPlusProblem {
         for (int j = 0; j < this.numEffects[i]; j++) {
             String[] eff = br.readLine().split(" ");
             int k = 0;
-            this.numberOfEffectConditions[i][j] = Integer.parseInt(eff[k++]);
-            for (int l = 0; l < this.numberOfEffectConditions[i][j]; l++) {
+            this.numOfEffectConditions[i][j] = Integer.parseInt(eff[k++]);
+            for (int l = 0; l < this.numOfEffectConditions[i][j]; l++) {
                 effectConditions[i][j] = new int[2];
                 effectConditions[i][j][0] = Integer.parseInt(eff[k++]);
                 effectConditions[i][j][1] = Integer.parseInt(eff[k++]);
@@ -341,7 +494,7 @@ public class SasPlusProblem {
 
                 sb.append(varNames[effectVar[i][j]]);
                 sb.append("=");
-                if (effectVar[i][j] != -1 && effectVarPrec[i][j] != -1)
+                if (effectVarPrec[i][j] != -1)
                     sb.append(values[effectVar[i][j]][effectVarPrec[i][j]]);
                 else
                     sb.append("none-of-them");
