@@ -18,7 +18,9 @@ object SHOPMethodCompiler extends DomainTransformerWithOutInformation {
         if (precondition.isEmpty && effect.isEmpty) (SimpleDecompositionMethod(abstractTask, subPlan, name), Nil)
         else {
           // generate a new schema that represents the decomposition method
-          val preconditionTaskSchema = GeneralTask("SHOP_method" + name + "_precondition", isPrimitive = true, (precondition.containedVariables ++ effect.containedVariables).toSeq, Nil, Nil,
+          val containedVariables = (precondition.containedVariables ++ effect.containedVariables).toSeq.distinct
+          val preconditionTaskSchema = GeneralTask("SHOP_method" + name + "_precondition", isPrimitive = true, containedVariables,
+                                                   Nil, subPlan.variableConstraints.constraints filter { _.getVariables.toSet.toSet.subsetOf(containedVariables.toSet) },
                                                    precondition, effect)
           // instantiate
           val preconditionPlanStep = new PlanStep(subPlan.getFirstFreePlanStepID, preconditionTaskSchema, preconditionTaskSchema.parameters)

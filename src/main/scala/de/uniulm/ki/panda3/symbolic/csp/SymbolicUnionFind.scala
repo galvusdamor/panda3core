@@ -74,6 +74,7 @@ object SymbolicUnionFind {
       case Equal(left, right) => uf.assertEqual(left, right)
       case _                  => ()
     }
+    task.parameters foreach {p => if (p.sort.elements.length == 1) uf.assertEqual(p,p.sort.elements.head)}
     uf
   }
 

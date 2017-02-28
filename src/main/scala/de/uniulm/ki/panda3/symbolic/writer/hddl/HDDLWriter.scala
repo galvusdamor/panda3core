@@ -28,7 +28,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
   }
 
   def writeVariable(v: Value, csp: CSP): String = csp getRepresentative v match {
-    case Constant(name) => toPDDLIdentifier(name)
+    case Constant(name)       => toPDDLIdentifier(name)
     case Variable(_, name, _) => toHPDDLVariableName(name)
   }
 
@@ -146,17 +146,17 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
   }
 
   def getRepresentative(v: Value, uf: SymbolicUnionFind): String = v match {
-    case Constant(c) => toPDDLIdentifier(c)
+    case Constant(c)            => toPDDLIdentifier(c)
     case vari@Variable(_, _, _) => uf.getRepresentative(vari) match {
-      case Constant(c) => toPDDLIdentifier(c)
+      case Constant(c)          => toPDDLIdentifier(c)
       case Variable(_, name, _) => toHPDDLVariableName(name)
     }
   }
 
 
   def writeFormula(builder: StringBuilder, formula: Formula, indent: String, taskUF: SymbolicUnionFind): Unit = formula match {
-    case Identity() => builder
-    case And(conj) =>
+    case Identity()               => builder
+    case And(conj)                =>
       if (conj.isEmpty || (conj forall { case Identity() => true; case _ => false }))
         ()
       else {
@@ -166,28 +166,28 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         }
         builder.append(indent + ")\n")
       }
-    case Or(disj) => builder.append(indent + "(or\n")
+    case Or(disj)                 => builder.append(indent + "(or\n")
       disj foreach {
         writeFormula(builder, _, indent + "\t", taskUF)
       }
       builder.append(indent + ")\n")
-    case l: Literal =>
+    case l: Literal               =>
       builder.append(writeLiteral(l, taskUF, indent))
-    case Not(form) => builder.append(indent + "(not\n")
+    case Not(form)                => builder.append(indent + "(not\n")
       writeFormula(builder, form, indent + "\t", taskUF)
       builder.append(indent + ")\n")
-    case Implies(left, right) => builder.append(indent + "(imply\n")
+    case Implies(left, right)     => builder.append(indent + "(imply\n")
       writeFormula(builder, left, indent + "\t", taskUF)
       writeFormula(builder, right, indent + "\t", taskUF)
       builder.append(indent + ")\n")
     case Equivalence(left, right) => writeFormula(builder, And(Implies(left, right) :: Implies(right, left) :: Nil), indent + "\t", taskUF)
-    case Exists(v, form) => builder.append(indent + "(exists (" + writeVariable(v, NoConstraintsCSP) + " - " + toPDDLIdentifier(v.sort.name) + ")\n")
+    case Exists(v, form)          => builder.append(indent + "(exists (" + writeVariable(v, NoConstraintsCSP) + " - " + toPDDLIdentifier(v.sort.name) + ")\n")
       val quantifiedUF = new SymbolicUnionFind()
       quantifiedUF.cloneFrom(taskUF)
       quantifiedUF.addVariable(v)
       writeFormula(builder, form, indent + "\t", quantifiedUF)
       builder.append(indent + ")\n")
-    case Forall(v, form) => builder.append(indent + "(forall (" + writeVariable(v, NoConstraintsCSP) + " - " + toPDDLIdentifier(v.sort.name) + ")\n")
+    case Forall(v, form)          => builder.append(indent + "(forall (" + writeVariable(v, NoConstraintsCSP) + " - " + toPDDLIdentifier(v.sort.name) + ")\n")
       val quantifiedUF = new SymbolicUnionFind()
       quantifiedUF.cloneFrom(taskUF)
       quantifiedUF.addVariable(v)
@@ -215,12 +215,12 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     if (!task.precondition.isEmpty) {
       builder.append("\t\t:precondition \n")
       writeFormula(builder, task.precondition, "\t\t\t", taskUF)
-    }
+    } else builder.append("\t\t:precondition ()\n")
     // effects
     if (!task.effect.isEmpty) {
       builder.append("\t\t:effect\n")
       writeFormula(builder, task.effect, "\t\t\t", taskUF)
-    }
+    } else builder.append("\t\t:effect ()\n")
 
     builder.append("\t)\n")
   }
@@ -231,7 +231,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
       builder.append("\t\t" + toPDDLIdentifier(c.name) + " - ")
       dom.getSortOfConstant(c) match {
         case Some(s) => builder.append(toPDDLIdentifier(s.name) + "\n")
-        case None => throw new IllegalArgumentException("The constant " + c + " does not have a unique sort in the given domain.")
+        case None    => throw new IllegalArgumentException("The constant " + c + " does not have a unique sort in the given domain.")
       }
     }
     builder.append("\t)\n")
@@ -243,7 +243,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     // ATTENTION: we cannot use any CSP in here, since the domain may lack constants, i.e., probably any CSP will be unsolvable causing problems
     val builder: StringBuilder = new StringBuilder()
 
-    builder.append("(define (domain " + toPDDLIdentifier(domainName) + ")\n\t(:requirements :typing :hierachie)\n")
+    builder.append("(define (domain " + toPDDLIdentifier(domainName) + ")\n\t(:requirements :typing " + (if (dom.decompositionMethods.nonEmpty) ":hierachie" else "") + ")\n")
 
     // add all sorts
     if (dom.sorts.nonEmpty) {
@@ -252,23 +252,23 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
 
 
       regularSorts foreach { s =>
-          val parentSorts = dom.sortGraph.edgeList filter { _._2 == s }
-          // if it has no parent sort it will be the parent of something
-          if (parentSorts.nonEmpty) {
-            builder.append("\t\t" + toPDDLIdentifier(s.name))
-            if (parentSorts.size == 1) builder.append(" - " + toPDDLIdentifier(parentSorts.head._1.name))
-            if (parentSorts.size > 1) {
-              builder.append(" - (either")
-              parentSorts foreach {
-                ps => builder.append(" " + toPDDLIdentifier(ps._1.name))
-              }
-              builder.append(")")
+        val parentSorts = dom.sortGraph.edgeList filter { _._2 == s }
+        // if it has no parent sort it will be the parent of something
+        if (parentSorts.nonEmpty) {
+          builder.append("\t\t" + toPDDLIdentifier(s.name))
+          if (parentSorts.size == 1) builder.append(" - " + toPDDLIdentifier(parentSorts.head._1.name))
+          if (parentSorts.size > 1) {
+            builder.append(" - (either")
+            parentSorts foreach {
+              ps => builder.append(" " + toPDDLIdentifier(ps._1.name))
             }
-            builder.append("\n")
+            builder.append(")")
           }
+          builder.append("\n")
+        }
       }
       // write isolated sorts at the end
-      isolatedSorts foreach {s => builder.append("\t\t" + toPDDLIdentifier(s.name) + "\n")}
+      isolatedSorts foreach { s => builder.append("\t\t" + toPDDLIdentifier(s.name) + "\n") }
 
       builder.append("\t)\n")
     }
