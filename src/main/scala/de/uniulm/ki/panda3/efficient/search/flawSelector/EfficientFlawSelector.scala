@@ -113,7 +113,7 @@ case class RandomFlawSelector(random: Random) extends EfficientFlawSubsetSelecto
 
 
 /**
-  * UMCP's flaw selection strategy: Abstract first and LCFS as a tie-breaker
+  * UMCP's flaw selection strategy: Abstract first and LCFR as a tie-breaker
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
