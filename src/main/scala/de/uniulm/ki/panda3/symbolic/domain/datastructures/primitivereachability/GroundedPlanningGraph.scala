@@ -61,9 +61,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
   override lazy val layer: Seq[(Set[GroundTask], Set[GroundLiteral])] = {
     // compute the layers
     val computedLayer = layerWithMutexes map { case (groundTasks, groundTaskMutexes, groundLiterals, groundLiteralMutexes) =>
-      (groundTasks filterNot {
-        _.task.name.startsWith("NO-OP")
-      }, groundLiterals)
+      (groundTasks filterNot { _.task.name.startsWith("NO-OP") }, groundLiterals)
     }
     // check assertions
     computedLayer foreach { case (_, b) => b foreach { gl => assert(gl.isPositive) } }
