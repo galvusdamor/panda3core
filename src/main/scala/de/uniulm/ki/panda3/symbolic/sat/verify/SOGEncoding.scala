@@ -116,7 +116,7 @@ case class SOGEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: 
 
       // start from 1 as we have to access the predecessor position
       Range(1, taskSequenceLength) flatMap { pos =>
-        impliesRightAnd(pathPosForbidden(path, pos) :: Nil, successors map { case (succP, _) => pathPosForbidden(succP, pos - 1) })
+        impliesRightAnd(pathPosForbidden(path, pos) :: Nil, successors map { case (succP, _) => pathPosForbidden(succP, pos) })
       }
     }
     println("G " + forbiddennessImplications.length)
