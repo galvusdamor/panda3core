@@ -12,7 +12,7 @@ import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachabili
 import de.uniulm.ki.panda3.efficient.heuristic.filter.RecomputeHTN
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps}
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
-import de.uniulm.ki.panda3.efficient.search.flawSelector.{SequentialEfficientFlawSelector, RandomFlawSelector, UMCPFlawSelection, LeastCostFlawRepair}
+import de.uniulm.ki.panda3.efficient.search.flawSelector._
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
@@ -196,12 +196,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           val flawSelector = search.flawSelector match {
             case LCFR                  => LeastCostFlawRepair
+            case CausalThreat          => CausalThreatSelector
+            case FrontFlaw             => FrontFlawFirst
             case RandomFlaw            => RandomFlawSelector(new Random(randomSeed))
             case UMCPFlaw              => UMCPFlawSelection
             case s: SequentialSelector =>
               val subSelectorArray = s.sequence map {
-                case LCFR       => LeastCostFlawRepair
-                case RandomFlaw => RandomFlawSelector(new Random(randomSeed))
+                case LCFR         => LeastCostFlawRepair
+                case RandomFlaw   => RandomFlawSelector(new Random(randomSeed))
+                case CausalThreat => CausalThreatSelector
+                case FrontFlaw    => FrontFlawFirst
               } toArray
 
               SequentialEfficientFlawSelector(subSelectorArray)
@@ -1198,6 +1202,11 @@ object LCFR extends SearchFlawSelector {override val longInfo: String = "lcfr"}
 object UMCPFlaw extends SearchFlawSelector {override val longInfo: String = "umcp-f"}
 
 object RandomFlaw extends SearchFlawSelector {override val longInfo: String = "random"}
+
+object FrontFlaw extends SearchFlawSelector {override val longInfo: String = "front-flaw"}
+
+object CausalThreat extends SearchFlawSelector {override val longInfo: String = "causal-threat first"}
+
 
 case class SequentialSelector(sequence: SearchFlawSelector*) extends SearchFlawSelector {override val longInfo: String = sequence map { _.longInfo } mkString " -> "}
 

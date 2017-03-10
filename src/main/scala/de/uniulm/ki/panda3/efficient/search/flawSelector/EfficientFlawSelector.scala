@@ -3,7 +3,8 @@ package de.uniulm.ki.panda3.efficient.search.flawSelector
 import java.util
 
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
-import de.uniulm.ki.panda3.efficient.plan.flaw.{EfficientAbstractPlanStep, EfficientFlaw}
+import de.uniulm.ki.panda3.efficient.plan.flaw.{EfficientAbstractPlanStep, EfficientCausalThreat, EfficientFlaw}
+import de.uniulm.ki.panda3.efficient.plan.flaw._
 
 import scala.util.Random
 
@@ -171,5 +172,86 @@ case class AbstractFirstWithDeferred(deferred: Set[Int]) extends EfficientFlawSe
     }
 
     minFlaw
+  }
+}
+
+object CausalThreatSelector extends EfficientFlawSubsetSelector {
+  override def reduceSelection(plan: EfficientPlan, activeFlaws: Array[Boolean], flaws: Array[EfficientFlaw],
+                               numberOfModifications: Array[Int]): Int = {
+    if (checkExistsCausalThreat(flaws))
+      crossOutNonCausalThreatFlaws(activeFlaws, flaws)
+    else
+      0
+  }
+
+  @inline final private def checkExistsCausalThreat(flaws: Array[EfficientFlaw]): Boolean = {
+    var foundCausalThreat = false
+    var flawNum = 0
+    while (flawNum < flaws.length && !foundCausalThreat) {
+      if (flaws(flawNum).isInstanceOf[EfficientCausalThreat])
+        foundCausalThreat = true
+      flawNum += 1
+    }
+    foundCausalThreat
+  }
+
+  @inline final private def crossOutNonCausalThreatFlaws(activeFlaws: Array[Boolean], flaws: Array[EfficientFlaw]): Int = {
+    var flawNum = 0
+    var numCrossed = 0
+    while (flawNum < flaws.length) {
+      if (!flaws(flawNum).isInstanceOf[EfficientCausalThreat]) {
+        activeFlaws(flawNum) = false
+        numCrossed += 1
+      }
+      flawNum += 1
+    }
+    numCrossed
+  }
+}
+
+object FrontFlawFirst extends EfficientFlawSubsetSelector {
+
+  private def getContainedTaskIndices(flaw: EfficientFlaw): Int = flaw match {
+    case EfficientAbstractPlanStep(plan, ps)             => ps
+    case EfficientCausalThreat(plan, cl, threater, _, _) => -1
+    case EfficientOpenPrecondition(plan, ps, _)          => ps
+    case EfficientUnboundVariable(_, _)                  => -1
+  }
+
+  /**
+    * removes flaws from consideration. removed flaws should be marked as false and the number of removed flaws should be returned
+    */
+  override def reduceSelection(plan: EfficientPlan, activeFlaws: Array[Boolean], flaws: Array[EfficientFlaw], numberOfModifications: Array[Int]): Int = {
+    var flawNum = 0
+    var excludedFlaws = 0
+    while (flawNum < activeFlaws.length) {
+      val thisFlawPlanStep = getContainedTaskIndices(flaws(flawNum))
+      // try to find another flaw which occurs before this one
+      var otherFlawNum = 0
+      while (otherFlawNum < activeFlaws.length && activeFlaws(flawNum)) {
+        if (activeFlaws(otherFlawNum)) {
+          val thatFlawPlanStep = getContainedTaskIndices(flaws(otherFlawNum))
+
+          if (thisFlawPlanStep == -1 && thatFlawPlanStep != -1){
+            // if I am not a Open precondition, and the other is, ignore me
+            activeFlaws(flawNum) = false
+            excludedFlaws += 1
+          } else if (thisFlawPlanStep != -1 && thatFlawPlanStep == -1) {
+            // other way around
+            activeFlaws(otherFlawNum) = false
+            excludedFlaws += 1
+          } else if (thisFlawPlanStep != -1 && thatFlawPlanStep != -1) {
+            if (plan.ordering.lt(thatFlawPlanStep,thisFlawPlanStep)) {
+              activeFlaws(flawNum) = false
+              excludedFlaws += 1
+            }
+          }
+        }
+        otherFlawNum += 1
+      }
+      flawNum += 1
+    }
+
+    excludedFlaws
   }
 }
