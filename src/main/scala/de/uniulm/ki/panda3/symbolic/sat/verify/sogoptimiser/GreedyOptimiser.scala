@@ -1,7 +1,10 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser
 
+import de.uniulm.ki.panda3.symbolic.domain.Task
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.util.{SimpleDirectedGraph, DirectedGraph}
+
+import scala.collection.mutable
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -9,7 +12,6 @@ import de.uniulm.ki.util.{SimpleDirectedGraph, DirectedGraph}
 object GreedyNumberOfAbstractChildrenOptimiser extends SOGOptimiser {
 
   override def minimalSOG(graphs: Seq[DirectedGraph[PlanStep]]): (DirectedGraph[Int], Seq[Map[PlanStep, Int]]) = {
-
 
     def matchGraph(currentGraph: DirectedGraph[Int], currentMapping: Seq[Map[PlanStep, Int]], nextGraph: DirectedGraph[PlanStep])
     : (DirectedGraph[Int], Seq[Map[PlanStep, Int]]) = {
@@ -59,7 +61,7 @@ object GreedyNumberOfAbstractChildrenOptimiser extends SOGOptimiser {
     }
 
     val graphReordering: Seq[(DirectedGraph[PlanStep], Int)] = graphs.zipWithIndex.sortBy(_._1.vertices.length).reverse
-    val backMapping: Map[Int, Int] = graphReordering.zipWithIndex map {case ((_,oldIndex), newIndex) => oldIndex -> newIndex} toMap
+    val backMapping: Map[Int, Int] = graphReordering.zipWithIndex map { case ((_, oldIndex), newIndex) => oldIndex -> newIndex } toMap
 
 
     val (minimalGraph, mapping) = graphReordering.foldLeft[(DirectedGraph[Int], Seq[Map[PlanStep, Int]])]((SimpleDirectedGraph(Nil, Nil), Nil))(
@@ -70,5 +72,36 @@ object GreedyNumberOfAbstractChildrenOptimiser extends SOGOptimiser {
       })
 
     (minimalGraph, mapping.indices map { i => mapping(backMapping(i)) })
+  }
+}
+
+
+object GreedyNumberOfChildrenFromTotallyOrderedOptimiser extends SOGOptimiser {
+  override def minimalSOG(graphs: Seq[DirectedGraph[PlanStep]]): (DirectedGraph[Int], Seq[Map[PlanStep, Int]]) = {
+    assert(graphs forall { _.allTotalOrderings.get.length == 1 })
+
+    // take the longest ones first
+    val sorted = graphs.zipWithIndex.sortBy(-_._1.vertices.length)
+    val maxLen = if (sorted.nonEmpty) sorted.head._1.vertices.length else 0
+    val range = Range(0, maxLen)
+
+    val possibleTasksPerChildPosition = range map { _ => new mutable.HashSet[Task]() } toArray
+    val psMapping = graphs.indices map { _ => new mutable.HashMap[PlanStep, Int]() } toArray
+
+    sorted foreach { case (g, gIndex) =>
+      range.foldLeft(g.topologicalOrdering.get)(
+        {
+          case (Nil, _)            => Nil
+          case (remainingTasks, i) =>
+            if (possibleTasksPerChildPosition(i) contains remainingTasks.head.schema) {psMapping(gIndex)(remainingTasks.head) = i; remainingTasks.tail }
+            else if (remainingTasks.length == maxLen - i) {possibleTasksPerChildPosition(i) += remainingTasks.head.schema; psMapping(gIndex)(remainingTasks.head) = i; remainingTasks.tail }
+            else remainingTasks
+        })
+    }
+
+
+    val supergraph = SimpleDirectedGraph(range, range zip range.tail)
+
+    (supergraph, psMapping map { _.toMap })
   }
 }

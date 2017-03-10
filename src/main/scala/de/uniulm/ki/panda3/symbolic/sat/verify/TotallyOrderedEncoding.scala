@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, DecompositionMethod, Ta
 import de.uniulm.ki.panda3.symbolic.logic.{Predicate, Literal}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
-import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.GreedyNumberOfAbstractChildrenOptimiser
+import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.{GreedyNumberOfChildrenFromTotallyOrderedOptimiser, GreedyNumberOfAbstractChildrenOptimiser}
 import de.uniulm.ki.util._
 
 import scala.collection.{mutable, Seq}
@@ -102,7 +102,8 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
     val lb = methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max
     // TODO what to do?
     //val g = DirectedGraph.minimalInducedSuperGraph[PlanStep](methodTaskGraphs) //, minimiseAbstractTaskOccurencesMetric)
-    val g = GreedyNumberOfAbstractChildrenOptimiser.minimalSOG(methodTaskGraphs)
+    //val g = GreedyNumberOfAbstractChildrenOptimiser.minimalSOG(methodTaskGraphs)
+    val g = GreedyNumberOfChildrenFromTotallyOrderedOptimiser.minimalSOG(methodTaskGraphs)
     println("done")
     val minimalSuperGraph = g._1
     val planStepToIndexMappings: Seq[Map[PlanStep, Int]] = g._2
