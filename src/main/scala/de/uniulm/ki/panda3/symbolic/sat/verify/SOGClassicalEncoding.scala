@@ -9,8 +9,8 @@ import scala.collection.Seq
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class SOGClassicalEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding{
-  //lazy val taskSequenceLength: Int = primitivePaths.length
-  lazy val taskSequenceLength: Int = taskSequenceLengthQQ
+  lazy val taskSequenceLength: Int = primitivePaths.length
+  //lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position
 
@@ -18,6 +18,7 @@ case class SOGClassicalEncoding(domain: Domain, initialPlan: Plan, taskSequenceL
 
   protected def pathActive(p1: Seq[Int]) = "active!" + "_" + p1.mkString(";")
 
+  override lazy val noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
     val paths = primitivePathArray

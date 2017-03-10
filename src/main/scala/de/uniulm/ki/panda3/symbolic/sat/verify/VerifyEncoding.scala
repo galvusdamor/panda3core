@@ -31,7 +31,7 @@ trait VerifyEncoding {
 
   def offsetToK: Int
 
-  def overrideK : Option[Int]
+  def overrideK: Option[Int]
 
   val K: Int = if (overrideK.isDefined) overrideK.get else VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
 
@@ -45,7 +45,7 @@ trait VerifyEncoding {
   lazy val numberOfLayers = K
 
 
-  protected val taskIndices          : Map[Task, Int]                = domain.tasks.zipWithIndex.toMap.withDefaultValue(-1)
+  protected val taskIndices          : Map[Task, Int]                = (domain.tasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).zipWithIndex.toMap.withDefaultValue(-1)
   protected val predicateIndices     : Map[Predicate, Int]           = domain.predicates.zipWithIndex.toMap
   protected val methodIndices        : Map[DecompositionMethod, Int] = domain.decompositionMethods.zipWithIndex.toMap
   protected val methodPlanStepIndices: Map[Int, Map[PlanStep, Int]]  = (domain.decompositionMethods map { method =>
@@ -234,7 +234,7 @@ object VerifyEncoding {
     if (minMethodSize >= 2) Math.ceil((taskSequenceLength - plan.planStepsWithoutInitGoal.length).toDouble / (minMethodSize - 1)).toInt + heightIncrease else Integer.MAX_VALUE
   }
 
-  def computeTDG(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, accumulate : (Int,Int) => Int, initialValue : Int): Int = {
+  def computeTDG(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, accumulate: (Int, Int) => Int, initialValue: Int): Int = {
 
     def printMap(map: Map[Task, Map[Int, Int]]): Unit = {
       println("\nMAP")

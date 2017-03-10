@@ -15,15 +15,17 @@ import scala.collection.Seq
 case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding {
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
-  protected def preconditionOfPath(path: Seq[Int], precondition: Predicate): String = "prec^" + path.mkString(",") + "_" + precondition.name
+  protected def preconditionOfPath(path: Seq[Int], precondition: Predicate): String = "prec^" + path.mkString(";") + "_" + precondition.name
 
-  protected def supporter(pathA: Seq[Int], pathB: Seq[Int], precondition: Predicate): String = "supp^" + pathA.mkString(",") + "_" + pathB.mkString(",") + "_" + precondition.name
+  protected def supporter(pathA: Seq[Int], pathB: Seq[Int], precondition: Predicate): String = "supp^" + pathA.mkString(";") + "_" + pathB.mkString(";") + "_" + precondition.name
 
   protected val before: ((Seq[Int], Seq[Int])) => String =
-    memoise[(Seq[Int], Seq[Int]), String]({ case (pathA: Seq[Int], pathB: Seq[Int]) => "before_" + pathA.mkString(",") + "_" + pathB.mkString(",") })
+    memoise[(Seq[Int], Seq[Int]), String]({ case (pathA: Seq[Int], pathB: Seq[Int]) => "before_" + pathA.mkString(";") + "_" + pathB.mkString(";") })
 
   //protected def before(pathA: Seq[Int], pathB: Seq[Int]): String = "before_" + pathA.mkString(",") + "_" + pathB.mkString(",")
 
+
+  override lazy val noAbstractsFormula: Seq[Clause] = primitivePathArray flatMap {case (p,ts) => ts filter {_.isAbstract} map {t => Clause((pathAction(p.length - 1,p,t),false))}}
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
     val paths = primitivePathArray

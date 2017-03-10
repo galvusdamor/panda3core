@@ -20,9 +20,6 @@ trait SOGEncoding  extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPri
   // this is only needed in the tree encoding
   override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, taskOrdering: Seq[Task]): Seq[Clause] = Nil
 
-
-  override lazy val noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
-
   override lazy val goalState: Seq[Clause] = goalStateOfLength(taskSequenceLength)
 
   //TODO: is this correct?
