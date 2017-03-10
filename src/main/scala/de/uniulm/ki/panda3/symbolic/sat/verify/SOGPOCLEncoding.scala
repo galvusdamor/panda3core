@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 import de.uniulm.ki.panda3.symbolic.domain.{Task, Domain}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.util.{Dot2PdfCompiler, DirectedGraphDotOptions, SimpleDirectedGraph}
+import de.uniulm.ki.util._
 
 import scala.collection.Seq
 
@@ -19,7 +19,10 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
 
   protected def supporter(pathA: Seq[Int], pathB: Seq[Int], precondition: Predicate): String = "supp^" + pathA.mkString(",") + "_" + pathB.mkString(",") + "_" + precondition.name
 
-  protected def before(pathA: Seq[Int], pathB: Seq[Int]): String = "before_" + pathA.mkString(",") + "_" + pathB.mkString(",")
+  protected val before: ((Seq[Int], Seq[Int])) => String =
+    memoise[(Seq[Int], Seq[Int]), String]({ case (pathA: Seq[Int], pathB: Seq[Int]) => "before_" + pathA.mkString(",") + "_" + pathB.mkString(",") })
+
+  //protected def before(pathA: Seq[Int], pathB: Seq[Int]): String = "before_" + pathA.mkString(",") + "_" + pathB.mkString(",")
 
 
   override lazy val stateTransitionFormula: Seq[Clause] = {

@@ -109,7 +109,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     //System.in.read()
     timeCapsule stop Timings.GENERATE_FORMULA
 
-    writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
+    //writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
 
     timeCapsule start Timings.TRANSFORM_DIMACS
     println("READY TO WRITE")
@@ -201,7 +201,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       val literals: Set[Int] = (assignment.split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet
 
       val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-      writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+      //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
       val (graphNodes, graphEdges) = encoder match {
         case g: GeneralEncoding =>
