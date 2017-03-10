@@ -80,12 +80,12 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   lazy val transitiveReduction: DirectedGraph[T] = {
     val changingEdgeMap = edges map { case (k, v) => val h = new mutable.HashSet[T](); h ++= v; (k, h) }
 
-    for (i <- vertices; j <- vertices
-         if edges(i).contains(j);
-         k <- vertices
-         if edges(j).contains(k) && changingEdgeMap(i).contains(k)
+    //
+
+    for ((i, j) <- edgeList;
+         if changingEdgeMap(i) exists { k => reachable(k) contains j }
     ) {
-      changingEdgeMap(i).remove(k)
+      changingEdgeMap(i).remove(j)
     }
 
 
@@ -114,6 +114,8 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   }
 
   protected def dotVertexStyleRenderer(v: T): String = ""
+
+  def map[U](f: T => U): DirectedGraph[U] = SimpleDirectedGraph(vertices map f, edgeList map { case (a, b) => (f(a), f(b)) })
 }
 
 case class DirectedGraphDotOptions(labelNodesWithNumbers: Boolean = false)
@@ -503,7 +505,12 @@ object DirectedGraphWithInternalMapping {
   }
 }
 
-case class SimpleDirectedGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraphWithAlgorithms[T] {}
+case class SimpleDirectedGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraphWithAlgorithms[T] {
+  override def equals(o: scala.Any): Boolean = o match {
+    case g: SimpleDirectedGraph[T] => vertices.toSet == g.vertices.toSet && edgeList.toSet == g.edgeList.toSet
+    case _                         => false
+  }
+}
 
 object SimpleDirectedGraph {
   def apply[T](nodes: Seq[T], edges: Seq[(T, T)]): SimpleDirectedGraph[T] = {
