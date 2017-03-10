@@ -25,7 +25,7 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
   //protected def before(pathA: Seq[Int], pathB: Seq[Int]): String = "before_" + pathA.mkString(",") + "_" + pathB.mkString(",")
 
 
-  override lazy val noAbstractsFormula: Seq[Clause] = primitivePathArray flatMap {case (p,ts) => ts filter {_.isAbstract} map {t => Clause((pathAction(p.length - 1,p,t),false))}}
+  override lazy val noAbstractsFormula: Seq[Clause] = primitivePathArray flatMap { case (p, ts) => ts filter { _.isAbstract } map { t => Clause((pathAction(p.length - 1, p, t), false)) } }
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
     val paths = primitivePathArray
@@ -96,8 +96,15 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
     println("C " + supportImpliesOrder.length)
 
     val pathsWithInitAndGoal = extendedSOG.vertices map { _._1 }
+    val onlyPathSOG = extendedSOG map { _._1 }
+
     val orderMustBeTransitive: Seq[Clause] =
-      pathsWithInitAndGoal flatMap { i => pathsWithInitAndGoal flatMap { j => pathsWithInitAndGoal map { k => impliesRightAndSingle(before(i, j) :: before(j, k) :: Nil, before(i, k)) } } }
+      pathsWithInitAndGoal flatMap { i =>
+        // only those which are not already ordered against it
+        pathsWithInitAndGoal filterNot { k => onlyPathSOG.reachable(i) contains k } flatMap { k =>
+          pathsWithInitAndGoal map { j => impliesRightAndSingle(before(i, j) :: before(j, k) :: Nil, before(i, k)) }
+        }
+      }
     println("D " + orderMustBeTransitive.length)
 
     val orderMustBeConsistent = pathsWithInitAndGoal flatMap { i => pathsWithInitAndGoal filter { _ != i } map { j => impliesNot(before(i, j), before(j, i)) } }
@@ -107,7 +114,6 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
     println("F " + sogOrderMustBeRespected.length)
 
     // no causal threats
-    val onlyPathSOG = extendedSOG map { _._1 }
     val noCausalThreat: Seq[Clause] = supporterLiterals flatMap { case (p1, p2, prec) =>
       val nonOrdered = extendedSOG.vertices filterNot { case (p, _) => p == p1 || p == p2 || onlyPathSOG.reachable(p2).contains(p) || onlyPathSOG.reachable(p).contains(p1) }
 
