@@ -275,6 +275,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
               println("Primitive Sequence with paths")
               println(actionSequence map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX).name + " " + t } mkString "\n")
 
+              val innerActions = allTrueAtoms filter { _.startsWith("action!") }
+              println("Inner actions with paths")
+              println(innerActions map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX).name + " " + t } mkString "\n")
+
+
               val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
               println(pathToPos mkString "\n")
               val active = allTrueAtoms filter { _.startsWith("active") }
