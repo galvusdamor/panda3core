@@ -84,8 +84,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     // start verification
     val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
     if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, planLength, offSetToK, defineK)
-    //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
-    else SOGEncoding(domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+    else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
 
     // (3)
     /*println("K " + encoder.K)
@@ -265,7 +264,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
                 PathBasedEncoding.pathSortingFunction(path1, path2)
               } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
-            case tree: SOGEncoding =>
+            case tree: PathBasedEncoding[_,_] =>
               val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
               println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
               val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
