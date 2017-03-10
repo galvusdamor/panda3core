@@ -454,6 +454,9 @@ object DirectedGraph {
 
 case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraph[T] {
 
+  // we don't want duplicats
+  assert(vertices.length == vertices.distinct.length)
+
   private val verticesToInt: BiMap[T, Int] = BiMap(vertices.zipWithIndex)
   private val internalGraph                = SimpleDirectedGraph[Int](vertices map verticesToInt.apply, edges map { case (from, to) =>
     verticesToInt(from) -> to.map(verticesToInt.apply)
