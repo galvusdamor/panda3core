@@ -78,11 +78,11 @@ object Main {
     //val probFile = "/home/gregor/3obs-3sat-3mod.xml"
     //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/satellite2-P-abstract-2obs-2sat-2mod.xml"
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/3obs-3sat-3mod.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8obs-3sat-4mod.xml"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8obs-3sat-4mod.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/2obs-2sat-2mod.xml"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-legal-fewer-htn-groundings.xml"
@@ -127,8 +127,8 @@ object Main {
     //val domFile = "miconic.hddl"
     //val probFile = "miconic06.hddl"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/domains/zenotravel.hddl"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/problems/zenotravel01.hddl"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/domains/zenotravel.hddl"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/problems/zenotravel01.hddl"
 
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/domains/verkabelung_domain_noComplexOperations.pddl"
@@ -167,7 +167,7 @@ object Main {
                                                             splitIndependedParameters = true,
                                                             liftedReachability = true, groundedReachability = None, //Some(PlanningGraph),
                                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                            iterateReachabilityAnalysis = false, groundDomain = false),
+                                                            iterateReachabilityAnalysis = false, groundDomain = true),
                                  //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
                                  //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
                                  //PlanBasedSearch(None, None, AStarActionsType(1), Some(TDGMinimumADD), Nil, LCFR),
@@ -190,7 +190,7 @@ object Main {
                                  //  .numOfPreconditions)), PriorityQueueSearch.abstractTaskSelection.random),
                                  //ProgressionSearch(Some(200), AStarActionsType(1), Some(GreedyProgression)),
                                  //SATSearch(Some(30 * 60), CRYPTOMINISAT(), planLength, Some(overrideK), checkResult = true),
-                                 SATSearch(Some(100000), CRYPTOMINISAT(), 30, Some(4), checkResult = true),
+                                 SATSearch(Some(100000), CRYPTOMINISAT(), 50, Some(9), checkResult = true),
                                  //SATSearch(Some(30 * 60 * 1000), MINISAT(), 30, Some(10)),
                                  //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
                                  postprocessing)

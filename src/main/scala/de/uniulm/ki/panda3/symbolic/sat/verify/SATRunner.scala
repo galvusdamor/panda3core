@@ -83,9 +83,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
     // start verification
     val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
-    if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, planLength, offSetToK, defineK)
-    //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
-    else SOGEncoding(domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+      if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, planLength, offSetToK, defineK)
+      //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+      else SOGPOCLEncoding(domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+      //else SOGClassicalEncoding(domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
 
     // (3)
     /*println("K " + encoder.K)
@@ -108,7 +109,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     //System.in.read()
     timeCapsule stop Timings.GENERATE_FORMULA
 
-    //writeStringToFile(usedFormula map {c => c.disjuncts map {case (a,p) => (if (!p) "not " else "") + a} mkString "\t"} mkString "\n", "formula.txt")
+    writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
 
     timeCapsule start Timings.TRANSFORM_DIMACS
     println("READY TO WRITE")
@@ -200,7 +201,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       val literals: Set[Int] = (assignment.split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet
 
       val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-      //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+      writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
       val (graphNodes, graphEdges) = encoder match {
         case g: GeneralEncoding =>
@@ -272,12 +273,16 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
               val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
               val taskSequence = actionSequence map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
-              println("Primitive Sequence with paths")
-              println(actionSequence map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX).name + " " + t } mkString "\n")
+              def actionStringToInfoString(t: String): String = {
+                val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX).name + " " + domain.tasks(actionIDX).isPrimitive + " " + t
+              }
 
-              val innerActions = allTrueAtoms filter { _.startsWith("action!") }
-              println("Inner actions with paths")
-              println(innerActions map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX).name + " " + t } mkString "\n")
+              println("Primitive Sequence with paths")
+              println(actionSequence map actionStringToInfoString mkString "\n")
+
+              val innerActions = allTrueAtoms filter { _.startsWith("action!") } filterNot { t => t.contains("-1") || t.contains("-2") }
+              //println("Inner actions with paths")
+              //println(innerActions map actionStringToInfoString mkString "\n")
 
 
               val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
@@ -288,7 +293,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
               assert(active.size == taskSequence.length, "ACTIVE " + active.size + " vs " + taskSequence.length)
 
               val graph = SimpleDirectedGraph(nodes, edges)
-              println(graph.sinks mkString "\n")
+              println(graph.sinks filterNot { t => t.contains("-1") || t.contains("-2") } map actionStringToInfoString mkString "\n")
               //assert(graph.sinks.length == taskSequence.length, "SINKS " + graph.sinks.length + " vs " + taskSequence.length)
               val nextPredicates = allTrueAtoms filter { _.startsWith("next") }
               println(nextPredicates mkString "\n")
@@ -318,7 +323,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
           primitiveSolution foreach { t => assert(t.isPrimitive) }
           println("CHECKING primitive solution of length " + primitiveSolution.length + " ...")
           println(primitiveSolution map { _.name } mkString "\n")
-          checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
+          //checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
           println(" done.")
 
           (nodes, edges)
@@ -339,7 +344,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       // no isolated nodes
       decompGraphNames.vertices foreach { v =>
         val (indeg, outdeg) = decompGraphNames.degrees(v)
-        assert(indeg + outdeg != 0, "unconnected action " + v)
+        if (!(v.name.contains("-1") || v.name.contains("-2")))
+          assert(indeg + outdeg != 0, "unconnected action " + v)
       }
 
       if (encoder.isInstanceOf[PathBasedEncoding[_, _]]) {
