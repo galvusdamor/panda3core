@@ -82,7 +82,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
 
     //
 
-    for ((i, j) <- edgeList;
+    for ((i, j) <- edgeList
          if changingEdgeMap(i) exists { k => reachable(k) contains j }
     ) {
       changingEdgeMap(i).remove(j)
