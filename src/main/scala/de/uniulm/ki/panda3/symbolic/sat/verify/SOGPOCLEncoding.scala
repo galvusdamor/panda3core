@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.util._
 
 import scala.collection.Seq
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 /**
   * This is an encoding that uses POCL criteria to ensure that the resulting plan is executable
@@ -30,14 +31,17 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
   override lazy val stateTransitionFormula: Seq[Clause] = {
     val paths = primitivePathArray
     assert(rootPayloads.length == 1)
+    println("Final SOG has " + rootPayloads.head.ordering.vertices.length + " vertices")
+    print("Compute Transitive reducton ... ")
     val sog = rootPayloads.head.ordering.transitiveReduction
+    println("done")
 
-    println(sog.isAcyclic)
+    /*println(sog.isAcyclic)
 
     val string = sog.dotString(options = DirectedGraphDotOptions(),
                                //nodeRenderer = {case (path, tasks) => tasks map { _.name } mkString ","})
                                nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + path})
-    Dot2PdfCompiler.writeDotToFile(string, "sog.pdf")
+    Dot2PdfCompiler.writeDotToFile(string, "sog.pdf")*/
 
     println("TREE P:" + primitivePaths.length + " S: " + taskSequenceLength)
 
@@ -47,10 +51,10 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
     val extendedSOG = SimpleDirectedGraph(sog.vertices :+ initVertex :+ goalVertex, sog.edgeList ++ (sog.vertices flatMap { v => (initVertex, v) ::(v, goalVertex) :: Nil }) :+
       (initVertex, goalVertex))
 
-    val stringA = extendedSOG.dotString(options = DirectedGraphDotOptions(),
+    /*val stringA = extendedSOG.dotString(options = DirectedGraphDotOptions(),
                                         //nodeRenderer = {case (path, tasks) => tasks map { _.name } mkString ","})
                                         nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + path})
-    Dot2PdfCompiler.writeDotToFile(stringA, "sogExt.pdf")
+    Dot2PdfCompiler.writeDotToFile(stringA, "sogExt.pdf")*/
 
 
     // init and goal must be contaiend in the final plan
@@ -92,20 +96,49 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
     println("B " + supportedPreconditionsMustHaveSupporter.length)
     val supporterLiterals: Seq[(Seq[Int], Seq[Int], Predicate)] = supportedPreconditionsMustHaveSupporterTemp flatMap { _._2 } distinct
 
+    // output supporter graph
+    //val supporterGraph = SimpleDirectedGraph(extendedSOG.vertices map {_._1}, supporterLiterals map {case (a,b,_)=> (a,b)} distinct)
+    //Dot2PdfCompiler.writeDotToFile(supporterGraph, "clgraph.pdf")
+    //Dot2PdfCompiler.writeDotToFile(supporterGraph.condensation, "clgraph-condensation.pdf")
+
     val supportImpliesOrder = supporterLiterals map { case (p1, p2, prec) => impliesSingle(supporter(p1, p2, prec), before(p1, p2)) }
     println("C " + supportImpliesOrder.length)
 
-    val pathsWithInitAndGoal = extendedSOG.vertices map { _._1 }
+    val pathsWithInitAndGoal = extendedSOG.vertices map { _._1 } toArray
     val onlyPathSOG = extendedSOG map { _._1 }
 
-    val orderMustBeTransitive: Seq[Clause] =
-      pathsWithInitAndGoal flatMap { i =>
-        // only those which are not already ordered against it
-        pathsWithInitAndGoal filterNot { k => onlyPathSOG.reachable(i) contains k } flatMap { k =>
-          pathsWithInitAndGoal map { j => impliesRightAndSingle(before(i, j) :: before(j, k) :: Nil, before(i, k)) }
+    val startTime = System.currentTimeMillis()
+    val orderMustBeTransitive: Array[Clause] = {
+      val clauses = new ArrayBuffer[Clause]
+      var i = 0
+      while (i < pathsWithInitAndGoal.length) {
+        var k = 0
+        while (k < pathsWithInitAndGoal.length) {
+          if (!(onlyPathSOG.reachable(pathsWithInitAndGoal(i)) contains pathsWithInitAndGoal(k))) {
+            var j = 0
+            while (j < pathsWithInitAndGoal.length) {
+              clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(j)) :: before(pathsWithInitAndGoal(j), pathsWithInitAndGoal(k)) :: Nil,
+                                                   before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
+              j += 1
+            }
+          }
+          k += 1
         }
+
+
+        i += 1
       }
-    println("D " + orderMustBeTransitive.length)
+
+      clauses.toArray
+    }
+    /*      pathsWithInitAndGoal flatMap { i =>
+            // only those which are not already ordered against it
+            pathsWithInitAndGoal filterNot { k => onlyPathSOG.reachable(i) contains k } flatMap { k =>
+              pathsWithInitAndGoal map { j => impliesRightAndSingle(before(i, j) :: before(j, k) :: Nil, before(i, k)) }
+            }
+          }*/
+    val endTime = System.currentTimeMillis()
+    println("D " + orderMustBeTransitive.length + " time needed " + (endTime - startTime).toDouble./(1000))
 
     val orderMustBeConsistent = pathsWithInitAndGoal flatMap { i => pathsWithInitAndGoal filter { _ != i } map { j => impliesNot(before(i, j), before(j, i)) } }
     println("E " + orderMustBeConsistent.length)
@@ -131,4 +164,5 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
       supportImpliesOrder ++ orderMustBeTransitive ++ orderMustBeConsistent ++ sogOrderMustBeRespected ++
       noCausalThreat
   }
+
 }
