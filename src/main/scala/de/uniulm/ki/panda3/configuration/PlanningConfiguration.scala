@@ -634,26 +634,27 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       val sasPlusParser = {
         import sys.process._
-        "../../fd/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl" !
+        "/home/dh/programme/FastDownward/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl" !
         // semantic empty line
 
         "rm __sasdomain.pddl __sasproblem.pddl" !
         // semantic empty line
 
         val sasreader = new SasPlusProblem("output.sas")
-        "rm output.sas" !
+        sasreader.prepareEfficientRep()
+        htnPlanningInstance.sasp = sasreader
+        //sasreader.prepareSymbolicRep(domain,problem)
+
+        //"rm output.sas" !
         // semantic empty line
 
+        System exit 0
         sasreader
       }
-
-
-
       println(sasPlusParser.toString)
-      System exit 0
 
       // for now
-      liftedResult
+      (liftedResult._1, liftedResult._2 + (SASPInput -> sasPlusParser) + (SymbolicGroundedReachability -> sasPlusParser))
     } else liftedResult
 
 

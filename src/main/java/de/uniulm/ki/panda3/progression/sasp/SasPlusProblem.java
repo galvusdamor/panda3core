@@ -1,19 +1,31 @@
 package de.uniulm.ki.panda3.progression.sasp;
 
+import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
+import de.uniulm.ki.panda3.symbolic.domain.Domain;
+import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
+import de.uniulm.ki.panda3.symbolic.logic.*;
+import de.uniulm.ki.panda3.symbolic.plan.Plan;
+import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
+import de.uniulm.ki.panda3.util.seqProviderList;
+import scala.collection.*;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.*;
+import java.util.Map;
 
 /**
  * Created by Daniel Höller on 24.02.17.
  */
-public class SasPlusProblem {
+public class SasPlusProblem {//} extends GroundedPrimitiveReachabilityAnalysis {
     /**
-     * Class to parse Malte Helmert's SAS+ format
+     * Class to use Malte Helmert's SAS+ format
      * <p>
      * see: http://www.fast-downward.org/TranslatorOutputFormat
      */
     private static String noVal = "<none of those>";
+    private static String negation = "not->";
 
     private int version;
     private int error = 0;
@@ -84,6 +96,10 @@ public class SasPlusProblem {
     // deleted
     public int[][] delLists;
 
+    // the following del-list contains all literals that are mutex to the one that is set as add effect, i.e. it
+    // contains (1) the same del-effects as the list before or (2) more -> use in POCL-planning to get more threats
+    public int[][] expandedDelLists;
+
     public int[][] precToTask; // 1 -> [4, 5, 7] means that the tasks 4, 5 and 7 all have precondition 1
     public int[][] addToTask; // 1 -> [4, 5, 7] means that the tasks 4, 5 and 7 all add fact no. 1
     public int[] numPrecs; // gives the number of preconditions for each action
@@ -95,6 +111,103 @@ public class SasPlusProblem {
     // int -> Object
     // Object -> int
     // action in old model <-> action in new model
+
+    public GroundLiteral[] symbolicStateFeatures;
+    public GroundTask[] primitiveTasks;
+
+    public void prepareSymbolicRep(Domain domain, Plan problem) {
+        symbolicStateFeatures = new GroundLiteral[numOfStateFeatures];
+        primitiveTasks = new GroundTask[numOfOperators];
+
+        // prepare lookup tables
+        Map<String, Predicate> allPredicates = new HashMap<>();
+        scala.collection.Iterator<Predicate> iter = domain.predicates().iterator();
+        while (iter.hasNext()) {
+            Predicate p = iter.next();
+            allPredicates.put(p.name().toLowerCase(), p);
+        }
+
+        Map<String, Constant> allConsts = new HashMap<>();
+        scala.collection.Iterator<Constant> iter2 = domain.constants().iterator();
+        while (iter2.hasNext()) {
+            Constant c = iter2.next();
+            allConsts.put(c.name().toLowerCase(), c);
+        }
+
+        Map<String, Task> allTasks = new HashMap<>();
+        scala.collection.Iterator<Task> iter3 = domain.tasks().iterator();
+        while (iter3.hasNext()) {
+            Task t = iter3.next();
+            if (t.isPrimitive())
+                allTasks.put(t.name().toLowerCase(), t);
+        }
+
+        // translate literals
+        for (int iVar = 0; iVar < numOfVars; iVar++) {
+            for (int iVal = 0; iVal < ranges[iVar]; iVal++) {
+                String name = values[iVar][iVal];
+                boolean isPos = true;
+                if (name.startsWith(negation)) {
+                    isPos = false;
+                    name = name.substring(negation.length());
+                }
+                name = name.replaceAll("\\(", " ").replaceAll("\\)", " ").replaceAll("\\, ", " ").trim().toLowerCase();
+                if (name.equals(noVal)) {
+                    // todo none-if-them implementieren
+                    System.out.println(noVal);
+                } else if (name.equals("__goal")) {
+                    System.out.println();
+                } else {
+                    String[] split = name.split(" ");
+                    Predicate p = allPredicates.get(split[0]);
+                    seqProviderList<Constant> params = new seqProviderList<>();
+                    for (int i = 1; i < split.length; i++) {
+                        Constant c = allConsts.get(split[i]);
+                        params.add(c);
+                    }
+                    GroundLiteral gl = new GroundLiteral(p, isPos, params.result());
+                    symbolicStateFeatures[firstIndex[iVar] + iVal] = gl;
+                }
+            }
+        }
+
+        // translate actions
+        for (int iOp = 0; iOp < numOfOperators; iOp++) {
+            String name = opNames[iOp].toLowerCase();
+            String[] split = name.split(" ");
+            Task t = allTasks.get(split[0]);
+
+            seqProviderList<Constant> params = new seqProviderList<>();
+            for (int i = 1; i < split.length; i++) {
+                Constant c = allConsts.get(split[iOp]);
+                params.add(c);
+            }
+
+            Seq<Constant> paramSeq = params.result();
+            GroundTask oldTask = new GroundTask(t, paramSeq);
+            //SymbolicUnionFind.constructVariableUnionFind(t).apply()
+
+            // create new task
+            int varId = 0;
+            seqProviderList<Variable> vars = new seqProviderList<>();
+            for (int i = 0; i < params.size(); i++) {
+                Variable v = new Variable(varId++, "v-" + params.get(i).name(), t.parameters().apply(i).sort());
+                vars.add(v);
+            }
+            seqProviderList<Literal> precLits = new seqProviderList<>();
+
+
+            And<Literal> prec = new And<Literal>(precLits.result());
+
+            seqProviderList<Literal> effLits = new seqProviderList<>();
+
+
+            And<Literal> eff = new And<Literal>(effLits.result());
+
+            Task newT = new ReducedTask(name, true, vars.result(), new seqProviderList<Variable>().result(), new seqProviderList<VariableConstraint>().result(), prec, eff);
+
+        }
+    }
 
     public void prepareEfficientRep() {
         numOfStateFeatures = 0;
@@ -118,6 +231,7 @@ public class SasPlusProblem {
         precLists = new int[numOfOperators][];
         addLists = new int[numOfOperators][];
         delLists = new int[numOfOperators][];
+        expandedDelLists = new int[numOfOperators][];
         numPrecs = new int[numOfOperators];
 
         Map<Integer, List<Integer>> precToTaskTemp = new HashMap<>();
@@ -127,6 +241,7 @@ public class SasPlusProblem {
             List<Integer> precList = new ArrayList<>();
             List<Integer> addList = new ArrayList<>();
             List<Integer> delList = new ArrayList<>();
+            List<Integer> expandedDelList = new ArrayList<>();
 
             // proceed prevail conditions
             for (int j = 0; j < numPrevailConditions[i]; j++) {
@@ -151,6 +266,15 @@ public class SasPlusProblem {
                         }
                     }
                 }
+
+                // fill extended del-list with all literals that threat the value that is set
+                int added = firstIndex[varIndex] + valToIndex;
+                for (int k = firstIndex[varIndex]; k <= lastIndex[varIndex]; k++) {
+                    if (k != added) {
+                        expandedDelList.add(firstIndex[varIndex] + k);
+                    }
+                }
+
                 // anyway, the value is set
                 addList.add(firstIndex[varIndex] + valToIndex);
 
@@ -191,6 +315,7 @@ public class SasPlusProblem {
             this.precLists[i] = new int[precList.size()];
             this.addLists[i] = new int[addList.size()];
             this.delLists[i] = new int[delList.size()];
+            this.expandedDelLists[i] = new int[expandedDelList.size()];
             for (int j = 0; j < precList.size(); j++) {
                 this.precLists[i][j] = precList.get(j);
             }
@@ -199,6 +324,9 @@ public class SasPlusProblem {
             }
             for (int j = 0; j < delList.size(); j++) {
                 this.delLists[i][j] = delList.get(j);
+            }
+            for (int j = 0; j < expandedDelList.size(); j++) {
+                this.expandedDelLists[i][j] = expandedDelList.get(j);
             }
         }
 
@@ -397,11 +525,15 @@ public class SasPlusProblem {
             if (val.equals(noVal)) {
                 values[i][j] = val;
             } else {
-                if (!val.startsWith("Atom ")) {
+                if (val.startsWith("Atom ")) {
+                    values[i][j] = val.substring("Atom ".length(), val.length());
+                } else if (val.startsWith("NegatedAtom ")) {
+                    values[i][j] = negation + val.substring("NegatedAtom ".length(), val.length());
+                } else {
+                    values[i][j] = val;
                     this.error = 1;
                     System.out.println("Error: (SAS+ parser) Unexpected structure of variable element.");
                 }
-                values[i][j] = val.substring("Atom ".length(), val.length());
             }
         }
         if (!br.readLine().equals("end_variable")) {
@@ -518,4 +650,14 @@ public class SasPlusProblem {
 
         return sb.toString();
     }
+/*
+    @Override
+    public Seq<GroundLiteral> reachableGroundLiterals() {
+        return null;
+    }
+
+    @Override
+    public Seq<GroundTask> reachableGroundPrimitiveActions() {
+        return null;
+    }*/
 }
