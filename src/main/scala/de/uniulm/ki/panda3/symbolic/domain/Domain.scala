@@ -31,7 +31,7 @@ import scala.annotation.elidable._
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
-                  decompositionAxioms: Seq[DecompositionAxiom]) extends DomainUpdatable {
+                  decompositionAxioms: Seq[DecompositionAxiom], mappingToOriginalGrounding: Option[GroundedDomainToDomainMapping] = None) extends DomainUpdatable {
 
   // sanity check for the sorts
   @elidable(ASSERTION)
@@ -39,10 +39,14 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
     decompositionMethods foreach { dm =>
       assert(tasks contains dm.abstractTask)
-      dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task => assert(tasks contains task, "Task " + task.name + " is missing in the domain") }
+      dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task =>
+        if (!(tasks contains task))
+          println("foo")
+        assert(tasks contains task, "Task " + task.name + " is missing in the domain") }
     }
 
-    tasks foreach { t => (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map { _._1 } foreach { p => assert(predicates contains p) } }
+    tasks foreach { t => (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map
+      { _._1 } foreach { p => assert(predicates contains p, "Predicate " + p.name + " not contained in predicate list") }}
   }
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
@@ -93,7 +97,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val hasNegativePreconditions: Boolean = tasks exists { _.preconditionsAsPredicateBool exists { !_._2 } }
 
 
-  /** A map showing for each task how deep the decomposition tree has to be, to be able to reach a primitive decomposition*/
+  /** A map showing for each task how deep the decomposition tree has to be, to be able to reach a primitive decomposition */
   lazy val minimumDecompositionHeightToPrimitive: Map[Task, Int] =
     taskSchemaTransitionGraph.condensation.topologicalOrdering.get.reverse.foldLeft(Map[Task, Int]().withDefaultValue(Integer.MAX_VALUE))(
       {
@@ -107,7 +111,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                 // take maximum within a method
                 m.subPlan.planStepsWithoutInitGoal map { _.schema } map currentMinima max
               } min)
-            } filter {_._2 != Integer.MAX_VALUE} map {case (a,b) => (a,b+1)}
+            } filter { _._2 != Integer.MAX_VALUE } map { case (a, b) => (a, b + 1) }
 
             val newMinima = currentMinima ++ newPairs
             if (newMinima == currentMinima) currentMinima else iterate(newMinima)
@@ -116,7 +120,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
           iterate(minima)
       })
 
-  def minimumDecompositionHeightToPrimitiveForPlan(plan : Plan) : Int = plan.planStepsWithoutInitGoal map {ps => minimumDecompositionHeightToPrimitive(ps.schema)} max
+  def minimumDecompositionHeightToPrimitiveForPlan(plan: Plan): Int = plan.planStepsWithoutInitGoal map { ps => minimumDecompositionHeightToPrimitive(ps.schema) } max
 
   /**
     * Determines the sort a constant originally belonged to.
@@ -184,20 +188,20 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   }
 
   override def update(domainUpdate: DomainUpdate): Domain = domainUpdate match {
-    case AddMethod(newMethods)               => Domain(sorts, predicates, tasks, decompositionMethods ++ newMethods, decompositionAxioms)
-    case AddPredicate(newPredicates)         => Domain(sorts, predicates ++ newPredicates, tasks, decompositionMethods, decompositionAxioms)
-    case AddTask(newTasks)                   => Domain(sorts, predicates, tasks ++ newTasks, decompositionMethods, decompositionAxioms)
-    case ExchangeTaskSchemaInMethods(map)    => Domain(sorts, predicates, tasks, decompositionMethods map { _.update(ExchangeTask(map)) }, decompositionAxioms)
+    case AddMethod(newMethods)               => Domain(sorts, predicates, tasks, decompositionMethods ++ newMethods, decompositionAxioms, mappingToOriginalGrounding)
+    case AddPredicate(newPredicates)         => Domain(sorts, predicates ++ newPredicates, tasks, decompositionMethods, decompositionAxioms, mappingToOriginalGrounding)
+    case AddTask(newTasks)                   => Domain(sorts, predicates, tasks ++ newTasks, decompositionMethods, decompositionAxioms, mappingToOriginalGrounding)
+    case ExchangeTaskSchemaInMethods(map)    => Domain(sorts, predicates, tasks, decompositionMethods map { _.update(ExchangeTask(map)) }, decompositionAxioms, mappingToOriginalGrounding)
     case ExchangeLiteralsByPredicate(map, _) =>
       val newPredicates = map.values flatMap { case (a, b) => a :: b :: Nil }
-      Domain(sorts, newPredicates.toSeq, tasks map { _.update(domainUpdate) }, decompositionMethods map { _.update(domainUpdate) }, decompositionAxioms)
+      Domain(sorts, newPredicates.toSeq, tasks map { _.update(domainUpdate) }, decompositionMethods map { _.update(domainUpdate) }, decompositionAxioms, mappingToOriginalGrounding)
     case RemovePredicate(predicatesToRemove) => copy(predicates = predicates filterNot predicatesToRemove)
     case _                                   => Domain(sorts map { _.update(domainUpdate) }, predicates map { _.update(domainUpdate) }, tasks map { _.update(domainUpdate) },
                                                        decompositionMethods map { _.update(domainUpdate) },
-                                                       decompositionAxioms)
+                                                       decompositionAxioms, mappingToOriginalGrounding)
   }
 
-  lazy val classicalDomain : Domain = Domain(sorts,predicates,tasks filter {_.isPrimitive},Nil,Nil)
+  lazy val classicalDomain: Domain = Domain(sorts, predicates, tasks filter { _.isPrimitive }, Nil, Nil, mappingToOriginalGrounding)
 
   lazy val statistics      : Map[String, Any] = Map(
                                                      "number of constants" -> constants.size,
@@ -210,3 +214,5 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                    )
   lazy val statisticsString: String           = statistics.mkString("\n")
 }
+
+case class GroundedDomainToDomainMapping(taskMapping: Map[Task, GroundTask])
