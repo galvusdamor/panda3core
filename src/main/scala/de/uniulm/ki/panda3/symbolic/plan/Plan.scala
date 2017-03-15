@@ -497,6 +497,14 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     })
   }
 
+  lazy val groundedInitialTask: GroundTask = {
+    val arguments = init.arguments map variableConstraints.getRepresentative map {
+      case c: Constant => c
+      case _           => noSupport(LIFTEDINIT)
+    }
+    GroundTask(init.schema, arguments)
+  }
+
   lazy val groundedInitialStateOnlyPositive   : Seq[GroundLiteral] = groundedInitialState filter { _.isPositive }
   lazy val groundedInitialStateOnlyPositiveSet: Set[GroundLiteral] = groundedInitialStateOnlyPositive toSet
 
