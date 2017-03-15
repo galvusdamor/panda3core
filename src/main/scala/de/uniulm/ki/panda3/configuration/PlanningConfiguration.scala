@@ -17,14 +17,14 @@ import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
 import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem
-import de.uniulm.ki.panda3.symbolic.domain.updates.ExchangeTask
+import de.uniulm.ki.panda3.symbolic.domain.updates.{RemovePredicate, AddPredicate, ExchangeTask}
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{Solvertype, SATRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{SASPlusGrounding, GroundedPrimitiveReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
 import de.uniulm.ki.panda3.symbolic.domain._
@@ -607,20 +607,19 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
     // convert to SAS+
-    val sasPlusResult = if (preprocessingConfiguration.convertToSASP) {
-
-
+    val sasPlusResult = if (preprocessingConfiguration.convertToSASP && !liftedResult._1._1.isGround) {
+      info("Converting to SAS+ ... ")
       // 1. step write pddl part of the domain to file
       val classicalDomain = liftedResult._1._1.classicalDomain
 
       val artificialGoal = Predicate("__goal", Nil)
-      val goalLiteral = Literal(artificialGoal,true,Nil)
+      val goalLiteral = Literal(artificialGoal, true, Nil)
 
-      val pddlDomain =       Domain(classicalDomain.sorts, classicalDomain.predicates :+ artificialGoal,
-               classicalDomain.tasks map {case rt : ReducedTask => rt.copy(effect = And(rt.effect.conjuncts :+ goalLiteral)) }, Nil,Nil)
+      val pddlDomain = Domain(classicalDomain.sorts, classicalDomain.predicates :+ artificialGoal,
+                              classicalDomain.tasks map { case rt: ReducedTask => rt.copy(effect = And(rt.effect.conjuncts :+ goalLiteral)) }, Nil, Nil)
 
       val withGoalPlan = {
-        val oldGoal = liftedResult._1._2.goal.schema match {case rt : ReducedTask => rt}
+        val oldGoal = liftedResult._1._2.goal.schema match {case rt: ReducedTask => rt}
         val newGoal = oldGoal.copy(precondition = And(oldGoal.precondition.conjuncts :+ goalLiteral))
 
         liftedResult._1._2.update(ExchangeTask(Map(oldGoal -> newGoal)))
@@ -629,12 +628,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val pddlPlan = Plan(withGoalPlan.initAndGoal, Nil, TaskOrdering(OrderingConstraint(withGoalPlan.init, withGoalPlan.goal) :: Nil, withGoalPlan.initAndGoal),
                           withGoalPlan.variableConstraints, withGoalPlan.init, withGoalPlan.goal, withGoalPlan.isModificationAllowed, withGoalPlan.isFlawAllowed, Map(), Map())
 
-      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain), "__sasdomain.pddl")
-      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan), "__sasproblem.pddl")
+      // FD can't handle either in the sort hierarchy, so we have to use predicates when writing them ...
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true), "__sasdomain.pddl")
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan, writeEitherWithPredicates = true), "__sasproblem.pddl")
 
       val sasPlusParser = {
         import sys.process._
-        "/home/dh/programme/FastDownward/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl" !
+        "../../fd/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl" !!
         // semantic empty line
 
         "rm __sasdomain.pddl __sasproblem.pddl" !
@@ -642,19 +642,26 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
         val sasreader = new SasPlusProblem("output.sas")
         sasreader.prepareEfficientRep()
-        htnPlanningInstance.sasp = sasreader
+        //htnPlanningInstance.sasp = sasreader
         //sasreader.prepareSymbolicRep(domain,problem)
 
-        //"rm output.sas" !
+        "rm output.sas" !
         // semantic empty line
 
-        System exit 0
-        sasreader
+        SASPlusGrounding(liftedResult._1._1, liftedResult._1._2, sasreader)
       }
-      println(sasPlusParser.toString)
+      val newAnalysisMap = liftedResult._2 + (SASPInput -> sasPlusParser) + (SymbolicGroundedReachability -> sasPlusParser)
+      val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
+      val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
+      val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
+      val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
+
+      info("done.\n")
+      info("Number of Grounded Actions " + sasPlusParser.reachableGroundPrimitiveActions.length + "\n")
+      extra(pruned._1.statisticsString + "\n")
 
       // for now
-      (liftedResult._1, liftedResult._2 + (SASPInput -> sasPlusParser) + (SymbolicGroundedReachability -> sasPlusParser))
+      (pruned, newAnalysisMap)
     } else liftedResult
 
 
@@ -686,6 +693,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val disallowedTasks = sasPlusResult._1._1.primitiveTasks filterNot reachable.contains
       val pruned = PruneHierarchy.transform(sasPlusResult._1._1, sasPlusResult._1._2, disallowedTasks.toSet)
       info("done.\n")
+      info("Number of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
+
+      println(newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions map { _.longInfo } mkString "\n")
+
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
     } else sasPlusResult
@@ -765,7 +776,27 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       info("Grounding ... ")
       timeCapsule start GROUNDING
-      val result = Grounding.transform(domainAndPlan, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
+      val result: (Domain, Plan) = {
+        val groundedDomainAndProblem = Grounding.transform(domainAndPlan, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
+
+        if (preprocessingConfiguration.convertToSASP) {
+          val sasPlusGrounder: SASPlusGrounding = analysisMap(SASPInput)
+          assert(groundedDomainAndProblem._1.mappingToOriginalGrounding.isDefined)
+          val flatTaskToGroundedTask = groundedDomainAndProblem._1.mappingToOriginalGrounding.get.taskMapping
+
+          val exchangeMap = flatTaskToGroundedTask collect { case (currentTask, groundTask) if sasPlusGrounder.groundedTasksToNewGroundTasksMapping contains groundTask =>
+            currentTask -> sasPlusGrounder.groundedTasksToNewGroundTasksMapping(groundTask)
+          }
+
+          val sasPlusDomain = groundedDomainAndProblem._1.update(AddPredicate(sasPlusGrounder.sasPlusPredicates)).update(ExchangeTask(exchangeMap)).
+            update(RemovePredicate(groundedDomainAndProblem._1.predicates.toSet))
+          val sasPlusPlan = groundedDomainAndProblem._2.update(ExchangeTask(exchangeMap))
+
+
+          (sasPlusDomain, sasPlusPlan)
+        } else groundedDomainAndProblem
+      }
+
 
       timeCapsule stop GROUNDING
       info("done.\n")

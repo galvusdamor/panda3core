@@ -87,6 +87,7 @@ object Main {
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-legal-fewer-htn-groundings.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/00--p01-variant.xml"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/06--p02-complete.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/09--p03-complete.xml"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/10--p04-part1.xml"
 
@@ -127,8 +128,14 @@ object Main {
     //val domFile = "miconic.hddl"
     //val probFile = "miconic06.hddl"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/domains/zenotravel.hddl"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/problems/zenotravel01.hddl"
+    val domFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC5/pipesworld/domain/domain_p02.pddl"
+    val probFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC5/pipesworld/problems/p02.pddl"
+
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/domains/zenotravel.hddl"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/problems/zenotravel01.hddl"
+
+    //val domFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
+    //val probFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp"
 
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/domains/verkabelung_domain_noComplexOperations.pddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/problems/genericLinearProblem_depth4.pddl"
@@ -158,16 +165,16 @@ object Main {
                             postprocessing
                            )
     } else PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = true),
+                                 ParsingConfiguration(eliminateEquality = true, stripHybrid = true),
                                  PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                             //compileOrderInMethods = Some(AllNecessaryOrderings),
                                                             compileOrderInMethods = None, //Some(OneRandomOrdering()),
-                                                            convertToSASP = true,
-                                                            compileInitialPlan = false,
+                                                            convertToSASP = false,
+                                                            compileInitialPlan = true,
                                                             splitIndependedParameters = true,
-                                                            liftedReachability = true, groundedReachability = None, //Some(PlanningGraph),
+                                                            liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                            iterateReachabilityAnalysis = false, groundDomain = false),
+                                                            iterateReachabilityAnalysis = false, groundDomain = true),
                                  //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
                                  //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
                                  //PlanBasedSearch(None, None, AStarActionsType(1), Some(TDGMinimumADD), Nil, LCFR),
@@ -178,8 +185,7 @@ object Main {
                                  //PlanBasedSearch(None, Some(5000), AStarActionsType(1), ADD :: Nil, Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarActionsType(1), Some(NumberOfFlaws), Nil, LCFR),
                                  //PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(TDGMinimumAction), Nil, LCFR),
-                                 //PlanBasedSearch(None, Some(30 * 60), AStarActionsType(1), ADD :: Nil, Nil, LCFR),
-                                 //PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD(Some(ADDReusing))), Nil, SequentialSelector(LCFR,RandomFlaw(6))),
+                                 PlanBasedSearch(None, Some(30 * 60), AStarActionsType(2), ADD :: Nil, Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
                                  //PlanBasedSearch(None, None, AStarDepthType(1), LiftedTDGPreconditionRelaxation(NeverRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
@@ -190,7 +196,7 @@ object Main {
                                  //  .numOfPreconditions)), PriorityQueueSearch.abstractTaskSelection.random),
                                  //ProgressionSearch(Some(200), AStarActionsType(1), Some(GreedyProgression)),
                                  //SATSearch(Some(30 * 60), CRYPTOMINISAT(), planLength, Some(overrideK), checkResult = true),
-                                 SATSearch(Some(100000), CRYPTOMINISAT(), 30, Some(4), checkResult = true),
+                                 //SATSearch(Some(100000), CRYPTOMINISAT(), 30, Some(10), checkResult = true),
                                  //SATSearch(Some(30 * 60 * 1000), MINISAT(), 30, Some(10)),
                                  //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
                                  postprocessing)

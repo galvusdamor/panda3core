@@ -18,7 +18,7 @@ import java.util.Map;
 /**
  * Created by Daniel Höller on 24.02.17.
  */
-public class SasPlusProblem {//} extends GroundedPrimitiveReachabilityAnalysis {
+public class SasPlusProblem {
     /**
      * Class to use Malte Helmert's SAS+ format
      * <p>
@@ -40,7 +40,7 @@ public class SasPlusProblem {//} extends GroundedPrimitiveReachabilityAnalysis {
     public int[] axioms;
     public int[] ranges; // variable-index -> number of values the var can have
     private String[] varNames; // variable-index ->  name-string of the var
-    private String[][] values; // var-index, value-index -> value-string (this is either an atom from the domain, or the noVal-String)
+    public String[][] values; // var-index, value-index -> value-string (this is either an atom from the domain, or the noVal-String)
 
     private int[] s0; // variable-index -> value set in s0
     private int[][] goal; // enum of pairs [var-index, value-needed]
@@ -262,7 +262,7 @@ public class SasPlusProblem {//} extends GroundedPrimitiveReachabilityAnalysis {
                     int added = firstIndex[varIndex] + valToIndex;
                     for (int k = firstIndex[varIndex]; k <= lastIndex[varIndex]; k++) {
                         if (k != added) {
-                            delList.add(firstIndex[varIndex] + k);
+                            delList.add(k);
                         }
                     }
                 }
@@ -271,7 +271,7 @@ public class SasPlusProblem {//} extends GroundedPrimitiveReachabilityAnalysis {
                 int added = firstIndex[varIndex] + valToIndex;
                 for (int k = firstIndex[varIndex]; k <= lastIndex[varIndex]; k++) {
                     if (k != added) {
-                        expandedDelList.add(firstIndex[varIndex] + k);
+                        expandedDelList.add(k);
                     }
                 }
 
@@ -506,7 +506,7 @@ public class SasPlusProblem {//} extends GroundedPrimitiveReachabilityAnalysis {
     }
 
     private void readMutex(BufferedReader br, int i) throws Exception {
-        while (!br.readLine().equals("begin_variable"))
+        while (!br.readLine().equals("end_mutex_group"))
             br.readLine();
     }
 
@@ -649,6 +649,10 @@ public class SasPlusProblem {//} extends GroundedPrimitiveReachabilityAnalysis {
         }
 
         return sb.toString();
+    }
+
+    public String[] getGroundedOperatorSignatures() {
+        return opNames;
     }
 /*
     @Override
