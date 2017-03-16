@@ -2,7 +2,9 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import java.io.{File, FileWriter, BufferedWriter}
 import java.util.UUID
+import java.util.concurrent.Semaphore
 
+import de.uniulm.ki.panda3.configuration.Timings._
 import de.uniulm.ki.panda3.configuration.{Timings, ResultMap, Information}
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -27,11 +29,18 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
   def runWithTimeLimit(timelimit: Option[Long], planLength: Int, offsetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false):
   (Boolean, Boolean) = {
+
+    val timerSemaphore = new Semaphore(0)
+    val timeLimitToReach = timelimit.getOrElse(Long.MaxValue) + 10000
+    val totalTimeAtBeginning = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+
     val runner = new Runnable {
       var result: Option[Boolean] = None
 
       override def run(): Unit = {
+        timeCapsule switchTimerToCurrentThread Timings.TOTAL_TIME
         result = Some(SATRunner.this.run(planLength: Int, offsetToK, includeGoal, defineK, checkSolution))
+        timerSemaphore.acquire()
       }
     }
     // start thread
@@ -41,21 +50,20 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
     // wait
     val startTime = System.currentTimeMillis()
-    while (System.currentTimeMillis() - startTime <= timelimit.getOrElse(Long.MaxValue) && runner.result.isEmpty && thread.isAlive) Thread.sleep(1000)
+    val alreadyUsedTime = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+    while (System.currentTimeMillis() - startTime <= timelimit.getOrElse(Long.MaxValue) - alreadyUsedTime && runner.result.isEmpty && thread.isAlive) Thread.sleep(1000)
+
+    timeCapsule switchTimerToCurrentThread(Timings.TOTAL_TIME, Some(timelimit.getOrElse(Long.MaxValue) - alreadyUsedTime))
+    timerSemaphore.release()
+
     if (satProcess != null) {
       println("Kill SAT solver")
       satProcess.destroy()
     }
-    JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t =>
-      //try {
-        t.stop()
-      /*} catch {
-        case td: Throwable => println("SAT Runner was aborted after timelimit ( " + timelimit.getOrElse(Long.MaxValue) + " ms) was reached.")
-      }*/
-    }
+    JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t => t.stop() }
 
 
-    if (runner.result.isEmpty) {Thread.sleep(500) ; (false, false) } else (runner.result.get, true)
+    if (runner.result.isEmpty) {Thread.sleep(500); (false, false) } else (runner.result.get, true)
   }
 
 
@@ -83,8 +91,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
     // start verification
     val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
-    if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, planLength, offSetToK, defineK)
-    else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+      if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, planLength, offSetToK, defineK)
+      else GeneralEncoding(domain, initialPlan, Range(0, planLength) map { _ => null.asInstanceOf[Task] }, offSetToK, defineK).asInstanceOf[VerifyEncoding]
 
     // (3)
     /*println("K " + encoder.K)
@@ -107,7 +115,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     //System.in.read()
     timeCapsule stop Timings.GENERATE_FORMULA
 
-    writeStringToFile(usedFormula map {c => c.disjuncts map {case (a,p) => (if (!p) "not " else "") + a} mkString "\t"} mkString "\n", "formula.txt")
+    //writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
 
     timeCapsule start Timings.TRANSFORM_DIMACS
     println("READY TO WRITE")
@@ -145,7 +153,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
     //writeStringToFile(usedFormula mkString "\n", new File("__formulaString"))
 
-    timeCapsule start Timings.SAT_SOLVER
+    //timeCapsule start Timings.SAT_SOLVER
+    val solverStartTime = System.currentTimeMillis()
     try {
       satSolver match {
         case MINISAT()       =>
@@ -160,7 +169,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     } catch {
       case rt: RuntimeException => println("Minisat exitcode problem ...")
     }
-    timeCapsule stop Timings.SAT_SOLVER
+    val solverEndTime = System.currentTimeMillis()
+    timeCapsule.set(SAT_SOLVER, solverEndTime - solverStartTime)
+    timeCapsule.addTo(TOTAL_TIME,solverEndTime - solverStartTime)
+    timeCapsule.addTo(VERIFY_TOTAL,solverEndTime - solverStartTime)
+    //timeCapsule stop Timings.SAT_SOLVER
     timeCapsule stop Timings.VERIFY_TOTAL
 
 
@@ -199,7 +212,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       val literals: Set[Int] = (assignment.split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet
 
       val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-      writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+      //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
       val (graphNodes, graphEdges) = encoder match {
         case g: GeneralEncoding =>
@@ -264,7 +277,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
                 PathBasedEncoding.pathSortingFunction(path1, path2)
               } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
-            case tree: PathBasedEncoding[_,_] =>
+            case tree: PathBasedEncoding[_, _] =>
               val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
               println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
               val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }

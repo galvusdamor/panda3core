@@ -43,11 +43,12 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
     var total = 0
 
     informationCapsule increment NUMBER_OF_NODES
+    val timeLimitInMilliSeconds = timeLimit.getOrElse(Int.MaxValue).toLong * 1000
 
     def bfs() = {
       val initTime: Long = System.currentTimeMillis()
       while (!stack.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
-        initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis() - 50) {
+        timeLimitInMilliSeconds >= timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) - 50) {
         val (plan, myNode, depth) = stack.pop()
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
 
@@ -139,12 +140,14 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
       semaphore.release()
     }
 
-    val resultSemaphore = new Semaphore(0)
 
+    val resultSemaphore = new Semaphore(0)
+    val timerSemaphore = new Semaphore(0)
 
 
     val thread = new Thread(new Runnable {
       override def run(): Unit = {
+        timeCapsule switchTimerToCurrentThread TOTAL_TIME
         timeCapsule start SEARCH
         try {
           bfs() // run the search, it will produce its results as side effects
@@ -153,25 +156,32 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
             t.printStackTrace()
             informationCapsule.set(ERROR, "true")
         }
-        timeCapsule stop SEARCH
 
+        timeCapsule stopOrIgnore SEARCH
 
         // notify waiting threads
-        resultSemaphore.release()
         semaphore.release()
+        resultSemaphore.release()
 
+        timerSemaphore.acquire()
       }
     })
 
     val resultFunction = ResultFunction(
       { _ =>
+        val timeLimitToReach = (timeLimit.getOrElse(Int.MaxValue).toLong + 10) * 1000
         // start the main worker thread which does the actual planning
         thread.start()
 
         val killerThread = new Thread(new Runnable {
           override def run(): Unit = {
             // wait timelimit + 10 seconds
-            Thread.sleep((timeLimit.getOrElse(Int.MaxValue).toLong + 10) * 1000)
+            var timeLimitReached = false
+            while (!timeLimitReached) {
+              Thread.sleep(250)
+              // test if we have reached the timelimit
+              timeLimitReached = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) > timeLimitToReach
+            }
             resultSemaphore.release()
             thread.stop()
           }
@@ -179,6 +189,10 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
         killerThread.start()
 
         resultSemaphore.acquire()
+        timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach))
+        timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach))
+        timerSemaphore.release()
+
         // just to be on the safe side stop all worker and utility threads
         killerThread.stop()
         thread.stop()

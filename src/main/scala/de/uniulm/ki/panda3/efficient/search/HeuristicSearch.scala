@@ -57,11 +57,12 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
     informationCapsule increment NUMBER_OF_NODES
     informationCapsule.addToDistribution(PLAN_SIZE, initialPlan.numberOfPlanSteps)
 
+    val timeLimitInMilliSeconds = timeLimit.getOrElse(Int.MaxValue).toLong * 1000
 
     def heuristicSearch() = {
-      val initTime: Long = System.currentTimeMillis()
+      val initTime = System.currentTimeMillis()
       while (searchQueue.nonEmpty && (continueOnSolution || result.isEmpty) && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
-        initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis() - 50) {
+        timeLimitInMilliSeconds >= timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) - 50) {
         val (myNode, depth) = searchQueue.dequeue()
         val plan = myNode.plan
         timeCapsule start SEARCH_FLAW_COMPUTATION
@@ -225,10 +226,12 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
     }
 
     val resultSemaphore = new Semaphore(0)
+    val timerSemaphore = new Semaphore(0)
 
 
     val thread = new Thread(new Runnable {
       override def run(): Unit = {
+        timeCapsule switchTimerToCurrentThread TOTAL_TIME
         timeCapsule start SEARCH
         try {
           heuristicSearch() // run the search, it will produce its results as side effects
@@ -237,33 +240,43 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
             t.printStackTrace()
             informationCapsule.set(ERROR, "true")
         }
-        timeCapsule stopOrIgnore SEARCH
 
+        timeCapsule stopOrIgnore SEARCH
 
         // notify waiting threads
         semaphore.release()
         resultSemaphore.release()
 
+        timerSemaphore.acquire()
       }
     })
 
     val resultFunction = ResultFunction(
       { _ =>
+        val timeLimitToReach = (timeLimit.getOrElse(Int.MaxValue).toLong + 10) * 1000
+        val totalTimeAtBeginning = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
         // start the main worker thread which does the actual planning
         thread.start()
 
         val killerThread = new Thread(new Runnable {
           override def run(): Unit = {
             // wait timelimit + 10 seconds
-            Thread.sleep((timeLimit.getOrElse(Int.MaxValue).toLong + 10) * 1000)
+            var timeLimitReached = false
+            while (!timeLimitReached) {
+              Thread.sleep(250)
+              // test if we have reached the timelimit
+              timeLimitReached = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) > timeLimitToReach
+            }
             resultSemaphore.release()
             thread.stop()
           }
         })
         killerThread.start()
 
-
         resultSemaphore.acquire()
+        timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach - totalTimeAtBeginning))
+        timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach - totalTimeAtBeginning))
+        timerSemaphore.release()
 
         // just to be on the safe side stop all worker and utility threads
         killerThread.stop()

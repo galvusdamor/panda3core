@@ -20,6 +20,7 @@ import de.uniulm.ki.panda3.symbolic.writer._
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+//scalastyle:off covariant.equals
 case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemovedCausalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering,
                 @Deprecated parameterVariableConstraints: CSP,
                 init: PlanStep, goal: PlanStep, isModificationAllowed: IsModificationAllowed, isFlawAllowed: IsFlawAllowed,
