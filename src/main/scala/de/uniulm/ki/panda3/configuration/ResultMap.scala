@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.configuration
 
+import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
@@ -11,34 +12,82 @@ import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 /**
   * all results a search might produce
   */
-sealed trait ResultType {
+sealed trait ResultType extends DefaultLongInfo {
   type ResultType
 }
 
 /** Timings are measured in milliseconds */
-object ProcessingTimings extends ResultType {type ResultType = TimeCapsule}
+object ProcessingTimings extends ResultType {
+  type ResultType = TimeCapsule
 
-object SearchStatus extends ResultType {type ResultType = SearchState}
+  override def longInfo: String = "timings"
+}
 
-object SearchResult extends ResultType {type ResultType = Option[Plan]}
+object SearchStatus extends ResultType {
+  type ResultType = SearchState
 
-object AllFoundPlans extends ResultType {type ResultType = Seq[Plan]}
+  override def longInfo: String = "search status"
+}
 
-object AllFoundSolutionPathsWithHStar extends ResultType {type ResultType = Seq[Seq[(SearchNode, Int)]]}
+object SearchResult extends ResultType {
+  type ResultType = Option[Plan]
 
-object SearchStatistics extends ResultType {type ResultType = InformationCapsule}
+  override def longInfo: String = "search result"
+}
 
-object SearchSpace extends ResultType {type ResultType = SearchNode}
+object AllFoundPlans extends ResultType {
+  type ResultType = Seq[Plan]
 
-object SolutionInternalString extends ResultType {type ResultType = Option[String]}
+  override def longInfo: String = "all plans"
+}
 
-object SolutionDotString extends ResultType {type ResultType = Option[String]}
+object AllFoundSolutionPathsWithHStar extends ResultType {
+  type ResultType = Seq[Seq[(SearchNode, Int)]]
 
-object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain, Plan)}
+  override def longInfo: String = "all plants with H* paths"
+}
 
-object FinalTaskDecompositionGraph extends ResultType {type ResultType = TaskDecompositionGraph}
+object SearchStatistics extends ResultType {
+  type ResultType = InformationCapsule
 
-object FinalGroundedReachability extends ResultType {type ResultType = GroundedPrimitiveReachabilityAnalysis}
+  override def longInfo: String = "statistics"
+}
+
+object SearchSpace extends ResultType {
+  type ResultType = SearchNode
+
+  override def longInfo: String = "search space"
+}
+
+object SolutionInternalString extends ResultType {
+  type ResultType = Option[String]
+
+  override def longInfo: String = "solution string"
+}
+
+object SolutionDotString extends ResultType {
+  type ResultType = Option[String]
+
+  override def longInfo: String = "solution dot"
+}
+
+object PreprocessedDomainAndPlan extends ResultType {
+  type ResultType = (Domain, Plan)
+
+  override def longInfo: String = "preprocessed domain and plan"
+}
+
+object FinalTaskDecompositionGraph extends ResultType {
+  type ResultType = TaskDecompositionGraph
+
+  override def longInfo: String = "final TDG"
+}
+
+object FinalGroundedReachability extends ResultType {
+  type ResultType = GroundedPrimitiveReachabilityAnalysis
+
+  override def longInfo: String = "final grounded reachability"
+}
 
 
 object Timings {
