@@ -126,6 +126,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domain.primitiveTasks.length)
     informationCapsule.set(Information.NUMBER_OF_METHODS, domain.decompositionMethods.length)
 
+    // write randomseed into the info capsule
+    informationCapsule.set(Information.RANDOM_SEED, randomSeed.toString)
+
 
     searchConfiguration match {
       case search: PlanBasedSearch        =>
@@ -752,7 +755,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   import PlanningConfiguration._
 
-  protected override def localModifications: Seq[(String, (Option[String]) => PlanningConfiguration.this.type)] =
+  protected override def localModifications: Seq[(String, (Option[String]) => PlanningConfiguration.this.type)] = localModificationsByKey ++ predefinedConfigurations
+
+  protected def localModificationsByKey: Seq[(String, (Option[String]) => PlanningConfiguration.this.type)] =
     Seq(
          "-printGeneralInfo" -> { l => assert(l.isEmpty); this.copy(printGeneralInformation = true).asInstanceOf[this.type] },
          "-noGeneralInfo" -> { l => assert(l.isEmpty); this.copy(printGeneralInformation = false).asInstanceOf[this.type] },
@@ -763,8 +768,20 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
          "-progression" -> { l => assert(l.isEmpty); this.copy(searchConfiguration = defaultProgressionConfiguration).asInstanceOf[this.type] },
          "-SAT" -> { l => assert(l.isEmpty); this.copy(searchConfiguration = defaultSATConfiguration).asInstanceOf[this.type] },
          "-seed" -> { l => assert(l.isDefined, "No seed provided"); this.copy(randomSeed = l.get.toInt).asInstanceOf[this.type] }
-
        )
+
+  protected def predefinedConfigurations: Seq[(String, (Option[String]) => PlanningConfiguration.this.type)] =
+    (PredefinedConfigurations.parsingConfigs.toSeq map { case (k, p) => k -> { l: Option[String] => assert(l.isEmpty); this.copy(parsingConfiguration = p).asInstanceOf[this.type] } }) ++
+      (PredefinedConfigurations.preprocessConfigs.toSeq map { case (k, p) =>
+        k -> { l: Option[String] => assert(l.isEmpty); this.copy(preprocessingConfiguration = p).asInstanceOf[this.type] }
+      }) ++
+      (PredefinedConfigurations.defaultConfigurations.toSeq map {
+        case (k, (parse, pre, search)) => k -> { l: Option[String] => assert(l.isEmpty);
+          this.copy(parsingConfiguration = parse, preprocessingConfiguration = pre, searchConfiguration =
+            search).asInstanceOf[this.type]
+        }
+      })
+
 
   override def potentialRecursiveChildren: Seq[Configuration] = (searchConfiguration match {
     case NoSearch =>
@@ -860,25 +877,19 @@ case class ParsingConfiguration(
 
 sealed trait TDGGeneration extends Configuration
 
-object NaiveTDG extends TDGGeneration {
-  override def toString: String = "Naive TDG"
-}
+object NaiveTDG extends TDGGeneration {override def toString: String = "Naive TDG"}
 
-object TopDownTDG extends TDGGeneration {
-  override def toString: String = "Top Down TDG"
-}
+object TopDownTDG extends TDGGeneration {override def toString: String = "Top Down TDG"}
 
-object TwoWayTDG extends TDGGeneration {
-  override def toString: String = "Two Way TDG"
-}
+object TwoWayTDG extends TDGGeneration {override def toString: String = "Two Way TDG"}
 
 sealed trait GroundedReachabilityMode extends Configuration
 
-object NaiveGroundedReachability extends GroundedReachabilityMode
+object NaiveGroundedReachability extends GroundedReachabilityMode {override def longInfo: String = "Naive Reachability"}
 
-object PlanningGraph extends GroundedReachabilityMode
+object PlanningGraph extends GroundedReachabilityMode {override def longInfo: String = "Planning Graph"}
 
-object PlanningGraphWithMutexes extends GroundedReachabilityMode
+object PlanningGraphWithMutexes extends GroundedReachabilityMode {override def longInfo: String = "Planning Graph with Mutexes"}
 
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
@@ -955,8 +966,8 @@ case class PreprocessingConfiguration(
          },
          "-dontIterateReachabilityAnalysis" -> { p => assert(p.isEmpty); this.copy(iterateReachabilityAnalysis = false).asInstanceOf[this.type] },
 
-         "-ground" -> { p => (if (p.isEmpty) this.copy(groundDomain = true) else this.copy(groundDomain = p.get.toBoolean)).asInstanceOf[this.type] },
-         "-lifted" -> { p => assert(p.isEmpty); this.copy(groundDomain = false).asInstanceOf[this.type] }
+         "-groundDomain" -> { p => (if (p.isEmpty) this.copy(groundDomain = true) else this.copy(groundDomain = p.get.toBoolean)).asInstanceOf[this.type] },
+         "-liftedDomain" -> { p => assert(p.isEmpty); this.copy(groundDomain = false).asInstanceOf[this.type] }
        )
 
   override def longInfo: String = "Preprocessing Configuration\n---------------------------\n" +
@@ -967,7 +978,7 @@ case class PreprocessingConfiguration(
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
                   ("Split indipendent parameters", splitIndependentParameters) ::
                   ("Lifted Reachability Analysis", liftedReachability) ::
-                  ("Grounded Reachability Analysis", if (groundedReachability.isEmpty) "false" else groundedReachability.get) ::
+                  ("Grounded Reachability Analysis", if (groundedReachability.isEmpty) "false" else groundedReachability.get.longInfo) ::
                   ("Grounded Task Decomposition Graph", if (groundedTaskDecompositionGraph.isEmpty) "false" else groundedTaskDecompositionGraph.get) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
                   ("Ground domain", groundDomain) ::

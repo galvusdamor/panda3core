@@ -7,8 +7,6 @@ import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
   */
 object PredefinedConfigurations {
 
-  val globalTimelimit = 30 * 60
-
   val hybridParsing = ParsingConfiguration(eliminateEquality = true, stripHybrid = false)
   val htnParsing    = ParsingConfiguration(eliminateEquality = true, stripHybrid = true)
 
@@ -17,17 +15,18 @@ object PredefinedConfigurations {
                             "-htn" -> htnParsing
                           )
 
+
+  val groundingPreprocess         = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                               compileOrderInMethods = None,
+                                                               compileInitialPlan = false, splitIndependentParameters = true,
+                                                               liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                               groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                               iterateReachabilityAnalysis = false, groundDomain = true)
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
                                                                //compileOrderInMethods = None, //Some(OneRandomOrdering()),
                                                                compileInitialPlan = false, splitIndependentParameters = true,
                                                                liftedReachability = true, groundedReachability = Some(PlanningGraph),
-                                                               groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                               iterateReachabilityAnalysis = false, groundDomain = true)
-  val groundingPreprocess         = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                               compileOrderInMethods = None,
-                                                               compileInitialPlan = false, splitIndependentParameters = true,
-                                                               liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                iterateReachabilityAnalysis = false, groundDomain = true)
   val liftedPreprocess            = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
@@ -42,6 +41,18 @@ object PredefinedConfigurations {
                                "-ground" -> groundingPreprocess,
                                "-lifted" -> liftedPreprocess
                              )
+
+
+  val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
+    Map(
+         "-panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR))
+       )
+
+
+  // TODO old stuff ... should probably be deleted
+
+
+  val globalTimelimit = 30 * 60
 
 
   // Greedy

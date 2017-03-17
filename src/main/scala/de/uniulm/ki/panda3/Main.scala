@@ -121,16 +121,7 @@ object Main {
       System exit 0
     }
 
-    val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
-
-
-    val a = domFile :: probFile :: "-printGeneralInfo" :: "-parser" :: "xml" :: "-seed" :: "44" :: "out.pdf" :: "-compileSHOPMethods" :: "false" :: "-dontEliminateEquality" ::
-      "-compileNegativePreconditions" :: "-stripHybrid" :: "-ground" :: "-planSearch" :: "-search" :: "a*-depth(4.5)" :: "-h" :: "tdg-mac(recompute=causal-link);RaNdom" ::
-      "-flaw" :: "LCFR Random" :: "-outputPlan" :: "-timings" ::  Nil
-    //val a = "testDom" :: "-h" :: "lmcut" :: "testProb" :: "-seed" :: "44" :: "out.pdf" :: "-silent" :: Nil
-
-    val plannerConfiguration = initialConfiguration.processCommandLineArguments(a)
+    val plannerConfiguration = initialConfiguration.processCommandLineArguments(args)
 
     println(plannerConfiguration.longInfo)
 
@@ -144,9 +135,8 @@ object Main {
     val results: ResultMap = plannerConfiguration.config.runResultSearch(domInputStream, probInputStream)
     if (results.map.contains(SearchStatistics)) {
       // add general information
-      results(SearchStatistics).set(Information.DOMAIN_NAME, new File(domFile).getName)
-      results(SearchStatistics).set(Information.PROBLEM_NAME, new File(probFile).getName)
-      results(SearchStatistics).set(Information.RANDOM_SEED, 42)
+      results(SearchStatistics).set(Information.DOMAIN_NAME, new File(plannerConfiguration.domFile.get).getName)
+      results(SearchStatistics).set(Information.PROBLEM_NAME, new File(plannerConfiguration.probFile.get).getName)
     }
 
     if (results.map.contains(SearchStatus))
