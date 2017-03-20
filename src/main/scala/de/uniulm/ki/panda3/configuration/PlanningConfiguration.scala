@@ -186,10 +186,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           if (efficientPGNeeded) {
             // do the whole preparation, i.e. planning graph
-            val initialState = domainAndPlan._2.groundedInitialState filter {
-              _.isPositive
-            } toSet
-            val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, GroundedPlanningGraphConfiguration())
+            val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
+            val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, GroundedPlanningGraphConfiguration(computeMutexes = preprocessingConfiguration
+              .groundedReachability.contains(PlanningGraphWithMutexes)))
             analysisMap = analysisMap +(EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic(symbolicPlanningGraph, wrapper))
           }
           timeCapsule stop HEURISTICS_PREPARATION
