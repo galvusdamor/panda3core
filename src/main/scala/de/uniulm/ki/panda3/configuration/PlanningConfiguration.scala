@@ -427,7 +427,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         val determinedSearchSate =
           if (informationCapsule.dataMap().contains(Information.ERROR)) SearchState.INSEARCH
           else if (result.nonEmpty) SearchState.SOLUTION
-          else if (timeCapsule.integralDataMap().contains(Timings.SEARCH) && timeCapsule.integralDataMap()(Timings.SEARCH) >=
+          else if (timeCapsule.integralDataMap().contains(Timings.TOTAL_TIME) && timeCapsule.integralDataMap()(Timings.TOTAL_TIME) >=
             1000 * timeLimit.getOrElse(Integer.MAX_VALUE / 1000))
             SearchState.TIMEOUT
           else {
