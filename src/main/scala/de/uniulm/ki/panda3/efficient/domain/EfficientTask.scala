@@ -59,7 +59,7 @@ case class EfficientGroundTask(taskID: Int, arguments: Array[Int]) {
     val task = domain.tasks(taskID)
     val effect = task.effect(effectIndex)
     val openPreconditionArguments = task.getArgumentsOfLiteral(arguments, effect)
-    EfficientGroundLiteral(effect.predicate, isPositive = true, openPreconditionArguments)
+    EfficientGroundLiteral(effect.predicate, isPositive = effect.isPositive, openPreconditionArguments)
   }
 
 
