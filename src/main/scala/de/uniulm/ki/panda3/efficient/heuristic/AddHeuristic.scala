@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.logic.EfficientGroundLiteral
 import de.uniulm.ki.panda3.efficient.plan.modification.EfficientModification
-import de.uniulm.ki.util.{InformationCapsule, BucketAccessMap}
+import de.uniulm.ki.util._
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -18,36 +18,45 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
                         resuingAsVHPOP: Boolean) extends MinimisationOverGroundingsBasedHeuristic[Unit] {
 
   val heuristicMap: Map[EfficientGroundLiteral, Double] =
-    (planningGraph.actionLayer zip planningGraph.stateLayer).foldLeft(initialState map { case (predicate, args) => EfficientGroundLiteral(predicate, isPositive = true, args) -> 0.0 } toMap)(
-      {
-        case (initiallyComputedValues, (actions, _)) =>
-          // apply all actions
-          actions.foldLeft(initiallyComputedValues)({ case (computedValues, (task, arguments)) =>
-            val groundTask = EfficientGroundTask(task, arguments)
+    (planningGraph.actionLayer zip planningGraph.stateLayer)
+      .foldLeft(initialState map { case (predicate, args) => EfficientGroundLiteral(predicate, isPositive = true, args) -> 0.0 } toMap)(
+        {
+          case (initiallyComputedValues, (actions, _)) =>
+            // apply all actions
+            actions.distinct.foldLeft(initiallyComputedValues)({ case (computedValues, (task, arguments)) =>
+              val groundTask = EfficientGroundTask(task, arguments)
 
-            // determine the total cost for this action
-            var actionCost = 1.0
+              // determine the total cost for this action
+              var actionCost = 1.0
 
-            var precondition = 0
-            while (precondition < domain.tasks(task).precondition.length) {
-              actionCost += computedValues(groundTask.substitutedPrecondition(precondition, domain))
-              precondition += 1
-            }
+              var precondition = 0
+              while (precondition < domain.tasks(task).precondition.length) {
+                actionCost += computedValues(groundTask.substitutedPrecondition(precondition, domain))
+                precondition += 1
+              }
 
 
-            val newPredicateCosts: ArrayBuffer[(EfficientGroundLiteral, Double)] = new ArrayBuffer[(EfficientGroundLiteral, Double)]()
+              val newPredicateCosts: ArrayBuffer[(EfficientGroundLiteral, Double)] = new ArrayBuffer[(EfficientGroundLiteral, Double)]()
+              val removePredicateCosts: ArrayBuffer[EfficientGroundLiteral] = new ArrayBuffer[EfficientGroundLiteral]()
 
-            var effect = 0
-            while (effect < domain.tasks(task).effect.length) {
-              val effectLiteral = groundTask.substitutedEffect(effect, domain)
-              if (effectLiteral.isPositive && (!computedValues.contains(effectLiteral) || computedValues(effectLiteral) > actionCost))
-                newPredicateCosts append ((effectLiteral, actionCost))
-              effect += 1
-            }
+              var effect = 0
+              while (effect < domain.tasks(task).effect.length) {
+                val effectLiteral = groundTask.substitutedEffect(effect, domain)
+                if (effectLiteral.isPositive && !computedValues.contains(effectLiteral)) {
+                  newPredicateCosts append ((effectLiteral, actionCost))
+                }
 
-            computedValues ++ newPredicateCosts.toArray
-                                                    })
-      }) withDefault { _ => Double.MaxValue }
+                if (effectLiteral.isPositive && computedValues.contains(effectLiteral) && computedValues(effectLiteral) > actionCost) {
+                  removePredicateCosts append effectLiteral
+                  newPredicateCosts append ((effectLiteral, actionCost))
+                }
+
+                effect += 1
+              }
+
+              (computedValues -- removePredicateCosts) ++ newPredicateCosts.toArray
+                                                               })
+        }) withDefault { _ => Double.MaxValue }
 
   /*heuristicMapping foreach {case (lit,v) =>
     println(lit.predicate + (lit.arguments.mkString("(",",",")")) + " -> " + v)
@@ -83,7 +92,7 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
         }
         if (!resuingAsVHPOP || !potentialSupporterFound) {
           val literalArguments = planStepTask.getArgumentsOfLiteral(arguments, planStepPreconditions(precondition))
-          val h = 1 + efficientAccessMaps(planStepPreconditions(precondition).predicate)(literalArguments)
+          val h = efficientAccessMaps(planStepPreconditions(precondition).predicate)(literalArguments)
           heuristicEstimate += h
         }
       }
