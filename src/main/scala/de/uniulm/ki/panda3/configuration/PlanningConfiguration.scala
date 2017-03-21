@@ -271,7 +271,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val wrappedSearchTreeRoot = wrapper.wrap(searchTreeRoot)
           (domainAndPlan._1, wrappedSearchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
             val actualResult: Seq[Plan] = resultfunction(()) map { wrapper.wrap }
-            println("STOP TOTAL TIME " + timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME))
             timeCapsule stop TOTAL_TIME
             runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan, analysisMap)
           })
