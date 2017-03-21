@@ -198,6 +198,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case LCFR                  => LeastCostFlawRepair
             case CausalThreat          => CausalThreatSelector
             case FrontFlaw             => FrontFlawFirst
+            case NewestFlaw            => NewestFlawFirst
             case RandomFlaw            => RandomFlawSelector(new Random(randomSeed))
             case UMCPFlaw              => UMCPFlawSelection
             case s: SequentialSelector =>
@@ -206,6 +207,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case RandomFlaw   => RandomFlawSelector(new Random(randomSeed))
                 case CausalThreat => CausalThreatSelector
                 case FrontFlaw    => FrontFlawFirst
+                case NewestFlaw   => NewestFlawFirst
               } toArray
 
               SequentialEfficientFlawSelector(subSelectorArray)
@@ -1204,6 +1206,8 @@ object UMCPFlaw extends SearchFlawSelector {override val longInfo: String = "umc
 object RandomFlaw extends SearchFlawSelector {override val longInfo: String = "random"}
 
 object FrontFlaw extends SearchFlawSelector {override val longInfo: String = "front-flaw"}
+
+object NewestFlaw extends SearchFlawSelector {override val longInfo: String = "newest-flaw"}
 
 object CausalThreat extends SearchFlawSelector {override val longInfo: String = "causal-threat first"}
 

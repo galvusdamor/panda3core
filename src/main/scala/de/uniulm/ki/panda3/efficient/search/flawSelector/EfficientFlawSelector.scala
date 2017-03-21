@@ -232,7 +232,7 @@ object FrontFlawFirst extends EfficientFlawSubsetSelector {
         if (activeFlaws(otherFlawNum)) {
           val thatFlawPlanStep = getContainedTaskIndices(flaws(otherFlawNum))
 
-          if (thisFlawPlanStep == -1 && thatFlawPlanStep != -1){
+          if (thisFlawPlanStep == -1 && thatFlawPlanStep != -1) {
             // if I am not a Open precondition, and the other is, ignore me
             activeFlaws(flawNum) = false
             excludedFlaws += 1
@@ -241,10 +241,50 @@ object FrontFlawFirst extends EfficientFlawSubsetSelector {
             activeFlaws(otherFlawNum) = false
             excludedFlaws += 1
           } else if (thisFlawPlanStep != -1 && thatFlawPlanStep != -1) {
-            if (plan.ordering.lt(thatFlawPlanStep,thisFlawPlanStep)) {
+            if (plan.ordering.lt(thatFlawPlanStep, thisFlawPlanStep)) {
               activeFlaws(flawNum) = false
               excludedFlaws += 1
             }
+          }
+        }
+        otherFlawNum += 1
+      }
+      flawNum += 1
+    }
+
+    excludedFlaws
+  }
+}
+
+
+object NewestFlawFirst extends EfficientFlawSubsetSelector {
+
+  private def getContainedTaskIndices(flaw: EfficientFlaw): Int = flaw match {
+    case EfficientAbstractPlanStep(plan, ps)             => plan.depthPerPlanStep(ps)
+    case EfficientCausalThreat(plan, cl, threater, _, _) => Math.max(plan.depthPerCausalLink(plan.causalLinks.indexOf(cl)), plan.depthPerPlanStep(threater))
+    case EfficientOpenPrecondition(plan, ps, _)          => plan.depthPerPlanStep(ps)
+    case EfficientUnboundVariable(_, _)                  => Int.MaxValue
+  }
+
+  /**
+    * removes flaws from consideration. removed flaws should be marked as false and the number of removed flaws should be returned
+    */
+  override def reduceSelection(plan: EfficientPlan, activeFlaws: Array[Boolean], flaws: Array[EfficientFlaw], numberOfModifications: Array[Int]): Int = {
+    var flawNum = 0
+    var excludedFlaws = 0
+    while (flawNum < activeFlaws.length) {
+      val thisFlawPlanSteps = getContainedTaskIndices(flaws(flawNum))
+      // try to find another flaw which takes precedence
+      var otherFlawNum = 0
+      while (otherFlawNum < activeFlaws.length && activeFlaws(flawNum)) {
+        if (flawNum != otherFlawNum && activeFlaws(otherFlawNum)) {
+          val thatFlawPlanSteps = getContainedTaskIndices(flaws(otherFlawNum))
+
+          val iTakePrecedence = thisFlawPlanSteps >= thatFlawPlanSteps
+
+          if (!iTakePrecedence) {
+            activeFlaws(flawNum) = false
+            excludedFlaws += 1
           }
         }
         otherFlawNum += 1
