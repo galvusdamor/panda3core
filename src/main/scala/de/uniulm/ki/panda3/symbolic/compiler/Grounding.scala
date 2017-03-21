@@ -42,10 +42,10 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
         val preconditionLiterals = g.substitutedPreconditions map {
           case GroundLiteral(predicate, isPositive, parameter) =>
             Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)
-        }
+        } distinct
         val effectLiterals = g.substitutedEffects map {
           case GroundLiteral(predicate, isPositive, parameter) => Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)
-        }
+        } distinct
 
         // TODO: here we assume that the grounding we get always fulfills the parameter constraints ... we have to assert this at some point
         ReducedTask(newTaskName, isPrimitive, Nil, Nil,Nil, And(preconditionLiterals), And(effectLiterals))
