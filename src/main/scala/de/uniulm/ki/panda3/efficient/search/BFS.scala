@@ -177,7 +177,7 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
           override def run(): Unit = {
             // wait timelimit + 10 seconds
             var timeLimitReached = false
-            while (!timeLimitReached) {
+            while (!timeLimitReached && thread.isAlive) {
               Thread.sleep(250)
               // test if we have reached the timelimit
               timeLimitReached = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) > timeLimitToReach
@@ -186,7 +186,23 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
             thread.stop()
           }
         })
+
+        // this thread is necessary in case we get an OOME - then both the main thread and the killer thread will show an exception (which I - apparently - cannot catch in scala)
+        val rescueThread = new Thread(new Runnable {
+          override def run(): Unit = {
+            // wait timelimit + 10 seconds
+            var timeLimitReached = false
+            while (killerThread.isAlive || thread.isAlive) {
+              Thread.sleep(250)
+            }
+            resultSemaphore.release()
+            thread.stop()
+          }
+        }, "Thread - RESCUE")
+
+
         killerThread.start()
+        rescueThread.start()
 
         resultSemaphore.acquire()
         timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach))

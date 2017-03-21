@@ -231,25 +231,26 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
 
     val thread = new Thread(new Runnable {
       override def run(): Unit = {
-        timeCapsule switchTimerToCurrentThread TOTAL_TIME
-        timeCapsule start SEARCH
-        try {
-          heuristicSearch() // run the search, it will produce its results as side effects
-        } catch {
-          case t: Throwable =>
-            t.printStackTrace()
-            informationCapsule.set(ERROR, "true")
-        }
+          timeCapsule switchTimerToCurrentThread TOTAL_TIME
+          timeCapsule start SEARCH
+          try {
+            heuristicSearch() // run the search, it will produce its results as side effects
+          } catch {
+            case t: Throwable =>
+              println("An error occured during search ... aborting")
+              t.printStackTrace()
+              informationCapsule.set(ERROR, "true")
+          }
 
-        timeCapsule stopOrIgnore SEARCH
+          timeCapsule stopOrIgnore SEARCH
 
-        // notify waiting threads
-        semaphore.release()
-        resultSemaphore.release()
+          // notify waiting threads
+          semaphore.release()
+          resultSemaphore.release()
 
-        timerSemaphore.acquire()
+          timerSemaphore.acquire()
       }
-    })
+    }, "Thread - RUN 1")
 
     val resultFunction = ResultFunction(
       { _ =>
@@ -260,18 +261,33 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
 
         val killerThread = new Thread(new Runnable {
           override def run(): Unit = {
-            // wait timelimit + 10 seconds
-            var timeLimitReached = false
-            while (!timeLimitReached) {
-              Thread.sleep(250)
-              // test if we have reached the timelimit
-              timeLimitReached = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) > timeLimitToReach
-            }
-            resultSemaphore.release()
-            thread.stop()
+              // wait timelimit + 10 seconds
+              var timeLimitReached = false
+              while (!timeLimitReached && thread.isAlive) {
+                Thread.sleep(250)
+                // test if we have reached the timelimit
+                timeLimitReached = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) > timeLimitToReach
+              }
+              resultSemaphore.release()
+              thread.stop()
           }
-        })
+        }, "Thread - KILLER")
+
+        // this thread is necessary in case we get an OOME - then both the main thread and the killer thread will show an exception (which I - apparently - cannot catch in scala)
+        val rescueThread = new Thread(new Runnable {
+          override def run(): Unit = {
+              // wait timelimit + 10 seconds
+              var timeLimitReached = false
+              while (killerThread.isAlive || thread.isAlive) {
+                Thread.sleep(250)
+              }
+              resultSemaphore.release()
+              thread.stop()
+          }
+        }, "Thread - RESCUE")
+
         killerThread.start()
+        rescueThread.start()
 
         resultSemaphore.acquire()
         timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach - totalTimeAtBeginning))
@@ -286,7 +302,6 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
 
         result
       })
-
 
 
     (root, semaphore, resultFunction, AbortFunction({ _ => abort = true }))
