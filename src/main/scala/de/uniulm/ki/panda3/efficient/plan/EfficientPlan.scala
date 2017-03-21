@@ -28,7 +28,8 @@ import scala.collection.mutable.ArrayBuffer
 case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStepParameters: Array[Array[Int]], planStepDecomposedByMethod: Array[Int],
                          planStepParentInDecompositionTree: Array[Int], planStepIsInstanceOfSubPlanPlanStep: Array[Int], planStepSupportedPreconditions: Array[mutable.BitSet],
                          potentialSupportersOfPlanStepPreconditions: Array[Array[mutable.BitSet]], causalLinksPotentialThreater: Array[mutable.BitSet],
-                         variableConstraints: EfficientCSP, ordering: EfficientOrdering, causalLinks: Array[EfficientCausalLink], problemConfiguration: ProblemConfiguration)() {
+                         variableConstraints: EfficientCSP, ordering: EfficientOrdering, causalLinks: Array[EfficientCausalLink], problemConfiguration: ProblemConfiguration,
+                         depth: Int = 0)(val depthPerPlanStep: Array[Int] = Array.fill(planStepTasks.length)(0), val depthPerCausalLink: Array[Int] = Array.fill(causalLinks.length)(0)) {
 
   assert(planStepTasks.length == planStepParameters.length)
   assert(planStepTasks.length == planStepDecomposedByMethod.length)
@@ -472,11 +473,28 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       decomposedPS += 1
     }
 
+    // 6. depth information
+    val newPSDepths = new Array[Int](newPlanStepTasks.length)
+    var i = 0
+    while (i < newPlanStepTasks.length) {
+      if (i < planStepTasks.length) newPSDepths(i) = depthPerPlanStep(i)
+      else newPSDepths(i) = depth + 1
+      i += 1
+    }
+
+    val newCLDepths = new Array[Int](newCausalLinks.length)
+    i = 0
+    while (i < newCausalLinks.length) {
+      if (i < causalLinks.length) newCLDepths(i) = depthPerCausalLink(i)
+      else newCLDepths(i) = depth + 1
+      i += 1
+    }
 
 
     val newPlan = EfficientPlan(domain, newPlanStepTasks, newPlanStepParameters, newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree,
                                 newPlanStepIsInstanceOfSubPlanPlanStep, newPlanStepSupportedPreconditions, newPotentialSupportersOfPlanStepPreconditions, newCausalLinksPotentialThreater,
-                                newVariableConstraints, newOrdering, newCausalLinks, problemConfiguration)()
+                                newVariableConstraints, newOrdering, newCausalLinks, problemConfiguration,
+                                depth = depth + 1)(newPSDepths, newCLDepths)
 
     //println("NP " + newPlan.planStepTasks.length + " of " + newPlan.numberOfPlanSteps)
     //println("C " + modification.getClass + " " + modification.addedPlanSteps.length + " " + modification.addedOrderings.length)
