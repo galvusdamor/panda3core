@@ -12,20 +12,28 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 object SplitIndependentParameters extends DecompositionMethodTransformer[Unit] {
-  override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, info: Unit, originalDomain : Domain): (Seq[DecompositionMethod], Seq[Task]) = {
+
+  override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, info: Unit, originalDomain: Domain): (Seq[DecompositionMethod], Seq[Task]) = {
     // TODO assert non-hybridity
     val splittedMethods = (methods :+ topMethod) map { case om@SimpleDecompositionMethod(abstractTask, subPlan, methodName) =>
       // determine splittable variables
       val subPlanVariables = subPlan.variableConstraints.variables filterNot abstractTask.parameters.contains
-      val splittable = subPlanVariables filter { v => subPlan.planSteps.count({ _.argumentSet.contains(v) }) == 1 } filter {
+      val splittableA = subPlanVariables filter { v => subPlan.planSteps.count({ _.argumentSet.contains(v) }) == 1 } filter {
         v => subPlan.variableConstraints.reducedDomainOf(v).size != 1 && subPlan.variableConstraints.constraints.count(_.getVariables.contains(v)) == 0
-      } toSeq
+      }
+
+      val commonParameters = (subPlanVariables -- splittableA) filter {v => subPlan.variableConstraints.reducedDomainOf(v).size != 1 }
+      val splittable = if (splittableA.size == 1) (splittableA filterNot  {
+        v =>
+          val ps = subPlan.planSteps.find(_.arguments contains v).get
+          commonParameters.isEmpty || (commonParameters forall { cp => ps.arguments.contains(cp) })
+      } toSeq) else splittableA.toSeq
 
       if (splittable.nonEmpty) {
         val groupedSplittable: Map[PlanStep, Seq[Variable]] = splittable groupBy { v => subPlan.planSteps.find(_.argumentSet contains v).get }
         // generate a new Task for every planStep
         val exchange: Map[PlanStep, (PlanStep, DecompositionMethod, Task)] = groupedSplittable map { case (op@PlanStep(id, subSchema, arguments), freeVariables) =>
-          val realArguments = arguments filterNot  freeVariables.contains
+          val realArguments = arguments filterNot freeVariables.contains
           val reducedSchema = ReducedTask(subSchema.name + "_" + methodName + "_" + id, isPrimitive = false, realArguments, Nil, Nil, And(Nil), And(Nil))
           val reducedPlanStep = PlanStep(id, reducedSchema, realArguments)
 
