@@ -105,3 +105,34 @@ object GreedyNumberOfChildrenFromTotallyOrderedOptimiser extends SOGOptimiser {
     (supergraph, psMapping map { _.toMap })
   }
 }
+
+
+object NativeOptimiser extends SOGOptimiser {
+  override def minimalSOG(graphs: Seq[DirectedGraph[PlanStep]]): (DirectedGraph[Int], Seq[Map[PlanStep, Int]]) = {
+    assert(graphs forall { _.allTotalOrderings.get.length == 1 })
+
+    // take the longest ones first
+    val sorted = graphs.zipWithIndex.sortBy(-_._1.vertices.length)
+    val maxLen = if (sorted.nonEmpty) sorted.head._1.vertices.length else 0
+    val range = Range(0, maxLen)
+
+    val possibleTasksPerChildPosition = range map { _ => new mutable.HashSet[Task]() } toArray
+    val psMapping = graphs.indices map { _ => new mutable.HashMap[PlanStep, Int]() } toArray
+
+    sorted foreach { case (g, gIndex) =>
+      range.foldLeft(g.topologicalOrdering.get)(
+        {
+          case (Nil, _)            => Nil
+          case (remainingTasks, i) =>
+            possibleTasksPerChildPosition(i) += remainingTasks.head.schema
+            psMapping(gIndex)(remainingTasks.head) = i
+            remainingTasks.tail
+        })
+    }
+
+
+    val supergraph = SimpleDirectedGraph(range, range zip range.tail)
+
+    (supergraph, psMapping map { _.toMap })
+  }
+}
