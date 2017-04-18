@@ -18,6 +18,7 @@ import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSea
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
+import de.uniulm.ki.panda3.symbolic.sat.ltl.BüchiAutomaton
 import de.uniulm.ki.panda3.symbolic.sat.verify.{Solvertype, SATRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
@@ -298,7 +299,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       case satSearch: SATSearch =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, timeCapsule, informationCapsule)
+          // if a formula is provided, translate it into a Büchi automaton
+          val automaton : Option[BüchiAutomaton]= satSearch.ltlFormula match {
+            case None => None
+            case Some(formula) => Some(BüchiAutomaton(formula))
+          }
+
+
+          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, automaton, timeCapsule, informationCapsule)
           val (solved, finished) = runner.runWithTimeLimit(satSearch.timeLimit.map({ a => 1000L * a }), satSearch.maximumPlanLength, 0, defineK = satSearch.overrideK, checkSolution =
             satSearch.checkResult)
 
@@ -945,7 +953,8 @@ case class SATSearch(timeLimit: Option[Int],
                      solverType: Solvertype,
                      maximumPlanLength: Int,
                      overrideK: Option[Int] = None,
-                     checkResult: Boolean = false
+                     checkResult: Boolean = false,
+                     ltlFormula : Option[String] = None
                     ) extends SearchConfiguration {}
 
 object NoSearch extends SearchConfiguration {

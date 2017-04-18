@@ -8,6 +8,7 @@ import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
+import de.uniulm.ki.panda3.symbolic.sat.ltl.{LTLFormulaEncoding, BüchiAutomaton}
 import de.uniulm.ki.util._
 
 import scala.collection.{JavaConversions, Seq}
@@ -17,7 +18,9 @@ import scala.io.Source
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // scalastyle:off method.length cyclomatic.complexity
-case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule) {
+case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype,
+                     büchiAutomaton: Option[BüchiAutomaton],
+                     timeCapsule: TimeCapsule, informationCapsule: InformationCapsule) {
 
   private val fileDir = "/dev/shm/"
 
@@ -105,7 +108,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     //println("READY")
     //System.in.read()
     val stateFormula = encoder.stateTransitionFormula ++ encoder.initialState ++ (if (includeGoal) encoder.goalState else Nil) ++ encoder.noAbstractsFormula
-    val usedFormula = encoder.decompositionFormula ++ stateFormula
+    val usedFormula = encoder.decompositionFormula ++ stateFormula ++
+      (if (büchiAutomaton.isDefined) LTLFormulaEncoding(büchiAutomaton.get)(encoder.asInstanceOf[PathBasedEncoding[_, _]]) else Nil)
     //println("Done")
     //System.in.read()
     timeCapsule stop Timings.GENERATE_FORMULA
@@ -182,7 +186,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     // postprocessing
     val solverOutput = Source.fromFile(fileDir + "__res" + uniqFileIdentifier + ".txt").mkString
     val (solveState, assignment) = satSolver match {
-      case MINISAT()       =>
+      case MINISAT()                 =>
         val splitted = solverOutput.split("\n")
         if (splitted.length == 1) (splitted(0), "") else (splitted(0), splitted(1))
       case CRYPTOMINISAT() | RISS6() =>
