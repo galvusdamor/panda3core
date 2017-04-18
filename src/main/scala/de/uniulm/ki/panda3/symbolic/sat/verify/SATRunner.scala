@@ -157,6 +157,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
         case CRYPTOMINISAT() =>
           println("Starting cryptominisat5")
           satProcess = (("cryptominisat5 --verb 0 " + fileDir + "__cnfString" + uniqFileIdentifier) #> new File(fileDir + "__res" + uniqFileIdentifier + ".txt")).run()
+        case RISS6()         =>
+          println("Starting riss6")
+          // -config=Riss6:-no-enabled_cp3
+          satProcess = (("/home/gregor/Riss6/bin/riss6 -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier) #>
+            new File(fileDir + "__res" + uniqFileIdentifier + ".txt")).run()
       }
       // wait for termination
       satProcess.exitValue()
@@ -180,8 +185,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       case MINISAT()       =>
         val splitted = solverOutput.split("\n")
         if (splitted.length == 1) (splitted(0), "") else (splitted(0), splitted(1))
-      case CRYPTOMINISAT() =>
-        val cleanString = solverOutput.replaceAll("s ", "").replaceAll("v ", "")
+      case CRYPTOMINISAT() | RISS6() =>
+        val cleanString = solverOutput.replaceAll("s ", "").replaceAll("v ", "").split("\n").filterNot(_.startsWith("c")).fold("")(_ + _ + "\n")
         val splitted = cleanString.split("\n", 2)
 
         if (splitted.length == 1) (splitted.head, "")

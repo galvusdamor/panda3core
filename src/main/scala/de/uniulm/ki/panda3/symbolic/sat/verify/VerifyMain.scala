@@ -907,3 +907,5 @@ sealed trait Solvertype
 case class MINISAT() extends Solvertype
 
 case class CRYPTOMINISAT() extends Solvertype
+
+case class RISS6() extends Solvertype
