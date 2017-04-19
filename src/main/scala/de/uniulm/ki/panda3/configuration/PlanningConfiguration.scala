@@ -88,7 +88,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   (Domain, SearchNode, Semaphore, AbortFunction, InformationCapsule, Unit => ResultMap) = {
     timeCapsule startOrLetRun TOTAL_TIME
     // run the preprocessing step
-    val (domainAndPlanFullyParsed, _) = runParsingPostProcessing(domain, problem, timeCapsule)
+    val (domainAndPlanFullyParsed, unprocessedDomain, _) = runParsingPostProcessing(domain, problem, timeCapsule)
     val ((domainAndPlan, preprocessedAnalysisMap), _) = runPreprocessing(domainAndPlanFullyParsed._1, domainAndPlanFullyParsed._2, timeCapsule)
 
     // create the information container
@@ -161,7 +161,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           (domainAndPlan._1, searchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
             val actualResult: Seq[Plan] = resultfunction(())
             timeCapsule stop TOTAL_TIME
-            runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan, analysisMap)
+            runPostProcessing(timeCapsule, informationCapsule, searchTreeRoot, actualResult, domainAndPlan, unprocessedDomain, analysisMap)
           })
         } else {
           // EFFICIENT SEARCH
@@ -272,7 +272,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           (domainAndPlan._1, wrappedSearchTreeRoot, nodesProcessed, abortFunction, informationCapsule, { _ =>
             val actualResult: Seq[Plan] = resultfunction(()) map { wrapper.wrap }
             timeCapsule stop TOTAL_TIME
-            runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan, analysisMap)
+            runPostProcessing(timeCapsule, informationCapsule, wrappedSearchTreeRoot, actualResult, domainAndPlan, unprocessedDomain, analysisMap)
           })
         }
       case progression: ProgressionSearch =>
@@ -303,7 +303,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                        timeLimit.getOrElse(Int.MaxValue).toLong * 1000)
 
           timeCapsule stop TOTAL_TIME
-          runPostProcessing(timeCapsule, informationCapsule, null, if (solutionFound) null :: Nil else Nil, domainAndPlan, analysisMap)
+          runPostProcessing(timeCapsule, informationCapsule, null, if (solutionFound) null :: Nil else Nil, domainAndPlan, unprocessedDomain, analysisMap)
         })
 
       case satSearch: SATSearch =>
@@ -316,12 +316,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           informationCapsule.set(Information.TIMEOUT, if (finished) "false" else "true")
 
           timeCapsule stop TOTAL_TIME
-          runPostProcessing(timeCapsule, informationCapsule, null, if (solved) null :: Nil else Nil, domainAndPlan, analysisMap)
+          runPostProcessing(timeCapsule, informationCapsule, null, if (solved) null :: Nil else Nil, domainAndPlan, unprocessedDomain, analysisMap)
         })
 
       case NoSearch => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
         timeCapsule stop TOTAL_TIME
-        runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, analysisMap)
+        runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
       })
     }
   }
@@ -423,6 +423,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
   def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Seq[Plan], domainAndPlan: (Domain, Plan),
+                        unprocessedDomainAndPlan: (Domain, Plan),
                         analysisMap: AnalysisMap): ResultMap =
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
       case ProcessingTimings => timeCapsule
@@ -447,7 +448,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         informationCapsule.set(Information.SOLVED_STATE, determinedSearchSate.toString)
 
         determinedSearchSate
-      case SearchResult                   => result.headOption
+      case InternalSearchResult           => result.headOption
+      case SearchResult                   =>
+        // start process of translating the solution back to something readable (i.e. lifted)
+        None
       case AllFoundPlans                  => result
       case SearchStatistics               => informationCapsule
       case SearchSpace                    => rootNode
@@ -456,6 +460,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case FinalTaskDecompositionGraph    => analysisMap(SymbolicGroundedTaskDecompositionGraph)
       case FinalGroundedReachability      => analysisMap(SymbolicGroundedReachability)
       case PreprocessedDomainAndPlan      => domainAndPlan
+      case UnprocessedDomainAndPlan       => unprocessedDomainAndPlan
       case AllFoundSolutionPathsWithHStar =>
         // we have to find all solutions paths, so first compute the solution state of each node to only traverse the paths to the actual solutions
         rootNode.recomputeSearchState()
@@ -508,7 +513,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     (parsedDomainAndProblem, timeCapsule)
   }
 
-  def runParsingPostProcessing(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): ((Domain, Plan), TimeCapsule) = {
+  def runParsingPostProcessing(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): ((Domain, Plan), (Domain, Plan), TimeCapsule) = {
     info("Preparing internal domain representation ... ")
 
     timeCapsule startOrLetRun PARSING
@@ -541,7 +546,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     timeCapsule stop PARSING
     info("done.\n")
-    (flattened, timeCapsule)
+    (flattened, cwaApplied, timeCapsule)
   }
 
 
@@ -1343,6 +1348,7 @@ case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) extend
          "-timings" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + ProcessingTimings).asInstanceOf[this.type] },
          "-outputStatus" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + SearchStatus).asInstanceOf[this.type] },
          "-outputPlan" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + SearchResult).asInstanceOf[this.type] },
+         "-outputInternalPlan" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + InternalSearchResult).asInstanceOf[this.type] },
          "-outputAllPlans" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + AllFoundPlans).asInstanceOf[this.type] },
          "-outputAllPlansWithH*" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + AllFoundSolutionPathsWithHStar).asInstanceOf[this.type] },
          "-statics" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + SearchStatistics).asInstanceOf[this.type] },
@@ -1350,6 +1356,7 @@ case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) extend
          "-outputPlanInternal" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + SolutionInternalString).asInstanceOf[this.type] },
          "-planToDot" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + SolutionDotString).asInstanceOf[this.type] },
          "-finalDomainAndPlan" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + PreprocessedDomainAndPlan).asInstanceOf[this.type] },
+         "-initialDomainAndPlan" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + UnprocessedDomainAndPlan).asInstanceOf[this.type] },
          "-finalTDG" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + FinalTaskDecompositionGraph).asInstanceOf[this.type] },
          "-finalReachability" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + FinalGroundedReachability).asInstanceOf[this.type] }
        )

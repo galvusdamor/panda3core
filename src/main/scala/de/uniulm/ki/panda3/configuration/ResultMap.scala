@@ -35,6 +35,13 @@ object SearchResult extends ResultType {
   override def longInfo: String = "search result"
 }
 
+
+object InternalSearchResult extends ResultType {
+  type ResultType = Option[Plan]
+
+  override def longInfo: String = "internal search result (may contain heavily compiled actions etc)"
+}
+
 object AllFoundPlans extends ResultType {
   type ResultType = Seq[Plan]
 
@@ -75,6 +82,12 @@ object PreprocessedDomainAndPlan extends ResultType {
   type ResultType = (Domain, Plan)
 
   override def longInfo: String = "preprocessed domain and plan"
+}
+
+object UnprocessedDomainAndPlan extends ResultType {
+  type ResultType = (Domain, Plan)
+
+  override def longInfo: String = "unprocessed domain and plan"
 }
 
 object FinalTaskDecompositionGraph extends ResultType {
