@@ -177,13 +177,13 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
                 val h = new Array[Double](heuristic.length)
                 val newPayload = new Array[Payload](heuristic.length)
                 var hPos = 0
-                var anyInfinity = false
+                var allFinite = true
                 while (hPos < h.length) {
                   val (hVal, pay) = heuristic(hPos).computeHeuristic(newPlan, myNode.payload(hPos), actualModifications(modNum), depth,
                                                                      (myNode.heuristic(hPos) - myNode.distanceValue) / weight, informationCapsule)
                   h(hPos) = distanceValue + weight * hVal
                   newPayload(hPos) = pay
-                  anyInfinity &= h(hPos) < Int.MaxValue
+                  allFinite &= h(hPos) < Int.MaxValue
 
                   hPos += 1
                 }
@@ -196,7 +196,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
                 else new EfficientSearchNode[Payload](nodeNumber, newPlan, null, h, distanceValue)
                 searchNode.payload = newPayload
 
-                if (!anyInfinity) searchQueue enqueue ((searchNode, depth + 1)) else informationCapsule increment NUMBER_OF_DISCARDED_NODES
+                if (allFinite) searchQueue enqueue ((searchNode, depth + 1)) else informationCapsule increment NUMBER_OF_DISCARDED_NODES
 
                 children append ((searchNode, modNum))
               } else informationCapsule increment NUMBER_OF_DISCARDED_NODES
