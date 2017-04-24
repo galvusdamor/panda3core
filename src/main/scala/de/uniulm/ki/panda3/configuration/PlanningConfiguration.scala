@@ -469,20 +469,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           assert(node.searchState == SearchState.SOLUTION)
           if (node.children.isEmpty) (node.plan.planSteps.length, ((node, 0) :: Nil) :: Nil)
           else {
-            val solvableChildren = node.children filter {
-              _._1.searchState == SearchState.SOLUTION
-            } map {
-              _._1
-            }
+            val solvableChildren = node.children filter { _._1.searchState == SearchState.SOLUTION } map { _._1 }
             val children = solvableChildren map getAllSolutions
-            val minimalLength = children map {
-              _._1
-            } min
+            val minimalLength = children map { _._1 } min
 
             // semantic empty line
-            (minimalLength, children flatMap {
-              _._2
-            } map { case p => p.+:(node, minimalLength - node.plan.planSteps.length) })
+            (minimalLength, children flatMap { _._2 } map { case p => p.+:(node, minimalLength - node.plan.planSteps.length) })
           }
         }
 
@@ -524,8 +516,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else (domain, problem)
     timeCapsule stop PARSER_SORT_EXPANSION
 
+    timeCapsule start PARSER_STRIP_HYBRID
+    val noHybrid = if (parsingConfiguration.stripHybrid) StripHybrid.transform(sortsExpandedDomainAndProblem, ()) else sortsExpandedDomainAndProblem
+    timeCapsule stop PARSER_STRIP_HYBRID
+
     timeCapsule start PARSER_CWA
-    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(sortsExpandedDomainAndProblem, true) else sortsExpandedDomainAndProblem
+    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(noHybrid, true) else noHybrid
     timeCapsule stop PARSER_CWA
 
     timeCapsule start PARSER_SHOP_METHODS
@@ -536,12 +532,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     val identity = if (parsingConfiguration.eliminateEquality) RemoveIdenticalVariables.transform(simpleMethod, ()) else simpleMethod
     timeCapsule stop PARSER_ELIMINATE_EQUALITY
 
-    timeCapsule start PARSER_STRIP_HYBRID
-    val noHybrid = if (parsingConfiguration.stripHybrid) StripHybrid.transform(identity, ()) else simpleMethod
-    timeCapsule stop PARSER_STRIP_HYBRID
-
     timeCapsule start PARSER_FLATTEN_FORMULA
-    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(noHybrid, ()) else simpleMethod
+    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(identity, ()) else identity
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule stop PARSING
