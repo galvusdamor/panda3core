@@ -75,7 +75,9 @@ object Main {
                   conf.copy(config = conf.config.modifyOnOptionString(key)(value))
                 else {
                   println("Option \"" + key + "\" unavailable in current circumstance")
-                  assert(false)
+                  println(conf.config.modifyOnOptionString.keySet)
+                  println(conf.longInfo)
+                  System exit 1
                   conf
                 }
             }
