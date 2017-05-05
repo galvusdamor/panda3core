@@ -9,7 +9,7 @@ import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability
 import de.uniulm.ki.panda3.efficient.heuristic._
 
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
-import de.uniulm.ki.panda3.efficient.heuristic.filter.RecomputeHTN
+import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps}
 import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 import de.uniulm.ki.panda3.efficient.search.flawSelector._
@@ -245,6 +245,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 // prepare filters
                 val filters = search.pruningTechniques map {
                   case TreeFFFilter                      => filter.TreeFF(wrapper.efficientDomain)
+                  case PlanLengthFilter(limit)           => PlanLengthLimit(limit)
                   case RecomputeHierarchicalReachability => RecomputeHTN
                 } toArray
 
@@ -451,7 +452,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case InternalSearchResult           => result.headOption
       case SearchResult                   =>
         // start process of translating the solution back to something readable (i.e. lifted)
-        None
+        result.headOption
       case AllFoundPlans                  => result
       case SearchStatistics               => informationCapsule
       case SearchSpace                    => rootNode
@@ -764,11 +765,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
          "-noGeneralInfo" -> { l => assert(l.isEmpty); this.copy(printGeneralInformation = false).asInstanceOf[this.type] },
          "-printAdditionalInfo" -> { l => assert(l.isEmpty); this.copy(printAdditionalData = true).asInstanceOf[this.type] },
          "-noAdditionalInfo" -> { l => assert(l.isEmpty); this.copy(printAdditionalData = false).asInstanceOf[this.type] },
+
          "-noSearch" -> { l => assert(l.isEmpty); this.copy(searchConfiguration = NoSearch).asInstanceOf[this.type] },
          "-planSearch" -> { l => assert(l.isEmpty); this.copy(searchConfiguration = defaultPlanSearchConfiguration).asInstanceOf[this.type] },
          "-progression" -> { l => assert(l.isEmpty); this.copy(searchConfiguration = defaultProgressionConfiguration).asInstanceOf[this.type] },
          "-SAT" -> { l => assert(l.isEmpty); this.copy(searchConfiguration = defaultSATConfiguration).asInstanceOf[this.type] },
-         "-seed" -> { l => assert(l.isDefined, "No seed provided"); this.copy(randomSeed = l.get.toInt).asInstanceOf[this.type] }
+
+         "-seed" -> { l => assert(l.isDefined, "No seed provided"); this.copy(randomSeed = l.get.toInt).asInstanceOf[this.type] },
+         "-timelimit" -> { l => assert(l.isDefined, "No time limit provided"); this.copy(timeLimit = Some(l.get.toInt)).asInstanceOf[this.type] }
        )
 
   protected def predefinedConfigurations: Seq[(String, (Option[String]) => PlanningConfiguration.this.type)] =
@@ -1164,15 +1168,18 @@ object DeleteRelaxedHTN extends SearchHeuristic {override val longInfo: String =
 sealed trait PruningTechnique extends DefaultLongInfo
 
 object PruningTechnique {
-  def parse(text: String) = ArgumentListParser.parse(text, { case (hName, hParameterMap) =>
+  def parse(text: String): Seq[PruningTechnique] = ArgumentListParser.parse(text, { case (hName, hParameterMap) =>
     hName.toLowerCase match {
       case "tree-ff"                                      => TreeFFFilter
       case "recompute-htn" | "recompute-htn-reachability" => RecomputeHierarchicalReachability
+      case "planLength"                                   => PlanLengthFilter(hParameterMap("limit").toInt)
     }
   })
 }
 
 object TreeFFFilter extends PruningTechnique {override val longInfo: String = "tree-ff"}
+
+case class PlanLengthFilter(limit: Int) extends PruningTechnique {override val longInfo: String = "planLength(<=" + limit + ")"}
 
 object RecomputeHierarchicalReachability extends PruningTechnique {override val longInfo: String = "recompute-htn-reachability"}
 
@@ -1343,7 +1350,7 @@ case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) extend
          "-outputInternalPlan" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + InternalSearchResult).asInstanceOf[this.type] },
          "-outputAllPlans" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + AllFoundPlans).asInstanceOf[this.type] },
          "-outputAllPlansWithH*" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + AllFoundSolutionPathsWithHStar).asInstanceOf[this.type] },
-         "-statics" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + SearchStatistics).asInstanceOf[this.type] },
+         "-statistics" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + SearchStatistics).asInstanceOf[this.type] },
          "-searchspace" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + SearchSpace).asInstanceOf[this.type] },
          "-outputPlanInternal" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + SolutionInternalString).asInstanceOf[this.type] },
          "-planToDot" -> { l => assert(l.isEmpty); this.copy(resultsToProduce = resultsToProduce + SolutionDotString).asInstanceOf[this.type] },
