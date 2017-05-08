@@ -440,9 +440,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           else {
             searchConfiguration match {
               case search: PlanBasedSearch =>
-                if (search.nodeLimit.isEmpty || search.nodeLimit.get > informationCapsule(Information.NUMBER_OF_NODES))
-                  SearchState.UNSOLVABLE
-                else SearchState.INSEARCH
+                if (informationCapsule.dataMap().contains(Information.SEARCH_SPACE_FULLY_EXPLORED)) SearchState.UNSOLVABLE else SearchState.INSEARCH
               case _                       => SearchState.INSEARCH
             }
           }

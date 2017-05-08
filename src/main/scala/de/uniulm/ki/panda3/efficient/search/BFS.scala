@@ -33,9 +33,9 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
 
     var abort = false
 
-    val stack = new util.ArrayDeque[(EfficientPlan, EfficientSearchNode[Unit], Int)]()
+    val queue = new util.ArrayDeque[(EfficientPlan, EfficientSearchNode[Unit], Int)]()
     var result: Option[EfficientPlan] = None
-    stack.add((initialPlan, root, 0))
+    queue.add((initialPlan, root, 0))
 
     var lastDepth = -1
     var minFlaw = Integer.MAX_VALUE
@@ -47,9 +47,9 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
 
     def bfs() = {
       val initTime: Long = System.currentTimeMillis()
-      while (!stack.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
+      while (!queue.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
         timeLimitInMilliSeconds >= timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) - 50) {
-        val (plan, myNode, depth) = stack.pop()
+        val (plan, myNode, depth) = queue.pop()
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
 
         assert(depth >= lastDepth)
@@ -125,7 +125,7 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
                 val searchNode = if (buildTree) new EfficientSearchNode[Unit](nodeNumber, newPlan, myNode, Array(0),0) else
                   new EfficientSearchNode[Unit](nodeNumber, newPlan, null, Array(0),0)
 
-                stack add(newPlan, searchNode, depth + 1)
+                queue add(newPlan, searchNode, depth + 1)
                 children append ((searchNode, modNum))
               }
               modNum += 1
@@ -137,6 +137,12 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
         // now the node is processed
         if (buildTree) myNode.setNotDirty()
       }
+
+      if (queue.isEmpty){
+        // if we reached this point and the queue is empty, we have proven the problem to be unsolvable
+        informationCapsule.set(SEARCH_SPACE_FULLY_EXPLORED, "true")
+      }
+
       semaphore.release()
     }
 

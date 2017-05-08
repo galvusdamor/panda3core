@@ -164,21 +164,22 @@ object Information {
   val TOTALLY_ORDERED              = "02 properties:05:totally ordered"
   val MINIMUM_DECOMPOSITION_HEIGHT = "02 properties:10:minimum decomposition height"
 
-  val NUMBER_OF_NODES           = "10 search nodes:00:total"
-  val NUMBER_OF_EXPANDED_NODES  = "10 search nodes:01:expanded"
-  val NUMBER_OF_DISCARDED_NODES = "10 search nodes:02:discarded nodes"
+  val NUMBER_OF_NODES             = "10 search nodes:00:total"
+  val NUMBER_OF_EXPANDED_NODES    = "10 search nodes:01:expanded"
+  val NUMBER_OF_DISCARDED_NODES   = "10 search nodes:02:discarded nodes"
+  val SEARCH_SPACE_FULLY_EXPLORED = "10 search nodes:99:search space fully explored"
 
   val PLAN_SIZE = "20 search plans:01:number of plansteps"
 
-  val DECOMPOSITION_MODIFICATIONS = "21 tdg heuristic:10:executed decompositions"
-  val ADD_ORDERING_MODIFICATIONS = "21 tdg heuristic:11:executed add orderings"
+  val DECOMPOSITION_MODIFICATIONS   = "21 tdg heuristic:10:executed decompositions"
+  val ADD_ORDERING_MODIFICATIONS    = "21 tdg heuristic:11:executed add orderings"
   val ADD_CAUSAL_LINK_MODIFICATIONS = "21 tdg heuristic:12:executed add causal link"
-  val ONLY_ONE_DECOMPOSITION      = "21 tdg heuristic:20:only one decomposition"
-  val TDG_COMPUTED_HEURISTIC      = "21 tdg heuristic:21:TDG computed heuristic"
+  val ONLY_ONE_DECOMPOSITION        = "21 tdg heuristic:20:only one decomposition"
+  val TDG_COMPUTED_HEURISTIC        = "21 tdg heuristic:21:TDG computed heuristic"
 
-  val TDG_COMPUTATION_INCREASED_H           = "21 tdg heuristic:80:TDG recomputation increased heuristic"
+  val TDG_COMPUTATION_INCREASED_H                    = "21 tdg heuristic:80:TDG recomputation increased heuristic"
   val TDG_COMPUTATION_INCREASED_H_RELATIVE_INCREMENT = "21 tdg heuristic:81:TDG recomputation relative increment (excluding infinity cases)"
-  val TDG_COMPUTATION_INCREASED_TO_INFINITY = "21 tdg heuristic:82:TDG recomputation increased heuristic to infinity"
+  val TDG_COMPUTATION_INCREASED_TO_INFINITY          = "21 tdg heuristic:82:TDG recomputation increased heuristic to infinity"
   //val ONLY_ONE_DECOMPOSITION = "21 tdg heuristic:10:"
 
   val NUMBER_OF_CONSTANTS         = "30 problem:01:number of constants"
