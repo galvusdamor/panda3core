@@ -201,7 +201,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
         if (buildTree) myNode.setNotDirty()
       }
 
-      if (searchQueue.isEmpty){
+      if (searchQueue.isEmpty) {
         // if we reached this point and the queue is empty, we have proven the problem to be unsolvable
         informationCapsule.set(SEARCH_SPACE_FULLY_EXPLORED, "true")
       }
@@ -267,6 +267,10 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
             }
             resultSemaphore.release()
             thread.stop()
+            timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach - totalTimeAtBeginning))
+            timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach - totalTimeAtBeginning))
+            timeCapsule stopOrIgnore TOTAL_TIME
+            timeCapsule stopOrIgnore SEARCH
           }
         }, "Thread - RESCUE")
 
