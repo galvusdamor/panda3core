@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.configuration
 
+import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
@@ -11,34 +12,95 @@ import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 /**
   * all results a search might produce
   */
-sealed trait ResultType {
+sealed trait ResultType extends DefaultLongInfo {
   type ResultType
 }
 
 /** Timings are measured in milliseconds */
-object ProcessingTimings extends ResultType {type ResultType = TimeCapsule}
+object ProcessingTimings extends ResultType {
+  type ResultType = TimeCapsule
 
-object SearchStatus extends ResultType {type ResultType = SearchState}
+  override def longInfo: String = "timings"
+}
 
-object SearchResult extends ResultType {type ResultType = Option[Plan]}
+object SearchStatus extends ResultType {
+  type ResultType = SearchState
 
-object AllFoundPlans extends ResultType {type ResultType = Seq[Plan]}
+  override def longInfo: String = "search status"
+}
 
-object AllFoundSolutionPathsWithHStar extends ResultType {type ResultType = Seq[Seq[(SearchNode, Int)]]}
+object SearchResult extends ResultType {
+  type ResultType = Option[Plan]
 
-object SearchStatistics extends ResultType {type ResultType = InformationCapsule}
+  override def longInfo: String = "search result"
+}
 
-object SearchSpace extends ResultType {type ResultType = SearchNode}
 
-object SolutionInternalString extends ResultType {type ResultType = Option[String]}
+object InternalSearchResult extends ResultType {
+  type ResultType = Option[Plan]
 
-object SolutionDotString extends ResultType {type ResultType = Option[String]}
+  override def longInfo: String = "internal search result (may contain heavily compiled actions etc)"
+}
 
-object PreprocessedDomainAndPlan extends ResultType {type ResultType = (Domain, Plan)}
+object AllFoundPlans extends ResultType {
+  type ResultType = Seq[Plan]
 
-object FinalTaskDecompositionGraph extends ResultType {type ResultType = TaskDecompositionGraph}
+  override def longInfo: String = "all plans"
+}
 
-object FinalGroundedReachability extends ResultType {type ResultType = GroundedPrimitiveReachabilityAnalysis}
+object AllFoundSolutionPathsWithHStar extends ResultType {
+  type ResultType = Seq[Seq[(SearchNode, Int)]]
+
+  override def longInfo: String = "all plants with H* paths"
+}
+
+object SearchStatistics extends ResultType {
+  type ResultType = InformationCapsule
+
+  override def longInfo: String = "statistics"
+}
+
+object SearchSpace extends ResultType {
+  type ResultType = SearchNode
+
+  override def longInfo: String = "search space"
+}
+
+object SolutionInternalString extends ResultType {
+  type ResultType = Option[String]
+
+  override def longInfo: String = "solution string"
+}
+
+object SolutionDotString extends ResultType {
+  type ResultType = Option[String]
+
+  override def longInfo: String = "solution dot"
+}
+
+object PreprocessedDomainAndPlan extends ResultType {
+  type ResultType = (Domain, Plan)
+
+  override def longInfo: String = "preprocessed domain and plan"
+}
+
+object UnprocessedDomainAndPlan extends ResultType {
+  type ResultType = (Domain, Plan)
+
+  override def longInfo: String = "unprocessed domain and plan"
+}
+
+object FinalTaskDecompositionGraph extends ResultType {
+  type ResultType = TaskDecompositionGraph
+
+  override def longInfo: String = "final TDG"
+}
+
+object FinalGroundedReachability extends ResultType {
+  type ResultType = GroundedPrimitiveReachabilityAnalysis
+
+  override def longInfo: String = "final grounded reachability"
+}
 
 
 object Timings {
@@ -102,13 +164,23 @@ object Information {
   val TOTALLY_ORDERED              = "02 properties:05:totally ordered"
   val MINIMUM_DECOMPOSITION_HEIGHT = "02 properties:10:minimum decomposition height"
 
-  val NUMBER_OF_NODES           = "10 search nodes:00:total"
-  val NUMBER_OF_EXPANDED_NODES  = "10 search nodes:01:expanded"
-  val NUMBER_OF_DISCARDED_NODES = "10 search nodes:02:discarded nodes"
+  val NUMBER_OF_NODES             = "10 search nodes:00:total"
+  val NUMBER_OF_EXPANDED_NODES    = "10 search nodes:01:expanded"
+  val NUMBER_OF_DISCARDED_NODES   = "10 search nodes:02:discarded nodes"
+  val SEARCH_SPACE_FULLY_EXPLORED = "10 search nodes:99:search space fully explored"
 
-  val PLAN_SIZE              = "20 search plans:01:number of plansteps"
-  val TDG_COMPUTED_HEURISTIC = "20 search plans:11:TDG computed heuristic"
-  val ONLY_ONE_DECOMPOSITION = "20 search plans:12:only one decomposition"
+  val PLAN_SIZE = "20 search plans:01:number of plansteps"
+
+  val DECOMPOSITION_MODIFICATIONS   = "21 tdg heuristic:10:executed decompositions"
+  val ADD_ORDERING_MODIFICATIONS    = "21 tdg heuristic:11:executed add orderings"
+  val ADD_CAUSAL_LINK_MODIFICATIONS = "21 tdg heuristic:12:executed add causal link"
+  val ONLY_ONE_DECOMPOSITION        = "21 tdg heuristic:20:only one decomposition"
+  val TDG_COMPUTED_HEURISTIC        = "21 tdg heuristic:21:TDG computed heuristic"
+
+  val TDG_COMPUTATION_INCREASED_H                    = "21 tdg heuristic:80:TDG recomputation increased heuristic"
+  val TDG_COMPUTATION_INCREASED_H_RELATIVE_INCREMENT = "21 tdg heuristic:81:TDG recomputation relative increment (excluding infinity cases)"
+  val TDG_COMPUTATION_INCREASED_TO_INFINITY          = "21 tdg heuristic:82:TDG recomputation increased heuristic to infinity"
+  //val ONLY_ONE_DECOMPOSITION = "21 tdg heuristic:10:"
 
   val NUMBER_OF_CONSTANTS         = "30 problem:01:number of constants"
   val NUMBER_OF_PREDICATES        = "30 problem:02:number of predicates"

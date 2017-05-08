@@ -33,8 +33,19 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
     val semaphore: Semaphore = new Semaphore(0)
     val initialPlanHeuristic = new Array[Double](heuristic.length)
     val initialPlanPayload = new Array[Payload](heuristic.length)
-    util.Arrays.fill(initialPlanHeuristic, Double.MaxValue)
     val rootDistanceValue = ((if (addNumberOfPlanSteps) initialPlan.numberOfPrimitivePlanSteps else 0) + (if (addDepth) 1 else 0)) * (if (invertCosts) -1 else 1)
+    // compute heuristic for the initial plan
+    var initialHPos = 0
+    var initialAllFinite = true
+    while (initialHPos < heuristic.length) {
+      val (hVal, pay) = heuristic(initialHPos).computeHeuristic(initialPlan, heuristic(initialHPos).computeInitialPayLoad(initialPlan), None, 0, 0, informationCapsule)
+      initialPlanHeuristic(initialHPos) = rootDistanceValue + weight * hVal
+      initialPlanPayload(initialHPos) = pay
+      initialAllFinite &= initialPlanHeuristic(initialHPos) < Int.MaxValue
+
+      initialHPos += 1
+    }
+
     val root = new EfficientSearchNode[Payload](0, initialPlan, null, initialPlanHeuristic, rootDistanceValue)
     root.payload = initialPlanPayload
 
@@ -70,15 +81,6 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
         timeCapsule stop SEARCH_FLAW_COMPUTATION
         minFlaw = Math.min(minFlaw, flaws.length)
 
-        //println("PLAN")
-        //plan.remainingAccessiblePrimitiveTasks.length
-        //if (!plan.allContainedApplicable) println("DEAD CONTAINED")
-        //if (!plan.allLandmarksApplicable) println("DEAD LANDMARKS")
-        //if (!plan.allAbstractTasksAllowed) println("DEAD ALLOWED")
-        //println(plan.allLandmarks filter { domain.tasks(_).isPrimitive } size)
-
-        //println("LM " + plan.allLandmarks.size + "/" + plan.simpleLandMark.size + " all " + plan.taskAllowed.count(x => x))
-
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
 
         // heuristic statistics
@@ -90,7 +92,6 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
         maxHeuristicCurrentInterval = Math.max(maxHeuristicCurrentInterval, myNode.heuristic(0))
 
 
-        //if (nodes % 300 == 0 && nodes > 0) {
         if (lastReportTime + 333 < System.currentTimeMillis()) {
           val nTime = System.currentTimeMillis()
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
@@ -126,7 +127,6 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
               myNode.modifications(flawnum) = flaws(flawnum).resolver
               numberOfModificationsPerFlaw(flawnum) = myNode.modifications(flawnum).length
             } else numberOfModificationsPerFlaw(flawnum) = flaws(flawnum).estimatedNumberOfResolvers
-            //assert(numberOfModifiactions == flaws(flawnum).resolver.length)
             flawnum += 1
           }
           timeCapsule stop (if (buildTree) SEARCH_FLAW_RESOLVER else SEARCH_FLAW_RESOLVER_ESTIMATION)
@@ -144,12 +144,9 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
             if (buildTree) timeCapsule stop SEARCH_FLAW_RESOLVER
 
 
-            //assert(actualModifications.length == smallFlawNumMod, "Estimation of number of modifications was incorrect (" + actualModifications.length + " and " + smallFlawNumMod +
-            // ")")
             var modNum = 0
             while (modNum < actualModifications.length) {
               // apply modification
-              //val newPlan: EfficientPlan = plan.modify(myNode.modifications(myNode.selectedFlaw)(modNum))
               val newPlan: EfficientPlan = plan.modify(actualModifications(modNum))
 
               timeCapsule start SEARCH_COMPUTE_FILTER
@@ -161,29 +158,24 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
               }
               timeCapsule stop SEARCH_COMPUTE_FILTER
 
-              //if (!newPlan.allContainedApplicable) println("DEAD CONTAINED")
-              //if (!newPlan.allLandmarksApplicable) println("DEAD LANDMARKS")
-              //if (!newPlan.allAbstractTasksAllowed) println("DEAD ALLOWED")
-
               if (newPlan.variableConstraints.potentiallyConsistent && newPlan.ordering.isConsistent && planAllowed) {
                 informationCapsule increment NUMBER_OF_NODES
                 informationCapsule.addToDistribution(PLAN_SIZE, newPlan.numberOfPlanSteps)
 
                 timeCapsule start SEARCH_COMPUTE_HEURISTIC
-                //val heuristicValue = (if (addCosts) depth + 1 else 0) + heuristic.computeHeuristic(newPlan)
                 val distanceValue = ((if (addNumberOfPlanSteps) newPlan.numberOfPrimitivePlanSteps else 0) + (if (addDepth) depth + 1 else 0)) * (if (invertCosts) -1 else 1)
 
                 // compute the heuristic array
                 val h = new Array[Double](heuristic.length)
                 val newPayload = new Array[Payload](heuristic.length)
                 var hPos = 0
-                var anyInfinity = false
+                var allFinite = true
                 while (hPos < h.length) {
                   val (hVal, pay) = heuristic(hPos).computeHeuristic(newPlan, myNode.payload(hPos), actualModifications(modNum), depth,
                                                                      (myNode.heuristic(hPos) - myNode.distanceValue) / weight, informationCapsule)
                   h(hPos) = distanceValue + weight * hVal
                   newPayload(hPos) = pay
-                  anyInfinity &= h(hPos) < Int.MaxValue
+                  allFinite &= h(hPos) < Int.MaxValue
 
                   hPos += 1
                 }
@@ -196,32 +188,24 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
                 else new EfficientSearchNode[Payload](nodeNumber, newPlan, null, h, distanceValue)
                 searchNode.payload = newPayload
 
-                if (!anyInfinity) searchQueue enqueue ((searchNode, depth + 1)) else informationCapsule increment NUMBER_OF_DISCARDED_NODES
+                if (allFinite) searchQueue enqueue ((searchNode, depth + 1)) else informationCapsule increment NUMBER_OF_DISCARDED_NODES
 
                 children append ((searchNode, modNum))
               } else informationCapsule increment NUMBER_OF_DISCARDED_NODES
               modNum += 1
             }
-          } /*else {
-            val flaw = myNode.plan.flaws(myNode.selectedFlaw)
-            println(flaw)
-            flaw match {
-              case EfficientOpenPrecondition(p,ps,precIndex) =>
-                val taskIndex = p.planStepTasks(ps)
-                val task = PlanningConfiguration.wrapper.wrapTask(taskIndex)
-                println(task.name)
-                val prec = p.taskOfPlanStep(ps).precondition(precIndex)
-                println(PlanningConfiguration.wrapper.wrapPredicate(prec.predicate).name)
-
-
-              case _ => ()
-            }
-          }*/
+          }
           if (buildTree) myNode.children = children.toArray
         }
         // now the node is processed
         if (buildTree) myNode.setNotDirty()
       }
+
+      if (searchQueue.isEmpty){
+        // if we reached this point and the queue is empty, we have proven the problem to be unsolvable
+        informationCapsule.set(SEARCH_SPACE_FULLY_EXPLORED, "true")
+      }
+
       semaphore.release()
     }
 
@@ -237,6 +221,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
           heuristicSearch() // run the search, it will produce its results as side effects
         } catch {
           case t: Throwable =>
+            println("An error occured during search ... aborting")
             t.printStackTrace()
             informationCapsule.set(ERROR, "true")
         }
@@ -249,7 +234,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
 
         timerSemaphore.acquire()
       }
-    })
+    }, "Thread - RUN 1")
 
     val resultFunction = ResultFunction(
       { _ =>
@@ -262,7 +247,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
           override def run(): Unit = {
             // wait timelimit + 10 seconds
             var timeLimitReached = false
-            while (!timeLimitReached) {
+            while (!timeLimitReached && thread.isAlive) {
               Thread.sleep(250)
               // test if we have reached the timelimit
               timeLimitReached = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) > timeLimitToReach
@@ -270,8 +255,23 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
             resultSemaphore.release()
             thread.stop()
           }
-        })
+        }, "Thread - KILLER")
+
+        // this thread is necessary in case we get an OOME - then both the main thread and the killer thread will show an exception (which I - apparently - cannot catch in scala)
+        val rescueThread = new Thread(new Runnable {
+          override def run(): Unit = {
+            // wait timelimit + 10 seconds
+            var timeLimitReached = false
+            while (killerThread.isAlive || thread.isAlive) {
+              Thread.sleep(250)
+            }
+            resultSemaphore.release()
+            thread.stop()
+          }
+        }, "Thread - RESCUE")
+
         killerThread.start()
+        rescueThread.start()
 
         resultSemaphore.acquire()
         timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach - totalTimeAtBeginning))
@@ -286,7 +286,6 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
 
         result
       })
-
 
 
     (root, semaphore, resultFunction, AbortFunction({ _ => abort = true }))

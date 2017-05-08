@@ -16,6 +16,8 @@ case class CausalLink(producer: PlanStep, consumer: PlanStep, condition: Literal
 
   def containsOne(pss: PlanStep*): Boolean = (pss foldLeft false) { case (b, ps) => b || contains(ps) }
 
+  def containsOnly(pss: PlanStep*): Boolean = pss.contains(producer) && pss.contains(consumer)
+
   def contains(ps: PlanStep): Boolean = ps == producer || ps == consumer
 
   override def update(domainUpdate: DomainUpdate): CausalLink = domainUpdate match {

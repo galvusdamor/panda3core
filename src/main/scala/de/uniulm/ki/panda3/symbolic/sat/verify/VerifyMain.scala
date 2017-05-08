@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 import java.io._
 
 import de.uniulm.ki.panda3.configuration._
-import de.uniulm.ki.panda3.symbolic.PrettyPrintable
+import de.uniulm.ki.panda3.symbolic.{DefaultLongInfo, PrettyPrintable}
 import de.uniulm.ki.panda3.symbolic.compiler.{AllOrderings, OneRandomOrdering}
 import de.uniulm.ki.panda3.symbolic.domain.{RandomPlanGenerator, Task}
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
@@ -26,21 +26,21 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     val probInputStream = new FileInputStream(probFile)
 
     val (searchConfig, usePlanningGraph) = configNumber match {
-      case x if x < 0 => (PlanBasedSearch(Some(0), Some(0), DFSType, Nil, Nil, LCFR, efficientSearch = false), false)
-      case 1          => (PlanBasedSearch(None, None, AStarDepthType(1), TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR), true)
-      case 2          => (PlanBasedSearch(None, None, DijkstraType, Nil, Nil, LCFR), true)
-      case 3          => (PlanBasedSearch(None, None, AStarDepthType(1), TDGMinimumAction() :: Nil, Nil, LCFR), true)
-      case 4          => (PlanBasedSearch(None, None, AStarDepthType(1), TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR), false)
-      case 5          => (PlanBasedSearch(None, None, DijkstraType, Nil, Nil, LCFR), false)
-      case 6          => (PlanBasedSearch(None, None, GreedyType, TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR), false)
+      case x if x < 0 => (PlanBasedSearch(Some(0), DFSType, Nil, Nil, LCFR, efficientSearch = false), false)
+      case 1          => (PlanBasedSearch(None, AStarDepthType(1), TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR), true)
+      case 2          => (PlanBasedSearch(None, DijkstraType, Nil, Nil, LCFR), true)
+      case 3          => (PlanBasedSearch(None, AStarDepthType(1), TDGMinimumAction() :: Nil, Nil, LCFR), true)
+      case 4          => (PlanBasedSearch(None, AStarDepthType(1), TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR), false)
+      case 5          => (PlanBasedSearch(None, DijkstraType, Nil, Nil, LCFR), false)
+      case 6          => (PlanBasedSearch(None, GreedyType, TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR), false)
     }
 
     // create the configuration
-    val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
+    val planningConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true, randomSeed = 42, timeLimit = if (configNumber < 0) Some(0) else None,
                                                ParsingConfiguration(stripHybrid = false, eliminateEquality = false),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph,
                                                                           compileOrderInMethods = None, compileInitialPlan = false,
-                                                                          convertToSASP = false, splitIndependedParameters = false, liftedReachability = true,
+                                                                          convertToSASP = false, splitIndependentParameters = false, liftedReachability = true,
                                                                           groundedReachability = Some(if (usePlanningGraph) PlanningGraphWithMutexes else PlanningGraph),
                                                                           groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = true),
@@ -205,10 +205,10 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     timeCapsule start VerifyRunner.SAT_SOLVER
     try {
       satsolver match {
-        case MINISAT()       =>
+        case MINISAT       =>
           println("Starting minisat")
           ("minisat " + VerifyRunner.fileDir + "__cnfString " + VerifyRunner.fileDir + "__res.txt") !
-        case CRYPTOMINISAT() =>
+        case CRYPTOMINISAT =>
           println("Starting cryptominisat5")
           ("cryptominisat5 --verb 0 " + VerifyRunner.fileDir + "__cnfString") #> new File(VerifyRunner.fileDir + "__res.txt") !
       }
@@ -233,10 +233,10 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
     val solverOutput = Source.fromFile(VerifyRunner.fileDir + "__res.txt").mkString
     val (solveState, assignment) = satsolver match {
-      case MINISAT()       =>
+      case MINISAT       =>
         val splitted = solverOutput.split("\n")
         if (splitted.length == 1) (splitted(0), "") else (splitted(0), splitted(1))
-      case CRYPTOMINISAT() =>
+      case CRYPTOMINISAT =>
         val cleanString = solverOutput.replaceAll("s ", "").replaceAll("v ", "")
         val splitted = cleanString.split("\n", 2)
 
@@ -732,7 +732,7 @@ object VerifyRunner {
     val result = problemsToVerify flatMap { case (domainFile, parserType, problems) => problems flatMap { case (problemFile, config) =>
       println("RUN " + domainFile + " " + problemFile)
 
-      val runner = VerifyRunner(prefix + domainFile, prefix + problemFile, config, parserType, CRYPTOMINISAT())
+      val runner = VerifyRunner(prefix + domainFile, prefix + problemFile, config, parserType, CRYPTOMINISAT)
 
       /*val solutionLines = Range(minOffset, maxOffset + 1) map { offsetToK =>
         val (isPlan, completed, time, information) = runner.runWithTimeLimit(timeLimit, runner.solutionPlan, offsetToK)
@@ -803,7 +803,7 @@ object VerifyRunner {
     val result = problemsToVerify foreach { case (domainFile, parserType, problems) => problems foreach { case (problemFile, config) =>
       Range(minPlan, maxPlan + 1, stepPlan) foreach { planLength =>
         println("RUN " + domainFile + " " + problemFile + "PLANLEN " + planLength)
-        val runner = VerifyRunner(prefix + domainFile, prefix + problemFile, -planLength, parserType, CRYPTOMINISAT())
+        val runner = VerifyRunner(prefix + domainFile, prefix + problemFile, -planLength, parserType, CRYPTOMINISAT)
 
         Range(minOffset, maxOffset + 1) foreach { offsetToK =>
           val (isPlan, completed, time, information) = runner.runWithTimeLimit(timeLimit, runner.solutionPlan, 0, includeGoal = true, verify = false)
@@ -834,9 +834,9 @@ object VerifyRunner {
   }
 
   def runPlanner(domFile: String, probFile: String, length: Int, offset: Int): Unit = {
-    //val runner = VerifyRunner(domFile, probFile, -length, HPDDLParserType, CRYPTOMINISAT())
-    //val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT())
-    val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT())
+    //val runner = VerifyRunner(domFile, probFile, -length, HPDDLParserType, CRYPTOMINISAT)
+    //val runner = VerifyRunner(domFile, probFile, -length, HDDLParserType, CRYPTOMINISAT)
+    val runner = VerifyRunner(domFile, probFile, -length, XMLParserType, CRYPTOMINISAT)
 
     val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = offset, includeGoal = true, verify = false)
     //val (_, time, info) = runner.run(runner.solutionPlan, offSetToK = 0, includeGoal = true, verify = false)
@@ -901,8 +901,8 @@ object VerifyRunner {
 
 }
 
-sealed trait Solvertype
+sealed trait Solvertype extends DefaultLongInfo
 
-case class MINISAT() extends Solvertype
+object MINISAT extends Solvertype {override val longInfo: String = "minisat"}
 
-case class CRYPTOMINISAT() extends Solvertype
+object CRYPTOMINISAT extends Solvertype {override val longInfo: String = "cryptominisat"}

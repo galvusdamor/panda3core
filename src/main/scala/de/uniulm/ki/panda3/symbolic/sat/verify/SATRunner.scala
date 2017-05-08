@@ -153,27 +153,44 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
     //writeStringToFile(usedFormula mkString "\n", new File("__formulaString"))
 
-    //timeCapsule start Timings.SAT_SOLVER
-    val solverStartTime = System.currentTimeMillis()
     try {
+      val stdout = new StringBuilder
+      val stderr = new StringBuilder
+      val logger = ProcessLogger({ s => stdout append (s + "\n") }, { s => stderr append (s + "\n") })
+
       satSolver match {
-        case MINISAT()       =>
+        case MINISAT       =>
           println("Starting minisat")
-          satProcess = ("minisat " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt").run()
-        case CRYPTOMINISAT() =>
+          writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' minisat " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt",
+                            fileDir + "__run" + uniqFileIdentifier)
+        case CRYPTOMINISAT =>
           println("Starting cryptominisat5")
-          satProcess = (("cryptominisat5 --verb 0 " + fileDir + "__cnfString" + uniqFileIdentifier) #> new File(fileDir + "__res" + uniqFileIdentifier + ".txt")).run()
+          writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' cryptominisat5 --verb 0 " + fileDir + "__cnfString" + uniqFileIdentifier, fileDir + "__run" + uniqFileIdentifier)
       }
+
+      satProcess = ("bash " + fileDir + "__run" + uniqFileIdentifier).run(logger)
+
       // wait for termination
       satProcess.exitValue()
+      satSolver match {
+        case CRYPTOMINISAT =>
+          writeStringToFile(stdout.toString(), new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
+        case _               =>
+      }
+      // remove runscript
+      ("rm " + fileDir + "__run" + uniqFileIdentifier) !
+
+      // get time measurement
+      val totalTime = (stderr.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
+      println("Time command gave the following runtime for the solver: " + totalTime)
+
+      timeCapsule.set(SAT_SOLVER, totalTime)
+      timeCapsule.addTo(TOTAL_TIME, totalTime)
+      timeCapsule.addTo(VERIFY_TOTAL, totalTime)
+
     } catch {
-      case rt: RuntimeException => println("Minisat exitcode problem ...")
+      case rt: RuntimeException => println("Minisat exitcode problem ..." + rt.toString)
     }
-    val solverEndTime = System.currentTimeMillis()
-    timeCapsule.set(SAT_SOLVER, solverEndTime - solverStartTime)
-    timeCapsule.addTo(TOTAL_TIME,solverEndTime - solverStartTime)
-    timeCapsule.addTo(VERIFY_TOTAL,solverEndTime - solverStartTime)
-    //timeCapsule stop Timings.SAT_SOLVER
     timeCapsule stop Timings.VERIFY_TOTAL
 
 
@@ -187,10 +204,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     // postprocessing
     val solverOutput = Source.fromFile(fileDir + "__res" + uniqFileIdentifier + ".txt").mkString
     val (solveState, assignment) = satSolver match {
-      case MINISAT()       =>
+      case MINISAT       =>
         val splitted = solverOutput.split("\n")
         if (splitted.length == 1) (splitted(0), "") else (splitted(0), splitted(1))
-      case CRYPTOMINISAT() =>
+      case CRYPTOMINISAT =>
         val cleanString = solverOutput.replaceAll("s ", "").replaceAll("v ", "")
         val splitted = cleanString.split("\n", 2)
 

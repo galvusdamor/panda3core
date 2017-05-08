@@ -15,44 +15,44 @@ class FullStackTest extends FlatSpec {
 
   val grounded = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                             compileOrderInMethods = None,
-                                            compileInitialPlan = false, convertToSASP = false, splitIndependedParameters = false,
+                                            compileInitialPlan = false, convertToSASP = false, splitIndependentParameters = false,
                                             liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                             iterateReachabilityAnalysis = false, groundDomain = true)
 
   val lifted = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                           compileOrderInMethods = None,
-                                          compileInitialPlan = false, convertToSASP = false, splitIndependedParameters = false,
+                                          compileInitialPlan = false, convertToSASP = false, splitIndependentParameters = false,
                                           liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
                                           groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                           iterateReachabilityAnalysis = false, groundDomain = false)
 
 
   val algos =
-    ("symbolic-BFS", grounded, PlanBasedSearch(None, Some(60 * 60), BFSType, Nil, Nil, LCFR, efficientSearch = false)) ::
-      ("symbolic-DFS", grounded, PlanBasedSearch(None, Some(60 * 60), DFSType, Nil, Nil, LCFR, efficientSearch = false)) ::
-      ("BFS", grounded, PlanBasedSearch(None, Some(60 * 60), BFSType, Nil, Nil, LCFR)) ::
-      ("DFS", grounded, PlanBasedSearch(None, Some(60 * 60), DFSType, Nil, Nil, LCFR)) ::
-      ("PR", grounded, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)) ::
-      ("PR-Recompute-Reach", grounded, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)) ::
-      ("PR-Recompute-CL", grounded, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil, Nil, LCFR)) ::
-      ("ActionCount", grounded, PlanBasedSearch(None, Some(60 * 60), AStarActionsType(2), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)) ::
-      ("ActionCount-Recompute-Reach", grounded, PlanBasedSearch(None, Some(60 * 60), AStarActionsType(2), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)) ::
-      ("ActionCount-Recompute-CL", grounded, PlanBasedSearch(None, Some(60 * 60), AStarActionsType(2), LiftedTDGMinimumAction(CausalLinkRecompute) :: Nil, Nil, LCFR)) ::
-      ("TDGADD", grounded, PlanBasedSearch(None, Some(60 * 60), AStarActionsType(2), LiftedTDGMinimumADD(NeverRecompute) :: Nil, Nil, LCFR)) ::
-      ("TDGADD-Recompute-Reach", grounded, PlanBasedSearch(None, Some(60 * 60), AStarActionsType(2), LiftedTDGMinimumADD(ReachabilityRecompute) :: Nil, Nil, LCFR)) ::
-      ("TDGADD-Recompute-CL", grounded, PlanBasedSearch(None, Some(60 * 60), AStarActionsType(2), LiftedTDGMinimumADD(CausalLinkRecompute) :: Nil, Nil, LCFR)) ::
-      ("lifted-DFS", lifted, PlanBasedSearch(None, Some(60 * 60), DFSType, Nil, Nil, LCFR)) ::
-      ("lifted-PR", lifted, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), TDGPreconditionRelaxation() :: Nil, Nil, LCFR)) ::
-      ("lifted-MMESCC", lifted, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR)) ::
-      ("lifted-ADD", lifted, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), TDGMinimumADD() :: Nil, Nil, LCFR)) ::
-      ("lifted-ActionCount", lifted, PlanBasedSearch(None, Some(60 * 60), AStarDepthType(2), TDGMinimumAction() :: Nil, Nil, LCFR)) ::
-      ("PRO-RCG", grounded, ProgressionSearch(Some(60 * 60), AStarActionsType(1),
+    ("symbolic-BFS", grounded, PlanBasedSearch(None,  BFSType, Nil, Nil, LCFR, efficientSearch = false)) ::
+      ("symbolic-DFS", grounded, PlanBasedSearch(None,  DFSType, Nil, Nil, LCFR, efficientSearch = false)) ::
+      ("BFS", grounded, PlanBasedSearch(None,  BFSType, Nil, Nil, LCFR)) ::
+      ("DFS", grounded, PlanBasedSearch(None,  DFSType, Nil, Nil, LCFR)) ::
+      ("PR", grounded, PlanBasedSearch(None,  AStarDepthType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)) ::
+      ("PR-Recompute-Reach", grounded, PlanBasedSearch(None,  AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)) ::
+      ("PR-Recompute-CL", grounded, PlanBasedSearch(None,  AStarDepthType(2), LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil, Nil, LCFR)) ::
+      ("ActionCount", grounded, PlanBasedSearch(None,  AStarActionsType(2), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)) ::
+      ("ActionCount-Recompute-Reach", grounded, PlanBasedSearch(None,  AStarActionsType(2), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)) ::
+      ("ActionCount-Recompute-CL", grounded, PlanBasedSearch(None,  AStarActionsType(2), LiftedTDGMinimumAction(CausalLinkRecompute) :: Nil, Nil, LCFR)) ::
+      ("TDGADD", grounded, PlanBasedSearch(None,  AStarActionsType(2), LiftedTDGMinimumADD(NeverRecompute) :: Nil, Nil, LCFR)) ::
+      ("TDGADD-Recompute-Reach", grounded, PlanBasedSearch(None,  AStarActionsType(2), LiftedTDGMinimumADD(ReachabilityRecompute) :: Nil, Nil, LCFR)) ::
+      ("TDGADD-Recompute-CL", grounded, PlanBasedSearch(None,  AStarActionsType(2), LiftedTDGMinimumADD(CausalLinkRecompute) :: Nil, Nil, LCFR)) ::
+      ("lifted-DFS", lifted, PlanBasedSearch(None,  DFSType, Nil, Nil, LCFR)) ::
+      ("lifted-PR", lifted, PlanBasedSearch(None,  AStarDepthType(2), TDGPreconditionRelaxation() :: Nil, Nil, LCFR)) ::
+      ("lifted-MMESCC", lifted, PlanBasedSearch(None,  AStarDepthType(2), TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR)) ::
+      ("lifted-ADD", lifted, PlanBasedSearch(None,  AStarDepthType(2), TDGMinimumADD() :: Nil, Nil, LCFR)) ::
+      ("lifted-ActionCount", lifted, PlanBasedSearch(None,  AStarDepthType(2), TDGMinimumAction() :: Nil, Nil, LCFR)) ::
+      ("PRO-RCG", grounded, ProgressionSearch( AStarActionsType(1),
                                               Some(RelaxedCompositionGraph(useTDReachability = true, producerSelectionStrategy = RCG.producerSelection.firstCome,
                                                                            heuristicExtraction = RCG.heuristicExtraction.ff)),
                                               abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.decompDepth)) ::
-      //("PRO-cRPGHTN", grounded, ProgressionSearch(Some(60 * 60), AStarActionsType(1),CompositionRPGHTN))) ::
-      //("PRO-greedyProgression", grounded, ProgressionSearch(Some(60 * 60), AStarActionsType(1),GreedyProgression))) ::
+      //("PRO-cRPGHTN", grounded, ProgressionSearch( AStarActionsType(1),CompositionRPGHTN))) ::
+      //("PRO-greedyProgression", grounded, ProgressionSearch( AStarActionsType(1),GreedyProgression))) ::
       Nil
 
 
@@ -78,7 +78,7 @@ class FullStackTest extends FlatSpec {
   algos foreach { case (algoText, preprocess, search) =>
     instances.zipWithIndex foreach { case ((instanceText, domain, problem), i) =>
       if (i == 0) {algoText must "deliver correct results on " + instanceText } else { it must "deliver correct results on " + instanceText } in {
-        val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
+        val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true, randomSeed = 42, timeLimit = Some(60 * 60),
                                                  ParsingConfiguration(eliminateEquality = false, stripHybrid = false),
                                                  preprocess,
                                                  search,

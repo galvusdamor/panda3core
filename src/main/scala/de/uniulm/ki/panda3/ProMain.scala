@@ -81,17 +81,17 @@ object ProMain {
 
 
       args(3) match {
-        case "-greedyProgression" => ProgressionSearch(Some(30 * 60), GreedyType, Some(GreedyProgression), abstractTaskSelectionStrategy = abstractSelector)
-        case "-greedyRCG"         => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction,
+        case "-greedyProgression" => ProgressionSearch(GreedyType, Some(GreedyProgression), abstractTaskSelectionStrategy = abstractSelector)
+        case "-greedyRCG"         => ProgressionSearch(GreedyType, Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction,
                                                                                                                producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
-        case "-greedyRCGTDR"      => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction,
+        case "-greedyRCGTDR"      => ProgressionSearch(GreedyType, Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction,
                                                                                                                producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
-        case "-astarRCG"          => ProgressionSearch(Some(30 * 60), AStarActionsType(1),
+        case "-astarRCG"          => ProgressionSearch(AStarActionsType(1),
                                                        Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
-        case "-astarRCGTDR"       => ProgressionSearch(Some(30 * 60), AStarActionsType(1),
+        case "-astarRCGTDR"       => ProgressionSearch(AStarActionsType(1),
                                                        Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
       }
@@ -99,13 +99,13 @@ object ProMain {
 
 
     // create the configuration
-    val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
+    val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true, randomSeed = 42, timeLimit = Some(30 * 60),
                                              ParsingConfiguration(eliminateEquality = true, stripHybrid = true),
                                              PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                         compileOrderInMethods = None,
                                                                         compileInitialPlan = false,
                                                                         convertToSASP = false,
-                                                                        splitIndependedParameters = true,
+                                                                        splitIndependentParameters = true,
                                                                         liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                                         groundedTaskDecompositionGraph = Some(TwoWayTDG), // None,
                                                                         iterateReachabilityAnalysis = false, groundDomain = true),

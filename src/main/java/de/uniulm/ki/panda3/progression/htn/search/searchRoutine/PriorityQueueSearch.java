@@ -18,7 +18,17 @@ import java.util.*;
  * Created by dh on 15.09.16.
  */
 public class PriorityQueueSearch extends ProgressionSearchRoutine {
-    static public enum abstractTaskSelection {branchOverAll, random, methodCount, decompDepth}
+    static public enum abstractTaskSelection {
+        branchOverAll, random, methodCount, decompDepth;
+
+        public static abstractTaskSelection parse(String text) {
+            if (text.equals("branchOverAll")) return branchOverAll;
+            if (text.equals("random")) return random;
+            if (text.equals("methodCount")) return methodCount;
+            if (text.equals("decompositionDepth")) return decompDepth;
+            throw new IllegalArgumentException("Unknown selection strategy " + text);
+        }
+    }
 
     public static final String SEARCH_TIME = "30 progression:01:searchTime";
     public static final String STATUS = "30 progression:01:status";
