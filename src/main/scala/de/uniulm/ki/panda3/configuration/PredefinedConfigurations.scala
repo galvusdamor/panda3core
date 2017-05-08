@@ -43,12 +43,6 @@ object PredefinedConfigurations {
                              )
 
 
-  val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
-    Map(
-         "-panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR))
-       )
-
-
   // TODO old stuff ... should probably be deleted
 
 
@@ -77,17 +71,15 @@ object PredefinedConfigurations {
   val AStarActionLiftedPR             = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)
   val AStarActionLiftedPRReachability = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)
 
+  val AStarAPRLiftedPRCompare    = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = true) :: Nil, Nil, LCFR)
+  val AStarActionLiftedPRCompare = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = false) :: Nil, Nil, LCFR)
+
   // GREEDY A*
-  val planSearchAStarPR            = PlanBasedSearch(None, AStarDepthType(2), TDGPreconditionRelaxation() :: Nil, Nil, LCFR)
   val planSearchAStarAPR           = PlanBasedSearch(None, AStarActionsType(2), TDGPreconditionRelaxation() :: Nil, Nil, LCFR)
   val planSearchAStarTDGAction     = PlanBasedSearch(None, AStarActionsType(2), TDGMinimumAction() :: Nil, Nil, LCFR)
   val planSearchAStarTDGADD        = PlanBasedSearch(None, AStarActionsType(2), TDGMinimumADD() :: Nil, Nil, LCFR)
   val planSearchAStarTDGADDReusing = PlanBasedSearch(None, AStarActionsType(2), TDGMinimumADD(Some(ADDReusing)) :: Nil, Nil, LCFR)
 
-
-  val planSearchAStarPRLiftedPR             = PlanBasedSearch(None, AStarDepthType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarPRLiftedPRReachability = PlanBasedSearch(None, AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarPRLiftedPRCausalLink   = PlanBasedSearch(None, AStarDepthType(2), LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil, Nil, LCFR)
 
   val planSearchAStarAPRLiftedPR             = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
   val planSearchAStarAPRLiftedPRReachability = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
@@ -97,11 +89,10 @@ object PredefinedConfigurations {
   val planSearchAStarActionLiftedPRReachability = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)
   val planSearchAStarActionLiftedPRCausalLink   = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumAction(CausalLinkRecompute) :: Nil, Nil, LCFR)
 
-  val planSearchAStarADDLiftedPR             = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumADD(NeverRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarADDLiftedPRReachability = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumADD(ReachabilityRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarADDLiftedPRCausalLink   = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumADD(CausalLinkRecompute) :: Nil, Nil, LCFR)
 
-  val planSearchAStarADDReusingLiftedPR = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing)) :: Nil, Nil, LCFR)
+  val greedyAStarAPRLiftedPRCompare    = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = true) :: Nil, Nil, LCFR)
+  val greedyAStarActionLiftedPRCompare = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = false) :: Nil, Nil, LCFR)
+
 
   val planSearchDijkstra                = PlanBasedSearch(None, DijkstraType, Nil, Nil, LCFR)
   val planSearchDFS                     = PlanBasedSearch(None, DFSType, Nil, Nil, LCFR)
@@ -119,15 +110,11 @@ object PredefinedConfigurations {
 
 
   val searchConfigs = Map(
-                           "-GAStarPR" -> planSearchAStarPR,
                            "-GAStarAPR" -> planSearchAStarAPR,
                            "-GAStarTDGAction" -> planSearchAStarTDGAction,
                            "-GAStarTDGADD" -> planSearchAStarTDGADD,
                            "-GAStarTDGADDReusing" -> planSearchAStarTDGADDReusing,
 
-                           "-GAStarPRLiftedPR" -> planSearchAStarPRLiftedPR,
-                           "-GAStarPRLiftedPRReachability" -> planSearchAStarPRLiftedPRReachability,
-                           "-GAStarPRLiftedPRCausalLink" -> planSearchAStarPRLiftedPRCausalLink,
 
                            "-GAStarAPRLiftedPR" -> planSearchAStarAPRLiftedPR,
                            "-GAStarAPRLiftedPRReachability" -> planSearchAStarAPRLiftedPRReachability,
@@ -136,12 +123,6 @@ object PredefinedConfigurations {
                            "-GAStarActionLiftedPR" -> planSearchAStarActionLiftedPR,
                            "-GAStarActionLiftedPRReachability" -> planSearchAStarActionLiftedPRReachability,
                            "-GAStarActionLiftedPRCausalLink" -> planSearchAStarActionLiftedPRCausalLink,
-
-                           "-GAStarADDLiftedPR" -> planSearchAStarADDLiftedPR,
-                           "-GAStarADDLiftedPRReachability" -> planSearchAStarADDLiftedPRReachability,
-                           "-GAStarADDLiftedPRCausalLink" -> planSearchAStarADDLiftedPRCausalLink,
-
-                           "-GAStarADDReusingLiftedPR" -> planSearchAStarADDReusingLiftedPR,
 
                            "-Dijkstra" -> planSearchDijkstra,
                            "-DFS" -> planSearchDFS,
@@ -184,5 +165,19 @@ object PredefinedConfigurations {
                            "-GreedyActionLiftedPRReachability" -> GreedyActionLiftedPRReachability
 
                          )
+
+  val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
+    Map(
+         "-panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)),
+         "-AStarADD" ->(htnParsing, groundingPreprocess, AStarADD),
+         "-AStarADDReusing" ->(htnParsing, groundingPreprocess, AStarADDReusing),
+         "-GreedyADD" ->(htnParsing, groundingPreprocess, GreedyADD),
+         "-GreedyADDReusing" ->(htnParsing, groundingPreprocess, GreedyADDReusing),
+         "-AStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRCompare),
+         "-AStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRCompare),
+         "-GreedyAStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarAPRLiftedPRCompare),
+         "-GreedyAStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare)
+       )
+
 
 }
