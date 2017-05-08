@@ -403,6 +403,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case LiftedTDGMinimumADD(CausalLinkRecompute, _)                            =>
         CausalLinkRecomputingLiftedMinimumADD(wrapper.efficientDomain, optionADD.get, innerHeuristicAsMinimisationOverGrounding)
 
+      case LiftedTDGMinimumActionCompareToWithoutRecompute(usePR) => ComparingTSTGHeuristic(wrapper.efficientDomain, usePR)
 
 
       // classical heuristics
@@ -1065,6 +1066,9 @@ object SearchHeuristic {
       case "pr" | "tdg-pr"            => LiftedTDGPreconditionRelaxation(mode = RecomputationMode.parse(hParameterMap.getOrElse("recompute", "never")))
       case "tdg-minimum-add"          => LiftedTDGMinimumADD(mode = RecomputationMode.parse(hParameterMap.getOrElse("recompute", "never")))
       case "tdg-mac" | "mac"          => LiftedTDGMinimumAction(mode = RecomputationMode.parse(hParameterMap.getOrElse("recompute", "never")))
+      // this heuristic only exists for evaluation purposes
+      case "tdg-mac-compare" | "mac-compare" => LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = false)
+      case "tdg-pr-compare" | "pr-compare"   => LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = true)
       // POCL heuristics
       case "add"                                             => ADD
       case "add_r" | "add-r" | "add_reusing" | "add-reusing" => ADDReusing
@@ -1142,6 +1146,10 @@ case class LiftedTDGMinimumAction(mode: RecomputationMode, innerHeuristic: Optio
 
 case class LiftedTDGMinimumADD(mode: RecomputationMode, innerHeuristic: Option[SearchHeuristic] = None)
   extends SearchHeuristicWithInner {override val longInfo: String = "tdg-minimum-add(recompute=" + mode.longInfo + ")"}
+
+
+// EVAL heuristics
+case class LiftedTDGMinimumActionCompareToWithoutRecompute(usePR: Boolean) extends SearchHeuristic {override val longInfo: String = "tdg-mac-comparison"}
 
 
 // POCL heuristics

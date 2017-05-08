@@ -102,7 +102,8 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
     heuristicEstimate
   }
 
-  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule): (Double, Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: Option[EfficientModification], depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule):
+  (Double, Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = 0 // plan.openPreconditions.length // every flaw must be addressed
 
@@ -117,4 +118,6 @@ case class AddHeuristic(planningGraph: EfficientGroundedPlanningGraph, domain: E
     }
     (heuristicValue, ())
   }
+
+  def computeInitialPayLoad(plan: EfficientPlan): Unit = ()
 }

@@ -33,8 +33,22 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
     val semaphore: Semaphore = new Semaphore(0)
     val initialPlanHeuristic = new Array[Double](heuristic.length)
     val initialPlanPayload = new Array[Payload](heuristic.length)
-    util.Arrays.fill(initialPlanHeuristic, Double.MaxValue)
     val rootDistanceValue = ((if (addNumberOfPlanSteps) initialPlan.numberOfPrimitivePlanSteps else 0) + (if (addDepth) 1 else 0)) * (if (invertCosts) -1 else 1)
+    // compute heuristic for the initial plan
+    var initialHPos = 0
+    var initialAllFinite = true
+    while (initialHPos < heuristic.length) {
+      val (hVal, pay) = heuristic(initialHPos).computeHeuristic(initialPlan, heuristic(initialHPos).computeInitialPayLoad(initialPlan), None, 0, 0, informationCapsule)
+      initialPlanHeuristic(initialHPos) = rootDistanceValue + weight * hVal
+      initialPlanPayload(initialHPos) = pay
+      initialAllFinite &= initialPlanHeuristic(initialHPos) < Int.MaxValue
+
+      initialHPos += 1
+    }
+
+    //util.Arrays.fill(initialPlanHeuristic, 0)
+
+
     val root = new EfficientSearchNode[Payload](0, initialPlan, null, initialPlanHeuristic, rootDistanceValue)
     root.payload = initialPlanPayload
 
@@ -231,24 +245,24 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
 
     val thread = new Thread(new Runnable {
       override def run(): Unit = {
-          timeCapsule switchTimerToCurrentThread TOTAL_TIME
-          timeCapsule start SEARCH
-          try {
-            heuristicSearch() // run the search, it will produce its results as side effects
-          } catch {
-            case t: Throwable =>
-              println("An error occured during search ... aborting")
-              t.printStackTrace()
-              informationCapsule.set(ERROR, "true")
-          }
+        timeCapsule switchTimerToCurrentThread TOTAL_TIME
+        timeCapsule start SEARCH
+        try {
+          heuristicSearch() // run the search, it will produce its results as side effects
+        } catch {
+          case t: Throwable =>
+            println("An error occured during search ... aborting")
+            t.printStackTrace()
+            informationCapsule.set(ERROR, "true")
+        }
 
-          timeCapsule stopOrIgnore SEARCH
+        timeCapsule stopOrIgnore SEARCH
 
-          // notify waiting threads
-          semaphore.release()
-          resultSemaphore.release()
+        // notify waiting threads
+        semaphore.release()
+        resultSemaphore.release()
 
-          timerSemaphore.acquire()
+        timerSemaphore.acquire()
       }
     }, "Thread - RUN 1")
 
@@ -261,28 +275,28 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
 
         val killerThread = new Thread(new Runnable {
           override def run(): Unit = {
-              // wait timelimit + 10 seconds
-              var timeLimitReached = false
-              while (!timeLimitReached && thread.isAlive) {
-                Thread.sleep(250)
-                // test if we have reached the timelimit
-                timeLimitReached = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) > timeLimitToReach
-              }
-              resultSemaphore.release()
-              thread.stop()
+            // wait timelimit + 10 seconds
+            var timeLimitReached = false
+            while (!timeLimitReached && thread.isAlive) {
+              Thread.sleep(250)
+              // test if we have reached the timelimit
+              timeLimitReached = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) > timeLimitToReach
+            }
+            resultSemaphore.release()
+            thread.stop()
           }
         }, "Thread - KILLER")
 
         // this thread is necessary in case we get an OOME - then both the main thread and the killer thread will show an exception (which I - apparently - cannot catch in scala)
         val rescueThread = new Thread(new Runnable {
           override def run(): Unit = {
-              // wait timelimit + 10 seconds
-              var timeLimitReached = false
-              while (killerThread.isAlive || thread.isAlive) {
-                Thread.sleep(250)
-              }
-              resultSemaphore.release()
-              thread.stop()
+            // wait timelimit + 10 seconds
+            var timeLimitReached = false
+            while (killerThread.isAlive || thread.isAlive) {
+              Thread.sleep(250)
+            }
+            resultSemaphore.release()
+            thread.stop()
           }
         }, "Thread - RESCUE")
 
