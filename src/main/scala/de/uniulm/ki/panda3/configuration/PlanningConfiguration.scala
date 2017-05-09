@@ -52,7 +52,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                  parsingConfiguration: ParsingConfiguration = ParsingConfiguration(),
                                  preprocessingConfiguration: PreprocessingConfiguration,
                                  searchConfiguration: SearchConfiguration,
-                                 postprocessingConfiguration: PostprocessingConfiguration) extends Configuration {
+                                 postprocessingConfiguration: PostprocessingConfiguration,
+                                 externalProgramPaths: Map[ExternalProgram, String] = Map()) extends Configuration {
 
   searchConfiguration match {
 
@@ -638,7 +639,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       val sasPlusParser = {
         import sys.process._
-        "../../fd/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl" !!
+        // we need a path to FD
+        assert(externalProgramPaths contains FastDownward, "no path to fast downward is specified")
+        val fdPath = externalProgramPaths(FastDownward)
+
+        (fdPath + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl") !!
         // semantic empty line
 
         "rm __sasdomain.pddl __sasproblem.pddl" !
@@ -839,7 +844,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   /** returns a detailed information about the object */
   override def longInfo: String = "Planning Configuration\n======================\n" +
     alignConfig(("\tprintGeneralInformation", printGeneralInformation) ::("\tprintAdditionalData", printAdditionalData) ::
-                  ("\trandom seed", randomSeed) ::("\ttime limit (in seconds)", timeLimit.getOrElse("none")) :: Nil) + "\n\n" + {
+                  ("\trandom seed", randomSeed) ::("\ttime limit (in seconds)", timeLimit.getOrElse("none")) :: Nil) + "\n\n" +
+    "\texternal programs" + (externalProgramPaths map { case (prog, path) => "\t\t" + prog + " at " + path } mkString ("\n")) + "\n\n" + {
     parsingConfiguration.longInfo + "\n\n" + preprocessingConfiguration.longInfo + "\n\n" + searchConfiguration.longInfo + "\n\n" + postprocessingConfiguration.longInfo
   }.split("\n").map(x => "\t" + x).mkString("\n")
 
@@ -860,7 +866,17 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
          "-SAT" -> { l => assert(l.isEmpty); this.copy(searchConfiguration = defaultSATConfiguration).asInstanceOf[this.type] },
 
          "-seed" -> { l => assert(l.isDefined, "No seed provided"); this.copy(randomSeed = l.get.toInt).asInstanceOf[this.type] },
-         "-timelimit" -> { l => assert(l.isDefined, "No time limit provided"); this.copy(timeLimit = Some(l.get.toInt)).asInstanceOf[this.type] }
+         "-timelimit" -> { l => assert(l.isDefined, "No time limit provided"); this.copy(timeLimit = Some(l.get.toInt)).asInstanceOf[this.type] },
+
+         // paths to external programs
+         "-programPath" -> { l => assert(l.isDefined)
+           val splittedPath = l.get.split("=")
+           assert(splittedPath.length == 2, "paths must be specified in the program=path format")
+           val program = splittedPath.head match {
+             case "fd" | "fast-downward" | "fastdownward" => FastDownward
+           }
+           this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
+         }
        )
 
   protected def predefinedConfigurations: Seq[(String, (Option[String]) => PlanningConfiguration.this.type)] =
@@ -869,7 +885,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         k -> { l: Option[String] => assert(l.isEmpty); this.copy(preprocessingConfiguration = p).asInstanceOf[this.type] }
       }) ++
       (PredefinedConfigurations.defaultConfigurations.toSeq map {
-        case (k, (parse, pre, search)) => k -> { l: Option[String] => assert(l.isEmpty);
+        case (k, (parse, pre, search)) => k -> { l: Option[String] => assert(l.isEmpty)
           this.copy(parsingConfiguration = parse, preprocessingConfiguration = pre, searchConfiguration =
             search).asInstanceOf[this.type]
         }
@@ -1034,6 +1050,10 @@ case class PreprocessingConfiguration(
          "-liftedReachability" -> { p => (if (p.isEmpty) this.copy(liftedReachability = true) else this.copy(liftedReachability = p.get.toBoolean)).asInstanceOf[this.type] },
          "-noLiftedReachability" -> { p => assert(p.isEmpty); this.copy(liftedReachability = false).asInstanceOf[this.type] },
 
+         "-sas+" -> { p => (if (p.isEmpty) this.copy(convertToSASP = true) else this.copy(convertToSASP = p.get.toBoolean)).asInstanceOf[this.type] },
+         "-nosas+" -> { p => assert(p.isEmpty); this.copy(convertToSASP = false).asInstanceOf[this.type] },
+
+
          "-groundedReachability" -> { p => assert(p.isDefined)
            val mode = p.get match {
              case "planningGraph" | "pg"             => PlanningGraph
@@ -1073,6 +1093,7 @@ case class PreprocessingConfiguration(
                   ("Compile unit methods", compileUnitMethods) ::
                   ("Compile order in methods", if (compileOrderInMethods.isEmpty) "false" else compileOrderInMethods.get) ::
                   ("Compile initial plan", compileInitialPlan) ::
+                  ("Convert to SAS+", convertToSASP) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
                   ("Split indipendent parameters", splitIndependentParameters) ::
                   ("Lifted Reachability Analysis", liftedReachability) ::
@@ -1494,3 +1515,7 @@ trait Configuration extends DefaultLongInfo {
     configs map { case (k, v) => k + (Range(0, 1 + keyMaxLength - k.length) map { _ => " " }).mkString("") + ": " + v.toString } mkString "\n"
   }
 }
+
+sealed trait ExternalProgram
+
+object FastDownward extends ExternalProgram
