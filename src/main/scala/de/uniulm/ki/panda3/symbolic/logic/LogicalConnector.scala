@@ -164,6 +164,25 @@ case class Implies(left: Formula, right: Formula) extends LogicalConnector with 
   }
 }
 
+case class When(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo {
+  override def update(domainUpdate: DomainUpdate): When = When(left.update(domainUpdate), right.update(domainUpdate))
+
+  lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
+
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
+
+  override def longInfo: String = left.longInfo + " ~> " + right.longInfo
+
+  override val isEmpty: Boolean = left.isEmpty && right.isEmpty
+
+  override def compileQuantors(): (Formula, Seq[Variable]) = {
+    val (lForm, lVars) = left.compileQuantors()
+    val (rForm, rVars) = right.compileQuantors()
+
+    (Implies(lForm, rForm), lVars ++ rVars)
+  }
+}
+
 case class Equivalence(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo {
   override def update(domainUpdate: DomainUpdate): Equivalence = Equivalence(left.update(domainUpdate), right.update(domainUpdate))
 

@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Created by dhoeller on 14.04.15.
@@ -58,6 +59,8 @@ public class hddlPanda3Visitor {
             scala.collection.immutable.Map$.MODULE$.<PlanStep, Tuple2<PlanStep, PlanStep>>empty();
 
     private boolean warningOutput = true;
+
+    private int nextQuantifiedVariableId = -1;
 
     public hddlPanda3Visitor() {
         this(true);
@@ -430,12 +433,8 @@ public class hddlPanda3Visitor {
 
             boolean hasEffect = false;
             Formula effect = new And<Literal>(new Vector<Literal>(0, 0, 0));
-            if (m.effect_body() != null) {
-                if ((m.effect_body() != null) && (m.effect_body().c_effect() != null)) {
-                    effect = visitConEff(methodParams, tnConstraints, sorts, predicates, m.effect_body().c_effect());
-                } else if ((m.effect_body() != null) && (m.effect_body().eff_conjuntion() != null)) {
-                    effect = visitConEffConj(methodParams, tnConstraints, sorts, predicates, m.effect_body().eff_conjuntion());
-                }
+            if (m.effect() != null) {
+                effect = visitEffect(methodParams, tnConstraints, sorts, predicates, m.effect());
                 hasEffect = true;
             }
 
@@ -518,10 +517,8 @@ public class hddlPanda3Visitor {
 
         Formula f2 = new And<Literal>(new Vector<Literal>(0, 0, 0));
 
-        if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().c_effect() != null)) {
-            f2 = visitConEff(parameters, constraints, sorts, predicates, ctxTask.effect_body().c_effect());
-        } else if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().eff_conjuntion() != null)) {
-            f2 = visitConEffConj(parameters, constraints, sorts, predicates, ctxTask.effect_body().eff_conjuntion());
+        if (ctxTask.effect() != null) {
+            f2 = visitEffect(parameters, constraints, sorts, predicates, ctxTask.effect());
         }
         return new GeneralTask(taskName, isPrimitive, parameters.result(), parameters.result(numOfParams), constraints.result(), f, f2);
     }
@@ -553,12 +550,14 @@ public class hddlPanda3Visitor {
             return visitNegAtomFormula(parameters, predicates, sorts, constraints, ctx.gd_negation());
         } else if (ctx.gd_conjuction() != null) { // a conduction of preconditions
             return visitGdConOrDisjunktion(conOrDis.and, parameters, predicates, sorts, constraints, ctx.gd_conjuction().gd());
-        } else if (ctx.gd_univeral() != null) {
-            return visitUniveralQuantifier(parameters, predicates, sorts, constraints, ctx.gd_univeral());
+        } else if (ctx.gd_universal() != null) {
+            return visitUniveralQuantifier(parameters, predicates, sorts, constraints, ctx.gd_universal());
         } else if (ctx.gd_existential() != null) {
             return visitExistentialQuantifier(parameters, predicates, sorts, constraints, ctx.gd_existential());
         } else if (ctx.gd_disjuction() != null) { // well ...
             return visitGdConOrDisjunktion(conOrDis.or, parameters, predicates, sorts, constraints, ctx.gd_disjuction().gd());
+        } else if (ctx.gd_implication() != null) { // new
+            return visitImplication(parameters, predicates, sorts, constraints, ctx.gd_implication());
         } else if (ctx.gd_equality_constraint() != null) {
             return visitEqConstraint(parameters, sorts, constraints, ctx);
         } else if (ctx.gd_empty() != null) {
@@ -582,10 +581,23 @@ public class hddlPanda3Visitor {
         return new Exists(inner2._1().apply(0), inner2._2());
     }
 
-    private Formula visitUniveralQuantifier(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.Gd_univeralContext gd_conjuctionContext) {
+    private Formula visitUniveralQuantifier(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.Gd_universalContext gd_conjuctionContext) {
         Tuple2<Seq<Variable>, Formula> inner2 = readInner(methodParams, predicates, sorts, constraints, gd_conjuctionContext.typed_var_list().typed_vars(), gd_conjuctionContext.gd());
         return new Forall(inner2._1().apply(0), inner2._2());
     }
+
+    private Formula visitImplication(
+            seqProviderList<Variable> params,
+            Seq<Predicate> predicates,
+            Seq<Sort> sorts,
+            seqProviderList<VariableConstraint> constraints,
+            antlrHDDLParser.Gd_implicationContext gd_implicationContext) {
+        return new Implies(
+                visitGoalConditions(predicates, params, sorts, constraints, gd_implicationContext.gd(0)),
+                visitGoalConditions(predicates, params, sorts, constraints, gd_implicationContext.gd(1)));
+    }
+
+
 
     private Tuple2<Seq<Variable>, Formula> readInner(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, List<antlrHDDLParser.Typed_varsContext> typed_varsContexts, antlrHDDLParser.GdContext gd) {
 
@@ -620,34 +632,54 @@ public class hddlPanda3Visitor {
         return new Tuple2<>(quantifiedVars.result(), inner);
     }
 
-    private Formula visitConEffConj(seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Eff_conjuntionContext ctx) {
-        seqProviderList<Literal> conj = new seqProviderList<>();
-
-        for (antlrHDDLParser.C_effectContext eff : ctx.c_effect()) {
-            Literal t = visitConEff(parameters, constraints, sorts, predicates, eff);
-            if (t != null) // it may be null if it uses a not yet implemented feature. This should already have been reported, so that we can skip it here
-                conj.add(t);
-        }
-        return new And(conj.result());
-    }
-
-    private Literal visitConEff(seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.C_effectContext ctx) {
+    private Formula visitEffect(
+            seqProviderList<Variable> parameters,
+            seqProviderList<VariableConstraint> constraints,
+            Seq<Sort> sorts,
+            Seq<Predicate> predicates,
+            antlrHDDLParser.EffectContext ctx) {
+        System.out.println("||>" + ctx.getText() + "<||");
         if (ctx.literal() != null) {
             if (ctx.literal().atomic_formula() != null) {
                 return visitAtomFormula(parameters, predicates, sorts, constraints, true, ctx.literal().atomic_formula());
             } else if (ctx.literal().neg_atomic_formula() != null) {
                 return visitAtomFormula(parameters, predicates, sorts, constraints, false, ctx.literal().neg_atomic_formula().atomic_formula());
             }
-        } else if (ctx.forall_effect() != null) {
-            this.report.reportForallEffect();
-        } else if (ctx.conditional_effect() != null) {
-            this.report.reportConditionalEffects();
+        } else if (ctx.eff_conjunction() != null) {
+            return new And<>(JavaToScala.toScalaSeq(ctx.eff_conjunction().effect().stream().map(x ->
+                 visitEffect(parameters, constraints, sorts, predicates, x)
+            ).collect(Collectors.toList())));
+        } else if (ctx.eff_universal() != null) {
+            return quantifiedFormula(
+                    false,
+                    typedParamsToVars(sorts, "TODO".hashCode(), ctx.eff_universal().typed_var_list().typed_vars()).result().toVector(),
+                    visitEffect(parameters, constraints, sorts, predicates, ctx.eff_universal().effect()));
+        } else if (ctx.eff_conditional() != null) {
+            return new When(
+                    visitGoalConditions(predicates, parameters, sorts, constraints, ctx.eff_conditional().gd()),
+                    visitEffect(parameters, constraints, sorts, predicates, ctx.eff_conditional().effect()));
         } else if (ctx.p_effect() != null) {
             this.report.reportNumericEffect();
-        } else {
-            if (warningOutput) System.out.println("ERROR: found an empty effect in action declaration.");
+        } else if (ctx.eff_empty() != null && warningOutput) {
+            System.out.println("ERROR: found an empty effect in action declaration.");
+        } else if (warningOutput) {
+            System.out.println("ERROR: unexpected token in effect declaration");
         }
+        System.out.println(">>>" + ctx.getText() + "<<<");
         return null;
+    }
+
+    // TODO: handle variable bindings properly
+    private Formula quantifiedFormula(boolean existential, Vector<Variable> variables, Formula formula) {
+        //if (variables.isEmpty()) { // ambiguous call
+        if (variables.length() == 0) {
+            return formula;
+        }
+        if (existential) {
+            return new Exists(variables.head(), quantifiedFormula(existential, variables.tail(), formula));
+        } else {
+            return new Forall(variables.head(), quantifiedFormula(existential, variables.tail(), formula));
+        }
     }
 
     enum conOrDis {
@@ -768,6 +800,11 @@ public class hddlPanda3Visitor {
      * @return Method returns a variable that may be out of the parameter list, or the initial state definition
      */
     private Variable getVariable(antlrHDDLParser.Var_or_constContext param, seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts) {
+        String ps = "";
+        for (Variable p : parameters.getList()) {
+            ps += " ; " + p.longInfo();
+        }
+        System.out.println("PARAM: " + param.getText() + " | " + ps);
         Variable var = null;
         if (param.VAR_NAME() != null) {
             // this is a variable
@@ -778,6 +815,11 @@ public class hddlPanda3Visitor {
                     var = v;
                     break;
                 }
+            }
+            // new
+            if (var == null) {
+                System.out.println("VAR_NAME: " + param.VAR_NAME().getText());
+                var = new Variable(-1, param.VAR_NAME().getText(), null);
             }
         } else {
             String pname = param.NAME().getText();
