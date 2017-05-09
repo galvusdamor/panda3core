@@ -21,8 +21,8 @@ case class SASPlusGrounding(domain: Domain, problem: Plan, sasPlusProblem: SasPl
 
   lazy val sasPlusPredicates: Array[Predicate] = sasPlusProblem.values.zipWithIndex flatMap { case (values, varNum) => values map { v => Predicate("var" + varNum + "=" + v, Nil) } }
 
-  lazy val groundedTasksToNewGroundTasksMapping: Map[GroundTask, Task] = {
-    val generalActions = sasPlusProblem.getGroundedOperatorSignatures.zipWithIndex map { case (op, i) =>
+  lazy val (groundedTasksToNewGroundTasksMapping, sasPlusTaskIndexToNewGroundTask) = {
+    val generalActions: Seq[((GroundTask, Task), (Int, Task))] = sasPlusProblem.getGroundedOperatorSignatures.zipWithIndex map { case (op, i) =>
       val splitted = op split " "
       val operatorName = splitted.head
       val parameter = splitted.tail
@@ -58,10 +58,10 @@ case class SASPlusGrounding(domain: Domain, problem: Plan, sasPlusProblem: SasPl
         //val delEffects = sasPlusProblem.delLists(taskIndex) map { eff => Literal(sasPlusPredicates(eff), isPositive = false, Nil) }
         val delEffects = sasPlusProblem.expandedDelLists(taskIndex) map { eff => Literal(sasPlusPredicates(eff), isPositive = false, Nil) }
 
-        ReducedTask(t + params.map { _.name }.mkString("[", ",", "]"), isPrimitive = true, Nil, Nil, Nil, And(precondition), And(addEffects ++ delEffects))
+        ReducedTask(t.name + params.map { _.name }.mkString("[", ",", "]"), isPrimitive = true, Nil, Nil, Nil, And(precondition), And(addEffects ++ delEffects))
       }
 
-      GroundTask(t, params) -> sasGroundTask
+      (GroundTask(t, params) -> sasGroundTask, taskIndex -> sasGroundTask)
     }
 
     val newInitTask = {
@@ -74,6 +74,9 @@ case class SASPlusGrounding(domain: Domain, problem: Plan, sasPlusProblem: SasPl
       ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And(preconditions), And(Nil))
     }
 
-    generalActions ++ ((problem.groundedInitialTask, newInitTask) ::(problem.groundedGoalTask, newGoalTask) :: Nil)
-  } toMap
+    val groundedToNewGroundMap: Map[GroundTask, Task] = (generalActions map { _._1 }) ++ ((problem.groundedInitialTask, newInitTask) ::(problem.groundedGoalTask, newGoalTask) :: Nil) toMap
+    val sasPlusIndexMap: Map[Int, Task] = generalActions map { _._2 } toMap
+
+    (groundedToNewGroundMap, sasPlusIndexMap)
+  }
 }

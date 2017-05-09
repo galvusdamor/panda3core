@@ -620,7 +620,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val goalLiteral = Literal(artificialGoal, true, Nil)
 
       val pddlDomain = Domain(classicalDomain.sorts, classicalDomain.predicates :+ artificialGoal,
-                              classicalDomain.tasks map { case rt: ReducedTask => rt.copy(effect = And(rt.effect.conjuncts :+ goalLiteral)) }, Nil, Nil)
+                              classicalDomain.tasks map { case rt: ReducedTask => rt.copy(effect = And(rt.effect.conjuncts :+ goalLiteral)) }, Nil, Nil, None, None)
 
       val withGoalPlan = {
         val oldGoal = liftedResult._1._2.goal.schema match {case rt: ReducedTask => rt}
@@ -796,8 +796,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             update(RemovePredicate(groundedDomainAndProblem._1.predicates.toSet))
           val sasPlusPlan = groundedDomainAndProblem._2.update(ExchangeTask(exchangeMap))
 
-
-          (sasPlusDomain, sasPlusPlan)
+          // as we have done the TDG grounding after the SAS+ process, there might be tasks in mapping that have already been pruned
+          val saspRepresentation = SASPlusRepresentation(sasPlusGrounder.sasPlusProblem,
+                                                         sasPlusGrounder.sasPlusTaskIndexToNewGroundTask filter { case (i, t) => sasPlusDomain.taskSet contains t })
+          (sasPlusDomain.copy(sasPlusRepresentation = Some(saspRepresentation)), sasPlusPlan)
         } else groundedDomainAndProblem
       }
 
@@ -997,6 +999,7 @@ case class PreprocessingConfiguration(
                                      ) extends Configuration {
   assert(!convertToSASP || groundedReachability.isEmpty, "You can't use both SAS+ and a grouded PG")
   assert(!convertToSASP || !compileNegativePreconditions, "You can't use both SAS+ and remove negative preconditions")
+
   //assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
 
   override protected def localModifications: Seq[(String, (Option[String]) => PreprocessingConfiguration.this.type)] =

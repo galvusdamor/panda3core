@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
+import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem
 import de.uniulm.ki.panda3.symbolic.csp.{OfSort, NotOfSort}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.TaskSchemaTransitionGraph
 import de.uniulm.ki.panda3.symbolic.domain.updates._
@@ -31,22 +32,38 @@ import scala.annotation.elidable._
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
-                  decompositionAxioms: Seq[DecompositionAxiom], mappingToOriginalGrounding: Option[GroundedDomainToDomainMapping] = None) extends DomainUpdatable {
+                  decompositionAxioms: Seq[DecompositionAxiom],
+                  mappingToOriginalGrounding: Option[GroundedDomainToDomainMapping] = None,
+                  sasPlusRepresentation: Option[SASPlusRepresentation] = None) extends DomainUpdatable {
 
   // sanity check for the sorts
   @elidable(ASSERTION)
   val assertion = {
+    //
     sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
     decompositionMethods foreach { dm =>
-      assert(tasks contains dm.abstractTask)
+      assert(taskSet contains dm.abstractTask)
       dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task =>
-        if (!(tasks contains task))
+        if (!(taskSet contains task))
           println("foo")
-        assert(tasks contains task, "Task " + task.name + " is missing in the domain") }
+        assert(taskSet contains task, "Task " + task.name + " is missing in the domain")
+      }
     }
 
-    tasks foreach { t => (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map
-      { _._1 } foreach { p => assert(predicates contains p, "Predicate " + p.name + " not contained in predicate list") }}
+    //
+    tasks foreach { t => (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map { _._1 } foreach { p =>
+      assert(predicates contains p, "Predicate " + p.name + " not contained in predicate list")
+    }
+    }
+
+    //
+    sasPlusRepresentation match {
+      case None                                                                   => None
+      case Some(rep@SASPlusRepresentation(sasPlusProblem, sasPlusIndexToTaskMap)) =>
+        sasPlusIndexToTaskMap.values foreach { task => assert(task.isPrimitive, task.name + "must be primitive"); assert(taskSet contains task, task.shortInfo + " not contained") }
+        primitiveTasks foreach { task => assert(rep.taskToSASPlusIndex.keySet contains task) }
+        sasPlusIndexToTaskMap.keys foreach {i => assert(sasPlusProblem.getGroundedOperatorSignatures.length > i); assert(i >= 0)}
+    }
   }
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
@@ -188,20 +205,26 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   }
 
   override def update(domainUpdate: DomainUpdate): Domain = domainUpdate match {
-    case AddMethod(newMethods)               => Domain(sorts, predicates, tasks, decompositionMethods ++ newMethods, decompositionAxioms, mappingToOriginalGrounding)
-    case AddPredicate(newPredicates)         => Domain(sorts, predicates ++ newPredicates, tasks, decompositionMethods, decompositionAxioms, mappingToOriginalGrounding)
-    case AddTask(newTasks)                   => Domain(sorts, predicates, tasks ++ newTasks, decompositionMethods, decompositionAxioms, mappingToOriginalGrounding)
-    case ExchangeTaskSchemaInMethods(map)    => Domain(sorts, predicates, tasks, decompositionMethods map { _.update(ExchangeTask(map)) }, decompositionAxioms, mappingToOriginalGrounding)
+    case AddMethod(newMethods)               =>
+      Domain(sorts, predicates, tasks, decompositionMethods ++ newMethods, decompositionAxioms, mappingToOriginalGrounding, sasPlusRepresentation)
+    case AddPredicate(newPredicates)         =>
+      Domain(sorts, predicates ++ newPredicates, tasks, decompositionMethods, decompositionAxioms, mappingToOriginalGrounding, sasPlusRepresentation)
+    case AddTask(newTasks)                   =>
+      Domain(sorts, predicates, tasks ++ newTasks, decompositionMethods, decompositionAxioms, mappingToOriginalGrounding, sasPlusRepresentation)
+    case ExchangeTaskSchemaInMethods(map)    =>
+      Domain(sorts, predicates, tasks, decompositionMethods map { _.update(ExchangeTask(map)) }, decompositionAxioms, mappingToOriginalGrounding, sasPlusRepresentation)
     case ExchangeLiteralsByPredicate(map, _) =>
       val newPredicates = map.values flatMap { case (a, b) => a :: b :: Nil }
-      Domain(sorts, newPredicates.toSeq, tasks map { _.update(domainUpdate) }, decompositionMethods map { _.update(domainUpdate) }, decompositionAxioms, mappingToOriginalGrounding)
+      Domain(sorts, newPredicates.toSeq, tasks map { _.update(domainUpdate) }, decompositionMethods map { _.update(domainUpdate) }, decompositionAxioms, mappingToOriginalGrounding,
+             sasPlusRepresentation map { _ update domainUpdate })
     case RemovePredicate(predicatesToRemove) => copy(predicates = predicates filterNot predicatesToRemove)
     case _                                   => Domain(sorts map { _.update(domainUpdate) }, predicates map { _.update(domainUpdate) }, tasks map { _.update(domainUpdate) },
                                                        decompositionMethods map { _.update(domainUpdate) },
-                                                       decompositionAxioms, mappingToOriginalGrounding)
+                                                       decompositionAxioms, mappingToOriginalGrounding,
+                                                       sasPlusRepresentation map { _ update domainUpdate })
   }
 
-  lazy val classicalDomain: Domain = Domain(sorts, predicates, tasks filter { _.isPrimitive }, Nil, Nil, mappingToOriginalGrounding)
+  lazy val classicalDomain: Domain = Domain(sorts, predicates, tasks filter { _.isPrimitive }, Nil, Nil, mappingToOriginalGrounding, sasPlusRepresentation)
 
   lazy val statistics      : Map[String, Any] = Map(
                                                      "number of constants" -> constants.size,
@@ -216,3 +239,9 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 }
 
 case class GroundedDomainToDomainMapping(taskMapping: Map[Task, GroundTask])
+
+case class SASPlusRepresentation(sasPlusProblem: SasPlusProblem, sasPlusIndexToTask: Map[Int, Task]) extends DomainUpdatable {
+  lazy val taskToSASPlusIndex: Map[Task, Int] = sasPlusIndexToTask map { case (a, b) => b -> a }
+
+  override def update(domainUpdate: DomainUpdate): SASPlusRepresentation = this.copy(sasPlusIndexToTask = sasPlusIndexToTask map { case (i, t) => (i, t update domainUpdate) })
+}

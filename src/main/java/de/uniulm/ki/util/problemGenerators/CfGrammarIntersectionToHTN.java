@@ -168,7 +168,7 @@ public class CfGrammarIntersectionToHTN {
         addMethods(g2, allowedModifications, allowedFlaws, tasksMap, sG2, decompositionMethods);
 
         Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
-        Domain d = new Domain(sorts, predicates.result(), tasks.result(), decompositionMethods.result(), decompositionAxioms, None$.empty());
+        Domain d = new Domain(sorts, predicates.result(), tasks.result(), decompositionMethods.result(), decompositionAxioms, None$.empty(),None$.empty());
 
         seqProviderList<Literal> s0Lits = new seqProviderList<>();
         s0Lits.add(turnAPos);
