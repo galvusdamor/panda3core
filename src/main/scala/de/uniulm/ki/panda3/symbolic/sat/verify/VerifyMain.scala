@@ -900,9 +900,3 @@ object VerifyRunner {
   }
 
 }
-
-sealed trait Solvertype extends DefaultLongInfo
-
-object MINISAT extends Solvertype {override val longInfo: String = "minisat"}
-
-object CRYPTOMINISAT extends Solvertype {override val longInfo: String = "cryptominisat"}
