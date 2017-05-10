@@ -120,8 +120,11 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
 
     val topMethods = reachableWithoutTop._1 collect { case x: GroundedDecompositionMethod => x }
 
-    (firstAndOrGraph pruneToEntities reachableWithoutTop._2, if (isInitialPlanGround) Nil else topGrounded :: GroundTask(initAndGoalNOOP, Nil) :: Nil,
-      if (isInitialPlanGround) Nil else topMethods.toSeq)
+    val prunedTDG = firstAndOrGraph pruneToEntities reachableWithoutTop._2
+
+    Dot2PdfCompiler.writeDotToFile(prunedTDG,"tdg.pdf")
+
+    (prunedTDG, if (isInitialPlanGround) Nil else topGrounded :: GroundTask(initAndGoalNOOP, Nil) :: Nil, if (isInitialPlanGround) Nil else topMethods.toSeq)
   }
 
   override lazy val reachableGroundedTasks         : Seq[GroundTask]                  = taskDecompositionGraph._1.andVertices.toSeq

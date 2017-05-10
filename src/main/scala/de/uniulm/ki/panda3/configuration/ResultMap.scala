@@ -121,6 +121,7 @@ object Timings {
   val COMPILE_UNIT_METHODS            = "02 preprocessing:02:compile unit methods"
   val COMPILE_ORDER_IN_METHODS        = "02 preprocessing:03:compile order in methods"
   val SPLIT_PARAMETERS                = "02 preprocessing:04:split parameter"
+  val USELESS_ABSTRACT_TASKS                = "02 preprocessing:05:expand useless abstract tasks"
   val TOP_TASK                        = "02 preprocessing:99:create artificial top task"
   val LIFTED_REACHABILITY_ANALYSIS    = "02 preprocessing:11:lifted reachabiltiy analysis"
   val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:12:grounded planning graph analysis"

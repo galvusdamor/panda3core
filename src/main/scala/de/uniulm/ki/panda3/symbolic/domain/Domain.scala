@@ -75,6 +75,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   lazy val primitiveTasks: Seq[Task] = tasks filter { _.isPrimitive }
   lazy val abstractTasks : Seq[Task] = tasks filterNot { _.isPrimitive }
+  lazy  val choicelessAbstractTasks: Set[Task] = abstractTasks filter { at => methodsForAbstractTasks(at).size == 1 } toSet
 
   lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
   lazy val allGroundedAbstractTasks : Seq[GroundTask] = abstractTasks flatMap { _.instantiateGround }
@@ -87,13 +88,12 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   lazy val isGround                : Boolean = predicates forall { _.argumentSorts.isEmpty }
   lazy val isTotallyOrdered        : Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
-  lazy val isHybrid                : Boolean = (decompositionMethods exists { _.subPlan.causalLinks.nonEmpty }) || (tasks exists { t => t.isAbstract && (t.precondition.isEmpty || t.effect
-    .isEmpty)
-  })
+  lazy val isHybrid                : Boolean =
+    (decompositionMethods exists { _.subPlan.causalLinks.nonEmpty }) || (tasks exists { t => t.isAbstract && (!t.precondition.isEmpty || !t.effect.isEmpty) })
   lazy val hasNegativePreconditions: Boolean = tasks exists { _.preconditionsAsPredicateBool exists { !_._2 } }
 
 
-  /** A map showing for each task how deep the decomposition tree has to be, to be able to reach a primitive decomposition*/
+  /** A map showing for each task how deep the decomposition tree has to be, to be able to reach a primitive decomposition */
   lazy val minimumDecompositionHeightToPrimitive: Map[Task, Int] =
     taskSchemaTransitionGraph.condensation.topologicalOrdering.get.reverse.foldLeft(Map[Task, Int]().withDefaultValue(Integer.MAX_VALUE))(
       {
@@ -107,7 +107,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                 // take maximum within a method
                 m.subPlan.planStepsWithoutInitGoal map { _.schema } map currentMinima max
               } min)
-            } filter {_._2 != Integer.MAX_VALUE} map {case (a,b) => (a,b+1)}
+            } filter { _._2 != Integer.MAX_VALUE } map { case (a, b) => (a, b + 1) }
 
             val newMinima = currentMinima ++ newPairs
             if (newMinima == currentMinima) currentMinima else iterate(newMinima)
@@ -116,7 +116,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
           iterate(minima)
       })
 
-  def minimumDecompositionHeightToPrimitiveForPlan(plan : Plan) : Int = plan.planStepsWithoutInitGoal map {ps => minimumDecompositionHeightToPrimitive(ps.schema)} max
+  def minimumDecompositionHeightToPrimitiveForPlan(plan: Plan): Int = plan.planStepsWithoutInitGoal map { ps => minimumDecompositionHeightToPrimitive(ps.schema) } max
 
   /**
     * Determines the sort a constant originally belonged to.
@@ -197,7 +197,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                        decompositionAxioms)
   }
 
-  lazy val classicalDomain : Domain = Domain(sorts,predicates,tasks filter {_.isPrimitive},Nil,Nil)
+  lazy val classicalDomain: Domain = Domain(sorts, predicates, tasks filter { _.isPrimitive }, Nil, Nil)
 
   lazy val statistics      : Map[String, Any] = Map(
                                                      "number of constants" -> constants.size,

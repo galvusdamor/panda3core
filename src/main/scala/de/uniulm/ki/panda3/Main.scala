@@ -28,6 +28,7 @@ object Main {
                                                                                                                compileInitialPlan = false,
                                                                                                                compileOrderInMethods = None,
                                                                                                                splitIndependentParameters = false,
+                                                                                                               compileUselessAbstractTasks = false,
                                                                                                                liftedReachability = false,
                                                                                                                groundedReachability = None,
                                                                                                                groundedTaskDecompositionGraph = None,

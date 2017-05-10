@@ -40,6 +40,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
                                                ParsingConfiguration(stripHybrid = false, eliminateEquality = false),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph,
                                                                           compileOrderInMethods = None, compileInitialPlan = false, splitIndependentParameters = false,
+                                                                          compileUselessAbstractTasks = false,
                                                                           liftedReachability = true,
                                                                           groundedReachability = Some(if (usePlanningGraph) PlanningGraphWithMutexes else PlanningGraph),
                                                                           groundedTaskDecompositionGraph = Some(TwoWayTDG),

@@ -518,6 +518,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     timeCapsule start PARSER_STRIP_HYBRID
     val noHybrid = if (parsingConfiguration.stripHybrid) StripHybrid.transform(sortsExpandedDomainAndProblem, ()) else sortsExpandedDomainAndProblem
+    if (parsingConfiguration.stripHybrid) assert(!noHybrid._1.isHybrid)
     timeCapsule stop PARSER_STRIP_HYBRID
 
     timeCapsule start PARSER_CWA
@@ -657,19 +658,37 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
-    if (!preprocessingConfiguration.iterateReachabilityAnalysis || tdgResult._1._1.tasks.length == domain.tasks.length) (tdgResult, timeCapsule)
-    else runReachabilityAnalyses(tdgResult._1._1, tdgResult._1._2, timeCapsule)
+    val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
+      if (tdgResult._1._1.isGround) ((if (preprocessingConfiguration.compileUselessAbstractTasks)
+        CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand useless abstract tasks", USELESS_ABSTRACT_TASKS) :: Nil
+      else Nil) ::
+        Nil flatten)
+      else Nil
+
+    val compiledResult = groundedCompilersToBeApplied.foldLeft(tdgResult._1)(
+      { case ((dom, prob), cc@CompilerConfiguration(compiler, option, message, timingString)) =>
+        timeCapsule start timingString
+        info("Compiling " + message + " ... ")
+        val compiled = cc.run(dom, prob)
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        timeCapsule stop timingString
+        compiled
+      })
+
+    if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length) ((compiledResult,tdgResult._2), timeCapsule)
+    else runReachabilityAnalyses(compiledResult._1, compiledResult._2, timeCapsule)
   }
 
+  private case class CompilerConfiguration[T](domainTransformer: DomainTransformer[T], information: T, name: String, timingName: String) {
+    def run(domain: Domain, plan: Plan) = domainTransformer.transform(domain, plan, information)
+  }
 
   def runPreprocessing(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     // start the timer
     timeCapsule start PREPROCESSING
     extra("Initial domain\n" + domain.statisticsString + "\n")
 
-    case class CompilerConfiguration[T](domainTransformer: DomainTransformer[T], information: T, name: String, timingName: String) {
-      def run(domain: Domain, plan: Plan) = domainTransformer.transform(domain, plan, information)
-    }
 
     val compilerToBeApplied: Seq[CompilerConfiguration[_]] =
       (if (preprocessingConfiguration.compileNegativePreconditions)
@@ -901,6 +920,7 @@ case class PreprocessingConfiguration(
                                        compileOrderInMethods: Option[TotallyOrderingOption],
                                        compileInitialPlan: Boolean,
                                        splitIndependentParameters: Boolean,
+                                       compileUselessAbstractTasks: Boolean,
                                        liftedReachability: Boolean,
                                        groundedReachability: Option[GroundedReachabilityMode],
                                        groundedTaskDecompositionGraph: Option[TDGGeneration],

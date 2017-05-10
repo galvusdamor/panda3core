@@ -55,6 +55,7 @@ object MonroeMain {
                                                ParsingConfiguration(),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = None,
                                                                           compileInitialPlan = false, splitIndependentParameters = false,
+                                                                          compileUselessAbstractTasks = false,
                                                                           liftedReachability = true, groundedReachability = None,
                                                                           groundedTaskDecompositionGraph = None, //Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = false),

@@ -519,6 +519,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     GroundTask(goal.schema, arguments)
   }
 
+  lazy val normalise: Plan = Plan(planSteps,causalLinks,orderingConstraintsWithoutRemovedPlanSteps,parameterVariableConstraints,init,goal,isModificationAllowed,isFlawAllowed,Map(),Map())
+
 
   override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[Plan] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[Plan].productIterator) } else false
 

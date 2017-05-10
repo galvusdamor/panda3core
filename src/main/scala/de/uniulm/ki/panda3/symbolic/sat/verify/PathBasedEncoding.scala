@@ -193,7 +193,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     val pPaths = initialPlanClauses flatMap { _._2 } sortWith { case ((p1, _), (p2, _)) => PathBasedEncoding.pathSortingFunction(p1, p2) }
 
     // create graph of the paths
-    /*{
+    {
       val treeNodes: Seq[Seq[Int]] = pPaths map { _._1 } flatMap { p => p.indices map { x => p take (x + 1) } } distinct
       val edges =
         pPaths map { _._1 } flatMap { p => Range(1, p.length) map { x =>  (p take x, p take x+1)} } distinct
@@ -202,7 +202,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
       val graph = SimpleDirectedGraph(treeNodes, edges)
       Dot2PdfCompiler.writeDotToFile(graph, "dectree.pdf")
-    }*/
+    }
 
     (dec ++ assertedTasks, pPaths, payloads)
   }

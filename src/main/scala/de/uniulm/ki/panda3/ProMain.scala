@@ -105,6 +105,7 @@ object ProMain {
                                                                         compileOrderInMethods = None,
                                                                         compileInitialPlan = false,
                                                                         splitIndependentParameters = true,
+                                                                        compileUselessAbstractTasks = false,
                                                                         liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                                         groundedTaskDecompositionGraph = Some(TwoWayTDG), // None,
                                                                         iterateReachabilityAnalysis = false, groundDomain = true),
