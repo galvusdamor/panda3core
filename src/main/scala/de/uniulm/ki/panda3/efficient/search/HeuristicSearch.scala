@@ -221,7 +221,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
           heuristicSearch() // run the search, it will produce its results as side effects
         } catch {
           case t: Throwable =>
-            println("An error occured during search ... aborting")
+            println("An error occurred during search ... aborting")
             t.printStackTrace()
             informationCapsule.set(ERROR, "true")
         }
