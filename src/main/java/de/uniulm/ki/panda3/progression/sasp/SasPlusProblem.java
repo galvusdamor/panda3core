@@ -13,6 +13,7 @@ import scala.collection.*;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.*;
+import java.util.BitSet;
 import java.util.Map;
 
 /**
@@ -35,7 +36,7 @@ public class SasPlusProblem {
     private int numOfVars;
     private int numOfMutexGroups;
     private int numOfGoalPairs;
-    private int numOfOperators;
+    public int numOfOperators;
 
     public int[] axioms;
     public int[] ranges; // variable-index -> number of values the var can have
@@ -45,7 +46,7 @@ public class SasPlusProblem {
     private int[] s0; // variable-index -> value set in s0
     private int[][] goal; // enum of pairs [var-index, value-needed]
 
-    private String[] opNames; // operator-index -> name-string
+    public String[] opNames; // operator-index -> name-string
 
     /* prevail conditions vs. preconditions vs. effect condition
      *
@@ -74,7 +75,7 @@ public class SasPlusProblem {
     private int[][] effectVarPrec; // operator-index, effect-index -> old var index (a precondition)
     private int[][] effectVarEff;  // operator-index, effect-index -> new var index (the effect)
 
-    private int[] costs; // operator-index -> action costs
+    public int[] costs; // operator-index -> action costs
 
     // ********************
     //  our representation
@@ -105,7 +106,43 @@ public class SasPlusProblem {
     public int[] numPrecs; // gives the number of preconditions for each action
 
     public int[] s0List;
+    private BitSet s0Bitset = null;
     public int[] gList;
+
+    public BitSet getS0() {
+        if (s0Bitset == null) {
+            s0Bitset = new BitSet(numOfStateFeatures);
+            for (int f : s0List)
+                s0Bitset.set(f);
+        }
+        return s0Bitset;
+    }
+
+    public String factName(int i) {
+        int group = indexToMutexGroup[i];
+        int firstI = firstIndex[group];
+        return varNames[group] + "=" + values[group][i - firstI];
+    }
+
+
+    public String printOp(int i) {
+        String res = "";
+        res += opNames[i];
+        res += printFactList(precLists[i]);
+        res += printFactList(addLists[i]);
+        res += printFactList(delLists[i]);
+        return res;
+    }
+
+    private String printFactList(int[] list) {
+        String res = "{";
+        for (int i = 0; i < list.length; i++) {
+            if (i > 0)
+                res += ", ";
+            res += factName(list[i]);
+        }
+        return res + "}";
+    }
 
     // translations
     // int -> Object
@@ -153,7 +190,7 @@ public class SasPlusProblem {
                 }
                 name = name.replaceAll("\\(", " ").replaceAll("\\)", " ").replaceAll("\\, ", " ").trim().toLowerCase();
                 if (name.equals(noVal)) {
-                    // todo none-if-them implementieren
+                    // todo none-of-them implementieren
                     System.out.println(noVal);
                 } else if (name.equals("__goal")) {
                     System.out.println();
@@ -364,6 +401,9 @@ public class SasPlusProblem {
         for (int i = 0; i < goal.length; i++) {
             gList[i] = firstIndex[goal[i][0]] + goal[i][1];
         }
+    }
+
+    public SasPlusProblem() {
     }
 
     public SasPlusProblem(String Filename) throws Exception {

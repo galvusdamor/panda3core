@@ -1,25 +1,22 @@
 package de.uniulm.ki.panda3.progression.htn;
 
 import de.uniulm.ki.panda3.configuration.*;
-import de.uniulm.ki.panda3.progression.bottomUpGrounder.groundingUtil;
-import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.*;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.ProgressionSearchRoutine;
 import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.*;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.cRpgHtn;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.hierarchyAware.delRelaxedHTN;
+import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem;
+import de.uniulm.ki.panda3.progression.sasp.heuristics.SasHeuristic;
+import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
+import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
-import scala.Tuple2;
-import scala.collection.*;
 
 import java.util.*;
 import java.util.BitSet;
@@ -31,51 +28,75 @@ import java.util.concurrent.ExecutionException;
 
 /**
  * Created by dhoeller on 01.07.16.
- * <p>
- * - The representation of actions' preconditions and effects via Bit-Vectors might be suboptimal
- * whenever there are only a few state features effected - maybe implement a version that only
- * represents the states as Bit-Vectors, but uses Booleans for preconditions and effects.
- * (see also the efficientRPG-Class)
- * <p>
- * - Especially the Bit-Vector representation seems to be suboptimal since it needs to copy the
- * vector before applying an AND-Operator and a comparison - have a look at the respective class
- * and look for more efficient implementations (but have a look at the comment above, first).
- * <p>
- * - How to implement different search configurations? Via if-then-else? Or via factory-class to
- * help jump-prediction? A search node could produce its child by a next()-method this would
- * also be nice when having an iterative rpg-calculaton.
  */
 public class htnPlanningInstance {
+
+    public static SasPlusProblem sasp;
 
     final boolean verbose = false;
 
     public static Random random;
     public static int randomSeed = 42;
 
-    public boolean plan(Plan p, Map<Task, Set<GroundedDecompositionMethod>> methodsByTask, Set<GroundTask> allActions, Set<GroundLiteral> allLiterals,
+    public boolean plan(Domain d, Plan p, Map<Task, Set<SimpleDecompositionMethod>> methodsByTask,
                         InformationCapsule ic, TimeCapsule tc,
                         PriorityQueueSearch.abstractTaskSelection taskSelectionStrategy,
                         SearchHeuristic heuristic, boolean doBFS, boolean doDFS,
                         boolean aStar, boolean deleteRelaxed, long quitAfterMs) throws ExecutionException, InterruptedException {
-        random = new Random(randomSeed);
+
+        // kann ich darauf verzichten?: Set<GroundTask> allActions, Set<GroundLiteral> allLiterals
+        // flags überdenken
+
+        if (d.sasPlusRepresentation().isEmpty()) {
+            System.out.println("Error: Progression search algorithm did not find action model.");
+            System.exit(-1);
+        }
+
+        // Convert data structures
         long totaltime = System.currentTimeMillis();
-        long time = System.currentTimeMillis();
+        random = new Random(randomSeed);
 
-        System.out.println("Calculating efficient representation...");
+        Map<Integer, Task> indexToTask = new HashMap<>();
+        scala.collection.immutable.Map<Object, Task> k2t = d.sasPlusRepresentation().get().sasPlusIndexToTask();
+        scala.collection.Iterator<Object> keys1 = k2t.keysIterator();
+        while (keys1.hasNext()) {
+            Integer k = (Integer) keys1.next();
+            indexToTask.put(k, k2t.apply(k));
+        }
+
+        Map<Task, Integer> taskToIndex = new HashMap<>();
+        scala.collection.immutable.Map<Task, Object> t2i = d.sasPlusRepresentation().get().taskToSASPlusIndex();
+        scala.collection.Iterator<Task> keys2 = t2i.keysIterator();
+        while (keys2.hasNext()) {
+            Task t = keys2.next();
+            taskToIndex.put(t, (Integer) t2i.apply(t));
+        }
+
+        ProgressionNetwork.flatProblem = d.sasPlusRepresentation().get().sasPlusProblem();
+        ProgressionNetwork.indexToTask = indexToTask;
+        ProgressionNetwork.taskToIndex = taskToIndex;
+
+
+        //long time = System.currentTimeMillis();
+
+        //System.out.println("Calculating efficient representation...");
         // translate to efficient representation
-        operators.numStateFeatures = allLiterals.size();
-        operators.numActions = allActions.size();
-        ToCompactRepresentation(allLiterals, allActions);
-        operators.methods = getEfficientMethodRep(methodsByTask);
-        operators.finalizeMethods();
+        //operators.numStateFeatures = allLiterals.size();
+        //operators.numActions = allActions.size();
+        //ToCompactRepresentation(allLiterals, allActions);
+        HashMap<Task, List<method>> methods = getEfficientMethodRep(methodsByTask);
+        finalizeMethods(methods);
+        ProgressionNetwork.methods = methods;
 
+        /*
         Tuple2<BitSet, int[]> s0 = getBitVector(p.groundedInitialState());
         Tuple2<BitSet, int[]> g = getBitVector(p.groundedGoalState());
         operators.goalList = g._2();
         operators.goal = g._1();
+        */
 
-        System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms.");
-
+        //System.out.println("Finished in " + (System.currentTimeMillis() - time) + " ms.");
+/*
         if (verbose) {
             System.out.println("\nList of grounded actions:");
             for (int i = 0; i < operators.numActions; i++) {
@@ -83,50 +104,67 @@ public class htnPlanningInstance {
                         operators.prec[i], operators.add[i], operators.del[i],
                         operators.numStateFeatures, operators.IndexToLiteral));
             }
-        }
+        }*/
 
         // todo: this will only work with ground initial tn and without any ordering
-        Set<GroundTask> initialGroundings = groundingUtil.getFullyGroundTN(p);
-        assert (initialGroundings.size() == p.planStepsWithoutInitGoal().size());
+        //Set<GroundTask> initialGroundings = groundingUtil.getFullyGroundTN(p);
+        //assert (initialGroundings.size() == p.planStepsWithoutInitGoal().size());
 
-        java.util.Iterator<GroundTask> iter = initialGroundings.iterator();
-        List<ProgressionPlanStep> initialTasks = new LinkedList<>();
-        while (iter.hasNext()) {
-            GroundTask n = iter.next();
-            ProgressionPlanStep ps = new ProgressionPlanStep(n);
-            if (ps.isPrimitive) {
-                ps.action = operators.ActionToIndex.get(ps.getTask());
-            } else {
-                ps.methods = operators.methods.get(ps.getTask().task()).get(ps.getTask());
-                if (ps.methods == null) {
-                    System.out.println("No method for initial task " + ps.getTask().longInfo());
-                    System.out.println("Problem unsolvable.");
-                    return false;
-                }
-            }
-            initialTasks.add(ps);
+
+        if (p.planStepsWithoutInitGoal().size() == 1) {
+            System.out.println("Error: Progression search algorithm found more than one task in the initial task network.");
+            System.exit(-1);
         }
-        ProgressionNetwork initialNode = new ProgressionNetwork(s0._1(), initialTasks);
+
+        //java.util.Iterator<GroundTask> iter = initialGroundings.iterator();
+        List<ProgressionPlanStep> initialTasks = new LinkedList<>();
+
+        //while (iter.hasNext()) {
+        //GroundTask n = iter.next();
+        ProgressionPlanStep ps = new ProgressionPlanStep(p.planStepsWithoutInitGoal().apply(0).schema());
+        /*if (ps.isPrimitive) {
+            ps.action = operators.ActionToIndex.get(ps.getTask());
+        } else {
+            ps.methods = operators.methods.get(ps.getTask().task()).get(ps.getTask());
+            if (ps.methods == null) {
+                System.out.println("No method for initial task " + ps.getTask().longInfo());
+                System.out.println("Problem unsolvable.");
+                return false;
+            }
+        }*/
+        initialTasks.add(ps);
+        //}
+        ProgressionNetwork initialNode = new ProgressionNetwork(ProgressionNetwork.flatProblem.getS0(), initialTasks);
+
+        Set<Task> allActions;
+        allActions = new HashSet<>();
+        scala.collection.Iterator<Task> iter = d.primitiveTasks().iterator();
+        while (iter.hasNext()) {
+            allActions.add(iter.next());
+        }
 
         if (doBFS)
             initialNode.heuristic = new proBFS();
         else if (doDFS)
             initialNode.heuristic = new proDFS();
-        else if (heuristic instanceof SimpleCompositionRPG$)
-            initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
+            //else if (heuristic instanceof SimpleCompositionRPG$)
+            //    initialNode.heuristic = new simpleCompositionRPG(operators.methods, allActions);
         else if (heuristic instanceof RelaxedCompositionGraph) {
+            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hLmCut, methods, initialTasks, allActions);
+        } else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
-            initialNode.heuristic = new RCG(operators.methods, initialTasks, allActions, heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
-        } else if (heuristic instanceof CompositionRPGHTN$)
-            initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
-        else if (heuristic instanceof GreedyProgression$)
+            initialNode.heuristic = new RCG(methods, initialTasks, allActions, heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
+            //} else if (heuristic instanceof CompositionRPGHTN$)
+            //    initialNode.heuristic = new cRpgHtn(operators.methods, allActions);
+        } else if (heuristic instanceof GreedyProgression$)
             initialNode.heuristic = new greedyProgression();
-        else if (heuristic instanceof DeleteRelaxedHTN$)
-            initialNode.heuristic = new delRelaxedHTN(operators.methods, allActions);
+            //else if (heuristic instanceof DeleteRelaxedHTN$)
+            //    initialNode.heuristic = new delRelaxedHTN(operators.methods, allActions);
         else {
             throw new IllegalArgumentException("Heuristic " + heuristic + " is not supported");
         }
 
+/*
         // todo: this is hacky!
         if ((taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.decompDepth) && (!TopDownReachabilityGraph.isInitialized())) {
             int taskNo = operators.numStateFeatures;
@@ -142,9 +180,9 @@ public class htnPlanningInstance {
                 taskNo++;
             }
 
-            new TopDownReachabilityGraph(operators.methods, initialTasks, taskNo, operators.numActions, TaskToIndex);
+            new TopDownReachabilityGraph(methods, initialTasks, taskNo, flatProblem.numOfOperators, TaskToIndex);
 
-        }
+        }*/
         initialNode.heuristic.build(initialNode);
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
@@ -191,7 +229,7 @@ public class htnPlanningInstance {
             solution = routine.search(initialNode, ic, tc);
         }
 
-        assert (isApplicable(solution, s0._1()));
+        assert (isApplicable(solution, ProgressionNetwork.flatProblem.getS0()));
         //System.out.println("###" + ic.keyValueListString() + ";" + tc.keyValueListString());
 
         int n = 1;
@@ -199,7 +237,7 @@ public class htnPlanningInstance {
             System.out.println("\nFound a solution:");
             for (Object a : solution) {
                 if (a instanceof Integer)
-                    System.out.println(n + " " + proPrinter.actionToStr(operators.IndexToAction[(Integer) a]));
+                    System.out.println(n + " " + proPrinter.actionToStr(ProgressionNetwork.indexToTask.get(a)));
                 else
                     System.out.println(n + " " + ((GroundedDecompositionMethod) a).longInfo());
                 n++;
@@ -215,46 +253,47 @@ public class htnPlanningInstance {
         return solution != null;
     }
 
+    private void finalizeMethods(HashMap<Task, List<method>> methods) {
+        for (List<method> y : methods.values()) {
+            for (method z : y) {
+                z.finalizeMethod();
+            }
+        }
+    }
+
     private boolean isApplicable(List<Object> solution, BitSet state) {
         if (solution == null)
             return true;
         for (Object mod : solution) {
             if (mod instanceof Integer) {
                 int a = (Integer) mod;
-                int pre = operators.prec[a].nextSetBit(0);
-                while (pre > -1) {
+                for (int pre : ProgressionNetwork.flatProblem.precLists[a]) {
                     if (!state.get(pre))
                         return false;
-                    pre = operators.prec[a].nextSetBit(pre + 1);
                 }
-                state.andNot(operators.del[a]);
-                state.or(operators.add[a]);
+
+                for (int df : ProgressionNetwork.flatProblem.delLists[a])
+                    state.set(df, false);
+                for (int af : ProgressionNetwork.flatProblem.addLists[a])
+                    state.set(af, true);
             }
         }
         return true;
     }
 
-    private HashMap<Task, HashMap<GroundTask, List<method>>> getEfficientMethodRep(Map<Task, Set<GroundedDecompositionMethod>> methodsByTask) {
-        HashMap<Task, HashMap<GroundTask, List<method>>> res = new HashMap<>();
+    private HashMap<Task, List<method>> getEfficientMethodRep(Map<Task, Set<SimpleDecompositionMethod>> methodsByTask) {
+        HashMap<Task, List<method>> res = new HashMap<>();
         for (Task t : methodsByTask.keySet()) {
-            HashMap<GroundTask, List<method>> oneSchema = new HashMap<>();
+            List<method> oneSchema = new ArrayList<>();
             res.put(t, oneSchema);
-            for (GroundedDecompositionMethod m : methodsByTask.get(t)) {
-                GroundTask gt = m.groundAbstractTask();
-                List<method> methods;
-                if (oneSchema.containsKey(gt)) {
-                    methods = oneSchema.get(gt);
-                } else {
-                    methods = new ArrayList<>();
-                    oneSchema.put(gt, methods);
-                }
-                methods.add(new method(m));
+            for (SimpleDecompositionMethod m : methodsByTask.get(t)) {
+                oneSchema.add(new method(m));
             }
         }
         return res;
     }
 
-
+/*
     private Tuple2<BitSet, int[]> getBitVector(Seq<GroundLiteral> groundLiteralSeq) {
         BitSet state = new BitSet(operators.numStateFeatures);
         int[] list = new int[groundLiteralSeq.size()];
@@ -299,7 +338,7 @@ public class htnPlanningInstance {
             operators.ActionToIndex.put(action, i);
             operators.IndexToAction[i] = action;
             if (action.mediumInfo().startsWith("SHOP_")) {
-                operators.ShopPrecActions.add(i);
+                ProgressionNetwork.ShopPrecActions.add(i);
             }
 
             operators.prec[i] = new BitSet(operators.numStateFeatures);
@@ -356,7 +395,7 @@ public class htnPlanningInstance {
                 deletedEffects.clear();
             }
         }
-    }
+    }*/
 
     private boolean featureEqual(GroundLiteral g1, GroundLiteral g2) {
         if (!g1.predicate().equals(g2.predicate()))

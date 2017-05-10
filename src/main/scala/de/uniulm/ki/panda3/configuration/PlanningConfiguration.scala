@@ -285,7 +285,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         val groundTasks = domainAndPlan._1.primitiveTasks map { t => GroundTask(t, Nil) }
         val groundLiterals = domainAndPlan._1.predicates map { p => GroundLiteral(p, true, Nil) }
         val groundMethods = domainAndPlan._1.methodsForAbstractTasks map { case (at, ms) =>
-          at -> JavaConversions.setAsJavaSet(ms map { m => GroundedDecompositionMethod(m, Map()) } toSet)
+          at -> JavaConversions.setAsJavaSet(ms collect {case s : SimpleDecompositionMethod => s} toSet)
         }
 
 
@@ -300,8 +300,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
         // scalastyle:off null
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val solutionFound = progressionInstance.plan(domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods), JavaConversions.setAsJavaSet(groundTasks.toSet),
-                                                       JavaConversions.setAsJavaSet(groundLiterals.toSet), informationCapsule, timeCapsule,
+          val solutionFound = progressionInstance.plan(domainAndPlan._1, domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods),
+                                                       informationCapsule, timeCapsule,
                                                        progression.abstractTaskSelectionStrategy,
                                                        progression.heuristic.getOrElse(null), doBFS, doDFS, aStar, progression.deleteRelaxed,
                                                        timeLimit.getOrElse(Int.MaxValue).toLong * 1000)

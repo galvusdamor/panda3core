@@ -19,6 +19,7 @@ public class CompleteEnforcedHillClimbing extends ProgressionSearchRoutine {
     int cehcSearchNodes = 1;
 
     public List<Object> search(ProgressionNetwork firstSearchNode) {
+        /*
         int bestMetric = firstSearchNode.metric;
         LinkedList<ProgressionNetwork> fringe = new LinkedList<>();
         fringe.add(firstSearchNode);
@@ -86,6 +87,8 @@ public class CompleteEnforcedHillClimbing extends ProgressionSearchRoutine {
                 }
             }
         }
+        */
+        return null;
     }
 
     @Override

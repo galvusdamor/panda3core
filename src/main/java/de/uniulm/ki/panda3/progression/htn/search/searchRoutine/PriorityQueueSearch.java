@@ -105,12 +105,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             ProgressionNetwork n = fringe.poll();
             actionloop:
             for (ProgressionPlanStep ps : n.getFirstPrimitiveTasks()) {
-                int pre = operators.prec[ps.action].nextSetBit(0);
-                while (pre > -1) {
-                    if (!n.state.get(pre))
-                        continue actionloop;
-                    pre = operators.prec[ps.action].nextSetBit(pre + 1);
-                }
+                if (!n.isApplicable(ps.action))
+                    continue actionloop;
 
                 ProgressionNetwork node = n.apply(ps, deleteRelaxed);
                 //if (visited.addIfNotIn(node))
@@ -358,12 +354,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             ProgressionNetwork n = fringe.poll();
             actionloop:
             for (ProgressionPlanStep ps : n.getFirstPrimitiveTasks()) {
-                int pre = operators.prec[ps.action].nextSetBit(0);
-                while (pre > -1) {
-                    if (!n.state.get(pre))
-                        continue actionloop;
-                    pre = operators.prec[ps.action].nextSetBit(pre + 1);
-                }
+                if (!n.isApplicable(ps.action))
+                    continue actionloop;
 
                 ProgressionNetwork node = n.apply(ps, deleteRelaxed);
 
@@ -536,7 +528,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
     private int getStepCount(LinkedList<Object> solution) {
         int count = 0;
         for (Object a : solution) {
-            if ((a instanceof Integer) && (!operators.ShopPrecActions.contains(a))) {
+            if ((a instanceof Integer) && (!ProgressionNetwork.ShopPrecActions.contains(a))) {
                 count++;
             }
         }
@@ -560,14 +552,14 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         if (solution != null) {
             for (Object a : solution) {
                 if (a instanceof Integer) {
-                    if (operators.ShopPrecActions.contains(a))
+                    if (ProgressionNetwork.ShopPrecActions.contains(a))
                         numShop++;
                     else {
                         numPrim++;
                         if (PrimitivePlan.length() > 0) {
                             PrimitivePlan += "&";
                         }
-                        String primName = operators.IndexToAction[(Integer) a].longInfo();
+                        String primName = ProgressionNetwork.indexToTask.get(a).longInfo();
                         PrimitivePlan += primName;
                         if (primName.startsWith("p_") && (primName.charAt(2) == '0' ||
                                 primName.charAt(2) == '1' ||

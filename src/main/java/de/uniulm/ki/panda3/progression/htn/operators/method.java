@@ -1,7 +1,10 @@
 package de.uniulm.ki.panda3.progression.htn.operators;
 
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
+import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
@@ -18,7 +21,7 @@ public class method {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("task ");
-        sb.append(this.m.groundAbstractTask().longInfo());
+        sb.append(this.m.abstractTask().longInfo());
         sb.append("\n t { 0: ");
         if (subtasks.length > 0) {
             sb.append(subtasks[0].longInfo());
@@ -48,8 +51,8 @@ public class method {
         return sb.toString();
     }
 
-    public final GroundedDecompositionMethod m; // this is the original method that is saved for printing the solution
-    public GroundTask[] subtasks; // these are the subtasks
+    public final SimpleDecompositionMethod m; // this is the original method that is saved for printing the solution
+    public Task[] subtasks; // these are the subtasks
     public int numDistinctSubTasks = 0;
 
     // these are the modifications for the SUB-tasks
@@ -62,22 +65,23 @@ public class method {
     public int numberOfPrimSubtasks = 0;
     public int numberOfAbsSubtasks;
 
-    public method(GroundedDecompositionMethod dm) {
+    public method(SimpleDecompositionMethod dm) {
         this.m = dm;
-        Seq<PlanStep> steps = dm.decompositionMethod().subPlan().planStepsWithoutInitGoal();
-        this.subtasks = new GroundTask[steps.size()];
+        Seq<PlanStep> steps = dm.subPlan().planStepsWithoutInitGoal();
+        this.subtasks = new Task[steps.size()];
         this.actionID = new int[steps.size()];
         this.methods = new List[steps.size()];
 
         for (int i = 0; i < steps.size(); i++) {
-            subtasks[i] = dm.subPlanPlanStepsToGrounded().get(steps.apply(i)).get();
-            if (subtasks[i].task().isPrimitive())
+
+            subtasks[i] = steps.apply(i).schema();
+            if (subtasks[i].isPrimitive())
                 numberOfPrimSubtasks++;
         }
         numberOfAbsSubtasks = steps.size() - numberOfPrimSubtasks;
 
         this.orderings = new ArrayList<>();
-        Seq<OrderingConstraint> orderings = dm.decompositionMethod().subPlan().orderingConstraints().minimalOrderingConstraints();
+        Seq<OrderingConstraint> orderings = dm.subPlan().orderingConstraints().minimalOrderingConstraints();
         for (int i = 0; i < orderings.size(); i++) {
             OrderingConstraint ordering = orderings.apply(i);
             int pre = steps.indexOf(ordering.before());
@@ -105,16 +109,16 @@ public class method {
     }
 
     public void finalizeMethod() {
-        Set<GroundTask> distinctTasks = new HashSet<>();
-        for(GroundTask t : this.subtasks){
+        Set<Task> distinctTasks = new HashSet<>();
+        for(Task t : this.subtasks){
             distinctTasks.add(t);
         }
         this.numDistinctSubTasks = distinctTasks.size();
         for (int i = 0; i < subtasks.length; i++) {
-            if (subtasks[i].task().isPrimitive()) {
-                actionID[i] = operators.ActionToIndex.get(subtasks[i]);
+            if (subtasks[i].isPrimitive()) {
+                actionID[i] = ProgressionNetwork.taskToIndex.get(subtasks[i]);
             } else {
-                this.methods[i] = operators.methods.get(subtasks[i].task()).get(subtasks[i]);
+                this.methods[i] = ProgressionNetwork.methods.get(subtasks[i]);
 
                 assert (this.methods[i] != null);
                 assert (this.methods[i].size() > 0);

@@ -28,8 +28,8 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
     private boolean goalRelaxedReachable;
 
     // these represent reachable tasks
-    private static HashMap<GroundTask, Integer> TaskLiteralToIndex;
-    private static HashMap<Integer, GroundTask> IndexToTaskLiteral;
+    private static HashMap<Task, Integer> TaskLiteralToIndex;
+    private static HashMap<Integer, Task> IndexToTaskLiteral;
 
     private static HashMap<method, Integer> MethodToIndex;
     private static HashMap<Integer, method> IndexToMethod;
@@ -44,12 +44,12 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
     private simpleCompositionRPG() {
     }
 
-    public simpleCompositionRPG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, Set<GroundTask> allActions) {
-        long time = System.currentTimeMillis();
+    public simpleCompositionRPG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, Set<Task> allActions) {
+       /* long time = System.currentTimeMillis();
         System.out.print("Init Simple Composition RPG heuristic");
-        Set<GroundTask> allTasks = new HashSet<>();
-        for (HashMap<GroundTask, List<method>> val : methods.values()) {
-            for (GroundTask t : val.keySet()) {
+        Set<Task> allTasks = new HashSet<>();
+        for (HashMap<Task, List<method>> val : methods.values()) {
+            for (Task t : val.keySet()) {
                 allTasks.add(t);
             }
         }
@@ -57,13 +57,13 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
         simpleCompositionRPG.IndexToTaskLiteral = new HashMap<>();
         simpleCompositionRPG.TaskLiteralToIndex = new HashMap<>();
 
-        for (GroundTask a : allActions) {
+        for (Task a : allActions) {
             simpleCompositionRPG.IndexToTaskLiteral.put(taskNo, a);
             simpleCompositionRPG.TaskLiteralToIndex.put(a, taskNo);
             taskNo++;
         }
 
-        for (GroundTask t : allTasks) {
+        for (Task t : allTasks) {
             simpleCompositionRPG.IndexToTaskLiteral.put(taskNo, t);
             simpleCompositionRPG.TaskLiteralToIndex.put(t, taskNo);
             taskNo++;
@@ -111,18 +111,18 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
 
             // the effect is the abstract task that has to be decomposed
             method someMethod = IndexToMethod.get(methodI);
-            int taskID = simpleCompositionRPG.TaskLiteralToIndex.get(someMethod.m.groundAbstractTask());
+            int taskID = simpleCompositionRPG.TaskLiteralToIndex.get(someMethod.m.abstractTask());
             simpleCompositionRPG.add[methodI].add(taskID);
 
             // the precondition contains all subtasks
-            for (GroundTask subtask : someMethod.subtasks) {
+            for (Task subtask : someMethod.subtasks) {
                 taskID = simpleCompositionRPG.TaskLiteralToIndex.get(subtask);
                 simpleCompositionRPG.prec[methodI].add(taskID);
             }
         }
 
         // every action makes the corresponding task-fact true
-        System.out.println(" (" + (System.currentTimeMillis() - time) + " ms)");
+        System.out.println(" (" + (System.currentTimeMillis() - time) + " ms)");*/
     }
 
     @Override
@@ -149,6 +149,8 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
          * for the *first time*, i.e. it is the delta of fulfilled goal conditions. Be aware that
          * goalDelta is *changed* during heuristic calculation.
          */
+
+        /*
         List<List<Integer>> goalDelta = new ArrayList<>();
 
         int[] actionDifficulty;
@@ -270,6 +272,7 @@ public class simpleCompositionRPG implements htnGroundedProgressionHeuristic {
             state = nextState;
         }
         this.heuristicValue = calcHeuristic(firstLayerWithFact, operatorDelta, goalDelta, actionDifficulty);
+        */
     }
 
     private int calcHeuristic(int[] firstLayerWithFact, List<List<Integer>> operatorDelta, List<List<Integer>> goalDelta, int[] actionDifficulty) {

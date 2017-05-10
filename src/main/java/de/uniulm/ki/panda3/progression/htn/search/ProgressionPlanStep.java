@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.progression.htn.search;
 
 import de.uniulm.ki.panda3.progression.htn.operators.method;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 
 import java.util.HashSet;
@@ -12,20 +13,20 @@ import java.util.Set;
  * Created by dhoeller on 22.07.16.
  */
 public class ProgressionPlanStep {
-    private final GroundTask task;
+    private final Task task;
     public Set<ProgressionPlanStep> successorList = new HashSet<>();
     public final boolean isPrimitive;
 
     public int action;
     public List<method> methods;
 
-    public GroundTask getTask() {
+    public Task getTask() {
         return task;
     }
 
-    public ProgressionPlanStep(GroundTask task) {
+    public ProgressionPlanStep(Task task) {
         this.task = task;
-        this.isPrimitive = task.task().isPrimitive();
+        this.isPrimitive = task.isPrimitive();
     }
 
     @Override
