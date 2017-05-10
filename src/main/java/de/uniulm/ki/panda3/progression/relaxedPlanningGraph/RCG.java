@@ -15,9 +15,27 @@ import java.util.*;
  * Created by dhoeller on 26.07.16.
  */
 public class RCG implements htnGroundedProgressionHeuristic {
-    public static enum producerSelection {numOfPreconditions, actionDifficulty, firstCome}
+    public static enum producerSelection {
+        numOfPreconditions, actionDifficulty, firstCome;
 
-    public static enum heuristicExtraction {ff, multicount}
+        public static producerSelection parse(String text) {
+            if (text.equals("#prec")) return numOfPreconditions;
+            if (text.equals("action-difficulty")) return actionDifficulty;
+            if (text.equals("fcfs")) return firstCome;
+            throw new IllegalArgumentException("Unknown selector " + text);
+        }
+        }
+
+    public static enum heuristicExtraction {
+        ff, multicount;
+
+        public static heuristicExtraction parse(String text) {
+            if (text.equals("ff")) return ff;
+            if (text.equals("multicount")) return multicount;
+            throw new IllegalArgumentException("Unknown extraction method " + text);
+        }
+
+        }
 
     /**
      * Define "Operator": An operator is either an action or a method

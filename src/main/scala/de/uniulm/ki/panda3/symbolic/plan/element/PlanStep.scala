@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.symbolic.plan.element
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeVariable, ExchangeTask, ExchangePlanSteps, DomainUpdate}
+import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, DomainUpdatable, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
@@ -68,7 +68,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
       val additionalParameters = exchangeMap(schema).parameters.drop(arguments.length) map { v => v.copy(name = v.name + "_ps" + id) }
       PlanStep(id, exchangeMap(schema), arguments ++ additionalParameters)
     } else this
-    case ExchangeVariable(oldVar, newVar) => PlanStep(id, schema, arguments map { _.update(domainUpdate) })
+    case ExchangeVariable(oldVar, newVar) => PlanStep(id, schema update PropagateEquality(Set()), arguments map { _.update(domainUpdate) }) // propagate irrelevant update to reduce task
     case _                                => PlanStep(id, schema.update(domainUpdate), arguments map { _.update(domainUpdate) })
   }
 

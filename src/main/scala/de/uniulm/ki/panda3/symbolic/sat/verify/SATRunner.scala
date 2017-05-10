@@ -2,7 +2,9 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import java.io.{File, FileWriter, BufferedWriter}
 import java.util.UUID
+import java.util.concurrent.Semaphore
 
+import de.uniulm.ki.panda3.configuration.Timings._
 import de.uniulm.ki.panda3.configuration.{Timings, ResultMap, Information}
 import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.And
@@ -28,11 +30,18 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
   def runWithTimeLimit(timelimit: Option[Long], planLength: Int, offsetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false):
   (Boolean, Boolean) = {
+
+    val timerSemaphore = new Semaphore(0)
+    val timeLimitToReach = timelimit.getOrElse(Long.MaxValue) + 10000
+    val totalTimeAtBeginning = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+
     val runner = new Runnable {
       var result: Option[Boolean] = None
 
       override def run(): Unit = {
+        timeCapsule switchTimerToCurrentThread Timings.TOTAL_TIME
         result = Some(SATRunner.this.run(planLength: Int, offsetToK, includeGoal, defineK, checkSolution))
+        timerSemaphore.acquire()
       }
     }
     // start thread
@@ -42,18 +51,18 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
     // wait
     val startTime = System.currentTimeMillis()
-    while (System.currentTimeMillis() - startTime <= timelimit.getOrElse(Long.MaxValue) && runner.result.isEmpty && thread.isAlive) Thread.sleep(1000)
+    val alreadyUsedTime = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+    while (System.currentTimeMillis() - startTime <= timelimit.getOrElse(Long.MaxValue) - alreadyUsedTime && runner.result.isEmpty && thread.isAlive) Thread.sleep(1000)
+
+    timeCapsule switchTimerToCurrentThread(Timings.TOTAL_TIME, Some(timelimit.getOrElse(Long.MaxValue) - alreadyUsedTime))
+    timerSemaphore.release()
+
     if (satProcess != null) {
       println("Kill SAT solver")
       satProcess.destroy()
     }
-    JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t =>
-      //try {
-      t.stop()
-      /*} catch {
-        case td: Throwable => println("SAT Runner was aborted after timelimit ( " + timelimit.getOrElse(Long.MaxValue) + " ms) was reached.")
-      }*/
-    }
+
+    JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t => t.stop() }
 
 
     if (runner.result.isEmpty) {Thread.sleep(500); (false, false) } else (runner.result.get, true)
@@ -148,27 +157,50 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
     //writeStringToFile(usedFormula mkString "\n", new File("__formulaString"))
 
-    timeCapsule start Timings.SAT_SOLVER
     try {
+      val stdout = new StringBuilder
+      val stderr = new StringBuilder
+      val logger = ProcessLogger({ s => stdout append (s + "\n") }, { s => stderr append (s + "\n") })
+
       satSolver match {
-        case MINISAT()       =>
+        case MINISAT       =>
           println("Starting minisat")
-          satProcess = ("minisat " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt").run()
-        case CRYPTOMINISAT() =>
+          writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' minisat " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt",
+                            fileDir + "__run" + uniqFileIdentifier)
+        case CRYPTOMINISAT =>
           println("Starting cryptominisat5")
-          satProcess = (("cryptominisat5 --verb 0 " + fileDir + "__cnfString" + uniqFileIdentifier) #> new File(fileDir + "__res" + uniqFileIdentifier + ".txt")).run()
-        case RISS6()         =>
+          writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' cryptominisat5 --verb 0 " + fileDir + "__cnfString" + uniqFileIdentifier, fileDir + "__run" + uniqFileIdentifier)
+
+        case RISS6 =>
           println("Starting riss6")
           // -config=Riss6:-no-enabled_cp3
-          satProcess = (("/home/gregor/Riss6/bin/riss6 -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier) #>
-            new File(fileDir + "__res" + uniqFileIdentifier + ".txt")).run()
+          writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' c/home/gregor/Riss6/bin/riss6 -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier,
+                            fileDir + "__run" + uniqFileIdentifier)
       }
+
+      satProcess = ("bash " + fileDir + "__run" + uniqFileIdentifier).run(logger)
+
       // wait for termination
       satProcess.exitValue()
+      satSolver match {
+        case CRYPTOMINISAT =>
+          writeStringToFile(stdout.toString(), new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
+        case _             =>
+      }
+      // remove runscript
+      ("rm " + fileDir + "__run" + uniqFileIdentifier) !
+
+      // get time measurement
+      val totalTime = (stderr.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
+      println("Time command gave the following runtime for the solver: " + totalTime)
+
+      timeCapsule.set(SAT_SOLVER, totalTime)
+      timeCapsule.addTo(TOTAL_TIME, totalTime)
+      timeCapsule.addTo(VERIFY_TOTAL, totalTime)
+
     } catch {
-      case rt: RuntimeException => println("Minisat exitcode problem ...")
+      case rt: RuntimeException => println("Minisat exitcode problem ..." + rt.toString)
     }
-    timeCapsule stop Timings.SAT_SOLVER
     timeCapsule stop Timings.VERIFY_TOTAL
 
 
@@ -182,10 +214,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     // postprocessing
     val solverOutput = Source.fromFile(fileDir + "__res" + uniqFileIdentifier + ".txt").mkString
     val (solveState, assignment) = satSolver match {
-      case MINISAT()       =>
+      case MINISAT               =>
         val splitted = solverOutput.split("\n")
         if (splitted.length == 1) (splitted(0), "") else (splitted(0), splitted(1))
-      case CRYPTOMINISAT() | RISS6() =>
+      case CRYPTOMINISAT | RISS6 =>
         val cleanString = solverOutput.replaceAll("s ", "").replaceAll("v ", "").split("\n").filterNot(_.startsWith("c")).fold("")(_ + _ + "\n")
         val splitted = cleanString.split("\n", 2)
 
@@ -207,7 +239,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       val literals: Set[Int] = (assignment.split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet
 
       val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-      writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+      //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
       val (graphNodes, graphEdges) = encoder match {
         case g: GeneralEncoding =>
@@ -272,6 +304,14 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
                 PathBasedEncoding.pathSortingFunction(path1, path2)
               } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
+            case tree: PathBasedEncoding[_, _] =>
+              val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
+              println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
+              val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
+              val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
+              val taskSequence = actionSequence map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
+
+              taskSequence
 
             case sogTree: SOGEncoding =>
 

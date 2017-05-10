@@ -8,3 +8,8 @@ import de.uniulm.ki.panda3.efficient.plan.EfficientPlan
 trait Filter {
   def isPossiblySolvable(plan: EfficientPlan): Boolean
 }
+
+
+case class PlanLengthLimit(limit : Int) extends Filter {
+  override def isPossiblySolvable(plan: EfficientPlan): Boolean = (plan.numberOfPlanSteps - 2) <= limit
+}

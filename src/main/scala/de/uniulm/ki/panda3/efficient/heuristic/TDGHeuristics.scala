@@ -63,7 +63,8 @@ trait ModificationTDGHeuristic extends TDGHeuristics {
       if (!modificationEfforts.contains(groundTask)) Double.MaxValue else modificationEfforts(groundTask)
     }
 
-  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule): (Double, Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: Option[EfficientModification], depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule):
+  (Double, Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = domain.tasks(plan.planStepTasks(1)).precondition.length // every flaw must be addressed
 
@@ -100,6 +101,8 @@ trait ModificationTDGHeuristic extends TDGHeuristics {
     }
     (heuristicValue, ())
   }
+
+  def computeInitialPayLoad(plan: EfficientPlan): Unit = ()
 }
 
 trait TDGPrimitiveActionValueHeuristic extends TDGHeuristics {
@@ -138,7 +141,8 @@ trait TDGPrimitiveActionValueHeuristic extends TDGHeuristics {
     }
   }
 
-  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule): (Double, Unit) = {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: Option[EfficientModification], depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule):
+  (Double, Unit) = {
     // accumulate for all actions in the plan
     var heuristicValue: Double = -initialDeductionFromHeuristicValue(plan)
 
@@ -152,6 +156,8 @@ trait TDGPrimitiveActionValueHeuristic extends TDGHeuristics {
     }
     (heuristicValue, ())
   }
+
+  def computeInitialPayLoad(plan: EfficientPlan): Unit = ()
 }
 
 

@@ -43,10 +43,10 @@ object IPCCoverage {
         val domInputStream = new FileInputStream(domainFile)
         val probInputStream = new FileInputStream(problemFile)
 
-        val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
+        val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true, randomSeed = 42, timeLimit = Some(0),
                                                  ParsingConfiguration(OldPDDLType),
                                                  PreprocessingConfiguration(false, true, None, false, false, false, None, None, false, false),
-                                                 PlanBasedSearch(Some(0), Some(0), AStarActionsType(1), NumberOfFlaws :: Nil, Nil, LCFR),
+                                                 PlanBasedSearch(Some(0), AStarActionsType(1), NumberOfFlaws :: Nil, Nil, LCFR),
                                                  //SearchConfiguration(None, Some(60), efficientSearch = true, AStarType, Some(NumberOfFlaws), true),
                                                  //Some (TDGMinimumModification)
                                                  PostprocessingConfiguration(/*verifySolution = false,*/ Set(ProcessingTimings,

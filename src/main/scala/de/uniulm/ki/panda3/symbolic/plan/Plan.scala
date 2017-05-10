@@ -20,6 +20,7 @@ import de.uniulm.ki.panda3.symbolic.writer._
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
+//scalastyle:off covariant.equals
 case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemovedCausalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering,
                 @Deprecated parameterVariableConstraints: CSP,
                 init: PlanStep, goal: PlanStep, isModificationAllowed: IsModificationAllowed, isFlawAllowed: IsFlawAllowed,
@@ -301,8 +302,10 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
         case ps               => ps update possiblyInvertedUpdate
       }
 
+      val postUpdateCorrection = ExchangeTask(Map(init.update(possiblyInvertedUpdate).schema -> newInit.schema, goal.update(possiblyInvertedUpdate).schema -> newGoal.schema))
+
       val newCausalLinksAndRemovedCausalLinks = causalLinksAndRemovedCausalLinks map { _ update possiblyInvertedUpdate }
-      val newOrderingConstraints = orderingConstraints update possiblyInvertedUpdate
+      val newOrderingConstraints = orderingConstraints update possiblyInvertedUpdate update postUpdateCorrection
       val newVariableConstraint = parameterVariableConstraints update possiblyInvertedUpdate
       val newPlanStepDecomposedByMethod = planStepDecomposedByMethod map { case (ps, method) => (ps update possiblyInvertedUpdate, method update possiblyInvertedUpdate) }
       val newPlanStepParentInDecompositionTree = planStepParentInDecompositionTree map {

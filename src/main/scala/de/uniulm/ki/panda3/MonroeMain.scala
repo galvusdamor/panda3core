@@ -51,14 +51,14 @@ object MonroeMain {
       val probInputStream = new FileInputStream(probFile)
 
       // create the configuration
-      val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
+      val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true, randomSeed = 42, timeLimit = Some(5 * 60),
                                                ParsingConfiguration(),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false, compileOrderInMethods = None,
-                                                                          compileInitialPlan = false,splitIndependedParameters = false,
+                                                                          compileInitialPlan = false, splitIndependentParameters = false,
                                                                           liftedReachability = true, groundedReachability = None,
                                                                           groundedTaskDecompositionGraph = None, //Some(TopDownTDG),
                                                                           iterateReachabilityAnalysis = true, groundDomain = false),
-                                               PlanBasedSearch(None, Some(5 * 60), GreedyType, LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute) :: Nil, Nil, LCFR),
+                                               PlanBasedSearch(None, GreedyType, LiftedTDGMinimumModificationWithCycleDetection(NeverRecompute) :: Nil, Nil, LCFR),
                                                //SearchConfiguration(None, Some(5), efficientSearch = true, DFSType, None, printSearchInfo = true),
                                                //SearchConfiguration(None, Some(5 * 60), efficientSearch = true, GreedyType, Some(NumberOfFlaws), printSearchInfo =true),
                                                PostprocessingConfiguration(Set(ProcessingTimings,
