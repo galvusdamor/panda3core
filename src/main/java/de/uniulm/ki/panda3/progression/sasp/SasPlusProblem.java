@@ -8,13 +8,17 @@ import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.panda3.util.seqProviderList;
+import scala.Tuple2;
 import scala.collection.*;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.BitSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by Daniel Höller on 24.02.17.
@@ -38,10 +42,10 @@ public class SasPlusProblem {
     private int numOfGoalPairs;
     public int numOfOperators;
 
-    public int[] axioms;
+    private int[] axioms;
     public int[] ranges; // variable-index -> number of values the var can have
     private String[] varNames; // variable-index ->  name-string of the var
-    public String[][] values; // var-index, value-index -> value-string (this is either an atom from the domain, or the noVal-String)
+    private String[][] values; // var-index, value-index -> value-string (this is either an atom from the domain, or the noVal-String)
 
     private int[] s0; // variable-index -> value set in s0
     private int[][] goal; // enum of pairs [var-index, value-needed]
@@ -108,6 +112,8 @@ public class SasPlusProblem {
     public int[] s0List;
     private BitSet s0Bitset = null;
     public int[] gList;
+
+    public String[] factStrs;
 
     public BitSet getS0() {
         if (s0Bitset == null) {
@@ -400,6 +406,14 @@ public class SasPlusProblem {
         gList = new int[goal.length];
         for (int i = 0; i < goal.length; i++) {
             gList[i] = firstIndex[goal[i][0]] + goal[i][1];
+        }
+
+        factStrs = new String[numOfStateFeatures];
+        int newI = 0;
+        for (int i = 0; i < values.length; i++) {
+            for (int j = 0; j < values[i].length; j++) {
+                factStrs[newI++] = varNames[i] + "=" + values[i][j];
+            }
         }
     }
 
@@ -694,14 +708,198 @@ public class SasPlusProblem {
     public String[] getGroundedOperatorSignatures() {
         return opNames;
     }
-/*
-    @Override
-    public Seq<GroundLiteral> reachableGroundLiterals() {
-        return null;
-    }
 
-    @Override
-    public Seq<GroundTask> reachableGroundPrimitiveActions() {
-        return null;
-    }*/
+    public Tuple2<Map<Integer, Task>, Map<Task, Integer>> restrictTo(Set<Integer> I, Map<Integer, Task> i2t) {
+        int actionCount = I.size();
+        int[] actionNewToOld = new int[actionCount];
+        Map<Task, Integer> taskToIndex = new HashMap<>();
+        Map<Integer, Task> indexToTask = new HashMap<>();
+        Set<Integer> usedFacts = new HashSet<>();
+
+        // calculate new action indices
+        Iterator<Integer> iter = I.iterator();
+        int newIndex = 0;
+        while (iter.hasNext()) {
+            int oldIndex = iter.next();
+            actionNewToOld[newIndex] = oldIndex;
+            for (int f : precLists[oldIndex])
+                usedFacts.add(f);
+            for (int f : addLists[oldIndex])
+                usedFacts.add(f);
+            for (int f : delLists[oldIndex])
+                usedFacts.add(f);
+            indexToTask.put(newIndex, i2t.get(oldIndex));
+            taskToIndex.put(i2t.get(oldIndex), newIndex);
+            newIndex++;
+        }
+
+        // calculate new fact indices
+        Iterator<Integer> iter2 = usedFacts.iterator();
+        int[] usedFactsOrdered = new int[usedFacts.size()];
+        for (int i = 0; i < usedFacts.size(); i++) {
+            usedFactsOrdered[i] = iter2.next();
+        }
+        java.util.Arrays.sort(usedFactsOrdered);
+
+        // shorten mutex groups
+        int[] indexToMutexGroupNew = new int[usedFacts.size()];
+        int[] factOldToNew = new int[numOfStateFeatures];
+        int[] factNewToOld = new int[usedFacts.size()];
+        String[][] valuesNew;
+
+        for (int i = 0; i < usedFactsOrdered.length; i++) {
+            factOldToNew[usedFactsOrdered[i]] = i;
+            factOldToNew[i] = usedFactsOrdered[i];
+            indexToMutexGroupNew[i] = indexToMutexGroup[usedFactsOrdered[i]];
+        }
+
+        // translate prec, add and del lists
+        int[][] precListsNew = new int[actionCount][];
+        int[][] addListsNew = new int[actionCount][];
+        int[][] delListsNew = new int[actionCount][];
+        int[] numprecsNew = new int[actionCount];
+        int[] costsNew = new int[actionCount];
+        for (int iA = 0; iA < actionNewToOld.length; iA++) {
+            int[] precOld = precLists[actionNewToOld[iA]];
+            int[] addOld = addLists[actionNewToOld[iA]];
+            int[] delOld = delLists[actionNewToOld[iA]];
+
+            int[] precNew = new int[precOld.length];
+            int[] addNew = new int[addOld.length];
+            int[] delNew = new int[delOld.length];
+
+            for (int i = 0; i < precOld.length; i++) {
+                precNew[i] = factOldToNew[precOld[i]];
+            }
+            for (int i = 0; i < addOld.length; i++) {
+                addNew[i] = factOldToNew[addOld[i]];
+            }
+            for (int i = 0; i < delOld.length; i++) {
+                delNew[i] = factOldToNew[delOld[i]];
+            }
+            numprecsNew[iA] = numPrecs[actionNewToOld[iA]];
+            costsNew[iA] = costs[actionNewToOld[iA]];
+
+            precListsNew[iA] = precNew;
+            addListsNew[iA] = addNew;
+            delListsNew[iA] = delNew;
+        }
+        numPrecs = numprecsNew;
+        costs = costsNew;
+
+        int[] s0ListNew = new int[s0List.length];
+        for (int i = 0; i < s0List.length; i++)
+            s0ListNew[i] = factOldToNew[s0List[i]];
+
+        int[] gListNew = new int[gList.length];
+        for (int i = 0; i < gList.length; i++) {
+            gListNew[i] = factOldToNew[gList[i]];
+        }
+
+        numOfStateFeatures = usedFacts.size();
+        numOfOperators = actionCount;
+        indexToMutexGroup = indexToMutexGroupNew;
+        List<Integer> firstI = new ArrayList<>();
+        List<Integer> lastI = new ArrayList<>();
+        int group = -1;
+        for (int i = 0; i < indexToMutexGroup.length; i++) {
+            if (indexToMutexGroup[i] != group) {
+                firstI.add(i);
+                if (group >= 0)
+                    lastI.add(i - 1);
+            }
+        }
+        lastI.add(indexToMutexGroup.length - 1);
+
+        firstIndex = new int[firstI.size()];
+        for (int i = 0; i < firstI.size(); i++)
+            firstIndex[i] = firstI.get(i);
+
+        lastIndex = new int[lastI.size()];
+        for (int i = 0; i < lastI.size(); i++)
+            lastIndex[i] = lastI.get(i);
+
+        assert (firstIndex.length == lastIndex.length);
+        for (int i = 0; i < firstIndex.length; i++) {
+            ranges[i] = lastIndex[i] - firstIndex[i] + 1;
+        }
+
+        precLists = precListsNew;
+        addLists = addListsNew;
+        delLists = delListsNew;
+
+        // calculate inverse mappings
+        HashMap<Integer, Set<Integer>> p2t = new HashMap<>();
+        HashMap<Integer, Set<Integer>> a2t = new HashMap<>();
+        for (int i = 0; i < numOfStateFeatures; i++) {
+            p2t.put(i, new HashSet<>());
+            a2t.put(i, new HashSet<>());
+        }
+
+        for (int i = 0; i < numOfOperators; i++) {
+            for (int f : precLists[i])
+                p2t.get(f).add(i);
+            for (int f : addLists[i])
+                a2t.get(f).add(i);
+        }
+
+        precToTask = new int[numOfStateFeatures][];
+        for (int i = 0; i < numOfStateFeatures; i++) {
+            Set<Integer> set = p2t.get(i);
+            precToTask[i] = new int[set.size()];
+            Iterator<Integer> iter3 = set.iterator();
+            for (int j = 0; j < set.size(); j++)
+                precToTask[i][j] = iter3.next();
+        }
+
+        addToTask = new int[numOfStateFeatures][];
+        for (int i = 0; i < numOfStateFeatures; i++) {
+            Set<Integer> set = a2t.get(i);
+            addToTask[i] = new int[set.size()];
+            Iterator<Integer> iter3 = set.iterator();
+            for (int j = 0; j < set.size(); j++)
+                addToTask[i][j] = iter3.next();
+        }
+
+        // calculate extended delete-lists
+        List<Integer>[] expandedDelListsNew = new List[numOfOperators];
+        for (int i = 0; i < numOfOperators; i++) {
+            List<Integer> aDelList = new ArrayList<>();
+            expandedDelListsNew[i] = aDelList;
+            for (int f : delLists[i])
+                aDelList.add(f);
+            for (int f : addLists[i]) {
+                int mutexgroup = indexToMutexGroup[f];
+                for (int j = firstIndex[mutexgroup]; j <= lastIndex[mutexgroup]; j++) {
+                    if (j != f)
+                        aDelList.add(j);
+                }
+            }
+        }
+
+        expandedDelLists = new int[numOfOperators][];
+        for (int i = 0; i < numOfOperators; i++) {
+            List<Integer> current = expandedDelListsNew[i];
+            expandedDelLists[i] = new int[current.size()];
+            for (int j = 0; j < current.size(); j++)
+                expandedDelLists[i][j] = current.get(j);
+        }
+
+        String[] factStrsNew = new String[numOfStateFeatures];
+        for (int i = 0; i < numOfStateFeatures; i++) {
+            factStrsNew[i] = factStrs[factNewToOld[i]];
+        }
+        factStrs = factStrsNew;
+
+        String[] opNamesNew = new String[numOfOperators];
+        for (int i = 0; i < numOfOperators; i++) {
+            opNamesNew[i] = opNames[actionNewToOld[i]];
+        }
+        opNames = opNamesNew;
+
+        s0List = s0ListNew;
+        gList = gListNew;
+        s0Bitset = null;
+        return new Tuple2<>(indexToTask, taskToIndex);
+    }
 }

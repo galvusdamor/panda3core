@@ -16,6 +16,7 @@ import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
+import scala.Tuple2;
 
 import java.util.*;
 import java.util.BitSet;
@@ -69,8 +70,9 @@ public class htnPlanningInstance {
         }
 
         ProgressionNetwork.flatProblem = d.sasPlusRepresentation().get().sasPlusProblem();
-        ProgressionNetwork.indexToTask = indexToTask;
-        ProgressionNetwork.taskToIndex = taskToIndex;
+        Tuple2<Map<Integer, Task>, Map<Task, Integer>> x = ProgressionNetwork.flatProblem.restrictTo(indexToTask.keySet(), indexToTask);
+        ProgressionNetwork.indexToTask = x._1();
+        ProgressionNetwork.taskToIndex = x._2();
 
         HashMap<Task, List<method>> methods = getEfficientMethodRep(methodsByTask);
         finalizeMethods(methods);

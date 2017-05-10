@@ -19,7 +19,7 @@ case class SASPlusGrounding(domain: Domain, problem: Plan, sasPlusProblem: SasPl
 
   override lazy val reachableGroundPrimitiveActions: Seq[GroundTask] = groundedTasksToNewGroundTasksMapping.keys.toSeq
 
-  lazy val sasPlusPredicates: Array[Predicate] = sasPlusProblem.values.zipWithIndex flatMap { case (values, varNum) => values map { v => Predicate("var" + varNum + "=" + v, Nil) } }
+  lazy val sasPlusPredicates: Array[Predicate] = sasPlusProblem.factStrs map { v => Predicate(/*"var" + varNum + "=" +*/ v, Nil) }
 
   lazy val (groundedTasksToNewGroundTasksMapping, sasPlusTaskIndexToNewGroundTask) = {
     val generalActions: Seq[((GroundTask, Task), (Int, Task))] = sasPlusProblem.getGroundedOperatorSignatures.zipWithIndex map { case (op, i) =>
