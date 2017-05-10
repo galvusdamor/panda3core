@@ -5,7 +5,7 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.configuration.Timings._
-import de.uniulm.ki.panda3.configuration.{Timings, ResultMap, Information}
+import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask

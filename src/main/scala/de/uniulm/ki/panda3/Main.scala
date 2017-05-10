@@ -6,7 +6,6 @@ import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
-import de.uniulm.ki.panda3.symbolic.sat.verify.CRYPTOMINISAT
 import de.uniulm.ki.panda3.symbolic.search.{SearchState}
 import de.uniulm.ki.util._
 
@@ -41,13 +40,24 @@ object Main {
       // determine which arguments belong together
       val groupedArguments = args.foldLeft[(Option[String], Seq[Either[String, (String, String)]])]((None, Nil))(
         {
-          case ((Some(command), grouped), nextArgument) if !nextArgument.startsWith("-") => (None, grouped :+ Right(command, nextArgument))
-          case ((Some(command), grouped), nextArgument) if nextArgument.startsWith("-")  => (Some(nextArgument), grouped :+ Left(command))
-          case ((None, grouped), nextArgument) if !nextArgument.startsWith("-")          => (None, grouped :+ Left(nextArgument))
-          case ((None, grouped), nextArgument) if nextArgument.startsWith("-")           => (Some(nextArgument), grouped)
+          case ((Some(command), grouped), nextArgument) =>
+            if (this.config.modifyOnOptionString contains command)
+              this.config.modifyOnOptionString(command)._1 match {
+                case NoParameter                                        => (Some(nextArgument), grouped :+ Left(command))
+                case OptionalParameter if !nextArgument.startsWith("-") => (None, grouped :+ Right(command, nextArgument))
+                case OptionalParameter if nextArgument.startsWith("-")  => (Some(nextArgument), grouped :+ Left(command))
+                case NecessaryParameter                                 => (None, grouped :+ Right(command, nextArgument))
+              } else (Some(nextArgument), grouped :+ Left(command))
+
+          case ((None, grouped), nextArgument) if !nextArgument.startsWith("-") => (None, grouped :+ Left(nextArgument))
+          case ((None, grouped), nextArgument) if nextArgument.startsWith("-")  => (Some(nextArgument), grouped)
         }) match {
         case (None, l)          => l
-        case (Some(command), l) => l :+ Left(command)
+        case (Some(command), l) =>
+          this.config.modifyOnOptionString(command)._1 match {
+            case NecessaryParameter => assert(false, "no argument provided for " + command); l // this will never be reached. it is just for the sake of completeness
+            case _                  => l :+ Left(command)
+          }
       }
 
       groupedArguments.foldLeft(this)(
@@ -73,7 +83,7 @@ object Main {
             val y = key match {
               case _ =>
                 if (conf.config.modifyOnOptionString.contains(key))
-                  conf.copy(config = conf.config.modifyOnOptionString(key)(value))
+                  conf.copy(config = conf.config.modifyOnOptionString(key)._2(value))
                 else {
                   println("Option \"" + key + "\" unavailable in current circumstance")
                   println(conf.config.modifyOnOptionString.keySet)
