@@ -113,6 +113,8 @@ trait SOGEncoding  extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPri
 
     SOG(SimpleDirectedGraph(vertices, internalEdges ++ connectingEdges))
   }
+
+  override protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[SOG]): PathDecompositionTree[SOG] = pdt
 }
 
 case class NonExpandedSOG(ordering: DirectedGraph[Int])

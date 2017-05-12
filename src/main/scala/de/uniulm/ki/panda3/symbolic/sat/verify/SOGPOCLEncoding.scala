@@ -26,10 +26,9 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
   //protected def before(pathA: Seq[Int], pathB: Seq[Int]): String = "before_" + pathA.mkString(",") + "_" + pathB.mkString(",")
 
 
-  override lazy val noAbstractsFormula: Seq[Clause] = primitivePathArray flatMap { case (p, ts) => ts filter { _.isAbstract } map { t => Clause((pathAction(p.length - 1, p, t), false)) } }
+  override lazy val noAbstractsFormula: Seq[Clause] = primitivePaths flatMap { case (p, ts) => ts filter { _.isAbstract } map { t => Clause((pathAction(p.length - 1, p, t), false)) } }
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
-    val paths = primitivePathArray
     println("Final SOG has " + rootPayload.ordering.vertices.length + " vertices")
     print("Compute Transitive reducton ... ")
     val sog = rootPayload.ordering.transitiveReduction

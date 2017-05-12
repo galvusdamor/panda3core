@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
+import de.uniulm.ki.panda3.symbolic.{DefaultLongInfo, PrettyPrintable}
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Task}
 import de.uniulm.ki.util._
 
@@ -19,7 +20,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
                                                                                                  })*/
 
   protected def pathAction(l: Int, p: Seq[Int], t: Task) = {
-    assert(p.length - 1 == l)
+    assert(p.length == l, "path " + p.mkString("(",",",")") + " does not have length " + l)
     "action!" + l + "_" + p.mkString(";") + "," + taskIndex(t)
   }
 
@@ -40,7 +41,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
 
   // returns all clauses needed for the decomposition and all paths to the last layer
-  private def generateDecompositionFormula(tree: PathDecompositionTree[Payload]): (Seq[Clause], Set[(Seq[Int], Set[Task])]) = {
+  private def generateDecompositionFormula(tree: PathDecompositionTree[Payload]): Seq[Clause] = {
     val possibleTasks = tree.possibleTasks.toSeq
     val layer = tree.layer
     val path = tree.path
@@ -55,7 +56,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       //val notAnyNonPossibleTask = domain.tasks filterNot possibleTasks map { action(layer, path, _) } map { a => Clause((a, false) :: Nil) }
       //(possibleTasksClauses ++ notAnyNonPossibleTask, Set((path, possibleTasks)))
       //println("Terminal path with " + possibleTasks.size + " tasks")
-      (possibleTasksClauses, Set((path, tree.possibleTasks)))
+      possibleTasksClauses
     } else {
       val (possibleAbstracts, possiblePrimitives) = possibleTasks.zipWithIndex partition { _._1.isAbstract }
 
@@ -80,16 +81,13 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       // recursive calls
       ///////////////////////////////
       // run recursive decent to get the formula for the downwards layers
-      val subTreeResults = tree.children map { case child => generateDecompositionFormula(child) }
-
-      val recursiveFormula = subTreeResults flatMap { _._1 }
-      val primitivePaths = subTreeResults flatMap { _._2 } toSet
+      val recursiveFormula : Seq[Clause] = tree.children flatMap  { case child => generateDecompositionFormula(child) }
 
 
       ///////////////////////////////
       // primitives must be inherited
       ///////////////////////////////
-      val keepPrimitives = primitivePositions.zipWithIndex flatMap { case (primitivePosition, primitiveIndexOnPrimitiveList) =>
+      val keepPrimitives : Seq[Clause] = primitivePositions.zipWithIndex flatMap { case (primitivePosition, primitiveIndexOnPrimitiveList) =>
 
         // put the primitive where we are told to put it and don't allow anything else
         val otherActions = Range(0, numberOfChildren) filter { _ != primitivePosition } flatMap { i => tree.children(i).possibleTasks map { task => possibleChildTasks(i)(task) } }
@@ -120,7 +118,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
 
       // 2. part: determine children according to selected method
-      val methodChildren = methodToPositions.indices flatMap { case methodIndexOnApplicableMethods =>
+      val methodChildren : Seq[Clause] = methodToPositions.indices flatMap { case methodIndexOnApplicableMethods =>
         val decompositionMethod = possibleMethods(methodIndexOnApplicableMethods)._1
         val methodIndex = possibleMethods(methodIndexOnApplicableMethods)._2
         val methodTasks = decompositionMethod.subPlan.planStepsWithoutInitGoal map { _.schema } toArray
@@ -142,13 +140,13 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       }
 
       // if there is nothing select at the current position we are not allowed to create new tasks
-      val noneApplied = {
+      val noneApplied : Seq[Clause] = {
         val allChildren = Range(0, numberOfChildren) flatMap { index => tree.children(index).possibleTasks map { task => possibleChildTasks(index)(task) } }
 
         notImpliesAllNot(possibleTasksToActions, allChildren)
       }
 
-      (possibleTasksClauses ++ keepPrimitives ++ decomposeAbstract ++ noneApplied ++ methodChildren ++ recursiveFormula, primitivePaths)
+      possibleTasksClauses ++ keepPrimitives ++ decomposeAbstract ++ noneApplied ++ methodChildren ++ recursiveFormula
     }
   }
 
@@ -187,6 +185,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     }
   }
 
+  protected def minimisePathDecompositionTree (pdt : PathDecompositionTree[Payload]) : PathDecompositionTree[Payload]
 
   lazy val (computedDecompositionFormula, primitivePaths, rootPayload) = {
     assert(initialPlan.planStepsWithoutInitGoal.length == 1)
@@ -195,18 +194,20 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     assert(initialPlanOrdering.length == 1)
 
     // first generate the path decomposition tree
-    val pathDecompositionTree = generatePathDecompositionTree(0 :: Nil, Set(initialPlanOrdering.head.schema))
+    val initialPathDecompositionTree = generatePathDecompositionTree(Nil, Set(initialPlanOrdering.head.schema))
+    val pathDecompositionTree = minimisePathDecompositionTree(initialPathDecompositionTree)
 
 
-    val (initialPlanClauses, paths) = generateDecompositionFormula(pathDecompositionTree)
-    val assertedTask: Clause = Clause(pathAction(0, 0 :: Nil, initialPlanOrdering.head.schema))
+    val initialPlanClauses = generateDecompositionFormula(pathDecompositionTree)
+    val paths = pathDecompositionTree.primitivePaths
+    val assertedTask: Clause = Clause(pathAction(0, Nil, initialPlanOrdering.head.schema))
 
 
     val payload: Payload = pathDecompositionTree.payload
 
     //println(dec.length)
 
-    val pPaths = paths.toSeq sortWith { case ((p1, _), (p2, _)) => PathBasedEncoding.pathSortingFunction(p1, p2) }
+    val pPaths = paths sortWith { case ((p1, _), (p2, _)) => PathBasedEncoding.pathSortingFunction(p1, p2) }
 
     // create graph of the paths
     {
@@ -223,8 +224,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     (initialPlanClauses :+ assertedTask, pPaths, payload)
   }
 
-  protected final lazy val primitivePathArray          = primitivePaths.toArray
-  protected final lazy val primitivePathsOnlyPathArray = primitivePathArray map { _._1 }
+  protected final lazy val primitivePathsOnlyPath = primitivePaths map { _._1 }
 
   override lazy val decompositionFormula: Seq[Clause] = computedDecompositionFormula
 }
@@ -233,13 +233,29 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
                                           methodToPositions: Array[Array[Int]],
                                           primitivePositions: Array[Int],
                                           payload: Payload,
-                                          children: Array[PathDecompositionTree[Payload]]) {
-  lazy val layer: Int = path.length - 1
-
+                                          children: Array[PathDecompositionTree[Payload]]) extends DefaultLongInfo{
   @elidable(ASSERTION)
   val assertion = {
     children.zipWithIndex foreach { case (child, i) => assert(child.path == path :+ i) }
   }
+
+  lazy val layer: Int = path.length
+
+
+  val primitivePaths : Array[(Seq[Int], Set[Task])] = if (children.length == 0) Array((path, possibleTasks)) else children flatMap {_.primitivePaths}
+
+  lazy val getAllNodesBelow : Array[PathDecompositionTree[Payload]] = (children flatMap {_.getAllNodesBelow}) :+ this
+
+  lazy val treeBelowAsGraph : DirectedGraph[PathDecompositionTree[Payload]]= {
+
+    val allNodes = getAllNodesBelow
+    val allEdges = getAllNodesBelow flatMap {t => t.children map {c => (t,c)}}
+
+    SimpleDirectedGraph(allNodes,allEdges)
+  }
+
+  /** returns a detailed information about the object */
+  override def longInfo: String = "T:" + possibleTasks.size + " P:" + path.mkString(",")
 }
 
 object PathBasedEncoding {
