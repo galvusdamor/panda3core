@@ -172,7 +172,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
     timeCapsule start VerifyRunner.TRANSFORM_DIMACS
     println("READY TO WRITE")
     val writer = new BufferedWriter(new FileWriter(new File(VerifyRunner.fileDir + "__cnfString")))
-    val atomMap = encoder.miniSATString(usedFormula, writer)
+    val atomMap = encoder.miniSATString(usedFormula.toArray, writer)
     println("FLUSH")
     writer.flush()
     writer.close()

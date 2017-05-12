@@ -57,6 +57,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   } filter isFlawAllowed
 
   lazy val planStepsWithoutInitGoal: Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
+  lazy val planStepSchemaArray     : Array[Task]   = planStepsWithoutInitGoal map { _.schema } toArray
 
   lazy val planStepsAndRemovedPlanStepsWithoutInitGoal: Seq[PlanStep] = planStepsAndRemovedPlanSteps filter { ps => ps != init && ps != goal }
 
@@ -519,7 +520,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     GroundTask(goal.schema, arguments)
   }
 
-  lazy val normalise: Plan = Plan(planSteps,causalLinks,orderingConstraintsWithoutRemovedPlanSteps,parameterVariableConstraints,init,goal,isModificationAllowed,isFlawAllowed,Map(),Map())
+  lazy val normalise: Plan = Plan(planSteps, causalLinks, orderingConstraintsWithoutRemovedPlanSteps, parameterVariableConstraints, init, goal, isModificationAllowed, isFlawAllowed, Map(),
+                                  Map())
 
 
   override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[Plan] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[Plan].productIterator) } else false

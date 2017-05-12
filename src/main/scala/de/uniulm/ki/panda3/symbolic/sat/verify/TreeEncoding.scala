@@ -176,5 +176,9 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
   override protected def computeTaskSequenceArrangement(possibleMethods: Array[DecompositionMethod],
                                                         possiblePrimitives: scala.Seq[Task]): (Array[Array[Int]], Array[Int], Array[Set[Task]], Unit) = ???
 
-  override protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[Unit]): PathDecompositionTree[Unit] = pdt
+  override protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[Unit]): PathDecompositionTree[Unit] = {
+    val dontRemovePrimitives: Seq[Set[Task]] = pdt.primitivePaths.toSeq map { _ => Set[Task]() }
+
+    pdt.restrictPathDecompositionTree(dontRemovePrimitives)
+  }
 }

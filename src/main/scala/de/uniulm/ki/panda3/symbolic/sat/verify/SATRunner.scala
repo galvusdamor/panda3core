@@ -114,7 +114,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     //println("READY")
     //System.in.read()
     val stateFormula = encoder.stateTransitionFormula ++ encoder.initialState ++ (if (includeGoal) encoder.goalState else Nil) ++ encoder.noAbstractsFormula
-    val usedFormula = encoder.decompositionFormula ++ stateFormula
+    val usedFormula = (encoder.decompositionFormula ++ stateFormula).toArray
+    println("NUMBER OF CLAUSES " + usedFormula.length)
+    println("NUMBER OF STATE CLAUSES " + stateFormula.length)
+    println("NUMBER OF DECOMPOSITION CLAUSES " + encoder.decompositionFormula.length)
+
+
     //println("Done")
     //System.in.read()
     timeCapsule stop Timings.GENERATE_FORMULA

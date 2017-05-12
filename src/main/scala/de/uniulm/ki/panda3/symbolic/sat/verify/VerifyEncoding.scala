@@ -164,9 +164,7 @@ trait VerifyEncoding {
   def goalState: Seq[Clause]
 
 
-  def miniSATString(formulasSeq: Seq[Clause], writer: BufferedWriter): Map[String, Int] = {
-    val formulas = formulasSeq.toArray
-    println("NUMBER OF CLAUSES " + formulas.length)
+  def miniSATString(formulas: Array[Clause], writer: BufferedWriter): Map[String, Int] = {
 
     // generate the atoms to int map
     val atomIndices = new mutable.HashMap[String, Int]()

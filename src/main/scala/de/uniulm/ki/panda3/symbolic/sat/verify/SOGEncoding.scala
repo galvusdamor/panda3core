@@ -11,7 +11,7 @@ import scala.collection.{mutable, Seq}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait SOGEncoding  extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrimitivePlanEncoding {
+trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrimitivePlanEncoding {
 
   protected final val useImplicationForbiddenness = false
 
@@ -59,7 +59,7 @@ trait SOGEncoding  extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPri
     print("MINI " + possibleMethods.length + " " + possiblePrimitives.length + " ... ")
     val lb = methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max
     val optimiser =
-      //OptimalBranchAndBoundOptimiser(minimiseChildrenWithAbstractTasks, lowerBound = lb) //, minimiseAbstractTaskOccurencesMetric)
+    //OptimalBranchAndBoundOptimiser(minimiseChildrenWithAbstractTasks, lowerBound = lb) //, minimiseAbstractTaskOccurencesMetric)
       GreedyNumberOfAbstractChildrenOptimiser
 
     val g = optimiser.minimalSOG(methodTaskGraphs)
@@ -114,7 +114,11 @@ trait SOGEncoding  extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPri
     SOG(SimpleDirectedGraph(vertices, internalEdges ++ connectingEdges))
   }
 
-  override protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[SOG]): PathDecompositionTree[SOG] = pdt
+  override protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[SOG]): PathDecompositionTree[SOG] = {
+    val dontRemovePrimitives: Seq[Set[Task]] = pdt.primitivePaths.toSeq map { _ => Set[Task]() }
+
+    pdt.restrictPathDecompositionTree(dontRemovePrimitives)
+  }
 }
 
 case class NonExpandedSOG(ordering: DirectedGraph[Int])

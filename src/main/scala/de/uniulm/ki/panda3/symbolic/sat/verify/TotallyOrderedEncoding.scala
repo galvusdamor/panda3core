@@ -1,13 +1,15 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, DecompositionMethod, Task, Domain}
+import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic.{Predicate, Literal}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.{NativeOptimiser, GreedyNumberOfChildrenFromTotallyOrderedOptimiser, GreedyNumberOfAbstractChildrenOptimiser}
 import de.uniulm.ki.util._
 
+import scala.annotation.elidable
+import scala.annotation.elidable._
 import scala.collection.{mutable, Seq}
 
 /**
@@ -134,6 +136,7 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
     (tasksPerMethodToChildrenMapping, childrenForPrimitives, childrenIndicesToPossibleTasks map { _.toSet } toArray, ())
   }
 
+
   protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[Unit]): PathDecompositionTree[Unit] = {
     Dot2PdfCompiler.writeDotToFile(pdt.treeBelowAsGraph, "pdt.pdf")
 
@@ -143,10 +146,10 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
     // perform reachability on this set of actions
     val initialState = initialPlan.init.schema.effectsAsPredicateBool collect { case (predicate, true) => predicate } toSet
 
-    sortedPaths.foldLeft(initialState)(
+    val (_, tasksToRemoveFromPaths) = sortedPaths.foldLeft[(Set[Predicate], Seq[Set[Task]])]((initialState, Nil))(
       {
-        case (state, (path, tasks)) =>
-          val (applicable, nonApplicable) = tasks partition { t => t.preconditionsAsPredicateBool forall { case (p, true) => state contains p } }
+        case ((state, toRemove), (path, tasks)) =>
+          val (applicable, nonApplicable) = tasks partition { t => t.isPrimitive && (t.preconditionsAsPredicateBool forall { case (p, true) => state contains p }) }
 
           if (nonApplicable.nonEmpty)
             println("Found " + nonApplicable.size + " non applicable tasks at " + path + ". Still applicable " + applicable.size)
@@ -155,27 +158,21 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
           val reachableState = state ++ (applicable flatMap { _.effectsAsPredicateBool collect { case (predicate, true) => predicate } })
 
           // return the reachable state
-          reachableState
+          (reachableState, toRemove :+ nonApplicable)
       })
 
-    System exit 0
 
+    val npdt = pdt.restrictPathDecompositionTree(tasksToRemoveFromPaths)
 
-    pdt
+    Dot2PdfCompiler.writeDotToFile(npdt.treeBelowAsGraph, "pdtN.pdf")
+
+    /*val dontRemovePrimitives: Seq[Set[Task]] = pdt.primitivePaths.toSeq map { _ => Set[Task]() }
+
+    pdt.restrictPathDecompositionTree(dontRemovePrimitives)*/
+    npdt
   }
 
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 
