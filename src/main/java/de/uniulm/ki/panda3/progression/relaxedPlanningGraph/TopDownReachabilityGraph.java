@@ -15,7 +15,7 @@ import java.util.*;
  */
 public class TopDownReachabilityGraph {
 
-    private BitSet root;
+    private BitSet root = null;
     private BitSet reachableTasks[]; // maps a task to itself and all TASKS that are reachable via decomposition
     private BitSet reachableActions[]; // maps a task to (possibly) itself and all ACTIONS that are reachable via decomposition
 
@@ -23,14 +23,8 @@ public class TopDownReachabilityGraph {
     private int[] taskToScc; // maps a task to its SCC
     private BitSet[] scc2reachableTasks; // maps an SCC to all TASKS reachable from it
 
-    static private HashMap<Task, Integer> internalMap;
-
-    static public boolean isInitialized() {
-        return (internalMap != null);
-    }
-
-    static public int mappingget(Task gt) {
-        return internalMap.get(gt) - ProgressionNetwork.flatProblem.numOfStateFeatures;
+    static public int mappingget(Task t) {
+        return ProgressionNetwork.taskToIndex.get(t);
     }
 
     static public int[] maxDecompDepth; // this is the maximum decomposition depth that is left before tasks are primitive
@@ -43,11 +37,9 @@ public class TopDownReachabilityGraph {
 
     }*/
 
-    public TopDownReachabilityGraph(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions, HashMap<Task, Integer> mapping) {
-        System.out.println("Calculating top down reachability...");
+    public TopDownReachabilityGraph(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, int numTasks) {
+        System.out.println("Calculating top down reachability ...");
         long time = System.currentTimeMillis();
-
-        this.internalMap = mapping;
 
         // build a graph that, for each task, has edges to every subtask of every method decomposing it
         this.reachableTasks = new BitSet[numTasks];
@@ -104,7 +96,7 @@ public class TopDownReachabilityGraph {
             tarjan(v);
             v = root.nextSetBit(v + 1);
         }
-        System.out.println("Found " + (iScc + 1) + " SCCs with up to " + biggestScc + " tasks.");
+        System.out.println(" - Found " + (iScc + 1) + " SCCs with up to " + biggestScc + " tasks.");
 
         // resize array with sccs
         int[][] old = scc;
@@ -153,7 +145,7 @@ public class TopDownReachabilityGraph {
             }
         }
 
-        System.out.println("Reachability calculated in " + (System.currentTimeMillis() - time) + " ms.");
+        System.out.println(" - Reachability calculated in " + (System.currentTimeMillis() - time) + " ms.");
     }
 
     private BitSet finished;

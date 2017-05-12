@@ -20,9 +20,9 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
 
     public static SasPlusProblem flatProblem;
-    public static Map<Integer, Task> indexToTask;
+    public static Task[] indexToTask;
     public static Map<Task, Integer> taskToIndex;
-    public static HashMap<Task, List<method>> methods;
+    public static Map<Task, List<method>> methods;
     public static Set<Integer> ShopPrecActions = new HashSet<>();
 
 

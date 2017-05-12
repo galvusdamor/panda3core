@@ -559,7 +559,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         if (PrimitivePlan.length() > 0) {
                             PrimitivePlan += "&";
                         }
-                        String primName = ProgressionNetwork.indexToTask.get(a).longInfo();
+                        String primName = ProgressionNetwork.indexToTask[(Integer) a].longInfo();
                         PrimitivePlan += primName;
                         if (primName.startsWith("p_") && (primName.charAt(2) == '0' ||
                                 primName.charAt(2) == '1' ||

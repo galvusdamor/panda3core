@@ -108,7 +108,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
         RCG.numTasks = createTaskLookupTable(allActions, getGroundTasks(methods)) - ProgressionNetwork.flatProblem.numOfStateFeatures;
 
         if (topDownReachability || orderingInvariants) {
-            tdRechability = new TopDownReachabilityGraph(methods, initialTasks, RCG.numTasks, ProgressionNetwork.flatProblem.numOfOperators, TaskToIndex);
+            tdRechability = new TopDownReachabilityGraph(methods, initialTasks, RCG.numTasks);
             //tdRechability.calcOrderingInvariants(RCG.numTasks,methods, IndexToTask);
         }
 
@@ -537,7 +537,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
                     }
                     sb.append(" - ");
                     if (action < ProgressionNetwork.flatProblem.numOfOperators) {
-                        sb.append(ProgressionNetwork.indexToTask.get(action).mediumInfo());
+                        sb.append(ProgressionNetwork.indexToTask[action].mediumInfo());
                     } else
                         sb.append(RCG.IndexToMethodGet(action).m.name());
                 }

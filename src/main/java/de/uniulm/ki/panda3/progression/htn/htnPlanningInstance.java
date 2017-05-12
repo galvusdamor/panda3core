@@ -71,14 +71,33 @@ public class htnPlanningInstance {
 
         ProgressionNetwork.flatProblem = d.sasPlusRepresentation().get().sasPlusProblem();
         Tuple2<Map<Integer, Task>, Map<Task, Integer>> x = ProgressionNetwork.flatProblem.restrictTo(indexToTask.keySet(), indexToTask);
-        ProgressionNetwork.indexToTask = x._1();
-        ProgressionNetwork.taskToIndex = x._2();
+        indexToTask = x._1();
+        taskToIndex = x._2();
+
+        // create permanent mappings
+        ProgressionNetwork.taskToIndex = new HashMap<>();
+        assert ((d.abstractTasks().size() + d.primitiveTasks().size()) == d.tasks().size());
+        ProgressionNetwork.indexToTask = new Task[d.tasks().size()];
+
+        int iAbs = taskToIndex.size(); // currently it contains solely the actions -> put abstracts behind
+        scala.collection.Iterator<Task> iter = d.abstractTasks().iterator();
+        while (iter.hasNext()) {
+            Task t = iter.next();
+            ProgressionNetwork.taskToIndex.put(t, iAbs);
+            ProgressionNetwork.indexToTask[iAbs] = t;
+            iAbs++;
+        }
+        ProgressionNetwork.taskToIndex.putAll(taskToIndex);
+
+        for (int i = 0; i < indexToTask.size(); i++) {
+            ProgressionNetwork.indexToTask[i] = indexToTask.get(i);
+        }
 
         HashMap<Task, List<method>> methods = getEfficientMethodRep(methodsByTask);
         finalizeMethods(methods);
-        ProgressionNetwork.methods = methods;
+        //ProgressionNetwork.methods = methods;
 
-        if (p.planStepsWithoutInitGoal().size() == 1) {
+        if (!(p.planStepsWithoutInitGoal().size() == 1)) {
             System.out.println("Error: Progression search algorithm found more than one task in the initial task network.");
             System.exit(-1);
         }
@@ -89,22 +108,17 @@ public class htnPlanningInstance {
         initialTasks.add(ps);
         ProgressionNetwork initialNode = new ProgressionNetwork(ProgressionNetwork.flatProblem.getS0(), initialTasks);
 
-        Set<Task> allActions;
-        allActions = new HashSet<>();
-        scala.collection.Iterator<Task> iter = d.primitiveTasks().iterator();
-        while (iter.hasNext()) {
-            allActions.add(iter.next());
-        }
+        assert (checkDomain(taskToIndex.keySet(), d.primitiveTasks().iterator(), indexToTask.keySet()));
 
         if (doBFS)
             initialNode.heuristic = new proBFS();
         else if (doDFS)
             initialNode.heuristic = new proDFS();
         else if (heuristic instanceof RelaxedCompositionGraph) {
-            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hLmCut, methods, initialTasks, allActions);
+            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hLmCut, methods, initialTasks, taskToIndex.keySet());
         } else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
-            initialNode.heuristic = new RCG(methods, initialTasks, allActions, heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
+            initialNode.heuristic = new RCG(methods, initialTasks, taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
         } else if (heuristic instanceof GreedyProgression$)
             initialNode.heuristic = new greedyProgression();
         else {
@@ -182,7 +196,7 @@ public class htnPlanningInstance {
             System.out.println("\nFound a solution:");
             for (Object a : solution) {
                 if (a instanceof Integer)
-                    System.out.println(n + " " + proPrinter.actionToStr(ProgressionNetwork.indexToTask.get(a)));
+                    System.out.println(n + " " + proPrinter.actionToStr(ProgressionNetwork.indexToTask[(Integer)a]));
                 else
                     System.out.println(n + " " + ((GroundedDecompositionMethod) a).longInfo());
                 n++;
@@ -193,10 +207,31 @@ public class htnPlanningInstance {
         return solution != null;
     }
 
+    private boolean checkDomain(Set<Task> tasks, scala.collection.Iterator<Task> iter, Set<Integer> integers) {
+        if (integers.size() != ProgressionNetwork.flatProblem.numOfOperators)
+            return false;
+        for (int i = 0; i < ProgressionNetwork.flatProblem.numOfOperators; i++)
+            if (!integers.contains(i)) {
+                System.out.println("Index mapping is discontiguous: " + i + "is not included");
+                return false;
+            }
+
+
+        Set<Task> allActions;
+        allActions = new HashSet<>();
+        while (iter.hasNext()) {
+            allActions.add(iter.next());
+        }
+        Set<Task> newSet = new HashSet<>();
+        newSet.addAll(tasks);
+        newSet.addAll(allActions);
+        return (tasks.size() == allActions.size()) && (allActions.size() == newSet.size());
+    }
+
     private void finalizeMethods(HashMap<Task, List<method>> methods) {
         for (List<method> y : methods.values()) {
             for (method z : y) {
-                z.finalizeMethod();
+                z.finalizeMethod(methods);
             }
         }
     }
