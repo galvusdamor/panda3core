@@ -30,10 +30,9 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
     val paths = primitivePathArray
-    assert(rootPayloads.length == 1)
-    println("Final SOG has " + rootPayloads.head.ordering.vertices.length + " vertices")
+    println("Final SOG has " + rootPayload.ordering.vertices.length + " vertices")
     print("Compute Transitive reducton ... ")
-    val sog = rootPayloads.head.ordering.transitiveReduction
+    val sog = rootPayload.ordering.transitiveReduction
     println("done")
 
     /*println(sog.isAcyclic)

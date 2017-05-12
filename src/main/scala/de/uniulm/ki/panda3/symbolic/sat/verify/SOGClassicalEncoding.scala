@@ -22,8 +22,7 @@ case class SOGClassicalEncoding(domain: Domain, initialPlan: Plan, taskSequenceL
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
     val paths = primitivePathArray
-    assert(rootPayloads.length == 1)
-    val sog = rootPayloads.head.ordering.transitiveReduction
+    val sog = rootPayload.ordering.transitiveReduction
 
     println(sog.isAcyclic)
 
