@@ -69,14 +69,6 @@ public class HtnCompositionEncoding extends SasPlusProblem {
         int[][] tPrecLists = new int[numAnM][];
         int[][] tAddLists = new int[numAnM][];
         int[][] tDelLists = new int[numAnM][];
-        List<Integer>[] precToMethod = new List[numExtenedStateFeatures];
-        for (int i = 0; i < this.numExtenedStateFeatures; i++)
-            precToMethod[i] = new ArrayList<>();
-
-        /*
-        HashMap<Integer, Set<Integer>> tHtnAddToTask = new HashMap<>();
-        for (int i = firstHtnIndex; i <= lastOverallIndex; i++)
-            tHtnAddToTask.put(i, new HashSet<>());*/
 
         /**
          * The original actions get an additional prec that represents its top-down-reachability and an additional add
@@ -99,7 +91,6 @@ public class HtnCompositionEncoding extends SasPlusProblem {
                 tAddLists[iA][iE] = this.addLists[iA][iE];
             }
             tAddLists[iA][iE] = firstTaskCompIndex + iA;
-            //tHtnAddToTask.get(firstTaskCompIndex + iA).add(iA);
         }
 
         /**
@@ -115,14 +106,11 @@ public class HtnCompositionEncoding extends SasPlusProblem {
                 Task t = m.subtasks[iSubTask];
                 int taskIndex = getTaskIndex(t);
                 tPrecLists[methodI][iSubTask] = taskIndex;
-                if (!precToMethod[taskIndex].contains(methodI)) // might be methods that have the same subtask twice
-                    precToMethod[taskIndex].add(methodI);
             }
 
             int compTaskIndex = getTaskIndex(m.m.abstractTask());
             tAddLists[methodI] = new int[1];
             tAddLists[methodI][0] = compTaskIndex;
-            //tHtnAddToTask.get(compTaskIndex).add(methodI);
         }
         this.numPrecs = tNumPrecs;
         this.precLists = tPrecLists;
@@ -134,44 +122,6 @@ public class HtnCompositionEncoding extends SasPlusProblem {
         for (int i = this.delLists.length; i < tDelLists.length; i++)
             tDelLists[i] = new int[0];
         this.delLists = tDelLists;
-
-        /*
-        // create prec-to-task-mapping
-        // state vars
-        int[][] tPrecToTask = new int[numExtenedStateFeatures][];
-        for (int i = 0; i < firstHtnIndex; i++)
-            tPrecToTask[i] = this.precToTask[i];
-
-        // top down reachability vars
-        for (int i = 0; i < numOfOperators; i++) {
-            tPrecToTask[firstTdrIndex + i] = new int[1];
-            tPrecToTask[firstTdrIndex + i][0] = i;
-        }
-
-        // composition reachability vars
-        for (int i = firstTaskCompIndex; i <= lastTaskCompIndex; i++) {
-            List<Integer> mapping = precToMethod[i];
-            tPrecToTask[i] = new int[mapping.size()];
-            for (int j = 0; j < mapping.size(); j++)
-                tPrecToTask[i][j] = mapping.get(j);
-        }
-        this.precToTask = tPrecToTask;
-
-        // generate lists mapping literal to lists of operators having it as add-effect
-        int[][] tAddToTask = new int[numExtenedStateFeatures][];
-        for (int i = 0; i < this.firstHtnIndex; i++)
-            tAddToTask[i] = addToTask[i];
-
-        for (int i = this.firstHtnIndex; i <= lastOverallIndex; i++) {
-            Set<Integer> ops = tHtnAddToTask.get(i);
-            tAddToTask[i] = new int[ops.size()];
-            Iterator<Integer> iter = ops.iterator();
-            int j = 0;
-            while (iter.hasNext())
-                tAddToTask[i][j++] = iter.next();
-        }
-        this.addToTask = tAddToTask;
-        */
 
         this.numOfStateFeatures = numExtenedStateFeatures;
         this.calcInverseMappings();
