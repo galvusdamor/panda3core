@@ -174,16 +174,10 @@ public class SasPlusProblem {
         expandedDelLists = new int[numOfOperators][];
         numPrecs = new int[numOfOperators];
 
-        /*
-        Map<Integer, List<Integer>> precToTaskTemp = new HashMap<>();
-        Map<Integer, List<Integer>> addEffToTaskTemp = new HashMap<>();
-*/
-
         for (int i = 0; i < numOfOperators; i++) {
             List<Integer> precList = new ArrayList<>();
             List<Integer> addList = new ArrayList<>();
             List<Integer> delList = new ArrayList<>();
-            //List<Integer> expandedDelList = new ArrayList<>();
 
             // proceed prevail conditions
             for (int j = 0; j < numPrevailConditions[i]; j++) {
@@ -209,15 +203,6 @@ public class SasPlusProblem {
                     }
                 }
 
-                /*
-                // fill extended del-list with all literals that threat the value that is set
-                int added = firstIndex[varIndex] + valToIndex;
-                for (int k = firstIndex[varIndex]; k <= lastIndex[varIndex]; k++) {
-                    if (k != added) {
-                        expandedDelList.add(k);
-                    }
-                }*/
-
                 // anyway, the value is set
                 addList.add(firstIndex[varIndex] + valToIndex);
 
@@ -230,37 +215,10 @@ public class SasPlusProblem {
 
             numPrecs[i] = precList.size();
 
-            /*
-            // fill reverse precondition list
-            for (int absoluteIndex : precList) {
-                List<Integer> tasksWithPrec;
-                if (precToTaskTemp.containsKey(absoluteIndex)) {
-                    tasksWithPrec = precToTaskTemp.get(absoluteIndex);
-                } else {
-                    tasksWithPrec = new ArrayList<>();
-                    precToTaskTemp.put(absoluteIndex, tasksWithPrec);
-                }
-                tasksWithPrec.add(i);
-            }*/
-
-            /*
-            // fill reverse add list
-            for (int absoluteIndex : addList) {
-                List<Integer> tasksWithAddEff;
-                if (addEffToTaskTemp.containsKey(absoluteIndex)) {
-                    tasksWithAddEff = addEffToTaskTemp.get(absoluteIndex);
-                } else {
-                    tasksWithAddEff = new ArrayList<>();
-                    addEffToTaskTemp.put(absoluteIndex, tasksWithAddEff);
-                }
-                tasksWithAddEff.add(i);
-            }*/
-
             // copy temporal structures to arrays
             this.precLists[i] = new int[precList.size()];
             this.addLists[i] = new int[addList.size()];
             this.delLists[i] = new int[delList.size()];
-            //this.expandedDelLists[i] = new int[expandedDelList.size()];
             for (int j = 0; j < precList.size(); j++) {
                 this.precLists[i][j] = precList.get(j);
             }
@@ -270,36 +228,8 @@ public class SasPlusProblem {
             for (int j = 0; j < delList.size(); j++) {
                 this.delLists[i][j] = delList.get(j);
             }
-            /*for (int j = 0; j < expandedDelList.size(); j++) {
-                this.expandedDelLists[i][j] = expandedDelList.get(j);
-            }*/
         }
 
-        // copy temporal structures to arrays
-        /*
-        this.precToTask = new int[numOfOperators][];
-        this.addToTask = new int[numOfOperators][];
-        for (int i = 0; i < numOfOperators; i++) {
-            // fill precToTask-list
-            if (precToTaskTemp.containsKey(i)) {
-                List<Integer> tasks = precToTaskTemp.get(i);
-                this.precToTask[i] = new int[tasks.size()];
-                for (int j = 0; j < tasks.size(); j++)
-                    this.precToTask[i][j] = tasks.get(j);
-            } else {
-                this.precToTask[i] = new int[0];
-            }
-
-            // fill precToAdd-list
-            if (addEffToTaskTemp.containsKey(i)) {
-                List<Integer> tasks = addEffToTaskTemp.get(i);
-                this.addToTask[i] = new int[tasks.size()];
-                for (int j = 0; j < tasks.size(); j++)
-                    this.addToTask[i][j] = tasks.get(j);
-            } else {
-                this.addToTask[i] = new int[0];
-            }
-        }*/
         calcInverseMappings();
         calcExtendedDelLists();
 
