@@ -13,7 +13,6 @@ import scala.collection.*;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.BitSet;
 import java.util.Iterator;
@@ -150,108 +149,6 @@ public class SasPlusProblem {
         return res + "}";
     }
 
-    // translations
-    // int -> Object
-    // Object -> int
-    // action in old model <-> action in new model
-
-    public GroundLiteral[] symbolicStateFeatures;
-    public GroundTask[] primitiveTasks;
-
-    public void prepareSymbolicRep(Domain domain, Plan problem) {
-        symbolicStateFeatures = new GroundLiteral[numOfStateFeatures];
-        primitiveTasks = new GroundTask[numOfOperators];
-
-        // prepare lookup tables
-        Map<String, Predicate> allPredicates = new HashMap<>();
-        scala.collection.Iterator<Predicate> iter = domain.predicates().iterator();
-        while (iter.hasNext()) {
-            Predicate p = iter.next();
-            allPredicates.put(p.name().toLowerCase(), p);
-        }
-
-        Map<String, Constant> allConsts = new HashMap<>();
-        scala.collection.Iterator<Constant> iter2 = domain.constants().iterator();
-        while (iter2.hasNext()) {
-            Constant c = iter2.next();
-            allConsts.put(c.name().toLowerCase(), c);
-        }
-
-        Map<String, Task> allTasks = new HashMap<>();
-        scala.collection.Iterator<Task> iter3 = domain.tasks().iterator();
-        while (iter3.hasNext()) {
-            Task t = iter3.next();
-            if (t.isPrimitive())
-                allTasks.put(t.name().toLowerCase(), t);
-        }
-
-        // translate literals
-        for (int iVar = 0; iVar < numOfVars; iVar++) {
-            for (int iVal = 0; iVal < ranges[iVar]; iVal++) {
-                String name = values[iVar][iVal];
-                boolean isPos = true;
-                if (name.startsWith(negation)) {
-                    isPos = false;
-                    name = name.substring(negation.length());
-                }
-                name = name.replaceAll("\\(", " ").replaceAll("\\)", " ").replaceAll("\\, ", " ").trim().toLowerCase();
-                if (name.equals(noVal)) {
-                    // todo none-of-them implementieren
-                    System.out.println(noVal);
-                } else if (name.equals("__goal")) {
-                    System.out.println();
-                } else {
-                    String[] split = name.split(" ");
-                    Predicate p = allPredicates.get(split[0]);
-                    seqProviderList<Constant> params = new seqProviderList<>();
-                    for (int i = 1; i < split.length; i++) {
-                        Constant c = allConsts.get(split[i]);
-                        params.add(c);
-                    }
-                    GroundLiteral gl = new GroundLiteral(p, isPos, params.result());
-                    symbolicStateFeatures[firstIndex[iVar] + iVal] = gl;
-                }
-            }
-        }
-
-        // translate actions
-        for (int iOp = 0; iOp < numOfOperators; iOp++) {
-            String name = opNames[iOp].toLowerCase();
-            String[] split = name.split(" ");
-            Task t = allTasks.get(split[0]);
-
-            seqProviderList<Constant> params = new seqProviderList<>();
-            for (int i = 1; i < split.length; i++) {
-                Constant c = allConsts.get(split[iOp]);
-                params.add(c);
-            }
-
-            Seq<Constant> paramSeq = params.result();
-            GroundTask oldTask = new GroundTask(t, paramSeq);
-            //SymbolicUnionFind.constructVariableUnionFind(t).apply()
-
-            // create new task
-            int varId = 0;
-            seqProviderList<Variable> vars = new seqProviderList<>();
-            for (int i = 0; i < params.size(); i++) {
-                Variable v = new Variable(varId++, "v-" + params.get(i).name(), t.parameters().apply(i).sort());
-                vars.add(v);
-            }
-            seqProviderList<Literal> precLits = new seqProviderList<>();
-
-
-            And<Literal> prec = new And<Literal>(precLits.result());
-
-            seqProviderList<Literal> effLits = new seqProviderList<>();
-
-
-            And<Literal> eff = new And<Literal>(effLits.result());
-
-            Task newT = new ReducedTask(name, true, vars.result(), new seqProviderList<Variable>().result(), new seqProviderList<VariableConstraint>().result(), prec, eff);
-
-        }
-    }
-
     public void prepareEfficientRep() {
         numOfStateFeatures = 0;
         firstIndex = new int[numOfVars];
@@ -277,14 +174,16 @@ public class SasPlusProblem {
         expandedDelLists = new int[numOfOperators][];
         numPrecs = new int[numOfOperators];
 
+        /*
         Map<Integer, List<Integer>> precToTaskTemp = new HashMap<>();
         Map<Integer, List<Integer>> addEffToTaskTemp = new HashMap<>();
+*/
 
         for (int i = 0; i < numOfOperators; i++) {
             List<Integer> precList = new ArrayList<>();
             List<Integer> addList = new ArrayList<>();
             List<Integer> delList = new ArrayList<>();
-            List<Integer> expandedDelList = new ArrayList<>();
+            //List<Integer> expandedDelList = new ArrayList<>();
 
             // proceed prevail conditions
             for (int j = 0; j < numPrevailConditions[i]; j++) {
@@ -310,13 +209,14 @@ public class SasPlusProblem {
                     }
                 }
 
+                /*
                 // fill extended del-list with all literals that threat the value that is set
                 int added = firstIndex[varIndex] + valToIndex;
                 for (int k = firstIndex[varIndex]; k <= lastIndex[varIndex]; k++) {
                     if (k != added) {
                         expandedDelList.add(k);
                     }
-                }
+                }*/
 
                 // anyway, the value is set
                 addList.add(firstIndex[varIndex] + valToIndex);
@@ -330,6 +230,7 @@ public class SasPlusProblem {
 
             numPrecs[i] = precList.size();
 
+            /*
             // fill reverse precondition list
             for (int absoluteIndex : precList) {
                 List<Integer> tasksWithPrec;
@@ -340,8 +241,9 @@ public class SasPlusProblem {
                     precToTaskTemp.put(absoluteIndex, tasksWithPrec);
                 }
                 tasksWithPrec.add(i);
-            }
+            }*/
 
+            /*
             // fill reverse add list
             for (int absoluteIndex : addList) {
                 List<Integer> tasksWithAddEff;
@@ -352,13 +254,13 @@ public class SasPlusProblem {
                     addEffToTaskTemp.put(absoluteIndex, tasksWithAddEff);
                 }
                 tasksWithAddEff.add(i);
-            }
+            }*/
 
             // copy temporal structures to arrays
             this.precLists[i] = new int[precList.size()];
             this.addLists[i] = new int[addList.size()];
             this.delLists[i] = new int[delList.size()];
-            this.expandedDelLists[i] = new int[expandedDelList.size()];
+            //this.expandedDelLists[i] = new int[expandedDelList.size()];
             for (int j = 0; j < precList.size(); j++) {
                 this.precLists[i][j] = precList.get(j);
             }
@@ -368,12 +270,13 @@ public class SasPlusProblem {
             for (int j = 0; j < delList.size(); j++) {
                 this.delLists[i][j] = delList.get(j);
             }
-            for (int j = 0; j < expandedDelList.size(); j++) {
+            /*for (int j = 0; j < expandedDelList.size(); j++) {
                 this.expandedDelLists[i][j] = expandedDelList.get(j);
-            }
+            }*/
         }
 
         // copy temporal structures to arrays
+        /*
         this.precToTask = new int[numOfOperators][];
         this.addToTask = new int[numOfOperators][];
         for (int i = 0; i < numOfOperators; i++) {
@@ -396,7 +299,9 @@ public class SasPlusProblem {
             } else {
                 this.addToTask[i] = new int[0];
             }
-        }
+        }*/
+        calcInverseMappings();
+        calcExtendedDelLists();
 
         s0List = new int[numOfVars];
         for (int i = 0; i < numOfVars; i++) {
@@ -711,6 +616,10 @@ public class SasPlusProblem {
 
     public Tuple2<Map<Integer, Task>, Map<Task, Integer>> restrictTo(Set<Integer> I, Map<Integer, Task> i2t) {
         int actionCount = I.size();
+        System.out.print("Reducing SAS+ domain ... ");
+        int orgOpNum = this.numOfOperators;
+        int orgStateNum = this.numOfStateFeatures;
+
         int[] actionNewToOld = new int[actionCount];
         Map<Task, Integer> taskToIndex = new HashMap<>();
         Map<Integer, Task> indexToTask = new HashMap<>();
@@ -745,11 +654,10 @@ public class SasPlusProblem {
         int[] indexToMutexGroupNew = new int[usedFacts.size()];
         int[] factOldToNew = new int[numOfStateFeatures];
         int[] factNewToOld = new int[usedFacts.size()];
-        String[][] valuesNew;
 
         for (int i = 0; i < usedFactsOrdered.length; i++) {
             factOldToNew[usedFactsOrdered[i]] = i;
-            factOldToNew[i] = usedFactsOrdered[i];
+            factNewToOld[i] = usedFactsOrdered[i];
             indexToMutexGroupNew[i] = indexToMutexGroup[usedFactsOrdered[i]];
         }
 
@@ -792,9 +700,8 @@ public class SasPlusProblem {
             s0ListNew[i] = factOldToNew[s0List[i]];
 
         int[] gListNew = new int[gList.length];
-        for (int i = 0; i < gList.length; i++) {
+        for (int i = 0; i < gList.length; i++)
             gListNew[i] = factOldToNew[gList[i]];
-        }
 
         numOfStateFeatures = usedFacts.size();
         numOfOperators = actionCount;
@@ -802,12 +709,16 @@ public class SasPlusProblem {
         List<Integer> firstI = new ArrayList<>();
         List<Integer> lastI = new ArrayList<>();
         int group = -1;
+        int groupId = -1;
         for (int i = 0; i < indexToMutexGroup.length; i++) {
             if (indexToMutexGroup[i] != group) {
                 firstI.add(i);
                 if (group >= 0)
                     lastI.add(i - 1);
+                group = indexToMutexGroup[i];
+                groupId++;
             }
+            indexToMutexGroup[i] = groupId;
         }
         lastI.add(indexToMutexGroup.length - 1);
 
@@ -820,70 +731,16 @@ public class SasPlusProblem {
             lastIndex[i] = lastI.get(i);
 
         assert (firstIndex.length == lastIndex.length);
-        for (int i = 0; i < firstIndex.length; i++) {
+        ranges = new int[firstIndex.length];
+        for (int i = 0; i < firstIndex.length; i++)
             ranges[i] = lastIndex[i] - firstIndex[i] + 1;
-        }
 
         precLists = precListsNew;
         addLists = addListsNew;
         delLists = delListsNew;
 
-        // calculate inverse mappings
-        HashMap<Integer, Set<Integer>> p2t = new HashMap<>();
-        HashMap<Integer, Set<Integer>> a2t = new HashMap<>();
-        for (int i = 0; i < numOfStateFeatures; i++) {
-            p2t.put(i, new HashSet<>());
-            a2t.put(i, new HashSet<>());
-        }
-
-        for (int i = 0; i < numOfOperators; i++) {
-            for (int f : precLists[i])
-                p2t.get(f).add(i);
-            for (int f : addLists[i])
-                a2t.get(f).add(i);
-        }
-
-        precToTask = new int[numOfStateFeatures][];
-        for (int i = 0; i < numOfStateFeatures; i++) {
-            Set<Integer> set = p2t.get(i);
-            precToTask[i] = new int[set.size()];
-            Iterator<Integer> iter3 = set.iterator();
-            for (int j = 0; j < set.size(); j++)
-                precToTask[i][j] = iter3.next();
-        }
-
-        addToTask = new int[numOfStateFeatures][];
-        for (int i = 0; i < numOfStateFeatures; i++) {
-            Set<Integer> set = a2t.get(i);
-            addToTask[i] = new int[set.size()];
-            Iterator<Integer> iter3 = set.iterator();
-            for (int j = 0; j < set.size(); j++)
-                addToTask[i][j] = iter3.next();
-        }
-
-        // calculate extended delete-lists
-        List<Integer>[] expandedDelListsNew = new List[numOfOperators];
-        for (int i = 0; i < numOfOperators; i++) {
-            List<Integer> aDelList = new ArrayList<>();
-            expandedDelListsNew[i] = aDelList;
-            for (int f : delLists[i])
-                aDelList.add(f);
-            for (int f : addLists[i]) {
-                int mutexgroup = indexToMutexGroup[f];
-                for (int j = firstIndex[mutexgroup]; j <= lastIndex[mutexgroup]; j++) {
-                    if (j != f)
-                        aDelList.add(j);
-                }
-            }
-        }
-
-        expandedDelLists = new int[numOfOperators][];
-        for (int i = 0; i < numOfOperators; i++) {
-            List<Integer> current = expandedDelListsNew[i];
-            expandedDelLists[i] = new int[current.size()];
-            for (int j = 0; j < current.size(); j++)
-                expandedDelLists[i][j] = current.get(j);
-        }
+        calcInverseMappings();
+        calcExtendedDelLists();
 
         String[] factStrsNew = new String[numOfStateFeatures];
         for (int i = 0; i < numOfStateFeatures; i++) {
@@ -900,6 +757,69 @@ public class SasPlusProblem {
         s0List = s0ListNew;
         gList = gListNew;
         s0Bitset = null;
+
+        System.out.println("done.");
+        System.out.println(" - Reduced number of operators from " + orgOpNum + " to " + I.size());
+        System.out.println(" - Reduced number of state-bits from " + orgStateNum + " to " + usedFacts.size());
+
         return new Tuple2<>(indexToTask, taskToIndex);
+    }
+
+    public void calcExtendedDelLists() {
+        List<Integer>[] expandedDelListsNew = new List[numOfOperators];
+        for (int i = 0; i < numOfOperators; i++) {
+            List<Integer> aDelList = new ArrayList<>();
+            expandedDelListsNew[i] = aDelList;
+            for (int f : delLists[i])
+                aDelList.add(f);
+            for (int f : addLists[i]) {
+                int mutexgroup = indexToMutexGroup[f];
+                for (int j = firstIndex[mutexgroup]; j <= lastIndex[mutexgroup]; j++) {
+                    if (j != f)
+                        aDelList.add(j);
+                }
+            }
+        }
+
+        for (int i = 0; i < numOfOperators; i++) {
+            List<Integer> current = expandedDelListsNew[i];
+            expandedDelLists[i] = new int[current.size()];
+            for (int j = 0; j < current.size(); j++)
+                expandedDelLists[i][j] = current.get(j);
+        }
+    }
+
+    public void calcInverseMappings() {
+        HashMap<Integer, Set<Integer>> p2t = new HashMap<>();
+        HashMap<Integer, Set<Integer>> a2t = new HashMap<>();
+        for (int i = 0; i < numOfStateFeatures; i++) {
+            p2t.put(i, new HashSet<>());
+            a2t.put(i, new HashSet<>());
+        }
+
+        for (int i = 0; i < numOfOperators; i++) {
+            for (int f : precLists[i])
+                p2t.get(f).add(i);
+            for (int f : addLists[i])
+                a2t.get(f).add(i);
+        }
+
+        this.precToTask = new int[numOfStateFeatures][];
+        for (int i = 0; i < numOfStateFeatures; i++) {
+            Set<Integer> set = p2t.get(i);
+            this.precToTask[i] = new int[set.size()];
+            Iterator<Integer> iter = set.iterator();
+            for (int j = 0; j < set.size(); j++)
+                this.precToTask[i][j] = iter.next();
+        }
+
+        this.addToTask = new int[numOfStateFeatures][];
+        for (int i = 0; i < numOfStateFeatures; i++) {
+            Set<Integer> set = a2t.get(i);
+            this.addToTask[i] = new int[set.size()];
+            Iterator<Integer> iter = set.iterator();
+            for (int j = 0; j < set.size(); j++)
+                this.addToTask[i][j] = iter.next();
+        }
     }
 }
