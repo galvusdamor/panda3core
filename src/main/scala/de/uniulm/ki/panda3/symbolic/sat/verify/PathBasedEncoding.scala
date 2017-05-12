@@ -328,7 +328,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       val remainingMethodsWithAssignments = possibleMethods.zip(methodToPositions) filter {
         case (method, assignment) => checkMethodPossibility(method, assignment, reducedChildren)
       }
-      println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
+      //println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
 
       val remainingMethods: Array[DecompositionMethod] = remainingMethodsWithAssignments map { _._1 }
       val remainingMethodSet: Set[DecompositionMethod] = remainingMethods.toSet
@@ -342,7 +342,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       val remainingPrimitives: Array[Task] = remainingPrimitivesWithAssignment map { _._1 }
       val remainingPrimitivesPositions: Array[Int] = remainingPrimitivesWithAssignment map { _._2 }
 
-      println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
+      //println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
 
 
       // check which tasks we can keep
@@ -356,7 +356,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
         case (method, assignment) =>
           (abstractTasksToDiscardSet contains method.abstractTask) || !(remainingMethodSet contains method)
       }
-      println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
+      //println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
 
       val remainingMethodsAfterATRemoval: Array[DecompositionMethod] = remainingMethodsWithAssignmentsAfterATRemoval map { _._1 }
       val remainingMethodsAssignmentsAfterATRemoval: Array[Array[Int]] = remainingMethodsWithAssignmentsAfterATRemoval map { _._2 }
@@ -375,8 +375,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
                             remainingMethodsAfterATRemoval, remainingMethodsAssignmentsAfterATRemoval, remainingPrimitivesPositions, payload, propagatedChildren, isNormalised = true)
     }
 
-  def restrictTo(restrictToTasks: Set[Task]): PathDecompositionTree[Payload] = if (restrictToTasks.size == possibleTasks) this else {
-    println("Downwards ")
+  def restrictTo(restrictToTasks: Set[Task]): PathDecompositionTree[Payload] = if (restrictToTasks.size == possibleTasks.size) this else {
     // propagate the restriction to children
     val remainingMethods = possibleMethods.zip(methodToPositions) filter { restrictToTasks contains _._1.abstractTask}
     val remainingPrimitives = possiblePrimitives.zip(primitivePositions) filter { restrictToTasks contains _._1}
