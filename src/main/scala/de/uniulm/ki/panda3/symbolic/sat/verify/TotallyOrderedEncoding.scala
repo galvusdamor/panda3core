@@ -137,13 +137,8 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
   }
 
 
-  protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[Unit]): PathDecompositionTree[Unit] = {
-    Dot2PdfCompiler.writeDotToFile(pdt.treeBelowAsGraph, "pdt.pdf")
-
-    // get the primitive paths in the order they actually occur
-    val sortedPaths = pdt.primitivePaths sortWith { case ((p1, _), (p2, _)) => PathBasedEncoding.pathSortingFunction(p1, p2) }
-
-    // perform reachability on this set of actions
+  protected def filterPrimitivesFF(sortedPaths: Array[(Seq[Int], Set[Task])]): Seq[Set[Task]] = {
+    // perform simple PG-style reachability on the given list of actions
     val initialState = initialPlan.init.schema.effectsAsPredicateBool collect { case (predicate, true) => predicate } toSet
 
     val (_, tasksToRemoveFromPaths) = sortedPaths.foldLeft[(Set[Predicate], Seq[Set[Task]])]((initialState, Nil))(
@@ -161,15 +156,88 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
           (reachableState, toRemove :+ nonApplicable)
       })
 
+    tasksToRemoveFromPaths
+  }
 
-    val npdt = pdt.restrictPathDecompositionTree(tasksToRemoveFromPaths)
+  protected def filterPrimitivesH2(sortedPaths: Array[(Seq[Int], Set[Task])]): Seq[Set[Task]] = {
+    // perform H2-style (i.e. look at all pairs of predicates) reachability on the given list of actions
+    val simpleInitialState = initialPlan.init.schema.effectsAsPredicateBool collect { case (predicate, true) => predicate } toArray
 
-    Dot2PdfCompiler.writeDotToFile(npdt.treeBelowAsGraph, "pdtN.pdf")
+    val h2InitialState = crossProduct(simpleInitialState, simpleInitialState) toSet
 
-    /*val dontRemovePrimitives: Seq[Set[Task]] = pdt.primitivePaths.toSeq map { _ => Set[Task]() }
+    val (_, tasksToRemoveFromPaths) = sortedPaths.foldLeft[((Set[(Predicate, Predicate)], Set[Predicate]), Seq[Set[Task]])](((h2InitialState, simpleInitialState.toSet), Nil))(
+      {
+        case (((h2State, h1State), toRemove), (path, tasks)) =>
+          val (applicable, nonApplicable) = tasks partition { t =>
+            if (t.isAbstract) false
+            else {
+              val positivePreconditions = t.preconditionsAsPredicateBool collect { case (predicate, true) => predicate } toArray
+              val h2Preconditions = crossProduct(positivePreconditions, positivePreconditions)
+              // the state must contain all h2 pairs
+              h2Preconditions forall h2State.contains
+            }
+          }
+
+          if (nonApplicable.nonEmpty)
+            println("Found " + nonApplicable.size + " non applicable tasks at " + path + ". Still applicable " + applicable.size)
+
+          // compute which h2 pairs are now reachable
+          val newlyReachable: Set[(Predicate, Predicate)] = applicable flatMap { t =>
+            val (adds, dels) = t.effectsAsPredicateBool partition { _._2 }
+            val delSet = dels map { _._1 } toSet
+
+            val x: Seq[(Predicate, Predicate)] = adds flatMap { case (add, _) =>
+              if (delSet contains add) Nil
+              else {
+                // if this action achieves both, then it is possible
+                val byAdd: Seq[(Predicate, Predicate)] = adds collect { case (add2, _) if !(delSet contains add2) => (add, add2) }
+
+                // if a predicate could be achieved on its one, then it can now together with all non-deleted things
+                val byNonDel: Seq[(Predicate, Predicate)] = h1State.toSeq collect { case nondel if !(delSet contains nondel) => (add, nondel) :: (nondel, add) :: Nil } flatten
+
+                byAdd ++ byNonDel
+              }
+            }
+
+            x
+          }
+
+
+          // apply tasks
+          val h2reachableState = h2State ++ newlyReachable
+          val h1reachableState = h1State ++ (applicable flatMap { _.effectsAsPredicateBool collect { case (predicate, true) => predicate } })
+
+          // return the reachable state
+          ((h2reachableState, h1reachableState), toRemove :+ nonApplicable)
+      })
+
+    tasksToRemoveFromPaths
+  }
+
+  protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[Unit]): PathDecompositionTree[Unit] = {
+    println("Round in minimisation")
+    Dot2PdfCompiler.writeDotToFile(pdt.treeBelowAsGraph, "pdt.pdf")
+
+    // get the primitive paths in the order they actually occur
+    val sortedPaths = pdt.primitivePaths sortWith { case ((p1, _), (p2, _)) => PathBasedEncoding.pathSortingFunction(p1, p2) }
+
+    val tasksToRemoveFromPaths = filterPrimitivesFF(sortedPaths)
+    //val tasksToRemoveFromPaths = filterPrimitivesH2(sortedPaths)
+
+    val foundAnyTaskToRemove = tasksToRemoveFromPaths exists { _.nonEmpty }
+    if (!foundAnyTaskToRemove) pdt
+    else {
+
+
+      val npdt = pdt.restrictPathDecompositionTree(tasksToRemoveFromPaths)
+
+      Dot2PdfCompiler.writeDotToFile(npdt.treeBelowAsGraph, "pdtN.pdf")
+
+      /*val dontRemovePrimitives: Seq[Set[Task]] = pdt.primitivePaths.toSeq map { _ => Set[Task]() }
 
     pdt.restrictPathDecompositionTree(dontRemovePrimitives)*/
-    npdt
+      minimisePathDecompositionTree(npdt)
+    }
   }
 
 }

@@ -268,19 +268,19 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
   lazy val possibleAbstracts = possibleTasks filter { _.isAbstract } toSeq
 
 
-  val primitivePaths: Array[(Seq[Int], Set[Task])] = if (children.length == 0) Array((path, possibleTasks)) else children flatMap { _.primitivePaths }
+  val primitivePaths: Array[(Seq[Int], Set[Task])] = if (children.length == 0 && possibleTasks.nonEmpty) Array((path, possibleTasks)) else children flatMap { _.primitivePaths }
 
   lazy val getAllNodesBelow: Array[PathDecompositionTree[Payload]] = (children flatMap { _.getAllNodesBelow }) :+ this
 
   lazy val treeBelowAsGraph: DirectedGraph[PathDecompositionTree[Payload]] = {
 
     val allNodes = getAllNodesBelow filter { _.possibleTasks.nonEmpty }
-    val allEdges = allNodes flatMap { t => t.children map { c => (t, c) } } filter {case (a,b) => a.possibleTasks.nonEmpty && b.possibleTasks.nonEmpty}
+    val allEdges = allNodes flatMap { t => t.children map { c => (t, c) } } filter { case (a, b) => a.possibleTasks.nonEmpty && b.possibleTasks.nonEmpty }
 
     SimpleDirectedGraph(allNodes, allEdges)
   }
 
-  private def buildChildrenTaskTable(methods : Array[(DecompositionMethod,Array[Int])], primitives : Array[(Task,Int)]) : Array[Set[Task]] = {
+  private def buildChildrenTaskTable(methods: Array[(DecompositionMethod, Array[Int])], primitives: Array[(Task, Int)]): Array[Set[Task]] = {
     val childrenPossibleTasks: Array[mutable.HashSet[Task]] = children.indices map { _ => new mutable.HashSet[Task]() } toArray
 
     // add tasks from methods
@@ -290,7 +290,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     // add inherited primitives
     primitives foreach { case (primitive, index) => childrenPossibleTasks(index) add primitive }
 
-    childrenPossibleTasks map {_.toSet}
+    childrenPossibleTasks map { _.toSet }
   }
 
   def checkMethodPossibility(method: DecompositionMethod, childrenAssignment: Array[Int], reducedChildren: Array[PathDecompositionTree[Payload]]): Boolean = {
@@ -302,10 +302,16 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
   def restrictPathDecompositionTree(toRemoveFromLeafPaths: Seq[Set[Task]]): PathDecompositionTree[Payload] =
     if (children.isEmpty) {
-      assert(toRemoveFromLeafPaths.length == 1)
       // I am a leaf, so just execute the removal
       // TODO: do something with payloads ... this will become necessary once we will perform this operation also with SOGs
-      PathDecompositionTree(path, possibleTasks -- toRemoveFromLeafPaths.head, Array(), Array(), Array(), Array(), payload, Array(), isNormalised = true)
+
+      if (possibleTasks.nonEmpty) {
+        assert(toRemoveFromLeafPaths.length == 1)
+        PathDecompositionTree(path, possibleTasks -- toRemoveFromLeafPaths.head, Array(), Array(), Array(), Array(), payload, Array(), isNormalised = true)
+      } else {
+        assert(toRemoveFromLeafPaths.isEmpty)
+        PathDecompositionTree(path, Set(), Array(), Array(), Array(), Array(), payload, Array(), isNormalised = true)
+      }
     } else {
       // separate toRemoveToChildren
 
@@ -362,7 +368,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       val remainingMethodsAssignmentsAfterATRemoval: Array[Array[Int]] = remainingMethodsWithAssignmentsAfterATRemoval map { _._2 }
 
       // we have removed methods, so we have to re-check whether the tasks our children can have can actually be produced
-      val childrenPossibleTasks: Array[Set[Task]] = buildChildrenTaskTable(remainingMethodsWithAssignmentsAfterATRemoval,remainingPrimitivesWithAssignment)
+      val childrenPossibleTasks: Array[Set[Task]] = buildChildrenTaskTable(remainingMethodsWithAssignmentsAfterATRemoval, remainingPrimitivesWithAssignment)
 
       // now we have propagated everything
       val propagatedChildren = childrenPossibleTasks.zip(reducedChildren) map { case (actuallyRemainingTasks, child) =>
@@ -375,17 +381,18 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
                             remainingMethodsAfterATRemoval, remainingMethodsAssignmentsAfterATRemoval, remainingPrimitivesPositions, payload, propagatedChildren, isNormalised = true)
     }
 
-  def restrictTo(restrictToTasks: Set[Task]): PathDecompositionTree[Payload] = if (restrictToTasks.size == possibleTasks.size) this else {
+  def restrictTo(restrictToTasks: Set[Task]): PathDecompositionTree[Payload] = if (restrictToTasks.size == possibleTasks.size) this
+  else {
     // propagate the restriction to children
-    val remainingMethods = possibleMethods.zip(methodToPositions) filter { restrictToTasks contains _._1.abstractTask}
-    val remainingPrimitives = possiblePrimitives.zip(primitivePositions) filter { restrictToTasks contains _._1}
+    val remainingMethods = possibleMethods.zip(methodToPositions) filter { restrictToTasks contains _._1.abstractTask }
+    val remainingPrimitives = possiblePrimitives.zip(primitivePositions) filter { restrictToTasks contains _._1 }
 
-    val childrenPossibleTasks: Array[Set[Task]] = buildChildrenTaskTable(remainingMethods,remainingPrimitives)
+    val childrenPossibleTasks: Array[Set[Task]] = buildChildrenTaskTable(remainingMethods, remainingPrimitives)
 
-    val restrictedChildren = childrenPossibleTasks.zip(children) map {case (tasks,child) => child.restrictTo(tasks)}
+    val restrictedChildren = childrenPossibleTasks.zip(children) map { case (tasks, child) => child.restrictTo(tasks) }
 
-    PathDecompositionTree(path,restrictToTasks,remainingPrimitives map {_._1},remainingMethods map {_._1}, remainingMethods map {_._2}, remainingPrimitives map {_._2},
-                          payload,restrictedChildren,isNormalised = isNormalised)
+    PathDecompositionTree(path, restrictToTasks, remainingPrimitives map { _._1 }, remainingMethods map { _._1 }, remainingMethods map { _._2 }, remainingPrimitives map { _._2 },
+                          payload, restrictedChildren, isNormalised = isNormalised)
   }
 
   /** returns a detailed information about the object */
