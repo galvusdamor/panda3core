@@ -101,12 +101,12 @@ object ProMain {
     // create the configuration
     val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true, randomSeed = 42, timeLimit = Some(30 * 60),
                                              ParsingConfiguration(eliminateEquality = true, stripHybrid = true),
-                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                             PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
                                                                         compileOrderInMethods = None,
-                                                                        compileInitialPlan = false,
-                                                                        convertToSASP = false,
+                                                                        compileInitialPlan = true,
+                                                                        convertToSASP = true,
                                                                         splitIndependentParameters = true,
-                                                                        liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                                        liftedReachability = true, groundedReachability = None, //Some(PlanningGraph),
                                                                         groundedTaskDecompositionGraph = Some(TwoWayTDG), // None,
                                                                         iterateReachabilityAnalysis = false, groundDomain = true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
@@ -123,7 +123,8 @@ object ProMain {
 
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatistics,
-                                                                             PreprocessedDomainAndPlan)))
+                                                                             PreprocessedDomainAndPlan)),
+      Map(FastDownward -> "/home/dh/programme/FastDownward"))
 
     //System.in.read()
 

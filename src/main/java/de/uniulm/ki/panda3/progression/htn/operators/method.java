@@ -108,7 +108,7 @@ public class method {
         }
     }
 
-    public void finalizeMethod() {
+    public void finalizeMethod(HashMap<Task, List<method>> methods) {
         Set<Task> distinctTasks = new HashSet<>();
         for(Task t : this.subtasks){
             distinctTasks.add(t);
@@ -118,7 +118,7 @@ public class method {
             if (subtasks[i].isPrimitive()) {
                 actionID[i] = ProgressionNetwork.taskToIndex.get(subtasks[i]);
             } else {
-                this.methods[i] = ProgressionNetwork.methods.get(subtasks[i]);
+                this.methods[i] = methods.get(subtasks[i]);
 
                 assert (this.methods[i] != null);
                 assert (this.methods[i].size() > 0);
