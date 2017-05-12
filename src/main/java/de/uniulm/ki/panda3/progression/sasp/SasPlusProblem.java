@@ -24,7 +24,11 @@ import java.util.Set;
  */
 public class SasPlusProblem {
     /**
-     * Class to use Malte Helmert's SAS+ format
+     * Class to use Malte Helmert's SAS+ format.
+     * <p>
+     * Please be aware that there are several domain transformations that make our representation
+     * differ from the original one -- these maintain *all (and only) the public* fields of the
+     * class.
      * <p>
      * see: http://www.fast-downward.org/TranslatorOutputFormat
      */
@@ -43,8 +47,8 @@ public class SasPlusProblem {
 
     private int[] axioms;
     public int[] ranges; // variable-index -> number of values the var can have
-    private String[] varNames; // variable-index ->  name-string of the var
-    private String[][] values; // var-index, value-index -> value-string (this is either an atom from the domain, or the noVal-String)
+    protected String[] varNames; // variable-index ->  name-string of the var
+    protected String[][] values; // var-index, value-index -> value-string (this is either an atom from the domain, or the noVal-String)
 
     private int[] s0; // variable-index -> value set in s0
     private int[][] goal; // enum of pairs [var-index, value-needed]
@@ -126,7 +130,12 @@ public class SasPlusProblem {
     public String factName(int i) {
         int group = indexToMutexGroup[i];
         int firstI = firstIndex[group];
-        return varNames[group] + "=" + values[group][i - firstI];
+        if ((group < values.length)
+                && ((i - firstI) < values[group].length)
+                && (group < varNames.length))
+            return varNames[group] + "=" + values[group][i - firstI];
+        else
+            return "fact" + i;
     }
 
 
@@ -636,34 +645,8 @@ public class SasPlusProblem {
         numOfStateFeatures = usedFacts.size();
         numOfOperators = actionCount;
         indexToMutexGroup = indexToMutexGroupNew;
-        List<Integer> firstI = new ArrayList<>();
-        List<Integer> lastI = new ArrayList<>();
-        int group = -1;
-        int groupId = -1;
-        for (int i = 0; i < indexToMutexGroup.length; i++) {
-            if (indexToMutexGroup[i] != group) {
-                firstI.add(i);
-                if (group >= 0)
-                    lastI.add(i - 1);
-                group = indexToMutexGroup[i];
-                groupId++;
-            }
-            indexToMutexGroup[i] = groupId;
-        }
-        lastI.add(indexToMutexGroup.length - 1);
-
-        firstIndex = new int[firstI.size()];
-        for (int i = 0; i < firstI.size(); i++)
-            firstIndex[i] = firstI.get(i);
-
-        lastIndex = new int[lastI.size()];
-        for (int i = 0; i < lastI.size(); i++)
-            lastIndex[i] = lastI.get(i);
-
-        assert (firstIndex.length == lastIndex.length);
-        ranges = new int[firstIndex.length];
-        for (int i = 0; i < firstIndex.length; i++)
-            ranges[i] = lastIndex[i] - firstIndex[i] + 1;
+        calcMutexGroupIndices();
+        calcRanges();
 
         precLists = precListsNew;
         addLists = addListsNew;
@@ -693,6 +676,39 @@ public class SasPlusProblem {
         System.out.println(" - Reduced number of state-bits from " + orgStateNum + " to " + usedFacts.size());
 
         return new Tuple2<>(indexToTask, taskToIndex);
+    }
+
+    public void calcMutexGroupIndices() {
+        List<Integer> firstI = new ArrayList<>();
+        List<Integer> lastI = new ArrayList<>();
+        int group = -1;
+        int groupId = -1;
+        for (int i = 0; i < indexToMutexGroup.length; i++) {
+            if (indexToMutexGroup[i] != group) {
+                firstI.add(i);
+                if (group >= 0)
+                    lastI.add(i - 1);
+                group = indexToMutexGroup[i];
+                groupId++;
+            }
+            indexToMutexGroup[i] = groupId;
+        }
+        lastI.add(indexToMutexGroup.length - 1);
+
+        firstIndex = new int[firstI.size()];
+        for (int i = 0; i < firstI.size(); i++)
+            firstIndex[i] = firstI.get(i);
+
+        lastIndex = new int[lastI.size()];
+        for (int i = 0; i < lastI.size(); i++)
+            lastIndex[i] = lastI.get(i);
+        assert (firstIndex.length == lastIndex.length);
+    }
+
+    public void calcRanges() {
+        ranges = new int[firstIndex.length];
+        for (int i = 0; i < firstIndex.length; i++)
+            ranges[i] = lastIndex[i] - firstIndex[i] + 1;
     }
 
     public void calcExtendedDelLists() {
