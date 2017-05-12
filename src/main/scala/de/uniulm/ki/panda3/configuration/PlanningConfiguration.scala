@@ -659,10 +659,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
     val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
-      if (tdgResult._1._1.isGround) ((if (preprocessingConfiguration.compileUselessAbstractTasks)
+      if (tdgResult._1._1.isGround) (if (preprocessingConfiguration.compileUselessAbstractTasks)
         CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand useless abstract tasks", USELESS_ABSTRACT_TASKS) :: Nil
       else Nil) ::
-        Nil flatten)
+        // this one has to be the last
+        (if (preprocessingConfiguration.compileInitialPlan)
+          CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
+        else Nil) ::
+        Nil flatten
       else Nil
 
     val compiledResult = groundedCompilersToBeApplied.foldLeft(tdgResult._1)(
@@ -676,7 +680,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         compiled
       })
 
-    if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length) ((compiledResult,tdgResult._2), timeCapsule)
+    if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length) ((compiledResult, tdgResult._2), timeCapsule)
     else runReachabilityAnalyses(compiledResult._1, compiledResult._2, timeCapsule)
   }
 
@@ -699,10 +703,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         else Nil) ::
         (if (preprocessingConfiguration.splitIndependentParameters)
           CompilerConfiguration(SplitIndependentParameters, (), "split parameters", SPLIT_PARAMETERS) :: Nil
-        else Nil) ::
-        // this one has to be the last
-        (if (preprocessingConfiguration.compileInitialPlan)
-          CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
         else Nil) ::
         Nil flatten
 
