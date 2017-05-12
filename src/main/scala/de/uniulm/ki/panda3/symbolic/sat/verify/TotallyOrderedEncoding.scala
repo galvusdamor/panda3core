@@ -13,7 +13,7 @@ import scala.collection.{mutable, Seq}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK : Option[Int] = None) extends PathBasedEncoding[Unit,Unit] {
+case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None) extends PathBasedEncoding[Unit, Unit] {
 
   val numberOfChildrenClauses: Int = 0
 
@@ -88,14 +88,14 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
 
   override protected def initialPayload(possibleTasks: Set[Task], path: scala.Seq[Int]): Unit = ()
 
-  override protected def combinePayloads(childrenPayload: Seq[Unit], intermediate : Unit): Unit = ()
+  override protected def combinePayloads(childrenPayload: Seq[Unit], intermediate: Unit): Unit = ()
 
   override protected def computeTaskSequenceArrangement(possibleMethods: Array[DecompositionMethod],
                                                         possiblePrimitives: scala.Seq[Task]): (Array[Array[Int]], Array[Int], Array[Set[Task]], Unit) = {
     val methodTaskGraphs = (possibleMethods map { _.subPlan.orderingConstraints.fullGraph }) ++ (
       possiblePrimitives map { t => SimpleDirectedGraph(PlanStep(-1, t, Nil) :: Nil, Nil) })
 
-    assert(methodTaskGraphs forall {_.allTotalOrderings.get.length == 1})
+    assert(methodTaskGraphs forall { _.allTotalOrderings.get.length == 1 })
 
     // TODO we are currently mapping plansteps, maybe we should prefer plansteps with identical tasks to be mapped together
     println("MINI " + possibleMethods.length + " " + possiblePrimitives.length)
@@ -110,7 +110,7 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
     val planStepToIndexMappings: Seq[Map[PlanStep, Int]] = g._2
     val topologicalOrdering = minimalSuperGraph.topologicalOrdering.get
 
-    val (methodMappings, primitiveMappings) = planStepToIndexMappings map {m => m map {case (ps, node) => (ps, topologicalOrdering.indexOf(node))}} splitAt possibleMethods.length
+    val (methodMappings, primitiveMappings) = planStepToIndexMappings map { m => m map { case (ps, node) => (ps, topologicalOrdering.indexOf(node)) } } splitAt possibleMethods.length
 
     val childrenIndicesToPossibleTasks = minimalSuperGraph.vertices map { _ => new mutable.HashSet[Task]() }
 
@@ -135,10 +135,65 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
   }
 
   protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[Unit]): PathDecompositionTree[Unit] = {
-
     Dot2PdfCompiler.writeDotToFile(pdt.treeBelowAsGraph, "pdt.pdf")
+
+    // get the primitive paths in the order they actually occur
+    val sortedPaths = pdt.primitivePaths sortWith { case ((p1, _), (p2, _)) => PathBasedEncoding.pathSortingFunction(p1, p2) }
+
+    // perform reachability on this set of actions
+    val initialState = initialPlan.init.schema.effectsAsPredicateBool collect { case (predicate, true) => predicate } toSet
+
+    sortedPaths.foldLeft(initialState)(
+      {
+        case (state, (path, tasks)) =>
+          val (applicable, nonApplicable) = tasks partition { t => t.preconditionsAsPredicateBool forall { case (p, true) => state contains p } }
+
+          if (nonApplicable.nonEmpty)
+            println("Found " + nonApplicable.size + " non applicable tasks at " + path + ". Still applicable " + applicable.size)
+
+          // apply tasks
+          val reachableState = state ++ (applicable flatMap { _.effectsAsPredicateBool collect { case (predicate, true) => predicate } })
+
+          // return the reachable state
+          reachableState
+      })
+
+    System exit 0
+
 
     pdt
   }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
