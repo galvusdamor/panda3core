@@ -212,6 +212,9 @@ object PredefinedConfigurations {
          "-Greedy-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, GreedyAPRLiftedPRCompare),
          "-Greedy-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, GreedyActionLiftedPRCompare),
 
+         "-GAStarActionLiftedPRReachability" -> (htnParsing, groundingPreprocess, planSearchAStarActionLiftedPRReachability),
+         "-AStarActionLiftedPRReachability" -> (htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
+
          "-GAStarAPRLiftedPR" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPR),
          "-GAStarAPRLiftedPRReachability" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPRReachability),
          "-AStarAPRLiftedPR" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPR),
