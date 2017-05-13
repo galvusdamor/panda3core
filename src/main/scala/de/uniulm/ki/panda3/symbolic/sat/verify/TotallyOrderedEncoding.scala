@@ -185,6 +185,7 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
           val newlyReachable: Set[(Predicate, Predicate)] = applicable flatMap { t =>
             val (adds, dels) = t.effectsAsPredicateBool partition { _._2 }
             val delSet = dels map { _._1 } toSet
+            val positivePreconditions = t.preconditionsAsPredicateBool collect { case (predicate, true) => predicate } toArray
 
             val x: Seq[(Predicate, Predicate)] = adds flatMap { case (add, _) =>
               if (delSet contains add) Nil
@@ -193,7 +194,9 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
                 val byAdd: Seq[(Predicate, Predicate)] = adds collect { case (add2, _) if !(delSet contains add2) => (add, add2) }
 
                 // if a predicate could be achieved on its one, then it can now together with all non-deleted things
-                val byNonDel: Seq[(Predicate, Predicate)] = h1State.toSeq collect { case nondel if !(delSet contains nondel) => (add, nondel) :: (nondel, add) :: Nil } flatten
+                val byNonDel: Seq[(Predicate, Predicate)] = h1State.toSeq collect { case nondel if !(delSet contains nondel) &&
+                  (positivePreconditions forall {prec => h2State contains (prec,nondel)})
+                   => (add, nondel) :: (nondel, add) :: Nil } flatten
 
                 byAdd ++ byNonDel
               }
@@ -221,8 +224,8 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
     // get the primitive paths in the order they actually occur
     val sortedPaths = pdt.primitivePaths sortWith { case ((p1, _), (p2, _)) => PathBasedEncoding.pathSortingFunction(p1, p2) }
 
-    val tasksToRemoveFromPaths = filterPrimitivesFF(sortedPaths)
-    //val tasksToRemoveFromPaths = filterPrimitivesH2(sortedPaths)
+    //val tasksToRemoveFromPaths = filterPrimitivesFF(sortedPaths)
+    val tasksToRemoveFromPaths = filterPrimitivesH2(sortedPaths)
 
     val foundAnyTaskToRemove = tasksToRemoveFromPaths exists { _.nonEmpty }
     if (!foundAnyTaskToRemove) pdt
