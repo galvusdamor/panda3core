@@ -1,12 +1,9 @@
 package de.uniulm.ki.panda3.progression.relaxedPlanningGraph;
 
 import de.uniulm.ki.panda3.progression.htn.operators.method;
-import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
-import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 
 import java.util.*;
 
@@ -23,7 +20,7 @@ public class TopDownReachabilityGraph {
     private int[] taskToScc; // maps a task to its SCC
     private BitSet[] scc2reachableTasks; // maps an SCC to all TASKS reachable from it
 
-    static public int mappingget(Task t) {
+    static public int tToI(Task t) {
         return ProgressionNetwork.taskToIndex.get(t);
     }
 
@@ -37,7 +34,7 @@ public class TopDownReachabilityGraph {
 
     }*/
 
-    public TopDownReachabilityGraph(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, int numTasks) {
+    public TopDownReachabilityGraph(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
         System.out.println("Calculating top down reachability ...");
         long time = System.currentTimeMillis();
 
@@ -49,29 +46,18 @@ public class TopDownReachabilityGraph {
             this.reachableTasks[i].set(i, true); // the task itself is reachable
         }
 
-        for (Task gt : methods.keySet()) {
-            BitSet parent = this.reachableTasks[mappingget(gt)];
-            for (method m : methods.get(gt))
+        for (Task t : methods.keySet()) {
+            BitSet parent = this.reachableTasks[tToI(t)];
+            for (method m : methods.get(t))
                 for (Task subTasks : m.subtasks)
-                    parent.set(mappingget(subTasks));
+                    parent.set(tToI(subTasks));
         }
-/*
-        for (int i = 0; i < this.reachableTasks.length; i++) {
-            BitSet bs = this.reachableTasks[i];
-            int v = bs.nextSetBit(0);
-            while (v > -1) {
 
-                if (i != v)
-                    System.out.println(i + " -> " + v + ";");
-                v = bs.nextSetBit(v + 1);
-            }
-        }
-*/
         // set root to those tasks in the initial task network
         this.root = new BitSet(numTasks);
         this.root.set(0, numTasks - 1, false);
         for (ProgressionPlanStep ps : initialTasks) {
-            root.set(mappingget(ps.getTask()));
+            root.set(tToI(ps.getTask()));
         }
 
         // calculate strongly connected components
@@ -136,10 +122,10 @@ public class TopDownReachabilityGraph {
         for (int i = 0; i < reachableTasks.length; i++) {
             reachableTasks[i] = scc2reachableTasks[taskToScc[i]];
             maxDecompDepth[i] = temp[taskToScc[i]];
-            this.reachableActions[i] = new BitSet(ProgressionNetwork.flatProblem.numOfOperators);
-            this.reachableActions[i].set(0, ProgressionNetwork.flatProblem.numOfOperators - 1, false);
+            this.reachableActions[i] = new BitSet(numActions);
+            this.reachableActions[i].set(0, numActions - 1, false);
             v = reachableTasks[i].nextSetBit(0);
-            while ((v > -1) && (v < ProgressionNetwork.flatProblem.numOfOperators)) {
+            while ((v > -1) && (v < numActions)) {
                 this.reachableActions[i].set(v);
                 v = reachableTasks[i].nextSetBit(v + 1);
             }
@@ -236,7 +222,7 @@ public class TopDownReachabilityGraph {
     }
 
     public BitSet getReachableActions(int task) {
-        return this.reachableActions[task - ProgressionNetwork.flatProblem.numOfStateFeatures];
+        return this.reachableActions[task];
     }
 
     /*
@@ -260,9 +246,9 @@ public class TopDownReachabilityGraph {
                         for (int b = 0; b < steps.size(); b++) {
                             GroundTask gtA = m.m.subPlanPlanStepsToGrounded().apply(steps.get(a));
                             GroundTask gtB = m.m.subPlanPlanStepsToGrounded().apply(steps.get(b));
-                            int iA = mappingget(gtA);
+                            int iA = tToI(gtA);
                             GroundTask testA = indexToTask[iA];
-                            int iB = mappingget(gtB);
+                            int iB = tToI(gtB);
                             GroundTask testB = indexToTask[iB];
                             if (!ordering[iA].get(iB))
                                 continue;

@@ -19,22 +19,24 @@ public class HtnCompositionEncoding extends SasPlusProblem {
     HashMap<method, Integer> MethodToIndex;
     method[] IndexToMethod;
 
-    TopDownReachabilityGraph tdRechability;
-    private int firstTdrIndex;
-    private int lastTdrIndex;
+    public TopDownReachabilityGraph tdRechability;
+    public int firstTdrIndex;
+    public int lastTdrIndex;
 
-    private int firstTaskCompIndex;
-    private int lastTaskCompIndex;
+    public int firstTaskCompIndex;
+    public int lastTaskCompIndex;
 
-    private int firstHtnIndex;
-    private int lastOverallIndex;
-    private int methodCosts = 1;
+    public int firstHtnIndex;
+    public int lastOverallIndex;
+    public int methodCosts = 1;
 
     public HtnCompositionEncoding(String Filename) throws Exception {
         super(Filename);
     }
 
     public HtnCompositionEncoding(SasPlusProblem p) {
+        assert (p.correctModel());
+
         this.numOfStateFeatures = p.numOfStateFeatures;
         this.numOfOperators = p.numOfOperators;
         this.firstIndex = p.firstIndex;
@@ -52,6 +54,8 @@ public class HtnCompositionEncoding extends SasPlusProblem {
         this.opNames = p.opNames;
         this.varNames = p.varNames;
         this.values = p.values;
+        this.gList = p.gList;
+        this.factStrs = p.factStrs;
     }
 
     public void geneateTaskCompGraph(HashMap<Task, List<method>> methods,
@@ -59,7 +63,7 @@ public class HtnCompositionEncoding extends SasPlusProblem {
 
         this.numAnM = createMethodLookupTable(methods);
         this.numTasks = ProgressionNetwork.indexToTask.length;
-        tdRechability = new TopDownReachabilityGraph(methods, initialTasks, this.numTasks);
+        tdRechability = new TopDownReachabilityGraph(methods, initialTasks, this.numTasks, this.numOfOperators);
 
         // set indices
         this.firstTdrIndex = this.numOfStateFeatures;
@@ -156,30 +160,30 @@ public class HtnCompositionEncoding extends SasPlusProblem {
         this.calcExtendedDelLists();
 
         int numMutexGroups = firstIndex.length;
-        String[] tVarNames = new String[numMutexGroups];
-        String[][] tValues = new String[numMutexGroups][];
+        String[] tFactStrs = new String[numOfStateFeatures];
 
-        for (int i = 0; i < varNames.length; i++) {
-            tVarNames[i] = varNames[i];
-            tValues[i] = values[i];
+        for (int i = 0; i < firstTdrIndex; i++) {
+            tFactStrs[i] = factStrs[i];
         }
 
         for (int i = firstTdrIndex; i <= lastTdrIndex; i++) {
-            int iVar = indexToMutexGroup[i];
-            tVarNames[iVar] = "tdr" + opNames[i - firstTdrIndex];
-            tValues[iVar] = new String[1];
-            tValues[iVar][0] = "true";
+            tFactStrs[i] = "tdr" + opNames[i - firstTdrIndex];
         }
 
         for (int i = firstTaskCompIndex; i <= lastTaskCompIndex; i++) {
-            int iVar = indexToMutexGroup[i];
-            tVarNames[iVar] = "bur" + ProgressionNetwork.indexToTask[i - firstTaskCompIndex];
-            tValues[iVar] = new String[1];
-            tValues[iVar][0] = "true";
+            tFactStrs[i] = "bur" + ProgressionNetwork.indexToTask[i - firstTaskCompIndex];
         }
+        factStrs = tFactStrs;
+/*
+        factStrs = new String[numOfStateFeatures];
+        int newI = 0;
+        for (int i = 0; i < values.length; i++) {
+            for (int j = 0; j < values[i].length; j++) {
+                factStrs[newI++] = varNames[i] + "=" + values[i][j];
+            }
+        }*/
 
-        varNames = tVarNames;
-        values = tValues;
+        assert (this.correctModel());
     }
 
     private int createMethodLookupTable(HashMap<Task, List<method>> methods) {

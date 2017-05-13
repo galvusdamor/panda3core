@@ -17,6 +17,7 @@ public class hLmCut extends hMax {
 
     public hLmCut(SasPlusProblem p) {
         super(p, true);
+        assert (p.correctModel());
         this.numOfStateFeatures = p.numOfStateFeatures;
         this.addToTask = p.addToTask;
         this.numOfOperators = p.numOfOperators;

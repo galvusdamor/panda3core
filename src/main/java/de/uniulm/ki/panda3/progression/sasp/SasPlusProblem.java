@@ -1,15 +1,7 @@
 package de.uniulm.ki.panda3.progression.sasp;
 
-import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
-import de.uniulm.ki.panda3.symbolic.domain.Domain;
-import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
-import de.uniulm.ki.panda3.symbolic.logic.*;
-import de.uniulm.ki.panda3.symbolic.plan.Plan;
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
-import de.uniulm.ki.panda3.util.seqProviderList;
 import scala.Tuple2;
-import scala.collection.*;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -554,6 +546,8 @@ public class SasPlusProblem {
     }
 
     public Tuple2<Map<Integer, Task>, Map<Task, Integer>> restrictTo(Set<Integer> I, Map<Integer, Task> i2t) {
+        assert this.correctModel();
+
         int actionCount = I.size();
         System.out.print("Reducing SAS+ domain ... ");
         int orgOpNum = this.numOfOperators;
@@ -675,6 +669,7 @@ public class SasPlusProblem {
         System.out.println(" - Reduced number of operators from " + orgOpNum + " to " + I.size());
         System.out.println(" - Reduced number of state-bits from " + orgStateNum + " to " + usedFacts.size());
 
+        assert this.correctModel();
         return new Tuple2<>(indexToTask, taskToIndex);
     }
 
@@ -727,6 +722,7 @@ public class SasPlusProblem {
             }
         }
 
+        expandedDelLists = new int[numOfOperators][];
         for (int i = 0; i < numOfOperators; i++) {
             List<Integer> current = expandedDelListsNew[i];
             expandedDelLists[i] = new int[current.size()];
@@ -767,5 +763,61 @@ public class SasPlusProblem {
             for (int j = 0; j < set.size(); j++)
                 this.addToTask[i][j] = iter.next();
         }
+    }
+
+    public boolean correctModel() {
+        assert precLists.length == numOfOperators;
+        assert addLists.length == numOfOperators;
+        assert delLists.length == numOfOperators;
+        assert expandedDelLists.length == numOfOperators;
+
+        for (int i = 0; i < numOfOperators; i++) {
+            for (int f : precLists[i]) {
+                assert (f < numOfStateFeatures);
+                assert (aContains(precToTask[f], i));
+            }
+            for (int f : addLists[i]) {
+                assert (f < numOfStateFeatures);
+                assert (aContains(addToTask[f], i));
+            }
+            for (int f : delLists[i]) {
+                assert (f < numOfStateFeatures);
+            }
+            for (int f : expandedDelLists[i]) {
+                assert (f < numOfStateFeatures);
+            }
+        }
+
+        assert addToTask.length == numOfStateFeatures;
+        assert precToTask.length == numOfStateFeatures;
+        for (int f = 0; f < numOfStateFeatures; f++) {
+            for (int t : precToTask[f]) {
+                assert (t < numOfOperators);
+                assert (aContains(precLists[t], f));
+            }
+            for (int t : addToTask[f]) {
+                assert (t < numOfOperators);
+                assert (aContains(addLists[t], f));
+            }
+        }
+
+        for (int f : this.s0List)
+            assert (f < numOfStateFeatures);
+
+        for (int f : this.gList)
+            assert (f < numOfStateFeatures);
+
+        assert (indexToMutexGroup.length == numOfStateFeatures);
+        assert (costs.length == numOfOperators);
+        assert (factStrs.length == numOfStateFeatures);
+        assert (indexToMutexGroup[numOfStateFeatures - 1] == (firstIndex.length - 1));
+        assert (firstIndex.length == lastIndex.length);
+        return true;
+    }
+
+    private boolean aContains(int[] array, int i) {
+        for (int a : array)
+            if (i == a) return true;
+        return false;
     }
 }

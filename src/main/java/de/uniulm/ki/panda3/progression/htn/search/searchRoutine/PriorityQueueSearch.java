@@ -2,10 +2,8 @@ package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
-import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
-import de.uniulm.ki.panda3.progression.htn.search.loopDetection.VisitedList;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.TopDownReachabilityGraph;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
@@ -196,7 +194,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             } else {
                 int minDepth = Integer.MAX_VALUE;
                 for (ProgressionPlanStep ps : n.getFirstAbstractTasks()) {
-                    int depth = TopDownReachabilityGraph.maxDecompDepth[TopDownReachabilityGraph.mappingget(ps.getTask())];
+                    int depth = TopDownReachabilityGraph.maxDecompDepth[TopDownReachabilityGraph.tToI(ps.getTask())];
                     if (depth < minDepth) {
                         minDepth = depth;
                         oneAbs = ps;

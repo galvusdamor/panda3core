@@ -79,23 +79,17 @@ public class htnPlanningInstance {
         assert ((d.abstractTasks().size() + d.primitiveTasks().size()) == d.tasks().size());
         ProgressionNetwork.indexToTask = new Task[d.tasks().size()];
 
-        int iAbs = taskToIndex.size(); // currently it contains solely the actions -> put abstracts behind
-        scala.collection.Iterator<Task> iter = d.abstractTasks().iterator();
+        int iAbs = 0;
+        scala.collection.Iterator<Task> iter = d.tasks().iterator();
         while (iter.hasNext()) {
             Task t = iter.next();
             ProgressionNetwork.taskToIndex.put(t, iAbs);
             ProgressionNetwork.indexToTask[iAbs] = t;
             iAbs++;
         }
-        ProgressionNetwork.taskToIndex.putAll(taskToIndex);
-
-        for (int i = 0; i < indexToTask.size(); i++) {
-            ProgressionNetwork.indexToTask[i] = indexToTask.get(i);
-        }
 
         HashMap<Task, List<method>> methods = getEfficientMethodRep(methodsByTask);
         finalizeMethods(methods);
-        //ProgressionNetwork.methods = methods;
 
         if (!(p.planStepsWithoutInitGoal().size() == 1)) {
             System.out.println("Error: Progression search algorithm found more than one task in the initial task network.");
@@ -103,9 +97,9 @@ public class htnPlanningInstance {
         }
 
         List<ProgressionPlanStep> initialTasks = new LinkedList<>();
-
         ProgressionPlanStep ps = new ProgressionPlanStep(p.planStepsWithoutInitGoal().apply(0).schema());
         initialTasks.add(ps);
+        ps.methods = methods.get(ps.getTask());
         ProgressionNetwork initialNode = new ProgressionNetwork(ProgressionNetwork.flatProblem.getS0(), initialTasks);
 
         assert (checkDomain(taskToIndex.keySet(), d.primitiveTasks().iterator(), indexToTask.keySet()));
@@ -115,7 +109,7 @@ public class htnPlanningInstance {
         else if (doDFS)
             initialNode.heuristic = new proDFS();
         else if (heuristic instanceof RelaxedCompositionGraph) {
-            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hLmCut, methods, initialTasks, taskToIndex.keySet());
+            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hAdd, methods, initialTasks, taskToIndex.keySet());
         } else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
             initialNode.heuristic = new RCG(methods, initialTasks, taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
