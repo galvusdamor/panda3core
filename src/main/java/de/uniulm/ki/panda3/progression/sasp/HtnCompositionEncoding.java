@@ -159,7 +159,6 @@ public class HtnCompositionEncoding extends SasPlusProblem {
         this.calcInverseMappings();
         this.calcExtendedDelLists();
 
-        int numMutexGroups = firstIndex.length;
         String[] tFactStrs = new String[numOfStateFeatures];
 
         for (int i = 0; i < firstTdrIndex; i++) {
@@ -167,22 +166,14 @@ public class HtnCompositionEncoding extends SasPlusProblem {
         }
 
         for (int i = firstTdrIndex; i <= lastTdrIndex; i++) {
-            tFactStrs[i] = "tdr" + opNames[i - firstTdrIndex];
+            tFactStrs[i] = "tdr-" + opNames[i - firstTdrIndex];
         }
 
         for (int i = firstTaskCompIndex; i <= lastTaskCompIndex; i++) {
-            tFactStrs[i] = "bur" + ProgressionNetwork.indexToTask[i - firstTaskCompIndex];
+            tFactStrs[i] = "bur-" + ProgressionNetwork.indexToTask[i - firstTaskCompIndex].shortInfo();
         }
         factStrs = tFactStrs;
-/*
-        factStrs = new String[numOfStateFeatures];
-        int newI = 0;
-        for (int i = 0; i < values.length; i++) {
-            for (int j = 0; j < values[i].length; j++) {
-                factStrs[newI++] = varNames[i] + "=" + values[i][j];
-            }
-        }*/
-
+        //System.out.println(this.toString());
         assert (this.correctModel());
     }
 

@@ -120,14 +120,7 @@ public class SasPlusProblem {
     }
 
     public String factName(int i) {
-        int group = indexToMutexGroup[i];
-        int firstI = firstIndex[group];
-        if ((group < values.length)
-                && ((i - firstI) < values[group].length)
-                && (group < varNames.length))
-            return varNames[group] + "=" + values[group][i - firstI];
-        else
-            return "fact" + i;
+        return factStrs[i];
     }
 
 
@@ -455,6 +448,28 @@ public class SasPlusProblem {
 
     @Override
     public String toString() {
+        String overall = "";
+        for (int i = 0; i < this.numOfOperators; i++) {
+            String opStr = opNames[i] + "\n\tp{";
+            opStr += listToString(precLists[i]) + "}\n\ta{";
+            opStr += listToString(addLists[i]) + "}\n\td{";
+            opStr += listToString(delLists[i]) + "}";
+            overall += opStr + "\n";
+        }
+        return overall;
+    }
+
+    private String listToString(int[] precList) {
+        String l = "";
+        for (int i = 0; i < precList.length; i++) {
+            if (i > 0)
+                l += ", ";
+            l += factStrs[precList[i]];
+        }
+        return l;
+    }
+
+    public String orgSasToString() {
         StringBuilder sb = new StringBuilder("");
         sb.append("Version: ");
         sb.append(this.version);
@@ -809,6 +824,7 @@ public class SasPlusProblem {
 
         assert (indexToMutexGroup.length == numOfStateFeatures);
         assert (costs.length == numOfOperators);
+        assert (opNames.length == numOfOperators);
         assert (factStrs.length == numOfStateFeatures);
         assert (indexToMutexGroup[numOfStateFeatures - 1] == (firstIndex.length - 1));
         assert (firstIndex.length == lastIndex.length);

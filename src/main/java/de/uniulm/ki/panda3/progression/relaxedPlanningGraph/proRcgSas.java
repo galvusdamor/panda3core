@@ -91,6 +91,8 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
         }
 
         this.heuristicVal = heuristic.calcHeu(s0, g);
+        //if (this.goalRelaxedReachable() && this.heuristicVal > 5)
+        //    System.out.println("h: " + this.heuristicVal);
         return this;
     }
 

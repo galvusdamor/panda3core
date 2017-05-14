@@ -53,40 +53,38 @@ public class htnPlanningInstance {
         long totaltime = System.currentTimeMillis();
         random = new Random(randomSeed);
 
-        Map<Integer, Task> indexToTask = new HashMap<>();
-        scala.collection.immutable.Map<Object, Task> k2t = d.sasPlusRepresentation().get().sasPlusIndexToTask();
-        scala.collection.Iterator<Object> keys1 = k2t.keysIterator();
-        while (keys1.hasNext()) {
-            Integer k = (Integer) keys1.next();
-            indexToTask.put(k, k2t.apply(k));
-        }
-
-        Map<Task, Integer> taskToIndex = new HashMap<>();
-        scala.collection.immutable.Map<Task, Object> t2i = d.sasPlusRepresentation().get().taskToSASPlusIndex();
-        scala.collection.Iterator<Task> keys2 = t2i.keysIterator();
-        while (keys2.hasNext()) {
-            Task t = keys2.next();
-            taskToIndex.put(t, (Integer) t2i.apply(t));
-        }
-
         ProgressionNetwork.flatProblem = d.sasPlusRepresentation().get().sasPlusProblem();
-        Tuple2<Map<Integer, Task>, Map<Task, Integer>> x = ProgressionNetwork.flatProblem.restrictTo(indexToTask.keySet(), indexToTask);
-        indexToTask = x._1();
-        taskToIndex = x._2();
+
+        Map<Integer, Task> indexToTask = mapTomap(d.sasPlusRepresentation().get().sasPlusIndexToTask());
+
+        Tuple2<Map<Integer, Task>, Map<Task, Integer>> mappings
+                = ProgressionNetwork.flatProblem.restrictTo(indexToTask.keySet(), indexToTask);
+        indexToTask = mappings._1();
+        //Map<Task, Integer> taskToIndex = mappings._2();
+
+        assert ((d.abstractTasks().size() + d.primitiveTasks().size()) == d.tasks().size());
 
         // create permanent mappings
         ProgressionNetwork.taskToIndex = new HashMap<>();
-        assert ((d.abstractTasks().size() + d.primitiveTasks().size()) == d.tasks().size());
         ProgressionNetwork.indexToTask = new Task[d.tasks().size()];
 
-        int iAbs = 0;
-        scala.collection.Iterator<Task> iter = d.tasks().iterator();
+        // create mapping for actions
+        for (int i = 0; i < indexToTask.keySet().size(); i++) {
+            Task action = indexToTask.get(i);
+            ProgressionNetwork.taskToIndex.put(action, i);
+            ProgressionNetwork.indexToTask[i] = action;
+        }
+
+        // add non-primitive tasks
+        int iAbs = indexToTask.keySet().size();
+        scala.collection.Iterator<Task> iter = d.abstractTasks().iterator();
         while (iter.hasNext()) {
             Task t = iter.next();
             ProgressionNetwork.taskToIndex.put(t, iAbs);
             ProgressionNetwork.indexToTask[iAbs] = t;
             iAbs++;
         }
+        indexToTask = null; // do not use this anymore
 
         HashMap<Task, List<method>> methods = getEfficientMethodRep(methodsByTask);
         finalizeMethods(methods);
@@ -102,17 +100,15 @@ public class htnPlanningInstance {
         ps.methods = methods.get(ps.getTask());
         ProgressionNetwork initialNode = new ProgressionNetwork(ProgressionNetwork.flatProblem.getS0(), initialTasks);
 
-        assert (checkDomain(taskToIndex.keySet(), d.primitiveTasks().iterator(), indexToTask.keySet()));
-
         if (doBFS)
             initialNode.heuristic = new proBFS();
         else if (doDFS)
             initialNode.heuristic = new proDFS();
         else if (heuristic instanceof RelaxedCompositionGraph) {
-            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hAdd, methods, initialTasks, taskToIndex.keySet());
+            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hMax, methods, initialTasks, ProgressionNetwork.taskToIndex.keySet());
         } else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
-            initialNode.heuristic = new RCG(methods, initialTasks, taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
+            initialNode.heuristic = new RCG(methods, initialTasks, ProgressionNetwork.taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
         } else if (heuristic instanceof GreedyProgression$)
             initialNode.heuristic = new greedyProgression();
         else {
@@ -190,9 +186,9 @@ public class htnPlanningInstance {
             System.out.println("\nFound a solution:");
             for (Object a : solution) {
                 if (a instanceof Integer)
-                    System.out.println(n + " " + proPrinter.actionToStr(ProgressionNetwork.indexToTask[(Integer)a]));
+                    System.out.println(n + " " + proPrinter.actionToStr(ProgressionNetwork.indexToTask[(Integer) a]));
                 else
-                    System.out.println(n + " " + ((GroundedDecompositionMethod) a).longInfo());
+                    System.out.println(n + " " + ((SimpleDecompositionMethod) a).name());
                 n++;
             }
         } else System.out.println("Problem unsolvable.");
@@ -201,25 +197,14 @@ public class htnPlanningInstance {
         return solution != null;
     }
 
-    private boolean checkDomain(Set<Task> tasks, scala.collection.Iterator<Task> iter, Set<Integer> integers) {
-        if (integers.size() != ProgressionNetwork.flatProblem.numOfOperators)
-            return false;
-        for (int i = 0; i < ProgressionNetwork.flatProblem.numOfOperators; i++)
-            if (!integers.contains(i)) {
-                System.out.println("Index mapping is discontiguous: " + i + "is not included");
-                return false;
-            }
-
-
-        Set<Task> allActions;
-        allActions = new HashSet<>();
-        while (iter.hasNext()) {
-            allActions.add(iter.next());
+    private Map<Integer, Task> mapTomap(scala.collection.immutable.Map<Object, Task> key2task) {
+        Map<Integer, Task> indexToTask = new HashMap<>();
+        scala.collection.Iterator<Object> keySet = key2task.keysIterator();
+        while (keySet.hasNext()) {
+            Integer key = (Integer) keySet.next();
+            indexToTask.put(key, key2task.apply(key));
         }
-        Set<Task> newSet = new HashSet<>();
-        newSet.addAll(tasks);
-        newSet.addAll(allActions);
-        return (tasks.size() == allActions.size()) && (allActions.size() == newSet.size());
+        return indexToTask;
     }
 
     private void finalizeMethods(HashMap<Task, List<method>> methods) {

@@ -187,6 +187,10 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
         }
 
         hVal = new int[tempWaitingForNodes.size()]; // initialized in calc method
+
+        /*for(int i = 0; i < nodeNames.size();i++)
+            System.out.println(nodeNames.get(i));
+        System.out.println();*/
     }
 
     @Override

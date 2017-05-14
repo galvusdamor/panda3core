@@ -6,6 +6,8 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.TopDownReachabilityGraph;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
+import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
@@ -573,10 +575,10 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         }
                     }
                 } else {
-                    GroundedDecompositionMethod dm = (GroundedDecompositionMethod) a;
-                    if (dm.groundAbstractTask().task().name().startsWith("tlt") && (dm.subPlanGroundedTasksWithoutInitAndGoal().size() > 0)) {
-                        for (int i = 0; i < dm.subPlanGroundedTasksWithoutInitAndGoal().size(); i++) {
-                            GroundTask ps = dm.subPlanGroundedTasksWithoutInitAndGoal().apply(i);
+                    SimpleDecompositionMethod dm = (SimpleDecompositionMethod) a;
+                    if (dm.abstractTask().name().startsWith("tlt") && (dm.subPlan().planStepsWithoutInitGoal().size() > 0)) {
+                        for (int i = 0; i < dm.subPlan().planStepsWithoutInitGoal().size(); i++) {
+                            Task ps = dm.subPlan().planStepsWithoutInitGoal().apply(i).schema();
                             if (FirstDecTask.length() > 0)
                                 FirstDecTask += "&";
                             FirstDecTask += ps.longInfo();
