@@ -49,28 +49,22 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
         }
     }
 
-    HashMap<ProgressionPlanStep, BitSet> reachableFrom = new HashMap<>();
-    HashMap<ProgressionPlanStep, BitSet> goalPartOf = new HashMap<>();
-    BitSet g;
-
     @Override
     public htnGroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps) {
-        // cleanup
-        reachableFrom.remove(ps);
-        goalPartOf.remove(ps);
-
         // prepare s0 and g
         // need to modify the facts that define top-down-reachability
         BitSet reachableActions = new BitSet(compEnc.numOfOperators);
         BitSet htnGoal = new BitSet(compEnc.numOfOperators);
-        for (ProgressionPlanStep psI : newTN.getFirstAbstractTasks()) {
-            collectTNiNodes(reachableActions, htnGoal, psI);
-        }
-        for (ProgressionPlanStep psI : newTN.getFirstPrimitiveTasks()) {
-            collectTNiNodes(reachableActions, htnGoal, psI);
-        }
+
+        for (ProgressionPlanStep ps2 : newTN.getFirstAbstractTasks())
+            prepareS0andG(ps2, reachableActions, htnGoal);
+
+        for (ProgressionPlanStep ps2 : newTN.getFirstPrimitiveTasks())
+            prepareS0andG(ps2, reachableActions, htnGoal);
 
         BitSet s0 = (BitSet) newTN.state.clone();
+        BitSet g = new BitSet(compEnc.numOfStateFeatures);
+
         int reachable = reachableActions.nextSetBit(0);
         while (reachable >= 0) {
             s0.set(compEnc.firstTdrIndex + reachable);
@@ -78,46 +72,34 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
         }
 
         // prepare g
-        BitSet g = new BitSet(compEnc.numOfStateFeatures);
         for (int fact : compEnc.gList) {
             g.set(fact);
         }
 
         int goalFact = htnGoal.nextSetBit(0);
         while (goalFact >= 0) {
-            //System.out.println(compEnc.factStrs[goalFact]);
-            g.set(goalFact);
+            g.set(goalFact + this.compEnc.firstTaskCompIndex);
             goalFact = htnGoal.nextSetBit(goalFact + 1);
         }
 
         this.heuristicVal = heuristic.calcHeu(s0, g);
-        //if (this.goalRelaxedReachable() && this.heuristicVal > 5)
-        //    System.out.println("h: " + this.heuristicVal);
         return this;
     }
 
-    private void collectTNiNodes(BitSet reachableActions, BitSet htnGoal, ProgressionPlanStep ps) {
-        BitSet partReach = reachableFrom.get(ps);
-        BitSet partGoal;
-        if (partReach == null) {
-            partReach = new BitSet(compEnc.numOfOperators);
-            partGoal = new BitSet(compEnc.numOfStateFeatures);
-            LinkedList<ProgressionPlanStep> temp = new LinkedList<>();
-            temp.add(ps);
-            while (!temp.isEmpty()) {
-                ProgressionPlanStep psInit = temp.removeFirst();
-                int taskIndex = ProgressionNetwork.taskToIndex.get(psInit.getTask());
-                partGoal.set(compEnc.firstTaskCompIndex + taskIndex);
-                partReach.or(compEnc.tdRechability.getReachableActions(taskIndex));
-                temp.addAll(psInit.successorList);
-            }
-            reachableFrom.put(ps, partReach);
-            goalPartOf.put(ps, partGoal);
-        } else
-            partGoal = goalPartOf.get(ps);
+    private void prepareS0andG(ProgressionPlanStep ps, BitSet r, BitSet g) {
+        if (!ps.done) {
+            ps.r = new BitSet(compEnc.numOfOperators);
+            ps.g = new BitSet(compEnc.numOfStateFeatures);
+            ps.r.or(compEnc.tdRechability.getReachableActions(ps.taskIndex));
+            ps.g.set(ps.taskIndex);
 
-        reachableActions.or(partReach);
-        htnGoal.or(partGoal);
+            for (ProgressionPlanStep ps2 : ps.successorList) {
+                prepareS0andG(ps2, ps.r, ps.g);
+            }
+            ps.done = true;
+        }
+        r.or(ps.r);
+        g.or(ps.g);
     }
 
     @Override

@@ -226,6 +226,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.numberOfTasks--;
         res.numberOfPrimitiveTasks--;
         res.state = (BitSet) this.state.clone();
+
         res.solution.add(ps.action);
         if (ProgressionNetwork.ShopPrecActions.contains(ps.action))
             res.numSHOPProgressionSteps++;
