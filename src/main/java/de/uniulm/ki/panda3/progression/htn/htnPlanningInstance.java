@@ -43,7 +43,6 @@ public class htnPlanningInstance {
                         PriorityQueueSearch.abstractTaskSelection taskSelectionStrategy,
                         SearchHeuristic heuristic, boolean doBFS, boolean doDFS,
                         boolean aStar, boolean deleteRelaxed, long quitAfterMs) throws ExecutionException, InterruptedException {
-
         if (d.sasPlusRepresentation().isEmpty()) {
             System.out.println("Error: Progression search algorithm did not find action model.");
             System.exit(-1);
@@ -105,7 +104,7 @@ public class htnPlanningInstance {
         else if (doDFS)
             initialNode.heuristic = new proDFS();
         else if (heuristic instanceof RelaxedCompositionGraph) {
-            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hMax, methods, initialTasks, ProgressionNetwork.taskToIndex.keySet());
+            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hAdd, methods, initialTasks, ProgressionNetwork.taskToIndex.keySet());
         } else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
             initialNode.heuristic = new RCG(methods, initialTasks, ProgressionNetwork.taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
