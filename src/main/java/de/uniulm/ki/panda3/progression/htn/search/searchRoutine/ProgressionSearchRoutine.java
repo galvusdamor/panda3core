@@ -18,7 +18,7 @@ public abstract class ProgressionSearchRoutine {
                 + " - generated nodes: " + searchnodes
                 + " - fringe size: " + fringesize
                 //+ " - best heuristic: " + bestMetric
-                + " - current modification depth: " + n.solution.size()
+                + " - current modification depth: " + n.solution.getLength()
                 + " - current heuristic: " + n.metric;
     }
 

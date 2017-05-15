@@ -21,7 +21,7 @@ public class proBFS implements htnGroundedProgressionHeuristic {
 
     @Override
     public void build(ProgressionNetwork tn) {
-        this.heuristic = tn.solution.size();
+        this.heuristic = tn.solution.getLength();
     }
 
     @Override
