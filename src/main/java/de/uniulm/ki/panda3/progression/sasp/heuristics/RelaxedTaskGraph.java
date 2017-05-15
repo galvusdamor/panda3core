@@ -199,7 +199,7 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
         if (this.trackPCF) {
             pcf = new int[pcf.length];
             for (int i = 0; i < pcfInvert.length; i++)
-                pcfInvert[i] = new UUIntStack();
+                pcfInvert[i].clear();
             opReachable.clear();
         }
 
