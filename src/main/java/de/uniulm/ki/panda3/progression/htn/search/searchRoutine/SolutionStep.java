@@ -17,9 +17,9 @@ public class SolutionStep {
     private int action;
     private SimpleDecompositionMethod method;
 
-    private int length;
-    private int primitiveCount;
-    private int shopCount;
+    protected int length;
+    protected int primitiveCount;
+    protected int shopCount;
 
     public SolutionStep() {
         length = 0;
@@ -30,7 +30,9 @@ public class SolutionStep {
     public SolutionStep(SolutionStep predSol, int action) {
         this.predecessor = predSol;
         this.action = action;
-        this.length = predSol.getLength() + 1;
+        this.length = predSol.length + 1;
+        this.primitiveCount = predSol.primitiveCount + 1;
+        this.shopCount = predSol.shopCount + 1;
 
         if (!ProgressionNetwork.ShopPrecActions.contains(action))
             primitiveCount++;
@@ -41,7 +43,9 @@ public class SolutionStep {
     public SolutionStep(SolutionStep predSol, SimpleDecompositionMethod method) {
         this.predecessor = predSol;
         this.method = method;
-        this.length = predSol.getLength() + 1;
+        this.length = predSol.length + 1;
+        this.primitiveCount = predSol.primitiveCount + 1;
+        this.shopCount = predSol.shopCount + 1;
     }
 
     @Override
@@ -70,7 +74,7 @@ public class SolutionStep {
             if (this.method != null)
                 o = this.method;
             else o = this.action;
-            ((LinkedList) l).addFirst(o);
+            ((LinkedList) l).add(o);
             return l;
         }
     }
