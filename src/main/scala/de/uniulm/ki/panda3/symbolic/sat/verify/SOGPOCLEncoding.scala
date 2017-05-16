@@ -105,7 +105,7 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
     val pathsWithInitAndGoal = extendedSOG.vertices map { _._1 } toArray
     val onlyPathSOG = extendedSOG map { _._1 }
 
-    val startTime = System.currentTimeMillis()
+    var startTime = System.currentTimeMillis()
     val orderMustBeTransitive: Array[Clause] = {
       val clauses = new ArrayBuffer[Clause]
       var i = 0
@@ -135,7 +135,7 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
               pathsWithInitAndGoal map { j => impliesRightAndSingle(before(i, j) :: before(j, k) :: Nil, before(i, k)) }
             }
           }*/
-    val endTime = System.currentTimeMillis()
+    var endTime = System.currentTimeMillis()
     println("D " + orderMustBeTransitive.length + " time needed " + (endTime - startTime).toDouble./(1000))
 
     val orderMustBeConsistent = pathsWithInitAndGoal flatMap { i => pathsWithInitAndGoal filter { _ != i } map { j => impliesNot(before(i, j), before(j, i)) } }
@@ -144,6 +144,7 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
     val sogOrderMustBeRespected = extendedSOG.vertices flatMap { case p@(i, _) => extendedSOG.reachable(p).-(p) map { _._1 } map { j => Clause(before(i, j)) } }
     println("F " + sogOrderMustBeRespected.length)
 
+    startTime = System.currentTimeMillis()
     // no causal threats
     val noCausalThreat: Seq[Clause] = supporterLiterals flatMap { case (p1, p2, prec) =>
       val nonOrdered = extendedSOG.vertices filterNot { case (p, _) => p == p1 || p == p2 || onlyPathSOG.reachable(p2).contains(p) || onlyPathSOG.reachable(p).contains(p1) }
@@ -155,7 +156,8 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
 
       }
     }
-    println("G " + noCausalThreat.length)
+    endTime = System.currentTimeMillis()
+    println("G " + noCausalThreat.length + " time needed " + (endTime - startTime).toDouble./(1000))
 
 
     initAndGoalMustBePresent ++ preconditionsMustBeSupported ++ supportedPreconditionsMustHaveSupporter ++
