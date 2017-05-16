@@ -589,7 +589,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
 
-  private def runReachabilityAnalyses(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
+  private def runReachabilityAnalyses(domain: Domain, problem: Plan, runForGrounder: Boolean, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     val emptyAnalysis = AnalysisMap(Map())
 
     // lifted reachability analysis
@@ -659,7 +659,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
     val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
-      if (tdgResult._1._1.isGround) (if (preprocessingConfiguration.compileUselessAbstractTasks)
+      if (!runForGrounder) (if (preprocessingConfiguration.compileUselessAbstractTasks)
         CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand useless abstract tasks", USELESS_ABSTRACT_TASKS) :: Nil
       else Nil) ::
         // this one has to be the last
@@ -669,6 +669,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         Nil flatten
       else Nil
 
+    // don't run compilation if we are still ground
     val compiledResult = groundedCompilersToBeApplied.foldLeft(tdgResult._1)(
       { case ((dom, prob), cc@CompilerConfiguration(compiler, option, message, timingString)) =>
         timeCapsule start timingString
@@ -681,7 +682,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       })
 
     if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length) ((compiledResult, tdgResult._2), timeCapsule)
-    else runReachabilityAnalyses(compiledResult._1, compiledResult._2, timeCapsule)
+    else runReachabilityAnalyses(compiledResult._1, compiledResult._2, runForGrounder, timeCapsule)
   }
 
   private case class CompilerConfiguration[T](domainTransformer: DomainTransformer[T], information: T, name: String, timingName: String) {
@@ -719,7 +720,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                                            )
 
     // initial run of the reachability analysis on the domain, until it has converged
-    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compiledDomain, compiledProblem, timeCapsule)
+    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compiledDomain, compiledProblem, runForGrounder = true, timeCapsule)
 
     // finished reachability analysis now we have to ground
     if (preprocessingConfiguration.groundDomain) {
@@ -751,7 +752,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
 
-      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, timeCapsule)
+      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, runForGrounder = false, timeCapsule)
 
       timeCapsule stop PREPROCESSING
       ((groundedDomainAndPlan, groundedAnalysisMap), timeCapsule)
