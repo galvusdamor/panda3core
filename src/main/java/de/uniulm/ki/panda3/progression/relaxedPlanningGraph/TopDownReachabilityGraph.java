@@ -1,22 +1,18 @@
 package de.uniulm.ki.panda3.progression.relaxedPlanningGraph;
 
 import de.uniulm.ki.panda3.progression.htn.operators.method;
-import de.uniulm.ki.panda3.progression.htn.operators.operators;
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 
-import java.util.BitSet;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by dh on 24.01.17.
  */
 public class TopDownReachabilityGraph {
 
-    private BitSet root;
+    private BitSet root = null;
     private BitSet reachableTasks[]; // maps a task to itself and all TASKS that are reachable via decomposition
     private BitSet reachableActions[]; // maps a task to (possibly) itself and all ACTIONS that are reachable via decomposition
 
@@ -24,23 +20,23 @@ public class TopDownReachabilityGraph {
     private int[] taskToScc; // maps a task to its SCC
     private BitSet[] scc2reachableTasks; // maps an SCC to all TASKS reachable from it
 
-    static private HashMap<GroundTask, Integer> internalMap;
-
-    static public boolean isInitialized() {
-        return (internalMap != null);
-    }
-
-    static public int mappingget(GroundTask gt) {
-        return internalMap.get(gt) - operators.numStateFeatures;
+    static public int tToI(Task t) {
+        return ProgressionNetwork.taskToIndex.get(t);
     }
 
     static public int[] maxDecompDepth; // this is the maximum decomposition depth that is left before tasks are primitive
 
+    /*
     public TopDownReachabilityGraph(HashMap<Task, HashMap<GroundTask, List<method>>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions, HashMap<GroundTask, Integer> mapping) {
-        System.out.println("Calculating top down reachability...");
-        long time = System.currentTimeMillis();
+        HashMap<GroundTask, List<method>> allmethods = new HashMap<>();
+        for(HashMap<GroundTask, List<method>> val : methods.values())
+            allmethods.putAll(val);
 
-        this.internalMap = mapping;
+    }*/
+
+    public TopDownReachabilityGraph(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
+        System.out.println("Calculating top down reachability ...");
+        long time = System.currentTimeMillis();
 
         // build a graph that, for each task, has edges to every subtask of every method decomposing it
         this.reachableTasks = new BitSet[numTasks];
@@ -51,33 +47,17 @@ public class TopDownReachabilityGraph {
         }
 
         for (Task t : methods.keySet()) {
-            HashMap<GroundTask, List<method>> set = methods.get(t);
-            for (GroundTask gt : set.keySet()) {
-                BitSet parent = this.reachableTasks[mappingget(gt)];
-                for (method m : set.get(gt)) {
-                    for (GroundTask subTasks : m.subtasks) {
-                        parent.set(mappingget(subTasks));
-                    }
-                }
-            }
+            BitSet parent = this.reachableTasks[tToI(t)];
+            for (method m : methods.get(t))
+                for (Task subTasks : m.subtasks)
+                    parent.set(tToI(subTasks));
         }
-/*
-        for (int i = 0; i < this.reachableTasks.length; i++) {
-            BitSet bs = this.reachableTasks[i];
-            int v = bs.nextSetBit(0);
-            while (v > -1) {
 
-                if (i != v)
-                    System.out.println(i + " -> " + v + ";");
-                v = bs.nextSetBit(v + 1);
-            }
-        }
-*/
         // set root to those tasks in the initial task network
         this.root = new BitSet(numTasks);
         this.root.set(0, numTasks - 1, false);
         for (ProgressionPlanStep ps : initialTasks) {
-            root.set(mappingget(ps.getTask()));
+            root.set(tToI(ps.getTask()));
         }
 
         // calculate strongly connected components
@@ -102,7 +82,7 @@ public class TopDownReachabilityGraph {
             tarjan(v);
             v = root.nextSetBit(v + 1);
         }
-        System.out.println("Found " + (iScc + 1) + " SCCs with up to " + biggestScc + " tasks.");
+        System.out.println(" - Found " + (iScc + 1) + " SCCs with up to " + biggestScc + " tasks.");
 
         // resize array with sccs
         int[][] old = scc;
@@ -142,16 +122,16 @@ public class TopDownReachabilityGraph {
         for (int i = 0; i < reachableTasks.length; i++) {
             reachableTasks[i] = scc2reachableTasks[taskToScc[i]];
             maxDecompDepth[i] = temp[taskToScc[i]];
-            this.reachableActions[i] = new BitSet(operators.numActions);
-            this.reachableActions[i].set(0, operators.numActions - 1, false);
+            this.reachableActions[i] = new BitSet(numActions);
+            this.reachableActions[i].set(0, numActions - 1, false);
             v = reachableTasks[i].nextSetBit(0);
-            while ((v > -1) && (v < operators.numActions)) {
+            while ((v > -1) && (v < numActions)) {
                 this.reachableActions[i].set(v);
                 v = reachableTasks[i].nextSetBit(v + 1);
             }
         }
 
-        System.out.println("Reachability calculated in " + (System.currentTimeMillis() - time) + " ms.");
+        System.out.println(" - Reachability calculated in " + (System.currentTimeMillis() - time) + " ms.");
     }
 
     private BitSet finished;
@@ -242,6 +222,66 @@ public class TopDownReachabilityGraph {
     }
 
     public BitSet getReachableActions(int task) {
-        return this.reachableActions[task - operators.numStateFeatures];
+        return this.reachableActions[task];
     }
+
+    /*
+    public void calcOrderingInvariants(int numTasks, HashMap<GroundTask, List<method>> methods, GroundTask[] indexToTask) {
+        BitSet[] ordering = new BitSet[numTasks];
+        for (int i = 0; i < numTasks; i++) {
+            ordering[i] = new BitSet(numTasks);
+            ordering[i].set(0, numTasks - 1, true);
+            ordering[i].set(i, false);
+        }
+        for (Task t : methods.keySet()) {
+            HashMap<GroundTask, List<method>> set = methods.get(t);
+            for (GroundTask gt : set.keySet()) {
+                for (method m : set.get(gt)) {
+                    scala.collection.Iterator<PlanStep> iter = m.m.decompositionMethod().subPlan().planStepsWithoutInitGoal().iterator();
+                    List<PlanStep> steps = new ArrayList<>();
+                    while (iter.hasNext()) {
+                        steps.add(iter.next());
+                    }
+                    for (int a = 0; a < steps.size(); a++) {
+                        for (int b = 0; b < steps.size(); b++) {
+                            GroundTask gtA = m.m.subPlanPlanStepsToGrounded().apply(steps.get(a));
+                            GroundTask gtB = m.m.subPlanPlanStepsToGrounded().apply(steps.get(b));
+                            int iA = tToI(gtA);
+                            GroundTask testA = indexToTask[iA];
+                            int iB = tToI(gtB);
+                            GroundTask testB = indexToTask[iB];
+                            if (!ordering[iA].get(iB))
+                                continue;
+                            boolean aBeforeB = m.m.decompositionMethod().subPlan().orderingConstraints().lt(steps.get(a), steps.get(b));
+                            if (!aBeforeB) {
+                                int childA = reachableTasks[iA].nextSetBit(0);
+                                while (childA > -1) {
+                                    int childB = reachableTasks[iB].nextSetBit(0);
+                                    while (childB > -1) {
+                                        if ((childA == 0) && (childB == 1))
+                                            System.out.println();
+
+                                        ordering[childA].set(childB, false);
+                                        childB = reachableTasks[iB].nextSetBit(childB + 1);
+                                    }
+                                    childA = reachableTasks[iA].nextSetBit(childA + 1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        int someindex = 0;
+        int otherTask = ordering[someindex].nextSetBit(0);
+        while (otherTask > -1) {
+            System.out.print(indexToTask[someindex].shortInfo());
+            System.out.print(" < ");
+            System.out.println(indexToTask[otherTask].shortInfo());
+            otherTask = ordering[someindex].nextSetBit(otherTask + 1);
+        }
+
+        System.out.println("DONE!");
+    }*/
 }

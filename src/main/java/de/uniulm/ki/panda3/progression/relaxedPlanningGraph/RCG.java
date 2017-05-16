@@ -24,7 +24,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
             if (text.equals("fcfs")) return firstCome;
             throw new IllegalArgumentException("Unknown selector " + text);
         }
-        }
+    }
 
     public static enum heuristicExtraction {
         ff, multicount;
@@ -35,7 +35,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
             throw new IllegalArgumentException("Unknown extraction method " + text);
         }
 
-        }
+    }
 
     /**
      * Define "Operator": An operator is either an action or a method
@@ -61,25 +61,25 @@ public class RCG implements htnGroundedProgressionHeuristic {
     private static method[] IndexToMethod;
 
 
-    private static HashMap<GroundTask, Integer> TaskToIndex;
-    private static GroundTask[] IndexToTask;
+    private static HashMap<Task, Integer> TaskToIndex;
+    private static Task[] IndexToTask;
 
     private static TopDownReachabilityGraph tdRechability;
 
     private static method IndexToMethodGet(int index) {
-        return IndexToMethod[index - operators.numActions];
+        return IndexToMethod[index - ProgressionNetwork.flatProblem.numOfOperators];
     }
 
-    private static GroundTask IndexToTaskGet(int index) {
-        return IndexToTask[index - operators.numStateFeatures];
+    private static Task IndexToTaskGet(int index) {
+        return IndexToTask[index - ProgressionNetwork.flatProblem.numOfStateFeatures];
     }
 
-    private static void IndexToTaskPut(int index, GroundTask t) {
-        IndexToTask[index - operators.numStateFeatures] = t;
+    private static void IndexToTaskPut(int index, Task t) {
+        IndexToTask[index - ProgressionNetwork.flatProblem.numOfStateFeatures] = t;
     }
 
     private static void IndexToMethodPut(int index, method m) {
-        IndexToMethod[index - operators.numActions] = m;
+        IndexToMethod[index - ProgressionNetwork.flatProblem.numOfOperators] = m;
     }
 
     // Members of the current object
@@ -95,7 +95,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
     static producerSelection prod = producerSelection.actionDifficulty;
     static heuristicExtraction heuEx = heuristicExtraction.multicount;
 
-    public RCG(HashMap<Task, HashMap<GroundTask, List<method>>> methods, List<ProgressionPlanStep> initialTasks, Set<GroundTask> allActions, boolean useTDReachability,
+    public RCG(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, Set<Task> allActions, boolean useTDReachability,
                producerSelection selectionStrategy, heuristicExtraction heuEx) {
         RCG.prod = selectionStrategy;
         RCG.heuEx = heuEx;
@@ -105,14 +105,15 @@ public class RCG implements htnGroundedProgressionHeuristic {
         System.out.println("Init Relaxed Composition Graph (RCG) heuristic");
 
         RCG.numOperators = createMethodLookupTable(methods);
-        RCG.numTasks = createTaskLookupTable(allActions, getGroundTasks(methods)) - operators.numStateFeatures;
+        RCG.numTasks = createTaskLookupTable(allActions, getGroundTasks(methods)) - ProgressionNetwork.flatProblem.numOfStateFeatures;
 
         if (topDownReachability || orderingInvariants) {
-            tdRechability = new TopDownReachabilityGraph(methods, initialTasks, RCG.numTasks, operators.numActions, TaskToIndex);
+            tdRechability = new TopDownReachabilityGraph(methods, initialTasks, RCG.numTasks, RCG.numOperators);
+            //tdRechability.calcOrderingInvariants(RCG.numTasks,methods, IndexToTask);
         }
 
         // action-task-facts are true one layer after the action, this can done due to the 1-to-1 correspondence
-        RCG.numExtenedStateFeatures = operators.numStateFeatures + RCG.numTasks;
+        RCG.numExtenedStateFeatures = ProgressionNetwork.flatProblem.numOfStateFeatures + RCG.numTasks;
 
         RCG.prec2task = new int[numExtenedStateFeatures][]; // pointers from literals to tasks that have this literal as precondition
         RCG.precLists = new int[numOperators][];
@@ -125,33 +126,33 @@ public class RCG implements htnGroundedProgressionHeuristic {
             inverseMapping[i] = new ArrayList<>();
         }
 
-        for (int actionI = 0; actionI < operators.numActions; actionI++) {
-            precLists[actionI] = operators.precList[actionI];
-            for (int precI = 0; precI < operators.precList[actionI].length; precI++) {
-                inverseMapping[operators.precList[actionI][precI]].add(actionI);
+        for (int actionI = 0; actionI < ProgressionNetwork.flatProblem.numOfOperators; actionI++) {
+            precLists[actionI] = ProgressionNetwork.flatProblem.precLists[actionI];
+            for (int precI = 0; precI < ProgressionNetwork.flatProblem.precLists[actionI].length; precI++) {
+                inverseMapping[ProgressionNetwork.flatProblem.precLists[actionI][precI]].add(actionI);
             }
         }
 
         // set number of operator (i.e. action and method) preconditions
         numprecs = new int[RCG.numOperators];
-        for (int i = 0; i < operators.numActions; i++) {
-            numprecs[i] = operators.precList[i].length;
+        for (int i = 0; i < ProgressionNetwork.flatProblem.numOfOperators; i++) {
+            numprecs[i] = ProgressionNetwork.flatProblem.precLists[i].length;
         }
 
-        for (int methodI = operators.numActions; methodI < numOperators; methodI++) {
+        for (int methodI = ProgressionNetwork.flatProblem.numOfOperators; methodI < numOperators; methodI++) {
             method m = RCG.IndexToMethodGet(methodI);
             numprecs[methodI] = m.numDistinctSubTasks;
             precLists[methodI] = new int[m.subtasks.length];
 
             for (int subtaskId = 0; subtaskId < m.subtasks.length; subtaskId++) {
-                GroundTask t = m.subtasks[subtaskId];
+                Task t = m.subtasks[subtaskId];
                 int taskIndex = RCG.TaskToIndex.get(t);
                 precLists[methodI][subtaskId] = taskIndex;
                 if (!inverseMapping[taskIndex].contains(methodI)) // this is necessary since there might be methods that have the same subtask twice
                     inverseMapping[taskIndex].add(methodI);
             }
 
-            int compTaskIndex = RCG.TaskToIndex.get(m.m.groundAbstractTask());
+            int compTaskIndex = RCG.TaskToIndex.get(m.m.abstractTask());
             addLists[methodI] = new int[1];
             addLists[methodI][0] = compTaskIndex;
         }
@@ -173,13 +174,13 @@ public class RCG implements htnGroundedProgressionHeuristic {
         }
 
         // generate add-lists
-        for (int i = 0; i < operators.numActions; i++) {
-            addLists[i] = new int[operators.addList[i].length + 1];
+        for (int i = 0; i < ProgressionNetwork.flatProblem.numOfOperators; i++) {
+            addLists[i] = new int[ProgressionNetwork.flatProblem.addLists[i].length + 1];
             int j;
-            for (j = 0; j < operators.addList[i].length; j++) {
-                RCG.addLists[i][j] = operators.addList[i][j];
+            for (j = 0; j < ProgressionNetwork.flatProblem.addLists[i].length; j++) {
+                RCG.addLists[i][j] = ProgressionNetwork.flatProblem.addLists[i][j];
             }
-            RCG.addLists[i][j] = operators.numStateFeatures + i; // actions are located after the original state features and this is the i-th action
+            RCG.addLists[i][j] = ProgressionNetwork.flatProblem.numOfStateFeatures + i; // actions are located after the original state features and this is the i-th action
         }
 
         // generate lists mapping literal to lists of operators having it as add-effect
@@ -197,18 +198,18 @@ public class RCG implements htnGroundedProgressionHeuristic {
         System.out.println(" (" + (System.currentTimeMillis() - time) + " ms)");
     }
 
-    private int createTaskLookupTable(Set<GroundTask> allActions, Set<GroundTask> allTasks) {
-        int taskNo = operators.numStateFeatures;
-        RCG.IndexToTask = new GroundTask[allActions.size() + allTasks.size()];
+    private int createTaskLookupTable(Set<Task> allActions, Set<Task> allTasks) {
+        int taskNo = ProgressionNetwork.flatProblem.numOfStateFeatures;
+        RCG.IndexToTask = new Task[allActions.size() + allTasks.size()];
         RCG.TaskToIndex = new HashMap<>();
 
-        for (GroundTask a : allActions) {
+        for (Task a : allActions) {
             RCG.IndexToTaskPut(taskNo, a);
             RCG.TaskToIndex.put(a, taskNo);
             taskNo++;
         }
 
-        for (GroundTask t : allTasks) {
+        for (Task t : allTasks) {
             RCG.IndexToTaskPut(taskNo, t);
             RCG.TaskToIndex.put(t, taskNo);
             taskNo++;
@@ -216,12 +217,10 @@ public class RCG implements htnGroundedProgressionHeuristic {
         return taskNo;
     }
 
-    public static Set<GroundTask> getGroundTasks(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
-        Set<GroundTask> allTasks = new HashSet<>();
-        for (HashMap<GroundTask, List<method>> val : methods.values()) {
-            for (GroundTask t : val.keySet()) {
-                allTasks.add(t);
-            }
+    public static Set<Task> getGroundTasks(HashMap<Task, List<method>> methods) {
+        Set<Task> allTasks = new HashSet<>();
+        for (Task t : methods.keySet()) {
+            allTasks.add(t);
         }
         return allTasks;
     }
@@ -232,27 +231,23 @@ public class RCG implements htnGroundedProgressionHeuristic {
      * @param methods
      * @return
      */
-    private int createMethodLookupTable(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
-        int methodID = operators.numActions;
+    private int createMethodLookupTable(HashMap<Task, List<method>> methods) {
+        int methodID = ProgressionNetwork.flatProblem.numOfOperators;
         RCG.MethodToIndex = new HashMap<>();
 
         // count methods, create array
         int anzMethods = 0;
-        for (HashMap<GroundTask, List<method>> val : methods.values()) {
-            for (List<method> val2 : val.values()) {
-                anzMethods += val2.size();
-            }
+        for (List<method> val2 : methods.values()) {
+            anzMethods += val2.size();
         }
         RCG.IndexToMethod = new method[anzMethods];
 
-        for (HashMap<GroundTask, List<method>> val : methods.values()) {
-            for (List<method> val2 : val.values()) {
-                for (method m : val2) {
-                    assert (!RCG.MethodToIndex.containsKey(m));
-                    RCG.MethodToIndex.put(m, methodID);
-                    RCG.IndexToMethodPut(methodID, m);
-                    methodID++;
-                }
+        for (List<method> val2 : methods.values()) {
+            for (method m : val2) {
+                assert (!RCG.MethodToIndex.containsKey(m));
+                RCG.MethodToIndex.put(m, methodID);
+                RCG.IndexToMethodPut(methodID, m);
+                methodID++;
             }
         }
         return methodID;
@@ -290,7 +285,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
 
         // add literals in s0 to fringe
         UUIntStack changedLiterals = new UUIntStack();
-        for (int i = 0; i < operators.numStateFeatures; i++) {
+        for (int i = 0; i < ProgressionNetwork.flatProblem.numOfStateFeatures; i++) {
             if (tn.state.get(i)) {
                 firstLayerWithFact[i] = 0;
                 changedLiterals.push(i);
@@ -298,22 +293,22 @@ public class RCG implements htnGroundedProgressionHeuristic {
                 firstLayerWithFact[i] = -1;
         }
         // init facts concerning reachable task
-        for (int i = operators.numStateFeatures; i < RCG.numExtenedStateFeatures; i++) {
+        for (int i = ProgressionNetwork.flatProblem.numOfStateFeatures; i < RCG.numExtenedStateFeatures; i++) {
             firstLayerWithFact[i] = -1;
         }
 
         // prepare goal - it contains the STRIPS-goal as well as all tasks that appear in the initial HTN
         UUIntStack stripsAndHtnGoals = new UUIntStack();
-        for (int i = 0; i < operators.goalList.length; i++) { // these are the state-based goals
-            stripsAndHtnGoals.push(operators.goalList[i]);
+        for (int i = 0; i < ProgressionNetwork.flatProblem.gList.length; i++) { // these are the state-based goals
+            stripsAndHtnGoals.push(ProgressionNetwork.flatProblem.gList[i]);
         }
 
         // add all tasks in the current network as goal
-        Set<GroundTask> tasksInTNI = new HashSet<>(); // these are used for the top-down reachability analysis
+        Set<Task> tasksInTNI = new HashSet<>(); // these are used for the top-down reachability analysis
 
         BitSet reachableActions = null; // this is used in top down reachability
         if (topDownReachability) {
-            reachableActions = new BitSet(operators.numActions);
+            reachableActions = new BitSet(ProgressionNetwork.flatProblem.numOfOperators);
         }
 
         LinkedList<ProgressionPlanStep> temp = new LinkedList<>();
@@ -366,7 +361,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
                 while (RCG.operatorsWithoutPrec.hasNext()) {
                     int op = RCG.operatorsWithoutPrec.next();
                     if ((!topDownReachability) ||
-                            (op >= operators.numActions) // it is a method
+                            (op >= ProgressionNetwork.flatProblem.numOfOperators) // it is a method
                             || (reachableActions.get(op)) // or a reachable action
                             ) {
                         newOperatorDelta.push(op);
@@ -379,7 +374,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
                 final int addedLiteral = changedLiterals.pop();
                 for (int actionWithThisPrec : prec2task[addedLiteral]) {
                     if ((topDownReachability) &&
-                            (actionWithThisPrec < operators.numActions) // aka it is an action
+                            (actionWithThisPrec < ProgressionNetwork.flatProblem.numOfOperators) // aka it is an action
                             && (!reachableActions.get(actionWithThisPrec)) // that is not reachable anymore via tdg
                             ) {
                         continue; // unreachable via hierarchy
@@ -445,7 +440,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
                 } else { // count HTN actions more than once
                     if (oneGoalDelta.hasNext()) {
                         goalFact = oneGoalDelta.next();
-                        if (goalFact < operators.numStateFeatures) {
+                        if (goalFact < ProgressionNetwork.flatProblem.numOfStateFeatures) {
                             postponed.push(goalFact);
                             continue;
                         }
@@ -456,7 +451,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
                         }
                         if (postponed.hasNext()) {
                             goalFact = postponed.next();
-                            if ((goalFact < operators.numStateFeatures) && (trueI.isSet(goalFact)))
+                            if ((goalFact < ProgressionNetwork.flatProblem.numOfStateFeatures) && (trueI.isSet(goalFact)))
                                 continue; // fact already there
                         } else {
                             loop = false;
@@ -491,9 +486,9 @@ public class RCG implements htnGroundedProgressionHeuristic {
                     }
                 }
 
-                if (!operators.ShopPrecActions.contains(producer)) {
+                if (!ProgressionNetwork.ShopPrecActions.contains(producer)) {
                     for (int i = 0; i < addLists[producer].length; i++) {
-                        if ((goalFact < operators.numStateFeatures) || (heuEx == heuristicExtraction.ff)) {
+                        if ((goalFact < ProgressionNetwork.flatProblem.numOfStateFeatures) || (heuEx == heuristicExtraction.ff)) {
                             trueI.set(addLists[producer][i]);
                             trueImm.set(addLists[producer][i]);
                         }
@@ -514,7 +509,7 @@ public class RCG implements htnGroundedProgressionHeuristic {
                             UUIntStack delta = goalDelta.get(flayer);
                             delta.push(aPrec);
                         }
-                        if (aPrec > operators.numStateFeatures) // this is an HTN-related precondition
+                        if (aPrec > ProgressionNetwork.flatProblem.numOfStateFeatures) // this is an HTN-related precondition
                             goalWeight[aPrec] += count;
                         else // a normal precondition
                             goalWeight[aPrec]++;
@@ -541,10 +536,10 @@ public class RCG implements htnGroundedProgressionHeuristic {
                         sb.append(", \n");
                     }
                     sb.append(" - ");
-                    if (action < operators.numActions) {
-                        sb.append(operators.IndexToAction[action].mediumInfo());
+                    if (action < ProgressionNetwork.flatProblem.numOfOperators) {
+                        sb.append(ProgressionNetwork.indexToTask[action].mediumInfo());
                     } else
-                        sb.append(RCG.IndexToMethodGet(action).m.mediumInfo());
+                        sb.append(RCG.IndexToMethodGet(action).m.name());
                 }
             }
 
@@ -558,8 +553,8 @@ public class RCG implements htnGroundedProgressionHeuristic {
                         sb.append(", \n");
                     }
                     sb.append(" - ");
-                    if (j < operators.numStateFeatures) {
-                        sb.append(operators.IndexToLiteral[j].mediumInfo());
+                    if (j < ProgressionNetwork.flatProblem.numOfStateFeatures) {
+                        sb.append("fact" +  j);
                     } else
                         sb.append(RCG.IndexToTaskGet(j).mediumInfo());
                 }
@@ -575,8 +570,8 @@ public class RCG implements htnGroundedProgressionHeuristic {
                 } else {
                     sb.append(", ");
                 }
-                if (fact < operators.numStateFeatures) {
-                    sb.append(operators.IndexToLiteral[fact].mediumInfo());
+                if (fact < ProgressionNetwork.flatProblem.numOfStateFeatures) {
+                    sb.append("fact" +  fact);
                 } else
                     sb.append(RCG.IndexToTaskGet(fact).mediumInfo());
                 if (goalDelta.get(i).get(fact) > 1) {

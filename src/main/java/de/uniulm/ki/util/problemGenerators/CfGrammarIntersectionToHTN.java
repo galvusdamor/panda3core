@@ -21,6 +21,8 @@ import de.uniulm.ki.panda3.symbolic.search.IsModificationAllowed;
 import de.uniulm.ki.panda3.symbolic.search.ModificationsByClass;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import de.uniulm.ki.panda3.util.seqProviderList;
+import scala.None;
+import scala.None$;
 import scala.Tuple2;
 import scala.collection.Seq;
 import scala.collection.immutable.Vector;
@@ -166,7 +168,7 @@ public class CfGrammarIntersectionToHTN {
         addMethods(g2, allowedModifications, allowedFlaws, tasksMap, sG2, decompositionMethods);
 
         Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
-        Domain d = new Domain(sorts, predicates.result(), tasks.result(), decompositionMethods.result(), decompositionAxioms);
+        Domain d = new Domain(sorts, predicates.result(), tasks.result(), decompositionMethods.result(), decompositionAxioms, None$.empty(),None$.empty());
 
         seqProviderList<Literal> s0Lits = new seqProviderList<>();
         s0Lits.add(turnAPos);

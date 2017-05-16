@@ -10,6 +10,7 @@ import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import de.uniulm.ki.panda3.util.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
+import scala.None$;
 import scala.Tuple2;
 import scala.Tuple3;
 import scala.Unit;
@@ -26,7 +27,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
         //Seq<Task> updatedTasks = updateTasks(dIn.sorts(), dIn.tasks());
         Seq<DecompositionMethod> updatedMethods = updateMethods(dIn.sorts(), dIn.decompositionMethods());
 
-        Domain d = new Domain(dIn.sorts(), dIn.predicates(), dIn.tasks(), updatedMethods, dIn.decompositionAxioms());
+        Domain d = new Domain(dIn.sorts(), dIn.predicates(), dIn.tasks(), updatedMethods, dIn.decompositionAxioms(), None$.empty(),None$.empty());
         Plan p = new Plan(pIn.planSteps(), pIn.causalLinks(), pIn.orderingConstraints(), pIn.variableConstraints(), pIn.init(), pIn.goal(), pIn.isModificationAllowed(),pIn
                 .isFlawAllowed(),pIn.planStepDecomposedByMethod(),pIn.planStepParentInDecompositionTree());
 

@@ -20,13 +20,13 @@ object PredefinedConfigurations {
                                                                compileOrderInMethods = None,
                                                                compileInitialPlan = false, splitIndependentParameters = true,
                                                                compileUselessAbstractTasks = false,
-                                                               liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                               liftedReachability = true, convertToSASP = false, groundedReachability = Some(PlanningGraphWithMutexes),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                iterateReachabilityAnalysis = false, groundDomain = true)
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
                                                                //compileOrderInMethods = None, //Some(OneRandomOrdering()),
-                                                               compileInitialPlan = false, splitIndependentParameters = true,
+                                                               compileInitialPlan = false, convertToSASP = false, splitIndependentParameters = true,
                                                                compileUselessAbstractTasks = false,
                                                                liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
@@ -35,7 +35,7 @@ object PredefinedConfigurations {
                                                                compileOrderInMethods = None,
                                                                compileInitialPlan = false, splitIndependentParameters = true,
                                                                compileUselessAbstractTasks = false,
-                                                               liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                               liftedReachability = true, convertToSASP = false, groundedReachability = Some(PlanningGraphWithMutexes),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                iterateReachabilityAnalysis = false, groundDomain = false)
 

@@ -56,6 +56,7 @@ public class cRpgHtn implements htnGroundedProgressionHeuristic {
     }
 
     public cRpgHtn(HashMap<Task, HashMap<GroundTask, List<method>>> methods, Set<GroundTask> allActions) {
+        /*
         long time = System.currentTimeMillis();
         System.out.print("Init composition RPG heuristic");
 
@@ -129,10 +130,11 @@ public class cRpgHtn implements htnGroundedProgressionHeuristic {
         }
 
         // every action makes the corresponding task-fact true
-        System.out.println(" (" + (System.currentTimeMillis() - time) + " ms)");
+        System.out.println(" (" + (System.currentTimeMillis() - time) + " ms)");*/
     }
 
     private void createTaskLookupTable(Set<GroundTask> allActions, Set<GroundTask> allTasks) {
+        /*
         int taskNo = operators.numStateFeatures;
         cRpgHtn.IndexToTaskLiteral = new HashMap<>();
         cRpgHtn.TaskLiteralToIndex = new HashMap<>();
@@ -147,7 +149,7 @@ public class cRpgHtn implements htnGroundedProgressionHeuristic {
             cRpgHtn.IndexToTaskLiteral.put(taskNo, t);
             cRpgHtn.TaskLiteralToIndex.put(t, taskNo);
             taskNo++;
-        }
+        }*/
     }
 
     private Set<GroundTask> getGroundTasks(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
@@ -161,6 +163,7 @@ public class cRpgHtn implements htnGroundedProgressionHeuristic {
     }
 
     private int createMethodLookupTable(HashMap<Task, HashMap<GroundTask, List<method>>> methods) {
+        /*
         int methodID = operators.numActions;
         cRpgHtn.MethodToIndex = new HashMap<>();
         cRpgHtn.IndexToMethod = new HashMap<>();
@@ -174,7 +177,8 @@ public class cRpgHtn implements htnGroundedProgressionHeuristic {
                 }
             }
         }
-        return methodID;
+        return methodID;*/
+        return -1;
     }
 
     @Override
@@ -183,6 +187,7 @@ public class cRpgHtn implements htnGroundedProgressionHeuristic {
     }
 
     public void build(ProgressionNetwork tn) {
+        /*
         // The following array stores for every fact in which fact layer it has been made true:
         // [6, 1, 0, -1] means that there are 4 facts, the first one has been made true in layer 6
         // the second in layer 1... The -1 for fact 4 means that this fact has never been made true
@@ -304,7 +309,7 @@ public class cRpgHtn implements htnGroundedProgressionHeuristic {
             this.heuristicValue = calcHeu(layersWithFact, operatorDelta, actionDifficulty, goalDelta);
         } else {
             this.heuristicValue = Integer.MAX_VALUE;
-        }
+        }*/
     }
 
     private int calcHeu(List<Integer>[] firstLayerWithFact, List<List<Integer>> operatorDelta, int[] actionDifficulty, List<List<Integer>> goalDelta) {
@@ -336,6 +341,7 @@ public class cRpgHtn implements htnGroundedProgressionHeuristic {
     }
 
     private String printLayerDelta(List<List<Integer>> operatorDelta, int[] firstLayerWithFact) {
+        /*
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < operatorDelta.size(); i++) {
             if (i >= 0) {
@@ -372,7 +378,8 @@ public class cRpgHtn implements htnGroundedProgressionHeuristic {
             }
             sb.append("\n\n");
         }
-        return sb.toString();
+        return sb.toString();*/
+        return null;
     }
 
     @Override

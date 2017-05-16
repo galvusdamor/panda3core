@@ -40,7 +40,7 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
                                                ParsingConfiguration(stripHybrid = false, eliminateEquality = false),
                                                PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = usePlanningGraph,
                                                                           compileOrderInMethods = None, compileInitialPlan = false, splitIndependentParameters = false,
-                                                                          compileUselessAbstractTasks = false,
+                                                                          convertToSASP = false, compileUselessAbstractTasks = false,
                                                                           liftedReachability = true,
                                                                           groundedReachability = Some(if (usePlanningGraph) PlanningGraphWithMutexes else PlanningGraph),
                                                                           groundedTaskDecompositionGraph = Some(TwoWayTDG),
@@ -901,11 +901,3 @@ object VerifyRunner {
   }
 
 }
-
-sealed trait Solvertype extends DefaultLongInfo
-
-object MINISAT extends Solvertype {override val longInfo: String = "minisat"}
-
-object RISS6 extends Solvertype {override val longInfo: String = "riss6"}
-
-object CRYPTOMINISAT extends Solvertype {override val longInfo: String = "cryptominisat"}

@@ -2,12 +2,12 @@ package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
-import de.uniulm.ki.panda3.progression.htn.operators.operators;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
-import de.uniulm.ki.panda3.progression.htn.search.loopDetection.VisitedList;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.TopDownReachabilityGraph;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
+import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
@@ -105,12 +105,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             ProgressionNetwork n = fringe.poll();
             actionloop:
             for (ProgressionPlanStep ps : n.getFirstPrimitiveTasks()) {
-                int pre = operators.prec[ps.action].nextSetBit(0);
-                while (pre > -1) {
-                    if (!n.state.get(pre))
-                        continue actionloop;
-                    pre = operators.prec[ps.action].nextSetBit(pre + 1);
-                }
+                if (!n.isApplicable(ps.action))
+                    continue actionloop;
 
                 ProgressionNetwork node = n.apply(ps, deleteRelaxed);
                 //if (visited.addIfNotIn(node))
@@ -200,7 +196,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             } else {
                 int minDepth = Integer.MAX_VALUE;
                 for (ProgressionPlanStep ps : n.getFirstAbstractTasks()) {
-                    int depth = TopDownReachabilityGraph.maxDecompDepth[TopDownReachabilityGraph.mappingget(ps.getTask())];
+                    int depth = TopDownReachabilityGraph.maxDecompDepth[TopDownReachabilityGraph.tToI(ps.getTask())];
                     if (depth < minDepth) {
                         minDepth = depth;
                         oneAbs = ps;
@@ -358,12 +354,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             ProgressionNetwork n = fringe.poll();
             actionloop:
             for (ProgressionPlanStep ps : n.getFirstPrimitiveTasks()) {
-                int pre = operators.prec[ps.action].nextSetBit(0);
-                while (pre > -1) {
-                    if (!n.state.get(pre))
-                        continue actionloop;
-                    pre = operators.prec[ps.action].nextSetBit(pre + 1);
-                }
+                if (!n.isApplicable(ps.action))
+                    continue actionloop;
 
                 ProgressionNetwork node = n.apply(ps, deleteRelaxed);
 
@@ -536,7 +528,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
     private int getStepCount(LinkedList<Object> solution) {
         int count = 0;
         for (Object a : solution) {
-            if ((a instanceof Integer) && (!operators.ShopPrecActions.contains(a))) {
+            if ((a instanceof Integer) && (!ProgressionNetwork.ShopPrecActions.contains(a))) {
                 count++;
             }
         }
@@ -560,14 +552,14 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         if (solution != null) {
             for (Object a : solution) {
                 if (a instanceof Integer) {
-                    if (operators.ShopPrecActions.contains(a))
+                    if (ProgressionNetwork.ShopPrecActions.contains(a))
                         numShop++;
                     else {
                         numPrim++;
                         if (PrimitivePlan.length() > 0) {
                             PrimitivePlan += "&";
                         }
-                        String primName = operators.IndexToAction[(Integer) a].longInfo();
+                        String primName = ProgressionNetwork.indexToTask[(Integer) a].longInfo();
                         PrimitivePlan += primName;
                         if (primName.startsWith("p_") && (primName.charAt(2) == '0' ||
                                 primName.charAt(2) == '1' ||
@@ -583,10 +575,10 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         }
                     }
                 } else {
-                    GroundedDecompositionMethod dm = (GroundedDecompositionMethod) a;
-                    if (dm.groundAbstractTask().task().name().startsWith("tlt") && (dm.subPlanGroundedTasksWithoutInitAndGoal().size() > 0)) {
-                        for (int i = 0; i < dm.subPlanGroundedTasksWithoutInitAndGoal().size(); i++) {
-                            GroundTask ps = dm.subPlanGroundedTasksWithoutInitAndGoal().apply(i);
+                    SimpleDecompositionMethod dm = (SimpleDecompositionMethod) a;
+                    if (dm.abstractTask().name().startsWith("tlt") && (dm.subPlan().planStepsWithoutInitGoal().size() > 0)) {
+                        for (int i = 0; i < dm.subPlan().planStepsWithoutInitGoal().size(); i++) {
+                            Task ps = dm.subPlan().planStepsWithoutInitGoal().apply(i).schema();
                             if (FirstDecTask.length() > 0)
                                 FirstDecTask += "&";
                             FirstDecTask += ps.longInfo();

@@ -3,8 +3,7 @@
 (define (problem transport-city-sequential-40nodes-1000size-4degree-100mindistance-4trucks-16packages-2008seed)
  (:domain transport)
  (:objects
-  city-loc-1 - location
-  city-loc-2 - location
+  city-loc-1 city-loc-2 - location
   city-loc-3 - location
   city-loc-4 - location
   city-loc-5 - location

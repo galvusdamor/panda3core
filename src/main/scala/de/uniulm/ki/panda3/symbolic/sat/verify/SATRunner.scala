@@ -5,9 +5,10 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.configuration.Timings._
-import de.uniulm.ki.panda3.configuration.{Timings, ResultMap, Information}
-import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Domain, Task}
+import de.uniulm.ki.panda3.symbolic.domain.ReducedTask
 import de.uniulm.ki.panda3.symbolic.logic.And
+import de.uniulm.ki.panda3.configuration._
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.util._
@@ -188,7 +189,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
       // wait for termination
       satProcess.exitValue()
       satSolver match {
-        case CRYPTOMINISAT =>
+        case CRYPTOMINISAT | RISS6 =>
           writeStringToFile(stdout.toString(), new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
         case _             =>
       }

@@ -16,6 +16,7 @@ import java.util.List;
 public class EnforcedHillClimbing extends ProgressionSearchRoutine{
 
     public List<Object> search(ProgressionNetwork firstSearchNode) {
+        /*
         System.out.println("\nStarting enforced hill climbing search");
         int searchnodes = 1;
         int bestMetric = firstSearchNode.metric;
@@ -94,7 +95,8 @@ public class EnforcedHillClimbing extends ProgressionSearchRoutine{
 
         System.out.println("Generated search nodes (total): " + searchnodes);
         System.out.println("Search time: " + (System.currentTimeMillis() - time) + " ms");
-        return solution;
+        return solution;*/
+        return null;
     }
 
     @Override

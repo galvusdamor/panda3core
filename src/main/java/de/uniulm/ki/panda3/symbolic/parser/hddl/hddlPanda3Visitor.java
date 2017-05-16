@@ -20,6 +20,7 @@ import de.uniulm.ki.panda3.symbolic.search.*;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import scala.None$;
 import scala.Tuple2;
 import scala.collection.Seq;
 import scala.collection.immutable.Map;
@@ -87,7 +88,7 @@ public class hddlPanda3Visitor {
         Seq<DecompositionMethod> decompositionMethods = visitMethodDef(ctxDomain.method_def(), sorts, predicates, tasks);
         Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
 
-        Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms);
+        Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms, None$.empty(),None$.empty());
 
         Seq<Variable> initArguments = init.parameters();
         PlanStep psInit = new PlanStep(0, init, initArguments);

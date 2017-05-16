@@ -70,6 +70,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
     val allGroundedTasks = groundedTasks flatMap { _._2.values } collect {
       case (task, groundTask) if !((domain.hiddenTasks ++ additionalHiddenTasks) contains groundTask.task) && !(initAndGoalInitialTask contains groundTask) => task
     }
+    val groundingTaskBackMapping = groundedTasks flatMap { _._2.values } toMap
 
 
     // helper methods
@@ -129,7 +130,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
 
     // TODO handle decomposition axioms ?!?
     assert(domain.decompositionAxioms.isEmpty)
-    (Domain(Nil, allGroundedPredicates.toSeq, allGroundedTasks.toSeq, groundedDecompositionMethods, Nil), initialPlan)
+    (Domain(Nil, allGroundedPredicates.toSeq, allGroundedTasks.toSeq, groundedDecompositionMethods, Nil, Some(GroundedDomainToDomainMapping(groundingTaskBackMapping)),None), initialPlan)
   }
 
 }

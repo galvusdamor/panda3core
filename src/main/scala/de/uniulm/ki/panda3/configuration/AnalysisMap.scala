@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.configuration
 
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientGroundedTaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, PrimitiveReachabilityAnalysis}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{SASPlusGrounding, GroundedPrimitiveReachabilityAnalysis, PrimitiveReachabilityAnalysis}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -20,6 +20,8 @@ object SymbolicGroundedTaskDecompositionGraph extends AnalysisType {type ResultT
 object EfficientGroundedTDG extends AnalysisType {type ResultType = EfficientGroundedTaskDecompositionGraph}
 
 object EfficientGroundedPlanningGraph extends AnalysisType {type ResultType = de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph}
+
+object SASPInput extends AnalysisType {type ResultType = SASPlusGrounding}
 
 case class AnalysisMap(map: Map[AnalysisType, Any]) extends (AnalysisType => Any) {
   // this assertion is useless due to Java Type erasure

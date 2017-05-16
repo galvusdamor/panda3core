@@ -10,6 +10,7 @@ import java.util.*;
  * Created by dhoeller on 23.07.16.
  */
 public class operators {
+    /*
     public static HashMap<GroundLiteral, Integer> LiteralToIndex;
     public static GroundLiteral[] IndexToLiteral;
 
@@ -46,5 +47,5 @@ public class operators {
                 }
             }
         }
-    }
+    }*/
 }

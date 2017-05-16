@@ -3,6 +3,8 @@ package de.uniulm.ki.panda3.progression.htn.search;
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance;
 import de.uniulm.ki.panda3.progression.htn.operators.*;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.htnGroundedProgressionHeuristic;
+import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
 
 import java.util.*;
 
@@ -15,6 +17,15 @@ import java.util.*;
  * be done because it is changed only at its beginning, and the nodes only hold pointers to its successors.
  */
 public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Cloneable {
+
+
+    public static SasPlusProblem flatProblem;
+    public static Task[] indexToTask;
+    public static Map<Task, Integer> taskToIndex;
+    public static Map<Task, List<method>> methods;
+    public static Set<Integer> ShopPrecActions = new HashSet<>();
+
+
     /* todo
      * - does this work for empty task networks? I don't think so. Could one compile these methods in something other?
      */
@@ -215,8 +226,9 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.numberOfTasks--;
         res.numberOfPrimitiveTasks--;
         res.state = (BitSet) this.state.clone();
+
         res.solution.add(ps.action);
-        if (operators.ShopPrecActions.contains(ps.action))
+        if (ProgressionNetwork.ShopPrecActions.contains(ps.action))
             res.numSHOPProgressionSteps++;
         else
             res.numProgressionSteps++;
@@ -227,9 +239,11 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
         // transfer state
         if (!deleteRelaxed) {
-            res.state.andNot(operators.del[ps.action]);
+            for (int df : ProgressionNetwork.flatProblem.delLists[ps.action])
+                res.state.set(df, false);
         }
-        res.state.or(operators.add[ps.action]);
+        for (int af : ProgressionNetwork.flatProblem.addLists[ps.action])
+            res.state.set(af, true);
 
         // every successor of ps is a first task if and only if it is
         // not a successor of any task in the firstTasks list.
@@ -275,11 +289,17 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     }
 
     private boolean isApplicable(BitSet state, int action) {
-        int pre = operators.prec[action].nextSetBit(0);
-        while (pre > -1) {
+        for (int pre : ProgressionNetwork.flatProblem.precLists[action]) {
             if (!state.get(pre))
                 return false;
-            pre = operators.prec[action].nextSetBit(pre + 1);
+        }
+        return true;
+    }
+
+    public boolean isApplicable(int action) {
+        for (int pre : ProgressionNetwork.flatProblem.precLists[action]) {
+            if (!this.state.get(pre))
+                return false;
         }
         return true;
     }
@@ -288,9 +308,11 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         if (!this.empty()) {
             return false;
         }
-        BitSet temp = (BitSet) this.state.clone();
-        temp.and(operators.goal);
-        return temp.equals(operators.goal);
+        for (int g : ProgressionNetwork.flatProblem.gList) {
+            if (!state.get(g))
+                return false;
+        }
+        return true;
     }
 
     @Override
