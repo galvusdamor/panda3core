@@ -204,6 +204,19 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
     assert(pathDecompositionTree.isNormalised)
 
+    /* def dd(pdt: PathDecompositionTree[Payload]): Unit = {
+      //println(pdt.localConditionalLandmarks map { case (t, s) => t.name + " -> " + (s map { _.name } mkString " ") } mkString "\n")
+      //println(pdt.localConditionalReachable map { case (t, s) => t.name + " -> " + (s map { _.name } mkString " ") } mkString "\n")
+      //println(pdt.localConditionalMutexes map { case (t, s) => t.name + " -> " + (s map { case (a, b) => "(" + a.name + " X " + b.name + ")" } mkString " ") } mkString "\n")
+      println(pdt.localConditionalMutexes map { case (t, s) => t.name + " -> " + s.size } mkString "\n")
+      println("DEC")
+      pdt.children foreach dd
+    }*/
+
+    //println(pathDecompositionTree.localConditionalLandmarks map { case (t, s) => t.name + " -> " + (s map { _.name } mkString " ") } mkString "\n")
+    //dd(pathDecompositionTree)
+    //System exit 0
+
 
     val initialPlanClauses = generateDecompositionFormula(pathDecompositionTree)
     val paths = pathDecompositionTree.primitivePaths
@@ -233,171 +246,10 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
   protected final lazy val primitivePathsOnlyPath = primitivePaths map { _._1 }
 
+
   override lazy val decompositionFormula: Seq[Clause] = computedDecompositionFormula
 }
 
-case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Task],
-                                          possiblePrimitives: Array[Task], // needed as its order matters
-                                          possibleMethods: Array[DecompositionMethod],
-                                          methodToPositions: Array[Array[Int]],
-                                          primitivePositions: Array[Int],
-                                          payload: Payload,
-                                          children: Array[PathDecompositionTree[Payload]],
-                                          isNormalised: Boolean = false) extends DefaultLongInfo {
-  @elidable(ASSERTION)
-  val assertion = {
-    children.zipWithIndex foreach { case (child, i) => assert(child.path == path :+ i) }
-    assert(possibleMethods.length == methodToPositions.length)
-
-    if (isNormalised) {
-      possibleMethods.zip(methodToPositions) foreach {
-        case (method, assignment) =>
-          val isAcceptable = checkMethodPossibility(method, assignment, children)
-          assert(isAcceptable, "method " + method.name + " is not applicable")
-      }
-
-      val childrenPossibleTasks = buildChildrenTaskTable(possibleMethods.zip(methodToPositions), possiblePrimitives.zip(primitivePositions))
-
-      childrenPossibleTasks.zip(children) foreach { case (actuallyRemainingTasks, child) => assert(child.possibleTasks.size == actuallyRemainingTasks.size) }
-    }
-
-    possibleAbstracts foreach { at => assert(possibleMethods.exists(_.abstractTask == at)) }
-  }
-
-  lazy val layer: Int        = path.length
-  lazy val possibleAbstracts = possibleTasks filter { _.isAbstract } toSeq
-
-
-  val primitivePaths: Array[(Seq[Int], Set[Task])] = if (children.length == 0 && possibleTasks.nonEmpty) Array((path, possibleTasks)) else children flatMap { _.primitivePaths }
-
-  lazy val getAllNodesBelow: Array[PathDecompositionTree[Payload]] = (children flatMap { _.getAllNodesBelow }) :+ this
-
-  lazy val treeBelowAsGraph: DirectedGraph[PathDecompositionTree[Payload]] = {
-
-    val allNodes = getAllNodesBelow filter { _.possibleTasks.nonEmpty }
-    val allEdges = allNodes flatMap { t => t.children map { c => (t, c) } } filter { case (a, b) => a.possibleTasks.nonEmpty && b.possibleTasks.nonEmpty }
-
-    SimpleDirectedGraph(allNodes, allEdges)
-  }
-
-  private def buildChildrenTaskTable(methods: Array[(DecompositionMethod, Array[Int])], primitives: Array[(Task, Int)]): Array[Set[Task]] = {
-    val childrenPossibleTasks: Array[mutable.HashSet[Task]] = children.indices map { _ => new mutable.HashSet[Task]() } toArray
-
-    // add tasks from methods
-    methods foreach { case (method, childrenPositions) =>
-      method.subPlan.planStepSchemaArray zip childrenPositions foreach { case (task, child) => childrenPossibleTasks(child) add task }
-    }
-    // add inherited primitives
-    primitives foreach { case (primitive, index) => childrenPossibleTasks(index) add primitive }
-
-    childrenPossibleTasks map { _.toSet }
-  }
-
-  def checkMethodPossibility(method: DecompositionMethod, childrenAssignment: Array[Int], reducedChildren: Array[PathDecompositionTree[Payload]]): Boolean = {
-    val ordering: Seq[Task] = method.subPlan.planStepSchemaArray
-    val methodPossible = ordering.zip(childrenAssignment) forall { case (task, position) => reducedChildren(position).possibleTasks contains task }
-    //if (!methodPossible) println("Excluded method.") else println("Acceptable method.")
-    methodPossible
-  }
-
-  def restrictPathDecompositionTree(toRemoveFromLeafPaths: Seq[Set[Task]]): PathDecompositionTree[Payload] =
-    if (children.isEmpty) {
-      // I am a leaf, so just execute the removal
-      // TODO: do something with payloads ... this will become necessary once we will perform this operation also with SOGs
-
-      if (possibleTasks.nonEmpty) {
-        assert(toRemoveFromLeafPaths.length == 1)
-        PathDecompositionTree(path, possibleTasks -- toRemoveFromLeafPaths.head, Array(), Array(), Array(), Array(), payload, Array(), isNormalised = true)
-      } else {
-        assert(toRemoveFromLeafPaths.isEmpty)
-        PathDecompositionTree(path, Set(), Array(), Array(), Array(), Array(), payload, Array(), isNormalised = true)
-      }
-    } else {
-      // separate toRemoveToChildren
-
-      val (empty, toRemovePerChild) = children.foldLeft[(Seq[Set[Task]], Seq[(PathDecompositionTree[Payload], Seq[Set[Task]])])](toRemoveFromLeafPaths, Nil)(
-        {
-          case ((remainingPrimitivePaths, result), child) =>
-            val (thisChildPrimitive, remainingChildPrimitives) = remainingPrimitivePaths.splitAt(child.primitivePaths.length)
-
-
-            (remainingChildPrimitives, result :+(child, thisChildPrimitive))
-        })
-
-      // we have to partition the primitive paths to all children ...
-      assert(empty.isEmpty)
-
-      val reducedChildren = toRemovePerChild.toArray map { case (child, toRemove) => child.restrictPathDecompositionTree(toRemove) }
-
-      // now we have to recompute the tree
-      // first step: check for all decomposition methods whether they are still applicable
-      val remainingMethodsWithAssignments = possibleMethods.zip(methodToPositions) filter {
-        case (method, assignment) => checkMethodPossibility(method, assignment, reducedChildren)
-      }
-      //println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
-
-      val remainingMethods: Array[DecompositionMethod] = remainingMethodsWithAssignments map { _._1 }
-      val remainingMethodSet: Set[DecompositionMethod] = remainingMethods.toSet
-      val remainingMethodsAssignments: Array[Array[Int]] = remainingMethodsWithAssignments map { _._2 }
-
-
-      val remainingPrimitivesWithAssignment =
-        possiblePrimitives.zipWithIndex collect { case (primitive, index) if reducedChildren(primitivePositions(index)).possibleTasks contains primitive =>
-          (primitive, primitivePositions(index))
-        }
-      val remainingPrimitives: Array[Task] = remainingPrimitivesWithAssignment map { _._1 }
-      val remainingPrimitivesPositions: Array[Int] = remainingPrimitivesWithAssignment map { _._2 }
-
-      //println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
-
-
-      // check which tasks we can keep
-      val (stillPossibleAbstractTasks, abstractTasksToDiscard) = possibleAbstracts partition { t => remainingMethods.exists(_.abstractTask == t) }
-      val abstractTasksToDiscardSet = abstractTasksToDiscard.toSet
-
-      // since we are discarding abstract tasks, their methods are not applicable any more
-      // now we have to recompute the tree
-      // first step: check for all decomposition methods whether they are still applicable
-      val remainingMethodsWithAssignmentsAfterATRemoval = possibleMethods.zip(methodToPositions) filterNot {
-        case (method, assignment) =>
-          (abstractTasksToDiscardSet contains method.abstractTask) || !(remainingMethodSet contains method)
-      }
-      //println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
-
-      val remainingMethodsAfterATRemoval: Array[DecompositionMethod] = remainingMethodsWithAssignmentsAfterATRemoval map { _._1 }
-      val remainingMethodsAssignmentsAfterATRemoval: Array[Array[Int]] = remainingMethodsWithAssignmentsAfterATRemoval map { _._2 }
-
-      // we have removed methods, so we have to re-check whether the tasks our children can have can actually be produced
-      val childrenPossibleTasks: Array[Set[Task]] = buildChildrenTaskTable(remainingMethodsWithAssignmentsAfterATRemoval, remainingPrimitivesWithAssignment)
-
-      // now we have propagated everything
-      val propagatedChildren = childrenPossibleTasks.zip(reducedChildren) map { case (actuallyRemainingTasks, child) =>
-        if (child.possibleTasks.size == actuallyRemainingTasks.size) child else child.restrictTo(actuallyRemainingTasks.toSet)
-      }
-
-      val stillPossibleTasks = stillPossibleAbstractTasks ++ remainingPrimitives
-
-      PathDecompositionTree(path, stillPossibleTasks.toSet, remainingPrimitives,
-                            remainingMethodsAfterATRemoval, remainingMethodsAssignmentsAfterATRemoval, remainingPrimitivesPositions, payload, propagatedChildren, isNormalised = true)
-    }
-
-  def restrictTo(restrictToTasks: Set[Task]): PathDecompositionTree[Payload] = if (restrictToTasks.size == possibleTasks.size) this
-  else {
-    // propagate the restriction to children
-    val remainingMethods = possibleMethods.zip(methodToPositions) filter { restrictToTasks contains _._1.abstractTask }
-    val remainingPrimitives = possiblePrimitives.zip(primitivePositions) filter { restrictToTasks contains _._1 }
-
-    val childrenPossibleTasks: Array[Set[Task]] = buildChildrenTaskTable(remainingMethods, remainingPrimitives)
-
-    val restrictedChildren = childrenPossibleTasks.zip(children) map { case (tasks, child) => child.restrictTo(tasks) }
-
-    PathDecompositionTree(path, restrictToTasks, remainingPrimitives map { _._1 }, remainingMethods map { _._1 }, remainingMethods map { _._2 }, remainingPrimitives map { _._2 },
-                          payload, restrictedChildren, isNormalised = isNormalised)
-  }
-
-  /** returns a detailed information about the object */
-  override def longInfo: String = "T:" + possibleTasks.size + " P:" + path.mkString(",")
-}
 
 object PathBasedEncoding {
   //def pathSortingFunction(pathA: Seq[Int], pathB: Seq[Int]): Int = path.foldLeft(0)({ case (acc, v) => acc * domain.maximumMethodSize + v })

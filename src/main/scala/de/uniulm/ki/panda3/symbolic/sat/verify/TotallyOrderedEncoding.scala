@@ -195,8 +195,9 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
 
                 // if a predicate could be achieved on its one, then it can now together with all non-deleted things
                 val byNonDel: Seq[(Predicate, Predicate)] = h1State.toSeq collect { case nondel if !(delSet contains nondel) &&
-                  (positivePreconditions forall {prec => h2State contains (prec,nondel)})
-                   => (add, nondel) :: (nondel, add) :: Nil } flatten
+                  (positivePreconditions forall { prec => h2State contains(prec, nondel) })
+                => (add, nondel) ::(nondel, add) :: Nil
+                } flatten
 
                 byAdd ++ byNonDel
               }
@@ -228,7 +229,7 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
     val tasksToRemoveFromPaths = filterPrimitivesH2(sortedPaths)
 
     val foundAnyTaskToRemove = tasksToRemoveFromPaths exists { _.nonEmpty }
-    if (!foundAnyTaskToRemove) pdt
+    if (!foundAnyTaskToRemove) pdt.normalise
     else {
 
 
@@ -238,7 +239,7 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, taskSequenc
 
       /*val dontRemovePrimitives: Seq[Set[Task]] = pdt.primitivePaths.toSeq map { _ => Set[Task]() }
 
-    pdt.restrictPathDecompositionTree(dontRemovePrimitives)*/
+      pdt.restrictPathDecompositionTree(dontRemovePrimitives)*/
       minimisePathDecompositionTree(npdt)
     }
   }

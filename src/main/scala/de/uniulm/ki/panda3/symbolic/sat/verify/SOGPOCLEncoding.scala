@@ -56,11 +56,11 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
 
 
     // init and goal must be contaiend in the final plan
-    val initAndGoalMustBePresent = Clause(pathAction(0, initVertex._1, initVertex._2.head)) :: Clause(pathAction(0, goalVertex._1, goalVertex._2.head)) :: Nil
+    val initAndGoalMustBePresent = Clause(pathAction(1, initVertex._1, initVertex._2.head)) :: Clause(pathAction(1, goalVertex._1, goalVertex._2.head)) :: Nil
 
     // for every present task, its preconditions must be supported
     val preconditionsMustBeSupportedTemp = extendedSOG.vertices flatMap { case node@(path, tasks) => tasks flatMap { t =>
-      t.preconditionsAsPredicateBool map { case (prec, true) => (impliesSingle(pathAction(path.length - 1, path, t), preconditionOfPath(path, prec)), (node, prec)) }
+      t.preconditionsAsPredicateBool map { case (prec, true) => (impliesSingle(pathAction(path.length, path, t), preconditionOfPath(path, prec)), (node, prec)) }
     }
     }
 
@@ -84,7 +84,7 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
         assert((taskList map { _._1 }).distinct.length == 1)
         val supportLiteral = taskList.head._1
 
-        impliesRightOr(supportLiteral :: Nil, taskList map { _._2._2 } map { t => pathAction(sPath.length - 1, sPath, t) })
+        impliesRightOr(supportLiteral :: Nil, taskList map { _._2._2 } map { t => pathAction(sPath.length, sPath, t) })
       } toSeq
 
       (supporterMustBePresent :+ supportedPrecMustHaveSupporter, potentialSupportingTasks zip supporterLiterals map { x => (x._1._1._1, path, prec) })
@@ -151,7 +151,7 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
       nonOrdered flatMap { case (pt, ts) =>
         val threadingTasks = ts filter { t => t.effectsAsPredicateBool exists { case (p, s) => !s && p == prec } }
 
-        threadingTasks map { t => impliesRightOr(supporter(p1, p2, prec) :: pathAction(pt.length - 1, pt, t) :: Nil, before(pt, p1) :: before(p2, pt) :: Nil) }
+        threadingTasks map { t => impliesRightOr(supporter(p1, p2, prec) :: pathAction(pt.length, pt, t) :: Nil, before(pt, p1) :: before(p2, pt) :: Nil) }
 
       }
     }
