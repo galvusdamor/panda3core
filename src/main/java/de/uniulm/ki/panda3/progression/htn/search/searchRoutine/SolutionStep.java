@@ -50,7 +50,21 @@ public class SolutionStep {
 
     @Override
     public String toString() {
-        return super.toString();
+
+        if (predecessor != null) {
+            String me;
+            if (this.method != null) {
+                me = this.method.name() + " @ " + this.method.abstractTask().shortInfo();
+            } else {
+                me = ProgressionNetwork.flatProblem.opNames[this.action];
+            }
+            String other = "";
+            other = predecessor.toString();
+            if (other.length() > 0)
+                me = "\n" + me;
+            return other + me;
+        } else
+            return ""; // the first node is a dummy
     }
 
     public boolean isFirst() {

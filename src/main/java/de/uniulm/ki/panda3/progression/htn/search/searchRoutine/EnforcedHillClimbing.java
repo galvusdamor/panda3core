@@ -15,7 +15,7 @@ import java.util.List;
  */
 public class EnforcedHillClimbing extends ProgressionSearchRoutine{
 
-    public List<Object> search(ProgressionNetwork firstSearchNode) {
+    public SolutionStep search(ProgressionNetwork firstSearchNode) {
         /*
         System.out.println("\nStarting enforced hill climbing search");
         int searchnodes = 1;
@@ -100,7 +100,7 @@ public class EnforcedHillClimbing extends ProgressionSearchRoutine{
     }
 
     @Override
-    public List<Object> search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
+    public SolutionStep search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
         return null;
     }
 }

@@ -5,12 +5,11 @@ import de.uniulm.ki.panda3.progression.htn.search.*;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.ProgressionSearchRoutine;
-import de.uniulm.ki.panda3.progression.proUtil.proPrinter;
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.SolutionStep;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.*;
 import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.sasp.heuristics.SasHeuristic;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
-import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
@@ -104,7 +103,7 @@ public class htnPlanningInstance {
         else if (doDFS)
             initialNode.heuristic = new proDFS();
         else if (heuristic instanceof RelaxedCompositionGraph) {
-            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hAdd, methods, initialTasks, ProgressionNetwork.taskToIndex.keySet());
+            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hLmCut, methods, initialTasks);
         } else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
             initialNode.heuristic = new RCG(methods, initialTasks, ProgressionNetwork.taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
@@ -168,7 +167,7 @@ public class htnPlanningInstance {
             System.out.println(" - time limit for search is " + (quitAfterMs / 1000) + " sec");
         }
 
-        List<Object> solution;
+        SolutionStep solution;
         if ((routine instanceof PriorityQueueSearch) && (taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.branchOverAll)) {
             System.out.println(" - This is not a good configuration -- it BRANCHES over ALL abstract tasks. " +
                     "One should only only do that for evaluation purposes.");
@@ -183,13 +182,7 @@ public class htnPlanningInstance {
         int n = 1;
         if (solution != null) {
             System.out.println("\nFound a solution:");
-            for (Object a : solution) {
-                if (a instanceof Integer)
-                    System.out.println(n + " " + proPrinter.actionToStr(ProgressionNetwork.indexToTask[(Integer) a]));
-                else
-                    System.out.println(n + " " + ((SimpleDecompositionMethod) a).name());
-                n++;
-            }
+            System.out.println(solution.toString());
         } else System.out.println("Problem unsolvable.");
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
 
@@ -214,10 +207,10 @@ public class htnPlanningInstance {
         }
     }
 
-    private boolean isApplicable(List<Object> solution, BitSet state) {
+    private boolean isApplicable(SolutionStep solution, BitSet state) {
         if (solution == null)
             return true;
-        for (Object mod : solution) {
+        for (Object mod : solution.getSolution()) {
             if (mod instanceof Integer) {
                 int a = (Integer) mod;
                 for (int pre : ProgressionNetwork.flatProblem.precLists[a]) {

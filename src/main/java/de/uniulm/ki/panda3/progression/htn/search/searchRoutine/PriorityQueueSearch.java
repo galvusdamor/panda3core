@@ -62,7 +62,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         this.taskSelection = taskSelectionStrategy;
     }
 
-    public List<Object> search(ProgressionNetwork firstSearchNode) {
+    public SolutionStep search(ProgressionNetwork firstSearchNode) {
         InformationCapsule ic = new InformationCapsule();
         TimeCapsule tc = new TimeCapsule();
         return search(firstSearchNode, ic, tc);
@@ -70,7 +70,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
     abstractTaskSelection taskSelection = abstractTaskSelection.random;
 
-    public List<Object> search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
+    public SolutionStep search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
         if (output)
             System.out.println("\nStarting priority queue search");
         int searchnodes = 1;
@@ -80,7 +80,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         long foundShortestPlan = 0;
         int unitPropagation = 0;
         int bestMetric = Integer.MAX_VALUE;
-        List<Object> solution = null;
+        SolutionStep solution = null;
         long totalSearchTime = System.currentTimeMillis();
         long lastInfo = System.currentTimeMillis();
         PriorityQueue<ProgressionNetwork> fringe = new PriorityQueue<>();
@@ -116,7 +116,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 node.heuristic = n.heuristic.update(node, ps);
                 node.metric = node.heuristic.getHeuristic();
                 if (aStar) {
-                    node.metric += node.solution.getLength();
+                    node.metric = node.metric + (node.solution.getLength() / 2);
+                    //node.metric += node.solution.getLength();
                 }
 
                 node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
@@ -130,7 +131,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                                 foundFirstPlanAfter = System.currentTimeMillis();
                             }
                             System.out.println("Found solution " + (foundPlans + 1) + " length " + numSteps);
-                            solution = node.solution.getSolution();
+                            solution = node.solution;
                             foundShortestPlan = System.currentTimeMillis();
                             planLength = numSteps;
                             if (node.progressionTrace != null)
@@ -217,7 +218,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 node.heuristic = n.heuristic.update(node, oneAbs, m);
                 node.metric = node.heuristic.getHeuristic();
                 if (aStar) {
-                    node.metric += node.solution.getLength();
+                    node.metric = node.metric + (node.solution.getLength() / 2);
+                    //node.metric += node.solution.getLength();
                 }
 
                 node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
@@ -322,7 +324,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
     }
 
     // ABSTRACT CHOICE
-    public List<Object> searchWithAbstractBranching(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
+    public SolutionStep searchWithAbstractBranching(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
         if (output)
             System.out.println("\nStarting priority queue search");
         int searchnodes = 1;
@@ -332,7 +334,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         long foundShortestPlan = 0;
         int unitPropagation = 0;
         int bestMetric = Integer.MAX_VALUE;
-        List<Object> solution = null;
+        SolutionStep solution = null;
         long totalSearchTime = System.currentTimeMillis();
         long lastInfo = System.currentTimeMillis();
         PriorityQueue<ProgressionNetwork> fringe = new PriorityQueue<>();
@@ -377,7 +379,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                                 foundFirstPlanAfter = System.currentTimeMillis();
                             }
                             System.out.println("Found solution " + (foundPlans + 1) + " length " + numSteps);
-                            solution = node.solution.getSolution();
+                            solution = node.solution;
                             foundShortestPlan = System.currentTimeMillis();
                             planLength = numSteps;
                             if (node.progressionTrace != null)
@@ -531,7 +533,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         return "Priority Queue";
     }
 
-    private void setSolInfo(List<Object> solution, InformationCapsule ic) {
+    private void setSolInfo(SolutionStep solution, InformationCapsule ic) {
         String PrimitivePlan = "";
         String FirstDecTask = "";
         int numPrim = 0;
@@ -540,7 +542,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         int numDec = 0;
 
         if (solution != null) {
-            for (Object a : solution) {
+            for (Object a : solution.getSolution()) {
                 if (a instanceof Integer) {
                     if (ProgressionNetwork.ShopPrecActions.contains(a))
                         numShop++;

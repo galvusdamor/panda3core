@@ -5,6 +5,7 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.ProgressionSearchRoutine;
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.SolutionStep;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.htnGroundedProgressionHeuristic;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.proBFS;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -48,9 +49,9 @@ public class delRelaxedHTN implements htnGroundedProgressionHeuristic {
         //routine = new EnforcedHillClimbing();
         //routine = new CompleteEnforcedHillClimbing();
 
-        List<Object> sol = routine.search(initialNode);
+        SolutionStep sol = routine.search(initialNode);
         if (sol != null) {
-            this.heuristicValue = sol.size();
+            this.heuristicValue = sol.getLength();
             this.relaxedRechable = true;
         } else {
             this.heuristicValue = Integer.MAX_VALUE;

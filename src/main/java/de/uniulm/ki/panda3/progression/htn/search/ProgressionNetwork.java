@@ -191,7 +191,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.numberOfTasks += m.numberOfPrimSubtasks;
 
         res.state = this.state;
-        res.solution = new SolutionStep(this.solution,m.m);
+        res.solution = new SolutionStep(this.solution, m.m);
         res.numDecompositionSteps++;
         res.unconstraintAbstractTasks.remove(ps);
 
