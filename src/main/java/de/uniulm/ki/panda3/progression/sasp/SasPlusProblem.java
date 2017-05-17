@@ -643,13 +643,23 @@ public class SasPlusProblem {
         numPrecs = numprecsNew;
         costs = costsNew;
 
-        int[] s0ListNew = new int[s0List.length];
+        List<Integer> tempList = new ArrayList<>();
         for (int i = 0; i < s0List.length; i++)
-            s0ListNew[i] = factOldToNew[s0List[i]];
+            if (usedFacts.contains(s0List[i]))
+                tempList.add(factOldToNew[s0List[i]]);
 
-        int[] gListNew = new int[gList.length];
+        int[] s0ListNew = new int[tempList.size()];
+        for (int i = 0; i < s0ListNew.length; i++)
+            s0ListNew[i] = tempList.get(i);
+
+        tempList.clear();
         for (int i = 0; i < gList.length; i++)
-            gListNew[i] = factOldToNew[gList[i]];
+            if (usedFacts.contains(gList[i]))
+                tempList.add(factOldToNew[gList[i]]);
+
+        int[] gListNew = new int[tempList.size()];
+        for (int i = 0; i < gListNew.length; i++)
+            gListNew[i] = tempList.get(i);
 
         numOfStateFeatures = usedFacts.size();
         numOfOperators = actionCount;
@@ -835,5 +845,116 @@ public class SasPlusProblem {
         for (int a : array)
             if (i == a) return true;
         return false;
+    }
+
+    public String ourRepToSaspString() {
+        StringBuilder s = new StringBuilder();
+
+        s.append("begin_version\n3\nend_version\n\n");
+
+        s.append("begin_metric\n");
+        if (this.actionCosts) s.append("1");
+        else s.append("0");
+        s.append("\nend_metric\n\n");
+
+        s.append(this.firstIndex.length + "\n"); // number of variables aka mutex groups
+        for (int i = 0; i < this.firstIndex.length; i++) {
+            s.append("begin_variable\n");
+            if (ranges[i] > 1) {
+                s.append("var" + (i + 1) + "\n");
+                s.append("-1\n"); // axiom layer of the var
+                s.append(ranges[i] + "\n");
+                for (int j = firstIndex[i]; j <= lastIndex[i]; j++) {
+                    s.append("Atom " + factStrs[j].substring(factStrs[j].indexOf("=") + 1) + "\n");
+                }
+            } else {
+                s.append(factStrs[firstIndex[i]].substring(factStrs[firstIndex[i]].indexOf("=") + 1).replaceAll(" ", "_") + "\n");
+
+                s.append("-1\n"); // axiom layer of the var
+                s.append("2\n");
+                s.append("Atom TRUE()\n");
+                s.append("Atom FALSE()\n");
+            }
+            s.append("end_variable\n\n");
+        }
+
+        s.append("0\n\n"); // number of mutex groups
+
+        // initial state
+        s.append("begin_state\n");
+        BitSet tempS0 = this.getS0();
+        for (int i = 0; i < firstIndex.length; i++) {
+            if (ranges[i] > 1) {
+                int value = tempS0.nextSetBit(firstIndex[i]) - firstIndex[i];
+                s.append(value + "\n");
+            } else {
+                if (tempS0.get(firstIndex[i]))
+                    s.append("0\n");
+                else
+                    s.append("1\n");
+            }
+        }
+        s.append("end_state\n\n");
+
+        // goal state
+        s.append("begin_goal\n");
+        s.append(this.gList.length + "\n");
+        for (int g : this.gList) {
+            int var = indexToMutexGroup[g];
+            int val = g - firstIndex[var];
+            s.append(var + " " + val + "\n");
+        }
+        s.append("end_goal\n\n");
+
+        // operators
+        s.append(numOfOperators + "\n\n");
+        for (int i = 0; i < numOfOperators; i++) {
+            s.append("begin_operator\n");
+            s.append(this.opNames[i] + "\n");
+
+            Set<Integer> affectedVars = new HashSet<>();
+            Map<Integer, Integer> precs = new HashMap<>();
+            Map<Integer, Integer> adds = new HashMap<>();
+
+            for (int prec : precLists[i]) {
+                int var = indexToMutexGroup[prec];
+                int val = prec - firstIndex[var];
+                precs.put(var, val);
+                //System.out.println(varNames[var] + " " + factStrs[prec]);
+            }
+
+            for (int add : addLists[i]) {
+                int var = indexToMutexGroup[add];
+                int val = add - firstIndex[var];
+                adds.put(var, val);
+                //System.out.println(varNames[var] + " " + factStrs[add]);
+            }
+
+            affectedVars.addAll(precs.keySet());
+            affectedVars.addAll(adds.keySet());
+
+            List<String> prevail = new ArrayList<>();
+            List<String> effects = new ArrayList<>();
+            for (int var : affectedVars) {
+                if (precs.containsKey(var) && !adds.containsKey(var)) {
+                    prevail.add(var + " " + precs.get(var) + "\n");
+                } else if (precs.containsKey(var) && adds.containsKey(var)) {
+                    effects.add("0 " + var + " " + precs.get(var) + " " + adds.get(var) + "\n");
+                } else if (!precs.containsKey(var) && adds.containsKey(var)) {
+                    effects.add("0 " + var + " -1 " + adds.get(var) + "\n");
+                }
+            }
+            s.append(prevail.size() + "\n");
+            for (String line : prevail)
+                s.append(line);
+            s.append(effects.size() + "\n");
+            for (String line : effects)
+                s.append(line);
+            s.append(costs[i] + "\n");
+            s.append("end_operator\n\n");
+        }
+
+
+        return s.toString();
     }
 }
