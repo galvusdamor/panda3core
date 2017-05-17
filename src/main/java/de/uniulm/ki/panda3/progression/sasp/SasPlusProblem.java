@@ -5,6 +5,7 @@ import scala.Tuple2;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.BitSet;
 import java.util.Iterator;
@@ -956,5 +957,24 @@ public class SasPlusProblem {
 
 
         return s.toString();
+    }
+
+    public String getStatistics() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(" - model has " + this.numOfOperators + " operators\n");
+        sb.append(" - model has " + this.numOfStateFeatures + " state features\n");
+        sb.append(" - operators' mean count of (pre, add, del) = (" + meanCount(precLists) + ", " + meanCount(addLists) + ", " + meanCount(delLists) + ")\n");
+        sb.append(" - effects' mean achiever count: " + meanCount(addLists) + "\n");
+        sb.append(" - effects' mean consumer count: " + meanCount(precToTask) + "\n");
+        return sb.toString();
+    }
+
+    DecimalFormat f = new DecimalFormat("#0.00");
+
+    private String meanCount(int[][] lists) {
+        double count = 0;
+        for (int[] list : lists)
+            count += list.length;
+        return f.format(count / this.precLists.length);
     }
 }

@@ -48,6 +48,7 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
     UUIntStack[] pcfInvert;
     protected int goalPCF;
     protected BitSet opReachable;
+    protected boolean earlyAbord = true;
 
     abstract int eAND();
 
@@ -224,7 +225,7 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
             waitingForCount[prec] = 0;
         }
 
-        return calcHeuLoop(activatable, (BitSet) g.clone());// do not change original goal
+        return calcHeuLoop(activatable, (BitSet) g.clone(), this.earlyAbord);// do not change original goal
     }
 
     @Override
@@ -253,11 +254,12 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
         for (int gf : g)
             goal.set(gf);
 
-        return calcHeuLoop(activatable, goal);
+        return calcHeuLoop(activatable, goal, this.earlyAbord);
     }
 
-    private int calcHeuLoop(UUIntPairPriorityQueue activatable, BitSet goal) {
+    private int calcHeuLoop(UUIntPairPriorityQueue activatable, BitSet goal, boolean earlyAbord) {
         int hValGoal = eAND();
+        boolean goalReached = false;
 
         while (!activatable.isEmpty()) {
             int newNode = activatable.minPair()[1];
@@ -267,8 +269,11 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
                 hValGoal = combineAND(hValGoal, hVal[newNode]);
                 if (old != hValGoal)
                     this.goalPCF = newNode;
-                if (goal.isEmpty())
-                    return hValGoal;
+                if (goal.isEmpty()) {
+                    goalReached = true;
+                    if (earlyAbord)
+                        break;
+                }
             }
             for (int i = 0; i < whoIsWaitingForMe[newNode].length; i++) {
                 int waitingNode = whoIsWaitingForMe[newNode][i];
@@ -278,7 +283,10 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
                 }
             }
         }
-        return Integer.MAX_VALUE;
+        if (goalReached)
+            return hValGoal;
+        else
+            return Integer.MAX_VALUE;
     }
 
 

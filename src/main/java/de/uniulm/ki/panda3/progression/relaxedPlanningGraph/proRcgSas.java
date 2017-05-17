@@ -42,6 +42,8 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
 
         this.compEnc = new HtnCompositionEncoding(flat);
         this.compEnc.geneateTaskCompGraph(methods, initialTasks);
+        System.out.println("Generating Relaxed Composition Model ...");
+        System.out.println(this.compEnc.getStatistics());
 
         if (heuristic == SasHeuristic.SasHeuristics.hAdd) {
             this.heuristic = new hAdd(this.compEnc);

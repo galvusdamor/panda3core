@@ -17,6 +17,8 @@ public class hLmCut extends hMax {
 
     public hLmCut(SasPlusProblem p) {
         super(p, true);
+        this.earlyAbord = false;
+        this.trackPCF = true;
         assert (p.correctModel());
         this.numOfStateFeatures = p.numOfStateFeatures;
         this.addToTask = p.addToTask;
@@ -52,12 +54,13 @@ public class hLmCut extends hMax {
         while (hMax > 0) {
             debugOut("hMax: " + hMax + "\n");
             // compute goal-zone
+            BitSet goalZone = new BitSet(this.numOfStateFeatures);
             BitSet cut = new BitSet(this.numOfOperators);
-            BitSet testReachability = new BitSet(this.numOfStateFeatures);
-            goalZone(cut, testReachability);
+            BitSet precsOfCutNodes = new BitSet(this.numOfStateFeatures);
+            goalZone(goalZone, cut, precsOfCutNodes);
 
             // check forward-reachability
-            forwardReachability(s0, cut, testReachability);
+            forwardReachability(s0, cut, goalZone, precsOfCutNodes);
 
             // calculate costs
             int minCosts = Integer.MAX_VALUE;
@@ -74,7 +77,8 @@ public class hLmCut extends hMax {
             cutted = cut.nextSetBit(0);
             while (cutted >= 0) {
                 this.costs[this.opIndexToEffNode[cutted]] -= minCosts;
-                debugOut(cutted + " " + nodeNames.get(this.opIndexToEffNode[cutted]) + "\n");
+                assert (this.costs[this.opIndexToEffNode[cutted]] >= 0);
+                debugOut(cutted + " " + opNames[cutted] + "\n");
                 cutted = cut.nextSetBit(cutted + 1);
             }
             hMax = super.calcHeu(s0, g);
@@ -83,7 +87,49 @@ public class hLmCut extends hMax {
         return lmCutHeu;
     }
 
-    private void forwardReachability(BitSet s0, BitSet cut, BitSet testReachability) {
+    private UUIntStack fringe = new UUIntStack();
+
+    private void goalZone(BitSet goalZone, BitSet cut, BitSet precsOfCutNodes) {
+        fringe.clear();
+        fringe.push(this.goalPCF);
+        while (!fringe.isEmpty()) {
+            int fact = fringe.pop();
+            debugOut("gz-fact: " + nodeNames.get(fact) + "\n");
+            for (int producer : addToTask[fact]) {
+                debugOut("producer: " + this.opNames[producer] + "\n");
+                if (!opReachable.get(producer)){
+                    debugOut("unreachable\n");
+                    continue;
+                }
+
+                int singlePrec = pcf[producer];
+                if (goalZone.get(singlePrec)) {
+                    continue;
+                }
+                debugOut("with prec: " + nodeNames.get(singlePrec) + "\n");
+
+                if (this.costs[this.opIndexToEffNode[producer]] == 0) {
+                    goalZone.set(singlePrec);
+                    fringe.push(singlePrec);
+                } else {
+                    cut.set(producer);
+                    precsOfCutNodes.set(singlePrec);
+                }
+            }
+        }
+        fringe.clear();
+
+        int goalZ = goalZone.nextSetBit(0);
+        debugOut("Goal-Zone: ");
+        while (goalZ >= 0) {
+            debugOut(nodeNames.get(goalZ) + " ");
+            goalZ = goalZone.nextSetBit(goalZ + 1);
+        }
+        debugOut("\n");
+    }
+
+    private void forwardReachability(BitSet s0, BitSet cut, BitSet goalZone, BitSet testReachability) {
+        // put s0 facts into list of reachable facts
         BitSet reachableFacts = (BitSet) s0.clone();
         UUIntStack newFacts = new UUIntStack();
         int reachableFact = s0.nextSetBit(0);
@@ -91,20 +137,24 @@ public class hLmCut extends hMax {
             newFacts.push(reachableFact);
             reachableFact = s0.nextSetBit(reachableFact + 1);
         }
-        reachabliltity:
+
+        // calculate reachability
+        reachability:
         while (!newFacts.isEmpty()) {
             UUIntStack addEffects = new UUIntStack();
             while (!newFacts.isEmpty()) {
                 reachableFact = newFacts.pop();
                 testReachability.set(reachableFact, false);
                 if (testReachability.isEmpty())
-                    break reachabliltity;
+                    break reachability;
 
                 UUIntStack operators = pcfInvert[reachableFact];
                 operators.resetIterator();
                 while (operators.hasNext()) {
                     int action = operators.next();
                     for (int addEff : this.addLists[action]) {
+                        if (goalZone.get(addEff))
+                            continue;
                         if (!reachableFacts.get(addEff)) {
                             reachableFacts.set(reachableFact, true);
                             addEffects.push(addEff);
@@ -127,42 +177,5 @@ public class hLmCut extends hMax {
                 unreachableFact = testReachability.nextSetBit(unreachableFact + 1);
             }
         }
-    }
-
-    private void goalZone(BitSet cut, BitSet testReachability) {
-        BitSet goalZone = new BitSet(this.numOfStateFeatures);
-        UUIntStack fringe = new UUIntStack();
-        fringe.push(this.goalPCF);
-        while (!fringe.isEmpty()) {
-            int fact = fringe.pop();
-            debugOut("gz-fact: " + nodeNames.get(fact) + "\n");
-            for (int producer : addToTask[fact]) {
-                if (!opReachable.get(producer))
-                    continue;
-                debugOut("producer: " + this.opNames[producer] + "\n");
-
-                int singlePrec = pcf[producer];
-                if (goalZone.get(singlePrec)) {
-                    continue;
-                }
-                debugOut("with prec: " + nodeNames.get(singlePrec) + "\n");
-
-                if (this.costs[this.opIndexToEffNode[producer]] == 0) {
-                    goalZone.set(singlePrec);
-                    fringe.push(singlePrec);
-                } else {
-                    cut.set(producer);
-                    testReachability.set(singlePrec);
-                }
-            }
-        }
-
-        int goalZ = goalZone.nextSetBit(0);
-        debugOut("Goal-Zone: ");
-        while (goalZ >= 0) {
-            debugOut(nodeNames.get(goalZ) + " ");
-            goalZ = goalZone.nextSetBit(goalZ + 1);
-        }
-        debugOut("\n");
     }
 }
