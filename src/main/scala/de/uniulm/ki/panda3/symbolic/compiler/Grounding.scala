@@ -108,7 +108,9 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
       case GroundedDecompositionMethod(liftedMethod, variableBinding) =>
         // ground the abstract actions
         val groundedAbstractTask = groundTaskToGroundedTask(GroundTask(liftedMethod.abstractTask, liftedMethod.abstractTask.parameters map variableBinding))
-        SimpleDecompositionMethod(groundedAbstractTask, groundPlan(liftedMethod.subPlan, variableBinding), liftedMethod.name)
+        SimpleDecompositionMethod(groundedAbstractTask, groundPlan(liftedMethod.subPlan, variableBinding), liftedMethod.name + (
+          variableBinding map {case (v,c) => v.name + "=" + c.name}
+          ).mkString("[",",","]"))
     }
 
     // check whether we have to insert a new abstract task, as the initial plan might not be completely grounded
