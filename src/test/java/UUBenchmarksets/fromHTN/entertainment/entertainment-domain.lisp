@@ -51,7 +51,7 @@
     :task (av_connect ?d1 ?d3)
     :subtasks (and
         (av_connect ?d1 ?d2)
-        (direct_av_connect ?d2 ?d3))
+        (av_connect ?d2 ?d3))
   )
 
   ; indirect av with split (no join possible anymore)

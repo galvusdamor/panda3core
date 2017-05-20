@@ -30,8 +30,10 @@
   (video_port p-tv-scart-1)
   (audio_cable scart-cable-1)
   (video_cable scart-cable-1)
+  
   (plug_of scart-cable-1 pl-scart-1)
   (plug_of scart-cable-1 pl-scart-2)
+
   (compatible p-tv-scart-1 pl-scart-1)
   (compatible p-tv-scart-1 pl-scart-2)
   (compatible p-dvd-scart-1 pl-scart-1)
