@@ -46,7 +46,7 @@ object PredefinedConfigurations {
   // TODO old stuff ... should probably be deleted
 
 
-  val globalTimelimit = 30 * 60
+  val globalTimelimit = 10 * 60
 
 
   // Greedy
@@ -172,26 +172,43 @@ object PredefinedConfigurations {
   val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
     Map(
          //"-panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)),
+         "-Dijkstra" ->(htnParsing, groundingPreprocess, planSearchDijkstra),
+         "-DFS" ->(htnParsing, groundingPreprocess, planSearchDFS),
+         "-BFS" ->(htnParsing, groundingPreprocess, planSearchBFS),
+
+         "-umcpBF" -> (htnParsing, groundingPreprocess,umcpBF),
+         "-umcpDF" -> (htnParsing, groundingPreprocess,umcpDF),
+         "-umcpH" -> (htnParsing, groundingPreprocess,umcpH),
+
+
+         // A*
          "-AStarADD" ->(htnParsing, groundingPreprocess, AStarADD),
          "-AStarADDReusing" ->(htnParsing, groundingPreprocess, AStarADDReusing),
-         "-GreedyADD" ->(htnParsing, groundingPreprocess, GreedyADD),
-         "-GreedyADDReusing" ->(htnParsing, groundingPreprocess, GreedyADDReusing),
+         "-AStarRelax" -> (htnParsing, groundingPreprocess,AStarRelax),
+         "-AStarAOpenPreconditions" -> (htnParsing, groundingPreprocess,AStarAOpenPreconditions),
+
+         "-AStarAPRLiftedPR" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR),
+         "-AStarAPRLiftedPRReachability" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
+         "-AStarActionLiftedPR" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR),
+         "-AStarActionLiftedPRReachability" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
+
+         // GA*
+         "-GAStarADD" ->(htnParsing, groundingPreprocess, planSearchAStarADD),
+         "-GAStarADDReusing" ->(htnParsing, groundingPreprocess, planSearchAStarADDReusing),
+         "-GAStarRelax" ->(htnParsing, groundingPreprocess, planSearchAStarRelax),
+         "-GAStarAOpenPreconditions" ->(htnParsing, groundingPreprocess, planSearchAStarAOpenPreconditions),
+
+         "-GAStarActionLiftedPR" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPR),
+         "-GAStarActionLiftedPRReachability" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPRReachability),
+         "-GAStarAPRLiftedPR" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPR),
+         "-GAStarAPRLiftedPRReachability" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPRReachability),
+
+         //  compare
+
          "-AStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRCompare),
          "-AStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRCompare),
          "-GreedyAStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarAPRLiftedPRCompare),
-         "-GreedyAStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare),
-         "-Greedy-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, GreedyAPRLiftedPRCompare),
-         "-Greedy-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, GreedyActionLiftedPRCompare),
-
-         "-GAStarActionLiftedPRReachability" -> (htnParsing, groundingPreprocess, planSearchAStarActionLiftedPRReachability),
-         "-AStarActionLiftedPRReachability" -> (htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
-
-         "-GAStarAPRLiftedPR" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPR),
-         "-GAStarAPRLiftedPRReachability" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPRReachability),
-         "-AStarAPRLiftedPR" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPR),
-         "-AStarAPRLiftedPRReachability" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
-         "-GreedyAPRLiftedPR" -> (htnParsing, groundingPreprocess, GreedyAPRLiftedPR),
-         "-GreedyAPRLiftedPRReachability" -> (htnParsing, groundingPreprocess, GreedyAPRLiftedPRReachability)
+         "-GreedyAStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare)
        )
 
 }
