@@ -119,6 +119,8 @@ public class hddlPanda3Visitor {
         IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
 
         seqProviderList<Variable> tniVars = new seqProviderList<>();
+        if (ctxProblem.p_htn() != null && ctxProblem.p_htn().typed_var_list() != null)
+            tniVars = typedParamsToVars(sorts, 0, ctxProblem.p_htn().typed_var_list().typed_vars());
         tniVars.add(init.parameters());
 
         seqProviderList<VariableConstraint> tniConstr = new seqProviderList<>();
@@ -129,6 +131,7 @@ public class hddlPanda3Visitor {
 
         Plan p;
         if (ctxProblem.p_htn() != null) { // HTN or TIHTN
+
             p = visitTaskNetwork(ctxProblem.p_htn().tasknetwork_def(), tniVars, tniConstr, psInit, psGoal, tasks, predicates, sorts,
                     allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
         } else {
