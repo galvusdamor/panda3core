@@ -313,7 +313,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       case satSearch: SATSearch =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, timeCapsule, informationCapsule)
+          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, satSearch.reductionMethod, timeCapsule, informationCapsule)
           val (solved, finished) = runner.runWithTimeLimit(timeLimit.map({ a => 1000L * a }), satSearch.maximumPlanLength, 0, defineK = satSearch.overrideK, checkSolution =
             satSearch.checkResult)
 
@@ -1435,10 +1435,19 @@ case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
 
 }
 
+sealed trait SATReductionMethod extends DefaultLongInfo
+
+object OnlyNormalise extends SATReductionMethod {  override def longInfo: String = "only normalise "}
+object FFReduction extends SATReductionMethod {  override def longInfo: String = "FF reduction"}
+object H2Reduction extends SATReductionMethod {  override def longInfo: String = "H2 reduction"}
+object FFReductionWithFullTest extends SATReductionMethod {  override def longInfo: String = "FF reduction with full reachability test"}
+
+
 case class SATSearch(solverType: Solvertype,
                      maximumPlanLength: Int,
                      overrideK: Option[Int] = None,
-                     checkResult: Boolean = false
+                     checkResult: Boolean = false,
+                     reductionMethod : SATReductionMethod = OnlyNormalise
                     ) extends SearchConfiguration {
 
   protected override def localModifications: Seq[(String, (ParameterMode, (Option[String] => this.type)))] =

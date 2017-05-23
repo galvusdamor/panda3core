@@ -20,7 +20,7 @@ import scala.io.Source
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // scalastyle:off method.length cyclomatic.complexity
-case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule) {
+case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule) {
 
   private val fileDir = "/dev/shm/"
 
@@ -94,9 +94,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
     // start verification
     val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
-      if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, planLength, offSetToK, defineK)
+      if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, reductionMethod, planLength, offSetToK, defineK)
       //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
-      else SOGPOCLEncoding(domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+      else SOGPOCLEncoding(domain, initialPlan, planLength, reductionMethod, offSetToK, defineK).asInstanceOf[VerifyEncoding]
     //else SOGClassicalEncoding(domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
 
     // (3)
@@ -323,12 +323,16 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
               Dot2PdfCompiler.writeDotToFile(graph,"graph.pdf")
 
+              graph.vertices foreach { t => val actionIDX = t.split(",").last.toInt;
+                println("task " + t + " " + actionIDX + " " + domain.tasks(actionIDX).name)
+                domain.tasks(actionIDX) }
+
               graph.sinks sortWith { case (t1, t2) =>
                 val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
                 val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
                 PathBasedEncoding.pathSortingFunction(path1, path2)
               } map { t => val actionIDX = t.split(",").last.toInt;
-                println("task " + t + " " + actionIDX + " " + domain.tasks(actionIDX).name)
+                //println("task " + t + " " + actionIDX + " " + domain.tasks(actionIDX).name)
                 domain.tasks(actionIDX) }
 
             case tree: PathBasedEncoding[_, _] =>

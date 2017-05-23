@@ -145,7 +145,8 @@ case class VerifyRunner(domFile: String, probFile: String, configNumber: Int, pa
 
     // start verification
     val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
-      if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder() && !verify) TotallyOrderedEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK, defineK)
+      if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder() && !verify)
+        TotallyOrderedEncoding(domain, initialPlan, OnlyNormalise, sequenceToVerify.length, offSetToK, defineK)
       else if (verify) GeneralEncoding(domain, initialPlan, sequenceToVerify, offSetToK, defineK) else TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK, defineK)
 
     // (3)

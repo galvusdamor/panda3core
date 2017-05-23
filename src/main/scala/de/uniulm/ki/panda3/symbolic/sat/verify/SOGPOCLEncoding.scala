@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
+import de.uniulm.ki.panda3.configuration.SATReductionMethod
 import de.uniulm.ki.panda3.symbolic.domain.{Task, Domain}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -13,7 +14,8 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding {
+case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, overrideK: Option[Int] = None)
+  extends SOGEncoding {
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected def preconditionOfPath(path: Seq[Int], precondition: Predicate): String = "prec^" + path.mkString(";") + "_" + precondition.name
