@@ -74,7 +74,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
       val possibleChildTasks: Array[Map[Task, String]] = Range(0, numberOfChildren) map { npos =>
         val npath = path :+ npos
-        domain.tasks map { t => t -> pathAction(layer + 1, npath, t) } toMap
+        tree.children(npos).possibleTasks map { t => t -> pathAction(layer + 1, npath, t) } toMap
       } toArray
 
 
@@ -107,11 +107,11 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       // 1. part: select method if necessary
       val decomposeAbstract: Seq[Clause] = possibleAbstracts flatMap { case (abstractTask, abstractIndex) =>
         // select a method
-        val possibleMethods = domain.methodsWithIndexForAbstractTasks(abstractTask) map { case (m, idx) => (m, method(layer, path, idx)) }
+        val atPossibleMethods = possibleMethods filter {_._1.abstractTask == abstractTask} map { case (m, idx) => (m, method(layer, path, idx)) }
 
         // one method must be applied
-        val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, possibleMethods map { _._2 })
-        val atMostOneCanBeApplied = atMostOneOf(possibleMethods map { _._2 })
+        val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, atPossibleMethods map { _._2 })
+        val atMostOneCanBeApplied = atMostOneOf(atPossibleMethods map { _._2 })
 
         atMostOneCanBeApplied :+ oneMustBeApplied
       }
