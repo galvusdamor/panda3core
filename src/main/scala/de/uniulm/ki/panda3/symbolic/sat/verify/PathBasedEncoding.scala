@@ -52,7 +52,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     // write myself
     val possibleTasksClauses: Seq[Clause] = atMostOneOf(possibleTasksToActions)
 
-    if (layer == K || (possibleTasks forall { _.isPrimitive })) {
+    if (tree.children.isEmpty) {
       //val notAnyNonPossibleTask = domain.tasks filterNot possibleTasks map { action(layer, path, _) } map { a => Clause((a, false) :: Nil) }
       //(possibleTasksClauses ++ notAnyNonPossibleTask, Set((path, possibleTasks)))
       //println("Terminal path with " + possibleTasks.size + " tasks")
@@ -65,7 +65,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       /*val possibleTasksPerChildPosition = new Array[mutable.Set[Task]](domain.maximumMethodSize)
       Range(0, domain.maximumMethodSize) foreach { possibleTasksPerChildPosition(_) = new mutable.HashSet[Task]() }
       possiblePrimitives foreach { case (primitive, _) => possibleTasksPerChildPosition(0) += primitive }*/
-      val possibleMethods: Array[(DecompositionMethod, Int)] = tree.possibleMethods.zipWithIndex
+      val possibleMethods: Array[(DecompositionMethod, Int)] = tree.possibleMethods
 
 
       val methodToPositions = tree.methodToPositions
@@ -157,7 +157,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
   protected def generatePathDecompositionTree(path: Seq[Int], possibleTasks: Set[Task]): PathDecompositionTree[Payload] = {
     //println("GENPATH: L=" + layer + " p=" + path + " |pTasks|=" + possibleTasks.size + " \\Delta=" + domain.maximumMethodSize)
     val possibleTaskOrder = possibleTasks.toSeq
-    val layer = path.length - 1
+    val layer = path.length
 
     if (layer == K || (possibleTaskOrder forall { _.isPrimitive })) {
       //println("Terminal path with " + possibleTasks.size + " tasks")
@@ -165,11 +165,11 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     } else {
       val (possibleAbstracts, possiblePrimitives) = possibleTaskOrder.toArray partition { _.isAbstract }
 
-      val possibleMethods: Array[DecompositionMethod] = possibleAbstracts flatMap { case abstractTask => domain.methodsForAbstractTasks(abstractTask) } toArray
+      val possibleMethods: Array[(DecompositionMethod, Int)] = possibleAbstracts flatMap { case abstractTask => domain.methodsWithIndexForAbstractTasks(abstractTask) } toArray
 
 
       val (methodToPositions, primitivePositions, positionsToPossibleTasks, intermediatePayload) =
-        computeTaskSequenceArrangement(possibleMethods, possiblePrimitives)
+        computeTaskSequenceArrangement(possibleMethods map { _._1 }, possiblePrimitives)
       val numberOfChildren = positionsToPossibleTasks.length
 
       assert(possibleMethods.length == methodToPositions.length)
@@ -199,9 +199,10 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     assert(initialPlanOrdering.length == 1)
 
     // first generate the path decomposition tree
+    println("Normalising and optimising PDT ... ")
     val initialPathDecompositionTree = generatePathDecompositionTree(Nil, Set(initialPlanOrdering.head.schema))
     val pathDecompositionTree = minimisePathDecompositionTree(initialPathDecompositionTree)
-
+    println("done")
     assert(pathDecompositionTree.isNormalised)
 
     /* def dd(pdt: PathDecompositionTree[Payload]): Unit = {
@@ -234,8 +235,6 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       val treeNodes: Seq[Seq[Int]] = pPaths map { _._1 } flatMap { p => p.indices map { x => p take (x + 1) } } distinct
       val edges =
         pPaths map { _._1 } flatMap { p => Range(1, p.length) map { x => (p take x, p take x + 1) } } distinct
-
-      println(edges)
 
       val graph = SimpleDirectedGraph(treeNodes, edges)
       Dot2PdfCompiler.writeDotToFile(graph, "dectree.pdf")

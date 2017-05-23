@@ -13,7 +13,7 @@ import scala.collection.{mutable, Seq}
   */
 case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Task],
                                           possiblePrimitives: Array[Task], // needed as its order matters
-                                          possibleMethods: Array[DecompositionMethod],
+                                          possibleMethods: Array[(DecompositionMethod,Int)],
                                           methodToPositions: Array[Array[Int]],
                                           primitivePositions: Array[Int],
                                           payload: Payload,
@@ -27,8 +27,8 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     if (isNormalised) {
       possibleMethods.zip(methodToPositions) foreach {
         case (method, assignment) =>
-          val isAcceptable = checkMethodPossibility(method, assignment, children)
-          assert(isAcceptable, "method " + method.name + " is not applicable")
+          val isAcceptable = checkMethodPossibility(method._1, assignment, children)
+          assert(isAcceptable, "method " + method._1.name + " is not applicable")
       }
 
       val childrenPossibleTasks = buildChildrenTaskTable(possibleMethods.zip(methodToPositions), possiblePrimitives.zip(primitivePositions))
@@ -36,7 +36,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       childrenPossibleTasks.zip(children) foreach { case (actuallyRemainingTasks, child) => assert(child.possibleTasks.size == actuallyRemainingTasks.size) }
     }
 
-    possibleAbstracts foreach { at => assert(possibleMethods.exists(_.abstractTask == at)) }
+    possibleAbstracts foreach { at => assert(possibleMethods.exists(_._1.abstractTask == at)) }
   }
 
   lazy val layer: Int        = path.length
@@ -64,9 +64,9 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     possibleTasks map { t =>
       // if t is abstract
       if (t.isAbstract) {
-        val applicableMethods = possibleMethods.zip(methodToPositions) filter { _._1.abstractTask == t }
+        val applicableMethods = possibleMethods.zip(methodToPositions) filter { _._1._1.abstractTask == t }
         val applicableMethodsReachable = applicableMethods map { case (m, positions) =>
-          m.subPlan.planStepSchemaArray zip positions flatMap { case (psSchema, pos) => children(pos).localConditionalReachable(psSchema) } toSet
+          m._1.subPlan.planStepSchemaArray zip positions flatMap { case (psSchema, pos) => children(pos).localConditionalReachable(psSchema) } toSet
         }
 
         val unionOfReachable = applicableMethodsReachable.reduce[Set[Task]]({ case (s1, s2) => s1 union s2 })
@@ -80,9 +80,9 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     possibleTasks map { t =>
       // if t is abstract
       if (t.isAbstract) {
-        val applicableMethods = possibleMethods.zip(methodToPositions) filter { _._1.abstractTask == t }
+        val applicableMethods = possibleMethods.zip(methodToPositions) filter { _._1._1.abstractTask == t }
         val applicableMethodsLandmarks = applicableMethods map { case (m, positions) =>
-          m.subPlan.planStepSchemaArray zip positions flatMap { case (psSchema, pos) => children(pos).localConditionalLandmarks(psSchema) } toSet
+          m._1.subPlan.planStepSchemaArray zip positions flatMap { case (psSchema, pos) => children(pos).localConditionalLandmarks(psSchema) } toSet
         }
 
         val intersectionOfLocalLandMarks = applicableMethodsLandmarks.reduce[Set[Task]]({ case (s1, s2) => s1 intersect s2 })
@@ -96,9 +96,9 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     possibleTasks map { t =>
 
       if (t.isAbstract) {
-        val applicableMethods = possibleMethods.zip(methodToPositions) filter { _._1.abstractTask == t }
+        val applicableMethods = possibleMethods.zip(methodToPositions) filter { _._1._1.abstractTask == t }
         val applicableMethodsMutexes: Array[(Set[(Task, Task)], Set[Task])] = applicableMethods map { case (m, positions) =>
-          val mutexesAndReachablePerPS: Array[(Set[(Task, Task)], Set[Task])] = m.subPlan.planStepSchemaArray zip positions map { case (psSchema, pos) =>
+          val mutexesAndReachablePerPS: Array[(Set[(Task, Task)], Set[Task])] = m._1.subPlan.planStepSchemaArray zip positions map { case (psSchema, pos) =>
             val localMutexesForPS = children(pos).localConditionalMutexes(psSchema)
             val localReachableForPS = children(pos).localConditionalReachable(psSchema)
 
@@ -179,12 +179,12 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       // now we have to recompute the tree
       // first step: check for all decomposition methods whether they are still applicable
       val remainingMethodsWithAssignments = possibleMethods.zip(methodToPositions) filter {
-        case (method, assignment) => checkMethodPossibility(method, assignment, reducedChildren)
+        case (method, assignment) => checkMethodPossibility(method._1, assignment, reducedChildren)
       }
       //println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
 
-      val remainingMethods: Array[DecompositionMethod] = remainingMethodsWithAssignments map { _._1 }
-      val remainingMethodSet: Set[DecompositionMethod] = remainingMethods.toSet
+      val remainingMethods: Array[(DecompositionMethod,Int)] = remainingMethodsWithAssignments map { _._1 }
+      val remainingMethodSet: Set[DecompositionMethod] = remainingMethods map {_._1} toSet
       val remainingMethodsAssignments: Array[Array[Int]] = remainingMethodsWithAssignments map { _._2 }
 
 
@@ -199,19 +199,19 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
 
       // check which tasks we can keep
-      val (stillPossibleAbstractTasks, abstractTasksToDiscard) = possibleAbstracts partition { t => remainingMethods.exists(_.abstractTask == t) }
+      val (stillPossibleAbstractTasks, abstractTasksToDiscard) = possibleAbstracts partition { t => remainingMethods.exists(_._1.abstractTask == t) }
       val abstractTasksToDiscardSet = abstractTasksToDiscard.toSet
 
       // since we are discarding abstract tasks, their methods are not applicable any more
       // now we have to recompute the tree
       // first step: check for all decomposition methods whether they are still applicable
-      val remainingMethodsWithAssignmentsAfterATRemoval = possibleMethods.zip(methodToPositions) filterNot {
+      val remainingMethodsWithAssignmentsAfterATRemoval : Array[((DecompositionMethod,Int), Array[Int])] = possibleMethods.zip(methodToPositions) filterNot {
         case (method, assignment) =>
-          (abstractTasksToDiscardSet contains method.abstractTask) || !(remainingMethodSet contains method)
+          (abstractTasksToDiscardSet contains method._1.abstractTask) || !(remainingMethodSet contains method._1)
       }
       //println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
 
-      val remainingMethodsAfterATRemoval: Array[DecompositionMethod] = remainingMethodsWithAssignmentsAfterATRemoval map { _._1 }
+      val remainingMethodsAfterATRemoval: Array[(DecompositionMethod,Int)] = remainingMethodsWithAssignmentsAfterATRemoval map { _._1 }
       val remainingMethodsAssignmentsAfterATRemoval: Array[Array[Int]] = remainingMethodsWithAssignmentsAfterATRemoval map { _._2 }
 
       // we have removed methods, so we have to re-check whether the tasks our children can have can actually be produced
@@ -231,7 +231,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
   def restrictTo(restrictToTasks: Set[Task]): PathDecompositionTree[Payload] = if (restrictToTasks.size == possibleTasks.size) this
   else {
     // propagate the restriction to children
-    val remainingMethods = possibleMethods.zip(methodToPositions) filter { restrictToTasks contains _._1.abstractTask }
+    val remainingMethods = possibleMethods.zip(methodToPositions) filter { restrictToTasks contains _._1._1.abstractTask }
     val remainingPrimitives = possiblePrimitives.zip(primitivePositions) filter { restrictToTasks contains _._1 }
 
     val childrenPossibleTasks: Array[Set[Task]] = buildChildrenTaskTable(remainingMethods, remainingPrimitives)
@@ -244,12 +244,12 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
   //////////// INTERNAL HELPER METHODS
 
-  private def buildChildrenTaskTable(methods: Array[(DecompositionMethod, Array[Int])], primitives: Array[(Task, Int)]): Array[Set[Task]] = {
+  private def buildChildrenTaskTable(methods: Array[((DecompositionMethod,Int), Array[Int])], primitives: Array[(Task, Int)]): Array[Set[Task]] = {
     val childrenPossibleTasks: Array[mutable.HashSet[Task]] = children.indices map { _ => new mutable.HashSet[Task]() } toArray
 
     // add tasks from methods
     methods foreach { case (method, childrenPositions) =>
-      method.subPlan.planStepSchemaArray zip childrenPositions foreach { case (task, child) => childrenPossibleTasks(child) add task }
+      method._1.subPlan.planStepSchemaArray zip childrenPositions foreach { case (task, child) => childrenPossibleTasks(child) add task }
     }
     // add inherited primitives
     primitives foreach { case (primitive, index) => childrenPossibleTasks(index) add primitive }
