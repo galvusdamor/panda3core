@@ -705,8 +705,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       info("done.\n")
       info("Number of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
 
-      println(newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions map { _.longInfo } mkString "\n")
-
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
     } else sasPlusResult
@@ -1550,3 +1548,5 @@ sealed trait Solvertype extends DefaultLongInfo with ExternalProgram
 object MINISAT extends Solvertype {override val longInfo: String = "minisat"}
 
 object CRYPTOMINISAT extends Solvertype {override val longInfo: String = "cryptominisat"}
+
+object RISS6 extends Solvertype {override val longInfo: String = "riss6"}
