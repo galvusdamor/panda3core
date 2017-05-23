@@ -161,7 +161,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     //writeStringToFile(cnfString, new File("__cnfString"))
     //timeCapsule stop VerifyRunner.WRITE_FORMULA
 
-    //writeStringToFile(usedFormula mkString "\n", new File("__formulaString"))
+    //writeStringToFile(usedFormula map {_.disjuncts mkString "\t"} mkString "\n", new File("__formulaString"))
 
     try {
       val stdout = new StringBuilder
@@ -209,30 +209,45 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
     }
     timeCapsule stop Timings.VERIFY_TOTAL
 
-
-    val formulaVariables: Seq[String] = (usedFormula flatMap { _.disjuncts map { _._1 } }).distinct
+    print("Logging statistical information about the run ... ")
+    val formulaVariables: Seq[String] = atomMap.keys.toSeq
     informationCapsule.set(Information.NUMBER_OF_VARIABLES, formulaVariables.size)
     informationCapsule.set(Information.NUMBER_OF_CLAUSES, usedFormula.length)
     informationCapsule.set(Information.STATE_FORMULA, stateFormula.length)
     informationCapsule.set(Information.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
     informationCapsule.set(Information.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
+    println("done")
 
     // postprocessing
-    val solverOutput = Source.fromFile(fileDir + "__res" + uniqFileIdentifier + ".txt").mkString
-    val (solveState, assignment) = satSolver match {
+    print("Reading solver output ... ")
+    val t1 = System.currentTimeMillis()
+    val solverSource = Source.fromFile(fileDir + "__res" + uniqFileIdentifier + ".txt")
+    val t2 = System.currentTimeMillis()
+    val solverOutput = solverSource.mkString
+    val t3 = System.currentTimeMillis()
+    println("done  " + (t2-t1) + " " + (t3-t2))
+    print("Preparing solver output ... ")
+    val t4 = System.currentTimeMillis()
+    val (solveState, literals) = satSolver match {
       case MINISAT               =>
         val splitted = solverOutput.split("\n")
-        if (splitted.length == 1) (splitted(0), "") else (splitted(0), splitted(1))
+        if (splitted.length == 1) (splitted(0), Set[Int]()) else (splitted(0), (splitted(1).split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet)
       case CRYPTOMINISAT | RISS6 =>
-        val cleanString = solverOutput.replaceAll("s ", "").replaceAll("v ", "").split("\n").filterNot(_.startsWith("c")).fold("")(_ + _ + "\n")
-        val splitted = cleanString.split("\n", 2)
+        val stateSplit = solverOutput.split("\n",2)
+        val cleanState = stateSplit.head.replaceAll("s ","")
 
-        if (splitted.length == 1) (splitted.head, "")
-        else (splitted.head, splitted(1).replaceAll("\n", " "))
+        if (stateSplit.length == 1) (cleanState, Set[Int]())
+        else {
+          val lits = stateSplit(1).split(" ").collect({case s if s != "\nv" && s != "v" && s != "0" && s != "0\n" => s.toInt}).toSet
+
+          (cleanState, lits)
+        }
     }
+    val t5 = System.currentTimeMillis()
+    println("done " + (t5-t4))
 
     // delete files
-    ("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+    //("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
 
     // report on the result
     println("MiniSAT says: " + solveState)
@@ -241,8 +256,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
     // postprocessing
     if (solved && checkSolution) {
+      println("checking solution")
       // things that are independent from the solver type
-      val literals: Set[Int] = (assignment.split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet
+      //val literals: Set[Int] =
 
       val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
       //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
@@ -290,9 +306,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
               val parentPathString = parent.split("_").last.split(",").head
               val childPathString = child.split("_").last.split(",").head
 
-              assert(parentPathString.count({ case ';' => true; case _ => false }) + 1 == childPathString.count({ case ';' => true; case _ => false }))
-              val parentPath = parentPathString.split(";") map { _.toInt }
-              val childPath = childPathString.split(";") map { _.toInt }
+              val parentPath = parentPathString.split(";").filter(_.nonEmpty) map { _.toInt }
+              val childPath = childPathString.split(";").filter(_.nonEmpty) map { _.toInt }
+
+              assert(parentPath.length + 1 == childPath.length)
 
               if (parentPath sameElements childPath.take(parentPath.length)) (parent, child) :: Nil else Nil
             }
@@ -304,11 +321,15 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
 
               val graph = SimpleDirectedGraph(nodes, edges)
 
+              Dot2PdfCompiler.writeDotToFile(graph,"graph.pdf")
+
               graph.sinks sortWith { case (t1, t2) =>
                 val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
                 val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
                 PathBasedEncoding.pathSortingFunction(path1, path2)
-              } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
+              } map { t => val actionIDX = t.split(",").last.toInt;
+                println("task " + t + " " + actionIDX + " " + domain.tasks(actionIDX).name)
+                domain.tasks(actionIDX) }
 
             case tree: PathBasedEncoding[_, _] =>
               val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
@@ -410,9 +431,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, t
               }
           }
 
-          primitiveSolution foreach { t => assert(t.isPrimitive) }
           println("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
           println(primitiveSolution map { _.name } mkString "\n")
+
+          primitiveSolution foreach { t => assert(t.isPrimitive) }
           checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
           println(" done.")
 
