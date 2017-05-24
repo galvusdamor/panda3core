@@ -23,11 +23,11 @@ object SplitIndependentParameters extends DecompositionMethodTransformer[Unit] {
       }
 
       val commonParameters = (subPlanVariables -- splittableA) filter {v => subPlan.variableConstraints.reducedDomainOf(v).size != 1 }
-      val splittable = if (false && splittableA.size == 1) (splittableA filterNot  {
+      val splittable = if (splittableA.size == 1) splittableA filterNot {
         v =>
           val ps = subPlan.planSteps.find(_.arguments contains v).get
           commonParameters.isEmpty || (commonParameters forall { cp => ps.arguments.contains(cp) })
-      } toSeq) else splittableA.toSeq
+      } toSeq else splittableA.toSeq
 
       if (splittable.nonEmpty) {
         val groupedSplittable: Map[PlanStep, Seq[Variable]] = splittable groupBy { v => subPlan.planSteps.find(_.argumentSet contains v).get }
