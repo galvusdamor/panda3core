@@ -286,7 +286,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         val groundTasks = domainAndPlan._1.primitiveTasks map { t => GroundTask(t, Nil) }
         val groundLiterals = domainAndPlan._1.predicates map { p => GroundLiteral(p, true, Nil) }
         val groundMethods = domainAndPlan._1.methodsForAbstractTasks map { case (at, ms) =>
-          at -> JavaConversions.setAsJavaSet(ms collect {case s : SimpleDecompositionMethod => s} toSet)
+          at -> JavaConversions.setAsJavaSet(ms collect { case s: SimpleDecompositionMethod => s } toSet)
         }
 
 
@@ -1437,17 +1437,20 @@ case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
 
 sealed trait SATReductionMethod extends DefaultLongInfo
 
-object OnlyNormalise extends SATReductionMethod {  override def longInfo: String = "only normalise "}
-object FFReduction extends SATReductionMethod {  override def longInfo: String = "FF reduction"}
-object H2Reduction extends SATReductionMethod {  override def longInfo: String = "H2 reduction"}
-object FFReductionWithFullTest extends SATReductionMethod {  override def longInfo: String = "FF reduction with full reachability test"}
+object OnlyNormalise extends SATReductionMethod {override def longInfo: String = "only normalise "}
+
+object FFReduction extends SATReductionMethod {override def longInfo: String = "FF reduction"}
+
+object H2Reduction extends SATReductionMethod {override def longInfo: String = "H2 reduction"}
+
+object FFReductionWithFullTest extends SATReductionMethod {override def longInfo: String = "FF reduction with full reachability test"}
 
 
 case class SATSearch(solverType: Solvertype,
                      maximumPlanLength: Int,
                      overrideK: Option[Int] = None,
                      checkResult: Boolean = false,
-                     reductionMethod : SATReductionMethod = OnlyNormalise
+                     reductionMethod: SATReductionMethod = OnlyNormalise
                     ) extends SearchConfiguration {
 
   protected override def localModifications: Seq[(String, (ParameterMode, (Option[String] => this.type)))] =
@@ -1462,6 +1465,15 @@ case class SATSearch(solverType: Solvertype,
              case "cryptominisat" => CRYPTOMINISAT
            }
            this.copy(solverType = solver).asInstanceOf[this.type]
+         }),
+         "-reduction" ->(NecessaryParameter, { l: Option[String] =>
+           val reduction = l.get.toLowerCase match {
+             case "normalise" => OnlyNormalise
+             case "ff"        => FFReduction
+             case "h2"        => H2Reduction
+             case "ff-full"   => FFReductionWithFullTest
+           }
+           this.copy(reductionMethod = reduction).asInstanceOf[this.type]
          })
        )
 
@@ -1470,6 +1482,7 @@ case class SATSearch(solverType: Solvertype,
     alignConfig(("solver", solverType.longInfo) ::
                   ("maximum plan length", maximumPlanLength) ::
                   ("override K", overrideK.getOrElse("false")) ::
+                  ("reduction mthod", reductionMethod.longInfo) ::
                   ("check result", checkResult) :: Nil)
 
 }
