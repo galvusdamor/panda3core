@@ -9,7 +9,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, CausalLink, Orderi
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.search.{IsModificationAllowed, IsFlawAllowed}
+import de.uniulm.ki.panda3.symbolic.search.{NoModifications, NoFlaws, IsModificationAllowed, IsFlawAllowed}
 import de.uniulm.ki.util.{DotPrintable, HashMemo}
 import de.uniulm.ki.panda3.symbolic.writer._
 
@@ -27,7 +27,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
                 planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)]) extends
   DomainUpdatable with PrettyPrintable with HashMemo with DotPrintable[PlanDotOptions] {
 
-  assert(planStepsAndRemovedPlanSteps == orderingConstraints.tasks)
+  assert(planStepsAndRemovedPlanSteps.toSet == orderingConstraints.tasks.toSet)
 
   assert(planStepsAndRemovedPlanSteps forall {
     ps => ps.arguments.size == ps.schema.parameters.size
@@ -535,6 +535,22 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[Plan] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[Plan].productIterator) } else false
 
   override lazy val dotString: String = dotString(PlanDotOptions())
+}
+
+object Plan {
+  /**
+    * Creates a totally ordered plan given a sequence of tasks. Currently only supports grounded tasks
+    */
+  def apply(taskSequence: Seq[Task], init : Task, goal : Task): Plan = {
+    assert((taskSequence :+ init :+ goal) forall {_.parameters.isEmpty})
+
+    val planStepSequence = ((init :: goal :: Nil) ++ taskSequence).zipWithIndex map { case (t,i) => PlanStep(i,t,Nil)}
+    val orderedPSSequence = ((planStepSequence.head :: Nil) ++ planStepSequence.drop(2)) :+ planStepSequence(1)
+    val totalOrdering = TaskOrdering.totalOrdering(orderedPSSequence)
+
+
+    Plan(planStepSequence, Nil, totalOrdering, CSP(Set(),Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws,Map(),Map())
+  }
 }
 
 case class PlanDotOptions(showParameters: Boolean = true, showOrdering: Boolean = true, omitImpliedOrderings: Boolean = true, showCausalLinks: Boolean = true,
