@@ -16,7 +16,8 @@ import scala.collection.{mutable, Seq}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
+case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
+                                   domain: Domain, initialPlan: Plan, reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
   extends PathBasedEncoding[Unit, Unit] {
 
   val numberOfChildrenClauses: Int = 0

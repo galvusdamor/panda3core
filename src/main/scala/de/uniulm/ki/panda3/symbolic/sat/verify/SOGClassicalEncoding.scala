@@ -2,13 +2,15 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.util.TimeCapsule
 
 import scala.collection.Seq
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SOGClassicalEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding{
+case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
+                                 domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding{
   lazy val taskSequenceLength: Int = primitivePaths.length
   //lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 

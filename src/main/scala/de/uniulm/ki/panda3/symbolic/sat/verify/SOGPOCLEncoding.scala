@@ -14,7 +14,8 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, overrideK: Option[Int] = None)
+case class SOGPOCLEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan,
+                           taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, overrideK: Option[Int] = None)
   extends SOGEncoding {
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 

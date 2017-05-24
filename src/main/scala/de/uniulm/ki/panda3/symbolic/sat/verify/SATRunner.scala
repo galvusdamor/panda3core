@@ -66,7 +66,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
     JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t => t.stop() }
 
 
-    if (runner.result.isEmpty) {Thread.sleep(500); (None, false) } else (runner.result.get, true)
+    if (runner.result.isEmpty) {Thread.sleep(500); (None, true) } else (runner.result.get, false)
   }
 
 
@@ -94,9 +94,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
     // start verification
     val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
-      if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder()) TotallyOrderedEncoding(domain, initialPlan, reductionMethod, planLength, offSetToK, defineK)
+      if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
+        TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK)
       //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
-      else SOGPOCLEncoding(domain, initialPlan, planLength, reductionMethod, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+      else SOGPOCLEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK).asInstanceOf[VerifyEncoding]
     //else SOGClassicalEncoding(domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
 
     // (3)
@@ -162,8 +163,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
     // but the planning problem is clearly unsatisfiable
     if (tritivallUnsatisfiable) {
       println("Problem is trivially unsatisfiable ... exiting")
+      timeCapsule stop Timings.VERIFY_TOTAL
       None
-    }else {
+    } else {
       //System exit 0
 
       //timeCapsule start VerifyRunner.WRITE_FORMULA
@@ -209,7 +211,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
         val totalTime = (stderr.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
         println("Time command gave the following runtime for the solver: " + totalTime)
 
-        timeCapsule.set(SAT_SOLVER, totalTime)
+        timeCapsule.addTo(SAT_SOLVER, totalTime)
         timeCapsule.addTo(TOTAL_TIME, totalTime)
         timeCapsule.addTo(VERIFY_TOTAL, totalTime)
 
@@ -247,7 +249,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
           if (stateSplit.length == 1) (cleanState, Set[Int]())
           else {
-            val lits = stateSplit(1).split(" ").collect({ case s if s != "\nv" && s != "v" && s != "0" && s != "0\n" => s.toInt }).toSet
+            val lits = stateSplit(1).split(" ").collect({ case s if s != "" &&
+              s != "\nv" && s != "v" && s != "0" && s != "0\n" => s.toInt
+                                                        }).toSet
 
             (cleanState, lits)
           }

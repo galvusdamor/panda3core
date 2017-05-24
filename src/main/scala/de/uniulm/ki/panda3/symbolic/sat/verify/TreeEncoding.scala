@@ -10,7 +10,8 @@ import scala.collection.{mutable, Seq}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
+case class TreeEncoding(timeCapsule: TimeCapsule,
+                        domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
   extends PathBasedEncoding[Unit, Unit] with LinearPrimitivePlanEncoding {
   override val numberOfChildrenClauses: Int = 0
 

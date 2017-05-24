@@ -62,6 +62,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     case _                       => ()
   }
 
+  lazy val timeLimitInMilliseconds: Option[Long] = timeLimit.map(_.toLong * 1000)
 
   import Timings._
 
@@ -314,16 +315,41 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case satSearch: SATSearch =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, satSearch.reductionMethod, timeCapsule, informationCapsule)
-          val (solution, finished) = runner.runWithTimeLimit(timeLimit.map({ a => 1000L * a }), satSearch.maximumPlanLength, 0, defineK = satSearch.overrideK, checkSolution =
-            satSearch.checkResult)
+
+
+          // determine show much time I have left
+          val remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+          println("Time remaining for SAT search " + remainingTime + "ms")
+
+          // depending on whether we are doing a single or a full run, we have either to do a loop or just one run
+          val (solution, error) = satSearch.runConfiguration match {
+            case SingleSATRun(maximumPlanLength, overrideK) =>
+              runner.runWithTimeLimit(Some(remainingTime), maximumPlanLength, 0, defineK = overrideK, checkSolution = satSearch.checkResult)
+            case FullSATRun()                               =>
+              // start with K = 0 and loop
+              // TODO this is only good for total order ...
+              var solution: Option[Seq[Task]] = None
+              var error: Boolean = false
+              var currentK = 0
+              while (solution.isEmpty && !error) {
+                println("\nRunning SAT search with K = " + currentK + "\n\n")
+                val (satResult, satError) = runner.runWithTimeLimit(timeLimit.map({ a => 1000L * a }), -1, 0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
+                println("ERROR " + satError)
+                error |= satError
+                solution = satResult
+                currentK += 1
+              }
+
+              (solution, false)
+          }
 
           informationCapsule.set(Information.SOLVED, if (solution.isDefined) "true" else "false")
-          informationCapsule.set(Information.TIMEOUT, if (finished) "false" else "true")
+          informationCapsule.set(Information.TIMEOUT, if (error) "true" else "false")
 
           timeCapsule stop TOTAL_TIME
           val potentialPlan = solution match {
-            case Some(taskSequence) => Plan(taskSequence,domainAndPlan._2.init.schema,domainAndPlan._2.goal.schema) :: Nil
-            case None => Nil
+            case Some(taskSequence) => Plan(taskSequence, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema) :: Nil
+            case None               => Nil
           }
           runPostProcessing(timeCapsule, informationCapsule, null, potentialPlan, domainAndPlan, unprocessedDomain, analysisMap)
         })
@@ -936,7 +962,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 object PlanningConfiguration {
   private val defaultPlanSearchConfiguration  = PlanBasedSearch(None, BFSType, Nil, Nil, LCFR)
   private val defaultProgressionConfiguration = ProgressionSearch(BFSType, None, PriorityQueueSearch.abstractTaskSelection.random)
-  private val defaultSATConfiguration         = SATSearch(MINISAT, 0)
+  private val defaultSATConfiguration         = SATSearch(MINISAT, SingleSATRun())
 }
 
 /**
@@ -1450,18 +1476,38 @@ object H2Reduction extends SATReductionMethod {override def longInfo: String = "
 object FFReductionWithFullTest extends SATReductionMethod {override def longInfo: String = "FF reduction with full reachability test"}
 
 
+sealed trait SATRunConfiguration extends DefaultLongInfo
+
+case class SingleSATRun(maximumPlanLength: Int = 1, overrideK: Option[Int] = None) extends SATRunConfiguration {override def longInfo: String = "XYZ"}
+
+case class FullSATRun() extends SATRunConfiguration {override def longInfo: String = "full run"}
+
+
 case class SATSearch(solverType: Solvertype,
-                     maximumPlanLength: Int,
-                     overrideK: Option[Int] = None,
+                     runConfiguration: SATRunConfiguration,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise
                     ) extends SearchConfiguration {
 
+  protected lazy val getSingleRun: SingleSATRun = runConfiguration match {
+    case s: SingleSATRun => s
+    case _               => SingleSATRun()
+  }
+
+  protected lazy val getFullRun: FullSATRun = runConfiguration match {
+    case f: FullSATRun => f
+    case _             => FullSATRun()
+  }
+
   protected override def localModifications: Seq[(String, (ParameterMode, (Option[String] => this.type)))] =
     Seq(
-         "-planlength" ->(NecessaryParameter, { l: Option[String] => this.copy(maximumPlanLength = l.get.toInt).asInstanceOf[this.type] }),
-         "-overrideK" ->(NecessaryParameter, { l: Option[String] => this.copy(overrideK = Some(l.get.toInt)).asInstanceOf[this.type] }),
-         "-dontOverrideK" ->(NecessaryParameter, { l: Option[String] => this.copy(overrideK = None).asInstanceOf[this.type] }),
+         "-planlength" ->(NecessaryParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(maximumPlanLength = l.get.toInt)).asInstanceOf[this.type] }),
+         "-overrideK" ->(NecessaryParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(overrideK = Some(l.get.toInt))).asInstanceOf[this.type] }),
+         "-dontOverrideK" ->(NoParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(overrideK = None)).asInstanceOf[this.type] }),
+
+         "-fullRun" ->(NoParameter, { l: Option[String] => this.copy(runConfiguration = getFullRun).asInstanceOf[this.type] }),
+
+
          "-checkResult" ->(NoParameter, { l: Option[String] => this.copy(checkResult = true).asInstanceOf[this.type] }),
          "-solver" ->(NecessaryParameter, { l: Option[String] =>
            val solver = l.get.toLowerCase match {
@@ -1483,11 +1529,17 @@ case class SATSearch(solverType: Solvertype,
 
   /** returns a detailed information about the object */
   override def longInfo: String = "SAT-Planning Configuration\n--------------------------\n" +
-    alignConfig(("solver", solverType.longInfo) ::
-                  ("maximum plan length", maximumPlanLength) ::
-                  ("override K", overrideK.getOrElse("false")) ::
-                  ("reduction mthod", reductionMethod.longInfo) ::
-                  ("check result", checkResult) :: Nil)
+    alignConfig((("solver", solverType.longInfo) :: Nil) ++
+                  (runConfiguration match {
+                    case single: SingleSATRun =>
+                      ("maximum plan length", single.maximumPlanLength) ::
+                        ("override K", single.overrideK.getOrElse("false")) :: Nil
+                    case fullRun: FullSATRun  =>
+                      ("full planner run", "true") :: Nil
+                  }
+                    ) ++ (
+      ("reduction method", reductionMethod.longInfo) ::
+        ("check result", checkResult) :: Nil))
 
 }
 

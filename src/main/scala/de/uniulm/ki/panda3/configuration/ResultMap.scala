@@ -121,7 +121,7 @@ object Timings {
   val COMPILE_UNIT_METHODS            = "02 preprocessing:02:compile unit methods"
   val COMPILE_ORDER_IN_METHODS        = "02 preprocessing:03:compile order in methods"
   val SPLIT_PARAMETERS                = "02 preprocessing:04:split parameter"
-  val USELESS_ABSTRACT_TASKS                = "02 preprocessing:05:expand useless abstract tasks"
+  val USELESS_ABSTRACT_TASKS          = "02 preprocessing:05:expand useless abstract tasks"
   val TOP_TASK                        = "02 preprocessing:99:create artificial top task"
   val LIFTED_REACHABILITY_ANALYSIS    = "02 preprocessing:11:lifted reachabiltiy analysis"
   val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:12:grounded planning graph analysis"
@@ -144,6 +144,9 @@ object Timings {
 
   val VERIFY_TOTAL     = "40 sat:00:total"
   val GENERATE_FORMULA = "40 sat:10:generate formula"
+  val GENERATE_PDT     = "40 sat:11:generate path decomposition tree"
+  val NORMALISE_PDT    = "40 sat:12:normalise path decomposition tree"
+  val GENERATE_CLAUSES = "40 sat:13:translate path decomposition tree to clauses"
   val TRANSFORM_DIMACS = "40 sat:20:transform to DIMACS"
   val WRITE_FORMULA    = "40 sat:30:write formula"
   val SAT_SOLVER       = "40 sat:40:SAT solver"

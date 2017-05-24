@@ -23,6 +23,9 @@ import scala.io.Source
   */
 //scalastyle:off number.of.methods
 trait VerifyEncoding {
+
+  def timeCapsule: TimeCapsule
+
   def domain: Domain
 
   def initialPlan: Plan
