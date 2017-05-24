@@ -17,6 +17,8 @@ public class hLmCut extends hMax {
 
     public hLmCut(SasPlusProblem p) {
         super(p, true);
+        this.earlyAbord = false;
+        this.trackPCF = true;
         assert (p.correctModel());
         this.numOfStateFeatures = p.numOfStateFeatures;
         this.addToTask = p.addToTask;
@@ -50,89 +52,15 @@ public class hLmCut extends hMax {
 
         int lmCutHeu = 0;
         while (hMax > 0) {
-            assert (debugOut("hMax: " + hMax + "\n"));
+            debugOut("hMax: " + hMax + "\n");
             // compute goal-zone
             BitSet goalZone = new BitSet(this.numOfStateFeatures);
             BitSet cut = new BitSet(this.numOfOperators);
-            BitSet testReachability = new BitSet(this.numOfStateFeatures);
-            UUIntStack fringe = new UUIntStack();
-            fringe.push(this.goalPCF);
-            while (!fringe.isEmpty()) {
-                int fact = fringe.pop();
-                assert (debugOut("gz-fact: " + nodeNames.get(fact) + "\n"));
-                for (int producer : addToTask[fact]) {
-                    if (!opReachable.get(producer))
-                        continue;
-                    assert (debugOut("producer: " + this.opNames[producer] + "\n"));
-
-                    int singlePrec = pcf[producer];
-                    if (goalZone.get(singlePrec)) {
-                        continue;
-                    }
-                    assert (debugOut("with prec: " + nodeNames.get(singlePrec) + "\n"));
-
-                    if (this.costs[this.opIndexToEffNode[producer]] == 0) {
-                        goalZone.set(singlePrec);
-                        fringe.push(singlePrec);
-                    } else {
-                        cut.set(producer);
-                        testReachability.set(singlePrec);
-                    }
-                }
-            }
-
-            int goalZ = goalZone.nextSetBit(0);
-            assert (debugOut("Goal-Zone: "));
-            while (goalZ >= 0) {
-                assert (debugOut(nodeNames.get(goalZ) + " "));
-                goalZ = goalZone.nextSetBit(goalZ + 1);
-            }
-            assert (debugOut("\n"));
+            BitSet precsOfCutNodes = new BitSet(this.numOfStateFeatures);
+            goalZone(goalZone, cut, precsOfCutNodes);
 
             // check forward-reachability
-            BitSet reachableFacts = (BitSet) s0.clone();
-            UUIntStack newFacts = new UUIntStack();
-            int reachableFact = s0.nextSetBit(0);
-            while (reachableFact >= 0) {
-                newFacts.push(reachableFact);
-                reachableFact = s0.nextSetBit(reachableFact + 1);
-            }
-            reachabliltity:
-            while (!newFacts.isEmpty()) {
-                UUIntStack addEffects = new UUIntStack();
-                while (!newFacts.isEmpty()) {
-                    reachableFact = newFacts.pop();
-                    reachableFacts.set(reachableFact, true);
-                    testReachability.set(reachableFact, false);
-                    if (testReachability.isEmpty())
-                        break reachabliltity;
-
-                    UUIntStack operators = pcfInvert[reachableFact];
-                    operators.resetIterator();
-                    while (operators.hasNext()) {
-                        int action = operators.next();
-                        for (int addEff : this.addLists[action]) {
-                            if (!reachableFacts.get(addEff)) {
-                                addEffects.push(addEff);
-                            }
-                        }
-                    }
-                }
-                newFacts = addEffects;
-            }
-
-            // delete unreachable actions
-            if (!testReachability.isEmpty()) { // some are not reachable
-                int unreachableFact = testReachability.nextSetBit(0);
-                while (unreachableFact >= 0) {
-                    UUIntStack unreachableOps = pcfInvert[unreachableFact];
-                    unreachableOps.resetIterator();
-                    while (unreachableOps.hasNext()) {
-                        cut.set(unreachableOps.next(), false);
-                    }
-                    unreachableFact = testReachability.nextSetBit(unreachableFact + 1);
-                }
-            }
+            forwardReachability(s0, cut, goalZone, precsOfCutNodes);
 
             // calculate costs
             int minCosts = Integer.MAX_VALUE;
@@ -145,16 +73,109 @@ public class hLmCut extends hMax {
             lmCutHeu += minCosts;
 
             // decrease action costs of cut
-            assert (debugOut("Cut: " + "\n"));
+            debugOut("Cut: " + "\n");
             cutted = cut.nextSetBit(0);
             while (cutted >= 0) {
                 this.costs[this.opIndexToEffNode[cutted]] -= minCosts;
-                assert (debugOut(cutted + " " + nodeNames.get(this.opIndexToEffNode[cutted]) + "\n"));
+                assert (this.costs[this.opIndexToEffNode[cutted]] >= 0);
+                debugOut(cutted + " " + opNames[cutted] + "\n");
                 cutted = cut.nextSetBit(cutted + 1);
             }
             hMax = super.calcHeu(s0, g);
         }
         this.costs = orgNodeCosts; // restore original cost values
         return lmCutHeu;
+    }
+
+    private UUIntStack fringe = new UUIntStack();
+
+    private void goalZone(BitSet goalZone, BitSet cut, BitSet precsOfCutNodes) {
+        fringe.clear();
+        fringe.push(this.goalPCF);
+        while (!fringe.isEmpty()) {
+            int fact = fringe.pop();
+            debugOut("gz-fact: " + nodeNames.get(fact) + "\n");
+            for (int producer : addToTask[fact]) {
+                debugOut("producer: " + this.opNames[producer] + "\n");
+                if (!opReachable.get(producer)){
+                    debugOut("unreachable\n");
+                    continue;
+                }
+
+                int singlePrec = pcf[producer];
+                if (goalZone.get(singlePrec)) {
+                    continue;
+                }
+                debugOut("with prec: " + nodeNames.get(singlePrec) + "\n");
+
+                if (this.costs[this.opIndexToEffNode[producer]] == 0) {
+                    goalZone.set(singlePrec);
+                    fringe.push(singlePrec);
+                } else {
+                    cut.set(producer);
+                    precsOfCutNodes.set(singlePrec);
+                }
+            }
+        }
+        fringe.clear();
+
+        int goalZ = goalZone.nextSetBit(0);
+        debugOut("Goal-Zone: ");
+        while (goalZ >= 0) {
+            debugOut(nodeNames.get(goalZ) + " ");
+            goalZ = goalZone.nextSetBit(goalZ + 1);
+        }
+        debugOut("\n");
+    }
+
+    private void forwardReachability(BitSet s0, BitSet cut, BitSet goalZone, BitSet testReachability) {
+        // put s0 facts into list of reachable facts
+        BitSet reachableFacts = (BitSet) s0.clone();
+        UUIntStack newFacts = new UUIntStack();
+        int reachableFact = s0.nextSetBit(0);
+        while (reachableFact >= 0) {
+            newFacts.push(reachableFact);
+            reachableFact = s0.nextSetBit(reachableFact + 1);
+        }
+
+        // calculate reachability
+        reachability:
+        while (!newFacts.isEmpty()) {
+            UUIntStack addEffects = new UUIntStack();
+            while (!newFacts.isEmpty()) {
+                reachableFact = newFacts.pop();
+                testReachability.set(reachableFact, false);
+                if (testReachability.isEmpty())
+                    break reachability;
+
+                UUIntStack operators = pcfInvert[reachableFact];
+                operators.resetIterator();
+                while (operators.hasNext()) {
+                    int action = operators.next();
+                    for (int addEff : this.addLists[action]) {
+                        if (goalZone.get(addEff))
+                            continue;
+                        if (!reachableFacts.get(addEff)) {
+                            reachableFacts.set(reachableFact, true);
+                            addEffects.push(addEff);
+                        }
+                    }
+                }
+            }
+            newFacts = addEffects;
+        }
+
+        // delete unreachable actions
+        if (!testReachability.isEmpty()) { // some are not reachable
+            int unreachableFact = testReachability.nextSetBit(0);
+            while (unreachableFact >= 0) {
+                UUIntStack unreachableOps = pcfInvert[unreachableFact];
+                unreachableOps.resetIterator();
+                while (unreachableOps.hasNext()) {
+                    cut.set(unreachableOps.next(), false);
+                }
+                unreachableFact = testReachability.nextSetBit(unreachableFact + 1);
+            }
+        }
     }
 }

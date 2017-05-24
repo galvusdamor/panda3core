@@ -11,13 +11,15 @@ import de.uniulm.ki.panda3.progression.sasp.heuristics.hLmCut;
 import de.uniulm.ki.panda3.progression.sasp.heuristics.hMax;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.util.*;
 
 /**
  * Created by dh on 10.05.17.
  */
 public class proRcgSas implements htnGroundedProgressionHeuristic {
-    private HtnCompositionEncoding compEnc;
+    protected HtnCompositionEncoding compEnc;
     private SasHeuristic heuristic;
     private int heuristicVal;
 
@@ -31,14 +33,17 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
 
     }
 
+    protected proRcgSas(){}
+
     public proRcgSas(SasPlusProblem flat,
                      SasHeuristic.SasHeuristics heuristic,
                      HashMap<Task, List<method>> methods,
-                     List<ProgressionPlanStep> initialTasks,
-                     Set<Task> allActions) {
+                     List<ProgressionPlanStep> initialTasks) {
 
         this.compEnc = new HtnCompositionEncoding(flat);
         this.compEnc.geneateTaskCompGraph(methods, initialTasks);
+        System.out.println("Generating Relaxed Composition Model ...");
+        System.out.println(this.compEnc.getStatistics());
 
         if (heuristic == SasHeuristic.SasHeuristics.hAdd) {
             this.heuristic = new hAdd(this.compEnc);
@@ -86,7 +91,7 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
         return this;
     }
 
-    private void prepareS0andG(ProgressionPlanStep ps, BitSet r, BitSet g) {
+    protected void prepareS0andG(ProgressionPlanStep ps, BitSet r, BitSet g) {
         if (!ps.done) {
             ps.r = new BitSet(compEnc.numOfOperators);
             ps.g = new BitSet(compEnc.numOfStateFeatures);

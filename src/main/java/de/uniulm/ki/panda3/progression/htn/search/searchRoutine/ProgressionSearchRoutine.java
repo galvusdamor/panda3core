@@ -18,13 +18,13 @@ public abstract class ProgressionSearchRoutine {
                 + " - generated nodes: " + searchnodes
                 + " - fringe size: " + fringesize
                 //+ " - best heuristic: " + bestMetric
-                + " - current modification depth: " + n.solution.size()
+                + " - current modification depth: " + n.solution.getLength()
                 + " - current heuristic: " + n.metric;
     }
 
-    public abstract List<Object> search(ProgressionNetwork firstSearchNode);
+    public abstract SolutionStep search(ProgressionNetwork firstSearchNode);
 
-    public abstract List<Object> search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing);
+    public abstract SolutionStep search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing);
 
     public String SearchName(){
         return "unknown";

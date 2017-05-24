@@ -126,7 +126,7 @@ public class HtnCompositionEncoding extends SasPlusProblem {
             tAddLists[iM] = new int[1];
             tAddLists[iM][0] = compTaskIndex;
 
-            tOpNames[iM] = m.m.name();
+            tOpNames[iM] = m.m.name() + "@" + m.m.abstractTask().shortInfo();
             tCosts[iM] = this.methodCosts;
         }
         this.numPrecs = tNumPrecs;
@@ -210,5 +210,4 @@ public class HtnCompositionEncoding extends SasPlusProblem {
     private int getTaskIndex(Task t) {
         return this.firstTaskCompIndex + ProgressionNetwork.taskToIndex.get(t);
     }
-
 }

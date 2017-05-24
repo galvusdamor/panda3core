@@ -22,6 +22,11 @@ public class UUIntStack {
         this.currentContainer.elements = new int[size];
     }
 
+    public void clear() {
+        this.currentContainer.lastContainer = null;
+        this.currentContainer.lastIndexSet = -1;
+    }
+
     public boolean isEmpty() {
         return ((this.currentContainer.lastContainer == null) && (this.currentContainer.lastIndexSet == -1));
     }

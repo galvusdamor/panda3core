@@ -1,0 +1,1 @@
+This is a translation of the rover domain deployed with JShop2.

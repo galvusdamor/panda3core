@@ -21,8 +21,9 @@ public abstract class SasHeuristic {
 
     public abstract int calcHeu(BitSet s0, BitSet g);
 
-    protected boolean debugOut(String s) {
+    public boolean debug = false;
+    protected void debugOut(String s) {
+        if(debug)
         System.out.print(s);
-        return true;
     }
 }

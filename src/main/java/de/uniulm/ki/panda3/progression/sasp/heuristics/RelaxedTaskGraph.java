@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.progression.sasp.heuristics;
 
+import de.uniulm.ki.panda3.progression.proUtil.UUIntPairPriorityQueue;
 import de.uniulm.ki.panda3.progression.proUtil.UUIntStack;
 import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem;
 
@@ -47,6 +48,7 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
     UUIntStack[] pcfInvert;
     protected int goalPCF;
     protected BitSet opReachable;
+    protected boolean earlyAbord = true;
 
     abstract int eAND();
 
@@ -195,27 +197,35 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
+        if (this.trackPCF) {
+            pcf = new int[pcf.length];
+            for (int i = 0; i < pcfInvert.length; i++)
+                pcfInvert[i].clear();
+            opReachable.clear();
+        }
+
+
         waitingForCount = waitingForCountORG.clone();
         for (int i = 0; i < hVal.length; i++) {
             hVal[i] = Integer.MAX_VALUE;
         }
-        PriorityQueue<sortedIndex> activatable = new PriorityQueue<>();
+        UUIntPairPriorityQueue activatable = new UUIntPairPriorityQueue();
 
         // init queue by adding s0
         int nextF = s0.nextSetBit(0);
         while (nextF >= 0) {
-            activatable.add(new sortedIndex(nextF, 0 + costs[nextF]));
+            activatable.add(this.sortedIndex(nextF, 0));
             waitingForCount[nextF] = 0;
             nextF = s0.nextSetBit(nextF + 1);
         }
 
         // dummy prec-nodes of actions that do not have preconditions
         for (int prec : precTnodes) {
-            activatable.add(new sortedIndex(prec, 0 + costs[prec]));
+            activatable.add(this.sortedIndex(prec, 0 + costs[prec]));
             waitingForCount[prec] = 0;
         }
 
-        return calcHeu(activatable, (BitSet) g.clone());// do not change original goal
+        return calcHeuLoop(activatable, (BitSet) g.clone(), this.earlyAbord);// do not change original goal
     }
 
     @Override
@@ -224,17 +234,17 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
         for (int i = 0; i < hVal.length; i++) {
             hVal[i] = Integer.MAX_VALUE;
         }
-        PriorityQueue<sortedIndex> activatable = new PriorityQueue<>();
+        UUIntPairPriorityQueue activatable = new UUIntPairPriorityQueue();
 
         // init queue by adding s0
         for (int i = 0; i < s0.length; i++) {
-            activatable.add(new sortedIndex(s0[i], 0 + costs[s0[i]]));
+            activatable.add(this.sortedIndex(s0[i], 0 + costs[s0[i]]));
             waitingForCount[s0[i]] = 0;
         }
 
         // dummy prec-nodes of actions that do not have preconditions
         for (int prec : precTnodes) {
-            activatable.add(new sortedIndex(prec, 0 + costs[prec]));
+            activatable.add(this.sortedIndex(prec, 0 + costs[prec]));
             waitingForCount[prec] = 0;
         }
 
@@ -244,74 +254,81 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
         for (int gf : g)
             goal.set(gf);
 
-        return calcHeu(activatable, goal);
+        return calcHeuLoop(activatable, goal, this.earlyAbord);
     }
 
-    private int calcHeu(PriorityQueue<sortedIndex> activatable, BitSet goal) {
+    private int calcHeuLoop(UUIntPairPriorityQueue activatable, BitSet goal, boolean earlyAbord) {
         int hValGoal = eAND();
+        boolean goalReached = false;
 
         while (!activatable.isEmpty()) {
-            int newNode = activatable.remove().index;
+            int newNode = activatable.minPair()[1];
             if (goal.get(newNode)) {
                 goal.set(newNode, false);
                 int old = hValGoal;
                 hValGoal = combineAND(hValGoal, hVal[newNode]);
                 if (old != hValGoal)
                     this.goalPCF = newNode;
-                if (goal.isEmpty())
-                    return hValGoal;
+                if (goal.isEmpty()) {
+                    goalReached = true;
+                    if (earlyAbord)
+                        break;
+                }
             }
             for (int i = 0; i < whoIsWaitingForMe[newNode].length; i++) {
                 int waitingNode = whoIsWaitingForMe[newNode][i];
                 waitingForCount[waitingNode]--;
                 if (waitingForCount[waitingNode] == 0) {
-                    activatable.add(new sortedIndex(waitingNode));
+                    activatable.add(this.sortedIndex(waitingNode));
                 }
             }
         }
-        return Integer.MAX_VALUE;
+        if (goalReached)
+            return hValGoal;
+        else
+            return Integer.MAX_VALUE;
     }
 
-    class sortedIndex implements Comparable<sortedIndex> {
-        private final int index;
 
-        public sortedIndex(int index, int hMaxVal) {
-            hVal[index] = hMaxVal;
-            this.index = index;
-        }
+    private int[] sortedIndex(int index, int hMaxVal) {
+        hVal[index] = hMaxVal;
+        int[] res = new int[2];
+        res[0] = hVal[index];
+        res[1] = index;
+        return res;
+    }
 
-        public sortedIndex(int index) {
-            this.index = index;
-            int predCosts;
-            if (isAndNode.get(index)) {
-                int relPrec = -1;
+    private int[] sortedIndex(int index) {
+        int[] res = new int[2];
+        res[1] = index;
 
-                predCosts = eAND();
-                for (int i = 0; i < waitingForNodes[index].length; i++) {
-                    int old = predCosts;
-                    predCosts = combineAND(predCosts, hVal[waitingForNodes[index][i]]);
-                    if (old != predCosts)
-                        relPrec = waitingForNodes[index][i];
-                }
+        int predCosts;
+        if (isAndNode.get(index)) {
+            int relPrec = -1;
 
-                int op = precNodeToOp[index];
-                if ((trackPCF) && (op > -1)) {
-                    opReachable.set(op);// mark operator as reached
-                    pcf[op] = relPrec; // mark which precondition has been the limiting factor
-                    pcfInvert[relPrec].push(op);
-                }
-            } else {
-                predCosts = eOR();
-                for (int i = 0; i < waitingForNodes[index].length; i++) {
-                    predCosts = combineOR(predCosts, hVal[waitingForNodes[index][i]]);
-                }
+            predCosts = eAND();
+            for (int i = 0; i < waitingForNodes[index].length; i++) {
+                int old = predCosts;
+                predCosts = combineAND(predCosts, hVal[waitingForNodes[index][i]]);
+                if (old != predCosts)
+                    relPrec = waitingForNodes[index][i];
             }
-            hVal[index] = predCosts + costs[index];
+
+            int op = precNodeToOp[index];
+            if ((trackPCF) && (op > -1)) {
+                opReachable.set(op);// mark operator as reached
+                pcf[op] = relPrec; // mark which precondition has been the limiting factor
+                pcfInvert[relPrec].push(op);
+            }
+        } else {
+            predCosts = eOR();
+            for (int i = 0; i < waitingForNodes[index].length; i++) {
+                predCosts = combineOR(predCosts, hVal[waitingForNodes[index][i]]);
+            }
         }
 
-        @Override
-        public int compareTo(sortedIndex other) {
-            return hVal[this.index] - hVal[other.index];
-        }
+        hVal[index] = predCosts + costs[index];
+        res[0] = hVal[index];
+        return res;
     }
 }

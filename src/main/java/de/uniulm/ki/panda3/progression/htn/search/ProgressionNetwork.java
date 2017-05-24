@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.progression.htn.search;
 
 import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance;
 import de.uniulm.ki.panda3.progression.htn.operators.*;
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.SolutionStep;
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.htnGroundedProgressionHeuristic;
 import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -33,7 +34,6 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public BitSet state;
     List<ProgressionPlanStep> unconstraintPrimitiveTasks;
     List<ProgressionPlanStep> unconstraintAbstractTasks;
-    public LinkedList<Object> solution;
     public int numProgressionSteps = 0;
     public int numSHOPProgressionSteps = 0;
     public int numDecompositionSteps = 0;
@@ -49,6 +49,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public int id = 0;
     private int numberOfTasks = 0;
     private int numberOfPrimitiveTasks = 0;
+    public SolutionStep solution;
 
     private ProgressionNetwork() {
     }
@@ -66,7 +67,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
                 numberOfTasks++;
             }
         }
-        this.solution = new LinkedList<>();
+        solution = new SolutionStep();
         if (printProgressionTrace) {
             System.out.println("WARNING: The system is recording a full decomposition trace - this is VERY slow and only recommended for debugging.");
             this.progressionTrace = "\nPROGRESSION-TRACE:\n\n";
@@ -190,7 +191,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.numberOfTasks += m.numberOfPrimSubtasks;
 
         res.state = this.state;
-        res.solution.add(m.m);
+        res.solution = new SolutionStep(this.solution, m.m);
         res.numDecompositionSteps++;
         res.unconstraintAbstractTasks.remove(ps);
 
@@ -227,7 +228,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.numberOfPrimitiveTasks--;
         res.state = (BitSet) this.state.clone();
 
-        res.solution.add(ps.action);
+        res.solution = new SolutionStep(this.solution, ps.action);
         if (ProgressionNetwork.ShopPrecActions.contains(ps.action))
             res.numSHOPProgressionSteps++;
         else
@@ -324,8 +325,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.unconstraintAbstractTasks = new LinkedList<>(); // todo: array or linkedList?
         res.unconstraintPrimitiveTasks.addAll(this.unconstraintPrimitiveTasks);
         res.unconstraintAbstractTasks.addAll(this.unconstraintAbstractTasks);
-        res.solution = new LinkedList<>();
-        res.solution.addAll(this.solution);
+        res.solution = this.solution;
         if (printProgressionTrace)
             res.progressionTrace = this.progressionTrace;
         res.numDecompositionSteps = this.numDecompositionSteps;

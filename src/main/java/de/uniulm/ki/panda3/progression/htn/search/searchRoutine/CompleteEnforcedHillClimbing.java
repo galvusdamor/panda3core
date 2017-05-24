@@ -18,7 +18,7 @@ public class CompleteEnforcedHillClimbing extends ProgressionSearchRoutine {
 
     int cehcSearchNodes = 1;
 
-    public List<Object> search(ProgressionNetwork firstSearchNode) {
+    public SolutionStep search(ProgressionNetwork firstSearchNode) {
         /*
         int bestMetric = firstSearchNode.metric;
         LinkedList<ProgressionNetwork> fringe = new LinkedList<>();
@@ -92,7 +92,7 @@ public class CompleteEnforcedHillClimbing extends ProgressionSearchRoutine {
     }
 
     @Override
-    public List<Object> search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
+    public SolutionStep search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
         return null;
     }
 }
