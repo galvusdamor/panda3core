@@ -108,11 +108,20 @@ trait PreComputationTSTGHeuristic extends TSTGHeuristic {
 }
 
 trait ReachabilityRecomputingTSTGHeuristic extends TSTGHeuristic {
-  protected def taskValue(plan: EfficientPlan) = new TaskValuation {
+  private lazy val unreachableTaskValues = domain.tasks map {_ => Int.MaxValue.toDouble}
 
-    val taskValues: Array[Double] = argumentRelaxedTDG.minSumTraversalArray(plan.tasksOfPresentPlanSteps :+ plan.planStepTasks(1), {
+  protected def taskValue(plan: EfficientPlan) = new TaskValuation {
+    // test first, whether all plansteps in the current plan are reachable ...
+    var ps = 2
+    var allAllowed = true
+    while (ps < plan.planStepTasks.length) {
+      if (plan.isPlanStepPresentInPlan(ps)) allAllowed &= plan taskAllowed plan.planStepTasks(ps)
+      ps += 1
+    }
+
+    val taskValues: Array[Double] = if (allAllowed) argumentRelaxedTDG.minSumTraversalArray(plan.tasksOfPresentPlanSteps :+ plan.planStepTasks(1), {
       task => if ((plan taskAllowed task) || (task == plan.planStepTasks(1))) computeHeuristicForPrimitive(task) else Int.MaxValue
-    }, computeHeuristicForMethod)
+    }, computeHeuristicForMethod) else unreachableTaskValues
 
 
     def apply(planStep: Int): Int = taskValues(plan.planStepTasks(planStep)).toInt

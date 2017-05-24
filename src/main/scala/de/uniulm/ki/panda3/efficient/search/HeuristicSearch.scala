@@ -267,10 +267,10 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
             }
             resultSemaphore.release()
             thread.stop()
-            timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach - totalTimeAtBeginning))
-            timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach - totalTimeAtBeginning))
-            timeCapsule stopOrIgnore TOTAL_TIME
-            timeCapsule stopOrIgnore SEARCH
+            HeuristicSearch.this.synchronized {
+                                                timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach - totalTimeAtBeginning))
+                                                timeCapsule stopOrIgnore SEARCH
+                                              }
           }
         }, "Thread - RESCUE")
 
@@ -278,15 +278,17 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
         rescueThread.start()
 
         resultSemaphore.acquire()
-        timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach - totalTimeAtBeginning))
-        timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach - totalTimeAtBeginning))
-        timerSemaphore.release()
+        HeuristicSearch.this.synchronized {
+                                            timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach - totalTimeAtBeginning))
+                                            timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach - totalTimeAtBeginning))
+                                            timerSemaphore.release()
 
-        // just to be on the safe side stop all worker and utility threads
-        killerThread.stop()
-        thread.stop()
+                                            // just to be on the safe side stop all worker and utility threads
+                                            killerThread.stop()
+                                            thread.stop()
 
-        timeCapsule stopOrIgnore SEARCH
+                                            timeCapsule stopOrIgnore SEARCH
+                                          }
 
         result
       })
