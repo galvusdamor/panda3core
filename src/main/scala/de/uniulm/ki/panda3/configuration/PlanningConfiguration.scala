@@ -314,14 +314,18 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case satSearch: SATSearch =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, satSearch.reductionMethod, timeCapsule, informationCapsule)
-          val (solved, finished) = runner.runWithTimeLimit(timeLimit.map({ a => 1000L * a }), satSearch.maximumPlanLength, 0, defineK = satSearch.overrideK, checkSolution =
+          val (solution, finished) = runner.runWithTimeLimit(timeLimit.map({ a => 1000L * a }), satSearch.maximumPlanLength, 0, defineK = satSearch.overrideK, checkSolution =
             satSearch.checkResult)
 
-          informationCapsule.set(Information.SOLVED, if (solved) "true" else "false")
+          informationCapsule.set(Information.SOLVED, if (solution.isDefined) "true" else "false")
           informationCapsule.set(Information.TIMEOUT, if (finished) "false" else "true")
 
           timeCapsule stop TOTAL_TIME
-          runPostProcessing(timeCapsule, informationCapsule, null, if (solved) null :: Nil else Nil, domainAndPlan, unprocessedDomain, analysisMap)
+          val potentialPlan = solution match {
+            case Some(taskSequence) => Plan(taskSequence,domainAndPlan._2.init.schema,domainAndPlan._2.goal.schema) :: Nil
+            case None => Nil
+          }
+          runPostProcessing(timeCapsule, informationCapsule, null, potentialPlan, domainAndPlan, unprocessedDomain, analysisMap)
         })
 
       case NoSearch => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>

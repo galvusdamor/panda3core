@@ -56,7 +56,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
       possiblePrimitives map { t => SimpleDirectedGraph(PlanStep(-1, t, Nil) :: Nil, Nil) })
 
     // TODO we are currently mapping plansteps, maybe we should prefer plansteps with identical tasks to be mapped together
-    print("MINI " + possibleMethods.length + " " + possiblePrimitives.length + " ... ")
+    //print("MINI " + possibleMethods.length + " " + possiblePrimitives.length + " ... ")
     val lb = methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max
     val optimiser =
     //OptimalBranchAndBoundOptimiser(minimiseChildrenWithAbstractTasks, lowerBound = lb) //, minimiseAbstractTaskOccurencesMetric)
@@ -68,7 +68,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     //val check = OptimalBranchAndBoundOptimiser(minimiseChildrenWithAbstractTasks, lowerBound = lb).minimalSOG(methodTaskGraphs)
     //val metOp = minimiseChildrenWithAbstractTasks(check._1,check._2)
 
-    println("done")
+    //println("done")
     //println("OP " + met + " of " + metOp)
     val minimalSuperGraph = g._1
     val planStepToIndexMappings: Seq[Map[PlanStep, Int]] = g._2

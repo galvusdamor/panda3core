@@ -102,14 +102,14 @@ case class TotallyOrderedEncoding(domain: Domain, initialPlan: Plan, reductionMe
     assert(methodTaskGraphs forall { _.allTotalOrderings.get.length == 1 })
 
     // TODO we are currently mapping plansteps, maybe we should prefer plansteps with identical tasks to be mapped together
-    println("MINI " + possibleMethods.length + " " + possiblePrimitives.length)
+    //println("MINI " + possibleMethods.length + " " + possiblePrimitives.length)
     val lb = methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max
     // TODO what to do?
     //val g = DirectedGraph.minimalInducedSuperGraph[PlanStep](methodTaskGraphs) //, minimiseAbstractTaskOccurencesMetric)
     //val g = GreedyNumberOfAbstractChildrenOptimiser.minimalSOG(methodTaskGraphs)
     val g = GreedyNumberOfChildrenFromTotallyOrderedOptimiser.minimalSOG(methodTaskGraphs)
     //val g = NativeOptimiser.minimalSOG(methodTaskGraphs)
-    println("done")
+    //println("done")
     val minimalSuperGraph = g._1
     val planStepToIndexMappings: Seq[Map[PlanStep, Int]] = g._2
     val topologicalOrdering = minimalSuperGraph.topologicalOrdering.get
