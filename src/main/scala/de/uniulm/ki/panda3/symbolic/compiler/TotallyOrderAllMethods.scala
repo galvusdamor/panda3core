@@ -61,22 +61,22 @@ object TotallyOrderAllMethods extends DecompositionMethodTransformer[TotallyOrde
             //Dot2PdfCompiler.writeDotToFile(g, "foo.pdf")
 
             val condensation = g.condensation
+
             val possibleOrderingSequences: Seq[Seq[Seq[PlanStep]]] = condensation.topologicalOrdering.get map { planSteps =>
               val remainingOrderingConstraints =
                 subPlan.orderingConstraints.minimalOrderingConstraints() collect { case OrderingConstraint(a, b) if planSteps.contains(a) && planSteps.contains(b) => (a, b) }
 
               val psList: Seq[PlanStep] = planSteps.toSeq
 
-              SimpleDirectedGraph(psList, remainingOrderingConstraints).allTotalOrderings.get
+              orderingOption match {
+                case AllNecessaryOrderings      => SimpleDirectedGraph(psList, remainingOrderingConstraints).allTotalOrderings.get
+                case OneOfTheNecessaryOrderings => SimpleDirectedGraph(psList, remainingOrderingConstraints).topologicalOrdering.get :: Nil
+              }
             }
 
             val expandesSequences = possibleOrderingSequences.foldLeft[Seq[Seq[PlanStep]]](Nil :: Nil)({ case (orderings, next) => orderings flatMap { o => next map { n => o ++ n } } })
 
-            val sequences = expandesSequences map { s => s }
-            orderingOption match {
-              case AllNecessaryOrderings      => sequences
-              case OneOfTheNecessaryOrderings => sequences.take(1)
-            }
+            expandesSequences map { s => s }
         }
 
         val orderingConstraints = orderings map { case ordering =>
