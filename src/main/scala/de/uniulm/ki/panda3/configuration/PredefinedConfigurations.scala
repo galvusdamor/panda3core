@@ -1,6 +1,8 @@
 package de.uniulm.ki.panda3.configuration
 
-import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
+import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
+import de.uniulm.ki.panda3.symbolic.compiler.{OneRandomOrdering, AllNecessaryOrderings}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -38,6 +40,27 @@ object PredefinedConfigurations {
                                                                liftedReachability = true, convertToSASP = false, groundedReachability = Some(PlanningGraphWithMutexes),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                iterateReachabilityAnalysis = false, groundDomain = false)
+
+  val oneshortOrderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                                       compileInitialPlan = true,
+                                                                       convertToSASP = false,
+                                                                       compileOrderInMethods = Some(OneRandomOrdering()),
+                                                                       splitIndependentParameters = true,
+                                                                       compileUselessAbstractTasks = true,
+                                                                       liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                                       iterateReachabilityAnalysis = true, groundDomain = true)
+
+  val oneshortOrderingGroundingPreprocessWithSASPlus = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
+                                                                                  compileInitialPlan = true,
+                                                                                  convertToSASP = true,
+                                                                                  compileOrderInMethods = Some(OneRandomOrdering()),
+                                                                                  splitIndependentParameters = true,
+                                                                                  compileUselessAbstractTasks = true,
+                                                                                  liftedReachability = true, groundedReachability = None,
+                                                                                  groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                                                  iterateReachabilityAnalysis = true, groundDomain = true)
+
 
   val preprocessConfigs = Map(
                                "-ordering" -> orderingGroundingPreprocess,
@@ -114,6 +137,10 @@ object PredefinedConfigurations {
   val planSearchAStarADDReusing = PlanBasedSearch(None, AStarActionsType(2), ADDReusing :: Nil, Nil, LCFR)
   val planSearchAStarRelax      = PlanBasedSearch(None, AStarActionsType(2), Relax :: Nil, Nil, LCFR)
 
+  val shop2 = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
+  val pro = ProgressionSearch(AStarActionsType(1), Some(RelaxedCompositionGraph(true, RCG.heuristicExtraction.multicount, RCG.producerSelection
+    .numOfPreconditions)), PriorityQueueSearch.abstractTaskSelection.random)
+
 
   val searchConfigs = Map(
                            "-GAStarAPR" -> planSearchAStarAPR,
@@ -179,16 +206,16 @@ object PredefinedConfigurations {
          "-DFS" ->(htnParsing, groundingPreprocess, planSearchDFS),
          "-BFS" ->(htnParsing, groundingPreprocess, planSearchBFS),
 
-         "-umcpBF" -> (htnParsing, groundingPreprocess,umcpBF),
-         "-umcpDF" -> (htnParsing, groundingPreprocess,umcpDF),
-         "-umcpH" -> (htnParsing, groundingPreprocess,umcpH),
+         "-umcpBF" ->(htnParsing, groundingPreprocess, umcpBF),
+         "-umcpDF" ->(htnParsing, groundingPreprocess, umcpDF),
+         "-umcpH" ->(htnParsing, groundingPreprocess, umcpH),
 
 
          // A*
          "-AStarADD" ->(htnParsing, groundingPreprocess, AStarADD),
          "-AStarADDReusing" ->(htnParsing, groundingPreprocess, AStarADDReusing),
-         "-AStarRelax" -> (htnParsing, groundingPreprocess,AStarRelax),
-         "-AStarAOpenPreconditions" -> (htnParsing, groundingPreprocess,AStarAOpenPreconditions),
+         "-AStarRelax" ->(htnParsing, groundingPreprocess, AStarRelax),
+         "-AStarAOpenPreconditions" ->(htnParsing, groundingPreprocess, AStarAOpenPreconditions),
 
          "-AStarAPRLiftedPR" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR),
          "-AStarAPRLiftedPRReachability" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
@@ -211,7 +238,35 @@ object PredefinedConfigurations {
          "-AStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRCompare),
          "-AStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRCompare),
          "-GreedyAStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarAPRLiftedPRCompare),
-         "-GreedyAStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare)
+         "-GreedyAStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare),
+
+         // configurations to test totSAT
+         "-oneshortTOTsat" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTpro" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, pro),
+         // Greedy-A*
+         "-oneshortTOTGreedyAStarMAC-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPRReachability),
+         "-oneshortTOTGreedyAStarMAC" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPR),
+         "-oneshortTOTGreedyAStarPR-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPRReachability),
+         "-oneshortTOTGreedyAStarPR" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPR),
+
+         // A*
+         "-oneshortTOTAStarMAC-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarActionLiftedPRReachability),
+         "-oneshortTOTAStarMAC" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarActionLiftedPR),
+         "-oneshortTOTAStarPR-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarAPRLiftedPRReachability),
+         "-oneshortTOTAStarPR" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarAPRLiftedPR),
+
+         // bullshit configurations
+         "-oneshortTOTDijkstra" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchDijkstra),
+         "-oneshortTOTDFS" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchDFS),
+         "-oneshortTOTBFS" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchBFS),
+
+         // UMCP
+         "-oneshortTOTumcpBF" ->(htnParsing, oneshortOrderingGroundingPreprocess, umcpBF),
+         "-oneshortTOTumcpDF" ->(htnParsing, oneshortOrderingGroundingPreprocess, umcpDF),
+         "-oneshortTOTumcpH" ->(htnParsing, oneshortOrderingGroundingPreprocess, umcpH),
+
+         // SHOP
+         "-oneshortTOTshop2" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, shop2)
        )
 
 }
