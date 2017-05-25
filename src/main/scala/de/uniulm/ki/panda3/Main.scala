@@ -54,7 +54,7 @@ object Main {
         }) match {
         case (None, l)          => l
         case (Some(command), l) =>
-          this.config.modifyOnOptionString(command)._1 match {
+          this.config.modifyOnOptionString.getOrElse(command,(NoParameter,()))._1 match {
             case NecessaryParameter => assert(false, "no argument provided for " + command); l // this will never be reached. it is just for the sake of completeness
             case _                  => l :+ Left(command)
           }
