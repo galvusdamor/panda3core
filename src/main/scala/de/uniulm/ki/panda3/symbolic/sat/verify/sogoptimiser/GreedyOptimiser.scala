@@ -99,8 +99,7 @@ object GreedyNumberOfChildrenFromTotallyOrderedOptimiser extends SOGOptimiser {
         })
     }
 
-
-    val supergraph = SimpleDirectedGraph(range, range zip range.tail)
+    val supergraph = SimpleDirectedGraph(range, if (range.nonEmpty) range zip range.tail else Nil)
 
     (supergraph, psMapping map { _.toMap })
   }

@@ -108,7 +108,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       // 1. part: select method if necessary
       val decomposeAbstract: Seq[Clause] = possibleAbstracts flatMap { case (abstractTask, abstractIndex) =>
         // select a method
-        val atPossibleMethods = possibleMethods filter {_._1.abstractTask == abstractTask} map { case (m, idx) => (m, method(layer, path, idx)) }
+        val atPossibleMethods = possibleMethods filter { _._1.abstractTask == abstractTask } map { case (m, idx) => (m, method(layer, path, idx)) }
 
         // one method must be applied
         val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, atPossibleMethods map { _._2 })
@@ -162,7 +162,9 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
     if (layer == K || (possibleTaskOrder forall { _.isPrimitive })) {
       //println("Terminal path with " + possibleTasks.size + " tasks")
-      PathDecompositionTree(path, possibleTasks filter { _.isPrimitive }, Array(), Array(), Array(), Array(), initialPayload(possibleTasks, path), Array())
+      val expansionPossible = possibleTasks exists { _.isAbstract }
+      PathDecompositionTree(path, possibleTasks filter { _.isPrimitive }, Array(), Array(), Array(), Array(), initialPayload(possibleTasks, path), Array(),
+                            localExpansionPossible = expansionPossible)
     } else {
       val (possibleAbstracts, possiblePrimitives) = possibleTaskOrder.toArray partition { _.isAbstract }
 
@@ -187,13 +189,17 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
 
       ///////////////////////////////
-      PathDecompositionTree(path, possibleTasks, possiblePrimitives, possibleMethods, methodToPositions, primitivePositions, myPayload, subTreeResults)
+      PathDecompositionTree(path, possibleTasks, possiblePrimitives, possibleMethods, methodToPositions, primitivePositions, myPayload, subTreeResults, localExpansionPossible = false)
     }
   }
 
   protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[Payload]): PathDecompositionTree[Payload]
 
-  lazy val (computedDecompositionFormula, primitivePaths, rootPayload) = {
+  lazy val (computedDecompositionFormula, primitivePaths, rootPayload, expansionPossible) = if (domain.maximumMethodSize == -1) {
+    val ret: (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean) = (Nil, Array(), initialPayload(Set(), Nil), false)
+    ret
+  }
+  else {
     assert(initialPlan.planStepsWithoutInitGoal.length == 1)
     val allOrderingsInitialPlan = initialPlan.orderingConstraints.graph.allTotalOrderings.get
     val initialPlanOrdering = allOrderingsInitialPlan.head
@@ -204,6 +210,11 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     timeCapsule start GENERATE_PDT
     val initialPathDecompositionTree = generatePathDecompositionTree(Nil, Set(initialPlanOrdering.head.schema))
     timeCapsule stop GENERATE_PDT
+    println("done")
+
+    print("Checking whether the PDT can grow any more ... ")
+    val expansion = initialPathDecompositionTree.expansionPossible
+    if (expansion) print("yes ... ") else print("no ... ")
     println("done")
 
 
@@ -239,7 +250,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
     //println(dec.length)
 
-    val pPaths = paths sortWith { case ((p1, _), (p2, _)) => PathBasedEncoding.pathSortingFunction(p1, p2) }
+    val pPaths: Array[(Seq[Int], Set[Task])] = paths sortWith { case ((p1, _), (p2, _)) => PathBasedEncoding.pathSortingFunction(p1, p2) }
 
     // create graph of the paths
     /*{
@@ -251,7 +262,8 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       Dot2PdfCompiler.writeDotToFile(graph, "dectree.pdf")
     }*/
 
-    (initialPlanClauses :+ assertedTask, pPaths, payload)
+    val ret: (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean) = (initialPlanClauses :+ assertedTask, pPaths, payload, expansion)
+    ret
   }
 
   protected final lazy val primitivePathsOnlyPath = primitivePaths map { _._1 }

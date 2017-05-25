@@ -13,11 +13,12 @@ import scala.collection.{mutable, Seq}
   */
 case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Task],
                                           possiblePrimitives: Array[Task], // needed as its order matters
-                                          possibleMethods: Array[(DecompositionMethod,Int)],
+                                          possibleMethods: Array[(DecompositionMethod, Int)],
                                           methodToPositions: Array[Array[Int]],
                                           primitivePositions: Array[Int],
                                           payload: Payload,
                                           children: Array[PathDecompositionTree[Payload]],
+                                          localExpansionPossible: Boolean,
                                           isNormalised: Boolean = false) extends DefaultLongInfo {
   @elidable(ASSERTION)
   val assertion = {
@@ -42,8 +43,9 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
   lazy val layer: Int        = path.length
   lazy val possibleAbstracts = possibleTasks filter { _.isAbstract } toSeq
 
-
   val primitivePaths: Array[(Seq[Int], Set[Task])] = if (children.length == 0 && possibleTasks.nonEmpty) Array((path, possibleTasks)) else children flatMap { _.primitivePaths }
+
+  lazy val expansionPossible: Boolean = localExpansionPossible || (children exists { _.expansionPossible })
 
   //////////////////////// transform to graph
 
@@ -154,10 +156,11 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
       if (possibleTasks.nonEmpty) {
         assert(toRemoveFromLeafPaths.length == 1)
-        PathDecompositionTree(path, possibleTasks -- toRemoveFromLeafPaths.head, Array(), Array(), Array(), Array(), payload, Array(), isNormalised = true)
+        PathDecompositionTree(path, possibleTasks -- toRemoveFromLeafPaths.head, Array(), Array(), Array(), Array(), payload, Array(),
+                              localExpansionPossible = localExpansionPossible, isNormalised = true)
       } else {
         assert(toRemoveFromLeafPaths.isEmpty)
-        PathDecompositionTree(path, Set(), Array(), Array(), Array(), Array(), payload, Array(), isNormalised = true)
+        PathDecompositionTree(path, Set(), Array(), Array(), Array(), Array(), payload, Array(), localExpansionPossible = localExpansionPossible, isNormalised = true)
       }
     } else {
       // separate toRemoveToChildren
@@ -183,8 +186,8 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       }
       //println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
 
-      val remainingMethods: Array[(DecompositionMethod,Int)] = remainingMethodsWithAssignments map { _._1 }
-      val remainingMethodSet: Set[DecompositionMethod] = remainingMethods map {_._1} toSet
+      val remainingMethods: Array[(DecompositionMethod, Int)] = remainingMethodsWithAssignments map { _._1 }
+      val remainingMethodSet: Set[DecompositionMethod] = remainingMethods map { _._1 } toSet
       val remainingMethodsAssignments: Array[Array[Int]] = remainingMethodsWithAssignments map { _._2 }
 
 
@@ -205,13 +208,13 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       // since we are discarding abstract tasks, their methods are not applicable any more
       // now we have to recompute the tree
       // first step: check for all decomposition methods whether they are still applicable
-      val remainingMethodsWithAssignmentsAfterATRemoval : Array[((DecompositionMethod,Int), Array[Int])] = possibleMethods.zip(methodToPositions) filterNot {
+      val remainingMethodsWithAssignmentsAfterATRemoval: Array[((DecompositionMethod, Int), Array[Int])] = possibleMethods.zip(methodToPositions) filterNot {
         case (method, assignment) =>
           (abstractTasksToDiscardSet contains method._1.abstractTask) || !(remainingMethodSet contains method._1)
       }
       //println("Methods: " + possibleMethods.length + " remaining " + remainingMethodsWithAssignments.length)
 
-      val remainingMethodsAfterATRemoval: Array[(DecompositionMethod,Int)] = remainingMethodsWithAssignmentsAfterATRemoval map { _._1 }
+      val remainingMethodsAfterATRemoval: Array[(DecompositionMethod, Int)] = remainingMethodsWithAssignmentsAfterATRemoval map { _._1 }
       val remainingMethodsAssignmentsAfterATRemoval: Array[Array[Int]] = remainingMethodsWithAssignmentsAfterATRemoval map { _._2 }
 
       // we have removed methods, so we have to re-check whether the tasks our children can have can actually be produced
@@ -225,7 +228,8 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       val stillPossibleTasks = stillPossibleAbstractTasks ++ remainingPrimitives
 
       PathDecompositionTree(path, stillPossibleTasks.toSet, remainingPrimitives,
-                            remainingMethodsAfterATRemoval, remainingMethodsAssignmentsAfterATRemoval, remainingPrimitivesPositions, payload, propagatedChildren, isNormalised = true)
+                            remainingMethodsAfterATRemoval, remainingMethodsAssignmentsAfterATRemoval, remainingPrimitivesPositions, payload, propagatedChildren,
+                            localExpansionPossible = localExpansionPossible, isNormalised = true)
     }
 
   def restrictTo(restrictToTasks: Set[Task]): PathDecompositionTree[Payload] = if (restrictToTasks.size == possibleTasks.size) this
@@ -239,12 +243,12 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     val restrictedChildren = childrenPossibleTasks.zip(children) map { case (tasks, child) => child.restrictTo(tasks) }
 
     PathDecompositionTree(path, restrictToTasks, remainingPrimitives map { _._1 }, remainingMethods map { _._1 }, remainingMethods map { _._2 }, remainingPrimitives map { _._2 },
-                          payload, restrictedChildren, isNormalised = isNormalised)
+                          payload, restrictedChildren, localExpansionPossible = localExpansionPossible, isNormalised = isNormalised)
   }
 
   //////////// INTERNAL HELPER METHODS
 
-  private def buildChildrenTaskTable(methods: Array[((DecompositionMethod,Int), Array[Int])], primitives: Array[(Task, Int)]): Array[Set[Task]] = {
+  private def buildChildrenTaskTable(methods: Array[((DecompositionMethod, Int), Array[Int])], primitives: Array[(Task, Int)]): Array[Set[Task]] = {
     val childrenPossibleTasks: Array[mutable.HashSet[Task]] = children.indices map { _ => new mutable.HashSet[Task]() } toArray
 
     // add tasks from methods

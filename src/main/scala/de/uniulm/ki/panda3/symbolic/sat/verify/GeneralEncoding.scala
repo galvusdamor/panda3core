@@ -17,6 +17,7 @@ case class GeneralEncoding(timeCapsule: TimeCapsule,
 
   lazy val taskSequenceLength      = taskSequence.length
   lazy val numberOfActionsPerLayer = taskSequence.length
+  override val expansionPossible: Boolean = true
 
   ///////////////////////////
   // STRING GENERATORS

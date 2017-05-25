@@ -40,6 +40,8 @@ trait VerifyEncoding {
 
   def numberOfChildrenClauses: Int
 
+  def expansionPossible : Boolean
+
   domain.tasks foreach { t => assert(t.parameters.isEmpty) }
   domain.predicates foreach { p => assert(p.argumentSorts.isEmpty) }
   //assert(initialPlan.init.substitutedEffects.length == domain.predicates.length)

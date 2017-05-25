@@ -104,7 +104,7 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
 
     // TODO we are currently mapping plansteps, maybe we should prefer plansteps with identical tasks to be mapped together
     //println("MINI " + possibleMethods.length + " " + possiblePrimitives.length)
-    val lb = methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max
+    val lb = if (methodTaskGraphs.nonEmpty) methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max else 0
     // TODO what to do?
     //val g = DirectedGraph.minimalInducedSuperGraph[PlanStep](methodTaskGraphs) //, minimiseAbstractTaskOccurencesMetric)
     //val g = GreedyNumberOfAbstractChildrenOptimiser.minimalSOG(methodTaskGraphs)

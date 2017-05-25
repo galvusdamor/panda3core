@@ -324,7 +324,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           // depending on whether we are doing a single or a full run, we have either to do a loop or just one run
           val (solution, error) = satSearch.runConfiguration match {
             case SingleSATRun(maximumPlanLength, overrideK) =>
-              runner.runWithTimeLimit(Some(remainingTime), maximumPlanLength, 0, defineK = overrideK, checkSolution = satSearch.checkResult)
+              runner.runWithTimeLimit(remainingTime, remainingTime, maximumPlanLength, 0, defineK = overrideK, checkSolution = satSearch.checkResult) match {case (a, b, c) => (a, b)}
             case FullSATRun()                               =>
               // start with K = 0 and loop
               // TODO this is only good for total order ...
@@ -332,19 +332,21 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               var error: Boolean = false
               var currentK = 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-              var usedTime: Long = remainingTime / Math.max(1,10 / (currentK + 1))
-              while (solution.isEmpty && !error && usedTime > 0) {
+              var usedTime: Long = remainingTime / Math.max(1, 10 / (currentK + 1))
+              var expansion: Boolean = true
+              while (solution.isEmpty && !error && expansion && usedTime > 0) {
                 println("\nRunning SAT search with K = " + currentK)
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
 
-                val (satResult, satError) = runner.runWithTimeLimit(Some(usedTime), -1, 0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, -1, 0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
                 println("ERROR " + satError)
                 error |= satError
                 solution = satResult
+                expansion = expansionPossible
                 currentK += 1
                 remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-                usedTime = remainingTime / Math.max(1,10 / (currentK + 1))
+                usedTime = remainingTime / Math.max(1, 10 / (currentK + 1))
               }
 
               (solution, false)
@@ -482,6 +484,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             searchConfiguration match {
               case search: PlanBasedSearch =>
                 if (informationCapsule.dataMap().contains(Information.SEARCH_SPACE_FULLY_EXPLORED)) SearchState.UNSOLVABLE else SearchState.INSEARCH
+              case sat: SATSearch          => SearchState.UNSOLVABLE
               case _                       => SearchState.INSEARCH
             }
           }
@@ -633,7 +636,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   private def runReachabilityAnalyses(domain: Domain, problem: Plan, runForGrounder: Boolean, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     val emptyAnalysis = AnalysisMap(Map())
 
-    assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall {domain.tasks contains _.schema })
+    assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
 
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
@@ -650,7 +653,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else ((domain, problem), emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
-    assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {liftedResult._1._1.tasks contains _.schema })
+    assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { liftedResult._1._1.tasks contains _.schema })
 
     // convert to SAS+
     val sasPlusResult = if (preprocessingConfiguration.convertToSASP && !liftedResult._1._1.isGround) {
@@ -750,7 +753,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else sasPlusResult
     if (preprocessingConfiguration.groundedReachability.isDefined) timeCapsule stop GROUNDED_PLANNINGGRAPH_ANALYSIS
 
-    assert(groundedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {groundedResult._1._1.tasks contains _.schema })
+    assert(groundedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { groundedResult._1._1.tasks contains _.schema })
 
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
@@ -770,7 +773,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
-    assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {tdgResult._1._1.tasks contains _.schema })
+    assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { tdgResult._1._1.tasks contains _.schema })
 
     val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
       if (!runForGrounder) (if (preprocessingConfiguration.compileUselessAbstractTasks)
