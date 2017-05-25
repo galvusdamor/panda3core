@@ -97,7 +97,8 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
           val npsRecent = recentNodes.asInstanceOf[Double] / (nTime - lastReportTime) * 1000
           if (printSearchInfo) println("Plans Expanded: " + nodes + " node/sec avg: " + nps.toInt + " recent: " + npsRecent.toInt + " Queue size " + searchQueue.length + " Recently lowest" +
-                                         " Heuristic " + minHeuristicCurrentInterval + " Recently highest Heuristic " + maxHeuristicCurrentInterval)
+                                         " Heuristic " + minHeuristicCurrentInterval + " Recently highest Heuristic " + maxHeuristicCurrentInterval +
+                                      " time limit " + timeLimitInMilliSeconds + "ms current " + timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME))
           minHeuristicCurrentInterval = Double.MaxValue
           maxHeuristicCurrentInterval = -Double.MaxValue
           lastReportTime = nTime

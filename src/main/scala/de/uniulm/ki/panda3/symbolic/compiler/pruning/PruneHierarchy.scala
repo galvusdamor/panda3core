@@ -27,7 +27,9 @@ object PruneInconsistentDecompositionMethods extends DomainTransformer[Unit] {
 object PruneHierarchy extends DomainTransformer[Set[Task]] {
 
   /** takes a domain, an initial plan and a set of tasks that are disallowed */
-  override def transform(domain: Domain, plan: Plan, removedTasks: Set[Task]): (Domain, Plan) = {
+  override def transform(domain: Domain, plan: Plan, tasksToBeRemoved: Set[Task]): (Domain, Plan) = {
+    // do not remove actions in the initial plan
+    val removedTasks = tasksToBeRemoved diff plan.planStepTasksSet
     // 1. remove the tasks
     val initialPruning = PruneTasks.transform(domain, plan, removedTasks)
 
@@ -40,7 +42,7 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
     val propagated = propagateInHierarchy(initialPruning._1)
 
     // all abstract tasks should have at least one method
-    assert(propagated.abstractTasks forall { at => propagated.methodsForAbstractTasks(at).nonEmpty })
+    assert(propagated.abstractTasks forall { at => propagated.methodsForAbstractTasks(at).nonEmpty || plan.planStepTasksSet.contains(at)})
 
     (propagated, plan)
   }

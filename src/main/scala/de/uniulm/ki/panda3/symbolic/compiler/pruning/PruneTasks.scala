@@ -32,7 +32,7 @@ object PruneUselessAbstractTasks extends DomainTransformer[Unit] {
     val tasksInMethods: Set[Task] = ((domain.decompositionMethods map { _.subPlan }) :+ plan) flatMap { _.planStepsAndRemovedPlanSteps map { _.schema } } toSet
     val uselessAbstractTasksNeverOccurring = (domain.abstractTasks filterNot tasksInMethods.contains).toSet
 
-    val uselessAbstractTasks = uselessAbstractTasksNoDecomposition ++ uselessAbstractTasksNeverOccurring
+    val uselessAbstractTasks = (uselessAbstractTasksNoDecomposition ++ uselessAbstractTasksNeverOccurring) filterNot plan.planStepSchemaArray.contains
 
     val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks filterNot uselessAbstractTasks.contains,
                                domain.decompositionMethods filterNot { m => uselessAbstractTasks exists { rt => m containsTask rt } }, domain.decompositionAxioms,

@@ -52,21 +52,29 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
     // wait
     val startTime = System.currentTimeMillis()
-    val alreadyUsedTime = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-    while (System.currentTimeMillis() - startTime <= timelimit.getOrElse(Long.MaxValue) - alreadyUsedTime && runner.result.isEmpty && thread.isAlive) Thread.sleep(1000)
-
-    timeCapsule switchTimerToCurrentThread(Timings.TOTAL_TIME, Some(timelimit.getOrElse(Long.MaxValue) - alreadyUsedTime))
-    timerSemaphore.release()
+    while (System.currentTimeMillis() - startTime <= timelimit.getOrElse(Long.MaxValue)  && runner.result.isEmpty && thread.isAlive) Thread.sleep(100)
 
     if (satProcess != null) {
       println("Kill SAT solver")
       satProcess.destroy()
+      "killall -9 cryptominisat5" !
     }
+
+    timeCapsule switchTimerToCurrentThread(Timings.TOTAL_TIME, Some(timelimit.getOrElse(Long.MaxValue)))
+    timerSemaphore.release()
 
     JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t => t.stop() }
 
 
-    if (runner.result.isEmpty) {Thread.sleep(500); (None, true) } else (runner.result.get, false)
+
+    if (runner.result.isEmpty) {
+      val errorState = System.currentTimeMillis() - startTime > timelimit.getOrElse(Long.MaxValue)
+      if (errorState) Thread.sleep(500)
+      val a = System.currentTimeMillis() - startTime
+      val b = timelimit.getOrElse(Long.MaxValue)
+      println(a + " + " + b)
+      (None, errorState)
+    }    else (runner.result.get, false)
   }
 
 
@@ -236,7 +244,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
       val t2 = System.currentTimeMillis()
       val solverOutput = solverSource.mkString
       val t3 = System.currentTimeMillis()
-      println("done  " + (t2 - t1) + " " + (t3 - t2))
+      println("done")
+      //println("done  " + (t2 - t1) + " " + (t3 - t2))
       print("Preparing solver output ... ")
       val t4 = System.currentTimeMillis()
       val (solveState, literals) = satSolver match {
@@ -257,7 +266,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
           }
       }
       val t5 = System.currentTimeMillis()
-      println("done " + (t5 - t4))
+      println("done")
+      //println("done " + (t5 - t4))
 
       // delete files
       //("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !

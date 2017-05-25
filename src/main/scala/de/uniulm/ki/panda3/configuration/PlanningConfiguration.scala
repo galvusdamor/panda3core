@@ -331,13 +331,20 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               var solution: Option[Seq[Task]] = None
               var error: Boolean = false
               var currentK = 0
-              while (solution.isEmpty && !error) {
-                println("\nRunning SAT search with K = " + currentK + "\n\n")
-                val (satResult, satError) = runner.runWithTimeLimit(timeLimit.map({ a => 1000L * a }), -1, 0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
+              var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+              var usedTime: Long = remainingTime / Math.max(1,10 / (currentK + 1))
+              while (solution.isEmpty && !error && usedTime > 0) {
+                println("\nRunning SAT search with K = " + currentK)
+                println("Time remaining for SAT search " + remainingTime + "ms")
+                println("Time used for this run " + usedTime + "ms\n\n")
+
+                val (satResult, satError) = runner.runWithTimeLimit(Some(usedTime), -1, 0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
                 println("ERROR " + satError)
                 error |= satError
                 solution = satResult
                 currentK += 1
+                remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+                usedTime = remainingTime / Math.max(1,10 / (currentK + 1))
               }
 
               (solution, false)
@@ -489,7 +496,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case AllFoundPlans                  => result
       case SearchStatistics               => informationCapsule
       case SearchSpace                    => rootNode
-      case SolutionInternalString         => if (result.nonEmpty) Some(result.head.longInfo) else None
+      case SolutionInternalString         => if (result.nonEmpty) Some(result.head.shortInfo) else None
       case SolutionDotString              => if (result.nonEmpty) Some(result.head.dotString) else None
       case FinalTaskDecompositionGraph    => analysisMap(SymbolicGroundedTaskDecompositionGraph)
       case FinalGroundedReachability      => analysisMap(SymbolicGroundedReachability)
@@ -626,6 +633,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   private def runReachabilityAnalyses(domain: Domain, problem: Plan, runForGrounder: Boolean, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     val emptyAnalysis = AnalysisMap(Map())
 
+    assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall {domain.tasks contains _.schema })
+
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
     val liftedResult = if (preprocessingConfiguration.liftedReachability) {
@@ -641,6 +650,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else ((domain, problem), emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
+    assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {liftedResult._1._1.tasks contains _.schema })
 
     // convert to SAS+
     val sasPlusResult = if (preprocessingConfiguration.convertToSASP && !liftedResult._1._1.isGround) {
@@ -740,6 +750,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else sasPlusResult
     if (preprocessingConfiguration.groundedReachability.isDefined) timeCapsule stop GROUNDED_PLANNINGGRAPH_ANALYSIS
 
+    assert(groundedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {groundedResult._1._1.tasks contains _.schema })
+
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
     val tdgResult = if (preprocessingConfiguration.groundedTaskDecompositionGraph.isDefined) {
@@ -757,6 +769,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       (tasksPruned, newAnalysisMap)
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
+
+    assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {tdgResult._1._1.tasks contains _.schema })
 
     val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
       if (!runForGrounder) (if (preprocessingConfiguration.compileUselessAbstractTasks)
