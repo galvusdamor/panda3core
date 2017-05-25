@@ -32,13 +32,24 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
   private var expansionPossible = true
 
 
+  private def getPID(): Int = {
+    val rt = java.lang.management.ManagementFactory.getRuntimeMXBean
+    val jvm = runtime.getClass.getDeclaredField("jvm")
+    jvm.setAccessible(true)
+    val vmManager = jvm.get(rt).asInstanceOf[sun.management.VMManagement]
+    val method = vmManager.getClass.getDeclaredMethod("getProcessId")
+    method.setAccessible(true)
+
+    method.invoke(vmManager).asInstanceOf[Int]
+  }
+
   def runWithTimeLimit(timelimit: Long, timeLimitForLastRun: Long,
                        planLength: Int, offsetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false): (Option[Seq[Task]], Boolean, Boolean) = {
 
     val timerSemaphore = new Semaphore(0)
 
     val runner = new Runnable {
-      var result   : Option[Option[Seq[Task]]] = None
+      var result: Option[Option[Seq[Task]]] = None
 
       override def run(): Unit = {
         timeCapsule switchTimerToCurrentThread Timings.TOTAL_TIME
@@ -56,9 +67,23 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
     while (System.currentTimeMillis() - startTime <= (if (expansionPossible) timelimit else timeLimitForLastRun) && runner.result.isEmpty && thread.isAlive) Thread.sleep(100)
 
     if (satProcess != null) {
-      println("Kill SAT solver")
-      satProcess.destroy()
-      "killall -9 cryptominisat5" !
+      //satProcess.destroy()
+
+      val pid = getPID()
+      println(pid)
+
+      val uuid = UUID.randomUUID().toString
+      val file = new File("__pid" + uuid)
+      ("pgrep -P " + pid) #> file !
+
+      val childPID = Source.fromFile(file).mkString
+      ("rm __pid" + uuid) !
+
+      if (childPID != "") {
+        println("Kill SAT solver with PID " + childPID)
+        //System exit 0
+        ("kill -9 " + childPID) !
+      }
     }
 
     timeCapsule switchTimerToCurrentThread(Timings.TOTAL_TIME, Some(if (expansionPossible) timelimit else timeLimitForLastRun))
@@ -69,7 +94,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
 
     if (runner.result.isEmpty) {
-      val errorState = System.currentTimeMillis() - startTime > (if (expansionPossible) timelimit else timeLimitForLastRun)
+      val errorState = System.currentTimeMillis() - startTime <= (if (expansionPossible) timelimit else timeLimitForLastRun)
       if (errorState) Thread.sleep(500)
       (None, errorState, expansionPossible)
     } else (runner.result.get, false, expansionPossible)
@@ -192,7 +217,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
                                 fileDir + "__run" + uniqFileIdentifier)
             case CRYPTOMINISAT =>
               println("Starting cryptominisat5")
-              writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' cryptominisat5 --verb 0 " + fileDir + "__cnfString" + uniqFileIdentifier, fileDir + "__run" + uniqFileIdentifier)
+              writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' cryptominisat5 --verb 0 " + fileDir + "__cnfString" + uniqFileIdentifier,
+                                fileDir + "__run" + uniqFileIdentifier)
 
             case RISS6 =>
               println("Starting riss6")
@@ -510,7 +536,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
           assert(nei.size == 1)
           assert(nei.head.name == v.name)
         } else {
-          val subTasks: Seq[Task] = nei map { n => n.id.split(",").last.toInt } collect {case i if domain.tasks.length > i => domain.tasks(i)}
+          val subTasks: Seq[Task] = nei map { n => n.id.split(",").last.toInt } collect { case i if domain.tasks.length > i => domain.tasks(i) }
           val tasksSchemaCount = subTasks groupBy { p => p }
           val possibleMethods = domain.methodsForAbstractTasks(myAction) map { _.subPlan.planStepsWithoutInitGoal } filter { planSteps =>
             val sameSize = planSteps.length == subTasks.length
