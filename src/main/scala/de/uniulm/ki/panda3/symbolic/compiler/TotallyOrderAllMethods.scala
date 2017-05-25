@@ -23,10 +23,10 @@ object TotallyOrderAllMethods extends DecompositionMethodTransformer[TotallyOrde
     ((methods :+ topMethod) flatMap {
       case SimpleDecompositionMethod(abstractTask, subPlan, methodName) =>
         val orderings = orderingOption match {
-          case AllOrderings          => subPlan.orderingConstraints.graph.allTotalOrderings.get
-          case AtMostKOrderings(1)   => subPlan.orderingConstraints.graph.topologicalOrdering.get :: Nil
-          case AtMostKOrderings(k)   => subPlan.orderingConstraints.graph.allTotalOrderings.get take k
-          case AllNecessaryOrderings => // this gets complicated
+          case AllOrderings                                       => subPlan.orderingConstraints.graph.allTotalOrderings.get
+          case AtMostKOrderings(1)                                => subPlan.orderingConstraints.graph.topologicalOrdering.get :: Nil
+          case AtMostKOrderings(k)                                => subPlan.orderingConstraints.graph.allTotalOrderings.get take k
+          case AllNecessaryOrderings | OneOfTheNecessaryOrderings => // this gets complicated
             assert(!originalDomain.hasNegativePreconditions)
             // dependency graph
             val possiblePreconditionsAndEffects = subPlan.planStepsWithoutInitGoal map { ps =>
@@ -80,8 +80,14 @@ object TotallyOrderAllMethods extends DecompositionMethodTransformer[TotallyOrde
                                                                                                                                                                  subPlan.goal) :: Nil)
         } map { constraints => TaskOrdering(constraints, subPlan.planSteps) }
 
-        orderingConstraints.zipWithIndex map { case (ordering, i) => SimpleDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering),
-                                                                                               methodName + "_ordering_" + i)
+        val methods = orderingConstraints.zipWithIndex map { case (ordering, i) => SimpleDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering),
+                                                                                                             methodName + "_ordering_" + i)
+
+        }
+        orderingOption match {
+          case AllNecessaryOrderings                             => methods
+          case OneOfTheNecessaryOrderings if methods.length < 50 => methods
+          case OneOfTheNecessaryOrderings                        => methods.take(200)
         }
     }, Nil)
 
@@ -99,3 +105,5 @@ object OneRandomOrdering {
 }
 
 object AllNecessaryOrderings extends TotallyOrderingOption
+
+object OneOfTheNecessaryOrderings extends TotallyOrderingOption
