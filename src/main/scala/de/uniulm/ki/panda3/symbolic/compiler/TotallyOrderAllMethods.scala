@@ -72,7 +72,11 @@ object TotallyOrderAllMethods extends DecompositionMethodTransformer[TotallyOrde
 
             val expandesSequences = possibleOrderingSequences.foldLeft[Seq[Seq[PlanStep]]](Nil :: Nil)({ case (orderings, next) => orderings flatMap { o => next map { n => o ++ n } } })
 
-            expandesSequences map { s => s }
+            val sequences = expandesSequences map { s => s }
+            orderingOption match {
+              case AllNecessaryOrderings      => sequences
+              case OneOfTheNecessaryOrderings => sequences.take(1)
+            }
         }
 
         val orderingConstraints = orderings map { case ordering =>
@@ -80,15 +84,8 @@ object TotallyOrderAllMethods extends DecompositionMethodTransformer[TotallyOrde
                                                                                                                                                                  subPlan.goal) :: Nil)
         } map { constraints => TaskOrdering(constraints, subPlan.planSteps) }
 
-        val methods = orderingConstraints.zipWithIndex map { case (ordering, i) => SimpleDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering),
-                                                                                                             methodName + "_ordering_" + i)
+        orderingConstraints.zipWithIndex map { case (ordering, i) => SimpleDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering), methodName + "_ordering_" + i) }
 
-        }
-        orderingOption match {
-          case AllNecessaryOrderings                             => methods
-          case OneOfTheNecessaryOrderings if methods.length < 50 => methods
-          case OneOfTheNecessaryOrderings                        => methods.take(200)
-        }
     }, Nil)
 
   override protected val transformationName: String = "totalOrder"
