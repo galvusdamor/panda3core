@@ -2,7 +2,7 @@ package de.uniulm.ki.panda3.configuration
 
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
-import de.uniulm.ki.panda3.symbolic.compiler.{OneRandomOrdering, AllNecessaryOrderings}
+import de.uniulm.ki.panda3.symbolic.compiler.{OneOfTheNecessaryOrderings, OneRandomOrdering, AllNecessaryOrderings}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -47,7 +47,7 @@ object PredefinedConfigurations {
   val oneshortOrderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                        compileInitialPlan = true,
                                                                        convertToSASP = false,
-                                                                       compileOrderInMethods = Some(OneRandomOrdering()),
+                                                                       compileOrderInMethods = Some(OneOfTheNecessaryOrderings),
                                                                        splitIndependentParameters = true,
                                                                        compileUselessAbstractTasks = true,
                                                                        liftedReachability = true, groundedReachability = Some(PlanningGraph),
@@ -57,7 +57,7 @@ object PredefinedConfigurations {
   val oneshortOrderingGroundingPreprocessWithSASPlus = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
                                                                                   compileInitialPlan = true,
                                                                                   convertToSASP = true,
-                                                                                  compileOrderInMethods = Some(OneRandomOrdering()),
+                                                                                  compileOrderInMethods = Some(OneOfTheNecessaryOrderings),
                                                                                   splitIndependentParameters = true,
                                                                                   compileUselessAbstractTasks = true,
                                                                                   liftedReachability = true, groundedReachability = None,
