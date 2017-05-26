@@ -92,7 +92,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
         ("kill -9 " + childPID) !
 
         // add time
-        val solverStillRunningPenalty = System.currentTimeMillis() - solverLastStarted
+
+        // if this was the last run (no expansion of PDT possible) and we got here, we have a timeout, so increase the used time beyond the TL
+        val solverStillRunningPenalty = if (expansionPossible) System.currentTimeMillis() - solverLastStarted else timeLimitForLastRun + 100
         timeCapsule.addTo(Timings.TOTAL_TIME, solverStillRunningPenalty)
         timeCapsule.addTo(Timings.SAT_SOLVER, solverStillRunningPenalty)
       }
