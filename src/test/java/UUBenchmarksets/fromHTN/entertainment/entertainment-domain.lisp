@@ -8,15 +8,18 @@
 (define (domain entertainment)
   (:requirements :typing)
   (:types
-      cable device connector - object
+      hardware connector conn_type - object
+      cable device - hardware
       port plug - connector
   )
 
-  (:predicates 
+  (:predicates
+     (isCable ?h - hardware)
      (audio_cable ?c - cable)
-     (audio_connected ?d1 ?d2 - device)
+     (audio_connected ?d - device ?c - cable)
      (audio_port ?po2 - port)
      (compatible ?po - port ?pl - plug)
+     (connection_type ?con - connector ?t - conn_type)
      (in_port ?po2 - port)
      (out_port ?po1 - port)
      (port_of ?d2 - device ?po2 - port)
@@ -25,7 +28,7 @@
      (same ?d1 ?d2 - device)
      (unused ?con - connector)
      (video_cable ?c - cable)
-     (video_connected ?d1 ?d2 - device)
+     (video_connected ?d - device ?c - cable)
      (video_port ?po1 - port)
   )
   
@@ -46,12 +49,21 @@
   )
 
   ; indirect av connection
-  (:method m-connect-rec-av
+  (:method m-connect-rec-av-1
+    :parameters (?d1 ?d2 ?d3 - device)
+    :task (av_connect ?d1 ?d3)
+    :subtasks (and
+        (direct_av_connect ?d1 ?d2)
+        (av_connect ?d2 ?d3))
+  )
+
+  ; indirect av connection
+  (:method m-connect-rec-av-2
     :parameters (?d1 ?d2 ?d3 - device)
     :task (av_connect ?d1 ?d3)
     :subtasks (and
         (av_connect ?d1 ?d2)
-        (av_connect ?d2 ?d3))
+        (direct_av_connect ?d2 ?d3))
   )
 
   ; indirect av with split (no join possible anymore)
@@ -105,73 +117,81 @@
     :parameters (?d1 ?d2 - device ?po1 ?po2 - port
                  ?c - cable ?pl1 ?pl2 - plug)
     :task (direct_av_connect ?d1 ?d2)
-    :precondition (and ;; these belong to conditional effects and MUST be checked here
+    :precondition (and
+        ;;(not (= ?pl1 ?pl2))
+        ;;(not (= ?d1 ?d2))
         (audio_port ?po1)
         (audio_port ?po2)
         (audio_cable ?c)
         (video_port ?po1)
         (video_port ?po2)
         (video_cable ?c)
+        (out_port ?po1)
+        (in_port ?po2)
       )
     :subtasks (and
-        (plug ?d1 ?d2 ?po1 ?po2 ?c ?pl1 ?pl2))
+        (plug ?d1 ?po1 ?c ?pl1)
+        (plug ?d2 ?po2 ?c ??pl2))
   )
 
   (:method m-dconnect-a
     :parameters (?d1 ?d2 - device ?po1 ?po2 - port
                  ?c - cable ?pl1 ?pl2 - plug)
     :task (direct_a_connect ?d1 ?d2)
-    :precondition (and ;; these belong to conditional effects and MUST be checked here
+    :precondition (and
+        ;;(not (= ?pl1 ?pl2))
+        ;;(not (= ?d1 ?d2))
         (audio_port ?po1)
         (audio_port ?po2)
         (audio_cable ?c)
+        (out_port ?po1)
+        (in_port ?po2)
       )
     :subtasks (and
-        (plug ?d1 ?d2 ?po1 ?po2 ?c ?pl1 ?pl2))
+        (plug ?d1 ?po1 ?c ?pl1)
+        (plug ?d2 ?po2 ?c ??pl2))
   )
 
   (:method m-dconnect-v
     :parameters (?d1 ?d2 - device ?po1 ?po2 - port
                  ?c - cable ?pl1 ?pl2 - plug)
     :task (direct_v_connect ?d1 ?d2)
-    :precondition (and ;; these belong to conditional effects and MUST be checked here
-        (video_port ?po1)
-        (video_port ?po2)
-        (video_cable ?c)
-      )
-    :subtasks (and
-        (plug ?d1 ?d2 ?po1 ?po2 ?c ?pl1 ?pl2))
-  )
-
-; primitives -------------------------------------------------------------
-
-  (:action plug
-    :parameters (?d1 ?d2 - device ?po1 ?po2 - port 
-                 ?c - cable ?pl1 ?pl2 - plug)
     :precondition (and
         ;;(not (= ?pl1 ?pl2))
         ;;(not (= ?d1 ?d2))
-        (unused ?po1) (unused ?po2) (unused ?pl1) (unused ?pl2)
+        (video_port ?po1)
+        (video_port ?po2)
+        (video_cable ?c)
         (out_port ?po1)
         (in_port ?po2)
-        (port_of ?d1 ?po1)
-        (port_of ?d2 ?po2)
-        (plug_of ?c ?pl1)
-        (plug_of ?c ?pl2)
-        (compatible ?po1 ?pl1)
-        (compatible ?po2 ?pl2)
+      )
+    :subtasks (and
+        (plug ?d1 ?po1 ?c ?pl1)
+        (plug ?d2 ?po2 ?c ??pl2))
+  )
+
+; primitives -------------------------------------------------------------
+  
+  (:action plug
+    :parameters (?d - device ?po - port 
+                 ?c - cable ?pl - plug
+                 ?t - conn_type)
+    :precondition (and
+        (unused ?po) (unused ?pl)
+        (port_of ?d ?po)
+        (plug_of ?c ?pl)
+        (connection_type ?po ?t)
+        (connection_type ?pl ?t)
       )
     :effect (and
-        (plugged ?po1 ?po2 ?c)
-        (when (and (audio_port ?po1)
-                   (audio_port ?po2)
+        ;(plugged ?po ?pl)
+        (when (and (audio_port ?po)
                    (audio_cable ?c))
-              (audio_connected ?d1 ?d2))
-        (when (and (video_port ?po1)
-                   (video_port ?po2)
+              (audio_connected ?d ?c))
+        (when (and (video_port ?po)
                    (video_cable ?c))
-              (video_connected ?d1 ?d2))
-        (not (unused ?po1))(not (unused ?po2))(not (unused ?pl1))(not (unused ?pl2))
+              (video_connected ?d ?c))
+        (not (unused ?po))(not (unused ?pl)))
       )
   )
 )
