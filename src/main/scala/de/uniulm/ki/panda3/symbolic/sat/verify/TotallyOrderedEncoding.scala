@@ -197,11 +197,27 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
     val (_, tasksToRemoveFromPaths) = sortedPaths.foldLeft[((Set[(Predicate, Predicate)], Set[Predicate]), Seq[Set[Task]])](((h2InitialState, simpleInitialState.toSet), Nil))(
       {
         case (((h2State, h1State), toRemove), (path, tasks)) =>
+          // debug output
+          /*println("\n\nh2 State" + (h2State map {case (a,b) => "(" + a.name + "," + b.name + ")"} mkString " "))
+          println("h1 State" + (h1State map {_.name} mkString " "))
+          println("tasks: ")
+          println(tasks map {case rt : ReducedTask =>
+            rt.name + "\n\tprec: " + rt.precondition.conjuncts.map({_.predicate.name}) +
+              "\n\tadd: " + rt.effect.conjuncts.filter(_.isPositive).map({_.predicate.name}) +
+              "\n\tdel: " + rt.effect.conjuncts.filter(_.isNegative).map({_.predicate.name})
+          } mkString "\n")
+          */
+
           val (applicable, nonApplicable) = tasks partition { t =>
             if (t.isAbstract) false
             else {
               val positivePreconditions = t.preconditionsAsPredicateBool collect { case (predicate, true) => predicate } toArray
               val h2Preconditions = crossProduct(positivePreconditions, positivePreconditions)
+
+              val nonHoldingPrecs = h2Preconditions filterNot h2State.contains
+
+              //println("Missing Precondition for " + t.name  + ": " + (nonHoldingPrecs map {case (a,b) => "(" + a.name + "," + b.name + ")"} mkString " "))
+
               // the state must contain all h2 pairs
               h2Preconditions forall h2State.contains
             }
@@ -275,24 +291,3 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
   }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
