@@ -31,10 +31,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
   private var expansionPossible = true
 
+  private var solverLastStarted: Long = 0
 
   private def getPID(): Int = {
     val rt = java.lang.management.ManagementFactory.getRuntimeMXBean
-    val jvm = runtime.getClass.getDeclaredField("jvm")
+    val jvm = rt.getClass.getDeclaredField("jvm")
     jvm.setAccessible(true)
     val vmManager = jvm.get(rt).asInstanceOf[sun.management.VMManagement]
     val method = vmManager.getClass.getDeclaredMethod("getProcessId")
@@ -64,7 +65,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
     // wait
     val startTime = System.currentTimeMillis()
-    while (System.currentTimeMillis() - startTime <= (if (expansionPossible) timelimit else timeLimitForLastRun) && runner.result.isEmpty && thread.isAlive) Thread.sleep(100)
+    var rounds = 0
+    while (System.currentTimeMillis() - startTime <= (if (expansionPossible) timelimit else timeLimitForLastRun) && runner.result.isEmpty && thread.isAlive) {
+      Thread.sleep(100)
+      rounds += 1
+      if (rounds % (60 * 10) == 1)
+        println("Still waiting ... running for " + (System.currentTimeMillis() - startTime) + " will abort at " + (if (expansionPossible) timelimit else timeLimitForLastRun))
+    }
 
     if (satProcess != null) {
       //satProcess.destroy()
@@ -83,6 +90,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
         println("Kill SAT solver with PID " + childPID)
         //System exit 0
         ("kill -9 " + childPID) !
+
+        // add time
+        val solverStillRunningPenalty = System.currentTimeMillis() - solverLastStarted
+        timeCapsule.addTo(Timings.TOTAL_TIME, solverStillRunningPenalty)
+        timeCapsule.addTo(Timings.SAT_SOLVER, solverStillRunningPenalty)
       }
     }
 
@@ -227,6 +239,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
                                 fileDir + "__run" + uniqFileIdentifier)
           }
 
+          solverLastStarted = System.currentTimeMillis()
+          println("Setting starttime of solver to " + solverLastStarted)
           satProcess = ("bash " + fileDir + "__run" + uniqFileIdentifier).run(logger)
 
           // wait for termination
