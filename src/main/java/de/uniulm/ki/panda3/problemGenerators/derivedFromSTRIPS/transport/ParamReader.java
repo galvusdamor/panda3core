@@ -1,4 +1,4 @@
-package UUBenchmarksets.derivedFromSTRIPS.transport.problemGen;
+package de.uniulm.ki.panda3.problemGenerators.derivedFromSTRIPS.transport;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +26,17 @@ public class ParamReader {
     public void read(String[] args) {
         boolean printDesc = false;
         for (int i = 0; i < args.length; i++) {
-
+            String[] kv = args[i].split("=");
+            assert (kv.length == 2);
+            // check whether the names contain them
+            boolean found = false;
+            for (int k = 0; k < names.length; k++)
+                if (names[k].equals(kv[0])) {
+                    found = true;
+                    params.put(kv[0], Integer.parseInt(kv[1]));
+                }
+            if (!found)
+                System.out.println("Could not find parameter " + kv[0]);
         }
     }
 }

@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.ipc2hddlDomainConverter;
+package de.uniulm.ki.panda3.problemGenerators.ipc2hddlDomainConverter;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
