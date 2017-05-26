@@ -136,7 +136,7 @@ public class htnPlanningInstance {
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
         ProgressionSearchRoutine routine;
-        boolean printOutput = true;
+        boolean printOutput = false;
         boolean findShortest = false;
 
         routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput, findShortest, taskSelectionStrategy);
