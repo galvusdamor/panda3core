@@ -18,15 +18,15 @@ object PredefinedConfigurations {
                           )
 
 
-  val groundingPreprocess         = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                               compileInitialPlan = true,
-                                                               convertToSASP = false,
-                                                               compileOrderInMethods = None,
-                                                               splitIndependentParameters = true,
-                                                               compileUselessAbstractTasks = true,
-                                                               liftedReachability = true, groundedReachability = Some(PlanningGraph),
-                                                               groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                               iterateReachabilityAnalysis = true, groundDomain = true)
+  val groundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                       compileInitialPlan = true,
+                                                       convertToSASP = false,
+                                                       compileOrderInMethods = None,
+                                                       splitIndependentParameters = true,
+                                                       compileUselessAbstractTasks = true,
+                                                       liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                       iterateReachabilityAnalysis = true, groundDomain = true)
 
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
@@ -141,7 +141,7 @@ object PredefinedConfigurations {
   val planSearchAStarRelax      = PlanBasedSearch(None, AStarActionsType(2), Relax :: Nil, Nil, LCFR)
 
   val shop2 = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
-  val pro = ProgressionSearch(AStarActionsType(1), Some(RelaxedCompositionGraph(true, RCG.heuristicExtraction.multicount, RCG.producerSelection
+  val pro   = ProgressionSearch(AStarActionsType(1), Some(RelaxedCompositionGraph(true, RCG.heuristicExtraction.multicount, RCG.producerSelection
     .numOfPreconditions)), PriorityQueueSearch.abstractTaskSelection.random)
 
 
@@ -273,7 +273,10 @@ object PredefinedConfigurations {
          "-oneshortTOTumcpH" ->(htnParsing, oneshortOrderingGroundingPreprocess, umcpH),
 
          // SHOP
-         "-oneshortTOTshop2" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, shop2)
+         "-oneshortTOTshop2" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, shop2),
+
+         // plan verification a la ICAPS'17
+         "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT,""))
        )
 
 }

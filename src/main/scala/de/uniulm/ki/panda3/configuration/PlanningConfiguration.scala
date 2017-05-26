@@ -20,7 +20,7 @@ import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.sat.verify.SATRunner
+import de.uniulm.ki.panda3.symbolic.sat.verify.{VerifyRunner, SATRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{SASPlusGrounding, GroundedPrimitiveReachabilityAnalysis}
@@ -36,8 +36,6 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, GroundTask
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.{efficient, symbolic}
-import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
-
 import de.uniulm.ki.util._
 
 import scala.util.Random
@@ -133,6 +131,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     // write randomseed into the info capsule
     informationCapsule.set(Information.RANDOM_SEED, randomSeed.toString)
+
+    // determine show much time I have left
+    val remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+    println("Time remaining for planner " + remainingTime + "ms")
 
 
     searchConfiguration match {
@@ -312,14 +314,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           runPostProcessing(timeCapsule, informationCapsule, null, if (solutionFound) null :: Nil else Nil, domainAndPlan, unprocessedDomain, analysisMap)
         })
 
-      case satSearch: SATSearch =>
+      case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, satSearch.reductionMethod, timeCapsule, informationCapsule)
 
 
-          // determine show much time I have left
-          val remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-          println("Time remaining for SAT search " + remainingTime + "ms")
 
           // depending on whether we are doing a single or a full run, we have either to do a loop or just one run
           val (solution, error) = satSearch.runConfiguration match {
@@ -362,11 +361,24 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           }
           runPostProcessing(timeCapsule, informationCapsule, null, potentialPlan, domainAndPlan, unprocessedDomain, analysisMap)
         })
+      case SATPlanVerification(solverType, planToVerity) =>
+        assert(domainAndPlan._1.isGround)
+        val taskSequenceToVerify: Seq[Task] = planToVerity.split(";") map { t => domainAndPlan._1.tasks.find(_.name == t).get }
 
-      case NoSearch => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+        (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+          val runner = VerifyRunner(domainAndPlan._1, domainAndPlan._2, solverType)
+
+          val (isSolution, runCompleted) = runner.runWithTimeLimit(remainingTime, taskSequenceToVerify, 0, includeGoal = true, None, timeCapsule, informationCapsule)
+
+
+
+          runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
+        })
+      case NoSearch                                      => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
         timeCapsule stop TOTAL_TIME
         runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
       })
+
     }
   }
 
@@ -964,6 +976,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       defaultPlanSearchConfiguration ::
         defaultProgressionConfiguration ::
         defaultSATConfiguration ::
+        defaultVerifyConfiguration ::
         NoSearch :: Nil
     case x        => x :: Nil
   }) ++ (parsingConfiguration :: preprocessingConfiguration :: postprocessingConfiguration :: Nil)
@@ -980,6 +993,7 @@ object PlanningConfiguration {
   private val defaultPlanSearchConfiguration  = PlanBasedSearch(None, BFSType, Nil, Nil, LCFR)
   private val defaultProgressionConfiguration = ProgressionSearch(BFSType, None, PriorityQueueSearch.abstractTaskSelection.random)
   private val defaultSATConfiguration         = SATSearch(MINISAT, SingleSATRun())
+  private val defaultVerifyConfiguration      = SATPlanVerification(MINISAT, "")
 }
 
 /**
@@ -1558,6 +1572,28 @@ case class SATSearch(solverType: Solvertype,
       ("reduction method", reductionMethod.longInfo) ::
         ("check result", checkResult) :: Nil))
 
+}
+
+
+case class SATPlanVerification(solverType: Solvertype, planToVerify: String) extends SearchConfiguration {
+
+  protected override def localModifications: Seq[(String, (ParameterMode, (Option[String] => this.type)))] =
+    Seq(
+         "-solver" ->(NecessaryParameter, { l: Option[String] =>
+           val solver = l.get.toLowerCase match {
+             case "minisat"       => MINISAT
+             case "cryptominisat" => CRYPTOMINISAT
+           }
+           this.copy(solverType = solver).asInstanceOf[this.type]
+         }),
+         "-plan" ->(NecessaryParameter, { l: Option[String] =>
+           this.copy(planToVerify = l.get).asInstanceOf[this.type]
+         })
+       )
+
+  /** returns a detailed information about the object */
+  override def longInfo: String = "SAT-Plan-Verification Configuration\n--------------------------\n" +
+    alignConfig(("solver", solverType.longInfo) ::("plan", planToVerify) :: Nil)
 }
 
 object NoSearch extends SearchConfiguration {
