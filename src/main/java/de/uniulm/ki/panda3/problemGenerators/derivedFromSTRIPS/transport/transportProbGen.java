@@ -1,4 +1,4 @@
-package UUBenchmarksets.derivedFromSTRIPS.transport.problemGen;
+package de.uniulm.ki.panda3.problemGenerators.derivedFromSTRIPS.transport;
 
 import java.util.*;
 
@@ -11,10 +11,16 @@ public class transportProbGen {
             new String[]{"numTruck", "numPackages", "numCities", "numOfComponents", "capacity"},
             new String[]{"number of trucks", "number of packages", "number of cities",
                     "number of components of the road network", "capacity of the transporters"},
-            new int[]{2, 3, 5, 1, 4});
+            new int[]{1, 2, 3, 1, 1});
 
     public static void main(String[] args) {
-        reader.read(args);
+        if (args.length > 0) {
+            r = new Random(Integer.parseInt(args[0]));
+            String[] realArgs = new String[args.length - 1];
+            System.arraycopy(args, 1, realArgs, 0, realArgs.length);
+            reader.read(realArgs);
+        }
+
         int numTruck = reader.get("numTruck");
         int numPackages = reader.get("numPackages");
         int numCities = reader.get("numCities");
@@ -45,8 +51,14 @@ public class transportProbGen {
                 packComp = r.nextInt(numOfComponents);
             } while (!containsTransporter[packComp]);
             BitSet component = components.get(packComp);
-            packageAt[i] = getElemNr(component, r.nextInt(component.cardinality()));
-            packageEnd[i] = getElemNr(component, r.nextInt(component.cardinality()));
+            int startP;
+            int endP;
+            do {
+                startP = r.nextInt(component.cardinality());
+                endP = r.nextInt(component.cardinality());
+            } while (startP == endP && component.cardinality() != 1);
+            packageAt[i] = getElemNr(component, startP);
+            packageEnd[i] = getElemNr(component, endP);
         }
 
         // write problem
@@ -145,7 +157,7 @@ public class transportProbGen {
 
     private static int getElemNr(BitSet x, int elemNumber) {
         int pos = x.nextSetBit(0);
-        for (int j = 1; j < elemNumber; j++) {
+        for (int j = 0; j < elemNumber; j++) {
             pos = x.nextSetBit(pos + 1);
         }
         return pos;

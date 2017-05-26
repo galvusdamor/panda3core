@@ -82,6 +82,13 @@ lazy val csvExtractor = (project in (file("assembly") / "csvExtractor")).setting
             mainClass in assembly := Some("de.uniulm.ki.util.collectPlanningInfo")
           )
 
+lazy val transportProbGen = (project in (file("assembly") / "transportProbGen")).settings(assemblySettings: _*).
+  settings(
+            target := file("assembly") / "transportProbGen",
+            assemblyJarName in assembly := "panda3transportProbGen.jar",
+            mainClass in assembly := Some("de.uniulm.ki.panda3.problemGenerators.derivedFromSTRIPS.transport.transportProbGen")
+          )
+
 
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 scalastyleConfig := baseDirectory.value / "project" / "scalastyle_config.xml"
