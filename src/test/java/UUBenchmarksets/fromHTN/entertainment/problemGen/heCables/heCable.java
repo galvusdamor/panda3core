@@ -13,6 +13,10 @@ public abstract class heCable {
     public List<hePlug> plugs;
     protected boolean audioCable;
     protected boolean videoCable;
+    protected List<Boolean> inPlug = new ArrayList<>();
+    protected List<Boolean> outPlug = new ArrayList<>();
+    protected List<Boolean> audioPlug = new ArrayList<>();
+    protected List<Boolean> videoPlug = new ArrayList<>();
 
     public boolean isAudioCable() {
         return audioCable;
@@ -36,5 +40,21 @@ public abstract class heCable {
 
     public String getTypeStr() {
         return typeStr;
+    }
+
+    public boolean isInPlug(int i) {
+        return inPlug.get(i);
+    }
+
+    public boolean isOutPlug(int i) {
+        return this.outPlug.get(i);
+    }
+
+    public boolean isAudioPlug(int i) {
+        return this.audioPlug.get(i);
+    }
+
+    public boolean isVideoPlug(int i) {
+        return this.videoPlug.get(i);
     }
 }

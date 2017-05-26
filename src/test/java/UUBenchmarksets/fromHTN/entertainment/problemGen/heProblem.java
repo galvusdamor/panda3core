@@ -47,6 +47,15 @@ public class heProblem {
         Map<String, List<String>> plugOf = new HashMap<>();
         Map<String, List<String>> typeDefPlug = new HashMap<>();
 
+        List<String> deviceDefs = new ArrayList<>();
+        List<String> portDefs = new ArrayList<>();
+        List<String> inPorts = new ArrayList<>();
+        List<String> outPorts = new ArrayList<>();
+        List<String> audioPorts = new ArrayList<>();
+        List<String> videoPorts = new ArrayList<>();
+        Map<String, List<String>> portOf = new HashMap<>();
+        Map<String, List<String>> typeDefPort = new HashMap<>();
+
         for (heCable c : cables) {
             int nextIndex = getNextIndex(cableDefs, c.getTypeStr());
             String cableName = c.getTypeStr() + nextIndex;
@@ -63,17 +72,16 @@ public class heProblem {
                 if (!typeDefPlug.containsKey(type))
                     typeDefPlug.put(type, new ArrayList<>());
                 typeDefPlug.get(type).add(myPlugs.get(i));
+                if (c.isInPlug(i))
+                    inPorts.add(myPlugs.get(i));
+                if (c.isOutPlug(i))
+                    outPorts.add(myPlugs.get(i));
+                if (c.isAudioPlug(i))
+                    audioPorts.add(myPlugs.get(i));
+                if (c.isVideoPlug(i))
+                    videoPorts.add(myPlugs.get(i));
             }
         }
-
-        List<String> deviceDefs = new ArrayList<>();
-        List<String> portDefs = new ArrayList<>();
-        List<String> inPorts = new ArrayList<>();
-        List<String> outPorts = new ArrayList<>();
-        List<String> audioPorts = new ArrayList<>();
-        List<String> videoPorts = new ArrayList<>();
-        Map<String, List<String>> portOf = new HashMap<>();
-        Map<String, List<String>> typeDefPort = new HashMap<>();
 
         for (heDevice d : devices) {
             int nextIndex = getNextIndex(cableDefs, d.getType());
@@ -103,13 +111,13 @@ public class heProblem {
                 " (:domain entertainment)\n" +
                 " (:objects\n");
         writeList(deviceDefs, sb);
-        sb.append(" - device\n");
+        sb.append(" - equipment\n");
         writeList(cableDefs, sb);
-        sb.append(" - cable\n");
+        sb.append(" - equipment\n");
         writeList(portDefs, sb);
-        sb.append(" - port\n");
+        sb.append(" - connector\n");
         writeList(plugDefs, sb);
-        sb.append(" - plug\n");
+        sb.append(" - connector\n");
 
         sb.append(" )\n" +
                 " (:htn\n" +
@@ -132,29 +140,30 @@ public class heProblem {
         writeList(portDefs, sb, "(unused ", ")");
         sb.append("\n\n");
 
-        writeList(outPorts, sb, "(out_port ", ")");
+        writeList(outPorts, sb, "(out_connector ", ")");
         sb.append("\n");
-        writeList(inPorts, sb, "(in_port ", ")");
+        writeList(inPorts, sb, "(in_connector ", ")");
         sb.append("\n\n");
 
-        writeList(audioPorts, sb, "(audio_port ", ")");
+        writeList(audioPorts, sb, "(audio_connector ", ")");
         sb.append("\n");
-        writeList(videoPorts, sb, "(video_port ", ")");
+        writeList(videoPorts, sb, "(video_connector ", ")");
         sb.append("\n\n");
 
+        /*
         writeList(audioCables, sb, "(audio_cable ", ")");
         sb.append("\n");
         writeList(videoCables, sb, "(video_cable ", ")");
-        sb.append("\n\n");
+        sb.append("\n\n");*/
 
         for (String key : portOf.keySet()) {
-            String pref = "(port_of " + key + " ";
+            String pref = "(conn_of " + key + " ";
             writeList(portOf.get(key), sb, pref, ")");
             sb.append("\n");
         }
 
         for (String key : plugOf.keySet()) {
-            String pref = "(plug_of " + key + " ";
+            String pref = "(conn_of " + key + " ";
             writeList(plugOf.get(key), sb, pref, ")");
             sb.append("\n\n");
         }
@@ -168,6 +177,11 @@ public class heProblem {
                             sb.append(port);
                             sb.append(" ");
                             sb.append(plug);
+                            sb.append(")\n");
+                            sb.append("  (compatible ");
+                            sb.append(plug);
+                            sb.append(" ");
+                            sb.append(port);
                             sb.append(")\n");
                         }
                 }

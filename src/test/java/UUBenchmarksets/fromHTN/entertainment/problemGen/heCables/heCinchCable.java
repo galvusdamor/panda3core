@@ -1,7 +1,6 @@
 package UUBenchmarksets.fromHTN.entertainment.problemGen.heCables;
 
 import UUBenchmarksets.fromHTN.entertainment.problemGen.heConnections.heCinchPlug;
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heConnections.heScartPlug;
 
 import java.util.ArrayList;
 
@@ -15,6 +14,14 @@ public class heCinchCable extends heCable {
         audioCable = true;
         videoCable = true;
         plugs.add(new heCinchPlug());
+        this.inPlug.add(true);
+        this.outPlug.add(true);
+        this.videoPlug.add(true);
+        this.audioPlug.add(true);
         plugs.add(new heCinchPlug());
+        this.inPlug.add(true);
+        this.outPlug.add(true);
+        this.videoPlug.add(true);
+        this.audioPlug.add(true);
     }
 }

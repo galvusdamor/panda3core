@@ -17,6 +17,14 @@ public class heScartCable extends heCable {
         audioCable = true;
         videoCable = true;
         plugs.add(new heScartPlug());
+        this.inPlug.add(true);
+        this.outPlug.add(true);
+        this.videoPlug.add(true);
+        this.audioPlug.add(true);
         plugs.add(new heScartPlug());
+        this.inPlug.add(true);
+        this.outPlug.add(true);
+        this.videoPlug.add(true);
+        this.audioPlug.add(true);
     }
 }
