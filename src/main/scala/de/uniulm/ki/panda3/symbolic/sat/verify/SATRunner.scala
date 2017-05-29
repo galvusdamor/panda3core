@@ -27,7 +27,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
   import sys.process._
 
-  private var satProcess: Process = null
+  private var satProcess: Option[Process] = None
 
   private var expansionPossible = true
 
@@ -66,14 +66,14 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
     // wait
     val startTime = System.currentTimeMillis()
     var rounds = 0
-    while (System.currentTimeMillis() - startTime <= (if (expansionPossible) timelimit else timeLimitForLastRun) && runner.result.isEmpty && thread.isAlive) {
+    while (System.currentTimeMillis() - startTime <= (if (expansionPossible) timelimit else timeLimitForLastRun) * 1.5 && runner.result.isEmpty && thread.isAlive) {
       Thread.sleep(100)
       rounds += 1
       if (rounds % (60 * 10) == 1)
         println("Still waiting ... running for " + (System.currentTimeMillis() - startTime) + " will abort at " + (if (expansionPossible) timelimit else timeLimitForLastRun))
     }
 
-    if (satProcess != null) {
+    if (satProcess.isDefined) {
       //satProcess.destroy()
 
       val pid = getPID()
@@ -81,16 +81,19 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
       val uuid = UUID.randomUUID().toString
       val file = new File("__pid" + uuid)
-      ("pgrep -P " + pid) #> file !
+      ("pstree -p " + pid) #| "grep -o '([0-9]\\+)'" #| "grep -o '[0-9]\\+'" #> file !
 
       val childPID = Source.fromFile(file).mkString
+      println("CHILD PIDs " + childPID)
       ("rm __pid" + uuid) !
 
       if (childPID != "") {
-        println("Kill SAT solver with PID " + childPID)
-        //System exit 0
-        ("kill -9 " + childPID) !
+        childPID.split("\n") foreach { c =>
+          println("Kill SAT solver with PID " + c)
+          //System exit 0
+          ("kill -9 " + c) !
 
+        }
         // add time
 
         // if this was the last run (no expansion of PDT possible) and we got here, we have a timeout, so increase the used time beyond the TL
@@ -243,10 +246,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
           solverLastStarted = System.currentTimeMillis()
           println("Setting starttime of solver to " + solverLastStarted)
-          satProcess = ("bash " + fileDir + "__run" + uniqFileIdentifier).run(logger)
+          satProcess = Some(("bash " + fileDir + "__run" + uniqFileIdentifier).run(logger))
 
           // wait for termination
-          satProcess.exitValue()
+          satProcess.get.exitValue()
           satSolver match {
             case CRYPTOMINISAT | RISS6 =>
               writeStringToFile(stdout.toString(), new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
