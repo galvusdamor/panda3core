@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
 import java.io.InputStream
+import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
@@ -669,6 +670,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     // convert to SAS+
     val sasPlusResult = if (preprocessingConfiguration.convertToSASP && !liftedResult._1._1.isGround) {
+      import sys.process._
+
       info("Converting to SAS+ ... ")
       // 1. step write pddl part of the domain to file
       val classicalDomain = liftedResult._1._1.classicalDomain
@@ -690,27 +693,30 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                           withGoalPlan.variableConstraints, withGoalPlan.init, withGoalPlan.goal, withGoalPlan.isModificationAllowed, withGoalPlan.isFlawAllowed, Map(), Map())
 
       // FD can't handle either in the sort hierarchy, so we have to use predicates when writing them ...
-      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true), "__sasdomain.pddl")
-      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan, writeEitherWithPredicates = true), "__sasproblem.pddl")
+      val uuid = UUID.randomUUID().toString
+
+      ("mkdir .fd" + uuid) !! // create directory
+
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true), ".fd" + uuid + "/__sasdomain.pddl")
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan, writeEitherWithPredicates = true), ".fd" + uuid + "/__sasproblem.pddl")
 
       val sasPlusParser = {
-        import sys.process._
         // we need a path to FD
         assert(externalProgramPaths contains FastDownward, "no path to fast downward is specified")
         val fdPath = externalProgramPaths(FastDownward)
 
-        (fdPath + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl") !!
+        writeStringToFile("#!/bin/bash\ncd .fd" + uuid + "\n../" + fdPath + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
+
+        ("bash runFD" + uuid + ".sh") !!
         // semantic empty line
 
-        "rm __sasdomain.pddl __sasproblem.pddl" !
         // semantic empty line
-
-        val sasreader = new SasPlusProblem("output.sas")
+        val sasreader = new SasPlusProblem(".fd" + uuid + "/output.sas")
         sasreader.prepareEfficientRep()
         //htnPlanningInstance.sasp = sasreader
         //sasreader.prepareSymbolicRep(domain,problem)
 
-        "rm output.sas" !
+        ("rm -rf .fd" + uuid) !
         // semantic empty line
 
         SASPlusGrounding(liftedResult._1._1, liftedResult._1._2, sasreader)
