@@ -81,15 +81,18 @@ object TotallyOrderAllMethods extends DecompositionMethodTransformer[TotallyOrde
       }
 
       val orderingConstraints = orderings map { case ordering =>
-        (ordering zip ordering.tail map { case (a, b) => OrderingConstraint(a, b) }) ++ (OrderingConstraint(subPlan.init, ordering.head) :: OrderingConstraint(ordering.last,
-                                                                                                                                                               subPlan.goal) :: Nil)
+        if (ordering.isEmpty)
+          OrderingConstraint(subPlan.init, subPlan.goal) :: Nil
+        else
+          (if (ordering.length > 1) ordering zip ordering.tail map { case (a, b) => OrderingConstraint(a, b) } else Nil) ++
+            (OrderingConstraint(subPlan.init, ordering.head) :: OrderingConstraint(ordering.last, subPlan.goal) :: Nil)
       } map { constraints => TaskOrdering(constraints, subPlan.planSteps) }
 
       orderingConstraints.zipWithIndex map { case (ordering, i) =>
         m match {
-          case SimpleDecompositionMethod(_, _, methodName) => SimpleDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering), methodName + "_ordering_" + i)
-          case SHOPDecompositionMethod(_,_,prec,eff,name) =>
-            SHOPDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering), prec,eff, name + "_ordering_" + i)
+          case SimpleDecompositionMethod(_, _, methodName)    => SimpleDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering), methodName + "_ordering_" + i)
+          case SHOPDecompositionMethod(_, _, prec, eff, name) =>
+            SHOPDecompositionMethod(abstractTask, subPlan.copy(orderingConstraints = ordering), prec, eff, name + "_ordering_" + i)
         }
       }
 
