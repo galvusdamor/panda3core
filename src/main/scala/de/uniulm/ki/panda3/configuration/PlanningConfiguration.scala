@@ -1100,7 +1100,7 @@ case class PreprocessingConfiguration(
                                        groundDomain: Boolean
                                      ) extends Configuration {
   assert(!convertToSASP || groundedReachability.isEmpty, "You can't use both SAS+ and a grouded PG")
-  assert(!convertToSASP || !compileNegativePreconditions, "You can't use both SAS+ and remove negative preconditions")
+  //assert(!convertToSASP || !compileNegativePreconditions, "You can't use both SAS+ and remove negative preconditions")
 
   //assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
 
