@@ -16,8 +16,8 @@ public class HtnCompositionEncoding extends SasPlusProblem {
     int numAnM;
     int numExtenedStateFeatures;
 
-    HashMap<method, Integer> MethodToIndex;
-    method[] IndexToMethod;
+    public HashMap<method, Integer> MethodToIndex;
+    public method[] IndexToMethod;
 
     public TopDownReachabilityGraph tdRechability;
     public int firstTdrIndex;

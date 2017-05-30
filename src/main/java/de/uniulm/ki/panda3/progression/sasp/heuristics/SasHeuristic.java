@@ -9,12 +9,29 @@ import java.util.BitSet;
  */
 public abstract class SasHeuristic {
 
-    public enum SasHeuristics {hMax, hAdd, hLmCut}
+    protected boolean isIncremental = false;
+    protected int lastAction;
+    protected IncrementInformation increment;
+
+    public enum SasHeuristics {hMax, hAdd, hFF, hLmCut, hIncLmCut}
 
     public SasHeuristic(SasPlusProblem p) {
     }
 
     private SasHeuristic() {
+    }
+
+    public boolean isIncremental(){
+        return isIncremental;
+    }
+
+    public void setIncrement(int lastAction, IncrementInformation i){
+        this.increment = i;
+        this.lastAction = lastAction;
+    }
+
+    public IncrementInformation getIncrement(){
+        return this.increment;
     }
 
     public abstract int calcHeu(int[] s0, int[] g);

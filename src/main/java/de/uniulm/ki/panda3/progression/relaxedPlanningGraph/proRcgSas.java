@@ -5,10 +5,7 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.progression.sasp.HtnCompositionEncoding;
 import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem;
-import de.uniulm.ki.panda3.progression.sasp.heuristics.SasHeuristic;
-import de.uniulm.ki.panda3.progression.sasp.heuristics.hAdd;
-import de.uniulm.ki.panda3.progression.sasp.heuristics.hLmCut;
-import de.uniulm.ki.panda3.progression.sasp.heuristics.hMax;
+import de.uniulm.ki.panda3.progression.sasp.heuristics.*;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 
 import java.io.BufferedWriter;
@@ -19,8 +16,9 @@ import java.util.*;
  * Created by dh on 10.05.17.
  */
 public class proRcgSas implements htnGroundedProgressionHeuristic {
-    protected HtnCompositionEncoding compEnc;
-    private SasHeuristic heuristic;
+    static protected HtnCompositionEncoding compEnc;
+    static private SasHeuristic heuristic;
+    private IncrementInformation incInf;
     private int heuristicVal;
 
     @Override
@@ -33,7 +31,8 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
 
     }
 
-    protected proRcgSas(){}
+    protected proRcgSas() {
+    }
 
     public proRcgSas(SasPlusProblem flat,
                      SasHeuristic.SasHeuristics heuristic,
@@ -49,13 +48,18 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
             this.heuristic = new hAdd(this.compEnc);
         } else if (heuristic == SasHeuristic.SasHeuristics.hMax) {
             this.heuristic = new hMax(this.compEnc);
+        } else if (heuristic == SasHeuristic.SasHeuristics.hFF) {
+            this.heuristic = new hFF(this.compEnc);
         } else if (heuristic == SasHeuristic.SasHeuristics.hLmCut) {
-            this.heuristic = new hLmCut(this.compEnc);
+            this.heuristic = new hLmCut(this.compEnc, false);
+        } else if (heuristic == SasHeuristic.SasHeuristics.hIncLmCut) {
+            this.heuristic = new hLmCut(this.compEnc, true);
+            this.incInf = new IncInfLmCut();
         }
     }
 
     @Override
-    public htnGroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps) {
+    public htnGroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, method m) {
         // prepare s0 and g
         // need to modify the facts that define top-down-reachability
         BitSet reachableActions = new BitSet(compEnc.numOfOperators);
@@ -87,8 +91,25 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
             goalFact = htnGoal.nextSetBit(goalFact + 1);
         }
 
-        this.heuristicVal = heuristic.calcHeu(s0, g);
-        return this;
+        //this.heuristicVal = heuristic.calcHeu(s0, g, ps.taskIndex);
+        if (heuristic.isIncremental()) {
+            int lastAction;
+            if (m != null)
+                lastAction = compEnc.MethodToIndex.get(m);
+            else
+                lastAction = ps.taskIndex;
+            heuristic.setIncrement(lastAction, this.incInf);
+        }
+        int heuVal = heuristic.calcHeu(s0, g);
+        if (heuristic.isIncremental()) {
+            proRcgSas res = new proRcgSas();
+            res.incInf = heuristic.getIncrement();
+            res.heuristicVal = heuVal;
+            return res;
+        } else {
+            this.heuristicVal = heuVal;
+            return this;
+        }
     }
 
     protected void prepareS0andG(ProgressionPlanStep ps, BitSet r, BitSet g) {
@@ -108,8 +129,8 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
     }
 
     @Override
-    public htnGroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, method m) {
-        return update(newTN, ps);
+    public htnGroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps) {
+        return update(newTN, ps, null);
     }
 
     @Override
