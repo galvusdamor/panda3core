@@ -81,18 +81,24 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
       val uuid = UUID.randomUUID().toString
       val file = new File("__pid" + uuid)
-      ("pstree -p " + pid) #| "grep -o '([0-9]\\+)'" #| "grep -o '[0-9]\\+'" #> file !
+      writeStringToFile("#!/bin/bash\npstree -p " + pid + " | grep time | grep -o '([0-9]*)' | grep -o '[0-9]*' > __pid" + uuid, "__kill" + uuid)
+
+      ("bash " + "__kill" + uuid) !
+
 
       val childPID = Source.fromFile(file).mkString
-      println("CHILD PIDs " + childPID)
+      //println("CHILD PIDs " + childPID)
       ("rm __pid" + uuid) !
+
+      ("rm __kill" + uuid) !
 
       if (childPID != "") {
         childPID.split("\n") foreach { c =>
-          println("Kill SAT solver with PID " + c)
-          //System exit 0
-          ("kill -9 " + c) !
-
+          if (c.toInt != pid) {
+            println("Kill SAT solver with PID " + c)
+            //System exit 0
+            ("kill -9 " + c) !
+          }
         }
         // add time
 
