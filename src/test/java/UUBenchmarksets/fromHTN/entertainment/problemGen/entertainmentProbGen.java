@@ -24,6 +24,7 @@ public class entertainmentProbGen {
         problems.add(getProblem1());
         problems.add(getProblem2());
         problems.add(getProblem3());
+        //problems.add(getProblem4());
 
         for (heProblem p : problems) {
             String filename = baseDir + p.getName() + ".lisp";
@@ -78,4 +79,21 @@ public class entertainmentProbGen {
         p.addAvGoal(g);
         return p;
     }
+/* does not work, yet
+    private static heProblem getProblem4() {
+        heProblem p = new heProblem("p04-split-and-rejoin");
+        heDevice dvd = new heDvdPlayer();
+        p.addDevice(dvd);
+        heDevice tv = heTV.getTVwithScart();
+        p.addDevice(tv);
+        heDevice adapter = new heScartToCinchAdapter();
+        p.addDevice(adapter);
+        p.addCable(new heScartCable());
+        p.addCable(new heScartToCinchCable());
+        heDevice[] g = new heDevice[2];
+        g[0] = dvd;
+        g[1] = tv;
+        p.addAvGoal(g);
+        return p;
+    }*/
 }

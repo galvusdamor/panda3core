@@ -1,5 +1,7 @@
-package de.uniulm.ki.util.problemGenerators;
+package UUBenchmarksets.provableHard.problemGenerators.postCorrespondenceProblem;
 
+import UUBenchmarksets.provableHard.problemGenerators.cfGrammarIntersection.CfGrammar;
+import UUBenchmarksets.provableHard.problemGenerators.cfGrammarIntersection.CfGrammarIntersectionToHTN;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.ioInterface.FileHandler;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;

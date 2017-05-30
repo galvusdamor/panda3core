@@ -110,5 +110,4 @@
         (not (capacity ?v ?s1))
       )
   )
-
 )
