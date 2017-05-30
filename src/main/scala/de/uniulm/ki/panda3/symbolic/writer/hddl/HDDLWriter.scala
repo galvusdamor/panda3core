@@ -210,7 +210,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     //builder.append(")\n")
 
     // preconditions
-    if (!task.precondition.isEmpty) {
+    if (!task.precondition.isEmpty || encodeTypesWithPredicates) {
       builder.append("\t\t:precondition \n")
       if (encodeTypesWithPredicates) builder.append("\t\t\t(and\n")
       writeFormula(builder, task.precondition, "\t\t\t" + (if (encodeTypesWithPredicates) "\t" else ""), taskUF)
