@@ -717,6 +717,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         //sasreader.prepareSymbolicRep(domain,problem)
 
         ("rm -rf .fd" + uuid) !
+
+        ("rm runFD" + uuid + ".sh") !!
         // semantic empty line
 
         SASPlusGrounding(liftedResult._1._1, liftedResult._1._2, sasreader)
