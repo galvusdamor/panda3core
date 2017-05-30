@@ -16,7 +16,7 @@ import de.uniulm.ki.util.HashMemo
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
   extends DomainUpdatable with PrettyPrintable {
 
-  arguments foreach {v => assert(v != null)}
+  arguments foreach { v => assert(v != null) }
 
 
   // TODO: this might cause problems in the wrapper (two decompositon methods might be judged as equal if they really are not), but is necessary to achieve at least a decent performance
@@ -26,7 +26,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
     case _              => false
   }
 
-  override val hashCode: Int = id + 31*schema.hashCode()
+  override val hashCode: Int = id + 31 * schema.hashCode()
 
   lazy val argumentSet = arguments.toSet
 
@@ -101,7 +101,8 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
       println(p.sort.elements)
       println(arguments(i))
     }
-    assert(p.sort.elements.contains(arguments(i)))
+    assert(p.sort.elements.contains(arguments(i)), "Task " + task.name + "Argument " + i + " asserted to " + arguments(i) + " but not allowed in sort " + p.sort.name +
+      p.sort.elements.map(_.name).mkString("(", ",", ")"))
   }
 
   // the arguments must be allowed
