@@ -17,6 +17,7 @@ import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
 import scala.Tuple2;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -35,13 +36,14 @@ public class htnPlanningInstance {
     final boolean verbose = false;
 
     public static Random random;
-    public static int randomSeed = 42;
 
     public boolean plan(Domain d, Plan p, Map<Task, Set<SimpleDecompositionMethod>> methodsByTask,
                         InformationCapsule ic, TimeCapsule tc,
                         PriorityQueueSearch.abstractTaskSelection taskSelectionStrategy,
-                        SearchHeuristic heuristic, boolean doBFS, boolean doDFS,
-                        boolean aStar, boolean deleteRelaxed, long quitAfterMs) throws ExecutionException, InterruptedException {
+                        SearchHeuristic heuristic,
+                        SearchAlgorithmType search,
+                        long randomSeed,
+                        long quitAfterMs) throws ExecutionException, InterruptedException {
         if (d.sasPlusRepresentation().isEmpty()) {
             System.out.println("Error: Progression search algorithm did not find action model.");
             System.exit(-1);
@@ -58,8 +60,6 @@ public class htnPlanningInstance {
         Tuple2<Map<Integer, Task>, Map<Task, Integer>> mappings
                 = ProgressionNetwork.flatProblem.restrictTo(indexToTask.keySet(), indexToTask);
         indexToTask = mappings._1();
-        //Map<Task, Integer> taskToIndex = mappings._2();
-
         assert ((d.abstractTasks().size() + d.primitiveTasks().size()) == d.tasks().size());
 
         // create permanent mappings
@@ -97,13 +97,27 @@ public class htnPlanningInstance {
         initialTasks.add(ps);
         ps.methods = methods.get(ps.getTask());
         ProgressionNetwork initialNode = new ProgressionNetwork(ProgressionNetwork.flatProblem.getS0(), initialTasks);
+        /*
+        try {
+            System.out.println("\n\n<PRESS KEY>");
+            System.in.read();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }*/
 
-        if (doBFS)
+        /* Spezialfälle
+         * - BFS/DFS -> PriorityQueue A* & spezielle Heuristik
+         * - Greedy Progression
+         * - Shop -> branching over all & Tiefensuche
+         * - Echte Heuristik x Greedy, Greedy A* (mit Faktor)
+         */
+        if (search instanceof BFSType$)
             initialNode.heuristic = new proBFS();
-        else if (doDFS)
+        else if (search instanceof DFSType$) {
             initialNode.heuristic = new proDFS();
-        else if (heuristic instanceof RelaxedCompositionGraph) {
-            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, SasHeuristic.SasHeuristics.hLmCut, methods, initialTasks);
+        } else if (heuristic instanceof HierarchicalHeuristicRelaxedComposition) {
+            HierarchicalHeuristicRelaxedComposition h = (HierarchicalHeuristicRelaxedComposition) heuristic;
+            initialNode.heuristic = new proRcgSas(ProgressionNetwork.flatProblem, h.classicalHeuristic(), methods, initialTasks);
         } else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
             initialNode.heuristic = new RCG(methods, initialTasks, ProgressionNetwork.taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
@@ -135,11 +149,19 @@ public class htnPlanningInstance {
         initialNode.heuristic.build(initialNode);
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
-        ProgressionSearchRoutine routine;
+        PriorityQueueSearch routine;
         boolean printOutput = true;
         boolean findShortest = false;
 
-        routine = new PriorityQueueSearch(aStar, deleteRelaxed, printOutput, findShortest, taskSelectionStrategy);
+        boolean aStar = true;
+        if (search instanceof GreedyType$)
+            aStar = false;
+
+        routine = new PriorityQueueSearch(aStar, printOutput, findShortest, taskSelectionStrategy);
+        if (search instanceof AStarActionsType) {
+            routine.greediness = (int)((AStarActionsType)search).weight();
+        }
+
         routine.wallTime = quitAfterMs;
 
         System.out.println("Searching with \n - " + routine.SearchName() + " search routine");
@@ -160,9 +182,6 @@ public class htnPlanningInstance {
             System.out.println(" - Abstract task choice: branch over all abstract tasks");
         }
 
-        if (deleteRelaxed) {
-            System.out.println(" - DELETE-RELAXED actions");
-        }
         if (quitAfterMs > 0) {
             System.out.println(" - time limit for search is " + (quitAfterMs / 1000) + " sec");
         }
@@ -170,7 +189,7 @@ public class htnPlanningInstance {
         SolutionStep solution;
         if ((routine instanceof PriorityQueueSearch) && (taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.branchOverAll)) {
             System.out.println(" - This is not a good configuration -- it BRANCHES over ALL abstract tasks. " +
-                    "One should only only do that for evaluation purposes.");
+                    "One should only do that for evaluation purposes.");
             solution = ((PriorityQueueSearch) routine).searchWithAbstractBranching(initialNode, ic, tc);
         } else {
             solution = routine.search(initialNode, ic, tc);
@@ -183,6 +202,7 @@ public class htnPlanningInstance {
         if (solution != null) {
             System.out.println("\nFound a solution:");
             System.out.println(solution.toString());
+            System.out.println("It contains " + solution.getLength() + " modifications, including " + solution.getPrimitiveCount() + " actions.");
         } else System.out.println("Problem unsolvable.");
         System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
 

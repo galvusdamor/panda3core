@@ -13,20 +13,23 @@ public abstract class ProgressionSearchRoutine {
 
     public long wallTime = -1;
 
-    protected String getInfoStr(int searchnodes, int fringesize, int bestMetric, ProgressionNetwork n, long searchtime) {
+    protected String getInfoStr(int searchnodes, int fringesize, int greedyness, ProgressionNetwork n, long searchtime) {
         return "nodes/sec: " + Math.round(searchnodes / ((System.currentTimeMillis() - searchtime) / 1000.0))
                 + " - generated nodes: " + searchnodes
                 + " - fringe size: " + fringesize
                 //+ " - best heuristic: " + bestMetric
                 + " - current modification depth: " + n.solution.getLength()
-                + " - current heuristic: " + n.metric;
+                + " - "
+                //if (greedyness > 1)
+                //s += greedyness + "*";
+                + "g(s)+h(s)= " + n.metric;
     }
 
     public abstract SolutionStep search(ProgressionNetwork firstSearchNode);
 
     public abstract SolutionStep search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing);
 
-    public String SearchName(){
+    public String SearchName() {
         return "unknown";
     }
 }

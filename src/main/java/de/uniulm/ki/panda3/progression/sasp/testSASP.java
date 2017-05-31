@@ -13,7 +13,7 @@ public class testSASP {
         String s = "/home/dh/Schreibtisch/sasp/strips/output.sas";
         SasPlusProblem sasp = new SasPlusProblem(s);
         sasp.prepareEfficientRep();
-        RelaxedTaskGraph rtg = new hLmCut(sasp);
+        RelaxedTaskGraph rtg = new hLmCut(sasp, false);
         int val = rtg.calcHeu(sasp.s0List, sasp.gList);
         System.out.println("hVal: " + val);
     }

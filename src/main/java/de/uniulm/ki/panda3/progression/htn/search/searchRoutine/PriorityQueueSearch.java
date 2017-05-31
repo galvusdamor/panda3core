@@ -18,6 +18,8 @@ import java.util.*;
  * Created by dh on 15.09.16.
  */
 public class PriorityQueueSearch extends ProgressionSearchRoutine {
+    public int greediness = 1;
+
     static public enum abstractTaskSelection {
         branchOverAll, random, methodCount, decompDepth;
 
@@ -53,10 +55,10 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
     }
 
-    public PriorityQueueSearch(boolean aStar, boolean deleteRelaxed, boolean output, boolean findShortest,
+    public PriorityQueueSearch(boolean aStar, boolean output, boolean findShortest,
                                abstractTaskSelection taskSelectionStrategy) {
         this.aStar = aStar;
-        this.deleteRelaxed = deleteRelaxed;
+        this.deleteRelaxed = false;
         this.output = output;
         this.findShortest = findShortest;
         this.taskSelection = taskSelectionStrategy;
@@ -116,7 +118,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 node.heuristic = n.heuristic.update(node, ps);
                 node.metric = node.heuristic.getHeuristic();
                 if (aStar) {
-                    node.metric = node.metric + (node.solution.getLength() / 2);
+                    node.metric = node.metric + (node.solution.getLength() / greediness);
                     //node.metric += node.solution.getLength();
                 }
 
@@ -147,11 +149,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     } else {
                         fringe.add(node);
                     }
-                    if (node.metric < bestMetric) {
-                        bestMetric = node.metric;
-                        if (output)
-                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
-                    }
                 }
                 searchnodes++;
                 if ((System.currentTimeMillis() - lastInfo) > 1000) {
@@ -161,8 +158,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         System.out.println("Seems to be a bad run, let's try again! -> restart");
                         fringe.clear();
                         fringe.add(firstSearchNode);
-                        htnPlanningInstance.randomSeed += 100;
-                        htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                        //htnPlanningInstance.randomSeed += 100;
+                        //htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
                         continue planningloop;
                     }
                     if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
@@ -172,7 +169,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     }
                     lastInfo = System.currentTimeMillis();
                     if (output)
-                        System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                        System.out.println(getInfoStr(searchnodes, fringe.size(), greediness, n, totalSearchTime));
                 }
             }
 
@@ -218,7 +215,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 node.heuristic = n.heuristic.update(node, oneAbs, m);
                 node.metric = node.heuristic.getHeuristic();
                 if (aStar) {
-                    node.metric = node.metric + (node.solution.getLength() / 2);
+                    node.metric = node.metric + (node.solution.getLength() / greediness);
                     //node.metric += node.solution.getLength();
                 }
 
@@ -236,11 +233,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     }*/
 
                     fringe.add(node);
-                    if (node.metric < bestMetric) {
-                        bestMetric = node.metric;
-                        if (output)
-                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
-                    }
                 }
                 searchnodes++;
                 if ((System.currentTimeMillis() - lastInfo) > 1000) {
@@ -250,8 +242,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         System.out.println("Seems to be a bad run, let's try again! -> restart");
                         fringe.clear();
                         fringe.add(firstSearchNode);
-                        htnPlanningInstance.randomSeed += 100;
-                        htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                        //htnPlanningInstance.randomSeed += 100;
+                        //htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
                         continue planningloop;
                     }
                     if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
@@ -261,7 +253,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     }
                     lastInfo = System.currentTimeMillis();
                     if (output)
-                        System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                        System.out.println(getInfoStr(searchnodes, fringe.size(), greediness, n, totalSearchTime));
                 }
             }
 
@@ -294,7 +286,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         info.add("30 progression:92:foundShortestPlanAfter", (int) (foundFirstPlanAfter - startedSearch));
         info.add("30 progression:93:foundFirstPlanAfter", (int) (foundShortestPlan - startedSearch));
         info.add("30 progression:94:foundPlans", foundPlans);
-        info.add("30 progression:95:randomSeed", htnPlanningInstance.randomSeed);
+        //info.add("30 progression:95:randomSeed", htnPlanningInstance.randomSeed);
 
         // write statistics
         if (solution != null)
@@ -398,7 +390,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     if (node.metric < bestMetric) {
                         bestMetric = node.metric;
                         if (output)
-                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                            System.out.println(getInfoStr(searchnodes, fringe.size(), greediness, n, totalSearchTime));
                     }
                 }
                 searchnodes++;
@@ -409,8 +401,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         System.out.println("Seems to be a bad run, let's try again! -> restart");
                         fringe.clear();
                         fringe.add(firstSearchNode);
-                        htnPlanningInstance.randomSeed += 100;
-                        htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                        //htnPlanningInstance.randomSeed += 100;
+                        //htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
                         continue planningloop;
                     }
                     if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
@@ -420,7 +412,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     }
                     lastInfo = System.currentTimeMillis();
                     if (output)
-                        System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                        System.out.println(getInfoStr(searchnodes, fringe.size(), greediness, n, totalSearchTime));
                 }
             }
 
@@ -444,7 +436,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         if (node.metric < bestMetric) {
                             bestMetric = node.metric;
                             if (output)
-                                System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                                System.out.println(getInfoStr(searchnodes, fringe.size(), greediness, n, totalSearchTime));
                         }
                     }
                     searchnodes++;
@@ -455,8 +447,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                             System.out.println("Seems to be a bad run, let's try again! -> restart");
                             fringe.clear();
                             fringe.add(firstSearchNode);
-                            htnPlanningInstance.randomSeed += 100;
-                            htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                            //htnPlanningInstance.randomSeed += 100;
+                            //htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
                             continue planningloop;
                         }
                         if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
@@ -466,7 +458,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         }
                         lastInfo = System.currentTimeMillis();
                         if (output)
-                            System.out.println(getInfoStr(searchnodes, fringe.size(), bestMetric, n, totalSearchTime));
+                            System.out.println(getInfoStr(searchnodes, fringe.size(), greediness, n, totalSearchTime));
                     }
                 }
             }
@@ -481,7 +473,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         info.add("30 progression:92:foundShortestPlanAfter", (int) (foundFirstPlanAfter - startedSearch));
         info.add("30 progression:93:foundFirstPlanAfter", (int) (foundShortestPlan - startedSearch));
         info.add("30 progression:94:foundPlans", foundPlans);
-        info.add("30 progression:95:randomSeed", htnPlanningInstance.randomSeed);
+        //info.add("30 progression:95:randomSeed", htnPlanningInstance.randomSeed);
 
         // write statistics
         if (solution != null)

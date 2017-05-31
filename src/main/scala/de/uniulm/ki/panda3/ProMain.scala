@@ -37,10 +37,7 @@ object ProMain {
     }
     val domFile = args(0)
     val probFile = args(1)
-    if (args.length >= 3) {
-      val randomseed = args(2)
-      htnPlanningInstance.randomSeed = Integer.parseInt(randomseed)
-    }
+    val randomseed = if (args.length >= 3) {      args(2).toInt    } else 42
     //val outputPDF = args(2)
     val outputPDF = "dot.dot"
 
@@ -99,7 +96,7 @@ object ProMain {
 
 
     // create the configuration
-    val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true, randomSeed = 42, timeLimit = Some(30 * 60),
+    val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true, randomSeed = randomseed, timeLimit = Some(30 * 60),
                                              ParsingConfiguration(eliminateEquality = true, stripHybrid = true),
                                              PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
                                                                         compileOrderInMethods = None,
@@ -133,7 +130,7 @@ object ProMain {
 
     results(SearchStatistics).set(Information.DOMAIN_NAME, new File(domFile).getName)
     results(SearchStatistics).set(Information.PROBLEM_NAME, new File(probFile).getName)
-    results(SearchStatistics).set(Information.RANDOM_SEED, htnPlanningInstance.randomSeed)
+    results(SearchStatistics).set(Information.RANDOM_SEED, randomseed)
 
 
     //println("Panda says: " + results(SearchStatus))
@@ -142,6 +139,6 @@ object ProMain {
     //println(results(ProcessingTimings).shortInfo)
 
 
-    println("###" + results(SearchStatistics).keyValueListString() + ";" + results(ProcessingTimings).keyValueListString())
+    //println("###" + results(SearchStatistics).keyValueListString() + ";" + results(ProcessingTimings).keyValueListString())
   }
 }

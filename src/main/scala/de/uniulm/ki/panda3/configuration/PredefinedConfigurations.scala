@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
+import de.uniulm.ki.panda3.progression.sasp.heuristics.SasHeuristic.SasHeuristics
 import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
 
 /**
@@ -22,6 +24,14 @@ object PredefinedConfigurations {
                                                                liftedReachability = true, convertToSASP = false, groundedReachability = Some(PlanningGraphWithMutexes),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                iterateReachabilityAnalysis = false, groundDomain = true)
+
+  val sasPlusPreprocess         = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
+                                                               compileOrderInMethods = None,
+                                                               compileInitialPlan = true, splitIndependentParameters = true,
+                                                               liftedReachability = true, convertToSASP = true, groundedReachability = None,
+                                                               groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                                iterateReachabilityAnalysis = false, groundDomain = true)
+
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
                                                                //compileOrderInMethods = None, //Some(OneRandomOrdering()),
@@ -39,6 +49,7 @@ object PredefinedConfigurations {
   val preprocessConfigs = Map(
                                "-ordering" -> orderingGroundingPreprocess,
                                "-ground" -> groundingPreprocess,
+                               "-SAS+" -> sasPlusPreprocess,
                                "-lifted" -> liftedPreprocess
                              )
 
@@ -176,7 +187,9 @@ object PredefinedConfigurations {
          "-AStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRCompare),
          "-AStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRCompare),
          "-GreedyAStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarAPRLiftedPRCompare),
-         "-GreedyAStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare)
+         "-GreedyAStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare),
+         "-GreedyAStarPro-hhRC-lm-cut" -> (htnParsing,sasPlusPreprocess,ProgressionSearch(AStarActionsType(2),
+          Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hLmCut)),PriorityQueueSearch.abstractTaskSelection.random))
        )
 
 
