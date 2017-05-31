@@ -391,7 +391,7 @@ public class SasPlusProblem {
 
     private void readMutex(BufferedReader br, int i) throws Exception {
         while (!br.readLine().equals("end_mutex_group"))
-            br.readLine();
+            ;
     }
 
     private void readVariable(BufferedReader br, int i) throws Exception {
