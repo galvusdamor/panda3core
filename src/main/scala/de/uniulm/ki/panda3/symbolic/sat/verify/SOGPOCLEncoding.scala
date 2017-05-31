@@ -15,8 +15,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class SOGPOCLEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan,
-                           taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, overrideK: Option[Int] = None)
-  extends SOGEncoding {
+                           taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding {
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected def preconditionOfPath(path: Seq[Int], precondition: Predicate): String = "prec^" + path.mkString(";") + "_" + precondition.name
@@ -33,8 +32,30 @@ case class SOGPOCLEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
     println("Final SOG has " + rootPayload.ordering.vertices.length + " vertices")
+    // assert correctness
+
+    val pl: DirectedGraph[(Seq[Int], Set[Task])] = rootPayload.ordering.map(
+      {
+        case (path, tasks) =>
+          val matchingPaths = primitivePaths.filter(_._1 == path)
+          if (matchingPaths.isEmpty)
+            (path, Set[Task]())
+          else
+            (path, matchingPaths.head._2)
+      })
+
+    /*rootPayload.ordering.vertices foreach { case (path, tasks) =>
+      val matchingPaths = primitivePaths.filter(_._1 == path)
+      if (matchingPaths.isEmpty)
+        assert(tasks.isEmpty)
+      else
+        assert(matchingPaths.length == 1 && matchingPaths.head._2 == tasks)
+
+    }*/
+
     print("Compute Transitive reducton ... ")
-    val sog = rootPayload.ordering.transitiveReduction
+    //val sog = rootPayload.ordering.transitiveReduction
+    val sog: DirectedGraph[(Seq[Int], Set[Task])] = pl.transitiveReduction
     println("done")
 
     /*println(sog.isAcyclic)
