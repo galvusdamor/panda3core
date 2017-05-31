@@ -31,8 +31,8 @@ public class SolutionStep {
         this.predecessor = predSol;
         this.action = action;
         this.length = predSol.length + 1;
-        this.primitiveCount = predSol.primitiveCount + 1;
-        this.shopCount = predSol.shopCount + 1;
+        this.primitiveCount = predSol.primitiveCount;
+        this.shopCount = predSol.shopCount;
 
         if (!ProgressionNetwork.ShopPrecActions.contains(action))
             primitiveCount++;
@@ -44,8 +44,8 @@ public class SolutionStep {
         this.predecessor = predSol;
         this.method = method;
         this.length = predSol.length + 1;
-        this.primitiveCount = predSol.primitiveCount + 1;
-        this.shopCount = predSol.shopCount + 1;
+        this.primitiveCount = predSol.primitiveCount;
+        this.shopCount = predSol.shopCount;
     }
 
     @Override
@@ -72,7 +72,7 @@ public class SolutionStep {
     }
 
     public int getLength() {
-        return this.length;
+        return this.length - this.shopCount;
     }
 
     public int getPrimitiveCount() {
