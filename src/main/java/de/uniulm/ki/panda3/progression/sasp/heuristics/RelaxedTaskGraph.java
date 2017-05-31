@@ -49,6 +49,7 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
     protected int goalPCF;
     protected BitSet opReachable;
     protected boolean earlyAbord = true;
+    protected boolean evalBestAchievers = false;
 
     abstract int eAND();
 
@@ -204,7 +205,6 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
             opReachable.clear();
         }
 
-
         waitingForCount = waitingForCountORG.clone();
         for (int i = 0; i < hVal.length; i++) {
             hVal[i] = Integer.MAX_VALUE;
@@ -225,7 +225,7 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
             waitingForCount[prec] = 0;
         }
 
-        return calcHeuLoop(activatable, (BitSet) g.clone(), this.earlyAbord);// do not change original goal
+        return calcHeuLoop(activatable, (BitSet) g.clone(), this.earlyAbord);
     }
 
     @Override
@@ -322,13 +322,25 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
             }
         } else {
             predCosts = eOR();
+            int bestAchiver = -1;
             for (int i = 0; i < waitingForNodes[index].length; i++) {
+                int old = predCosts;
                 predCosts = combineOR(predCosts, hVal[waitingForNodes[index][i]]);
+                if (old != predCosts)
+                    bestAchiver = waitingForNodes[index][i];
+            }
+            assert bestAchiver >= 0;
+            if (evalBestAchievers) {
+                this.evalAchiever(index, bestAchiver);
             }
         }
 
         hVal[index] = predCosts + costs[index];
         res[0] = hVal[index];
         return res;
+    }
+
+    protected void evalAchiever(int nodeId, int bestAchiver) {
+
     }
 }
