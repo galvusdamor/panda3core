@@ -17,8 +17,8 @@ public class ProgressionPlanStep {
 
     public int action;
     public List<method> methods;
-    public BitSet r;
-    public BitSet g;
+    public BitSet reachableTasks;
+    public BitSet goalFacts;
     public boolean done;
 
     public Task getTask() {

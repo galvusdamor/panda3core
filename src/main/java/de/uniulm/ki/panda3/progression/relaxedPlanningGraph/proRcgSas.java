@@ -8,8 +8,6 @@ import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.sasp.heuristics.*;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.util.*;
 
 /**
@@ -63,13 +61,13 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
         // prepare s0 and g
         // need to modify the facts that define top-down-reachability
         BitSet reachableActions = new BitSet(compEnc.numOfOperators);
-        BitSet htnGoal = new BitSet(compEnc.numOfOperators);
+        BitSet htnGoal = new BitSet(compEnc.numOfStateFeatures);
 
-        for (ProgressionPlanStep ps2 : newTN.getFirstAbstractTasks())
-            prepareS0andG(ps2, reachableActions, htnGoal);
+        for (ProgressionPlanStep first : newTN.getFirstAbstractTasks())
+            prepareS0andG(first, reachableActions, htnGoal);
 
-        for (ProgressionPlanStep ps2 : newTN.getFirstPrimitiveTasks())
-            prepareS0andG(ps2, reachableActions, htnGoal);
+        for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
+            prepareS0andG(first, reachableActions, htnGoal);
 
         BitSet s0 = (BitSet) newTN.state.clone();
         BitSet g = new BitSet(compEnc.numOfStateFeatures);
@@ -88,6 +86,7 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
         int goalFact = htnGoal.nextSetBit(0);
         while (goalFact >= 0) {
             g.set(goalFact + this.compEnc.firstTaskCompIndex);
+            //System.out.println(compEnc.factStrs[goalFact + this.compEnc.firstTaskCompIndex]); // for debugging
             goalFact = htnGoal.nextSetBit(goalFact + 1);
         }
 
@@ -114,18 +113,18 @@ public class proRcgSas implements htnGroundedProgressionHeuristic {
 
     protected void prepareS0andG(ProgressionPlanStep ps, BitSet r, BitSet g) {
         if (!ps.done) {
-            ps.r = new BitSet(compEnc.numOfOperators);
-            ps.g = new BitSet(compEnc.numOfStateFeatures);
-            ps.r.or(compEnc.tdRechability.getReachableActions(ps.taskIndex));
-            ps.g.set(ps.taskIndex);
+            ps.reachableTasks = new BitSet(compEnc.numOfOperators);
+            ps.goalFacts = new BitSet(compEnc.numOfStateFeatures);
+            ps.reachableTasks.or(compEnc.tdRechability.getReachableActions(ps.taskIndex));
+            ps.goalFacts.set(ps.taskIndex);
 
             for (ProgressionPlanStep ps2 : ps.successorList) {
-                prepareS0andG(ps2, ps.r, ps.g);
+                prepareS0andG(ps2, ps.reachableTasks, ps.goalFacts);
             }
             ps.done = true;
         }
-        r.or(ps.r);
-        g.or(ps.g);
+        r.or(ps.reachableTasks);
+        g.or(ps.goalFacts);
     }
 
     @Override
