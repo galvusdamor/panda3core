@@ -1,9 +1,10 @@
 package de.uniulm.ki.panda3.progression.sasp;
 
+import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.IActionReachability;
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.TopDownReachabilityGraph;
+import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.TDGLandmarkFactory;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 
 import java.util.*;
@@ -19,7 +20,7 @@ public class HtnCompositionEncoding extends SasPlusProblem {
     public HashMap<method, Integer> MethodToIndex;
     public method[] IndexToMethod;
 
-    public TopDownReachabilityGraph tdRechability;
+    public IActionReachability tdRechability;
     public int firstTdrIndex;
     public int lastTdrIndex;
 
@@ -58,12 +59,12 @@ public class HtnCompositionEncoding extends SasPlusProblem {
         this.factStrs = p.factStrs;
     }
 
-    public void geneateTaskCompGraph(HashMap<Task, List<method>> methods,
-                                     List<ProgressionPlanStep> initialTasks) {
+    public void generateTaskCompGraph(HashMap<Task, List<method>> methods,
+                                      List<ProgressionPlanStep> initialTasks) {
 
         this.numAnM = createMethodLookupTable(methods);
         this.numTasks = ProgressionNetwork.indexToTask.length;
-        tdRechability = new TopDownReachabilityGraph(methods, initialTasks, this.numTasks, this.numOfOperators);
+        tdRechability = new TDGLandmarkFactory(methods, initialTasks, this.numTasks, this.numOfOperators);
 
         // set indices
         this.firstTdrIndex = this.numOfStateFeatures;

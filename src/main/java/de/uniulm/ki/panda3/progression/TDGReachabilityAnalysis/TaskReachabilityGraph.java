@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.progression.relaxedPlanningGraph;
+package de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis;
 
 import de.uniulm.ki.panda3.progression.htn.operators.method;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
@@ -10,7 +10,7 @@ import java.util.*;
 /**
  * Created by dh on 24.01.17.
  */
-public class TopDownReachabilityGraph {
+public class TaskReachabilityGraph implements IActionReachability {
 
     private BitSet root = null;
     private BitSet reachableTasks[]; // maps a task to itself and all TASKS that are reachable via decomposition
@@ -34,7 +34,7 @@ public class TopDownReachabilityGraph {
 
     }*/
 
-    public TopDownReachabilityGraph(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
+    public TaskReachabilityGraph(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
         System.out.println("Calculating top down reachability ...");
         long time = System.currentTimeMillis();
 
