@@ -1,10 +1,11 @@
 package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
-import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance;
-import de.uniulm.ki.panda3.progression.htn.operators.method;
+import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.TaskReachabilityGraph;
+import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance;
+import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
+import de.uniulm.ki.panda3.progression.htn.representation.SolutionStep;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.TopDownReachabilityGraph;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -158,8 +159,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         System.out.println("Seems to be a bad run, let's try again! -> restart");
                         fringe.clear();
                         fringe.add(firstSearchNode);
-                        //htnPlanningInstance.randomSeed += 100;
-                        //htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                        //ProPlanningInstance.randomSeed += 100;
+                        //ProPlanningInstance.random = new Random(ProPlanningInstance.randomSeed);
                         continue planningloop;
                     }
                     if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
@@ -179,14 +180,14 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             // which task shall be decomposed?
             ProgressionPlanStep oneAbs = null;
             if (taskSelection == abstractTaskSelection.random)
-                oneAbs = n.getFirstAbstractTasks().get(htnPlanningInstance.random.nextInt(n.getFirstAbstractTasks().size()));
+                oneAbs = n.getFirstAbstractTasks().get(ProPlanningInstance.random.nextInt(n.getFirstAbstractTasks().size()));
             else if (taskSelection == abstractTaskSelection.methodCount) { // minimize branching
                 int minMethods = Integer.MAX_VALUE;
                 for (ProgressionPlanStep ps : n.getFirstAbstractTasks()) {
                     if (ps.methods.size() < minMethods) {
                         minMethods = ps.methods.size();
                         oneAbs = ps;
-                    } else if ((ps.methods.size() == minMethods) && (htnPlanningInstance.random.nextBoolean())) {
+                    } else if ((ps.methods.size() == minMethods) && (ProPlanningInstance.random.nextBoolean())) {
                         minMethods = ps.methods.size();
                         oneAbs = ps;
                     }
@@ -194,11 +195,11 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             } else {
                 int minDepth = Integer.MAX_VALUE;
                 for (ProgressionPlanStep ps : n.getFirstAbstractTasks()) {
-                    int depth = TopDownReachabilityGraph.maxDecompDepth[TopDownReachabilityGraph.tToI(ps.getTask())];
+                    int depth = TaskReachabilityGraph.maxDecompDepth[TaskReachabilityGraph.tToI(ps.getTask())];
                     if (depth < minDepth) {
                         minDepth = depth;
                         oneAbs = ps;
-                    } else if ((ps.methods.size() == minDepth) && (htnPlanningInstance.random.nextBoolean())) {
+                    } else if ((ps.methods.size() == minDepth) && (ProPlanningInstance.random.nextBoolean())) {
                         minDepth = ps.methods.size();
                         oneAbs = ps;
                     }
@@ -206,7 +207,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             }
 
             methodloop:
-            for (method m : oneAbs.methods) {
+            for (ProMethod m : oneAbs.methods) {
                 ProgressionNetwork node = n.decompose(oneAbs, m);
                 //if (visited.addIfNotIn(node))
                 //    continue methodloop;
@@ -242,8 +243,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         System.out.println("Seems to be a bad run, let's try again! -> restart");
                         fringe.clear();
                         fringe.add(firstSearchNode);
-                        //htnPlanningInstance.randomSeed += 100;
-                        //htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                        //ProPlanningInstance.randomSeed += 100;
+                        //ProPlanningInstance.random = new Random(ProPlanningInstance.randomSeed);
                         continue planningloop;
                     }
                     if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
@@ -286,7 +287,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         info.add("30 progression:92:foundShortestPlanAfter", (int) (foundFirstPlanAfter - startedSearch));
         info.add("30 progression:93:foundFirstPlanAfter", (int) (foundShortestPlan - startedSearch));
         info.add("30 progression:94:foundPlans", foundPlans);
-        //info.add("30 progression:95:randomSeed", htnPlanningInstance.randomSeed);
+        //info.add("30 progression:95:randomSeed", ProPlanningInstance.randomSeed);
 
         // write statistics
         if (solution != null)
@@ -401,8 +402,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                         System.out.println("Seems to be a bad run, let's try again! -> restart");
                         fringe.clear();
                         fringe.add(firstSearchNode);
-                        //htnPlanningInstance.randomSeed += 100;
-                        //htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                        //ProPlanningInstance.randomSeed += 100;
+                        //ProPlanningInstance.random = new Random(ProPlanningInstance.randomSeed);
                         continue planningloop;
                     }
                     if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
@@ -418,7 +419,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
             for (ProgressionPlanStep oneAbs : n.getFirstAbstractTasks()) {
                 methodloop:
-                for (method m : oneAbs.methods) {
+                for (ProMethod m : oneAbs.methods) {
                     ProgressionNetwork node = n.decompose(oneAbs, m);
 
                     // todo: add unit propagation here
@@ -447,8 +448,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                             System.out.println("Seems to be a bad run, let's try again! -> restart");
                             fringe.clear();
                             fringe.add(firstSearchNode);
-                            //htnPlanningInstance.randomSeed += 100;
-                            //htnPlanningInstance.random = new Random(htnPlanningInstance.randomSeed);
+                            //ProPlanningInstance.randomSeed += 100;
+                            //ProPlanningInstance.random = new Random(ProPlanningInstance.randomSeed);
                             continue planningloop;
                         }
                         if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
@@ -473,7 +474,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         info.add("30 progression:92:foundShortestPlanAfter", (int) (foundFirstPlanAfter - startedSearch));
         info.add("30 progression:93:foundFirstPlanAfter", (int) (foundShortestPlan - startedSearch));
         info.add("30 progression:94:foundPlans", foundPlans);
-        //info.add("30 progression:95:randomSeed", htnPlanningInstance.randomSeed);
+        //info.add("30 progression:95:randomSeed", ProPlanningInstance.randomSeed);
 
         // write statistics
         if (solution != null)

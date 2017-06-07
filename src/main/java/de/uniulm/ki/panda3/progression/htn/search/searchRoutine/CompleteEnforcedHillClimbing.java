@@ -1,14 +1,9 @@
 package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
-import de.uniulm.ki.panda3.progression.htn.operators.method;
-import de.uniulm.ki.panda3.progression.htn.operators.operators;
+import de.uniulm.ki.panda3.progression.htn.representation.SolutionStep;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
-import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
-
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * Created by dh on 15.09.16.

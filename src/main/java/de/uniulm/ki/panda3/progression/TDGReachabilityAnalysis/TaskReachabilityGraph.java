@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis;
 
-import de.uniulm.ki.panda3.progression.htn.operators.method;
+import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -34,7 +34,7 @@ public class TaskReachabilityGraph implements IActionReachability {
 
     }*/
 
-    public TaskReachabilityGraph(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
+    public TaskReachabilityGraph(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
         System.out.println("Calculating top down reachability ...");
         long time = System.currentTimeMillis();
 
@@ -48,7 +48,7 @@ public class TaskReachabilityGraph implements IActionReachability {
 
         for (Task t : methods.keySet()) {
             BitSet parent = this.reachableTasks[tToI(t)];
-            for (method m : methods.get(t))
+            for (ProMethod m : methods.get(t))
                 for (Task subTasks : m.subtasks)
                     parent.set(tToI(subTasks));
         }

@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis;
 
-import de.uniulm.ki.panda3.progression.htn.operators.method;
+import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -36,7 +36,7 @@ public class TDGLandmarkFactory implements IActionReachability {
         return ProgressionNetwork.indexToTask[i];
     }
 
-    public TDGLandmarkFactory(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
+    public TDGLandmarkFactory(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
         System.out.println("Calculating HTN invariants ...");
         long time = System.currentTimeMillis();
         this.numActions = numActions;
@@ -95,12 +95,12 @@ public class TDGLandmarkFactory implements IActionReachability {
         assert (implementationEquality(methods, initialTasks, numTasks, numActions));
     }
 
-    private void buildAndOrGraph(HashMap<Task, List<method>> methods, int numTasks) {
+    private void buildAndOrGraph(HashMap<Task, List<ProMethod>> methods, int numTasks) {
         // build method index map
         int mI = numTasks;
-        HashMap<method, Integer> mIndices = new HashMap<>();
+        HashMap<ProMethod, Integer> mIndices = new HashMap<>();
         for (Task t : methods.keySet())
-            for (method m : methods.get(t)) {
+            for (ProMethod m : methods.get(t)) {
                 mIndices.put(m, mI);
                 mI++;
             }
@@ -118,7 +118,7 @@ public class TDGLandmarkFactory implements IActionReachability {
 
         for (Task t : methods.keySet()) {
             BitSet decompTaskNode = graph[tToI(t)];
-            for (method m : methods.get(t)) {
+            for (ProMethod m : methods.get(t)) {
                 int iM = mIndices.get(m);
                 decompTaskNode.set(iM); // edge from abstract task to the method that decomposes it
                 BitSet methodNode = graph[iM];
@@ -444,7 +444,7 @@ public class TDGLandmarkFactory implements IActionReachability {
      * Functions checking assertions
      */
 
-    private boolean implementationEquality(HashMap<Task, List<method>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
+    private boolean implementationEquality(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
         TaskReachabilityGraph that = new TaskReachabilityGraph(methods, initialTasks, numTasks, numActions);
         for (int i = 0; i < numActions; i++) {
             BitSet thisImplementation = this.getReachableActions(i);

@@ -1,8 +1,7 @@
 package de.uniulm.ki.panda3.progression.htn.search;
 
-import de.uniulm.ki.panda3.progression.htn.operators.method;
+import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 
 import java.util.*;
 
@@ -16,7 +15,7 @@ public class ProgressionPlanStep {
     public final boolean isPrimitive;
 
     public int action;
-    public List<method> methods;
+    public List<ProMethod> methods;
     public BitSet reachableTasks;
     public BitSet goalFacts;
     public boolean done;
