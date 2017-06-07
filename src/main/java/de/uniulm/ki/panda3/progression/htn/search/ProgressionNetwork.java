@@ -2,7 +2,6 @@ package de.uniulm.ki.panda3.progression.htn.search;
 
 import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance;
 import de.uniulm.ki.panda3.progression.htn.representation.*;
-import de.uniulm.ki.panda3.progression.htn.representation.SolutionStep;
 import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeuristic;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.symbolic.domain.Task;

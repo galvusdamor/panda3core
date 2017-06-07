@@ -7,7 +7,7 @@ import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.Pr
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.*;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
-import de.uniulm.ki.panda3.progression.htn.representation.SolutionStep;
+import de.uniulm.ki.panda3.progression.htn.search.SolutionStep;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;

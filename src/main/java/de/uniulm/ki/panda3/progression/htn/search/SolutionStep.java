@@ -1,6 +1,5 @@
-package de.uniulm.ki.panda3.progression.htn.representation;
+package de.uniulm.ki.panda3.progression.htn.search;
 
-import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
 
 import java.util.LinkedList;
