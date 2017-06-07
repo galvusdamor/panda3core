@@ -3,9 +3,9 @@ package de.uniulm.ki.panda3
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
-import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount
+import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.panda3.symbolic.compiler.{AllNecessaryOrderings, AllOrderings, TotallyOrderingOption}
@@ -15,7 +15,7 @@ import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util._
 
-import scala.collection.{mutable, JavaConversions}
+import scala.collection.{JavaConversions, mutable}
 
 
 /**
@@ -66,14 +66,14 @@ object ProMain {
       }
 
       val heuristicExtraction = if (args.length >= 6) args(5) match {
-        case "-ff"    => RCG.heuristicExtraction.ff
-        case "-multicount" => RCG.heuristicExtraction.multicount
-      } else RCG.heuristicExtraction.multicount
+        case "-ff"    => ProRcgFFMulticount.heuristicExtraction.ff
+        case "-multicount" => ProRcgFFMulticount.heuristicExtraction.multicount
+      } else ProRcgFFMulticount.heuristicExtraction.multicount
 
       val producerSelector = if (args.length >= 7) args(6) match {
-        case "-numPrec"    => RCG.producerSelection.numOfPreconditions
-        case "-difficulty" => RCG.producerSelection.actionDifficulty
-        case "-fcfs"       => RCG.producerSelection.firstCome
+        case "-numPrec"    => ProRcgFFMulticount.producerSelection.numOfPreconditions
+        case "-difficulty" => ProRcgFFMulticount.producerSelection.actionDifficulty
+        case "-fcfs"       => ProRcgFFMulticount.producerSelection.firstCome
       } else null
 
 

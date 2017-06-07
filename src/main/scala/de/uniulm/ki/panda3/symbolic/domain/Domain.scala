@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.domain
 
-import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem
-import de.uniulm.ki.panda3.symbolic.csp.{OfSort, NotOfSort}
+import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem
+import de.uniulm.ki.panda3.symbolic.csp.{NotOfSort, OfSort}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.TaskSchemaTransitionGraph
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.logic._

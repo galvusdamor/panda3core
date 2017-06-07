@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
-import de.uniulm.ki.panda3.progression.sasp.heuristics.SasHeuristic.SasHeuristics
+import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
 import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
 
 /**

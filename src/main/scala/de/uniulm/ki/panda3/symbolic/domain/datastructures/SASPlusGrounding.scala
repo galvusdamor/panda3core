@@ -1,8 +1,8 @@
 package de.uniulm.ki.panda3.symbolic.domain.datastructures
 
-import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem
+import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem
 import de.uniulm.ki.panda3.symbolic.csp.SymbolicUnionFind
-import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Task, Domain}
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask

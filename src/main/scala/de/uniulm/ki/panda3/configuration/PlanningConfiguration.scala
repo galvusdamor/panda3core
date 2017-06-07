@@ -10,11 +10,11 @@ import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachabili
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps}
 import de.uniulm.ki.panda3.efficient.search.flawSelector._
-import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
+import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
-import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem
-import de.uniulm.ki.panda3.progression.sasp.heuristics.SasHeuristic.SasHeuristics
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount
+import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
+import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem
 import de.uniulm.ki.panda3.symbolic.domain.updates.{AddPredicate, ExchangeTask, RemovePredicate}
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
@@ -280,7 +280,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         }
       case progression: ProgressionSearch =>
 
-        val progressionInstance = new htnPlanningInstance()
+        val progressionInstance = new ProPlanningInstance()
         val groundMethods = domainAndPlan._1.methodsForAbstractTasks map { case (at, ms) =>
           at -> JavaConversions.setAsJavaSet(ms collect {case s : SimpleDecompositionMethod => s} toSet)
         }
@@ -640,7 +640,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
         val sasreader = new SasPlusProblem("output.sas")
         sasreader.prepareEfficientRep()
-        //htnPlanningInstance.sasp = sasreader
+        //ProPlanningInstance.sasp = sasreader
         //sasreader.prepareSymbolicRep(domain,problem)
 
         "rm output.sas" !
@@ -1173,8 +1173,8 @@ object SearchHeuristic {
       // pandaPRO
       case "hhmcff" | "relaxed-composition_with_multicount_ff"  => RelaxedCompositionGraph(
                                                                             useTDReachability = hParameterMap.getOrElse("td-reachability", "true").toBoolean,
-                                                                            heuristicExtraction = RCG.heuristicExtraction.parse(hParameterMap.getOrElse("extraction", "ff")),
-                                                                            producerSelectionStrategy = RCG.producerSelection.parse(hParameterMap.getOrElse("selection", "fcfs")))
+                                                                            heuristicExtraction = ProRcgFFMulticount.heuristicExtraction.parse(hParameterMap.getOrElse("extraction", "ff")),
+                                                                            producerSelectionStrategy = ProRcgFFMulticount.producerSelection.parse(hParameterMap.getOrElse("selection", "fcfs")))
       case "greedy-progression"                 => GreedyProgression
       case "hhrc"                               =>
         val h = hParameterMap.get("h") match {
@@ -1265,7 +1265,7 @@ object Relax extends SearchHeuristic {override val longInfo: String = "relax"}
 
 
 // PANDAPRO heuristics
-case class RelaxedCompositionGraph(useTDReachability: Boolean, heuristicExtraction: RCG.heuristicExtraction, producerSelectionStrategy: RCG.producerSelection)
+case class RelaxedCompositionGraph(useTDReachability: Boolean, heuristicExtraction: ProRcgFFMulticount.heuristicExtraction, producerSelectionStrategy: ProRcgFFMulticount.producerSelection)
   extends SearchHeuristic {override val longInfo: String = "hhMcFF"}
 
 object GreedyProgression extends SearchHeuristic {override val longInfo: String = "greedy-progression"}
