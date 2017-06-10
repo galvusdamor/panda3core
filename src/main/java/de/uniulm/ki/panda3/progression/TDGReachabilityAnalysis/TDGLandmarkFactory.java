@@ -10,7 +10,7 @@ import java.util.*;
 /**
  * Created by dh on 24.01.17.
  */
-public class TDGLandmarkFactory implements IActionReachability {
+public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLandmarks {
 
     private final int numActions;
     private final int numTasks;
@@ -24,9 +24,12 @@ public class TDGLandmarkFactory implements IActionReachability {
     private int[] nodeToScc; // maps a task to its SCC
     BitSet sccTree[];
 
+    // reachability and landmarks
     BitSet[] possible;  // node -> reachable nodes
     BitSet[] necessary; // node -> necessary nodes (aka landmarks)
-    private BitSet[] reachableActions; // maps a task to (possibly) itself and all ACTIONS that are reachable via decomposition
+    BitSet[] reachableActions; // maps a task to (possibly) itself and all ACTIONS that are reachable via decomposition
+    BitSet[][] relaxedLandmarks;
+
 
     static public int tToI(Task t) {
         return ProgressionNetwork.taskToIndex.get(t);
@@ -73,12 +76,12 @@ public class TDGLandmarkFactory implements IActionReachability {
 
         taskNames = new String[nodeCount];
         taskParams = new String[nodeCount][];
-        relaxedLandmarks = new HashMap[nodeCount];
+        relLMs = new HashMap[nodeCount];
         for (int i = 0; i < nodeCount; i++)
-            relaxedLandmarks[i] = new HashMap<>();
+            relLMs[i] = new HashMap<>();
 
         for (int v = root.nextSetBit(0); v > -1; v = root.nextSetBit(v + 1))
-            calcDisjuctiveLMs(nodeToScc[v]);
+            calcRelaxedLMs(nodeToScc[v]);
 
         // set the reachability of every task to the reachability of the SCC it belongs to and set also the reachable actions
         this.reachableActions = new BitSet[numTasks]; // these are the reachable actions
@@ -88,11 +91,60 @@ public class TDGLandmarkFactory implements IActionReachability {
             for (int v = possible[i].nextSetBit(0); (v > -1) && (v < numActions); v = possible[i].nextSetBit(v + 1))
                 this.reachableActions[i].set(v);
         }
+        collectRelaxedLMs();
+        printDisLMTranslation();
 
         //printBS(necessary);
         //printDisLMs();
         System.out.println(" - Reachability calculated in " + (System.currentTimeMillis() - time) + " ms.");
         assert (implementationEquality(methods, initialTasks, numTasks, numActions));
+    }
+
+    private void collectRelaxedLMs() {
+        relaxedLandmarks = new BitSet[this.numTasks][];
+        for (int i = 0; i < this.numActions; i++) // the rest will be set below
+            relaxedLandmarks[i] = new BitSet[0];
+        HashMap<String, BitSet> lookupTable = new HashMap<>();
+        for (int i = 0; i < taskNames.length; i++) {
+            if (taskNames[i] == null)
+                continue;
+            BitSet tasks;
+            if (lookupTable.containsKey(taskNames[i])) {
+                tasks = lookupTable.get(taskNames[i]);
+            } else {
+                tasks = new BitSet();
+                lookupTable.put(taskNames[i], tasks);
+            }
+            tasks.set(i);
+        }
+
+        for (int i = numActions; i < numTasks; i++) {
+            List<BitSet> tLMs = new ArrayList<>();
+            for (String type : relLMs[i].keySet()) {
+                BitSet disj = new BitSet(numTasks);
+                BitSet tasksOfType = lookupTable.get(type);
+                for (String[] parameterSet : relLMs[i].get(type)) {
+                    for (int t = tasksOfType.nextSetBit(0); t >= 0; t = tasksOfType.nextSetBit(t + 1)) {
+                        boolean match = true;
+                        assert taskParams[t].length == parameterSet.length;
+                        for (int iP = 0; iP < taskParams[t].length; iP++) {
+                            if ((parameterSet[iP].equals(varSymbol)) || (parameterSet[iP].equals(taskParams[t][iP])))
+                                continue;
+                            else {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (match)
+                            disj.set(t);
+                    }
+                }
+                tLMs.add(disj);
+            }
+            relaxedLandmarks[i] = new BitSet[tLMs.size()];
+            for (int j = 0; j < tLMs.size(); j++)
+                relaxedLandmarks[i][j] = tLMs.get(j);
+        }
     }
 
     private void buildAndOrGraph(HashMap<Task, List<ProMethod>> methods, int numTasks) {
@@ -213,12 +265,12 @@ public class TDGLandmarkFactory implements IActionReachability {
     private final String varSymbol = "?";
 
     // NodeID -> [TaskName -> ParamSets]
-    HashMap<String, List<String[]>>[] relaxedLandmarks;
+    HashMap<String, List<String[]>>[] relLMs;
 
-    private void calcDisjuctiveLMs(int iScc) {
+    private void calcRelaxedLMs(int iScc) {
         int v = sccTree[iScc].nextSetBit(0);
         while (v > -1) {
-            calcDisjuctiveLMs(v);
+            calcRelaxedLMs(v);
             v = sccTree[iScc].nextSetBit(v + 1);
         }
         boolean changed = true;
@@ -227,11 +279,11 @@ public class TDGLandmarkFactory implements IActionReachability {
             for (int node : scc[iScc]) {
                 boolean localChange = false;
                 if (isPrimitive(node)) {
-                    dissPrimTask(node);
+                    calcRLMsPrimTask(node);
                 } else if (isAbstract(node)) {
-                    localChange = dissAbsTask(node);
+                    localChange = calcRLMsAbsTask(node);
                 } else { // this is a method node
-                    localChange = dissMethod(node);
+                    localChange = calcRLMsMethod(node);
                 }
 
                 if (localChange)
@@ -242,15 +294,15 @@ public class TDGLandmarkFactory implements IActionReachability {
         }
     }
 
-    private void dissPrimTask(int node) {
+    private void calcRLMsPrimTask(int node) {
         if (taskNames[node] == null)
             extractParams(node);
         List<String[]> paramSets = new ArrayList<>();
         paramSets.add(taskParams[node].clone());
-        relaxedLandmarks[node].put(taskNames[node], paramSets);
+        relLMs[node].put(taskNames[node], paramSets);
     }
 
-    private boolean dissAbsTask(int node) {
+    private boolean calcRLMsAbsTask(int node) {
         if (taskNames[node] == null)
             extractParams(node);
         HashMap<String, List<String[]>> lms = null;
@@ -258,16 +310,16 @@ public class TDGLandmarkFactory implements IActionReachability {
         for (int mI = graph[node].nextSetBit(0); mI >= 0; mI = graph[node].nextSetBit(mI + 1)) {
             if (first) { // copy first
                 first = false;
-                lms = copyLMs(relaxedLandmarks[mI]);
+                lms = copyLMs(this.relLMs[mI]);
             } else { // combine
                 LinkedList<String> delete = new LinkedList();
                 for (String taskName : lms.keySet()) {
-                    if (!relaxedLandmarks[mI].containsKey(taskName)) {
+                    if (!this.relLMs[mI].containsKey(taskName)) {
                         delete.add(taskName);
                         continue;
                     }
                     List<String[]> taskParamSets = lms.get(taskName);
-                    List<String[]> methParamSets = relaxedLandmarks[mI].get(taskName);
+                    List<String[]> methParamSets = this.relLMs[mI].get(taskName);
                     unify(taskParamSets, methParamSets);
                 }
                 for (String del : delete)
@@ -280,8 +332,8 @@ public class TDGLandmarkFactory implements IActionReachability {
         paramSets.add(taskParams[node].clone());
         lms.put(taskNames[node], paramSets);
 
-        HashMap<String, List<String[]>> old = relaxedLandmarks[node];
-        relaxedLandmarks[node] = lms;
+        HashMap<String, List<String[]>> old = this.relLMs[node];
+        this.relLMs[node] = lms;
         return !equalLmSets(old, lms);
     }
 
@@ -336,26 +388,26 @@ public class TDGLandmarkFactory implements IActionReachability {
         return Integer.MAX_VALUE; // all are variables
     }
 
-    private boolean dissMethod(int node) {
-        HashMap<String, List<String[]>> old = relaxedLandmarks[node];
-        relaxedLandmarks[node] = new HashMap<>();
+    private boolean calcRLMsMethod(int node) {
+        HashMap<String, List<String[]>> old = relLMs[node];
+        relLMs[node] = new HashMap<>();
         for (int tI = graph[node].nextSetBit(0); tI >= 0; tI = graph[node].nextSetBit(tI + 1)) {
 
-            HashMap<String, List<String[]>> childLMs = relaxedLandmarks[tI];
+            HashMap<String, List<String[]>> childLMs = relLMs[tI];
             for (String task : childLMs.keySet()) {
                 List<String[]> params;
-                if (!relaxedLandmarks[node].containsKey(task)) {
+                if (!relLMs[node].containsKey(task)) {
                     params = new ArrayList<>();
-                    relaxedLandmarks[node].put(task, params);
+                    relLMs[node].put(task, params);
                 } else
-                    params = relaxedLandmarks[node].get(task);
+                    params = relLMs[node].get(task);
 
                 // todo: some kind of contains test?
                 for (String[] params2 : childLMs.get(task))
                     params.add(params2.clone());
             }
         }
-        return !equalLmSets(old, relaxedLandmarks[node]);
+        return !equalLmSets(old, relLMs[node]);
     }
 
     private boolean equalLmSets(HashMap<String, List<String[]>> thisSet, HashMap<String, List<String[]>> thatSet) {
@@ -399,8 +451,19 @@ public class TDGLandmarkFactory implements IActionReachability {
         return node < numActions;
     }
 
+
+    /*
+     * Implement interfaces
+     */
+
+    @Override
     public BitSet getReachableActions(int task) {
         return this.reachableActions[task];
+    }
+
+    @Override
+    public BitSet[] getDisjLandmarks(int task) {
+        return this.relaxedLandmarks[task];
     }
 
 
@@ -408,12 +471,30 @@ public class TDGLandmarkFactory implements IActionReachability {
      * printer functions
      */
 
+    private void printDisLMTranslation() {
+        for (int i = numActions; i < numTasks; i++) {
+            System.out.println(ProgressionNetwork.indexToTask[i].name() + " :");
+            for (int j = 0; j < relaxedLandmarks[i].length; j++) {
+                BitSet lms = relaxedLandmarks[i][j];
+                boolean first = true;
+                for (int lm = lms.nextSetBit(0); lm >= 0; lm = lms.nextSetBit(lm + 1)) {
+                    if (first) {
+                        System.out.print(" - ");
+                        first = false;
+                    } else
+                        System.out.print("   ");
+                    System.out.println(ProgressionNetwork.indexToTask[lm].name());
+                }
+            }
+        }
+    }
+
     private void printDisLMs() {
         for (int i = numActions; i < numTasks; i++) {
-            if (relaxedLandmarks[i].size() > 0) {
+            if (relLMs[i].size() > 0) {
                 System.out.println(ProgressionNetwork.indexToTask[i].name() + " :");
-                for (String key : relaxedLandmarks[i].keySet()) {
-                    for (String[] params : relaxedLandmarks[i].get(key)) {
+                for (String key : relLMs[i].keySet()) {
+                    for (String[] params : relLMs[i].get(key)) {
                         System.out.print(" - " + key);
                         for (String param : params)
                             System.out.print(" " + param);
@@ -446,7 +527,7 @@ public class TDGLandmarkFactory implements IActionReachability {
 
     private boolean implementationEquality(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
         TaskReachabilityGraph that = new TaskReachabilityGraph(methods, initialTasks, numTasks, numActions);
-        for (int i = 0; i < numActions; i++) {
+        for (int i = 0; i < numTasks; i++) {
             BitSet thisImplementation = this.getReachableActions(i);
             BitSet thatImplementation = that.getReachableActions(i);
 
@@ -456,5 +537,4 @@ public class TDGLandmarkFactory implements IActionReachability {
 
         return true;
     }
-
 }

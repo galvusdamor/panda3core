@@ -7,5 +7,4 @@ import java.util.BitSet;
  */
 public interface IActionReachability {
     BitSet getReachableActions(int task);
-
 }
