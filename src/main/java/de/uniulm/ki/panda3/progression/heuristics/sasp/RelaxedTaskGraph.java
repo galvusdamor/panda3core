@@ -228,35 +228,6 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
         return calcHeuLoop(activatable, (BitSet) g.clone(), this.earlyAbord);
     }
 
-    @Override
-    public int calcHeu(int[] s0, int[] g) {
-        waitingForCount = waitingForCountORG.clone();
-        for (int i = 0; i < hVal.length; i++) {
-            hVal[i] = Integer.MAX_VALUE;
-        }
-        UUIntPairPriorityQueue activatable = new UUIntPairPriorityQueue();
-
-        // init queue by adding s0
-        for (int i = 0; i < s0.length; i++) {
-            activatable.add(this.sortedIndex(s0[i], 0 + costs[s0[i]]));
-            waitingForCount[s0[i]] = 0;
-        }
-
-        // dummy prec-nodes of actions that do not have preconditions
-        for (int prec : precTnodes) {
-            activatable.add(this.sortedIndex(prec, 0 + costs[prec]));
-            waitingForCount[prec] = 0;
-        }
-
-        // init goal
-        BitSet goal = new BitSet();
-
-        for (int gf : g)
-            goal.set(gf);
-
-        return calcHeuLoop(activatable, goal, this.earlyAbord);
-    }
-
     private int calcHeuLoop(UUIntPairPriorityQueue activatable, BitSet goal, boolean earlyAbord) {
         int hValGoal = eAND();
         boolean goalReached = false;

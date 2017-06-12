@@ -34,9 +34,9 @@ public abstract class SasHeuristic {
         return this.increment;
     }
 
-    public abstract int calcHeu(int[] s0, int[] g);
-
     public abstract int calcHeu(BitSet s0, BitSet g);
+
+    //public abstract int calcHeu(BitSet s0, BitSet[] g);
 
     public boolean debug = false;
     protected void debugOut(String s) {

@@ -31,17 +31,6 @@ public class hLmCut extends hMax {
     }
 
     @Override
-    public int calcHeu(int[] s0, int[] g) {
-        BitSet s0set = new BitSet(numOfStateFeatures);
-        for (int f : s0)
-            s0set.set(f);
-        BitSet goalSet = new BitSet();
-        for (int gf : g)
-            goalSet.set(gf);
-        return hLmCut(s0set, goalSet);
-    }
-
-    @Override
     public int calcHeu(BitSet s0, BitSet g) {
         return hLmCut(s0, g);
     }

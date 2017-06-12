@@ -63,19 +63,6 @@ public class hFF extends RelaxedTaskGraph {
     }
 
     @Override
-    public int calcHeu(int[] s0, int[] g) {
-        achiever = emptyAchieverList.clone();
-        super.calcHeu(s0, g);
-        BitSet s0Set = new BitSet();
-        for (int i : s0)
-            s0Set.set(i);
-        UUIntStack fringe = new UUIntStack();
-        for (int f : g)
-            fringe.push(f);
-        return calcFF(s0Set, fringe);
-    }
-
-    @Override
     int eAND() {
         return 0;
     }
