@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeurist
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
-import de.uniulm.ki.panda3.progression.proUtil.fastIntegerDataStructures.UUIntStack;
+import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntStack;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import jdk.nashorn.internal.runtime.BitVector;
 

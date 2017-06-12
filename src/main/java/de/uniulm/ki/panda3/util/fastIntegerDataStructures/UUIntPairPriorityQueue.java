@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.progression.proUtil.fastIntegerDataStructures;
+package de.uniulm.ki.panda3.util.fastIntegerDataStructures;
 
 import java.util.Arrays;
 import java.util.Random;

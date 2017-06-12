@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.progression.heuristics.sasp;
 
-import de.uniulm.ki.panda3.progression.proUtil.fastIntegerDataStructures.UUIntStack;
+import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntStack;
 
 import java.util.BitSet;
 import java.util.LinkedList;
