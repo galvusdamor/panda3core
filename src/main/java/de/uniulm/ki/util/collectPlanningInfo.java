@@ -24,6 +24,8 @@ public class collectPlanningInfo {
         //String outFile = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/07-partial-observable/04-results-rcg-greedy/all.out";
         String inputFile = args[0]; //"foo";
         String outFile = args[1]; // "foo.csv";
+        //String inputFile = "/home/gregor/Workspace/Panda3/lifted_planner/transport.log"; //"foo";
+        //String outFile = "test.csv"; // "foo.csv";
         FileReader fr = new FileReader(inputFile);
         BufferedReader br = new BufferedReader(fr);
 
@@ -35,11 +37,11 @@ public class collectPlanningInfo {
         while (br.ready()) {
             String line = br.readLine();
             if (line.startsWith(parsingKey)) {
-                String csv = line.substring(parsingKey.length(), line.length() - 1);
+                String csv = line.substring(parsingKey.length(), line.length());
                 String numStr = "";
                 while (isNumber(csv.charAt(0))) {
                     numStr += csv.charAt(0);
-                    csv.substring(1);
+                    csv = csv.substring(1);
                 }
                 int lastNum = num;
                 num = Integer.parseInt(numStr);
@@ -50,7 +52,7 @@ public class collectPlanningInfo {
                 }
 
                 csv = csv.trim();
-                String[] elems = csv.split("\";\"");
+                String[] elems = csv.substring(1, csv.length() -1).split("\";\"");
                 for (String elem : elems) {
                     String[] pair = elem.split("\"=\"");
                     if (pair.length == 2) {
@@ -128,7 +130,9 @@ public class collectPlanningInfo {
     }
 
     private static boolean isNumber(char c) {
-        return (c == '0') || (c == '1') || (c == '2') || (c == '3') || (c == '4') ||
-                (c == '5') || (c == '6') || (c == '7') || (c == '8') || (c == '9');
+        //return (c == '0') || (c == '1') || (c == '2') || (c == '3') || (c == '4') ||
+        //        (c == '5') || (c == '6') || (c == '7') || (c == '8') || (c == '9');
+
+        return c >= '0' && c <= '9';
     }
 }
