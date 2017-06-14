@@ -56,14 +56,14 @@ lazy val singleToMultiTLT = (project in (file("assembly") / "singleToMultiTLT"))
   settings(
             target := file("assembly") / "singleToMultiTLT",
             assemblyJarName in assembly := "singleToMultiTLT.jar",
-            mainClass in assembly := Some("de.uniulm.ki.panda3.progression.proUtil.singleToMultiTLT")
+            mainClass in assembly := Some("de.uniulm.ki.panda3.planRecognition.singleToMultiTLT")
           )
 
 lazy val switchTLT = (project in (file("assembly") / "switchTLT")).settings(assemblySettings: _*).
   settings(
             target := file("assembly") / "switchTLT",
             assemblyJarName in assembly := "tlt.jar",
-            mainClass in assembly := Some("de.uniulm.ki.panda3.progression.proUtil.switchTLT")
+            mainClass in assembly := Some("de.uniulm.ki.panda3.planRecognition.switchTLT")
           )
 
 lazy val monroe = (project in (file("assembly") / "monroe")).settings(assemblySettings: _*).

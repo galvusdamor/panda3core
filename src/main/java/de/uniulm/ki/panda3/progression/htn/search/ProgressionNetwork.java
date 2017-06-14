@@ -1,10 +1,9 @@
 package de.uniulm.ki.panda3.progression.htn.search;
 
-import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance;
-import de.uniulm.ki.panda3.progression.htn.operators.*;
-import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.SolutionStep;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.htnGroundedProgressionHeuristic;
-import de.uniulm.ki.panda3.progression.sasp.SasPlusProblem;
+import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance;
+import de.uniulm.ki.panda3.progression.htn.representation.*;
+import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeuristic;
+import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 
 import java.util.*;
@@ -23,7 +22,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public static SasPlusProblem flatProblem;
     public static Task[] indexToTask;
     public static Map<Task, Integer> taskToIndex;
-    public static Map<Task, List<method>> methods;
+    public static Map<Task, List<ProMethod>> methods;
     public static Set<Integer> ShopPrecActions = new HashSet<>();
 
 
@@ -42,7 +41,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     private boolean printProgressionTrace = false;
     public String progressionTrace;
 
-    public htnGroundedProgressionHeuristic heuristic;
+    public GroundedProgressionHeuristic heuristic;
 
     public int metric = 0;
     public boolean goalRelaxedReachable = true;
@@ -183,7 +182,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         return sb.toString();
     }
 
-    public ProgressionNetwork decompose(ProgressionPlanStep ps, method m) {
+    public ProgressionNetwork decompose(ProgressionPlanStep ps, ProMethod m) {
         ProgressionNetwork res = this.clone();
 
         res.numberOfTasks--; // some task will be decomposed
@@ -196,7 +195,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.unconstraintAbstractTasks.remove(ps);
 
         // get copy of method subtask network
-        subtaskNetwork tn = m.instantiate();
+        ProSubtaskNetwork tn = m.instantiate();
 
         assert (tn.size() > 0);
         assert (tn.getLastNodes().size() > 0);
@@ -338,7 +337,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public int compareTo(ProgressionNetwork other) {
         int c = (this.metric - other.metric);
         if (c == 0) {
-            if (htnPlanningInstance.random.nextBoolean())
+            if (ProPlanningInstance.random.nextBoolean())
                 c = 1;
             else c = -1;
         }

@@ -2,8 +2,8 @@ package de.uniulm.ki.panda3.configuration
 
 import java.io.FileInputStream
 
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
 import de.uniulm.ki.panda3.symbolic.search.SearchState
 import org.scalatest.FlatSpec
 
@@ -49,9 +49,9 @@ class FullStackTest extends FlatSpec {
       ("lifted-MMESCC", lifted, PlanBasedSearch(None, AStarDepthType(2), TDGMinimumModificationWithCycleDetection() :: Nil, Nil, LCFR)) ::
       ("lifted-ADD", lifted, PlanBasedSearch(None, AStarDepthType(2), TDGMinimumADD() :: Nil, Nil, LCFR)) ::
       ("lifted-ActionCount", lifted, PlanBasedSearch(None, AStarDepthType(2), TDGMinimumAction() :: Nil, Nil, LCFR)) ::
-      ("PRO-RCG", grounded, ProgressionSearch(AStarActionsType(1),
-                                              Some(RelaxedCompositionGraph(useTDReachability = true, producerSelectionStrategy = RCG.producerSelection.firstCome,
-                                                                           heuristicExtraction = RCG.heuristicExtraction.ff)),
+      ("PRO-RCG", grounded, ProgressionSearch( AStarActionsType(1),
+                                              Some(RelaxedCompositionGraph(useTDReachability = true, producerSelectionStrategy = ProRcgFFMulticount.producerSelection.firstCome,
+                                                                           heuristicExtraction = ProRcgFFMulticount.heuristicExtraction.ff)),
                                               abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.decompDepth)) ::
       //("PRO-cRPGHTN", grounded, ProgressionSearch( AStarActionsType(1),CompositionRPGHTN))) ::
       //("PRO-greedyProgression", grounded, ProgressionSearch( AStarActionsType(1),GreedyProgression))) ::

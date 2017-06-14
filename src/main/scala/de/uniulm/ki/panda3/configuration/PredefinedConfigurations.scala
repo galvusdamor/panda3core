@@ -1,8 +1,13 @@
 package de.uniulm.ki.panda3.configuration
 
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount
+import de.uniulm.ki.panda3.symbolic.compiler.OneOfTheNecessaryOrderings
+
+
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
-import de.uniulm.ki.panda3.symbolic.compiler.{OneOfTheNecessaryOrderings, OneRandomOrdering, AllNecessaryOrderings}
+import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
+import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
+
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -27,6 +32,15 @@ object PredefinedConfigurations {
                                                        liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                        iterateReachabilityAnalysis = true, groundDomain = true)
+
+
+  val sasPlusPreprocess = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
+                                                     compileOrderInMethods = None,
+                                                     compileInitialPlan = true, splitIndependentParameters = true,
+                                                     liftedReachability = true, convertToSASP = true, compileUselessAbstractTasks = true,
+                                                     groundedReachability = None,
+                                                     groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                     iterateReachabilityAnalysis = false, groundDomain = true)
 
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
@@ -68,6 +82,7 @@ object PredefinedConfigurations {
   val preprocessConfigs = Map(
                                "-ordering" -> orderingGroundingPreprocess,
                                "-ground" -> groundingPreprocess,
+                               "-SAS+" -> sasPlusPreprocess,
                                "-lifted" -> liftedPreprocess
                              )
 
@@ -141,7 +156,7 @@ object PredefinedConfigurations {
   val planSearchAStarRelax      = PlanBasedSearch(None, AStarActionsType(2), Relax :: Nil, Nil, LCFR)
 
   val shop2 = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
-  val pro   = ProgressionSearch(AStarActionsType(1), Some(RelaxedCompositionGraph(true, RCG.heuristicExtraction.multicount, RCG.producerSelection
+  val pro   = ProgressionSearch(AStarActionsType(1), Some(RelaxedCompositionGraph(true, ProRcgFFMulticount.heuristicExtraction.multicount, ProRcgFFMulticount.producerSelection
     .numOfPreconditions)), PriorityQueueSearch.abstractTaskSelection.random)
 
 
@@ -243,6 +258,12 @@ object PredefinedConfigurations {
          "-GreedyAStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarAPRLiftedPRCompare),
          "-GreedyAStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare),
 
+         // PRO
+         "-GreedyAStarPro-hhRC-lm-cut" ->(htnParsing, sasPlusPreprocess, ProgressionSearch(AStarActionsType(2),
+                                                                                           Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hLmCut)), PriorityQueueSearch
+                                                                                             .abstractTaskSelection.random)),
+
+
          // configurations to test totSAT
          "-oneshortTOTsat" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
          "-oneshortTOTsatFF" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
@@ -276,7 +297,8 @@ object PredefinedConfigurations {
          "-oneshortTOTshop2" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, shop2),
 
          // plan verification a la ICAPS'17
-         "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT,""))
+         "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, ""))
+
        )
 
 }

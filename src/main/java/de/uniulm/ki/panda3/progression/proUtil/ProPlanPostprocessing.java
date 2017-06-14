@@ -1,9 +1,6 @@
 package de.uniulm.ki.panda3.progression.proUtil;
 
-import de.uniulm.ki.panda3.progression.htn.operators.operators;
-
 import java.util.BitSet;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
