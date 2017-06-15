@@ -22,6 +22,7 @@ import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{VerifyRunner, SATRunner}
+import de.uniulm.ki.panda3.symbolic.sat.verify.SATRunner
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, SASPlusGrounding}
@@ -41,8 +42,9 @@ import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 import de.uniulm.ki.util._
 
-import scala.util.Random
 import scala.collection.JavaConversions
+import scala.util.Random
+
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -583,7 +585,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop PARSER_ELIMINATE_EQUALITY
 
     timeCapsule start PARSER_FLATTEN_FORMULA
-    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(identity, ()) else identity
+    val flattened = if (parsingConfiguration.reduceGneralTasks) ReduceGeneralTasks.transform(identity, ()) else identity
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule stop PARSING
@@ -1018,7 +1020,7 @@ case class ParsingConfiguration(
                                  compileSHOPMethods: Boolean = true,
                                  eliminateEquality: Boolean = true,
                                  stripHybrid: Boolean = false,
-                                 toPlainFormulaRepresentation: Boolean = true
+                                 reduceGneralTasks: Boolean = true
                                ) extends Configuration {
   /** returns a detailed information about the object */
   override def longInfo: String = "Parsing Configuration\n---------------------\n" +
@@ -1027,7 +1029,7 @@ case class ParsingConfiguration(
                   ("CompileSHOPMethods", compileSHOPMethods) ::
                   ("Eliminate Equality", eliminateEquality) ::
                   ("Strip Hybridity", stripHybrid) ::
-                  ("To Plain Formula Representation", toPlainFormulaRepresentation) :: Nil
+                  ("Reduce General Tasks", reduceGneralTasks) :: Nil
                )
 
   protected override def localModifications: Seq[(String, (ParameterMode, (Option[String]) => ParsingConfiguration.this.type))] =
@@ -1058,8 +1060,10 @@ case class ParsingConfiguration(
          "-stripHybrid" ->(NoParameter, { p: Option[String] => this.copy(stripHybrid = true).asInstanceOf[this.type] }),
          "-dontStripHybrid" ->(NoParameter, { p: Option[String] => this.copy(stripHybrid = false).asInstanceOf[this.type] }),
 
-         "-toPlainFormulaRepresentation" ->(NoParameter, { p: Option[String] => this.copy(toPlainFormulaRepresentation = true).asInstanceOf[this.type] }),
-         "-generalFormulaRepresentation" ->(NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(toPlainFormulaRepresentation = false).asInstanceOf[this.type] })
+         "-toPlainFormulaRepresentation" ->(NoParameter, { p: Option[String] =>
+           (if (p.isEmpty) this.copy(reduceGneralTasks = true) else this.copy(reduceGneralTasks = p.get.toBoolean)).asInstanceOf[this.type]
+         }),
+         "-generalFormulaRepresentation" ->(NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(reduceGneralTasks = false).asInstanceOf[this.type] })
        )
 }
 
@@ -1094,6 +1098,7 @@ case class PreprocessingConfiguration(
                                        groundDomain: Boolean
                                      ) extends Configuration {
   assert(!convertToSASP || groundedReachability.isEmpty, "You can't use both SAS+ and a grouded PG")
+
   //assert(!convertToSASP || !compileNegativePreconditions, "You can't use both SAS+ and remove negative preconditions")
 
   //assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
@@ -1262,19 +1267,21 @@ object SearchHeuristic {
       case "relax"                                           => Relax
 
       // pandaPRO
-      case "hhmcff" | "relaxed-composition_with_multicount_ff"  => RelaxedCompositionGraph(
-                                                                            useTDReachability = hParameterMap.getOrElse("td-reachability", "true").toBoolean,
-                                                                            heuristicExtraction = ProRcgFFMulticount.heuristicExtraction.parse(hParameterMap.getOrElse("extraction", "ff")),
-                                                                            producerSelectionStrategy = ProRcgFFMulticount.producerSelection.parse(hParameterMap.getOrElse("selection", "fcfs")))
-      case "greedy-progression"                 => GreedyProgression
-      case "hhrc"                               =>
+      case "hhmcff" | "relaxed-composition_with_multicount_ff" => RelaxedCompositionGraph(
+                                                                                           useTDReachability = hParameterMap.getOrElse("td-reachability", "true").toBoolean,
+                                                                                           heuristicExtraction = ProRcgFFMulticount.heuristicExtraction
+                                                                                             .parse(hParameterMap.getOrElse("extraction", "ff")),
+                                                                                           producerSelectionStrategy = ProRcgFFMulticount.producerSelection
+                                                                                             .parse(hParameterMap.getOrElse("selection", "fcfs")))
+      case "greedy-progression"                                => GreedyProgression
+      case "hhrc"                                              =>
         val h = hParameterMap.get("h") match {
-          case Some("ff") => SasHeuristics.hFF
-          case Some("add") => SasHeuristics.hAdd
-          case Some("max") => SasHeuristics.hMax
-          case Some("lm-cut") => SasHeuristics.hLmCut
+          case Some("ff")         => SasHeuristics.hFF
+          case Some("add")        => SasHeuristics.hAdd
+          case Some("max")        => SasHeuristics.hMax
+          case Some("lm-cut")     => SasHeuristics.hLmCut
           case Some("inc-lm-cut") => SasHeuristics.hIncLmCut
-          case None => assert(false); null
+          case None               => assert(false); null
         }
 
         HierarchicalHeuristicRelaxedComposition(h)

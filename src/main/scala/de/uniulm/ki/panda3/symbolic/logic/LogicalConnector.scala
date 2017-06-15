@@ -164,6 +164,25 @@ case class Implies(left: Formula, right: Formula) extends LogicalConnector with 
   }
 }
 
+case class When(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo {
+  override def update(domainUpdate: DomainUpdate): When = When(left.update(domainUpdate), right.update(domainUpdate))
+
+  lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
+
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
+
+  override def longInfo: String = left.longInfo + " ~> " + right.longInfo
+
+  override val isEmpty: Boolean = left.isEmpty && right.isEmpty
+
+  override def compileQuantors(): (Formula, Seq[Variable]) = {
+    val (lForm, lVars) = left.compileQuantors()
+    val (rForm, rVars) = right.compileQuantors()
+
+    (Implies(lForm, rForm), lVars ++ rVars)
+  }
+}
+
 case class Equivalence(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo {
   override def update(domainUpdate: DomainUpdate): Equivalence = Equivalence(left.update(domainUpdate), right.update(domainUpdate))
 
@@ -204,6 +223,12 @@ case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLon
   }
 }
 
+object Exists {
+  def apply(vs: Seq[Variable], f: Formula): Formula = {
+    if (vs.isEmpty) { f } else { Exists(vs.head, Exists(vs.tail, f)) }
+  }
+}
+
 case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo with HashMemo {
   override def update(domainUpdate: DomainUpdate): Forall = Forall(v.update(domainUpdate), formula.update(domainUpdate))
 
@@ -228,3 +253,10 @@ case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLon
     (And(newForlumaeAndVars map {_._1}), newForlumaeAndVars flatMap {_._2})
   }
 }
+
+object Forall {
+  def apply(vs: Seq[Variable], f: Formula): Formula = {
+    if (vs.isEmpty) { f } else { Forall(vs.head, Forall(vs.tail, f)) }
+  }
+}
+

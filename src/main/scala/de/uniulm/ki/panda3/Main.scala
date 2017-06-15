@@ -118,7 +118,7 @@ object Main {
 
     println("This is PANDA3\nBelieve us: It is great!")
     println("\nCopyright: Ulm University 2014-2017")
-    println("Developer: Gregor Behnke, Daniel Höller, Kristof Mickeleit, Tobias Welz, Kadir Dede, Matthias Englert, and Thomas Geier")
+    println("Developer: Gregor Behnke, Daniel Höller, Kristof Mickeleit, Tobias Welz, Kadir Dede, Matthias Englert, Mario Schmautz and Thomas Geier")
     println("Thanks to Pascal Bercher for his moral support while writing PANDA3\n\n")
 
     val initialConfiguration = RunConfiguration()

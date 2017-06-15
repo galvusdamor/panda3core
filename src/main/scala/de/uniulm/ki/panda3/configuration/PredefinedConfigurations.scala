@@ -219,17 +219,19 @@ object PredefinedConfigurations {
 
   val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
     Map(
-         //"-panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)),
+         // A*
+         "-panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)),
          "-Dijkstra" ->(htnParsing, groundingPreprocess, planSearchDijkstra),
          "-DFS" ->(htnParsing, groundingPreprocess, planSearchDFS),
          "-BFS" ->(htnParsing, groundingPreprocess, planSearchBFS),
 
-         "-umcpBF" ->(htnParsing, groundingPreprocess, umcpBF),
-         "-umcpDF" ->(htnParsing, groundingPreprocess, umcpDF),
-         "-umcpH" ->(htnParsing, groundingPreprocess, umcpH),
+         "-umcpBF" -> (htnParsing, groundingPreprocess,umcpBF),
+         "-umcpDF" -> (htnParsing, groundingPreprocess,umcpDF),
+         "-umcpH" -> (htnParsing, groundingPreprocess,umcpH),
 
 
          // A*
+
          "-AStarADD" ->(htnParsing, groundingPreprocess, AStarADD),
          "-AStarADDReusing" ->(htnParsing, groundingPreprocess, AStarADDReusing),
          "-AStarRelax" ->(htnParsing, groundingPreprocess, AStarRelax),
@@ -298,7 +300,6 @@ object PredefinedConfigurations {
 
          // plan verification a la ICAPS'17
          "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, ""))
-
        )
 
 }
