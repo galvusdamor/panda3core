@@ -223,6 +223,12 @@ case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLon
   }
 }
 
+object Exists {
+  def apply(vs: Seq[Variable], f: Formula): Formula = {
+    if (vs.isEmpty) { f } else { Exists(vs.head, Exists(vs.tail, f)) }
+  }
+}
+
 case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo with HashMemo {
   override def update(domainUpdate: DomainUpdate): Forall = Forall(v.update(domainUpdate), formula.update(domainUpdate))
 
@@ -247,3 +253,10 @@ case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLon
     (And(newForlumaeAndVars map {_._1}), newForlumaeAndVars flatMap {_._2})
   }
 }
+
+object Forall {
+  def apply(vs: Seq[Variable], f: Formula): Formula = {
+    if (vs.isEmpty) { f } else { Forall(vs.head, Forall(vs.tail, f)) }
+  }
+}
+

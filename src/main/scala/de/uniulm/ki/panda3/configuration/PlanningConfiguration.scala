@@ -7,7 +7,6 @@ import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
 import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic._
-
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps}
@@ -19,7 +18,7 @@ import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
 import de.uniulm.ki.panda3.symbolic.{DefaultLongInfo, PrettyPrintable}
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
-import de.uniulm.ki.panda3.symbolic.sat.verify.{CRYPTOMINISAT, MINISAT, Solvertype, SATRunner}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{CRYPTOMINISAT, MINISAT, SATRunner, Solvertype}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
@@ -38,7 +37,6 @@ import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 import scala.collection.JavaConversions
 import scala.util.Random
-
 import scala.collection.JavaConversions
 
 /**
@@ -533,7 +531,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop PARSER_ELIMINATE_EQUALITY
 
     timeCapsule start PARSER_FLATTEN_FORMULA
-    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(identity, ()) else identity
+    val flattened = if (parsingConfiguration.reduceGneralTasks) ReduceGeneralTasks.transform(identity, ()) else identity
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule stop PARSING
@@ -832,7 +830,7 @@ case class ParsingConfiguration(
                                  compileSHOPMethods: Boolean = true,
                                  eliminateEquality: Boolean = true,
                                  stripHybrid: Boolean = false,
-                                 toPlainFormulaRepresentation: Boolean = true
+                                 reduceGneralTasks: Boolean = true
                                ) extends Configuration {
   /** returns a detailed information about the object */
   override def longInfo: String = "Parsing Configuration\n---------------------\n" +
@@ -841,7 +839,7 @@ case class ParsingConfiguration(
                   ("CompileSHOPMethods", compileSHOPMethods) ::
                   ("Eliminate Equality", eliminateEquality) ::
                   ("Strip Hybridity", stripHybrid) ::
-                  ("To Plain Formula Representation", toPlainFormulaRepresentation) :: Nil
+                  ("Reduce General Tasks", reduceGneralTasks) :: Nil
                )
 
   protected override def localModifications: Seq[(String, (Option[String]) => ParsingConfiguration.this.type)] =
@@ -873,9 +871,9 @@ case class ParsingConfiguration(
          "-dontStripHybrid" -> { p => assert(p.isEmpty); this.copy(stripHybrid = false).asInstanceOf[this.type] },
 
          "-toPlainFormulaRepresentation" -> { p =>
-           (if (p.isEmpty) this.copy(toPlainFormulaRepresentation = true) else this.copy(toPlainFormulaRepresentation = p.get.toBoolean)).asInstanceOf[this.type]
+           (if (p.isEmpty) this.copy(reduceGneralTasks = true) else this.copy(reduceGneralTasks = p.get.toBoolean)).asInstanceOf[this.type]
          },
-         "-generalFormulaRepresentation" -> { p => assert(p.isEmpty); this.copy(toPlainFormulaRepresentation = false).asInstanceOf[this.type] }
+         "-generalFormulaRepresentation" -> { p => assert(p.isEmpty); this.copy(reduceGneralTasks = false).asInstanceOf[this.type] }
        )
 }
 
