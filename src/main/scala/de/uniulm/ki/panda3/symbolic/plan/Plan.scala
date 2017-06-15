@@ -46,6 +46,9 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       assert(orderingConstraints.lt(ps, goal))
   }
 
+  assert(orderingConstraints.lt(init,goal))
+  assert(orderingConstraints.isConsistent)
+
   lazy val planSteps       : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
   lazy val planStepTasksSet: Set[Task]       = planSteps map { _.schema } toSet
   lazy val causalLinks     : Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter { cl => isPresent(cl.producer) && isPresent(cl.consumer) }

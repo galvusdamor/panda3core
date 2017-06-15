@@ -170,7 +170,7 @@ public class hddlPanda3Visitor {
         seqProviderList<PlanStep> planSteps = new seqProviderList<>();
         planSteps.add(psInit);
         planSteps.add(psGoal);
-        taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal);
+        taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit,psGoal);
 
 
         if (tnCtx.subtask_defs() != null) {
