@@ -50,7 +50,7 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
 
     // if the path is part of a solution, then it must contain a task
     val selected = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
-      val actionAtoms = tasks.toSeq map { pathAction(path.length - 1, path, _) }
+      val actionAtoms = tasks.toSeq map { pathAction(path.length, path, _) }
       val pathString = pathActive(path)
       notImpliesAllNot(pathString :: Nil, actionAtoms).+:(impliesRightOr(pathString :: Nil, actionAtoms))
     }
@@ -75,7 +75,7 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
 
     // if a path contain an action, then the position it is mapped to contains the same action
     val sameAction = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
-      tasks.toSeq map { t => (t, pathAction(path.length - 1, path, t)) } flatMap { case (t, actionAtom) =>
+      tasks.toSeq map { t => (t, pathAction(path.length, path, t)) } flatMap { case (t, actionAtom) =>
         positionsPerPath(pindex) map { case (_, position, connectionAtom) =>
           impliesRightAndSingle(actionAtom :: connectionAtom :: Nil, action(K - 1, position, t))
         }
@@ -89,7 +89,7 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
     // forbid certain connections if disallowed by the SOG
     /////////////////
     val forbiddenConnections: Seq[Clause] = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
-      val successors = if (useImplicationForbiddenness) sog.reachable((path, tasks)).toSeq else sog.edges((path, tasks))
+      val successors = if (useImplicationForbiddenness) sog.reachable.find(_._1._1 == path).get._2.toSeq else sog.edges.find(_._1._1 == path).get._2
 
       // start from 1 as we have to access the predecessor position
       Range(1, taskSequenceLength) flatMap { pos =>
@@ -100,7 +100,7 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
 
     val forbiddennessImplications: Seq[Clause] = if (useImplicationForbiddenness) Nil
     else primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
-      val successors = if (useImplicationForbiddenness) sog.reachable((path, tasks)).toSeq else sog.edges((path, tasks))
+      val successors = if (useImplicationForbiddenness) sog.reachable.find(_._1._1 == path).get._2.toSeq else sog.edges.find(_._1._1 == path).get._2
 
       // start from 1 as we have to access the predecessor position
       Range(1, taskSequenceLength) flatMap { pos =>
