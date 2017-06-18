@@ -8,7 +8,7 @@ import java.util.BitSet;
 /**
  * Created by dh on 15.05.17.
  */
-public class hFF extends RelaxedTaskGraph {
+public class hFF extends RTGBaseCalc {
     int[] emptyAchieverList;
 
     public hFF(SasPlusProblem p) {

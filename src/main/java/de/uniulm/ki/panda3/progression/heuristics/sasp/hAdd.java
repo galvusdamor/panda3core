@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 /**
  * Created by dh on 01.05.17.
  */
-public class hAdd extends RelaxedTaskGraph {
+public class hAdd extends RTGBaseCalc {
     public hAdd(SasPlusProblem p) {
         super(p);
     }

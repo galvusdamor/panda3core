@@ -92,7 +92,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
                 this.reachableActions[i].set(v);
         }
         collectRelaxedLMs();
-        printDisLMTranslation();
+        //printDisLMTranslation();
 
         //printBS(necessary);
         //printDisLMs();

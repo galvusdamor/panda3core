@@ -1,44 +1,43 @@
 package de.uniulm.ki.panda3.progression.heuristics.sasp;
 
-import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntPairPriorityQueue;
-import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntStack;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
+import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntStack;
 
 import java.util.*;
 
 /**
- * Created by dh on 28.04.17.
+ * Created by dh on 16.06.17.
  */
 public abstract class RelaxedTaskGraph extends SasHeuristic {
 
-    private final int[] waitingForCountORG;
-
-    int[] costs; // costs of activating a node (in addition to its predecessors -> this are action costs)
+    static int nodeCount;
 
     // this is only used for debugging
-    List<String> nodeNames = new ArrayList<>();
+    static List<String> nodeNames = new ArrayList<>();
 
-    int[] precNodeToOp; // mapping of nodes that belong to preconditions to the corresponding operator
-    int[] opIndexToEffNode; // mapping of operator to its effect node
+    static int[] precNodeToOp; // mapping of nodes that belong to preconditions to the corresponding operator
+    static int[] opIndexToEffNode; // mapping of operator to its effect node
 
-    BitSet isAndNode = new BitSet(); // is it an AND-node? (it is an OR-node otherwise)
+    static BitSet isAndNode = new BitSet(); // is it an AND-node? (it is an OR-node otherwise)
 
     // for each node, the int defines the *index* of the nodes to be activated before the respective node
-    int[][] waitingForNodes;
+    static int[][] waitingForNodes;
 
     /* for each node, the int defines the *number* of nodes to be activated before the respective node
      * - for or-nodes, this will be always one
      * - for and-nodes, it is the actual number of predecessors
      */
-    int[] waitingForCount;
+    static int[] initialWaitingForCount; // the original values
 
     /* for each node, it gives a list of nodes that wait that the respective node is activated */
-    int[][] whoIsWaitingForMe;
+    static int[][] whoIsWaitingForMe;
 
-    int[] precTnodes; // precondition nodes of actions without preconditions
+    static int[] precTnodes; // precondition nodes of actions without preconditions
 
     /* holds h-max for every node */
     int[] hVal;
+    int[] costs; // costs of activating a node (in addition to its predecessors -> this are action costs)
+    int[] currentWaitingForCount;
 
     //
     // stuff that is needed to calculate LM-Cut
@@ -51,37 +50,11 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
     protected boolean earlyAbord = true;
     protected boolean evalBestAchievers = false;
 
-    abstract int eAND();
-
-    abstract int eOR();
-
-    abstract int combineAND(int x, int y);
-
-    abstract int combineOR(int x, int y);
-
     public RelaxedTaskGraph(SasPlusProblem p) {
         this(p, false);
     }
 
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("digraph planGraph {");
-        for (int i = 0; i < nodeNames.size(); i++) {
-            sb.append("\tnode [shape=ellipse, label=\"" +
-                    nodeNames.get(i) + "\"] node" + i + ";");
-        }
-        for (int i = 0; i < waitingForNodes.length; i++) {
-            for (int j : waitingForNodes[i])
-                sb.append("node" + i + "-> node" + j);
-        }
-        sb.append("}");
-
-        return sb.toString();
-    }
-
     public RelaxedTaskGraph(SasPlusProblem p, boolean trackPCF) {
-        super(p);
         this.trackPCF = trackPCF;
 
         // init variable nodes
@@ -144,7 +117,7 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
             tempWhoIsWaitingForMe.add(new ArrayList<>());
 
         this.waitingForNodes = new int[tempWaitingForNodes.size()][];
-        this.waitingForCountORG = new int[tempWaitingForNodes.size()];
+        this.initialWaitingForCount = new int[tempWaitingForNodes.size()];
         for (int i = 0; i < tempWaitingForNodes.size(); i++) {
             List<Integer> list = tempWaitingForNodes.get(i);
             this.waitingForNodes[i] = new int[list.size()];
@@ -153,9 +126,9 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
                 tempWhoIsWaitingForMe.get(list.get(j)).add(i);
             }
             if (isAndNode.get(i)) {
-                waitingForCountORG[i] = list.size();
+                initialWaitingForCount[i] = list.size();
             } else {
-                waitingForCountORG[i] = 1;
+                initialWaitingForCount[i] = 1;
             }
         }
 
@@ -189,6 +162,8 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
             opReachable = new BitSet(p.numOfOperators);
         }
 
+        this.nodeCount = tempWaitingForNodes.size();
+
         hVal = new int[tempWaitingForNodes.size()]; // initialized in calc method
 
         /*for(int i = 0; i < nodeNames.size();i++)
@@ -196,122 +171,34 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
         System.out.println();*/
     }
 
-    @Override
-    public int calcHeu(BitSet s0, BitSet g) {
-        if (this.trackPCF) {
-            pcf = new int[pcf.length];
-            for (int i = 0; i < pcfInvert.length; i++)
-                pcfInvert[i].clear();
-            opReachable.clear();
-        }
-
-        waitingForCount = waitingForCountORG.clone();
-        for (int i = 0; i < hVal.length; i++) {
-            hVal[i] = Integer.MAX_VALUE;
-        }
-        UUIntPairPriorityQueue activatable = new UUIntPairPriorityQueue();
-
-        // init queue by adding s0
-        int nextF = s0.nextSetBit(0);
-        while (nextF >= 0) {
-            activatable.add(this.sortedIndex(nextF, 0));
-            waitingForCount[nextF] = 0;
-            nextF = s0.nextSetBit(nextF + 1);
-        }
-
-        // dummy prec-nodes of actions that do not have preconditions
-        for (int prec : precTnodes) {
-            activatable.add(this.sortedIndex(prec, 0 + costs[prec]));
-            waitingForCount[prec] = 0;
-        }
-
-        return calcHeuLoop(activatable, (BitSet) g.clone(), this.earlyAbord);
-    }
-
-    private int calcHeuLoop(UUIntPairPriorityQueue activatable, BitSet goal, boolean earlyAbord) {
-        int hValGoal = eAND();
-        boolean goalReached = false;
-
-        while (!activatable.isEmpty()) {
-            int newNode = activatable.minPair()[1];
-            if (goal.get(newNode)) {
-                goal.set(newNode, false);
-                int old = hValGoal;
-                hValGoal = combineAND(hValGoal, hVal[newNode]);
-                if (old != hValGoal)
-                    this.goalPCF = newNode;
-                if (goal.isEmpty()) {
-                    goalReached = true;
-                    if (earlyAbord)
-                        break;
-                }
-            }
-            for (int i = 0; i < whoIsWaitingForMe[newNode].length; i++) {
-                int waitingNode = whoIsWaitingForMe[newNode][i];
-                waitingForCount[waitingNode]--;
-                if (waitingForCount[waitingNode] == 0) {
-                    activatable.add(this.sortedIndex(waitingNode));
-                }
-            }
-        }
-        if (goalReached)
-            return hValGoal;
-        else
-            return Integer.MAX_VALUE;
-    }
-
-
-    private int[] sortedIndex(int index, int hMaxVal) {
-        hVal[index] = hMaxVal;
-        int[] res = new int[2];
-        res[0] = hVal[index];
-        res[1] = index;
-        return res;
-    }
-
-    private int[] sortedIndex(int index) {
-        int[] res = new int[2];
-        res[1] = index;
-
-        int predCosts;
-        if (isAndNode.get(index)) {
-            int relPrec = -1;
-
-            predCosts = eAND();
-            for (int i = 0; i < waitingForNodes[index].length; i++) {
-                int old = predCosts;
-                predCosts = combineAND(predCosts, hVal[waitingForNodes[index][i]]);
-                if (old != predCosts)
-                    relPrec = waitingForNodes[index][i];
-            }
-
-            int op = precNodeToOp[index];
-            if ((trackPCF) && (op > -1)) {
-                opReachable.set(op);// mark operator as reached
-                pcf[op] = relPrec; // mark which precondition has been the limiting factor
-                pcfInvert[relPrec].push(op);
-            }
-        } else {
-            predCosts = eOR();
-            int bestAchiver = -1;
-            for (int i = 0; i < waitingForNodes[index].length; i++) {
-                int old = predCosts;
-                predCosts = combineOR(predCosts, hVal[waitingForNodes[index][i]]);
-                if (old != predCosts)
-                    bestAchiver = waitingForNodes[index][i];
-            }
-            assert bestAchiver >= 0;
-            if (evalBestAchievers) {
-                this.evalAchiever(index, bestAchiver);
-            }
-        }
-
-        hVal[index] = predCosts + costs[index];
-        res[0] = hVal[index];
-        return res;
-    }
-
     protected void evalAchiever(int nodeId, int bestAchiver) {
 
+    }
+
+
+    abstract int eAND();
+
+    abstract int eOR();
+
+    abstract int combineAND(int x, int y);
+
+    abstract int combineOR(int x, int y);
+
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("digraph planGraph {");
+        for (int i = 0; i < nodeNames.size(); i++) {
+            sb.append("\tnode [shape=ellipse, label=\"" +
+                    nodeNames.get(i) + "\"] node" + i + ";");
+        }
+        for (int i = 0; i < waitingForNodes.length; i++) {
+            for (int j : waitingForNodes[i])
+                sb.append("node" + i + "-> node" + j);
+        }
+        sb.append("}");
+
+        return sb.toString();
     }
 }

@@ -16,7 +16,7 @@ import java.util.*;
 public class ProRcgSas implements GroundedProgressionHeuristic {
     static protected HtnCompositionEncoding compEnc;
     static private SasHeuristic heuristic;
-    private IncrementInformation incInf;
+    protected IncrementInformation inc;
     private int heuristicVal;
 
     @Override
@@ -52,7 +52,6 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
             this.heuristic = new hLmCut(this.compEnc, false);
         } else if (heuristic == SasHeuristic.SasHeuristics.hIncLmCut) {
             this.heuristic = new hLmCut(this.compEnc, true);
-            this.incInf = new IncInfLmCut();
         }
     }
 
@@ -90,23 +89,19 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
             goalFact = htnGoal.nextSetBit(goalFact + 1);
         }
 
-        //this.heuristicVal = heuristic.calcHeu(s0, g, ps.taskIndex);
         if (heuristic.isIncremental()) {
             int lastAction;
             if (m != null)
                 lastAction = compEnc.MethodToIndex.get(m);
             else
                 lastAction = ps.taskIndex;
-            heuristic.setIncrement(lastAction, this.incInf);
-        }
-        int heuVal = heuristic.calcHeu(s0, g);
-        if (heuristic.isIncremental()) {
+
             ProRcgSas res = new ProRcgSas();
-            res.incInf = heuristic.getIncrement();
-            res.heuristicVal = heuVal;
+            res.heuristicVal = this.heuristic.calcHeu(lastAction, inc, s0, g);
+            res.inc = this.heuristic.getIncInf();
             return res;
         } else {
-            this.heuristicVal = heuVal;
+            this.heuristicVal = this.heuristic.calcHeu(s0, g);
             return this;
         }
     }
@@ -134,11 +129,11 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
 
     @Override
     public int getHeuristic() {
-        return heuristicVal;
+        return this.heuristicVal;
     }
 
     @Override
     public boolean goalRelaxedReachable() {
-        return heuristicVal < Integer.MAX_VALUE;
+        return heuristicVal != SasHeuristic.cUnreachable;
     }
 }

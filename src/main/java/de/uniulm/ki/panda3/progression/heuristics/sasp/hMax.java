@@ -5,7 +5,7 @@ import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 /**
  * Created by dh on 01.05.17.
  */
-public class hMax extends RelaxedTaskGraph {
+public class hMax extends RTGBaseCalc {
     public hMax(SasPlusProblem p, boolean trackPCF) {
         super(p, trackPCF);
     }
