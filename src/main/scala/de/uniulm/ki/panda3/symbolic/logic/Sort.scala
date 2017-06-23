@@ -14,6 +14,10 @@ import de.uniulm.ki.util.HashMemo
 case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo {
 
   lazy val elementSet : Set[Constant] = elements toSet
+<<<<<<< HEAD
+=======
+
+>>>>>>> do not include a constant twice if sort expansion has already happend
   lazy val allElements: Seq[Constant] = (elements ++ (subSorts flatMap {_.allElements})) distinct
 
   override def update(domainUpdate: DomainUpdate): Sort = (domainUpdate match {
