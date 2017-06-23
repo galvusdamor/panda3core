@@ -77,7 +77,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
       //satProcess.destroy()
 
       val pid = getPID()
-      println(pid)
+      //println(pid)
 
       val uuid = UUID.randomUUID().toString
       val file = new File("__pid" + uuid)
@@ -151,8 +151,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
         if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
           TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK)
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
-        else SOGPOCLEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK).asInstanceOf[VerifyEncoding]
-      //else SOGClassicalEncoding(domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+      //  else SOGPOCLEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+      else SOGClassicalEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
 
       // (3)
       /*println("K " + encoder.K)
@@ -399,7 +399,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
         }
       }
       }
-      val primitiveSolution: Seq[Task] = encoder match {
+      val primitiveSolutionWithPotentialEmptyMethodApplications: Seq[Task] = encoder match {
         case tot: TotallyOrderedEncoding =>
           // check executability of the plan
 
@@ -411,12 +411,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
             println("task " + t + " " + actionIDX + " " + domain.tasks(actionIDX).name)
             domain.tasks(actionIDX) }*/
 
+
           graph.sinks sortWith { case (t1, t2) =>
             val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
             val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
             PathBasedEncoding.pathSortingFunction(path1, path2)
           } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
-
         case tree: TotallyOrderedEncoding =>
           val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
           //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
@@ -517,9 +517,14 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
           }
       }
 
+      // there may be empty methods in the domain, which would produce abstract tasks as sinks. Hence we have to filter them out
+      val primitiveSolution =
+        primitiveSolutionWithPotentialEmptyMethodApplications filterNot { t => t.isAbstract && domain.methodsForAbstractTasks(t).exists(_.subPlan.planStepsWithoutInitGoal.isEmpty) }
+
+
       print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
       //println("\n")
-      //println(primitiveSolution map { _.name } mkString "\n")
+      //println(primitiveSolution map { t => t.isPrimitive + " " + t.name } mkString "\n")
 
       primitiveSolution foreach { t => assert(t.isPrimitive) }
       checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
@@ -540,9 +545,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
     val decompGraphNames = SimpleDirectedGraph(graphNodes map changeSATNameToActionName, graphEdges map { case (a, b) => (changeSATNameToActionName(a), changeSATNameToActionName(b)) })
     val decompGraph = SimpleDirectedGraph(graphNodes, graphEdges)
-    writeStringToFile(decompGraphNames.dotString, "decompName.dot")
-    Dot2PdfCompiler.writeDotToFile(decompGraph, "decomp.pdf")
-    Dot2PdfCompiler.writeDotToFile(decompGraphNames, "decompName.pdf")
+    //writeStringToFile(decompGraphNames.dotString, "decompName.dot")
+    //Dot2PdfCompiler.writeDotToFile(decompGraph, "decomp.pdf")
+    //Dot2PdfCompiler.writeDotToFile(decompGraphNames, "decompName.pdf")
 
     // no isolated nodes
     decompGraphNames.vertices foreach { v =>

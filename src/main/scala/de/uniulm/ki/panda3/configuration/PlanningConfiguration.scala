@@ -342,6 +342,34 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               }
 
               (solution, false)
+
+
+            case OptimalSATRun(overrideK)                               =>
+              // start with K = 0 and loop
+              // TODO this is only good for total order ...
+              var solution: Option[Seq[Task]] = None
+              var error: Boolean = false
+              var currentLength = 1
+              var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+              var usedTime: Long = remainingTime / Math.max(1, 10 / (currentLength + 1))
+              var expansion: Boolean = true
+              while (solution.isEmpty && !error && expansion && usedTime > 0) {
+                println("\nRunning SAT search with K = " + currentLength)
+                println("Time remaining for SAT search " + remainingTime + "ms")
+                println("Time used for this run " + usedTime + "ms\n\n")
+
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, currentLength, 0, defineK = overrideK, checkSolution = satSearch.checkResult)
+                println("ERROR " + satError)
+
+                error |= satError
+                solution = satResult
+                expansion = expansionPossible
+                currentLength += 1
+                remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+                usedTime = remainingTime / Math.max(1, 10 / (currentLength + 1))
+              }
+
+              (solution, false)
           }
 
           informationCapsule.set(Information.SOLVED, if (solution.isDefined) "true" else "false")
@@ -1517,6 +1545,8 @@ sealed trait SATRunConfiguration extends DefaultLongInfo
 case class SingleSATRun(maximumPlanLength: Int = 1, overrideK: Option[Int] = None) extends SATRunConfiguration {override def longInfo: String = "XYZ"}
 
 case class FullSATRun() extends SATRunConfiguration {override def longInfo: String = "full run"}
+
+case class OptimalSATRun(overrideK : Option[Int]) extends SATRunConfiguration {override def longInfo: String = "optimal run"}
 
 
 case class SATSearch(solverType: Solvertype,
