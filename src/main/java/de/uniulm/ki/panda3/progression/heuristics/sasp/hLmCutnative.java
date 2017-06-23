@@ -81,9 +81,12 @@ public class hLmCutnative extends SasHeuristic {
         UUIntPairPriorityQueue queue = new UUIntPairPriorityQueue();
         for (int op = operators.nextSetBit(0); op >= 0; op = operators.nextSetBit(op + 1)) {
             costs[op] -= decreaseBy;
+            assert costs[op] >= 0;
             for (int f : p.addLists[op]) {
-                hVal[f] = hVal[maxPrec[op]] + costs[op];
-                queue.add(hVal[f], f);
+                if ((hVal[maxPrec[op]] + costs[op]) < hVal[f]) { // that f might be cheaper now
+                    hVal[f] = hVal[maxPrec[op]] + costs[op];
+                    queue.add(hVal[f], f);
+                }
             }
         }
 
@@ -91,7 +94,7 @@ public class hLmCutnative extends SasHeuristic {
             int[] pair = queue.minPair();
             int pVal = pair[0];
             int prop = pair[1];
-            if (hVal[prop] < pVal) // we have prop decreased -> this is ok
+            if (hVal[prop] < pVal) // we have prop's costs DECREASED -> this is ok
                 continue;
             for (int op : p.precToTask[prop]) {
                 if (prop == maxPrec[op]) { // this may change the costs of the operator and all its successors
