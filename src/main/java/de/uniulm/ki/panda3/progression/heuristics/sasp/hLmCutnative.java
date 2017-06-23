@@ -20,6 +20,7 @@ public class hLmCutnative extends SasHeuristic {
     private int[] hVal;
     private int[] maxPrec;
     private int maxPrecG;
+    private int[] costs;
 
     public hLmCutnative(SasPlusProblem p, SasHeuristics heuristic) {
         this.heuristic = heuristic;
@@ -38,6 +39,7 @@ public class hLmCutnative extends SasHeuristic {
     }
 
     public int hMax(BitSet s0, BitSet g) {
+        this.costs = p.costs.clone();
         this.unsatPrecs = p.numPrecs.clone();
         this.hVal = hValInit.clone();
         this.maxPrec = maxPrecInit.clone();
@@ -63,8 +65,8 @@ public class hLmCutnative extends SasHeuristic {
                     hVal[maxPrec[op]] = hVal[prop];
                 if (--unsatPrecs[op] == 0) {
                     for (int f : p.addLists[op]) {
-                        if ((hVal[maxPrec[op]] + p.costs[op]) < hVal[f]) {
-                            hVal[f] = hVal[maxPrec[op]] + p.costs[op];
+                        if ((hVal[maxPrec[op]] + costs[op]) < hVal[f]) {
+                            hVal[f] = hVal[maxPrec[op]] + costs[op];
                             queue.add(hVal[f], f);
                         }
                     }
@@ -72,6 +74,46 @@ public class hLmCutnative extends SasHeuristic {
             }
         }
         return cUnreachable;
+    }
+
+
+    public int costUpdate(BitSet operators, int decreaseBy, BitSet g) {
+        UUIntPairPriorityQueue queue = new UUIntPairPriorityQueue();
+        for (int op = operators.nextSetBit(0); op >= 0; op = operators.nextSetBit(op + 1)) {
+            costs[op] -= decreaseBy;
+            for (int f : p.addLists[op]) {
+                hVal[f] = hVal[maxPrec[op]] + costs[op];
+                queue.add(hVal[f], f);
+            }
+        }
+
+        while (!queue.isEmpty()) {
+            int[] pair = queue.minPair();
+            int pVal = pair[0];
+            int prop = pair[1];
+            if (hVal[prop] < pVal) // we have prop decreased -> this is ok
+                continue;
+            for (int op : p.precToTask[prop]) {
+                if (prop == maxPrec[op]) { // this may change the costs of the operator and all its successors
+                    int opMaxPrec = -1;
+                    int val = Integer.MIN_VALUE;
+                    for (int f : p.precLists[op]) {
+                        if (hVal[f] > val) {
+                            opMaxPrec = f;
+                            val = hVal[f];
+                        }
+                    }
+                    maxPrec[op] = opMaxPrec;
+                    for (int f : p.addLists[op]) {
+                        if ((hVal[maxPrec[op]] + costs[op]) < hVal[f]) {
+                            hVal[f] = hVal[maxPrec[op]] + costs[op];
+                            queue.add(hVal[f], f);
+                        }
+                    }
+                }
+            }
+        }
+        return getMaxVal(g);
     }
 
     private int getMaxVal(BitSet g) {
