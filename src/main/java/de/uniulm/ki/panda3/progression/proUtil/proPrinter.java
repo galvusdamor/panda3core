@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.progression.proUtil;
 
+import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 
@@ -13,9 +14,9 @@ public class proPrinter {
     //public static int numStateFeatures;
     //public static GroundLiteral[] IndexToLiteral;
 
-    public static String actionTupleToStr(GroundTask groundTask, BitSet prec, BitSet add, BitSet del, int numStateFeatures, GroundLiteral[] IndexToLiteral) {
+    public static String actionTupleToStr(Task task, BitSet prec, BitSet add, BitSet del, int numStateFeatures, GroundLiteral[] IndexToLiteral) {
         StringBuilder sb = new StringBuilder();
-        sb.append(actionToStr(groundTask));
+        sb.append(actionToStr(task));
         sb.append(" = {");
         sb.append(bitsetToStr(prec, numStateFeatures, IndexToLiteral));
         sb.append("}, {");
@@ -36,13 +37,13 @@ public class proPrinter {
         return sb.toString();
     }
 
-    public static String actionToStr(GroundTask groundTask) {
+    public static String actionToStr(Task groundTask) {
         StringBuilder sb = new StringBuilder();
-        sb.append(groundTask.task().name());
-        for (int i = 0; i < groundTask.arguments().size(); i++) {
+        sb.append(groundTask.name());
+        /*for (int i = 0; i < groundTask.arguments().size(); i++) {
             sb.append("-");
             sb.append(groundTask.arguments().apply(i).name());
-        }
+        }*/
         return sb.toString();
     }
 

@@ -165,6 +165,12 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
   }*/
   assert(artificialParametersRepresentingConstants forall parameters.contains)
   assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })
+  if (parameters.isEmpty){
+    // if ground, don't have something both in the add and del effects!
+    effectsAsPredicateBool filterNot {_._2} foreach {case (p,false) =>
+      assert(!effectsAsPredicateBool.contains((p,true)))
+    }
+  }
 
   lazy val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)] = (precondition.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
   lazy val effectsAsPredicateBool      : Seq[(Predicate, Boolean)] = (effect.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct

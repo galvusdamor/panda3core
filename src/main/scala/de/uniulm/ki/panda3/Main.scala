@@ -3,17 +3,10 @@ package de.uniulm.ki.panda3
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
-import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.heuristic.filter.TreeFF
-import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
-import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
-import de.uniulm.ki.panda3.symbolic.compiler.{OneRandomOrdering, AllNecessaryOrderings, AllOrderings}
+import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
-import de.uniulm.ki.panda3.symbolic.sat.verify.{MINISAT, CRYPTOMINISAT}
-import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
-import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
+import de.uniulm.ki.panda3.symbolic.search.{SearchState}
 import de.uniulm.ki.util._
 
 
@@ -25,235 +18,161 @@ import de.uniulm.ki.util._
 //scalastyle:off
 object Main {
 
+
+  case class RunConfiguration(domFile: Option[String] = None, probFile: Option[String] = None, outputFile: Option[String] = None,
+                              config: PlanningConfiguration = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
+                                                                                    randomSeed = 42, timeLimit = None,
+                                                                                    ParsingConfiguration(),
+                                                                                    PreprocessingConfiguration(compileNegativePreconditions = false,
+                                                                                                               compileUnitMethods = false,
+                                                                                                               compileInitialPlan = false,
+                                                                                                               convertToSASP = false,
+                                                                                                               compileOrderInMethods = None,
+                                                                                                               splitIndependentParameters = false,
+                                                                                                               compileUselessAbstractTasks = false,
+                                                                                                               liftedReachability = false,
+                                                                                                               groundedReachability = None,
+                                                                                                               groundedTaskDecompositionGraph = None,
+                                                                                                               iterateReachabilityAnalysis = false,
+                                                                                                               groundDomain = false),
+                                                                                    NoSearch, PostprocessingConfiguration(Set()))) extends PrettyPrintable {
+
+    def processCommandLineArguments(args: Seq[String]): RunConfiguration = {
+      // determine which arguments belong together
+      val groupedArguments = args.foldLeft[(Option[String], Seq[Either[String, (String, String)]])]((None, Nil))(
+        {
+          case ((Some(command), grouped), nextArgument) =>
+            if (this.config.modifyOnOptionString contains command)
+              this.config.modifyOnOptionString(command)._1 match {
+                case NoParameter                                        => (Some(nextArgument), grouped :+ Left(command))
+                case OptionalParameter if !nextArgument.startsWith("-") => (None, grouped :+ Right(command, nextArgument))
+                case OptionalParameter if nextArgument.startsWith("-")  => (Some(nextArgument), grouped :+ Left(command))
+                case NecessaryParameter                                 => (None, grouped :+ Right(command, nextArgument))
+              } else (Some(nextArgument), grouped :+ Left(command))
+
+          case ((None, grouped), nextArgument) if !nextArgument.startsWith("-") => (None, grouped :+ Left(nextArgument))
+          case ((None, grouped), nextArgument) if nextArgument.startsWith("-")  => (Some(nextArgument), grouped)
+        }) match {
+        case (None, l)          => l
+        case (Some(command), l) =>
+          this.config.modifyOnOptionString.getOrElse(command,(NoParameter,()))._1 match {
+            case NecessaryParameter => assert(false, "no argument provided for " + command); l // this will never be reached. it is just for the sake of completeness
+            case _                  => l :+ Left(command)
+          }
+      }
+
+      groupedArguments.foldLeft(this)(
+        { case (conf, option) => option match {
+          case Left(opt) if !opt.startsWith("-") =>
+            opt match {
+              case dom if conf.domFile.isEmpty    => conf.copy(domFile = Some(dom))
+              case prob if conf.probFile.isEmpty  => conf.copy(probFile = Some(prob))
+              case out if conf.outputFile.isEmpty => conf.copy(outputFile = Some(out))
+              case _                              =>
+                println("PANDA was given a fourth non-option argument \"" + opt + "\". Only three (domain-, problem-, and output-file) will be processed. Ignoring option")
+                conf
+            }
+          case _                                 => // this is a real option
+
+            // get the key
+            val (key, value) = option match {
+              case Left(command)       => (command, None)
+              case Right((command, v)) => (command, Some(v))
+            }
+
+            // treat special keys
+            val y = key match {
+              case _ =>
+                if (conf.config.modifyOnOptionString.contains(key))
+                  conf.copy(config = conf.config.modifyOnOptionString(key)._2(value))
+                else {
+                  println("Option \"" + key + "\" unavailable in current circumstance")
+                  println(conf.config.modifyOnOptionString.keySet)
+                  println(conf.longInfo)
+                  System exit 1
+                  conf
+                }
+            }
+
+            y
+        }
+        })
+    }
+
+    /** returns a string by which this object may be referenced */
+    override def shortInfo: String = mediumInfo
+
+    /** returns a string that can be utilized to define the object */
+    override def mediumInfo: String = longInfo
+
+    /** returns a detailed information about the object */
+    override def longInfo: String = "Planner Configuration\n=====================\nDomain: " + domFile.getOrElse("none") + "\nProblem: " + probFile.getOrElse("none") + "\nOutput: " +
+      outputFile.getOrElse("none") + "\n\n" + config.longInfo
+  }
+
+
   def main(args: Array[String]) {
 
-    println("This is Panda3")
 
-    /*if (args.length < 2) {
-      println("This program needs exactly three arguments\n\t1. the domain file\n\t2. the problem file\n\t3. the random seed.")
-      //println("This program needs exactly two arguments\n\t1. the domain file\n\t2. the problem file")
-      System.exit(1)
-    }
-    val domFile = args(0)
-    val probFile = args(1)*/
+    //PlanningConfiguration(true,true,null,null,SATSearch(None,null,0).modifyOnOptionString("-planlength")(Some("2")),null)
 
-    val randomseed = if (args.length >= 3) args(2).toInt else 10
-    val planLength = randomseed
-    htnPlanningInstance.randomSeed = randomseed
-    val overrideK = if (args.length >= 4) args(3).toInt else 10
-    //val outputPDF = args(2)
-    val outputPDF = "dot.pdf"
+    println("This is PANDA3\nBelieve us: It is great!")
+    println("\nCopyright: Ulm University 2014-2017")
+    println("Developer: Gregor Behnke, Daniel Höller, Kristof Mickeleit, Tobias Welz, Kadir Dede, Matthias Englert, and Thomas Geier")
+    println("Thanks to Pascal Bercher for his moral support while writing PANDA3\n\n")
 
-    //val domFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
-    //val probFile = "/media/dhoeller/Daten/Repositories/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/domains/UMTranslog.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/UM-Translog/problems/UMTranslog-P-1-Airplane.xml"
+    val initialConfiguration = RunConfiguration()
 
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/domains/CyberSecurity.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/AufbewahrungDesPasswortsMitITN.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/AufbewahrungDesPasswortsOhneITN.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/SicherheitslückenInProgrammenMitITN.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/SicherheitslückenInProgrammenOhneITN.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/VernetzungVonRechnernMitMitITN.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/CyberSecurity/problems/VernetzungVonRechnernMitOhneITN.xml"
-
-    //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
-    //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
-    //val domFile = "/home/gregor/temp/model/domaineasy3.lisp"
-    //val probFile = "/home/gregor/temp/model/problemeasy3.lisp"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_domain.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/AssemblyTask_problem.xml"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VeryVerySmall.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/04-OrganizeMeeting_Large.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/ThesisExampleProblem.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/SmartPhone/problems/OrganizeMeeting_with_preferences_hasPhoneNumber.xml"
-    //val domFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/verkabelung.lisp"
-    //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem-test-split1.lisp"
-    //val probFile = "/home/gregor/Dokumente/svn/miscellaneous/A1-Vorprojekt/Planungsdomaene/problem1.lisp"
-
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/satellite2.xml"
-    //val probFile = "/home/gregor/3obs-3sat-3mod.xml"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/satellite2-P-abstract-2obs-2sat-2mod.xml"
-
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/domains/satellite2.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-2obs-2sat-2mod.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/satellite2-P-abstract-3obs-3sat-3mod.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/3obs-3sat-3mod.xml"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/8obs-3sat-4mod.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Satellite/problems/2obs-2sat-2mod.xml"
-
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-legal-fewer-htn-groundings.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/00--p01-variant.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/09--p03-complete.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/10--p04-part1.xml"
-
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p02-domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p02.pddl"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/domain/p01-domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/transport-strips/problems/p01.pddl"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/domain/p01-domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p05.pddl"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/domain/driverlog.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/DriverLog/problems/pfile2"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/domain/zenotravelStrips.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/ZenoTravel/problems/pfile2"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/domain/stripsSat.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Satellite/problems/pfile2"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC4/PROMELA-PHILO/domain/P01_DOMAIN.PDDL"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC4/PROMELA-PHILO/problems/P01_PHIL2.PDDL"
-
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/pegsol/domain/domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/pegsol/problems/p01.pddl"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/tidybot/domain/domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/tidybot/problems/p01.pddl"
-    //val domFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/domain/domain.pddl"
-    //val probFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC7/nomystery/problems/p01.pddl"
-
-    //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/domain-htn.lisp"
-    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/p01-htn.lisp"
-
-    //val domFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
-    //val probFile = "../panda3core_with_planning_graph/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp"
-
-
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/domains/woodworking-legal-fewer-htn-groundings.xml"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/XML/Woodworking/problems/07--p03-part1.xml"
-
-    //val domFile = "pkp/pkp2-dom.lisp"
-    //val probFile = "pkp/pkp2-prob.lisp"
-    //val domFile = "miconic.hddl"
-    //val probFile = "miconic06.hddl"
-
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/domains/zenotravel.hddl"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Zenotravel/problems/zenotravel01.hddl"
-
-
-    //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/domains/verkabelung_domain_noComplexOperations.pddl"
-    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/AssemblyHierarchical/problems/genericLinearProblem_depth4.pddl"
-
-    //val domFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp"
-    //val probFile = "/home/gregor/Workspace/Panda3/panda3core/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p01-htn.lisp"
-
-    val domInputStream = new FileInputStream(domFile)
-    val probInputStream = new FileInputStream(probFile)
-
-
-
-    val postprocessing = PostprocessingConfiguration(Set(ProcessingTimings,
-                                                         SearchStatistics,
-                                                         SearchStatus,
-                                                         //SearchResult,
-                                                         //FinalGroundedReachability,
-                                                         PreprocessedDomainAndPlan))
-
-    // planning config is given via stdin
-    val searchConfig = if (args.length > 10) {
-      assert(args.length == 6, "PANDA needs exactly 6 arguments in this configuration")
-      PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                            PredefinedConfigurations.parsingConfigs(args(3)),
-                            PredefinedConfigurations.preprocessConfigs(args(4)),
-                            PredefinedConfigurations.searchConfigs(args(5)),
-                            postprocessing
-                           )
-    } else PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
-                                 ParsingConfiguration(eliminateEquality = false, stripHybrid = true),
-                                 PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                            compileInitialPlan = true,
-                                                            //compileOrderInMethods = Some(AllNecessaryOrderings),
-                                                            compileOrderInMethods = None, //Some(OneRandomOrdering()),
-                                                            splitIndependedParameters = true,
-                                                            liftedReachability = true, groundedReachability = None, //Some(PlanningGraph),
-                                                            groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                            iterateReachabilityAnalysis = false, groundDomain = true),
-                                 //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
-                                 //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(TDGMinimumModification), true),
-                                 //PlanBasedSearch(None, None, AStarActionsType(1), Some(TDGMinimumADD), Nil, LCFR),
-                                 //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(NumberOfFlaws), true),
-                                 //SearchConfiguration(None, None, efficientSearch = true, GreedyType, Some(NumberOfFlaws), true),
-                                 //PlanBasedSearch(None, None, DijkstraType, Nil, Nil, LCFR),
-                                 //PlanBasedSearch(None, Some(30 * 60), GreedyType, UMCPHeuristic :: Nil, Nil, UMCPFlaw),
-                                 //PlanBasedSearch(None, Some(5000), AStarActionsType(1), ADD :: Nil, Nil, LCFR),
-                                 //PlanBasedSearch(None, None, AStarActionsType(1), Some(NumberOfFlaws), Nil, LCFR),
-                                 //PlanBasedSearch(None, Some(30 * 60), AStarActionsType, Some(TDGMinimumAction), Nil, LCFR),
-                                 //PlanBasedSearch(None, Some(30 * 60), AStarActionsType(1), ADD :: Nil, Nil, LCFR),
-                                 //PlanBasedSearch(None, None, AStarDepthType(1), Some(TDGMinimumADD(Some(ADDReusing))), Nil, SequentialSelector(LCFR,RandomFlaw(6))),
-                                 //PlanBasedSearch(None, None, AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
-                                 //PlanBasedSearch(None, None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
-                                 //PlanBasedSearch(None, None, AStarDepthType(1), LiftedTDGPreconditionRelaxation(NeverRecompute) :: RandomHeuristic(1) :: Nil, Nil, LCFR),
-                                 //NoSearch,
-                                 //PlanBasedSearch(None, Some(30 * 60), AStarDepthType(1), LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing)) :: Nil, Nil, LCFR),
-                                 //ProgressionSearch(Some(30 * 60), DFSType, None, abstractTaskSelectionStrategy =  PriorityQueueSearch.abstractTaskSelection.branchOverAll),
-                                 //ProgressionSearch(Some(30 * 60), AStarActionsType(1), Some(RelaxedCompositionGraph(true, RCG.heuristicExtraction.multicount, RCG.producerSelection
-                                 //  .numOfPreconditions)), PriorityQueueSearch.abstractTaskSelection.random),
-                                 //ProgressionSearch(Some(200), AStarActionsType(1), Some(GreedyProgression)),
-                                 //SATSearch(Some(30 * 60), CRYPTOMINISAT(), planLength, Some(overrideK), checkResult = true),
-                                 SATSearch(Some(100000), CRYPTOMINISAT(), 50, Some(9), checkResult = true),
-                                 //SATSearch(Some(30 * 60 * 1000), MINISAT(), 30, Some(10)),
-                                 //SearchConfiguration(Some(-100), Some(-100), efficientSearch = false, BFSType, None, printSearchInfo = true),
-                                 postprocessing)
-    //System.in.read()
-
-
-    val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
-    // add general information
-    results(SearchStatistics).set(Information.DOMAIN_NAME, new File(domFile).getName)
-    results(SearchStatistics).set(Information.PROBLEM_NAME, new File(probFile).getName)
-    results(SearchStatistics).set(Information.RANDOM_SEED, randomseed)
-
-
-    println("Panda says: " + results(SearchStatus))
-    println(results(SearchStatistics).shortInfo)
-    println("----------------- TIMINGS -----------------")
-    println(results(ProcessingTimings).shortInfo)
-
-
-    // output data in a machine readable format
-    println("###" + results(SearchStatistics).keyValueListString() + DataCapsule.SEPARATOR + results(ProcessingTimings).keyValueListString())
-
-
-    // get all found plans
-    //val foundPlans = results(AllFoundPlans)
-    //println("Found in total " + foundPlans.length + " plans")
-
-    /*// get all found plans
-    val foundPaths = results(AllFoundSolutionPathsWithHStar)
-    println("Found in total " + foundPaths.length + " paths with lengths")
-    println(foundPaths map { _.length } map { "\t" + _ } mkString "\n")
-
-    assert(foundPaths.length == foundPaths.length)
-    if (foundPaths.nonEmpty) {
-      val lengthOfInitialInitialPlan = foundPaths.head.head._1.plan.planSteps.length
-
-      foundPaths foreach { p =>
-        assert(p.last._1.plan.flaws.isEmpty)
-        assert(p.head._1.plan.planSteps.length == lengthOfInitialInitialPlan)
+    // test if we have to print the help
+    if (args.length > 0 && args(0) == "-help") {
+      if (args.length > 1) {
+        val helpForKey = args(1)
+        println("Help for key " + helpForKey + "\n" + initialConfiguration.config.helpTexts(helpForKey))
+      } else {
+        println("Available Keys (specific help can be requested using -help KEY):")
+        println(initialConfiguration.config.optionStrings map { s => "\t" + s } mkString "\n")
       }
+      System exit 0
     }
 
-    val initialState = wrapper.initialPlan.groundedInitialStateOnlyPositive
-    val planningGraph = GroundedPlanningGraph(wrapper.symbolicDomain, initialState.toSet, GroundedPlanningGraphConfiguration())
-    val efficientPlanningGraph = EfficientGroundedPlanningGraphFromSymbolic(planningGraph, wrapper)
-    val efficientInitialState = wrapper.initialPlan.groundedInitialState collect { case GroundLiteral(task, true, args) =>
-      (wrapper.unwrap(task), args map wrapper.unwrap toArray)
+    val plannerConfiguration = initialConfiguration.processCommandLineArguments(args)
+
+    println(plannerConfiguration.longInfo)
+
+
+
+    val domInputStream = new FileInputStream(plannerConfiguration.domFile.get)
+    val probInputStream = new FileInputStream(plannerConfiguration.probFile.get)
+
+
+
+    val results: ResultMap = plannerConfiguration.config.runResultSearch(domInputStream, probInputStream)
+    if (results.map.contains(SearchStatistics)) {
+      // add general information
+      results(SearchStatistics).set(Information.DOMAIN_NAME, new File(plannerConfiguration.domFile.get).getName)
+      results(SearchStatistics).set(Information.PROBLEM_NAME, new File(plannerConfiguration.probFile.get).getName)
     }
-    val addHeuristic = AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, efficientInitialState.toArray, resuingAsVHPOP = false)
-    val relaxHeuristic = RelaxHeuristic(efficientPlanningGraph, wrapper.efficientDomain, efficientInitialState.toArray)
+
+    if (results.map.contains(SearchStatus))
+      println("Panda says: " + results(SearchStatus))
 
 
-    val pathsWithHStarAndADD: Seq[Seq[(SearchNode, (Int, Int,Int))]] =
-      foundPaths map { p => p map { case (node, hstar) => (node, (hstar, addHeuristic.computeHeuristic(wrapper.unwrap(node.plan), (), null)._1.toInt,
-        relaxHeuristic.computeHeuristic(wrapper.unwrap(node.plan), (), null)._1.toInt)) } }
+    if (results.map.contains(SearchStatistics))
+      println(results(SearchStatistics).shortInfo)
+    if (results.map.contains(ProcessingTimings)) {
+      println("----------------- TIMINGS -----------------")
+      println(results(ProcessingTimings).shortInfo)
+    }
 
-    */
+    if (results.map.contains(SearchStatistics) && results.map.contains(ProcessingTimings)) {
+      // output data in a machine readable format
+      println("###" + results(SearchStatistics).keyValueListString() + DataCapsule.SEPARATOR + results(ProcessingTimings).keyValueListString())
+    }
+
     if (results.map.contains(SearchResult) && results(SearchResult).isDefined) {
 
       println("SOLUTION SEQUENCE")
       val plan = results(SearchResult).get
-
-      //println(HDDLWriter("foo","bar").writePlan(plan,indentation = false,problemMode = true))
 
       assert(plan.planSteps forall { _.schema.isPrimitive })
 
@@ -266,7 +185,8 @@ object Main {
 
       println((plan.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive }).zipWithIndex map { case (ps, i) => i + ": " + psToString(ps) } mkString "\n")
 
-      if (results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.nonEmpty) {
+
+      if (results.map.contains(PreprocessedDomainAndPlan) && results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.nonEmpty) {
         println("FIRST DECOMPOSITION")
         val initSchema = results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.head.schema
         val initPS = plan.planStepsAndRemovedPlanSteps find { _.schema == initSchema } get
@@ -274,65 +194,18 @@ object Main {
         val realGoal = plan.planStepsAndRemovedPlanSteps find { _.schema == realGoalSchema } get
 
         println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
-
-        //println("Longest Path " + results(PreprocessedDomainAndPlan)._1.taskSchemaTransitionGraph.longestPathLength.get)
-        //println("Maximum Method size " + results(PreprocessedDomainAndPlan)._1.maximumMethodSize)
       }
     }
 
-    if (results.map.contains(SearchResult) && results(SearchStatus) == SearchState.SOLUTION) {
+    if (results.map.contains(SearchResult) && results.map.contains(SearchStatus) && results(SearchStatus) == SearchState.SOLUTION && plannerConfiguration.outputFile.isDefined) {
       val solution = results(SearchResult).get
       //println(solution.planSteps.length)
       // write output
-      if (outputPDF.endsWith("dot")) {
-        writeStringToFile(solution.dotString(PlanDotOptions(showHierarchy = false)), new File(outputPDF))
+      if (plannerConfiguration.outputFile.get.endsWith("dot")) {
+        writeStringToFile(solution.dotString(PlanDotOptions(showHierarchy = false)), new File(plannerConfiguration.outputFile.get))
       } else {
-        Dot2PdfCompiler.writeDotToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), outputPDF)
+        Dot2PdfCompiler.writeDotToFile(solution.dotString(PlanDotOptions(showHierarchy = true)), plannerConfiguration.outputFile.get)
       }
-    }
-
-
-    var doneCounter = 0
-    // check the tree
-
-    val wrapper = Wrapping(results(PreprocessedDomainAndPlan))
-    val tff = TreeFF(wrapper.efficientDomain)
-
-    def dfs(searchNode: SearchNode): Unit = if (!searchNode.dirty) {
-      val effPlan = wrapper.unwrap(searchNode.plan)
-
-      if (searchNode.searchState == SearchState.SOLUTION && !tff.isPossiblySolvable(effPlan)) {
-        println("BÄÄ")
-
-        val parPlan = wrapper.unwrap(searchNode.parent.plan)
-        println("PARENT " + parPlan.numberOfAllPlanSteps)
-        println(tff.isPossiblySolvable(parPlan))
-
-        println("\n\n\nCHILD " + effPlan.numberOfAllPlanSteps)
-        println(tff.isPossiblySolvable(effPlan))
-
-
-        System exit 0
-      }
-
-      //searchNode.plan
-      //searchNode.plan.flaws
-
-      //searchNode.plan.flaws map { _.resolvents(results(PreprocessedDomainAndPlan)._1) }
-      //searchNode.modifications
-
-      doneCounter += 1
-      if (doneCounter % 10 == 0) println("traversed " + doneCounter)
-      println("STATE: " + searchNode.searchState)
-      //searchNode.modifications.length // force computation (and check of assertions)
-      searchNode.children foreach { x => dfs(x._1) }
-    }
-
-    //System.in.read()
-
-    if (searchConfig.postprocessingConfiguration.resultsToProduce contains SearchSpace) {
-      results(SearchSpace).recomputeSearchState()
-      dfs(results(SearchSpace))
     }
   }
 }

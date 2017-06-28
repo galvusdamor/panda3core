@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
+import de.uniulm.ki.panda3.configuration.SATReductionMethod
 import de.uniulm.ki.panda3.symbolic.domain.{Task, Domain}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -13,7 +14,8 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding {
+case class SOGPOCLEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan,
+                           taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding {
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected def preconditionOfPath(path: Seq[Int], precondition: Predicate): String = "prec^" + path.mkString(";") + "_" + precondition.name
@@ -26,14 +28,34 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
   //protected def before(pathA: Seq[Int], pathB: Seq[Int]): String = "before_" + pathA.mkString(",") + "_" + pathB.mkString(",")
 
 
-  override lazy val noAbstractsFormula: Seq[Clause] = primitivePathArray flatMap { case (p, ts) => ts filter { _.isAbstract } map { t => Clause((pathAction(p.length - 1, p, t), false)) } }
+  override lazy val noAbstractsFormula: Seq[Clause] = primitivePaths flatMap { case (p, ts) => ts filter { _.isAbstract } map { t => Clause((pathAction(p.length - 1, p, t), false)) } }
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
-    val paths = primitivePathArray
-    assert(rootPayloads.length == 1)
-    println("Final SOG has " + rootPayloads.head.ordering.vertices.length + " vertices")
+    println("Final SOG has " + rootPayload.ordering.vertices.length + " vertices")
+    // assert correctness
+
+    val pl: DirectedGraph[(Seq[Int], Set[Task])] = rootPayload.ordering.map(
+      {
+        case (path, tasks) =>
+          val matchingPaths = primitivePaths.filter(_._1 == path)
+          if (matchingPaths.isEmpty)
+            (path, Set[Task]())
+          else
+            (path, matchingPaths.head._2)
+      })
+
+    /*rootPayload.ordering.vertices foreach { case (path, tasks) =>
+      val matchingPaths = primitivePaths.filter(_._1 == path)
+      if (matchingPaths.isEmpty)
+        assert(tasks.isEmpty)
+      else
+        assert(matchingPaths.length == 1 && matchingPaths.head._2 == tasks)
+
+    }*/
+
     print("Compute Transitive reducton ... ")
-    val sog = rootPayloads.head.ordering.transitiveReduction
+    //val sog = rootPayload.ordering.transitiveReduction
+    val sog: DirectedGraph[(Seq[Int], Set[Task])] = pl.transitiveReduction
     println("done")
 
     /*println(sog.isAcyclic)
@@ -58,11 +80,11 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
 
 
     // init and goal must be contaiend in the final plan
-    val initAndGoalMustBePresent = Clause(pathAction(0, initVertex._1, initVertex._2.head)) :: Clause(pathAction(0, goalVertex._1, goalVertex._2.head)) :: Nil
+    val initAndGoalMustBePresent = Clause(pathAction(1, initVertex._1, initVertex._2.head)) :: Clause(pathAction(1, goalVertex._1, goalVertex._2.head)) :: Nil
 
     // for every present task, its preconditions must be supported
     val preconditionsMustBeSupportedTemp = extendedSOG.vertices flatMap { case node@(path, tasks) => tasks flatMap { t =>
-      t.preconditionsAsPredicateBool map { case (prec, true) => (impliesSingle(pathAction(path.length - 1, path, t), preconditionOfPath(path, prec)), (node, prec)) }
+      t.preconditionsAsPredicateBool map { case (prec, true) => (impliesSingle(pathAction(path.length, path, t), preconditionOfPath(path, prec)), (node, prec)) }
     }
     }
 
@@ -86,7 +108,7 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
         assert((taskList map { _._1 }).distinct.length == 1)
         val supportLiteral = taskList.head._1
 
-        impliesRightOr(supportLiteral :: Nil, taskList map { _._2._2 } map { t => pathAction(sPath.length - 1, sPath, t) })
+        impliesRightOr(supportLiteral :: Nil, taskList map { _._2._2 } map { t => pathAction(sPath.length, sPath, t) })
       } toSeq
 
       (supporterMustBePresent :+ supportedPrecMustHaveSupporter, potentialSupportingTasks zip supporterLiterals map { x => (x._1._1._1, path, prec) })
@@ -107,7 +129,7 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
     val pathsWithInitAndGoal = extendedSOG.vertices map { _._1 } toArray
     val onlyPathSOG = extendedSOG map { _._1 }
 
-    val startTime = System.currentTimeMillis()
+    var startTime = System.currentTimeMillis()
     val orderMustBeTransitive: Array[Clause] = {
       val clauses = new ArrayBuffer[Clause]
       var i = 0
@@ -137,7 +159,7 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
               pathsWithInitAndGoal map { j => impliesRightAndSingle(before(i, j) :: before(j, k) :: Nil, before(i, k)) }
             }
           }*/
-    val endTime = System.currentTimeMillis()
+    var endTime = System.currentTimeMillis()
     println("D " + orderMustBeTransitive.length + " time needed " + (endTime - startTime).toDouble./(1000))
 
     val orderMustBeConsistent = pathsWithInitAndGoal flatMap { i => pathsWithInitAndGoal filter { _ != i } map { j => impliesNot(before(i, j), before(j, i)) } }
@@ -146,6 +168,7 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
     val sogOrderMustBeRespected = extendedSOG.vertices flatMap { case p@(i, _) => extendedSOG.reachable(p).-(p) map { _._1 } map { j => Clause(before(i, j)) } }
     println("F " + sogOrderMustBeRespected.length)
 
+    startTime = System.currentTimeMillis()
     // no causal threats
     val noCausalThreat: Seq[Clause] = supporterLiterals flatMap { case (p1, p2, prec) =>
       val nonOrdered = extendedSOG.vertices filterNot { case (p, _) => p == p1 || p == p2 || onlyPathSOG.reachable(p2).contains(p) || onlyPathSOG.reachable(p).contains(p1) }
@@ -153,11 +176,12 @@ case class SOGPOCLEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength
       nonOrdered flatMap { case (pt, ts) =>
         val threadingTasks = ts filter { t => t.effectsAsPredicateBool exists { case (p, s) => !s && p == prec } }
 
-        threadingTasks map { t => impliesRightOr(supporter(p1, p2, prec) :: pathAction(pt.length - 1, pt, t) :: Nil, before(pt, p1) :: before(p2, pt) :: Nil) }
+        threadingTasks map { t => impliesRightOr(supporter(p1, p2, prec) :: pathAction(pt.length, pt, t) :: Nil, before(pt, p1) :: before(p2, pt) :: Nil) }
 
       }
     }
-    println("G " + noCausalThreat.length)
+    endTime = System.currentTimeMillis()
+    println("G " + noCausalThreat.length + " time needed " + (endTime - startTime).toDouble./(1000))
 
 
     initAndGoalMustBePresent ++ preconditionsMustBeSupported ++ supportedPreconditionsMustHaveSupporter ++

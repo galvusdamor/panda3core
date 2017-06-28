@@ -2,15 +2,17 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.util.TimeCapsule
 
 import scala.collection.Seq
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SOGClassicalEncoding(domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding{
-  lazy val taskSequenceLength: Int = primitivePaths.length
-  //lazy val taskSequenceLength: Int = taskSequenceLengthQQ
+case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
+                                 domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding{
+  //lazy val taskSequenceLength: Int = primitivePaths.length
+  lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position
 
@@ -21,9 +23,7 @@ case class SOGClassicalEncoding(domain: Domain, initialPlan: Plan, taskSequenceL
   override lazy val noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
-    val paths = primitivePathArray
-    assert(rootPayloads.length == 1)
-    val sog = rootPayloads.head.ordering.transitiveReduction
+    val sog = rootPayload.ordering.transitiveReduction
 
     println(sog.isAcyclic)
 

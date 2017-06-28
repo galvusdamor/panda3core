@@ -20,6 +20,7 @@ import de.uniulm.ki.panda3.symbolic.search.*;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import scala.None$;
 import scala.Tuple2;
 import scala.collection.Seq;
 import scala.collection.immutable.Map;
@@ -87,7 +88,7 @@ public class hddlPanda3Visitor {
         Seq<DecompositionMethod> decompositionMethods = visitMethodDef(ctxDomain.method_def(), sorts, predicates, tasks);
         Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
 
-        Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms);
+        Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms, None$.empty(),None$.empty());
 
         Seq<Variable> initArguments = init.parameters();
         PlanStep psInit = new PlanStep(0, init, initArguments);
@@ -118,6 +119,8 @@ public class hddlPanda3Visitor {
         IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
 
         seqProviderList<Variable> tniVars = new seqProviderList<>();
+        if (ctxProblem.p_htn() != null && ctxProblem.p_htn().typed_var_list() != null)
+            tniVars = typedParamsToVars(sorts, 0, ctxProblem.p_htn().typed_var_list().typed_vars());
         tniVars.add(init.parameters());
 
         seqProviderList<VariableConstraint> tniConstr = new seqProviderList<>();
@@ -128,6 +131,7 @@ public class hddlPanda3Visitor {
 
         Plan p;
         if (ctxProblem.p_htn() != null) { // HTN or TIHTN
+
             p = visitTaskNetwork(ctxProblem.p_htn().tasknetwork_def(), tniVars, tniConstr, psInit, psGoal, tasks, predicates, sorts,
                     allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
         } else {
@@ -157,7 +161,7 @@ public class hddlPanda3Visitor {
         seqProviderList<PlanStep> planSteps = new seqProviderList<>();
         planSteps.add(psInit);
         planSteps.add(psGoal);
-        taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal);
+        taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit,psGoal);
 
 
         if (tnCtx.subtask_defs() != null) {

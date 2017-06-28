@@ -33,9 +33,9 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
 
     var abort = false
 
-    val stack = new util.ArrayDeque[(EfficientPlan, EfficientSearchNode[Unit], Int)]()
+    val queue = new util.ArrayDeque[(EfficientPlan, EfficientSearchNode[Unit], Int)]()
     var result: Option[EfficientPlan] = None
-    stack.add((initialPlan, root, 0))
+    queue.add((initialPlan, root, 0))
 
     var lastDepth = -1
     var minFlaw = Integer.MAX_VALUE
@@ -43,12 +43,13 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
     var total = 0
 
     informationCapsule increment NUMBER_OF_NODES
+    val timeLimitInMilliSeconds = timeLimit.getOrElse(Int.MaxValue).toLong * 1000
 
     def bfs() = {
       val initTime: Long = System.currentTimeMillis()
-      while (!stack.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
-        initTime + timeLimit.getOrElse(Int.MaxValue).toLong * 1000 >= System.currentTimeMillis() - 50) {
-        val (plan, myNode, depth) = stack.pop()
+      while (!queue.isEmpty && result.isEmpty && nodeLimit.getOrElse(Int.MaxValue) >= nodes &&
+        timeLimitInMilliSeconds >= timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) - 50) {
+        val (plan, myNode, depth) = queue.pop()
         informationCapsule increment NUMBER_OF_EXPANDED_NODES
 
         assert(depth >= lastDepth)
@@ -124,7 +125,7 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
                 val searchNode = if (buildTree) new EfficientSearchNode[Unit](nodeNumber, newPlan, myNode, Array(0),0) else
                   new EfficientSearchNode[Unit](nodeNumber, newPlan, null, Array(0),0)
 
-                stack add(newPlan, searchNode, depth + 1)
+                queue add(newPlan, searchNode, depth + 1)
                 children append ((searchNode, modNum))
               }
               modNum += 1
@@ -136,15 +137,23 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
         // now the node is processed
         if (buildTree) myNode.setNotDirty()
       }
+
+      if (queue.isEmpty){
+        // if we reached this point and the queue is empty, we have proven the problem to be unsolvable
+        informationCapsule.set(SEARCH_SPACE_FULLY_EXPLORED, "true")
+      }
+
       semaphore.release()
     }
 
-    val resultSemaphore = new Semaphore(0)
 
+    val resultSemaphore = new Semaphore(0)
+    val timerSemaphore = new Semaphore(0)
 
 
     val thread = new Thread(new Runnable {
       override def run(): Unit = {
+        timeCapsule switchTimerToCurrentThread TOTAL_TIME
         timeCapsule start SEARCH
         try {
           bfs() // run the search, it will produce its results as side effects
@@ -153,32 +162,59 @@ object BFS extends EfficientSearchAlgorithm[Unit] {
             t.printStackTrace()
             informationCapsule.set(ERROR, "true")
         }
-        timeCapsule stop SEARCH
 
+        timeCapsule stopOrIgnore SEARCH
 
         // notify waiting threads
-        resultSemaphore.release()
         semaphore.release()
+        resultSemaphore.release()
 
+        timerSemaphore.acquire()
       }
     })
 
     val resultFunction = ResultFunction(
       { _ =>
+        val timeLimitToReach = (timeLimit.getOrElse(Int.MaxValue).toLong + 10) * 1000
         // start the main worker thread which does the actual planning
         thread.start()
 
         val killerThread = new Thread(new Runnable {
           override def run(): Unit = {
             // wait timelimit + 10 seconds
-            Thread.sleep((timeLimit.getOrElse(Int.MaxValue).toLong + 10) * 1000)
+            var timeLimitReached = false
+            while (!timeLimitReached && thread.isAlive) {
+              Thread.sleep(250)
+              // test if we have reached the timelimit
+              timeLimitReached = timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME) > timeLimitToReach
+            }
             resultSemaphore.release()
             thread.stop()
           }
         })
+
+        // this thread is necessary in case we get an OOME - then both the main thread and the killer thread will show an exception (which I - apparently - cannot catch in scala)
+        val rescueThread = new Thread(new Runnable {
+          override def run(): Unit = {
+            // wait timelimit + 10 seconds
+            var timeLimitReached = false
+            while (killerThread.isAlive || thread.isAlive) {
+              Thread.sleep(250)
+            }
+            resultSemaphore.release()
+            thread.stop()
+          }
+        }, "Thread - RESCUE")
+
+
         killerThread.start()
+        rescueThread.start()
 
         resultSemaphore.acquire()
+        timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach))
+        timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach))
+        timerSemaphore.release()
+
         // just to be on the safe side stop all worker and utility threads
         killerThread.stop()
         thread.stop()

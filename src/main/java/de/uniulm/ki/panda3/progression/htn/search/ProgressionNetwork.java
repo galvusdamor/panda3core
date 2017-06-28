@@ -1,8 +1,10 @@
 package de.uniulm.ki.panda3.progression.htn.search;
 
-import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance;
-import de.uniulm.ki.panda3.progression.htn.operators.*;
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.htnGroundedProgressionHeuristic;
+import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance;
+import de.uniulm.ki.panda3.progression.htn.representation.*;
+import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeuristic;
+import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
 
 import java.util.*;
 
@@ -15,6 +17,15 @@ import java.util.*;
  * be done because it is changed only at its beginning, and the nodes only hold pointers to its successors.
  */
 public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Cloneable {
+
+
+    public static SasPlusProblem flatProblem;
+    public static Task[] indexToTask;
+    public static Map<Task, Integer> taskToIndex;
+    public static Map<Task, List<ProMethod>> methods;
+    public static Set<Integer> ShopPrecActions = new HashSet<>();
+
+
     /* todo
      * - does this work for empty task networks? I don't think so. Could one compile these methods in something other?
      */
@@ -22,7 +33,6 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public BitSet state;
     List<ProgressionPlanStep> unconstraintPrimitiveTasks;
     List<ProgressionPlanStep> unconstraintAbstractTasks;
-    public LinkedList<Object> solution;
     public int numProgressionSteps = 0;
     public int numSHOPProgressionSteps = 0;
     public int numDecompositionSteps = 0;
@@ -31,13 +41,14 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     private boolean printProgressionTrace = false;
     public String progressionTrace;
 
-    public htnGroundedProgressionHeuristic heuristic;
+    public GroundedProgressionHeuristic heuristic;
 
     public int metric = 0;
     public boolean goalRelaxedReachable = true;
     public int id = 0;
     private int numberOfTasks = 0;
     private int numberOfPrimitiveTasks = 0;
+    public SolutionStep solution;
 
     private ProgressionNetwork() {
     }
@@ -55,7 +66,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
                 numberOfTasks++;
             }
         }
-        this.solution = new LinkedList<>();
+        solution = new SolutionStep();
         if (printProgressionTrace) {
             System.out.println("WARNING: The system is recording a full decomposition trace - this is VERY slow and only recommended for debugging.");
             this.progressionTrace = "\nPROGRESSION-TRACE:\n\n";
@@ -171,7 +182,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         return sb.toString();
     }
 
-    public ProgressionNetwork decompose(ProgressionPlanStep ps, method m) {
+    public ProgressionNetwork decompose(ProgressionPlanStep ps, ProMethod m) {
         ProgressionNetwork res = this.clone();
 
         res.numberOfTasks--; // some task will be decomposed
@@ -179,12 +190,12 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.numberOfTasks += m.numberOfPrimSubtasks;
 
         res.state = this.state;
-        res.solution.add(m.m);
+        res.solution = new SolutionStep(this.solution, m.m);
         res.numDecompositionSteps++;
         res.unconstraintAbstractTasks.remove(ps);
 
         // get copy of method subtask network
-        subtaskNetwork tn = m.instantiate();
+        ProSubtaskNetwork tn = m.instantiate();
 
         assert (tn.size() > 0);
         assert (tn.getLastNodes().size() > 0);
@@ -215,8 +226,9 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.numberOfTasks--;
         res.numberOfPrimitiveTasks--;
         res.state = (BitSet) this.state.clone();
-        res.solution.add(ps.action);
-        if (operators.ShopPrecActions.contains(ps.action))
+
+        res.solution = new SolutionStep(this.solution, ps.action);
+        if (ProgressionNetwork.ShopPrecActions.contains(ps.action))
             res.numSHOPProgressionSteps++;
         else
             res.numProgressionSteps++;
@@ -227,9 +239,11 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
         // transfer state
         if (!deleteRelaxed) {
-            res.state.andNot(operators.del[ps.action]);
+            for (int df : ProgressionNetwork.flatProblem.delLists[ps.action])
+                res.state.set(df, false);
         }
-        res.state.or(operators.add[ps.action]);
+        for (int af : ProgressionNetwork.flatProblem.addLists[ps.action])
+            res.state.set(af, true);
 
         // every successor of ps is a first task if and only if it is
         // not a successor of any task in the firstTasks list.
@@ -275,11 +289,17 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     }
 
     private boolean isApplicable(BitSet state, int action) {
-        int pre = operators.prec[action].nextSetBit(0);
-        while (pre > -1) {
+        for (int pre : ProgressionNetwork.flatProblem.precLists[action]) {
             if (!state.get(pre))
                 return false;
-            pre = operators.prec[action].nextSetBit(pre + 1);
+        }
+        return true;
+    }
+
+    public boolean isApplicable(int action) {
+        for (int pre : ProgressionNetwork.flatProblem.precLists[action]) {
+            if (!this.state.get(pre))
+                return false;
         }
         return true;
     }
@@ -288,9 +308,11 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         if (!this.empty()) {
             return false;
         }
-        BitSet temp = (BitSet) this.state.clone();
-        temp.and(operators.goal);
-        return temp.equals(operators.goal);
+        for (int g : ProgressionNetwork.flatProblem.gList) {
+            if (!state.get(g))
+                return false;
+        }
+        return true;
     }
 
     @Override
@@ -302,8 +324,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         res.unconstraintAbstractTasks = new LinkedList<>(); // todo: array or linkedList?
         res.unconstraintPrimitiveTasks.addAll(this.unconstraintPrimitiveTasks);
         res.unconstraintAbstractTasks.addAll(this.unconstraintAbstractTasks);
-        res.solution = new LinkedList<>();
-        res.solution.addAll(this.solution);
+        res.solution = this.solution;
         if (printProgressionTrace)
             res.progressionTrace = this.progressionTrace;
         res.numDecompositionSteps = this.numDecompositionSteps;
@@ -316,7 +337,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public int compareTo(ProgressionNetwork other) {
         int c = (this.metric - other.metric);
         if (c == 0) {
-            if (htnPlanningInstance.random.nextBoolean())
+            if (ProPlanningInstance.random.nextBoolean())
                 c = 1;
             else c = -1;
         }

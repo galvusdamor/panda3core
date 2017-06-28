@@ -3,9 +3,9 @@ package de.uniulm.ki.panda3
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
-import de.uniulm.ki.panda3.progression.htn.htnPlanningInstance
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount
+import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
-import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.panda3.symbolic.compiler.{AllNecessaryOrderings, AllOrderings, TotallyOrderingOption}
@@ -15,7 +15,7 @@ import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.util._
 
-import scala.collection.{mutable, JavaConversions}
+import scala.collection.{JavaConversions, mutable}
 
 
 /**
@@ -37,10 +37,7 @@ object ProMain {
     }
     val domFile = args(0)
     val probFile = args(1)
-    if (args.length >= 3) {
-      val randomseed = args(2)
-      htnPlanningInstance.randomSeed = Integer.parseInt(randomseed)
-    }
+    val randomseed = if (args.length >= 3) {      args(2).toInt    } else 42
     //val outputPDF = args(2)
     val outputPDF = "dot.dot"
 
@@ -69,29 +66,29 @@ object ProMain {
       }
 
       val heuristicExtraction = if (args.length >= 6) args(5) match {
-        case "-ff"    => RCG.heuristicExtraction.ff
-        case "-multicount" => RCG.heuristicExtraction.multicount
-      } else RCG.heuristicExtraction.multicount
+        case "-ff"    => ProRcgFFMulticount.heuristicExtraction.ff
+        case "-multicount" => ProRcgFFMulticount.heuristicExtraction.multicount
+      } else ProRcgFFMulticount.heuristicExtraction.multicount
 
       val producerSelector = if (args.length >= 7) args(6) match {
-        case "-numPrec"    => RCG.producerSelection.numOfPreconditions
-        case "-difficulty" => RCG.producerSelection.actionDifficulty
-        case "-fcfs"       => RCG.producerSelection.firstCome
+        case "-numPrec"    => ProRcgFFMulticount.producerSelection.numOfPreconditions
+        case "-difficulty" => ProRcgFFMulticount.producerSelection.actionDifficulty
+        case "-fcfs"       => ProRcgFFMulticount.producerSelection.firstCome
       } else null
 
 
       args(3) match {
-        case "-greedyProgression" => ProgressionSearch(Some(30 * 60), GreedyType, Some(GreedyProgression), abstractTaskSelectionStrategy = abstractSelector)
-        case "-greedyRCG"         => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction,
+        case "-greedyProgression" => ProgressionSearch(GreedyType, Some(GreedyProgression), abstractTaskSelectionStrategy = abstractSelector)
+        case "-greedyRCG"         => ProgressionSearch(GreedyType, Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction,
                                                                                                                producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
-        case "-greedyRCGTDR"      => ProgressionSearch(Some(30 * 60), GreedyType, Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction,
+        case "-greedyRCGTDR"      => ProgressionSearch(GreedyType, Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction,
                                                                                                                producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
-        case "-astarRCG"          => ProgressionSearch(Some(30 * 60), AStarActionsType(1),
+        case "-astarRCG"          => ProgressionSearch(AStarActionsType(1),
                                                        Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
-        case "-astarRCGTDR"       => ProgressionSearch(Some(30 * 60), AStarActionsType(1),
+        case "-astarRCGTDR"       => ProgressionSearch(AStarActionsType(1),
                                                        Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
       }
@@ -99,13 +96,15 @@ object ProMain {
 
 
     // create the configuration
-    val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
+    val searchConfig = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true, randomSeed = randomseed, timeLimit = Some(30 * 60),
                                              ParsingConfiguration(eliminateEquality = true, stripHybrid = true),
-                                             PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                             PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
                                                                         compileOrderInMethods = None,
-                                                                        compileInitialPlan = false,
-                                                                        splitIndependedParameters = true,
-                                                                        liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                                        compileInitialPlan = true,
+                                                                        convertToSASP = true,
+                                                                        splitIndependentParameters = true,
+                                                                        compileUselessAbstractTasks = false,
+                                                                        liftedReachability = true, groundedReachability = None, //Some(PlanningGraph),
                                                                         groundedTaskDecompositionGraph = Some(TwoWayTDG), // None,
                                                                         iterateReachabilityAnalysis = false, groundDomain = true),
                                              //SearchConfiguration(None, None, efficientSearch = true, AStarActionsType, Some(TDGMinimumModification), true),
@@ -122,7 +121,8 @@ object ProMain {
 
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatistics,
-                                                                             PreprocessedDomainAndPlan)))
+                                                                             PreprocessedDomainAndPlan)),
+      Map(FastDownward -> "/home/dh/programme/FastDownward"))
 
     //System.in.read()
 
@@ -131,7 +131,7 @@ object ProMain {
 
     results(SearchStatistics).set(Information.DOMAIN_NAME, new File(domFile).getName)
     results(SearchStatistics).set(Information.PROBLEM_NAME, new File(probFile).getName)
-    results(SearchStatistics).set(Information.RANDOM_SEED, htnPlanningInstance.randomSeed)
+    results(SearchStatistics).set(Information.RANDOM_SEED, randomseed)
 
 
     //println("Panda says: " + results(SearchStatus))
@@ -140,6 +140,6 @@ object ProMain {
     //println(results(ProcessingTimings).shortInfo)
 
 
-    println("###" + results(SearchStatistics).keyValueListString() + ";" + results(ProcessingTimings).keyValueListString())
+    //println("###" + results(SearchStatistics).keyValueListString() + ";" + results(ProcessingTimings).keyValueListString())
   }
 }

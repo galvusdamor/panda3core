@@ -12,10 +12,12 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class GeneralEncoding(domain: Domain, initialPlan: Plan, taskSequence: Seq[Task], offsetToK: Int, overrideK : Option[Int] = None) extends LinearPrimitivePlanEncoding {
+case class GeneralEncoding(timeCapsule: TimeCapsule,
+                           domain: Domain, initialPlan: Plan, taskSequence: Seq[Task], offsetToK: Int, overrideK: Option[Int] = None) extends LinearPrimitivePlanEncoding {
 
   lazy val taskSequenceLength      = taskSequence.length
   lazy val numberOfActionsPerLayer = taskSequence.length
+  override val expansionPossible: Boolean = true
 
   ///////////////////////////
   // STRING GENERATORS

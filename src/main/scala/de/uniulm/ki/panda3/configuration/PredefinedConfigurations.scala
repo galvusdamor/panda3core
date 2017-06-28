@@ -1,13 +1,18 @@
 package de.uniulm.ki.panda3.configuration
 
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount
+import de.uniulm.ki.panda3.symbolic.compiler.OneOfTheNecessaryOrderings
+
+
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
+import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
 import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
+
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 object PredefinedConfigurations {
-
-  val globalTimelimit = 30 * 60
 
   val hybridParsing = ParsingConfiguration(eliminateEquality = true, stripHybrid = false)
   val htnParsing    = ParsingConfiguration(eliminateEquality = true, stripHybrid = true)
@@ -17,106 +22,150 @@ object PredefinedConfigurations {
                             "-htn" -> htnParsing
                           )
 
+
+  val groundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                       compileInitialPlan = true,
+                                                       convertToSASP = false,
+                                                       compileOrderInMethods = None,
+                                                       splitIndependentParameters = true,
+                                                       compileUselessAbstractTasks = true,
+                                                       liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                       iterateReachabilityAnalysis = true, groundDomain = true)
+
+
+  val sasPlusPreprocess = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
+                                                     compileOrderInMethods = None,
+                                                     compileInitialPlan = true, splitIndependentParameters = true,
+                                                     liftedReachability = true, convertToSASP = true, compileUselessAbstractTasks = true,
+                                                     groundedReachability = None,
+                                                     groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                     iterateReachabilityAnalysis = false, groundDomain = true)
+
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
                                                                //compileOrderInMethods = None, //Some(OneRandomOrdering()),
-                                                               compileInitialPlan = false,splitIndependedParameters = true,
+                                                               compileInitialPlan = false, convertToSASP = false, splitIndependentParameters = true,
+                                                               compileUselessAbstractTasks = false,
                                                                liftedReachability = true, groundedReachability = Some(PlanningGraph),
-                                                               groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                               iterateReachabilityAnalysis = false, groundDomain = true)
-  val groundingPreprocess         = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                               compileOrderInMethods = None,
-                                                               compileInitialPlan = false,splitIndependedParameters = true,
-                                                               liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                iterateReachabilityAnalysis = false, groundDomain = true)
   val liftedPreprocess            = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = None,
-                                                               compileInitialPlan = false,splitIndependedParameters = true,
-                                                               liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                               compileInitialPlan = false, splitIndependentParameters = true,
+                                                               compileUselessAbstractTasks = false,
+                                                               liftedReachability = true, convertToSASP = false, groundedReachability = Some(PlanningGraphWithMutexes),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                iterateReachabilityAnalysis = false, groundDomain = false)
+
+  val oneshortOrderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                                       compileInitialPlan = true,
+                                                                       convertToSASP = false,
+                                                                       compileOrderInMethods = Some(OneOfTheNecessaryOrderings),
+                                                                       splitIndependentParameters = true,
+                                                                       compileUselessAbstractTasks = true,
+                                                                       liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                                       iterateReachabilityAnalysis = true, groundDomain = true)
+
+  val oneshortOrderingGroundingPreprocessWithSASPlus = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
+                                                                                  compileInitialPlan = true,
+                                                                                  convertToSASP = true,
+                                                                                  compileOrderInMethods = Some(OneOfTheNecessaryOrderings),
+                                                                                  splitIndependentParameters = true,
+                                                                                  compileUselessAbstractTasks = true,
+                                                                                  liftedReachability = true, groundedReachability = None,
+                                                                                  groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                                                  iterateReachabilityAnalysis = true, groundDomain = true)
+
 
   val preprocessConfigs = Map(
                                "-ordering" -> orderingGroundingPreprocess,
                                "-ground" -> groundingPreprocess,
+                               "-SAS+" -> sasPlusPreprocess,
                                "-lifted" -> liftedPreprocess
                              )
 
 
-  // Greedy
-  val GreedyADD                = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, ADD :: Nil, Nil, LCFR)
-  val GreedyADDReusing         = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, ADDReusing :: Nil, Nil, LCFR)
-  val GreedyRelax              = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, Relax :: Nil, Nil, LCFR)
-  val GreedyAOpenPreconditions = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, NumberOfOpenPreconditions :: Nil, Nil, LCFR)
+  // TODO old stuff ... should probably be deleted
 
-  val GreedyAPRLiftedPR                = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
-  val GreedyAPRLiftedPRReachability    = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
-  val GreedyActionLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)
-  val GreedyActionLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)
+
+  val globalTimelimit = 10 * 60
+
+
+  // Greedy
+  val GreedyADD                = PlanBasedSearch(None, GreedyType, ADD :: Nil, Nil, LCFR)
+  val GreedyADDReusing         = PlanBasedSearch(None, GreedyType, ADDReusing :: Nil, Nil, LCFR)
+  val GreedyRelax              = PlanBasedSearch(None, GreedyType, Relax :: Nil, Nil, LCFR)
+  val GreedyAOpenPreconditions = PlanBasedSearch(None, GreedyType, NumberOfOpenPreconditions :: Nil, Nil, LCFR)
+
+  val GreedyAPRLiftedPR                = PlanBasedSearch(None, GreedyType, LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
+  val GreedyAPRLiftedPRReachability    = PlanBasedSearch(None, GreedyType, LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
+  val GreedyActionLiftedPR             = PlanBasedSearch(None, GreedyType, LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)
+  val GreedyActionLiftedPRReachability = PlanBasedSearch(None, GreedyType, LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)
+
+  val GreedyAPRLiftedPRCompare    = PlanBasedSearch(None, GreedyType, LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = true) :: Nil, Nil, LCFR)
+  val GreedyActionLiftedPRCompare = PlanBasedSearch(None, GreedyType, LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = false) :: Nil, Nil, LCFR)
 
   // A*
-  val AStarADD                = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), ADD :: Nil, Nil, LCFR)
-  val AStarADDReusing         = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), ADDReusing :: Nil, Nil, LCFR)
-  val AStarRelax              = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), Relax :: Nil, Nil, LCFR)
-  val AStarAOpenPreconditions = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), NumberOfOpenPreconditions :: Nil, Nil, LCFR)
+  val AStarADD                = PlanBasedSearch(None, AStarActionsType(1), ADD :: Nil, Nil, LCFR)
+  val AStarADDReusing         = PlanBasedSearch(None, AStarActionsType(1), ADDReusing :: Nil, Nil, LCFR)
+  val AStarRelax              = PlanBasedSearch(None, AStarActionsType(1), Relax :: Nil, Nil, LCFR)
+  val AStarAOpenPreconditions = PlanBasedSearch(None, AStarActionsType(1), NumberOfOpenPreconditions :: Nil, Nil, LCFR)
 
-  val AStarAPRLiftedPR                = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
-  val AStarAPRLiftedPRReachability    = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
-  val AStarActionLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)
-  val AStarActionLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(1), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)
+  val AStarAPRLiftedPR                = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
+  val AStarAPRLiftedPRReachability    = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
+  val AStarActionLiftedPR             = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)
+  val AStarActionLiftedPRReachability = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)
+
+  val AStarAPRLiftedPRCompare    = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = true) :: Nil, Nil, LCFR)
+  val AStarActionLiftedPRCompare = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = false) :: Nil, Nil, LCFR)
 
   // GREEDY A*
-  val planSearchAStarPR            = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), TDGPreconditionRelaxation() :: Nil, Nil, LCFR)
-  val planSearchAStarAPR           = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGPreconditionRelaxation() :: Nil, Nil, LCFR)
-  val planSearchAStarTDGAction     = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGMinimumAction() :: Nil, Nil, LCFR)
-  val planSearchAStarTDGADD        = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGMinimumADD() :: Nil, Nil, LCFR)
-  val planSearchAStarTDGADDReusing = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), TDGMinimumADD(Some(ADDReusing)) :: Nil, Nil, LCFR)
+  val planSearchAStarAPR           = PlanBasedSearch(None, AStarActionsType(2), TDGPreconditionRelaxation() :: Nil, Nil, LCFR)
+  val planSearchAStarTDGAction     = PlanBasedSearch(None, AStarActionsType(2), TDGMinimumAction() :: Nil, Nil, LCFR)
+  val planSearchAStarTDGADD        = PlanBasedSearch(None, AStarActionsType(2), TDGMinimumADD() :: Nil, Nil, LCFR)
+  val planSearchAStarTDGADDReusing = PlanBasedSearch(None, AStarActionsType(2), TDGMinimumADD(Some(ADDReusing)) :: Nil, Nil, LCFR)
 
 
-  val planSearchAStarPRLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarPRLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarPRLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil, Nil, LCFR)
+  val planSearchAStarAPRLiftedPR             = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
+  val planSearchAStarAPRLiftedPRReachability = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
+  val planSearchAStarAPRLiftedPRCausalLink   = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil, Nil, LCFR)
 
-  val planSearchAStarAPRLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarAPRLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarAPRLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGPreconditionRelaxation(CausalLinkRecompute) :: Nil, Nil, LCFR)
+  val planSearchAStarActionLiftedPR             = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)
+  val planSearchAStarActionLiftedPRReachability = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)
+  val planSearchAStarActionLiftedPRCausalLink   = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumAction(CausalLinkRecompute) :: Nil, Nil, LCFR)
 
-  val planSearchAStarActionLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarActionLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarActionLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumAction(CausalLinkRecompute) :: Nil, Nil, LCFR)
 
-  val planSearchAStarADDLiftedPR             = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumADD(NeverRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarADDLiftedPRReachability = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumADD(ReachabilityRecompute) :: Nil, Nil, LCFR)
-  val planSearchAStarADDLiftedPRCausalLink   = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumADD(CausalLinkRecompute) :: Nil, Nil, LCFR)
+  val greedyAStarAPRLiftedPRCompare    = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = true) :: Nil, Nil, LCFR)
+  val greedyAStarActionLiftedPRCompare = PlanBasedSearch(None, AStarActionsType(2), LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = false) :: Nil, Nil, LCFR)
 
-  val planSearchAStarADDReusingLiftedPR = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), LiftedTDGMinimumADD(NeverRecompute, Some(ADDReusing)) :: Nil, Nil, LCFR)
 
-  val planSearchDijkstra                = PlanBasedSearch(None, Some(globalTimelimit), DijkstraType, Nil, Nil, LCFR)
-  val planSearchDFS                     = PlanBasedSearch(None, Some(globalTimelimit), DFSType, Nil, Nil, LCFR)
-  val planSearchBFS                     = PlanBasedSearch(None, Some(globalTimelimit), BFSType, Nil, Nil, LCFR)
-  val planSearchAStarOpenPreconditions  = PlanBasedSearch(None, Some(globalTimelimit), AStarDepthType(2), NumberOfOpenPreconditions :: Nil, Nil, LCFR)
-  val planSearchAStarAOpenPreconditions = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), NumberOfOpenPreconditions :: Nil, Nil, LCFR)
+  val planSearchDijkstra                = PlanBasedSearch(None, DijkstraType, Nil, Nil, LCFR)
+  val planSearchDFS                     = PlanBasedSearch(None, DFSType, Nil, Nil, LCFR)
+  val planSearchBFS                     = PlanBasedSearch(None, BFSType, Nil, Nil, LCFR)
+  val planSearchAStarOpenPreconditions  = PlanBasedSearch(None, AStarDepthType(2), NumberOfOpenPreconditions :: Nil, Nil, LCFR)
+  val planSearchAStarAOpenPreconditions = PlanBasedSearch(None, AStarActionsType(2), NumberOfOpenPreconditions :: Nil, Nil, LCFR)
 
-  val umcpBF = PlanBasedSearch(None, Some(globalTimelimit), BFSType, Nil, Nil, UMCPFlaw)
-  val umcpDF = PlanBasedSearch(None, Some(globalTimelimit), DFSType, Nil, Nil, UMCPFlaw)
-  val umcpH  = PlanBasedSearch(None, Some(globalTimelimit), GreedyType, UMCPHeuristic :: Nil, Nil, UMCPFlaw)
+  val umcpBF = PlanBasedSearch(None, BFSType, Nil, Nil, UMCPFlaw)
+  val umcpDF = PlanBasedSearch(None, DFSType, Nil, Nil, UMCPFlaw)
+  val umcpH  = PlanBasedSearch(None, GreedyType, UMCPHeuristic :: Nil, Nil, UMCPFlaw)
 
-  val planSearchAStarADD        = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), ADD :: Nil, Nil, LCFR)
-  val planSearchAStarADDReusing = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), ADDReusing :: Nil, Nil, LCFR)
-  val planSearchAStarRelax      = PlanBasedSearch(None, Some(globalTimelimit), AStarActionsType(2), Relax :: Nil, Nil, LCFR)
+  val planSearchAStarADD        = PlanBasedSearch(None, AStarActionsType(2), ADD :: Nil, Nil, LCFR)
+  val planSearchAStarADDReusing = PlanBasedSearch(None, AStarActionsType(2), ADDReusing :: Nil, Nil, LCFR)
+  val planSearchAStarRelax      = PlanBasedSearch(None, AStarActionsType(2), Relax :: Nil, Nil, LCFR)
+
+  val shop2 = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
+  val pro   = ProgressionSearch(AStarActionsType(1), Some(RelaxedCompositionGraph(true, ProRcgFFMulticount.heuristicExtraction.multicount, ProRcgFFMulticount.producerSelection
+    .numOfPreconditions)), PriorityQueueSearch.abstractTaskSelection.random)
 
 
   val searchConfigs = Map(
-                           "-GAStarPR" -> planSearchAStarPR,
                            "-GAStarAPR" -> planSearchAStarAPR,
                            "-GAStarTDGAction" -> planSearchAStarTDGAction,
                            "-GAStarTDGADD" -> planSearchAStarTDGADD,
                            "-GAStarTDGADDReusing" -> planSearchAStarTDGADDReusing,
 
-                           "-GAStarPRLiftedPR" -> planSearchAStarPRLiftedPR,
-                           "-GAStarPRLiftedPRReachability" -> planSearchAStarPRLiftedPRReachability,
-                           "-GAStarPRLiftedPRCausalLink" -> planSearchAStarPRLiftedPRCausalLink,
 
                            "-GAStarAPRLiftedPR" -> planSearchAStarAPRLiftedPR,
                            "-GAStarAPRLiftedPRReachability" -> planSearchAStarAPRLiftedPRReachability,
@@ -125,12 +174,6 @@ object PredefinedConfigurations {
                            "-GAStarActionLiftedPR" -> planSearchAStarActionLiftedPR,
                            "-GAStarActionLiftedPRReachability" -> planSearchAStarActionLiftedPRReachability,
                            "-GAStarActionLiftedPRCausalLink" -> planSearchAStarActionLiftedPRCausalLink,
-
-                           "-GAStarADDLiftedPR" -> planSearchAStarADDLiftedPR,
-                           "-GAStarADDLiftedPRReachability" -> planSearchAStarADDLiftedPRReachability,
-                           "-GAStarADDLiftedPRCausalLink" -> planSearchAStarADDLiftedPRCausalLink,
-
-                           "-GAStarADDReusingLiftedPR" -> planSearchAStarADDReusingLiftedPR,
 
                            "-Dijkstra" -> planSearchDijkstra,
                            "-DFS" -> planSearchDFS,
@@ -173,5 +216,114 @@ object PredefinedConfigurations {
                            "-GreedyActionLiftedPRReachability" -> GreedyActionLiftedPRReachability
 
                          )
+
+  val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
+    Map(
+         //"-panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)),
+         "-Dijkstra" ->(htnParsing, groundingPreprocess, planSearchDijkstra),
+         "-DFS" ->(htnParsing, groundingPreprocess, planSearchDFS),
+         "-BFS" ->(htnParsing, groundingPreprocess, planSearchBFS),
+
+         "-umcpBF" ->(htnParsing, groundingPreprocess, umcpBF),
+         "-umcpDF" ->(htnParsing, groundingPreprocess, umcpDF),
+         "-umcpH" ->(htnParsing, groundingPreprocess, umcpH),
+
+
+         // A*
+         "-AStarADD" ->(htnParsing, groundingPreprocess, AStarADD),
+         "-AStarADDReusing" ->(htnParsing, groundingPreprocess, AStarADDReusing),
+         "-AStarRelax" ->(htnParsing, groundingPreprocess, AStarRelax),
+         "-AStarAOpenPreconditions" ->(htnParsing, groundingPreprocess, AStarAOpenPreconditions),
+
+         "-AStarAPRLiftedPR" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR),
+         "-AStarAPRLiftedPRReachability" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
+         "-AStarActionLiftedPR" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR),
+         "-AStarActionLiftedPRReachability" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
+
+         // GA*
+         "-GAStarADD" ->(htnParsing, groundingPreprocess, planSearchAStarADD),
+         "-GAStarADDReusing" ->(htnParsing, groundingPreprocess, planSearchAStarADDReusing),
+         "-GAStarRelax" ->(htnParsing, groundingPreprocess, planSearchAStarRelax),
+         "-GAStarAOpenPreconditions" ->(htnParsing, groundingPreprocess, planSearchAStarAOpenPreconditions),
+
+         "-GAStarActionLiftedPR" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPR),
+         "-GAStarActionLiftedPRReachability" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPRReachability),
+         "-GAStarAPRLiftedPR" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPR),
+         "-GAStarAPRLiftedPRReachability" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPRReachability),
+
+         //  compare
+
+         "-AStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRCompare),
+         "-AStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRCompare),
+         "-GreedyAStar-MAC-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarAPRLiftedPRCompare),
+         "-GreedyAStar-PR-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare),
+
+         // PRO
+         "-GreedyAStarPro-hhRC-lm-cut" ->(htnParsing, sasPlusPreprocess, ProgressionSearch(AStarActionsType(2),
+                                                                                           Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hLmCut)), PriorityQueueSearch
+                                                                                             .abstractTaskSelection.random)),
+
+
+         // configurations to test totSAT
+         "-oneshortTOTsat" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTsatRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTsatMaple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTsatFF" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTsatFFRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTsatFFMaple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTsatH2" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTsatH2Riss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTsatH2Maple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTsatFFFull" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
+         "-oneshortTOTsatFFFullRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
+         "-oneshortTOTsatFFFullMaple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod =
+           FFReductionWithFullTest)),
+
+
+         "-oneshortTOTSASsat" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTSASsatRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTSASsatMaple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTSASsatFF" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTSASsatFFRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTSASsatFFMaple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTSASsatH2" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTSASsatH2Riss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTSASsatH2Maple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTSASsatFFFull" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
+         "-oneshortTOTSASsatFFFullRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
+         "-oneshortTOTSASsatFFFullMaple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod =
+           FFReductionWithFullTest)),
+
+         "-poclSat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTpro" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, pro),
+         // Greedy-A*
+         "-oneshortTOTGreedyAStarMAC-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPRReachability),
+         "-oneshortTOTGreedyAStarMAC" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPR),
+         "-oneshortTOTGreedyAStarPR-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPRReachability),
+         "-oneshortTOTGreedyAStarPR" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPR),
+
+         // A*
+         "-oneshortTOTAStarMAC-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarActionLiftedPRReachability),
+         "-oneshortTOTAStarMAC" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarActionLiftedPR),
+         "-oneshortTOTAStarPR-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarAPRLiftedPRReachability),
+         "-oneshortTOTAStarPR" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarAPRLiftedPR),
+
+         // bullshit configurations
+         "-oneshortTOTDijkstra" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchDijkstra),
+         "-oneshortTOTDFS" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchDFS),
+         "-oneshortTOTBFS" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchBFS),
+
+         // UMCP
+         "-oneshortTOTumcpBF" ->(htnParsing, oneshortOrderingGroundingPreprocess, umcpBF),
+         "-oneshortTOTumcpDF" ->(htnParsing, oneshortOrderingGroundingPreprocess, umcpDF),
+         "-oneshortTOTumcpH" ->(htnParsing, oneshortOrderingGroundingPreprocess, umcpH),
+
+         // SHOP
+         "-oneshortTOTshop2" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, shop2),
+
+         // plan verification a la ICAPS'17
+         "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, ""))
+
+       )
 
 }

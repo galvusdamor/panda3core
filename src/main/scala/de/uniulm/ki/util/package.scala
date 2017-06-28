@@ -1,6 +1,6 @@
 package de.uniulm.ki
 
-import java.io.{PrintWriter, File}
+import java.io.{FileWriter, BufferedWriter, PrintWriter, File}
 
 import scala.collection.mutable
 
@@ -10,9 +10,7 @@ import scala.collection.mutable
 package object util {
   def writeStringToFile(s: String, file: String): Unit = writeStringToFile(s, new File(file))
 
-  def writeStringToFile(s: String, file: File): Unit = {
-    Some(new PrintWriter(file)).foreach { p => p.write(s); p.close() }
-  }
+  def writeStringToFile(s: String, file: File): Unit = Some(new BufferedWriter(new PrintWriter(file))).foreach { p => p.write(s); p.close() }
 
 
   def allMappings[A, B](listA: Seq[A], listB: Seq[B]): Seq[Seq[(A, B)]] = if (listA.isEmpty || listB.isEmpty) Nil :: Nil
@@ -28,8 +26,10 @@ package object util {
   def crossProduct[A](list: Seq[Seq[A]]): Seq[Seq[A]] = if (list.isEmpty) Nil :: Nil
   else {
     val subList = crossProduct(list.tail)
-    list.head flatMap { e => subList map {l => l :+ e} }
+    list.head flatMap { e => subList map { l => l :+ e } }
   }
+
+  def crossProduct[A](array1: Array[A], array2: Array[A]): Array[(A, A)] = array1 flatMap { p1 => array2 map { p2 => (p1, p2) } }
 
   def arrayContains[A](array: Array[A], element: A): Boolean = {
     var i = 0
@@ -48,7 +48,7 @@ package object util {
     val memoisationMap = new mutable.HashMap[Input, Output]()
 
     def apply(input: Input): Output = {
-      if (memoisationMap contains input){ memoisationMap(input)}
+      if (memoisationMap contains input) {memoisationMap(input) }
       else {
         val newValue = function(input)
         memoisationMap(input) = newValue

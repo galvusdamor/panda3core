@@ -35,7 +35,7 @@ trait TSTGHeuristic extends EfficientHeuristic[Unit] {
 
   protected def deductionForInsertedCausalLink: Int
 
-  protected def deductionForDecomposition: Int
+  protected def deductionForDecomposition(decompositionModification: EfficientDecomposePlanStep, plan: EfficientPlan): Double
 
   protected abstract class TaskValuation {
     def apply(planStep: Int): Int
@@ -43,31 +43,34 @@ trait TSTGHeuristic extends EfficientHeuristic[Unit] {
 
   protected def taskValue(plan: EfficientPlan): TaskValuation
 
-  override def computeHeuristic(plan: EfficientPlan, payload: Unit, appliedModification: EfficientModification, depth: Int, oldHeuristic: Double,
+  // only necessary for the comparing TSTG heuristic, which executes the compute Heuristic twice. Here only one call should be counted
+  protected val logStatistics = true
+
+  override def computeHeuristic(plan: EfficientPlan, payload: Unit, appliedModification: Option[EfficientModification], depth: Int, oldHeuristic: Double,
                                 informationCapsule: InformationCapsule): (Double, Unit) =
-    if (appliedModification.isInstanceOf[EfficientAddOrdering])
+    if (appliedModification.getOrElse(()).isInstanceOf[EfficientAddOrdering]) {
+      if (logStatistics) informationCapsule increment ADD_ORDERING_MODIFICATIONS
       (oldHeuristic, payload)
-    else if (appliedModification.isInstanceOf[EfficientInsertCausalLink])
+    } else if (appliedModification.getOrElse(()).isInstanceOf[EfficientInsertCausalLink]) {
+      if (logStatistics) informationCapsule increment ADD_CAUSAL_LINK_MODIFICATIONS
       (oldHeuristic - deductionForInsertedCausalLink, payload)
-    else if (appliedModification.isInstanceOf[EfficientDecomposePlanStep]) {
-      val modificationAsDecompose = appliedModification.asInstanceOf[EfficientDecomposePlanStep]
+    } else if (appliedModification.isEmpty || appliedModification.getOrElse(()).isInstanceOf[EfficientDecomposePlanStep]) {
+      // we have performed a decomposition modification
+      if (logStatistics) informationCapsule increment DECOMPOSITION_MODIFICATIONS
 
-      val decomposedTaskIndex = plan.planStepTasks(modificationAsDecompose.decomposePlanStep)
+      val modificationAsDecomposeOption = if (appliedModification.isEmpty) None else Some(appliedModification.get.asInstanceOf[EfficientDecomposePlanStep])
 
-      if (domain.taskToPossibleMethods(decomposedTaskIndex).length == 1) {
-        informationCapsule increment ONLY_ONE_DECOMPOSITION
-        var reductionForNewPrimitives = 0.0
-        var i = 0
-        while (i < modificationAsDecompose.addedPlanSteps.length) {
-          val newTask = modificationAsDecompose.addedPlanSteps(i)._1
-          if (domain.tasks(newTask).isPrimitive)
-            reductionForNewPrimitives += computeHeuristicForPrimitive(newTask)
+      val decomposedTaskIndex = if (appliedModification.isEmpty) -1 else plan.planStepTasks(modificationAsDecomposeOption.get.decomposePlanStep)
 
-          i += 1
-        }
-        (oldHeuristic - deductionForDecomposition - reductionForNewPrimitives, payload)
+      if (decomposedTaskIndex != -1 && domain.taskToPossibleMethods(decomposedTaskIndex).length == 1) {
+        val modificationAsDecompose = modificationAsDecomposeOption.get
+
+        if (logStatistics) informationCapsule increment ONLY_ONE_DECOMPOSITION
+
+        val methodDeduction = deductionForDecomposition(modificationAsDecompose, plan)
+        (oldHeuristic - methodDeduction, payload)
       } else {
-        informationCapsule increment TDG_COMPUTED_HEURISTIC
+        if (logStatistics) informationCapsule increment TDG_COMPUTED_HEURISTIC
         var h = -initialDeductionFromHeuristicValue(plan)
         val valuation = taskValue(plan)
 
@@ -88,6 +91,8 @@ trait TSTGHeuristic extends EfficientHeuristic[Unit] {
       }
 
     } else (Integer.MIN_VALUE, ())
+
+  def computeInitialPayLoad(plan: EfficientPlan): Unit = ()
 }
 
 trait PreComputationTSTGHeuristic extends TSTGHeuristic {
@@ -103,11 +108,20 @@ trait PreComputationTSTGHeuristic extends TSTGHeuristic {
 }
 
 trait ReachabilityRecomputingTSTGHeuristic extends TSTGHeuristic {
-  protected def taskValue(plan: EfficientPlan) = new TaskValuation {
+  private lazy val unreachableTaskValues = domain.tasks map {_ => Int.MaxValue.toDouble}
 
-    val taskValues: Array[Double] = argumentRelaxedTDG.minSumTraversalArray(plan.tasksOfPresentPlanSteps :+ plan.planStepTasks(1), {
+  protected def taskValue(plan: EfficientPlan) = new TaskValuation {
+    // test first, whether all plansteps in the current plan are reachable ...
+    var ps = 2
+    var allAllowed = true
+    while (ps < plan.planStepTasks.length) {
+      if (plan.isPlanStepPresentInPlan(ps)) allAllowed &= plan taskAllowed plan.planStepTasks(ps)
+      ps += 1
+    }
+
+    val taskValues: Array[Double] = if (allAllowed) argumentRelaxedTDG.minSumTraversalArray(plan.tasksOfPresentPlanSteps :+ plan.planStepTasks(1), {
       task => if ((plan taskAllowed task) || (task == plan.planStepTasks(1))) computeHeuristicForPrimitive(task) else Int.MaxValue
-    }, computeHeuristicForMethod)
+    }, computeHeuristicForMethod) else unreachableTaskValues
 
 
     def apply(planStep: Int): Int = taskValues(plan.planStepTasks(planStep)).toInt
@@ -139,7 +153,6 @@ trait CausalLinkRecomputingTSTGHeuristic extends TSTGHeuristic {
   }
 }
 
-
 trait DeduceCausalLinksTSTGHeuristic extends TSTGHeuristic {
   protected def initialDeductionFromHeuristicValue(plan: EfficientPlan): Double = {
     var deduction = -domain.tasks(plan.planStepTasks(1)).precondition.length
@@ -157,7 +170,7 @@ trait DeduceCausalLinksTSTGHeuristic extends TSTGHeuristic {
 
   protected def deductionForInsertedCausalLink: Int = 1
 
-  protected def deductionForDecomposition: Int = 1
+  protected def deductionForDecomposition(decompositionModification: EfficientDecomposePlanStep, plan: EfficientPlan): Double = 1
 }
 
 
@@ -188,7 +201,18 @@ trait LiftedMinimumActionCount extends TSTGHeuristic {
 
   protected def deductionForInsertedCausalLink: Int = 0
 
-  protected def deductionForDecomposition: Int = 0
+  protected def deductionForDecomposition(decompositionModification: EfficientDecomposePlanStep, plan: EfficientPlan): Double = {
+    var reductionForNewPrimitives = 0.0
+    var i = 0
+    while (i < decompositionModification.addedPlanSteps.length) {
+      val newTask = decompositionModification.addedPlanSteps(i)._1
+      if (domain.tasks(newTask).isPrimitive)
+        reductionForNewPrimitives += computeHeuristicForPrimitive(newTask)
+
+      i += 1
+    }
+    reductionForNewPrimitives
+  }
 
 }
 
@@ -233,7 +257,7 @@ trait LiftedMinimumADD extends TSTGHeuristic {
 
   protected def deductionForInsertedCausalLink: Int = throw new IllegalStateException("bää")
 
-  protected def deductionForDecomposition: Int = throw new IllegalStateException("bää")
+  protected def deductionForDecomposition(decompositionModification: EfficientDecomposePlanStep, plan: EfficientPlan): Double = throw new IllegalStateException("bää")
 
 }
 
@@ -287,3 +311,92 @@ case class CausalLinkRecomputingLiftedMinimumActionCount(domain: EfficientDomain
 case class CausalLinkRecomputingLiftedMinimumADD(domain: EfficientDomain, addHeuristic: AddHeuristic,
                                                  primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None) extends
   CausalLinkRecomputingTSTGHeuristic with LiftedMinimumADD
+
+
+/**
+  * @param usePR if this is false, we will use MAC
+  */
+case class ComparingTSTGHeuristic(domain: EfficientDomain, usePR: Boolean) extends EfficientHeuristic[Array[Double]] {
+
+  import de.uniulm.ki.panda3.configuration.Information._
+
+  trait ReachabilityRecomputingTSTGHeuristicWithAccess extends TSTGHeuristic {
+
+    var taskValues: Array[Double] = Array()
+
+    def taskValue(plan: EfficientPlan) = new TaskValuation {
+
+      taskValues = argumentRelaxedTDG.minSumTraversalArray(plan.tasksOfPresentPlanSteps :+ plan.planStepTasks(1), {
+        task => if ((plan taskAllowed task) || (task == plan.planStepTasks(1))) computeHeuristicForPrimitive(task) else Int.MaxValue
+      }, computeHeuristicForMethod)
+
+
+      def apply(planStep: Int): Int = taskValues(plan.planStepTasks(planStep)).toInt
+    }
+  }
+
+  trait GivenTaskValuesTSTGHeuristic extends TSTGHeuristic {
+    override protected val logStatistics = false
+
+    var taskValues: Array[Double] = Array()
+
+    def taskValue(plan: EfficientPlan) = new TaskValuation {
+      def apply(planStep: Int): Int = taskValues(plan.planStepTasks(planStep)).toInt
+    }
+  }
+
+  // needed types of inner heuristics
+  case class PR(domain: EfficientDomain, primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None)
+    extends ReachabilityRecomputingTSTGHeuristicWithAccess with LiftedPreconditionRelaxationTDGHeuristic
+
+  case class PRUse(domain: EfficientDomain, primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None)
+    extends GivenTaskValuesTSTGHeuristic with LiftedPreconditionRelaxationTDGHeuristic
+
+  case class MAC(domain: EfficientDomain, primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None)
+    extends ReachabilityRecomputingTSTGHeuristicWithAccess with LiftedMinimumActionCount
+
+  case class MACUse(domain: EfficientDomain, primitiveActionInPlanHeuristic: Option[MinimisationOverGroundingsBasedHeuristic[Unit]] = None)
+    extends GivenTaskValuesTSTGHeuristic with LiftedMinimumActionCount
+
+
+  private val innerHeuristic = if (usePR) PR(domain) else MAC(domain)
+  private val oldHeuristic   = if (usePR) PRUse(domain) else MACUse(domain)
+
+  override def computeHeuristic(plan: EfficientPlan, oldTaskValues: Array[Double], appliedModification: Option[EfficientModification], depth: Int, lastHeuristic: Double,
+                                informationCapsule: InformationCapsule): (Double, Array[Double]) = {
+
+    // compute heuristic with old task values
+    oldHeuristic.taskValues = oldTaskValues
+    val noRecomputeValue = oldHeuristic.computeHeuristic(plan, (), None, depth, lastHeuristic, informationCapsule)
+
+    val actualHeuristic = innerHeuristic.computeHeuristic(plan, (), appliedModification, depth, lastHeuristic, informationCapsule)
+
+
+    // applied modification is empty, if this is the initial plan
+    if (appliedModification.isDefined) {
+      if (noRecomputeValue._1 > actualHeuristic._1) {
+        innerHeuristic.taskValues.zipWithIndex.zip(oldTaskValues) foreach { case ((newV, i), old) => if (newV != old) println("STRANGE " + i + " old: " + old + " new: " + newV) }
+
+        plan.planStepTasks.indices foreach { case ps => if (plan.isPlanStepPresentInPlan(ps))
+          println("PS " + ps + " T: " + plan.planStepTasks(ps) + " old " + oldTaskValues(plan.planStepTasks(ps)) + " new " + innerHeuristic.taskValues(plan.planStepTasks(ps)))
+        }
+        assert(noRecomputeValue._1 > actualHeuristic._1, "Recomputation cannot cause the heuristic to decrease")
+      }
+
+      // if the heuristic values differ, log how they differed!
+      if (noRecomputeValue._1 != actualHeuristic._1) {
+        informationCapsule increment TDG_COMPUTATION_INCREASED_H
+        if (actualHeuristic._1 >= Int.MaxValue) informationCapsule increment TDG_COMPUTATION_INCREASED_TO_INFINITY
+        else informationCapsule.addToDistribution(TDG_COMPUTATION_INCREASED_H_RELATIVE_INCREMENT, (actualHeuristic._1 - noRecomputeValue._1) / noRecomputeValue._1)
+      }
+    }
+
+    innerHeuristic.taskValue(plan)
+    (actualHeuristic._1, innerHeuristic.taskValues)
+  }
+
+  override def computeInitialPayLoad(plan: EfficientPlan): Array[Double] = Array.fill(domain.tasks.length)(1)
+
+
+}
+

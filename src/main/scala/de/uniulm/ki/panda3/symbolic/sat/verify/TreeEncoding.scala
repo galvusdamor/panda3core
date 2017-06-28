@@ -10,7 +10,8 @@ import scala.collection.{mutable, Seq}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
+case class TreeEncoding(timeCapsule: TimeCapsule,
+                        domain: Domain, initialPlan: Plan, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
   extends PathBasedEncoding[Unit, Unit] with LinearPrimitivePlanEncoding {
   override val numberOfChildrenClauses: Int = 0
 
@@ -26,8 +27,8 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
   protected def pathActive(p1: Seq[Int]) = "active!" + "_" + p1.mkString(";")
 
   protected val orderFromCommonPath: ((Int, Int)) => String = memoise[(Int, Int), String]({ case (pathAIndex, pathBIndex) =>
-    val pathA = primitivePathArray(pathAIndex)._1
-    val pathB = primitivePathArray(pathBIndex)._1
+    val pathA = primitivePaths(pathAIndex)._1
+    val pathB = primitivePaths(pathBIndex)._1
     val commonPath = pathA.zip(pathB) takeWhile { case (a, b) => a == b } map { _._1 }
     val beforeInMethod = pathA(commonPath.length)
     val afterInMethod = pathB(commonPath.length)
@@ -105,7 +106,7 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
     println("E " + sameAction.length)
 
     // select a total order of the paths
-    val nextPossible = primitivePathsOnlyPathArray.zipWithIndex flatMap { case (p1, p1i) => primitivePathsOnlyPathArray.zipWithIndex flatMap { case (p2, p2i) =>
+    val nextPossible = primitivePathsOnlyPath.zipWithIndex flatMap { case (p1, p1i) => primitivePathsOnlyPath.zipWithIndex flatMap { case (p2, p2i) =>
       if (p1i != p2i) {
         val next = nextPath(p1, p2)
         impliesNot(next, orderFromCommonPath(p2i, p1i)) :: impliesSingle(next, pathActive(p1)) :: impliesSingle(next, pathActive(p2)) :: Nil
@@ -114,20 +115,20 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
     }
     println("F " + nextPossible.length)
 
-    val nextValid = primitivePathsOnlyPathArray.+:(Integer.MAX_VALUE :: Nil).+:(-1 :: Nil) flatMap { path =>
+    val nextValid = primitivePathsOnlyPath.+:(Integer.MAX_VALUE :: Nil).+:(-1 :: Nil) flatMap { path =>
       val successor = primitivePaths.+:((Integer.MAX_VALUE :: Nil, Set[Task]())) collect { case (next, _) if next != path => nextPath(path, next) }
       val predecessor = primitivePaths.+:((-1 :: Nil, Set[Task]())) collect { case (next, _) if next != path => nextPath(next, path) }
 
-      val atMostSuccessor = if (path.head != Integer.MAX_VALUE) atMostOneOf(successor) else successor map { s => Clause((s, false)) }
-      val atMostPredecessor = if (path.head != -1) atMostOneOf(predecessor) else predecessor map { s => Clause((s, false)) }
-      val activeCheck =
+      val atMostSuccessor: Seq[Clause] = if (path.head != Integer.MAX_VALUE) atMostOneOf(successor) else successor map { s => Clause((s, false)) }
+      val atMostPredecessor: Seq[Clause] = if (path.head != -1) atMostOneOf(predecessor) else predecessor map { s => Clause((s, false)) }
+      val activeCheck: Seq[Clause] =
         if (path.head != Integer.MAX_VALUE && path.head != -1) impliesRightOr(pathActive(path) :: Nil, successor) :: impliesRightOr(pathActive(path) :: Nil, predecessor) :: Nil else Nil
 
       atMostSuccessor ++ atMostPredecessor ++ activeCheck
     }
     println("G " + nextValid.length)
 
-    val primitivesOrder = primitivePathsOnlyPathArray.zipWithIndex flatMap { case (p1, p1i) => primitivePathsOnlyPathArray.zipWithIndex flatMap { case (p2, p2i) =>
+    val primitivesOrder = primitivePathsOnlyPath.zipWithIndex flatMap { case (p1, p1i) => primitivePathsOnlyPath.zipWithIndex flatMap { case (p2, p2i) =>
       if (p1i != p2i) {
         Range(0, taskSequenceLength - 1) flatMap { case pos =>
           val thisConnection = pathToPos(p1, pos)
@@ -175,4 +176,10 @@ case class TreeEncoding(domain: Domain, initialPlan: Plan, taskSequenceLength: I
 
   override protected def computeTaskSequenceArrangement(possibleMethods: Array[DecompositionMethod],
                                                         possiblePrimitives: scala.Seq[Task]): (Array[Array[Int]], Array[Int], Array[Set[Task]], Unit) = ???
+
+  override protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[Unit]): PathDecompositionTree[Unit] = {
+    val dontRemovePrimitives: Seq[Set[Task]] = pdt.primitivePaths.toSeq map { _ => Set[Task]() }
+
+    pdt.restrictPathDecompositionTree(dontRemovePrimitives)
+  }
 }

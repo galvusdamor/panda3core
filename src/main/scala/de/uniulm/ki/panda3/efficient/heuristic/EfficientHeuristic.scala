@@ -10,14 +10,21 @@ import de.uniulm.ki.util.InformationCapsule
   */
 trait EfficientHeuristic[Payload] {
 
-  def computeHeuristic(plan: EfficientPlan, payload: Payload, appliedModification: EfficientModification, depth: Int, oldHeuristic: Double,
+  def computeHeuristic(plan: EfficientPlan, payload: Payload, appliedModification: Option[EfficientModification], depth: Int, oldHeuristic: Double,
                        informationCapsule: InformationCapsule): (Double, Payload)
+
+  final def computeHeuristic(plan: EfficientPlan, payload: Payload, appliedModification: EfficientModification, depth: Int, oldHeuristic: Double,
+                       informationCapsule: InformationCapsule): (Double, Payload) = computeHeuristic(plan, payload, Some(appliedModification), depth, oldHeuristic, informationCapsule)
+
+  def computeInitialPayLoad(plan: EfficientPlan) : Payload
 }
 
 
 object AlwaysZeroHeuristic extends EfficientHeuristic[Unit] {
-  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: EfficientModification, depth: Int, oldHeuristic: Double,
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: Option[EfficientModification], depth: Int, oldHeuristic: Double,
                                 informationCapsule: InformationCapsule): (Double, Unit) = (0, ())
+
+  def computeInitialPayLoad(plan: EfficientPlan) : Unit = ()
 }
 
 trait MinimisationOverGroundingsBasedHeuristic[Payload] extends EfficientHeuristic[Payload] {

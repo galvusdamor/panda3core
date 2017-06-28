@@ -3,7 +3,7 @@ lazy val commonSettings = Seq(
                                description := "A planning system for partial-order causal-link, hierarchical and hybrid planning.",
                                homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/gregor-behnke.html")),
                                organization := "de.uni-ulm.ki",
-                               version := "0.2.0-SNAPSHOT",
+                               version := "0.2.1-SNAPSHOT",
                                scalaVersion := "2.11.8",
                                resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
                                libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.5" % "test",
@@ -54,17 +54,17 @@ lazy val sat = (project in (file("assembly") / "sat")).settings(assemblySettings
 
 lazy val singleToMultiTLT = (project in (file("assembly") / "singleToMultiTLT")).settings(assemblySettings: _*).
   settings(
-    target := file("assembly") / "singleToMultiTLT",
-    assemblyJarName in assembly := "singleToMultiTLT.jar",
-    mainClass in assembly := Some("de.uniulm.ki.panda3.progression.proUtil.singleToMultiTLT")
-  )
+            target := file("assembly") / "singleToMultiTLT",
+            assemblyJarName in assembly := "singleToMultiTLT.jar",
+            mainClass in assembly := Some("de.uniulm.ki.panda3.planRecognition.singleToMultiTLT")
+          )
 
 lazy val switchTLT = (project in (file("assembly") / "switchTLT")).settings(assemblySettings: _*).
   settings(
-    target := file("assembly") / "switchTLT",
-    assemblyJarName in assembly := "tlt.jar",
-    mainClass in assembly := Some("de.uniulm.ki.panda3.progression.proUtil.switchTLT")
-  )
+            target := file("assembly") / "switchTLT",
+            assemblyJarName in assembly := "tlt.jar",
+            mainClass in assembly := Some("de.uniulm.ki.panda3.planRecognition.switchTLT")
+          )
 
 lazy val monroe = (project in (file("assembly") / "monroe")).settings(assemblySettings: _*).
   settings(
@@ -80,6 +80,13 @@ lazy val csvExtractor = (project in (file("assembly") / "csvExtractor")).setting
             target := file("assembly") / "csvExtractor",
             assemblyJarName in assembly := "panda3csvExtractor.jar",
             mainClass in assembly := Some("de.uniulm.ki.util.collectPlanningInfo")
+          )
+
+lazy val transportProbGen = (project in (file("assembly") / "transportProbGen")).settings(assemblySettings: _*).
+  settings(
+            target := file("assembly") / "transportProbGen",
+            assemblyJarName in assembly := "panda3transportProbGen.jar",
+            mainClass in assembly := Some("de.uniulm.ki.panda3.problemGenerators.derivedFromSTRIPS.transport.transportProbGen")
           )
 
 

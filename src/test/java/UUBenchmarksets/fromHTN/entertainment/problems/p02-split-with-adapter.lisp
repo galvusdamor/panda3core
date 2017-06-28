@@ -1,0 +1,75 @@
+(define (problem p02-split-with-adapter)
+ (:domain entertainment)
+ (:objects
+  simple-dvd-1 simple-tv-1 scart-to-cinch-1 - equipment
+  scart-cable-1 cinch-cable-1 cinch-cable-2 - equipment
+  simple-dvd-1-scart-port-1 simple-tv-1-cinch-port-1 simple-tv-1-cinch-port-2 scart-to-cinch-1-scart-port-1 scart-to-cinch-1-cinch-port-2 scart-to-cinch-1-cinch-port-3 - connector
+  scart-cable-1-scart-plug-1 scart-cable-1-scart-plug-2 cinch-cable-1-cinch-plug-1 cinch-cable-1-cinch-plug-2 cinch-cable-2-cinch-plug-1 cinch-cable-2-cinch-plug-2 - connector
+ )
+ (:htn
+  :tasks (and
+     (av_connect simple-dvd-1 simple-tv-1)
+   )
+  :ordering ( )
+  :constraints ( ))
+ (:init
+  (unused scart-cable-1-scart-plug-1) (unused scart-cable-1-scart-plug-2) (unused cinch-cable-1-cinch-plug-1) (unused cinch-cable-1-cinch-plug-2) (unused cinch-cable-2-cinch-plug-1) (unused cinch-cable-2-cinch-plug-2)
+  (unused simple-dvd-1-scart-port-1) (unused simple-tv-1-cinch-port-1) (unused simple-tv-1-cinch-port-2) (unused scart-to-cinch-1-scart-port-1) (unused scart-to-cinch-1-cinch-port-2) (unused scart-to-cinch-1-cinch-port-3)
+
+  (out_connector scart-cable-1-scart-plug-1) (out_connector scart-cable-1-scart-plug-2) (out_connector cinch-cable-1-cinch-plug-1) (out_connector cinch-cable-1-cinch-plug-2) (out_connector cinch-cable-2-cinch-plug-1) (out_connector cinch-cable-2-cinch-plug-2) (out_connector simple-dvd-1-scart-port-1) (out_connector scart-to-cinch-1-cinch-port-2) (out_connector scart-to-cinch-1-cinch-port-3)
+  (in_connector scart-cable-1-scart-plug-1) (in_connector scart-cable-1-scart-plug-2) (in_connector cinch-cable-1-cinch-plug-1) (in_connector cinch-cable-1-cinch-plug-2) (in_connector cinch-cable-2-cinch-plug-1) (in_connector cinch-cable-2-cinch-plug-2) (in_connector simple-tv-1-cinch-port-1) (in_connector simple-tv-1-cinch-port-2) (in_connector scart-to-cinch-1-scart-port-1)
+
+  (audio_connector scart-cable-1-scart-plug-1) (audio_connector scart-cable-1-scart-plug-2) (audio_connector cinch-cable-1-cinch-plug-1) (audio_connector cinch-cable-1-cinch-plug-2) (audio_connector cinch-cable-2-cinch-plug-1) (audio_connector cinch-cable-2-cinch-plug-2) (audio_connector simple-dvd-1-scart-port-1) (audio_connector simple-tv-1-cinch-port-2) (audio_connector scart-to-cinch-1-scart-port-1) (audio_connector scart-to-cinch-1-cinch-port-2)
+  (video_connector scart-cable-1-scart-plug-1) (video_connector scart-cable-1-scart-plug-2) (video_connector cinch-cable-1-cinch-plug-1) (video_connector cinch-cable-1-cinch-plug-2) (video_connector cinch-cable-2-cinch-plug-1) (video_connector cinch-cable-2-cinch-plug-2) (video_connector simple-dvd-1-scart-port-1) (video_connector simple-tv-1-cinch-port-1) (video_connector scart-to-cinch-1-scart-port-1) (video_connector scart-to-cinch-1-cinch-port-3)
+
+  (conn_of scart-to-cinch-1 scart-to-cinch-1-scart-port-1) (conn_of scart-to-cinch-1 scart-to-cinch-1-cinch-port-2) (conn_of scart-to-cinch-1 scart-to-cinch-1-cinch-port-3)
+  (conn_of simple-dvd-1 simple-dvd-1-scart-port-1)
+  (conn_of simple-tv-1 simple-tv-1-cinch-port-1) (conn_of simple-tv-1 simple-tv-1-cinch-port-2)
+  (conn_of cinch-cable-1 cinch-cable-1-cinch-plug-1) (conn_of cinch-cable-1 cinch-cable-1-cinch-plug-2)
+
+  (conn_of cinch-cable-2 cinch-cable-2-cinch-plug-1) (conn_of cinch-cable-2 cinch-cable-2-cinch-plug-2)
+
+  (conn_of scart-cable-1 scart-cable-1-scart-plug-1) (conn_of scart-cable-1 scart-cable-1-scart-plug-2)
+
+  (compatible simple-dvd-1-scart-port-1 scart-cable-1-scart-plug-1)
+  (compatible scart-cable-1-scart-plug-1 simple-dvd-1-scart-port-1)
+  (compatible simple-dvd-1-scart-port-1 scart-cable-1-scart-plug-2)
+  (compatible scart-cable-1-scart-plug-2 simple-dvd-1-scart-port-1)
+  (compatible scart-to-cinch-1-scart-port-1 scart-cable-1-scart-plug-1)
+  (compatible scart-cable-1-scart-plug-1 scart-to-cinch-1-scart-port-1)
+  (compatible scart-to-cinch-1-scart-port-1 scart-cable-1-scart-plug-2)
+  (compatible scart-cable-1-scart-plug-2 scart-to-cinch-1-scart-port-1)
+  (compatible simple-tv-1-cinch-port-1 cinch-cable-1-cinch-plug-1)
+  (compatible cinch-cable-1-cinch-plug-1 simple-tv-1-cinch-port-1)
+  (compatible simple-tv-1-cinch-port-1 cinch-cable-1-cinch-plug-2)
+  (compatible cinch-cable-1-cinch-plug-2 simple-tv-1-cinch-port-1)
+  (compatible simple-tv-1-cinch-port-1 cinch-cable-2-cinch-plug-1)
+  (compatible cinch-cable-2-cinch-plug-1 simple-tv-1-cinch-port-1)
+  (compatible simple-tv-1-cinch-port-1 cinch-cable-2-cinch-plug-2)
+  (compatible cinch-cable-2-cinch-plug-2 simple-tv-1-cinch-port-1)
+  (compatible simple-tv-1-cinch-port-2 cinch-cable-1-cinch-plug-1)
+  (compatible cinch-cable-1-cinch-plug-1 simple-tv-1-cinch-port-2)
+  (compatible simple-tv-1-cinch-port-2 cinch-cable-1-cinch-plug-2)
+  (compatible cinch-cable-1-cinch-plug-2 simple-tv-1-cinch-port-2)
+  (compatible simple-tv-1-cinch-port-2 cinch-cable-2-cinch-plug-1)
+  (compatible cinch-cable-2-cinch-plug-1 simple-tv-1-cinch-port-2)
+  (compatible simple-tv-1-cinch-port-2 cinch-cable-2-cinch-plug-2)
+  (compatible cinch-cable-2-cinch-plug-2 simple-tv-1-cinch-port-2)
+  (compatible scart-to-cinch-1-cinch-port-2 cinch-cable-1-cinch-plug-1)
+  (compatible cinch-cable-1-cinch-plug-1 scart-to-cinch-1-cinch-port-2)
+  (compatible scart-to-cinch-1-cinch-port-2 cinch-cable-1-cinch-plug-2)
+  (compatible cinch-cable-1-cinch-plug-2 scart-to-cinch-1-cinch-port-2)
+  (compatible scart-to-cinch-1-cinch-port-2 cinch-cable-2-cinch-plug-1)
+  (compatible cinch-cable-2-cinch-plug-1 scart-to-cinch-1-cinch-port-2)
+  (compatible scart-to-cinch-1-cinch-port-2 cinch-cable-2-cinch-plug-2)
+  (compatible cinch-cable-2-cinch-plug-2 scart-to-cinch-1-cinch-port-2)
+  (compatible scart-to-cinch-1-cinch-port-3 cinch-cable-1-cinch-plug-1)
+  (compatible cinch-cable-1-cinch-plug-1 scart-to-cinch-1-cinch-port-3)
+  (compatible scart-to-cinch-1-cinch-port-3 cinch-cable-1-cinch-plug-2)
+  (compatible cinch-cable-1-cinch-plug-2 scart-to-cinch-1-cinch-port-3)
+  (compatible scart-to-cinch-1-cinch-port-3 cinch-cable-2-cinch-plug-1)
+  (compatible cinch-cable-2-cinch-plug-1 scart-to-cinch-1-cinch-port-3)
+  (compatible scart-to-cinch-1-cinch-port-3 cinch-cable-2-cinch-plug-2)
+  (compatible cinch-cable-2-cinch-plug-2 scart-to-cinch-1-cinch-port-3)
+ )
+)

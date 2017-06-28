@@ -23,6 +23,9 @@ import scala.io.Source
   */
 //scalastyle:off number.of.methods
 trait VerifyEncoding {
+
+  def timeCapsule: TimeCapsule
+
   def domain: Domain
 
   def initialPlan: Plan
@@ -36,6 +39,8 @@ trait VerifyEncoding {
   val K: Int = if (overrideK.isDefined) overrideK.get else VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
 
   def numberOfChildrenClauses: Int
+
+  def expansionPossible : Boolean
 
   domain.tasks foreach { t => assert(t.parameters.isEmpty) }
   domain.predicates foreach { p => assert(p.argumentSorts.isEmpty) }
@@ -164,9 +169,7 @@ trait VerifyEncoding {
   def goalState: Seq[Clause]
 
 
-  def miniSATString(formulasSeq: Seq[Clause], writer: BufferedWriter): Map[String, Int] = {
-    val formulas = formulasSeq.toArray
-    println("NUMBER OF CLAUSES " + formulas.length)
+  def miniSATString(formulas: Array[Clause], writer: BufferedWriter): scala.Predef.Map[String, Int] = {
 
     // generate the atoms to int map
     val atomIndices = new mutable.HashMap[String, Int]()
