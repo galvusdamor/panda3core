@@ -10,14 +10,13 @@ import java.util.*;
  * Created by dh on 22.06.17.
  */
 public class hLmCutnative extends SasHeuristic {
-    private final SasHeuristics heuristic;
     private final int[] maxPrecInit;
     private final int[] hValInit;
     private final int[] precLessOps;
 
     SasPlusProblem p;
     private int[] unsatPrecs;
-    private int numGoals;
+    //private int numGoals; // only for hMax
 
     private int[] hVal;
     private int[] maxPrec;
@@ -26,10 +25,9 @@ public class hLmCutnative extends SasHeuristic {
     private int[] costs;
 
     // necessary for debug
-    private BitSet s0;
+    //private BitSet s0;
 
-    public hLmCutnative(SasPlusProblem p, SasHeuristics heuristic) {
-        this.heuristic = heuristic;
+    public hLmCutnative(SasPlusProblem p) {
         this.p = p;
         this.maxPrecInit = new int[p.numOfOperators];
         for (int i = 0; i < maxPrecInit.length; i++)
@@ -63,8 +61,8 @@ public class hLmCutnative extends SasHeuristic {
             return hMax;
 
         while (hMax > 0) {
-            assert implementationEquality(g);
-            //assert reachablilityOK(this.hVal); // this is less restrictive than the one above
+            assert implementationEquality(s0, g);
+            //assert reachablilityOK(s0, this.hVal); // this is less restrictive than the one above
 
             BitSet goalZone = new BitSet(p.numOfStateFeatures);
             BitSet cut = new BitSet(p.numOfOperators);
@@ -227,12 +225,12 @@ public class hLmCutnative extends SasHeuristic {
     }
 
     public int hMax(BitSet s0, BitSet g) {
-        this.s0 = s0; // for debug
+        //this.s0 = s0; // for debug
         this.costs = p.costs.clone();
         this.unsatPrecs = p.numPrecs.clone();
         this.hVal = hValInit.clone();
         this.maxPrec = maxPrecInit.clone();
-        this.numGoals = g.cardinality();
+        //this.numGoals = g.cardinality(); // only for hMax
         for (int i = 0; i < p.numOfStateFeatures; i++)
             maxPrecInv[i].clear();
 
@@ -373,13 +371,13 @@ public class hLmCutnative extends SasHeuristic {
         return true;
     }
 
-    private boolean implementationEquality(BitSet g) {
+    private boolean implementationEquality(BitSet s0, BitSet g) {
         int[] temp = p.costs;
         p.costs = this.costs.clone();
         hMax otherImp = new hMax(p);
         otherImp.earlyAbord = false;
         p.costs = temp;
-        otherImp.calcHeu(this.s0, g);
+        otherImp.calcHeu(s0, g);
 
         int[] otherVals = otherImp.hVal;
         for (int i = 0; i < hVal.length; i++)
@@ -388,8 +386,8 @@ public class hLmCutnative extends SasHeuristic {
         return true;
     }
 
-    private boolean reachablilityOK(int[] someHVals) {
-        Set<Integer> reachableFacts = calcReach();
+    private boolean reachablilityOK(BitSet s0, int[] someHVals) {
+        Set<Integer> reachableFacts = calcReach(s0);
         for (int i = 0; i < p.numOfStateFeatures; i++) {
             if (((someHVals[i] == cUnreachable) && (reachableFacts.contains(i)))
                     || ((someHVals[i] < cUnreachable) && (!reachableFacts.contains(i))))
@@ -398,7 +396,7 @@ public class hLmCutnative extends SasHeuristic {
         return true;
     }
 
-    private Set<Integer> calcReach() {
+    private Set<Integer> calcReach(BitSet s0) {
         Set<Integer> reachableFacts = new HashSet<>();
         for (int f = s0.nextSetBit(0); f >= 0; f = s0.nextSetBit(f + 1))
             reachableFacts.add(f);
