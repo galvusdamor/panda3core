@@ -266,9 +266,34 @@ object PredefinedConfigurations {
 
          // configurations to test totSAT
          "-oneshortTOTsat" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTsatRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTsatMaple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
          "-oneshortTOTsatFF" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTsatFFRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTsatFFMaple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
          "-oneshortTOTsatH2" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTsatH2Riss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTsatH2Maple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
          "-oneshortTOTsatFFFull" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
+         "-oneshortTOTsatFFFullRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
+         "-oneshortTOTsatFFFullMaple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod =
+           FFReductionWithFullTest)),
+
+
+         "-oneshortTOTSASsat" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTSASsatRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTSASsatMaple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-oneshortTOTSASsatFF" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTSASsatFFRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTSASsatFFMaple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-oneshortTOTSASsatH2" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTSASsatH2Riss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTSASsatH2Maple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-oneshortTOTSASsatFFFull" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
+         "-oneshortTOTSASsatFFFullRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
+         "-oneshortTOTSASsatFFFullMaple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod =
+           FFReductionWithFullTest)),
+
          "-poclSat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
          "-oneshortTOTpro" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, pro),
          // Greedy-A*

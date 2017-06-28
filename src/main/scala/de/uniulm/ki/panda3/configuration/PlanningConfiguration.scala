@@ -309,7 +309,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, satSearch.reductionMethod, timeCapsule, informationCapsule)
+          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
+                                 satSearch.reductionMethod, timeCapsule, informationCapsule)
 
 
 
@@ -344,7 +345,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               (solution, false)
 
 
-            case OptimalSATRun(overrideK)                               =>
+            case OptimalSATRun(overrideK) =>
               // start with K = 0 and loop
               // TODO this is only good for total order ...
               var solution: Option[Seq[Task]] = None
@@ -725,7 +726,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         assert(externalProgramPaths contains FastDownward, "no path to fast downward is specified")
         val fdPath = externalProgramPaths(FastDownward)
 
-        writeStringToFile("#!/bin/bash\ncd .fd" + uuid + "\n../" + fdPath + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
+        val path = if (fdPath.startsWith("/")) fdPath else "../" + fdPath
+        writeStringToFile("#!/bin/bash\ncd .fd" + uuid + "\n" + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
 
         ("bash runFD" + uuid + ".sh") !!
         // semantic empty line
@@ -979,6 +981,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
            assert(splittedPath.length == 2, "paths must be specified in the program=path format")
            val program = splittedPath.head match {
              case "fd" | "fast-downward" | "fastdownward" => FastDownward
+             case "riss6" => RISS6
+             case "mapleCOMSPS" => MapleCOMSPS
            }
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
@@ -1122,6 +1126,7 @@ case class PreprocessingConfiguration(
                                        groundDomain: Boolean
                                      ) extends Configuration {
   assert(!convertToSASP || groundedReachability.isEmpty, "You can't use both SAS+ and a grouded PG")
+
   //assert(!convertToSASP || !compileNegativePreconditions, "You can't use both SAS+ and remove negative preconditions")
 
   //assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
@@ -1290,19 +1295,21 @@ object SearchHeuristic {
       case "relax"                                           => Relax
 
       // pandaPRO
-      case "hhmcff" | "relaxed-composition_with_multicount_ff"  => RelaxedCompositionGraph(
-                                                                            useTDReachability = hParameterMap.getOrElse("td-reachability", "true").toBoolean,
-                                                                            heuristicExtraction = ProRcgFFMulticount.heuristicExtraction.parse(hParameterMap.getOrElse("extraction", "ff")),
-                                                                            producerSelectionStrategy = ProRcgFFMulticount.producerSelection.parse(hParameterMap.getOrElse("selection", "fcfs")))
-      case "greedy-progression"                 => GreedyProgression
-      case "hhrc"                               =>
+      case "hhmcff" | "relaxed-composition_with_multicount_ff" => RelaxedCompositionGraph(
+                                                                                           useTDReachability = hParameterMap.getOrElse("td-reachability", "true").toBoolean,
+                                                                                           heuristicExtraction = ProRcgFFMulticount.heuristicExtraction
+                                                                                             .parse(hParameterMap.getOrElse("extraction", "ff")),
+                                                                                           producerSelectionStrategy = ProRcgFFMulticount.producerSelection
+                                                                                             .parse(hParameterMap.getOrElse("selection", "fcfs")))
+      case "greedy-progression"                                => GreedyProgression
+      case "hhrc"                                              =>
         val h = hParameterMap.get("h") match {
-          case Some("ff") => SasHeuristics.hFF
-          case Some("add") => SasHeuristics.hAdd
-          case Some("max") => SasHeuristics.hMax
-          case Some("lm-cut") => SasHeuristics.hLmCut
+          case Some("ff")         => SasHeuristics.hFF
+          case Some("add")        => SasHeuristics.hAdd
+          case Some("max")        => SasHeuristics.hMax
+          case Some("lm-cut")     => SasHeuristics.hLmCut
           case Some("inc-lm-cut") => SasHeuristics.hIncLmCut
-          case None => assert(false); null
+          case None               => assert(false); null
         }
 
         HierarchicalHeuristicRelaxedComposition(h)
@@ -1546,7 +1553,7 @@ case class SingleSATRun(maximumPlanLength: Int = 1, overrideK: Option[Int] = Non
 
 case class FullSATRun() extends SATRunConfiguration {override def longInfo: String = "full run"}
 
-case class OptimalSATRun(overrideK : Option[Int]) extends SATRunConfiguration {override def longInfo: String = "optimal run"}
+case class OptimalSATRun(overrideK: Option[Int]) extends SATRunConfiguration {override def longInfo: String = "optimal run"}
 
 
 case class SATSearch(solverType: Solvertype,
@@ -1618,6 +1625,8 @@ case class SATPlanVerification(solverType: Solvertype, planToVerify: String) ext
            val solver = l.get.toLowerCase match {
              case "minisat"       => MINISAT
              case "cryptominisat" => CRYPTOMINISAT
+             case "riss6"         => RISS6
+             case "mapleCOMSPS"   => MapleCOMSPS
            }
            this.copy(solverType = solver).asInstanceOf[this.type]
          }),
@@ -1716,3 +1725,5 @@ object MINISAT extends Solvertype {override val longInfo: String = "minisat"}
 object CRYPTOMINISAT extends Solvertype {override val longInfo: String = "cryptominisat"}
 
 object RISS6 extends Solvertype {override val longInfo: String = "riss6"}
+
+object MapleCOMSPS extends Solvertype {override val longInfo: String = "MapleCOMSPS"}
