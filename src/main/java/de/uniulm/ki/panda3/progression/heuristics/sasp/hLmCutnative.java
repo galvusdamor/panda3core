@@ -73,7 +73,8 @@ public class hLmCutnative extends SasHeuristic {
             assert cut.cardinality() > 0;
 
             // check forward-reachability
-            forwardReachability(s0, cut, goalZone, precsOfCutNodes);
+            //forwardReachabilityDFS(s0, cut, goalZone, precsOfCutNodes);
+            forwardReachabilityBFS(s0, cut, goalZone, precsOfCutNodes);
             assert cut.cardinality() > 0;
 
             // calculate costs
@@ -116,6 +117,7 @@ public class hLmCutnative extends SasHeuristic {
 
                 if (this.costs[producer] == 0) {
                     goalZone.set(singlePrec);
+                    precsOfCutNodes.set(singlePrec, false);
                     fringe.push(singlePrec);
                 } else {
                     cut.set(producer);
@@ -126,12 +128,54 @@ public class hLmCutnative extends SasHeuristic {
     }
 
 
-    private void forwardReachability(BitSet s0, BitSet cut, BitSet goalZone, BitSet testReachability) {
+    private void forwardReachabilityDFS(BitSet s0, BitSet cut, BitSet goalZone, BitSet testReachability) {
+        UUIntStack stack = new UUIntStack(100);
+
+        BitSet remove = new BitSet();
+        for (int f = testReachability.nextSetBit(0); f >= 0; f = testReachability.nextSetBit(f + 1)) {
+            if (s0.get(f))
+                continue;
+            BitSet visited = new BitSet();
+            boolean reachedS0 = false;
+            stack.clear();
+            stack.push(f);
+            visited.set(f);
+            reachabilityLoop:
+            while (!stack.isEmpty()) {
+                int pred = stack.pop();
+                for (int op : p.addToTask[pred]) {
+                    if (unsatPrecs[op] > 0)
+                        continue;
+                    if (goalZone.get(maxPrec[op]))
+                        continue;
+                    if ((p.numPrecs[op] == 0) || (s0.get(maxPrec[op]))) { // reached s0
+                        reachedS0 = true;
+                        break reachabilityLoop;
+                    } else if (!visited.get(maxPrec[op])) {
+                        visited.set(maxPrec[op], true);
+                        stack.push(maxPrec[op]);
+                    }
+                }
+            }
+            if (!reachedS0)
+                remove.set(f);
+        }
+        for (int op = cut.nextSetBit(0); op >= 0; op = cut.nextSetBit(op + 1)) {
+            if (remove.get(maxPrec[op]))
+                cut.set(op, false);
+        }
+    }
+
+    private void forwardReachabilityBFS(BitSet s0, BitSet cut, BitSet goalZone, BitSet testReachability) {
         // put s0 facts into list of reachable facts
         BitSet reachableFacts = (BitSet) s0.clone();
         fringe.clear();
         for (int f = s0.nextSetBit(0); f >= 0; f = s0.nextSetBit(f + 1))
             fringe.push(f);
+        for (int op : precLessOps) {
+            for (int f : p.addLists[op])
+                fringe.push(f);
+        }
 
         // calculate reachability
         reachability:
@@ -143,6 +187,8 @@ public class hLmCutnative extends SasHeuristic {
                 if (testReachability.isEmpty())
                     break reachability;
 
+                BitSet bs = getMaxPrecInv(f);
+                assert bs.equals(maxPrecInv[f]);
                 for (int op = maxPrecInv[f].nextSetBit(0); op >= 0; op = maxPrecInv[f].nextSetBit(op + 1)) {
                     if (unsatPrecs[op] > 0)
                         continue;
@@ -150,7 +196,7 @@ public class hLmCutnative extends SasHeuristic {
                         if (goalZone.get(addEff))
                             continue;
                         if (!reachableFacts.get(addEff)) {
-                            reachableFacts.set(f, true);
+                            reachableFacts.set(addEff, true);
                             addEffects.push(addEff);
                         }
                     }
@@ -162,10 +208,23 @@ public class hLmCutnative extends SasHeuristic {
         // delete unreachable actions
         if (!testReachability.isEmpty()) { // some are not reachable
             for (int f = testReachability.nextSetBit(0); f >= 0; f = testReachability.nextSetBit(f + 1)) {
-                for (int op = maxPrecInv[f].nextSetBit(0); op >= 0; op = maxPrecInv[f].nextSetBit(op + 1))
+                for (int op = maxPrecInv[f].nextSetBit(0); op >= 0; op = maxPrecInv[f].nextSetBit(op + 1)) {
+                    assert maxPrec[op] == f;
                     cut.set(op, false);
+                }
             }
         }
+    }
+
+    private BitSet getMaxPrecInv(int f) {
+        BitSet bs = new BitSet();
+        for (int i = 0; i < p.numOfOperators; i++) {
+            if (unsatPrecs[i] > 0)
+                continue;
+            if (maxPrec[i] == f)
+                bs.set(i);
+        }
+        return bs;
     }
 
     public int hMax(BitSet s0, BitSet g) {
@@ -207,9 +266,9 @@ public class hLmCutnative extends SasHeuristic {
             for (int op : p.precToTask[prop]) {
                 if ((maxPrec[op] == -1) || (hVal[maxPrec[op]] < hVal[prop])) {
                     maxPrec[op] = prop;
-                    maxPrecInv[prop].set(op);
                 }
                 if (--unsatPrecs[op] == 0) {
+                    maxPrecInv[maxPrec[op]].set(op);
                     assert allPrecsTrue(op);
                     for (int f : p.addLists[op]) {
                         if ((hVal[maxPrec[op]] + costs[op]) < hVal[f]) {
@@ -269,7 +328,9 @@ public class hLmCutnative extends SasHeuristic {
         return getMaxValEnd(g);
     }
 
-
+    /*
+     * When the graph is *not* build up until level-off-point -> use this on
+     */
     private int getMaxVal(BitSet g) {
         int hVal = 0;
         for (int f = g.nextSetBit(0); f >= 0; f = g.nextSetBit(f + 1)) {
@@ -283,6 +344,9 @@ public class hLmCutnative extends SasHeuristic {
         return hVal;
     }
 
+    /*
+     * When the graph is build up until level-off-point -> use this on
+     */
     private int getMaxValEnd(BitSet g) {
         int hVal = 0;
         for (int f = g.nextSetBit(0); f >= 0; f = g.nextSetBit(f + 1)) {
@@ -302,7 +366,6 @@ public class hLmCutnative extends SasHeuristic {
     /*
      * Tests used in assertions
      */
-
     private boolean allPrecsTrue(int op) {
         for (int prec : p.precLists[op]) {
             if (hVal[prec] == cUnreachable)
@@ -319,7 +382,7 @@ public class hLmCutnative extends SasHeuristic {
         p.costs = temp;
         otherImp.calcHeu(this.s0, g);
 
-        int[] otherVals =  otherImp.hVal;
+        int[] otherVals = otherImp.hVal;
         for (int i = 0; i < hVal.length; i++)
             if (hVal[i] != otherVals[i])
                 return false;
