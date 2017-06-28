@@ -24,6 +24,8 @@ public class hLmCutnative extends SasHeuristic {
     private BitSet[] maxPrecInv;
     private int maxPrecG;
     private int[] costs;
+
+    // necessary for debug
     private BitSet s0;
 
     public hLmCutnative(SasPlusProblem p, SasHeuristics heuristic) {
@@ -60,18 +62,14 @@ public class hLmCutnative extends SasHeuristic {
         else if (hMax == cUnreachable)
             return hMax;
 
-        int[] ct = corrh2Tab(g);
-        for (int i = 0; i < hVal.length; i++)
-            assert (hVal[i] == ct[i]);
-
         while (hMax > 0) {
+            assert implementationEquality(g);
+            //assert reachablilityOK(this.hVal); // this is less restrictive than the one above
+
             BitSet goalZone = new BitSet(p.numOfStateFeatures);
             BitSet cut = new BitSet(p.numOfOperators);
             BitSet precsOfCutNodes = new BitSet(p.numOfStateFeatures);
             goalZone(goalZone, cut, precsOfCutNodes);
-            if(cut.cardinality() ==0){
-                goalZone(goalZone, cut, precsOfCutNodes);
-            }
             assert cut.cardinality() > 0;
 
             // check forward-reachability
@@ -145,8 +143,9 @@ public class hLmCutnative extends SasHeuristic {
                 if (testReachability.isEmpty())
                     break reachability;
 
-
                 for (int op = maxPrecInv[f].nextSetBit(0); op >= 0; op = maxPrecInv[f].nextSetBit(op + 1)) {
+                    if (unsatPrecs[op] > 0)
+                        continue;
                     for (int addEff : p.addLists[op]) {
                         if (goalZone.get(addEff))
                             continue;
@@ -170,7 +169,7 @@ public class hLmCutnative extends SasHeuristic {
     }
 
     public int hMax(BitSet s0, BitSet g) {
-        this.s0 = s0;
+        this.s0 = s0; // for debug
         this.costs = p.costs.clone();
         this.unsatPrecs = p.numPrecs.clone();
         this.hVal = hValInit.clone();
@@ -178,8 +177,6 @@ public class hLmCutnative extends SasHeuristic {
         this.numGoals = g.cardinality();
         for (int i = 0; i < p.numOfStateFeatures; i++)
             maxPrecInv[i].clear();
-
-        int[] ct = corrh2Tab(g);
 
         UUIntPairPriorityQueue queue = new UUIntPairPriorityQueue();
         for (int f = s0.nextSetBit(0); f >= 0; f = s0.nextSetBit(f + 1)) {
@@ -202,7 +199,7 @@ public class hLmCutnative extends SasHeuristic {
             int prop = pair[1];
             if (hVal[prop] < pVal)
                 continue;
-            assert (hVal[prop] == ct[prop]);
+
             // only for hMax
             //if (g.get(prop) && (--numGoals == 0)) {
             //    return getMaxVal(g);
@@ -217,7 +214,6 @@ public class hLmCutnative extends SasHeuristic {
                     for (int f : p.addLists[op]) {
                         if ((hVal[maxPrec[op]] + costs[op]) < hVal[f]) {
                             hVal[f] = hVal[maxPrec[op]] + costs[op];
-                            assert (hVal[f] >= ct[f]);
                             queue.add(hVal[f], f);
                         }
                     }
@@ -227,31 +223,16 @@ public class hLmCutnative extends SasHeuristic {
         return getMaxValEnd(g);
     }
 
-    private boolean allPrecsTrue(int op) {
-        for (int prec : p.precLists[op]) {
-            if (hVal[prec] == cUnreachable)
-                return false;
-        }
-        return true;
-    }
-
     public int costUpdate(BitSet operators, int decreaseBy, BitSet g) {
-        Set<Integer> reachable = calcReach();
-        for (int op = operators.nextSetBit(0); op >= 0; op = operators.nextSetBit(op + 1)) {
-            costs[op] -= decreaseBy;
-        }
-        int[] ct = corrh2Tab(g);
         UUIntPairPriorityQueue queue = new UUIntPairPriorityQueue();
         for (int op = operators.nextSetBit(0); op >= 0; op = operators.nextSetBit(op + 1)) {
-            //costs[op] -= decreaseBy;
+            costs[op] -= decreaseBy;
             assert costs[op] >= 0;
             assert allPrecsTrue(op);
             for (int f : p.addLists[op]) {
                 if ((hVal[maxPrec[op]] + costs[op]) < hVal[f]) { // that f might be cheaper now
                     hVal[f] = hVal[maxPrec[op]] + costs[op];
-                    assert (hVal[f] >= ct[f]);
                     queue.add(hVal[f], f);
-                    //System.out.println("IniPro " + f);
                 }
             }
         }
@@ -261,8 +242,6 @@ public class hLmCutnative extends SasHeuristic {
             int prop = pair[1];
             if (hVal[prop] < pVal) // we have prop's costs DECREASED -> this is fine
                 continue;
-            //System.out.println(prop + " @ " + pVal);
-            assert (hVal[prop] == ct[prop]);
             for (int op : p.precToTask[prop]) {
                 if ((unsatPrecs[op] == 0) && (prop == maxPrec[op])) { // this may change the costs of the operator and all its successors
                     int opMaxPrec = -1;
@@ -280,10 +259,6 @@ public class hLmCutnative extends SasHeuristic {
                     for (int f : p.addLists[op]) {
                         if ((hVal[maxPrec[op]] + costs[op]) < hVal[f]) {
                             hVal[f] = hVal[maxPrec[op]] + costs[op];
-                            assert reachable.contains(f);
-                            //System.out.println("HVAL " + f + "=" + hVal[f] + " from " + op);
-                            //if(hVal[f] != ct[f])
-                            //    System.out.print(0);
                             assert hVal[f] >= 0;
                             queue.add(hVal[f], f);
                         }
@@ -291,32 +266,64 @@ public class hLmCutnative extends SasHeuristic {
                 }
             }
         }
-        assert reachablilityOK(hVal);
-        int res = getMaxValEnd(g);
-        assert equalToReCalc(res, g);
-        return res;
+        return getMaxValEnd(g);
     }
 
-    private boolean equalToReCalc(int res, BitSet g) {
-        int[] temp = p.costs;
-        p.costs = this.costs.clone();
-        hMax h2 = new hMax(p);
-        p.costs = temp;
-        int other = h2.calcHeu(this.s0, g);
-        //return true;
-        return res == other;
+
+    private int getMaxVal(BitSet g) {
+        int hVal = 0;
+        for (int f = g.nextSetBit(0); f >= 0; f = g.nextSetBit(f + 1)) {
+            assert this.hVal[f] != cUnreachable;
+            if (hVal > this.hVal[f]) {
+                hVal = this.hVal[f];
+                maxPrecG = f;
+            }
+        }
+
+        return hVal;
     }
 
-    private int[] corrh2Tab(BitSet g) {
+    private int getMaxValEnd(BitSet g) {
+        int hVal = 0;
+        for (int f = g.nextSetBit(0); f >= 0; f = g.nextSetBit(f + 1)) {
+            if (this.hVal[f] == cUnreachable) {
+                maxPrecG = -1;
+                return cUnreachable;
+            }
+            if (hVal < this.hVal[f]) {
+                hVal = this.hVal[f];
+                maxPrecG = f;
+            }
+        }
+
+        return hVal;
+    }
+
+    /*
+     * Tests used in assertions
+     */
+
+    private boolean allPrecsTrue(int op) {
+        for (int prec : p.precLists[op]) {
+            if (hVal[prec] == cUnreachable)
+                return false;
+        }
+        return true;
+    }
+
+    private boolean implementationEquality(BitSet g) {
         int[] temp = p.costs;
         p.costs = this.costs.clone();
-        hMax h2 = new hMax(p);
-        h2.earlyAbord = false;
+        hMax otherImp = new hMax(p);
+        otherImp.earlyAbord = false;
         p.costs = temp;
-        int other = h2.calcHeu(this.s0, g);
-        reachablilityOK(h2.hVal);
-        return h2.hVal;
-        //return res == other;
+        otherImp.calcHeu(this.s0, g);
+
+        int[] otherVals =  otherImp.hVal;
+        for (int i = 0; i < hVal.length; i++)
+            if (hVal[i] != otherVals[i])
+                return false;
+        return true;
     }
 
     private boolean reachablilityOK(int[] someHVals) {
@@ -347,34 +354,5 @@ public class hLmCutnative extends SasHeuristic {
             }
         }
         return reachableFacts;
-    }
-
-    private int getMaxVal(BitSet g) {
-        int hVal = 0;
-        for (int f = g.nextSetBit(0); f >= 0; f = g.nextSetBit(f + 1)) {
-            assert this.hVal[f] != cUnreachable;
-            if (hVal > this.hVal[f]) {
-                hVal = this.hVal[f];
-                maxPrecG = f;
-            }
-        }
-
-        return hVal;
-    }
-
-    private int getMaxValEnd(BitSet g) {
-        int hVal = 0;
-        for (int f = g.nextSetBit(0); f >= 0; f = g.nextSetBit(f + 1)) {
-            if (this.hVal[f] == cUnreachable) {
-                maxPrecG = -1;
-                return cUnreachable;
-            }
-            if (hVal < this.hVal[f]) {
-                hVal = this.hVal[f];
-                maxPrecG = f;
-            }
-        }
-
-        return hVal;
     }
 }
