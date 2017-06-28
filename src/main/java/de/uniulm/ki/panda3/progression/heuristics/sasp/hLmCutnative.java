@@ -73,8 +73,8 @@ public class hLmCutnative extends SasHeuristic {
             assert cut.cardinality() > 0;
 
             // check forward-reachability
-            //forwardReachabilityDFS(s0, cut, goalZone, precsOfCutNodes);
-            forwardReachabilityBFS(s0, cut, goalZone, precsOfCutNodes);
+            forwardReachabilityDFS(s0, cut, goalZone, precsOfCutNodes);
+            //forwardReachabilityBFS(s0, cut, goalZone, precsOfCutNodes);
             assert cut.cardinality() > 0;
 
             // calculate costs
@@ -187,8 +187,7 @@ public class hLmCutnative extends SasHeuristic {
                 if (testReachability.isEmpty())
                     break reachability;
 
-                BitSet bs = getMaxPrecInv(f);
-                assert bs.equals(maxPrecInv[f]);
+                assert getMaxPrecInv(f).equals(maxPrecInv[f]);
                 for (int op = maxPrecInv[f].nextSetBit(0); op >= 0; op = maxPrecInv[f].nextSetBit(op + 1)) {
                     if (unsatPrecs[op] > 0)
                         continue;
