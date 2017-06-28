@@ -20,7 +20,7 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.{AddPredicate, ExchangeTask, 
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
-import de.uniulm.ki.panda3.symbolic.sat.ltl.BüchiAutomaton
+import de.uniulm.ki.panda3.symbolic.sat.ltl.{LTLFormula, BüchiAutomaton}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{VerifyRunner, SATRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
@@ -311,9 +311,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           // if a formula is provided, translate it into a Büchi automaton
-          val automaton : Option[BüchiAutomaton]= satSearch.ltlFormula match {
-            case None => None
-            case Some(formula) => Some(BüchiAutomaton(formula))
+          val automaton: Option[BüchiAutomaton] = satSearch.ltlFormula match {
+            case None          => None
+            case Some(formula) => Some(BüchiAutomaton(domainAndPlan._1, formula.parse(domainAndPlan._1)))
           }
 
 
@@ -989,8 +989,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
            assert(splittedPath.length == 2, "paths must be specified in the program=path format")
            val program = splittedPath.head match {
              case "fd" | "fast-downward" | "fastdownward" => FastDownward
-             case "riss6" => RISS6
-             case "mapleCOMSPS" => MapleCOMSPS
+             case "riss6"                                 => RISS6
+             case "mapleCOMSPS"                           => MapleCOMSPS
            }
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
@@ -1565,7 +1565,7 @@ case class OptimalSATRun(overrideK: Option[Int]) extends SATRunConfiguration {ov
 
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
-                     ltlFormula : Option[String] = None,
+                     ltlFormula: Option[LTLFormula] = None,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise
                     ) extends SearchConfiguration {

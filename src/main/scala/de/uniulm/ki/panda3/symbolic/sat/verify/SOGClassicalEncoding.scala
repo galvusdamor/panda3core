@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.domain.{Task, Domain}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.util.TimeCapsule
 
@@ -10,7 +10,7 @@ import scala.collection.Seq
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
-                                 domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding{
+                                domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding with EncodingWithLinearPlan {
   //lazy val taskSequenceLength: Int = primitivePaths.length
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
@@ -19,6 +19,14 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
   protected def pathPosForbidden(path: Seq[Int], position: Int): String = "forbidden_" + path.mkString(";") + "-" + position
 
   protected def pathActive(p1: Seq[Int]) = "active!" + "_" + p1.mkString(";")
+
+
+  override def linearPlan: scala.Seq[Map[Task, String]] = {
+    val allTasksArePossibleEverywhere: Set[Task] = primitivePaths flatMap { _._2 } toSet
+
+    Range(0, taskSequenceLength) map { case i => allTasksArePossibleEverywhere map { t => t -> { action(K - 1, i, t) } } toMap }
+  }
+
 
   override lazy val noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
 

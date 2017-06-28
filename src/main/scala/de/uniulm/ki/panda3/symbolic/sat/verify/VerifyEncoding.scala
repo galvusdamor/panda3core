@@ -40,7 +40,7 @@ trait VerifyEncoding {
 
   def numberOfChildrenClauses: Int
 
-  def expansionPossible : Boolean
+  def expansionPossible: Boolean
 
   domain.tasks foreach { t => assert(t.parameters.isEmpty) }
   domain.predicates foreach { p => assert(p.argumentSorts.isEmpty) }
@@ -66,11 +66,11 @@ trait VerifyEncoding {
 
 
   // LOGICALS ABBREVIATIONS
-  protected def atLeastOneOf(atoms: Seq[String]): Clause = Clause(atoms map { (_, true) })
+  def atLeastOneOf(atoms: Seq[String]): Clause = Clause(atoms map { (_, true) })
 
   protected var atMostCounter = 0
 
-  protected def atMostOneOf(atoms: Seq[String]): Seq[Clause] = {
+  def atMostOneOf(atoms: Seq[String]): Seq[Clause] = {
     val buffer = new ArrayBuffer[Clause]()
     val numberOfBits: Int = Math.ceil(Math.log(atoms.length) / Math.log(2)).toInt
     val bits = Range(0, numberOfBits) map { b => ("atMost_" + atMostCounter + "_" + b, b) }
@@ -103,11 +103,13 @@ trait VerifyEncoding {
 
   protected def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms).+:(atLeastOneOf(atoms))
 
-  protected def impliesNot(left: String, right: String): Clause = Clause((left, false) ::(right, false) :: Nil)
+  def impliesNot(left: String, right: String): Clause = Clause((left, false) ::(right, false) :: Nil)
 
   protected def impliesNot(left: Seq[String], right: String): Clause = Clause((left map { l => (l, false) }).+:(right, false))
 
   protected def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
+
+  def notImplies(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, true)))
 
   protected def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) ::(leftFalse, true) ::(right, false) :: Nil) :: Nil
 
@@ -119,7 +121,7 @@ trait VerifyEncoding {
     right map { r => Clause(leftList.+:((r, false))) }
   }
 
-  protected def impliesSingle(left: String, right: String): Clause = Clause((left, false) ::(right, true) :: Nil)
+  def impliesSingle(left: String, right: String): Clause = Clause((left, false) ::(right, true) :: Nil)
 
 
   protected def impliesRightAnd(leftConjunct: Seq[String], rightConjunct: Seq[String]): Seq[Clause] = {
@@ -127,7 +129,7 @@ trait VerifyEncoding {
     rightConjunct map { r => Clause(negLeft.+:(r, true)) }
   }
 
-  protected def impliesRightAndSingle(leftConjunct: Seq[String], right: String): Clause = {
+  def impliesRightAndSingle(leftConjunct: Seq[String], right: String): Clause = {
     val negLeft = leftConjunct map { (_, false) }
     Clause(negLeft.+:(right, true))
   }
@@ -322,6 +324,8 @@ object Clause {
   def apply(disjuncts: Seq[(String, Boolean)]): Clause = Clause(disjuncts.toArray)
 
   def apply(atom: String): Clause = Clause((atom, true) :: Nil)
+
+  def apply(atoms: Array[String]): Clause = Clause(atoms map { a => (a, true) })
 
   def apply(literal: (String, Boolean)): Clause = Clause(literal :: Nil)
 }
