@@ -792,6 +792,31 @@ public class SasPlusProblem {
         }
     }
 
+    public void removeDublicates(boolean showWarning) {
+        removeDublicates(this.precLists, true, showWarning);
+        removeDublicates(this.addLists, false, showWarning);
+        removeDublicates(this.delLists, false, showWarning);
+    }
+
+    private void removeDublicates(int[][] someAr, boolean isPrec, boolean showWarning) {
+        for (int op = 0; op < someAr.length; op++) {
+            Set<Integer> temp = new HashSet<>();
+            for (int i = 0; i < someAr[op].length; i++) {
+                if (showWarning && temp.contains(someAr[op][i]))
+                    System.out.println("The operator " + opNames[op] + " has duplicates in its prec/add/del lists. These will be removed.");
+                temp.add(someAr[op][i]);
+            }
+            if (temp.size() < someAr[op].length) {
+                if (isPrec)
+                    numPrecs[op] = temp.size();
+                someAr[op] = new int[temp.size()];
+                int i = 0;
+                for (int f : temp)
+                    someAr[op][i++] = f;
+            }
+        }
+    }
+
     public boolean correctModel() {
         assert precLists.length == numOfOperators;
         assert addLists.length == numOfOperators;

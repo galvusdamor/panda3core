@@ -156,6 +156,7 @@ public class HtnCompositionEncoding extends SasPlusProblem {
             tIndexToMutexGroup[i] = group++;
         indexToMutexGroup = tIndexToMutexGroup;
 
+        this.removeDublicates(false);
         this.calcMutexGroupIndices();
         this.calcRanges();
         this.calcInverseMappings();
