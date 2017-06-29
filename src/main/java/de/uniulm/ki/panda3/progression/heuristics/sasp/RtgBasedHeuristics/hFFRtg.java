@@ -9,10 +9,10 @@ import java.util.BitSet;
 /**
  * Created by dh on 15.05.17.
  */
-public class hFfRtg extends RTGBaseCalc {
+public class hFFRtg extends RTGBaseCalc {
     int[] emptyAchieverList;
 
-    public hFfRtg(SasPlusProblem p) {
+    public hFFRtg(SasPlusProblem p) {
         super(p);
         this.evalBestAchievers = true;
         this.trackPCF = false;

@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * Created by dh on 22.06.17.
  */
-public class hAddhFfEq extends SasHeuristic {
+public class hAddhFFEq extends SasHeuristic {
     private final SasHeuristics heuristic;
     private final int[] precLessOps;
     private final int[] hValPropInit;
@@ -22,7 +22,7 @@ public class hAddhFfEq extends SasHeuristic {
     private int[] hValProp;
     private int[] reachedBy;
 
-    public hAddhFfEq(SasPlusProblem p, SasHeuristics heuristic) {
+    public hAddhFFEq(SasPlusProblem p, SasHeuristics heuristic) {
         this.heuristic = heuristic;
         this.p = p;
         List<Integer> tempPrecLess = new ArrayList<>();

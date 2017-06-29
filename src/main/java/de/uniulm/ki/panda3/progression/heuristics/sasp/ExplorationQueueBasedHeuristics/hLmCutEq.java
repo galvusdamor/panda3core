@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics;
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncInfLmCut;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncrementInformation;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics.hMaxRtg;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
@@ -25,12 +27,14 @@ public class hLmCutEq extends SasHeuristic {
     //private BitSet[] maxPrecInv;
     private int maxPrecG;
     private int[] costs;
+    private IncInfLmCut myIncInf;
 
     // necessary for debug
     //private BitSet s0;
 
-    public hLmCutEq(SasPlusProblem p) {
+    public hLmCutEq(SasPlusProblem p, boolean incremental) {
         this.p = p;
+        this.isIncremental = incremental;
         this.maxPrecInit = new int[p.numOfOperators];
         for (int i = 0; i < maxPrecInit.length; i++)
             maxPrecInit[i] = -1;
@@ -54,7 +58,18 @@ public class hLmCutEq extends SasHeuristic {
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
+        return calcHeu(-1, null, s0, g);
+    }
+
+    @Override
+    public int calcHeu(int lastAction, IncrementInformation inc, BitSet s0, BitSet g) {
         int hLmCut = 0;
+        this.costs = p.costs.clone();
+
+        if (isIncremental) {
+            myIncInf = new IncInfLmCut();
+            hLmCut = IncrementalLmCut(lastAction, (IncInfLmCut) inc);
+        }
 
         int hMax = hMax(s0, g);
         if (hMax == 0)
@@ -85,6 +100,11 @@ public class hLmCutEq extends SasHeuristic {
             assert minCosts > 0;
             hLmCut += minCosts;
 
+            if (isIncremental) {
+                myIncInf.cuts.add(cut);
+                myIncInf.costs.push(minCosts);
+            }
+
             // decrease action costs of cut
             if (debug) {
                 debugOut("Cut: " + "\n");
@@ -99,6 +119,32 @@ public class hLmCutEq extends SasHeuristic {
         return hLmCut;
     }
 
+    @Override
+    public IncrementInformation getIncInf() {
+        return this.myIncInf;
+    }
+
+    private int IncrementalLmCut(int lastAction, IncInfLmCut parentIncInf) {
+        int lmCutHeu = 0;
+        assert parentIncInf.costsGreaterZero(this.costs);
+        assert parentIncInf.cutsAreDisjunctive();
+        parentIncInf.costs.resetIterator();
+        for (BitSet cut : parentIncInf.cuts) {
+            int costs = parentIncInf.costs.next();
+            assert costs > 0;
+            if (!cut.get(lastAction)) {
+                lmCutHeu += costs;
+                myIncInf.cuts.add(cut);
+                myIncInf.costs.push(costs);
+                for (int op = cut.nextSetBit(0); op >= 0; op = cut.nextSetBit(op + 1)) {
+                    this.costs[op] -= costs;
+                    assert (this.costs[op] >= 0);
+                    debugOut(op + " " + p.opNames[op] + "\n");
+                }
+            }
+        }
+        return lmCutHeu;
+    }
 
     UUIntStack fringe = new UUIntStack();
 
@@ -229,7 +275,6 @@ public class hLmCutEq extends SasHeuristic {
 
     public int hMax(BitSet s0, BitSet g) {
         //this.s0 = s0; // for debug
-        this.costs = p.costs.clone();
         this.unsatPrecs = p.numPrecs.clone();
         this.hVal = hValInit.clone();
         this.maxPrec = maxPrecInit.clone();

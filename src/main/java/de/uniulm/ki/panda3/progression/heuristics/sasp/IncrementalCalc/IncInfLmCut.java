@@ -18,25 +18,38 @@ public class IncInfLmCut extends IncrementInformation {
         this.costs = new UUIntStack(25);
     }
 
-    public boolean disjunct() {
-        for (int i = 0; i < cuts.size(); i++) {
-            for (int j = i + 1; j < cuts.size(); j++) {
-                BitSet some = (BitSet) cuts.get(i).clone();
-                if (some.intersects(cuts.get(j)))
+    public boolean cutsAreDisjunctive() {
+        for (int cutI = 0; cutI < cuts.size(); cutI++) {
+            for (int cutJ = cutI + 1; cutJ < cuts.size(); cutJ++) {
+                BitSet some = (BitSet) cuts.get(cutI).clone();
+                if (some.intersects(cuts.get(cutJ)))
                     return false;
             }
         }
         return true;
     }
 
-    public boolean costsGrZero(int[] costs, int[] opIndexToEffNode) {
+    public boolean costsGreaterZero(int[] costs, int[] opIndexToEffNode) {
         for (BitSet cut : cuts) {
-            int i = cut.nextSetBit(0);
-            while (i >= 0) {
-                if (costs[opIndexToEffNode[i]] <= 0) {
+            int op = cut.nextSetBit(0);
+            while (op >= 0) {
+                if (costs[opIndexToEffNode[op]] <= 0) {
                     return false;
                 }
-                i = cut.nextSetBit(i + 1);
+                op = cut.nextSetBit(op + 1);
+            }
+        }
+        return true;
+    }
+
+    public boolean costsGreaterZero(int[] costs) {
+        for (BitSet cut : cuts) {
+            int op = cut.nextSetBit(0);
+            while (op >= 0) {
+                if (costs[op] <= 0) {
+                    return false;
+                }
+                op = cut.nextSetBit(op + 1);
             }
         }
         return true;

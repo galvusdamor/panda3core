@@ -2,6 +2,12 @@ package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph;
 
 import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeuristic;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.*;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics.hAddhFFEq;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics.hLmCutEq;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics.hMaxEq;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncInfLmCut;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncrementInformation;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics.hLmCutRtg;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
@@ -43,15 +49,22 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
         System.out.println(this.compEnc.getStatistics());
 
         if (heuristic == SasHeuristic.SasHeuristics.hAdd) {
-            this.heuristic = new hAdd(this.compEnc);
+            //this.heuristic = new hAddRtg(this.compEnc);
+            this.heuristic = new hAddhFFEq(this.compEnc, SasHeuristic.SasHeuristics.hAdd);
         } else if (heuristic == SasHeuristic.SasHeuristics.hMax) {
-            this.heuristic = new hMax(this.compEnc);
+            //this.heuristic = new hMaxRtg(this.compEnc);
+            this.heuristic = new hMaxEq(this.compEnc);
         } else if (heuristic == SasHeuristic.SasHeuristics.hFF) {
-            this.heuristic = new hFF(this.compEnc);
+            //this.heuristic = new hFFRtg(this.compEnc);
+            this.heuristic = new hAddhFFEq(this.compEnc, SasHeuristic.SasHeuristics.hFF);
         } else if (heuristic == SasHeuristic.SasHeuristics.hLmCut) {
-            this.heuristic = new hLmCut(this.compEnc, false);
+            //this.heuristic = new hLmCutRtg(this.compEnc, false);
+            this.heuristic = new hLmCutEq(this.compEnc, false);
         } else if (heuristic == SasHeuristic.SasHeuristics.hIncLmCut) {
-            this.heuristic = new hLmCut(this.compEnc, true);
+            this.inc = new IncInfLmCut();
+            //this.heuristic = new hLmCutRtg(this.compEnc, true);
+            this.heuristic = new hLmCutRtg(this.compEnc, true);
+            this.heuristic = new hLmCutEq(this.compEnc, true);
         }
     }
 
@@ -71,10 +84,8 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
         BitSet s0 = (BitSet) newTN.state.clone();
         BitSet g = new BitSet(compEnc.numOfStateFeatures);
 
-        int reachable = reachableActions.nextSetBit(0);
-        while (reachable >= 0) {
+        for (int reachable = reachableActions.nextSetBit(0); reachable >= 0; reachable = reachableActions.nextSetBit(reachable + 1)) {
             s0.set(compEnc.firstTdrIndex + reachable);
-            reachable = reachableActions.nextSetBit(reachable + 1);
         }
 
         // prepare g
@@ -82,11 +93,9 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
             g.set(fact);
         }
 
-        int goalFact = htnGoal.nextSetBit(0);
-        while (goalFact >= 0) {
+        for (int goalFact = htnGoal.nextSetBit(0); goalFact >= 0; goalFact = htnGoal.nextSetBit(goalFact + 1)) {
             g.set(goalFact + this.compEnc.firstTaskCompIndex);
             //System.out.println(compEnc.factStrs[goalFact + this.compEnc.firstTaskCompIndex]); // for debugging
-            goalFact = htnGoal.nextSetBit(goalFact + 1);
         }
 
         if (heuristic.isIncremental()) {
@@ -97,11 +106,11 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
                 lastAction = ps.taskIndex;
 
             ProRcgSas res = new ProRcgSas();
-            res.heuristicVal = this.heuristic.calcHeu(lastAction, inc, s0, g);
+            res.heuristicVal = heuristic.calcHeu(lastAction, inc, s0, g);
             res.inc = this.heuristic.getIncInf();
             return res;
         } else {
-            this.heuristicVal = this.heuristic.calcHeu(s0, g);
+            this.heuristicVal = heuristic.calcHeu(s0, g);
             return this;
         }
     }

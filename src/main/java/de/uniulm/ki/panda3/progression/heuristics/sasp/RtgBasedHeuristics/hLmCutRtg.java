@@ -102,8 +102,8 @@ public class hLmCutRtg extends hMaxRtg {
     private int IncrementalLmCut(int lastAction, IncInfLmCut incrementInfo) {
         int lmCutHeu = 0;
         IncInfLmCut i = (IncInfLmCut) this.incInf;
-        assert i.costsGrZero(this.costs, this.opIndexToEffNode);
-        assert i.disjunct();
+        assert i.costsGreaterZero(this.costs, this.opIndexToEffNode);
+        assert i.cutsAreDisjunctive();
         i.costs.resetIterator();
         for (BitSet cut : i.cuts) {
             int costs = i.costs.next();
