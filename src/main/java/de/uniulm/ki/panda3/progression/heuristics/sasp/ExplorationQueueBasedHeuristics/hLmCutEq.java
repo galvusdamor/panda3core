@@ -1,5 +1,7 @@
-package de.uniulm.ki.panda3.progression.heuristics.sasp;
+package de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics;
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics.hMaxRtg;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntPairPriorityQueue;
 import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntStack;
@@ -9,7 +11,7 @@ import java.util.*;
 /**
  * Created by dh on 22.06.17.
  */
-public class hLmCutnative extends SasHeuristic {
+public class hLmCutEq extends SasHeuristic {
     private final int[] maxPrecInit;
     private final int[] hValInit;
     private final int[] precLessOps;
@@ -20,14 +22,14 @@ public class hLmCutnative extends SasHeuristic {
 
     private int[] hVal;
     private int[] maxPrec;
-    private BitSet[] maxPrecInv;
+    //private BitSet[] maxPrecInv;
     private int maxPrecG;
     private int[] costs;
 
     // necessary for debug
     //private BitSet s0;
 
-    public hLmCutnative(SasPlusProblem p) {
+    public hLmCutEq(SasPlusProblem p) {
         this.p = p;
         this.maxPrecInit = new int[p.numOfOperators];
         for (int i = 0; i < maxPrecInit.length; i++)
@@ -35,9 +37,9 @@ public class hLmCutnative extends SasHeuristic {
         this.hValInit = new int[p.numOfStateFeatures];
         for (int i = 0; i < hValInit.length; i++)
             hValInit[i] = cUnreachable;
-        this.maxPrecInv = new BitSet[p.numOfStateFeatures];
+        /*this.maxPrecInv = new BitSet[p.numOfStateFeatures];
         for (int i = 0; i < p.numOfStateFeatures; i++)
-            maxPrecInv[i] = new BitSet();
+            maxPrecInv[i] = new BitSet();*/
 
         // get actions without preconditions
         List<Integer> tempPrecLess = new ArrayList<>();
@@ -164,6 +166,7 @@ public class hLmCutnative extends SasHeuristic {
         }
     }
 
+    /*
     private void forwardReachabilityBFS(BitSet s0, BitSet cut, BitSet goalZone, BitSet testReachability) {
         // put s0 facts into list of reachable facts
         BitSet reachableFacts = (BitSet) s0.clone();
@@ -211,7 +214,7 @@ public class hLmCutnative extends SasHeuristic {
                 }
             }
         }
-    }
+    }*/
 
     private BitSet getMaxPrecInv(int f) {
         BitSet bs = new BitSet();
@@ -231,8 +234,8 @@ public class hLmCutnative extends SasHeuristic {
         this.hVal = hValInit.clone();
         this.maxPrec = maxPrecInit.clone();
         //this.numGoals = g.cardinality(); // only for hMax
-        for (int i = 0; i < p.numOfStateFeatures; i++)
-            maxPrecInv[i].clear();
+        //for (int i = 0; i < p.numOfStateFeatures; i++)
+        //    maxPrecInv[i].clear();
 
         UUIntPairPriorityQueue queue = new UUIntPairPriorityQueue();
         for (int f = s0.nextSetBit(0); f >= 0; f = s0.nextSetBit(f + 1)) {
@@ -265,7 +268,7 @@ public class hLmCutnative extends SasHeuristic {
                     maxPrec[op] = prop;
                 }
                 if (--unsatPrecs[op] == 0) {
-                    maxPrecInv[maxPrec[op]].set(op);
+                    //maxPrecInv[maxPrec[op]].set(op);
                     assert allPrecsTrue(op);
                     for (int f : p.addLists[op]) {
                         if ((hVal[maxPrec[op]] + costs[op]) < hVal[f]) {
@@ -309,9 +312,9 @@ public class hLmCutnative extends SasHeuristic {
                             val = hVal[f];
                         }
                     }
-                    maxPrecInv[prop].set(op, false);
+                    //maxPrecInv[prop].set(op, false);
                     maxPrec[op] = opMaxPrec;
-                    maxPrecInv[opMaxPrec].set(op, true);
+                    //maxPrecInv[opMaxPrec].set(op, true);
                     for (int f : p.addLists[op]) {
                         if ((hVal[maxPrec[op]] + costs[op]) < hVal[f]) {
                             hVal[f] = hVal[maxPrec[op]] + costs[op];
@@ -374,7 +377,7 @@ public class hLmCutnative extends SasHeuristic {
     private boolean implementationEquality(BitSet s0, BitSet g) {
         int[] temp = p.costs;
         p.costs = this.costs.clone();
-        hMax otherImp = new hMax(p);
+        hMaxRtg otherImp = new hMaxRtg(p);
         otherImp.earlyAbord = false;
         p.costs = temp;
         otherImp.calcHeu(s0, g);

@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.progression.heuristics.sasp;
+package de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc;
 
 import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntStack;
 
@@ -10,8 +10,8 @@ import java.util.List;
  * Created by dh on 29.05.17.
  */
 public class IncInfLmCut extends IncrementInformation {
-    List<BitSet> cuts;
-    UUIntStack costs;
+    public List<BitSet> cuts;
+    public UUIntStack costs;
 
     public IncInfLmCut() {
         this.cuts = new LinkedList<>();

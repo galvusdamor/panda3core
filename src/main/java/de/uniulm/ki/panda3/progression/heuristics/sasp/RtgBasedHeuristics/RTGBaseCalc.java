@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.progression.heuristics.sasp;
+package de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics;
 
 import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntPairPriorityQueue;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;

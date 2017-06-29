@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.progression.heuristics.sasp;
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncrementInformation;
+
 import java.util.BitSet;
 
 /**
@@ -10,7 +12,7 @@ public abstract class SasHeuristic {
 
     public enum SasHeuristics {hMax, hAdd, hFF, hLmCut, hIncLmCut;}
 
-    boolean isIncremental = false;
+    protected boolean isIncremental = false;
 
     public boolean isIncremental() {
         return this.isIncremental;

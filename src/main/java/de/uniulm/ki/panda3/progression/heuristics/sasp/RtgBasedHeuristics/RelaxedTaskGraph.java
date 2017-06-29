@@ -1,5 +1,6 @@
-package de.uniulm.ki.panda3.progression.heuristics.sasp;
+package de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics;
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntStack;
 
@@ -35,7 +36,7 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
     static int[] precTnodes; // precondition nodes of actions without preconditions
 
     /* holds h-max for every node */
-    int[] hVal;
+    public int[] hVal;
     int[] costs; // costs of activating a node (in addition to its predecessors -> this are action costs)
     int[] currentWaitingForCount;
 
@@ -47,7 +48,7 @@ public abstract class RelaxedTaskGraph extends SasHeuristic {
     UUIntStack[] pcfInvert;
     protected int goalPCF;
     protected BitSet opReachable;
-    protected boolean earlyAbord = true;
+    public boolean earlyAbord = true;
     protected boolean evalBestAchievers = false;
 
     public RelaxedTaskGraph(SasPlusProblem p) {

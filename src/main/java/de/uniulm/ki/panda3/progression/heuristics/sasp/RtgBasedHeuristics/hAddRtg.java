@@ -1,12 +1,14 @@
-package de.uniulm.ki.panda3.progression.heuristics.sasp;
+package de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics;
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics.RTGBaseCalc;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 
 /**
  * Created by dh on 01.05.17.
  */
-public class hAdd extends RTGBaseCalc {
-    public hAdd(SasPlusProblem p) {
+public class hAddRtg extends RTGBaseCalc {
+
+    public hAddRtg(SasPlusProblem p) {
         super(p);
     }
 

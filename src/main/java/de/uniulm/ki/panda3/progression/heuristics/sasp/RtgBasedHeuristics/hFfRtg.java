@@ -1,5 +1,6 @@
-package de.uniulm.ki.panda3.progression.heuristics.sasp;
+package de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics;
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics.RTGBaseCalc;
 import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntStack;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 
@@ -8,10 +9,10 @@ import java.util.BitSet;
 /**
  * Created by dh on 15.05.17.
  */
-public class hFF extends RTGBaseCalc {
+public class hFfRtg extends RTGBaseCalc {
     int[] emptyAchieverList;
 
-    public hFF(SasPlusProblem p) {
+    public hFfRtg(SasPlusProblem p) {
         super(p);
         this.evalBestAchievers = true;
         this.trackPCF = false;

@@ -1,5 +1,7 @@
-package de.uniulm.ki.panda3.progression.heuristics.sasp;
+package de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics;
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncInfLmCut;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncrementInformation;
 import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntStack;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 
@@ -8,15 +10,16 @@ import java.util.*;
 /**
  * Created by dh on 02.05.17.
  */
-public class hLmCut extends hMax {
+public class hLmCutRtg extends hMaxRtg {
     private final int[][] addToTask;
     private final int numOfOperators;
     private final int[][] addLists;
     private final String[] opNames;
     private final String[] factStrs;
     private int numOfStateFeatures;
+    private IncrementInformation incInf;
 
-    public hLmCut(SasPlusProblem p, boolean incremental) {
+    public hLmCutRtg(SasPlusProblem p, boolean incremental) {
         super(p, true);
         this.earlyAbord = false;
         this.trackPCF = true;
@@ -32,36 +35,17 @@ public class hLmCut extends hMax {
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
-        return hLmCut(s0, g);
+        return calcHeu(-1, null, s0, g);
     }
 
-    private int hLmCut(BitSet s0, BitSet g) {
+    public int calcHeu(int lastAction, IncrementInformation inc, BitSet s0, BitSet g) {
         int[] orgNodeCosts = this.costs.clone();
         IncInfLmCut incrementInfo = null;
         int lmCutHeu = 0;
 
         if (isIncremental) {
             incrementInfo = new IncInfLmCut();
-            IncInfLmCut i = (IncInfLmCut) this.increment;
-            assert i.costsGrZero(this.costs, this.opIndexToEffNode);
-            assert i.disjunct();
-            i.costs.resetIterator();
-            for (BitSet cut : i.cuts) {
-                int costs = i.costs.next();
-                assert costs > 0;
-                if (!cut.get(lastAction)) {
-                    lmCutHeu += costs;
-                    incrementInfo.cuts.add(cut);
-                    incrementInfo.costs.push(costs);
-                    int cutted = cut.nextSetBit(0);
-                    while (cutted >= 0) {
-                        this.costs[this.opIndexToEffNode[cutted]] -= costs;
-                        assert (this.costs[this.opIndexToEffNode[cutted]] >= 0);
-                        debugOut(cutted + " " + opNames[cutted] + "\n");
-                        cutted = cut.nextSetBit(cutted + 1);
-                    }
-                }
-            }
+            lmCutHeu = IncrementalLmCut(lastAction, incrementInfo);
         }
 
         int hMax = super.calcHeu(s0, g);
@@ -86,10 +70,8 @@ public class hLmCut extends hMax {
 
             // calculate costs
             int minCosts = Integer.MAX_VALUE;
-            int cutted = cut.nextSetBit(0);
-            while (cutted >= 0) {
+            for (int cutted = cut.nextSetBit(0); cutted >= 0; cutted = cut.nextSetBit(cutted + 1)) {
                 minCosts = Integer.min(minCosts, this.costs[this.opIndexToEffNode[cutted]]);
-                cutted = cut.nextSetBit(cutted + 1);
             }
             assert minCosts > 0;
             lmCutHeu += minCosts;
@@ -101,19 +83,47 @@ public class hLmCut extends hMax {
 
             // decrease action costs of cut
             debugOut("Cut: " + "\n");
-            cutted = cut.nextSetBit(0);
-            while (cutted >= 0) {
+            for (int cutted = cut.nextSetBit(0); cutted >= 0; cutted = cut.nextSetBit(cutted + 1)) {
                 this.costs[this.opIndexToEffNode[cutted]] -= minCosts;
                 assert (this.costs[this.opIndexToEffNode[cutted]] >= 0);
                 debugOut(cutted + " " + opNames[cutted] + "\n");
-                cutted = cut.nextSetBit(cutted + 1);
             }
+
+            //hMax = super.updateCosts(s0, g, cut);
+            //assert hMax == super.calcHeu(s0, g);
             hMax = super.calcHeu(s0, g);
         }
 
         this.costs = orgNodeCosts; // restore original cost values
-        this.increment = incrementInfo;
+        this.incInf = incrementInfo;
         return lmCutHeu;
+    }
+
+    private int IncrementalLmCut(int lastAction, IncInfLmCut incrementInfo) {
+        int lmCutHeu = 0;
+        IncInfLmCut i = (IncInfLmCut) this.incInf;
+        assert i.costsGrZero(this.costs, this.opIndexToEffNode);
+        assert i.disjunct();
+        i.costs.resetIterator();
+        for (BitSet cut : i.cuts) {
+            int costs = i.costs.next();
+            assert costs > 0;
+            if (!cut.get(lastAction)) {
+                lmCutHeu += costs;
+                incrementInfo.cuts.add(cut);
+                incrementInfo.costs.push(costs);
+                for (int cutted = cut.nextSetBit(0); cutted >= 0; cutted = cut.nextSetBit(cutted + 1)) {
+                    this.costs[this.opIndexToEffNode[cutted]] -= costs;
+                    assert (this.costs[this.opIndexToEffNode[cutted]] >= 0);
+                    debugOut(cutted + " " + opNames[cutted] + "\n");
+                }
+            }
+        }
+        return lmCutHeu;
+    }
+
+    public IncrementInformation getIncInf() {
+        return this.incInf;
     }
 
     private UUIntStack fringe = new UUIntStack();
@@ -148,11 +158,10 @@ public class hLmCut extends hMax {
         }
         fringe.clear();
 
-        int goalZ = goalZone.nextSetBit(0);
+
         debugOut("Goal-Zone: ");
-        while (goalZ >= 0) {
+        for (int goalZ = goalZone.nextSetBit(0); goalZ >= 0; goalZ = goalZone.nextSetBit(goalZ + 1)) {
             debugOut(nodeNames.get(goalZ) + " ");
-            goalZ = goalZone.nextSetBit(goalZ + 1);
         }
         debugOut("\n");
     }
@@ -161,10 +170,9 @@ public class hLmCut extends hMax {
         // put s0 facts into list of reachable facts
         BitSet reachableFacts = (BitSet) s0.clone();
         UUIntStack newFacts = new UUIntStack();
-        int reachableFact = s0.nextSetBit(0);
-        while (reachableFact >= 0) {
+        for (int reachableFact = s0.nextSetBit(0); reachableFact >= 0;
+             reachableFact = s0.nextSetBit(reachableFact + 1)) {
             newFacts.push(reachableFact);
-            reachableFact = s0.nextSetBit(reachableFact + 1);
         }
 
         // calculate reachability
@@ -172,7 +180,7 @@ public class hLmCut extends hMax {
         while (!newFacts.isEmpty()) {
             UUIntStack addEffects = new UUIntStack();
             while (!newFacts.isEmpty()) {
-                reachableFact = newFacts.pop();
+                int reachableFact = newFacts.pop();
                 testReachability.set(reachableFact, false);
                 if (testReachability.isEmpty())
                     break reachability;
@@ -196,14 +204,13 @@ public class hLmCut extends hMax {
 
         // delete unreachable actions
         if (!testReachability.isEmpty()) { // some are not reachable
-            int unreachableFact = testReachability.nextSetBit(0);
-            while (unreachableFact >= 0) {
+            for (int unreachableFact = testReachability.nextSetBit(0); unreachableFact >= 0;
+                 unreachableFact = testReachability.nextSetBit(unreachableFact + 1)) {
                 UUIntStack unreachableOps = pcfInvert[unreachableFact];
                 unreachableOps.resetIterator();
                 while (unreachableOps.hasNext()) {
                     cut.set(unreachableOps.next(), false);
                 }
-                unreachableFact = testReachability.nextSetBit(unreachableFact + 1);
             }
         }
     }

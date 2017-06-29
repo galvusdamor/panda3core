@@ -1,15 +1,20 @@
-package de.uniulm.ki.panda3.progression.heuristics.sasp;
+package de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics;
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntPairPriorityQueue;
 
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 
 /**
  * Created by dh on 22.06.17.
  */
-public class hFFnative extends SasHeuristic {
+public class hAddhFfEq extends SasHeuristic {
     private final SasHeuristics heuristic;
+    private final int[] precLessOps;
+    private final int[] hValPropInit;
     SasPlusProblem p;
     private int[] unsatPrecs;
     private int numGoals;
@@ -17,9 +22,20 @@ public class hFFnative extends SasHeuristic {
     private int[] hValProp;
     private int[] reachedBy;
 
-    public hFFnative(SasPlusProblem p, SasHeuristics heuristic) {
+    public hAddhFfEq(SasPlusProblem p, SasHeuristics heuristic) {
         this.heuristic = heuristic;
         this.p = p;
+        List<Integer> tempPrecLess = new ArrayList<>();
+        for (int i = 0; i < p.numOfOperators; i++) {
+            if (p.addLists[i].length == 0)
+                tempPrecLess.add(i);
+        }
+        precLessOps = new int[tempPrecLess.size()];
+        for (int i = 0; i < tempPrecLess.size(); i++)
+            precLessOps[i] = tempPrecLess.get(i);
+        this.hValPropInit = new int[p.numOfStateFeatures];
+        for (int i = 0; i < hValPropInit.length; i++)
+            hValPropInit[i] = cUnreachable;
     }
 
     @Override
@@ -28,15 +44,20 @@ public class hFFnative extends SasHeuristic {
         this.numGoals = g.cardinality();
 
         this.hValOp = p.costs.clone();
-        this.hValProp = new int[p.numOfStateFeatures];
-        for (int i = 0; i < hValProp.length; i++)
-            hValProp[i] = cUnreachable;
+        this.hValProp = hValPropInit.clone();
         this.reachedBy = new int[p.numOfStateFeatures];
 
         UUIntPairPriorityQueue queue = new UUIntPairPriorityQueue();
         for (int f = s0.nextSetBit(0); f >= 0; f = s0.nextSetBit(f + 1)) {
             queue.add(0, f);
             hValProp[f] = 0;
+        }
+        // actions without preconditions
+        for (int a = 0; a < precLessOps.length; a++) {
+            for (int f : p.addLists[a]) {
+                hValProp[f] = p.costs[a];
+                queue.add(hValProp[f], f);
+            }
         }
 
         while (!queue.isEmpty()) {
@@ -52,7 +73,7 @@ public class hFFnative extends SasHeuristic {
                     return getFFVal(g);
             }
             for (int op : p.precToTask[prop]) {
-                hValOp[op] += pVal; // depends on heurisitc
+                hValOp[op] += pVal;
                 if (--unsatPrecs[op] == 0) {
                     for (int f : p.addLists[op]) {
                         if (hValOp[op] < hValProp[f]) {
@@ -87,7 +108,7 @@ public class hFFnative extends SasHeuristic {
 
         int hGoal = 0;
         for (int op = markedOps.nextSetBit(0); op >= 0; op = markedOps.nextSetBit(op + 1)) {
-            hGoal += hValOp[op];
+            hGoal += p.costs[op];
         }
         return hGoal;
     }
