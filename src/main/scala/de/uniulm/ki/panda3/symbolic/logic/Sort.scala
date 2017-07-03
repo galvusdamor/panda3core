@@ -15,6 +15,8 @@ case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) exte
 
   lazy val elementSet : Set[Constant] = elements toSet
 
+  lazy val allElements: Seq[Constant] = (elements ++ (subSorts flatMap {_.allElements})) distinct
+
   override def update(domainUpdate: DomainUpdate): Sort = (domainUpdate match {
     case ExchangeSorts(map) => if (map.contains(this)) map(this) else this
     case _                  => this

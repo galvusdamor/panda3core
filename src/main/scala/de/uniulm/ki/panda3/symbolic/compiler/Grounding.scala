@@ -36,20 +36,23 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
 
     // ----- Tasks
     def groundTaskToGroundedTask(groundTask: GroundTask): Task = groundTask match {
-      case g@GroundTask(ReducedTask(name, isPrimitive, _, _,_, _, _), constants) =>
+      case g@GroundTask(ReducedTask(name, isPrimitive, _, _, _, _, _), constants) =>
         val newTaskName = name + ((constants map { _.name }) mkString("[", ",", "]"))
         // ground precondition and effect
         val preconditionLiterals = g.substitutedPreconditions map {
           case GroundLiteral(predicate, isPositive, parameter) =>
             Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)
         } distinct
-        val effectLiterals = g.substitutedEffects map {
+        val effectLiteralsUnfiltered = g.substitutedEffects map {
           case GroundLiteral(predicate, isPositive, parameter) => Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)
         } distinct
 
+        // remove effects that occur also in the preconditions
+        val effectLiterals = effectLiteralsUnfiltered filterNot { l => l.isNegative && (effectLiteralsUnfiltered contains l.negate) }
+
         // TODO: here we assume that the grounding we get always fulfills the parameter constraints ... we have to assert this at some point
-        ReducedTask(newTaskName, isPrimitive, Nil, Nil,Nil, And(preconditionLiterals), And(effectLiterals))
-      case _                                                                   => noSupport(FORUMLASNOTSUPPORTED)
+        ReducedTask(newTaskName, isPrimitive, Nil, Nil, Nil, And(preconditionLiterals), And(effectLiterals))
+      case _                                                                      => noSupport(FORUMLASNOTSUPPORTED)
     }
 
     val alreadyGroundedVariableMapping = plan.variableConstraints.variables map { vari => (vari, plan.variableConstraints.getRepresentative(vari)) } collect {
@@ -66,7 +69,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
       }
       (t, taskMap)
     }
-    val additionalHiddenTasks = reachabilityAnalysis.additionalMethodsNeededToGround flatMap  {_.decompositionMethod.subPlan.initAndGoal} map {_.schema} distinct
+    val additionalHiddenTasks = reachabilityAnalysis.additionalMethodsNeededToGround flatMap { _.decompositionMethod.subPlan.initAndGoal } map { _.schema } distinct
     val allGroundedTasks = groundedTasks flatMap { _._2.values } collect {
       case (task, groundTask) if !((domain.hiddenTasks ++ additionalHiddenTasks) contains groundTask.task) && !(initAndGoalInitialTask contains groundTask) => task
     }
@@ -109,8 +112,8 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
         // ground the abstract actions
         val groundedAbstractTask = groundTaskToGroundedTask(GroundTask(liftedMethod.abstractTask, liftedMethod.abstractTask.parameters map variableBinding))
         SimpleDecompositionMethod(groundedAbstractTask, groundPlan(liftedMethod.subPlan, variableBinding), liftedMethod.name + (
-          variableBinding map {case (v,c) => v.name + "=" + c.name}
-          ).mkString("[",",","]"))
+          variableBinding map { case (v, c) => v.name + "=" + c.name }
+          ).mkString("[", ",", "]"))
     }
 
     // check whether we have to insert a new abstract task, as the initial plan might not be completely grounded
@@ -132,7 +135,7 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
 
     // TODO handle decomposition axioms ?!?
     assert(domain.decompositionAxioms.isEmpty)
-    (Domain(Nil, allGroundedPredicates.toSeq, allGroundedTasks.toSeq, groundedDecompositionMethods, Nil, Some(GroundedDomainToDomainMapping(groundingTaskBackMapping)),None), initialPlan)
+    (Domain(Nil, allGroundedPredicates.toSeq, allGroundedTasks.toSeq, groundedDecompositionMethods, Nil, Some(GroundedDomainToDomainMapping(groundingTaskBackMapping)), None), initialPlan)
   }
 
 }

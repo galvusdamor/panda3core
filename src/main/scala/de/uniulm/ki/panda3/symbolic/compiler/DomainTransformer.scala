@@ -62,7 +62,11 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
 
     val (extendedMethods, newTasks) = transformMethods(domain.decompositionMethods, topMethod, info, domain)
 
-    if ((extendedMethods count { _.abstractTask == topTask }) == 1 && allowToRemoveTopMethod) {
+    val numberOfTopMethods = extendedMethods count { _.abstractTask == topTask }
+    if (numberOfTopMethods == 0) {
+      // if the compiler does not want to add a top method, it's ok
+      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks), plan)
+    } else if (numberOfTopMethods == 1 && allowToRemoveTopMethod) {
       // regenerate the initial plan, as it may have changed
       val remainingTopMethod = (extendedMethods find { _.abstractTask == topTask }).get.subPlan
       val newPlan = remainingTopMethod.replaceInitAndGoal(plan.init, plan.goal, Nil)

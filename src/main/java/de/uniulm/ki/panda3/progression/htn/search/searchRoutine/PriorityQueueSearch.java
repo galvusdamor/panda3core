@@ -517,6 +517,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             ic.set(INFERRED_TLT, FirstDecTask);
             ic.set(ENFORCED_PREFIX_LENGTH, enforcedPrefLength);
         }
-        ic.set(SOLUTION, PrimitivePlan);
+        //ic.set(SOLUTION, PrimitivePlan);
     }
 }

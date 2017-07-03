@@ -80,8 +80,8 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
         for (int i = 0; i < nodeCount; i++)
             relLMs[i] = new HashMap<>();
 
-        for (int v = root.nextSetBit(0); v > -1; v = root.nextSetBit(v + 1))
-            calcRelaxedLMs(nodeToScc[v]);
+        //for (int v = root.nextSetBit(0); v > -1; v = root.nextSetBit(v + 1))
+        //    calcRelaxedLMs(nodeToScc[v]);
 
         // set the reachability of every task to the reachability of the SCC it belongs to and set also the reachable actions
         this.reachableActions = new BitSet[numTasks]; // these are the reachable actions
@@ -91,7 +91,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
             for (int v = possible[i].nextSetBit(0); (v > -1) && (v < numActions); v = possible[i].nextSetBit(v + 1))
                 this.reachableActions[i].set(v);
         }
-        collectRelaxedLMs();
+        //collectRelaxedLMs();
         //printDisLMTranslation();
 
         //printBS(necessary);
@@ -349,6 +349,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
     }
 
     private void unify(List<String[]> taskParamSets, List<String[]> methParamSets) {
+        //System.out.println("UNIFY " + taskParamSets.size()  );
         for (int iLM = 0; iLM < taskParamSets.size(); iLM++) {
             int currentCost = Integer.MAX_VALUE;
             String[] currentUnified = null;
@@ -435,12 +436,17 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
     private void extractParams(int node) {
         Task task = iToT(node);
         String n = task.name();
-        String tName = n.substring(0, n.indexOf("["));
-        taskNames[node] = tName;
-        String paramStrs = n.substring(n.indexOf("["));
-        paramStrs = paramStrs.substring(1, paramStrs.length() - 1);
-        String[] params = paramStrs.split(",");
-        taskParams[node] = params;
+        if (!n.contains("[")) {
+            taskNames[node] = n;
+            taskParams[node] = new String[0];
+        } else {
+            String tName = n.substring(0, n.indexOf("["));
+            taskNames[node] = tName;
+            String paramStrs = n.substring(n.indexOf("["));
+            paramStrs = paramStrs.substring(1, paramStrs.length() - 1);
+            String[] params = paramStrs.split(",");
+            taskParams[node] = params;
+        }
     }
 
     private boolean isAbstract(int node) {

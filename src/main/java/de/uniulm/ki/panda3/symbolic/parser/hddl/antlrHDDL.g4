@@ -2,6 +2,8 @@ grammar antlrHDDL;
 
 /**
  * Created by Daniel Höller, Ulm University (daniel.hoeller@uni-ulm.de)
+ * and Mario Schmautz, Ulm University (mario.schmautz@uni-ulm.de) [some refactoring & additions]
+ *
  * - This file contains the grammar for the ANTLR parser generator
  * - It describes an extension of the Planning Domain Definition Language to describe hierarchical
  *   planning problems like Hybrid Planning or Hierarchical Task Network planning.
@@ -75,7 +77,7 @@ comp_task_def :
 task_def : task_symbol
       ':parameters' '(' typed_var_list ')'
       (':precondition' gd)?
-      (':effect' effect_body)? ')';
+      (':effect' effect)? ')';
 
 task_symbol : NAME;
 
@@ -92,7 +94,7 @@ method_def :
       ':parameters' '(' typed_var_list ')'
       ':task' '(' task_symbol var_or_const* ')'
       (':precondition' gd)?
-      (':effect' effect_body)?
+      (':effect' effect)?
       tasknetwork_def;
 
 // @HDDL
@@ -168,32 +170,32 @@ action_def :
 // - gd ^= goal description and is used in goals and preconditions
 //
 // @PDDL
-gd : gd_empty | atomic_formula | gd_negation | gd_conjuction | gd_disjuction | gd_existential | gd_univeral | gd_equality_constraint;
+gd : gd_empty | atomic_formula | gd_negation | gd_implication | gd_conjuction | gd_disjuction | gd_existential | gd_universal | gd_equality_constraint;
 
 gd_empty : '(' ')';
 gd_conjuction : '(' 'and' gd+ ')';
 gd_disjuction : '(' 'or' gd+ ')';
 gd_negation : '(' 'not' gd ')';
-gd_existential : '(exists' '(' typed_var_list ')' gd ')';
-gd_univeral : '(forall' '(' typed_var_list ')' gd ')';
+gd_implication : '(' 'imply' gd gd ')'; // new
+gd_existential : '(' 'exists' '(' typed_var_list ')' gd ')';
+gd_universal : '(' 'forall' '(' typed_var_list ')' gd ')';
 
 gd_equality_constraint : equallity var_or_const var_or_const ')';
 
 //
 // effects
 //
-effect_body : eff_empty | c_effect | eff_conjuntion;
+// Note: In contrast to earlier versions of this grammar nested conditional effects are now permitted.
+//       (This is not allowed in PDDL 2.1)
+effect : eff_empty | eff_conjunction | eff_universal | eff_conditional | literal | p_effect;
 
-eff_conjuntion : '(' 'and' c_effect+ ')';
 eff_empty : '(' ')';
-c_effect : p_effect | literal | forall_effect | conditional_effect;
-
-forall_effect : '(' 'forall' '(' var_or_const* ')' effect_body ')';
-conditional_effect : '(' 'when' gd cond_effect ')';
+eff_conjunction : '(' 'and' effect+ ')';
+eff_universal : '(' 'forall' '(' typed_var_list ')' effect ')';
+eff_conditional : '(' 'when' gd effect ')';
 
 literal : neg_atomic_formula | atomic_formula;
 neg_atomic_formula : '(' 'not' atomic_formula ')';
-cond_effect : literal | '(' 'and' literal+ ')';
 
 p_effect : '(' assign_op f_head f_exp ')';
 

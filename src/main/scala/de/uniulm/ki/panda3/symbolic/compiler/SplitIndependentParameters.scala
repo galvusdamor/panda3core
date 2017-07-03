@@ -18,19 +18,22 @@ object SplitIndependentParameters extends DecompositionMethodTransformer[Unit] {
     val splittedMethods = (methods :+ topMethod) map { case om@SimpleDecompositionMethod(abstractTask, subPlan, methodName) =>
       // determine splittable variables
       val subPlanVariables = subPlan.variableConstraints.variables filterNot abstractTask.parameters.contains
-      val splittableA = subPlanVariables filter { v => subPlan.planSteps.count({ _.argumentSet.contains(v) }) == 1 } filter {
+      val splittableA = subPlanVariables filter { v => subPlan.planStepsWithoutInitGoal.count({ _.argumentSet.contains(v) }) == 1 } filter {
         v => subPlan.variableConstraints.reducedDomainOf(v).size != 1 && subPlan.variableConstraints.constraints.count(_.getVariables.contains(v)) == 0
       }
 
-      val commonParameters = (subPlanVariables -- splittableA) filter {v => subPlan.variableConstraints.reducedDomainOf(v).size != 1 }
-      val splittable = if (splittableA.size == 1) (splittableA filterNot  {
+      val commonParameters = (subPlanVariables -- splittableA) filter { v => subPlan.variableConstraints.reducedDomainOf(v).size != 1 }
+      val planStepsOfSplittable: Set[PlanStep] = splittableA map { v => subPlan.planStepsWithoutInitGoal.find(_.arguments contains v).get }
+
+      val splittable = if (planStepsOfSplittable.size == 1) splittableA filterNot {
         v =>
-          val ps = subPlan.planSteps.find(_.arguments contains v).get
+          val ps = subPlan.planStepsWithoutInitGoal.find(_.arguments contains v).get
           commonParameters.isEmpty || (commonParameters forall { cp => ps.arguments.contains(cp) })
-      } toSeq) else splittableA.toSeq
+      } toSeq
+      else splittableA.toSeq
 
       if (splittable.nonEmpty) {
-        val groupedSplittable: Map[PlanStep, Seq[Variable]] = splittable groupBy { v => subPlan.planSteps.find(_.argumentSet contains v).get }
+        val groupedSplittable: Map[PlanStep, Seq[Variable]] = splittable groupBy { v => subPlan.planStepsWithoutInitGoal.find(_.argumentSet contains v).get }
         // generate a new Task for every planStep
         val exchange: Map[PlanStep, (PlanStep, DecompositionMethod, Task)] = groupedSplittable map { case (op@PlanStep(id, subSchema, arguments), freeVariables) =>
           val realArguments = arguments filterNot freeVariables.contains

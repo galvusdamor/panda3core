@@ -97,7 +97,8 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
           val npsRecent = recentNodes.asInstanceOf[Double] / (nTime - lastReportTime) * 1000
           if (printSearchInfo) println("Plans Expanded: " + nodes + " node/sec avg: " + nps.toInt + " recent: " + npsRecent.toInt + " Queue size " + searchQueue.length + " Recently lowest" +
-                                         " Heuristic " + minHeuristicCurrentInterval + " Recently highest Heuristic " + maxHeuristicCurrentInterval)
+                                         " Heuristic " + minHeuristicCurrentInterval + " Recently highest Heuristic " + maxHeuristicCurrentInterval +
+                                      " time limit " + timeLimitInMilliSeconds + "ms current " + timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME))
           minHeuristicCurrentInterval = Double.MaxValue
           maxHeuristicCurrentInterval = -Double.MaxValue
           lastReportTime = nTime
@@ -201,7 +202,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
         if (buildTree) myNode.setNotDirty()
       }
 
-      if (searchQueue.isEmpty){
+      if (searchQueue.isEmpty) {
         // if we reached this point and the queue is empty, we have proven the problem to be unsolvable
         informationCapsule.set(SEARCH_SPACE_FULLY_EXPLORED, "true")
       }
@@ -221,7 +222,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
           heuristicSearch() // run the search, it will produce its results as side effects
         } catch {
           case t: Throwable =>
-            println("An error occured during search ... aborting")
+            println("An error occurred during search ... aborting")
             t.printStackTrace()
             informationCapsule.set(ERROR, "true")
         }
@@ -267,6 +268,10 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
             }
             resultSemaphore.release()
             thread.stop()
+            HeuristicSearch.this.synchronized {
+                                                timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach - totalTimeAtBeginning))
+                                                timeCapsule stopOrIgnore SEARCH
+                                              }
           }
         }, "Thread - RESCUE")
 
@@ -274,15 +279,17 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
         rescueThread.start()
 
         resultSemaphore.acquire()
-        timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach - totalTimeAtBeginning))
-        timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach - totalTimeAtBeginning))
-        timerSemaphore.release()
+        HeuristicSearch.this.synchronized {
+                                            timeCapsule.switchTimerToCurrentThreadOrIgnore(TOTAL_TIME, Some(timeLimitToReach - totalTimeAtBeginning))
+                                            timeCapsule.switchTimerToCurrentThreadOrIgnore(SEARCH, Some(timeLimitToReach - totalTimeAtBeginning))
+                                            timerSemaphore.release()
 
-        // just to be on the safe side stop all worker and utility threads
-        killerThread.stop()
-        thread.stop()
+                                            // just to be on the safe side stop all worker and utility threads
+                                            killerThread.stop()
+                                            thread.stop()
 
-        timeCapsule stopOrIgnore SEARCH
+                                            timeCapsule stopOrIgnore SEARCH
+                                          }
 
         result
       })

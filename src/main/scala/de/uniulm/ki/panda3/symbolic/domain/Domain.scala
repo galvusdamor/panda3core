@@ -39,13 +39,17 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   // sanity check for the sorts
   @elidable(ASSERTION)
   val assertion = {
+    assert(taskSet.size == tasks.size)
     //
     sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
     decompositionMethods foreach { dm =>
       assert(taskSet contains dm.abstractTask)
+      assert(dm.subPlan.planStepsAndRemovedPlanSteps.length == dm.subPlan.planSteps.length)
       dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task =>
-        if (!(taskSet contains task))
+        if (!(taskSet contains task)) {
+          val x = dm
           println("foo")
+        }
         assert(taskSet contains task, "Task " + task.name + " is missing in the domain")
       }
     }
@@ -96,21 +100,21 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   lazy val primitiveTasks: Seq[Task] = tasks filter { _.isPrimitive }
   lazy val abstractTasks : Seq[Task] = tasks filterNot { _.isPrimitive }
+  lazy  val choicelessAbstractTasks: Set[Task] = abstractTasks filter { at => methodsForAbstractTasks(at).size == 1 } toSet
 
   lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
   lazy val allGroundedAbstractTasks : Seq[GroundTask] = abstractTasks flatMap { _.instantiateGround }
 
-  lazy val methodsWithIndexForAbstractTasks: Map[Task, Seq[(DecompositionMethod, Int)]] = decompositionMethods.zipWithIndex.groupBy(_._1.abstractTask)
-  lazy val methodsForAbstractTasks         : Map[Task, Seq[DecompositionMethod]]        = methodsWithIndexForAbstractTasks map { case (a, b) => a -> (b map { _._1 }) }
+  lazy val methodsWithIndexForAbstractTasks: Map[Task, Seq[(DecompositionMethod, Int)]] = decompositionMethods.zipWithIndex.groupBy(_._1.abstractTask).withDefaultValue(Nil)
+  lazy val methodsForAbstractTasks         : Map[Task, Seq[DecompositionMethod]]        = methodsWithIndexForAbstractTasks map { case (a, b) => a -> (b map { _._1 }) } withDefaultValue Nil
 
-  lazy val minimumMethodSize: Int = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min
-  lazy val maximumMethodSize: Int = decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max
+  lazy val minimumMethodSize: Int = if (decompositionMethods.nonEmpty) decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min else -1
+  lazy val maximumMethodSize: Int = if (decompositionMethods.nonEmpty) decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max else -1
 
   lazy val isGround                : Boolean = predicates forall { _.argumentSorts.isEmpty }
   lazy val isTotallyOrdered        : Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
-  lazy val isHybrid                : Boolean = (decompositionMethods exists { _.subPlan.causalLinks.nonEmpty }) || (tasks exists { t => t.isAbstract && (t.precondition.isEmpty || t.effect
-    .isEmpty)
-  })
+  lazy val isHybrid                : Boolean =
+    (decompositionMethods exists { _.subPlan.causalLinks.nonEmpty }) || (tasks exists { t => t.isAbstract && (!t.precondition.isEmpty || !t.effect.isEmpty) })
   lazy val hasNegativePreconditions: Boolean = tasks exists { _.preconditionsAsPredicateBool exists { !_._2 } }
 
 

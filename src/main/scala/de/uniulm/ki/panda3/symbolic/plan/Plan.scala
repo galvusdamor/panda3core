@@ -9,7 +9,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, CausalLink, Orderi
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.search.{IsModificationAllowed, IsFlawAllowed}
+import de.uniulm.ki.panda3.symbolic.search.{NoModifications, NoFlaws, IsModificationAllowed, IsFlawAllowed}
 import de.uniulm.ki.util.{DotPrintable, HashMemo}
 import de.uniulm.ki.panda3.symbolic.writer._
 
@@ -27,7 +27,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
                 planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)]) extends
   DomainUpdatable with PrettyPrintable with HashMemo with DotPrintable[PlanDotOptions] {
 
-  assert(planStepsAndRemovedPlanSteps == orderingConstraints.tasks)
+  assert(planStepsAndRemovedPlanSteps.toSet == orderingConstraints.tasks.toSet)
 
   assert(planStepsAndRemovedPlanSteps forall {
     ps => ps.arguments.size == ps.schema.parameters.size
@@ -46,6 +46,9 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       assert(orderingConstraints.lt(ps, goal))
   }
 
+  assert(orderingConstraints.lt(init,goal))
+  assert(orderingConstraints.isConsistent)
+
   lazy val planSteps       : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
   lazy val planStepTasksSet: Set[Task]       = planSteps map { _.schema } toSet
   lazy val causalLinks     : Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter { cl => isPresent(cl.producer) && isPresent(cl.consumer) }
@@ -57,6 +60,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   } filter isFlawAllowed
 
   lazy val planStepsWithoutInitGoal: Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
+  lazy val planStepSchemaArray     : Array[Task]   = planStepsWithoutInitGoal map { _.schema } toArray
 
   lazy val planStepsAndRemovedPlanStepsWithoutInitGoal: Seq[PlanStep] = planStepsAndRemovedPlanSteps filter { ps => ps != init && ps != goal }
 
@@ -527,10 +531,29 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     GroundTask(goal.schema, arguments)
   }
 
+  lazy val normalise: Plan = Plan(planSteps, causalLinks, orderingConstraintsWithoutRemovedPlanSteps, parameterVariableConstraints, init, goal, isModificationAllowed, isFlawAllowed, Map(),
+                                  Map())
+
 
   override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[Plan] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[Plan].productIterator) } else false
 
   override lazy val dotString: String = dotString(PlanDotOptions())
+}
+
+object Plan {
+  /**
+    * Creates a totally ordered plan given a sequence of tasks. Currently only supports grounded tasks
+    */
+  def apply(taskSequence: Seq[Task], init : Task, goal : Task): Plan = {
+    assert((taskSequence :+ init :+ goal) forall {_.parameters.isEmpty})
+
+    val planStepSequence = ((init :: goal :: Nil) ++ taskSequence).zipWithIndex map { case (t,i) => PlanStep(i,t,Nil)}
+    val orderedPSSequence = ((planStepSequence.head :: Nil) ++ planStepSequence.drop(2)) :+ planStepSequence(1)
+    val totalOrdering = TaskOrdering.totalOrdering(orderedPSSequence)
+
+
+    Plan(planStepSequence, Nil, totalOrdering, CSP(Set(),Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws,Map(),Map())
+  }
 }
 
 case class PlanDotOptions(showParameters: Boolean = true, showOrdering: Boolean = true, omitImpliedOrderings: Boolean = true, showCausalLinks: Boolean = true,

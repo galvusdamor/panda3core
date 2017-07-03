@@ -26,8 +26,10 @@ package object util {
   def crossProduct[A](list: Seq[Seq[A]]): Seq[Seq[A]] = if (list.isEmpty) Nil :: Nil
   else {
     val subList = crossProduct(list.tail)
-    list.head flatMap { e => subList map {l => l :+ e} }
+    list.head flatMap { e => subList map { l => l :+ e } }
   }
+
+  def crossProduct[A](array1: Array[A], array2: Array[A]): Array[(A, A)] = array1 flatMap { p1 => array2 map { p2 => (p1, p2) } }
 
   def arrayContains[A](array: Array[A], element: A): Boolean = {
     var i = 0

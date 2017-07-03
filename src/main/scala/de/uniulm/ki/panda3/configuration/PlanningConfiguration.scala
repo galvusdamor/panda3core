@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
 import java.io.InputStream
+import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
@@ -20,6 +21,7 @@ import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
+import de.uniulm.ki.panda3.symbolic.sat.verify.{VerifyRunner, SATRunner}
 import de.uniulm.ki.panda3.symbolic.sat.verify.SATRunner
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
@@ -37,10 +39,12 @@ import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
+
 import de.uniulm.ki.util._
 
-import scala.util.Random
 import scala.collection.JavaConversions
+import scala.util.Random
+
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -60,6 +64,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     case _                       => ()
   }
 
+  lazy val timeLimitInMilliseconds: Option[Long] = timeLimit.map(_.toLong * 1000)
 
   import Timings._
 
@@ -130,6 +135,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     // write randomseed into the info capsule
     informationCapsule.set(Information.RANDOM_SEED, randomSeed.toString)
+
+    // determine show much time I have left
+    val remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+    println("Time remaining for planner " + remainingTime + "ms")
 
 
     searchConfiguration match {
@@ -282,7 +291,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
         val progressionInstance = new ProPlanningInstance()
         val groundMethods = domainAndPlan._1.methodsForAbstractTasks map { case (at, ms) =>
-          at -> JavaConversions.setAsJavaSet(ms collect {case s : SimpleDecompositionMethod => s} toSet)
+          at -> JavaConversions.setAsJavaSet(ms collect { case s: SimpleDecompositionMethod => s } toSet)
         }
 
 
@@ -300,23 +309,71 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           runPostProcessing(timeCapsule, informationCapsule, null, if (solutionFound) null :: Nil else Nil, domainAndPlan, unprocessedDomain, analysisMap)
         })
 
-      case satSearch: SATSearch =>
+      case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, timeCapsule, informationCapsule)
-          val (solved, finished) = runner.runWithTimeLimit(timeLimit.map({ a => 1000L * a }), satSearch.maximumPlanLength, 0, defineK = satSearch.overrideK, checkSolution =
-            satSearch.checkResult)
+          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, satSearch.reductionMethod, timeCapsule, informationCapsule)
 
-          informationCapsule.set(Information.SOLVED, if (solved) "true" else "false")
-          informationCapsule.set(Information.TIMEOUT, if (finished) "false" else "true")
+
+
+          // depending on whether we are doing a single or a full run, we have either to do a loop or just one run
+          val (solution, error) = satSearch.runConfiguration match {
+            case SingleSATRun(maximumPlanLength, overrideK) =>
+              runner.runWithTimeLimit(remainingTime, remainingTime, maximumPlanLength, 0, defineK = overrideK, checkSolution = satSearch.checkResult) match {case (a, b, c) => (a, b)}
+            case FullSATRun()                               =>
+              // start with K = 0 and loop
+              // TODO this is only good for total order ...
+              var solution: Option[Seq[Task]] = None
+              var error: Boolean = false
+              var currentK = 0
+              var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+              var usedTime: Long = remainingTime / Math.max(1, 10 / (currentK + 1))
+              var expansion: Boolean = true
+              while (solution.isEmpty && !error && expansion && usedTime > 0) {
+                println("\nRunning SAT search with K = " + currentK)
+                println("Time remaining for SAT search " + remainingTime + "ms")
+                println("Time used for this run " + usedTime + "ms\n\n")
+
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, -1, 0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
+                println("ERROR " + satError)
+                error |= satError
+                solution = satResult
+                expansion = expansionPossible
+                currentK += 1
+                remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+                usedTime = remainingTime / Math.max(1, 10 / (currentK + 1))
+              }
+
+              (solution, false)
+          }
+
+          informationCapsule.set(Information.SOLVED, if (solution.isDefined) "true" else "false")
+          informationCapsule.set(Information.TIMEOUT, if (error) "true" else "false")
 
           timeCapsule stop TOTAL_TIME
-          runPostProcessing(timeCapsule, informationCapsule, null, if (solved) null :: Nil else Nil, domainAndPlan, unprocessedDomain, analysisMap)
+          val potentialPlan = solution match {
+            case Some(taskSequence) => Plan(taskSequence, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema) :: Nil
+            case None               => Nil
+          }
+          runPostProcessing(timeCapsule, informationCapsule, null, potentialPlan, domainAndPlan, unprocessedDomain, analysisMap)
         })
+      case SATPlanVerification(solverType, planToVerity) =>
+        assert(domainAndPlan._1.isGround)
+        val taskSequenceToVerify: Seq[Task] = planToVerity.split(";") map { t => domainAndPlan._1.tasks.find(_.name == t).get }
 
-      case NoSearch => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+        (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+          val runner = VerifyRunner(domainAndPlan._1, domainAndPlan._2, solverType)
+
+          val (isSolution, runCompleted) = runner.runWithTimeLimit(remainingTime, taskSequenceToVerify, 0, includeGoal = true, None, timeCapsule, informationCapsule)
+
+
+
+          runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
+        })
+      case NoSearch                                      => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
         timeCapsule stop TOTAL_TIME
         runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
       })
+
     }
   }
 
@@ -434,6 +491,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             searchConfiguration match {
               case search: PlanBasedSearch =>
                 if (informationCapsule.dataMap().contains(Information.SEARCH_SPACE_FULLY_EXPLORED)) SearchState.UNSOLVABLE else SearchState.INSEARCH
+              case sat: SATSearch          => SearchState.UNSOLVABLE
               case _                       => SearchState.INSEARCH
             }
           }
@@ -448,7 +506,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case AllFoundPlans                  => result
       case SearchStatistics               => informationCapsule
       case SearchSpace                    => rootNode
-      case SolutionInternalString         => if (result.nonEmpty) Some(result.head.longInfo) else None
+      case SolutionInternalString         => if (result.nonEmpty) Some(result.head.shortInfo) else None
       case SolutionDotString              => if (result.nonEmpty) Some(result.head.dotString) else None
       case FinalTaskDecompositionGraph    => analysisMap(SymbolicGroundedTaskDecompositionGraph)
       case FinalGroundedReachability      => analysisMap(SymbolicGroundedReachability)
@@ -511,27 +569,28 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     timeCapsule start PARSER_STRIP_HYBRID
     val noHybrid = if (parsingConfiguration.stripHybrid) StripHybrid.transform(sortsExpandedDomainAndProblem, ()) else sortsExpandedDomainAndProblem
+    if (parsingConfiguration.stripHybrid) assert(!noHybrid._1.isHybrid)
     timeCapsule stop PARSER_STRIP_HYBRID
 
-    timeCapsule start PARSER_CWA
-    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(noHybrid, true) else noHybrid
-    timeCapsule stop PARSER_CWA
-
     timeCapsule start PARSER_SHOP_METHODS
-    val simpleMethod = if (parsingConfiguration.compileSHOPMethods) SHOPMethodCompiler.transform(cwaApplied, ()) else cwaApplied
+    val simpleMethod = if (parsingConfiguration.compileSHOPMethods) SHOPMethodCompiler.transform(noHybrid, ()) else noHybrid
     timeCapsule stop PARSER_SHOP_METHODS
 
-    timeCapsule start PARSER_ELIMINATE_EQUALITY
-    val identity = if (parsingConfiguration.eliminateEquality) RemoveIdenticalVariables.transform(simpleMethod, ()) else simpleMethod
-    timeCapsule stop PARSER_ELIMINATE_EQUALITY
-
     timeCapsule start PARSER_FLATTEN_FORMULA
-    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(identity, ()) else identity
+    val flattened = if (parsingConfiguration.reduceGneralTasks) ReduceGeneralTasks.transform(simpleMethod, ()) else simpleMethod
     timeCapsule stop PARSER_FLATTEN_FORMULA
+
+    timeCapsule start PARSER_CWA
+    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(flattened, true) else flattened
+    timeCapsule stop PARSER_CWA
+
+    timeCapsule start PARSER_ELIMINATE_EQUALITY
+    val identity = if (parsingConfiguration.eliminateEquality) RemoveIdenticalVariables.transform(cwaApplied, ()) else cwaApplied
+    timeCapsule stop PARSER_ELIMINATE_EQUALITY
 
     timeCapsule stop PARSING
     info("done.\n")
-    (flattened, cwaApplied, timeCapsule)
+    (identity,noHybrid, timeCapsule)
   }
 
 
@@ -581,8 +640,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
 
-  private def runReachabilityAnalyses(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
+  private def runReachabilityAnalyses(domain: Domain, problem: Plan, runForGrounder: Boolean, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     val emptyAnalysis = AnalysisMap(Map())
+
+    assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
 
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
@@ -599,9 +660,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else ((domain, problem), emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
+    assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { liftedResult._1._1.tasks contains _.schema })
 
     // convert to SAS+
     val sasPlusResult = if (preprocessingConfiguration.convertToSASP && !liftedResult._1._1.isGround) {
+      import sys.process._
+
       info("Converting to SAS+ ... ")
       // 1. step write pddl part of the domain to file
       val classicalDomain = liftedResult._1._1.classicalDomain
@@ -623,27 +687,33 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                           withGoalPlan.variableConstraints, withGoalPlan.init, withGoalPlan.goal, withGoalPlan.isModificationAllowed, withGoalPlan.isFlawAllowed, Map(), Map())
 
       // FD can't handle either in the sort hierarchy, so we have to use predicates when writing them ...
-      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true), "__sasdomain.pddl")
-      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan, writeEitherWithPredicates = true), "__sasproblem.pddl")
+      val uuid = UUID.randomUUID().toString
+
+      ("mkdir .fd" + uuid) !! // create directory
+
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true), ".fd" + uuid + "/__sasdomain.pddl")
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan, writeEitherWithPredicates = true), ".fd" + uuid + "/__sasproblem.pddl")
 
       val sasPlusParser = {
-        import sys.process._
         // we need a path to FD
         assert(externalProgramPaths contains FastDownward, "no path to fast downward is specified")
         val fdPath = externalProgramPaths(FastDownward)
 
-        ("python " + fdPath + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl") !!
+        // semantic empty line
+        writeStringToFile("#!/bin/bash\ncd .fd" + uuid + "\npython " + fdPath + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
+
+        ("bash runFD" + uuid + ".sh") !!
         // semantic empty line
 
-        "rm __sasdomain.pddl __sasproblem.pddl" !
         // semantic empty line
-
-        val sasreader = new SasPlusProblem("output.sas")
+        val sasreader = new SasPlusProblem(".fd" + uuid + "/output.sas")
         sasreader.prepareEfficientRep()
         //ProPlanningInstance.sasp = sasreader
         //sasreader.prepareSymbolicRep(domain,problem)
 
-        "rm output.sas" !
+        ("rm -rf .fd" + uuid) !
+
+        ("rm runFD" + uuid + ".sh") !!
         // semantic empty line
 
         SASPlusGrounding(liftedResult._1._1, liftedResult._1._2, sasreader)
@@ -693,12 +763,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       info("done.\n")
       info("Number of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
 
-      println(newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions map { _.longInfo } mkString "\n")
-
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
     } else sasPlusResult
     if (preprocessingConfiguration.groundedReachability.isDefined) timeCapsule stop GROUNDED_PLANNINGGRAPH_ANALYSIS
+
+    assert(groundedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { groundedResult._1._1.tasks contains _.schema })
 
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
@@ -718,19 +788,44 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
-    if (!preprocessingConfiguration.iterateReachabilityAnalysis || tdgResult._1._1.tasks.length == domain.tasks.length) (tdgResult, timeCapsule)
-    else runReachabilityAnalyses(tdgResult._1._1, tdgResult._1._2, timeCapsule)
+    assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { tdgResult._1._1.tasks contains _.schema })
+
+    val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
+      if (!runForGrounder) (if (preprocessingConfiguration.compileUselessAbstractTasks)
+        CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand useless abstract tasks", USELESS_ABSTRACT_TASKS) :: Nil
+      else Nil) ::
+        // this one has to be the last
+        (if (preprocessingConfiguration.compileInitialPlan)
+          CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
+        else Nil) ::
+        Nil flatten
+      else Nil
+
+    // don't run compilation if we are still ground
+    val compiledResult = groundedCompilersToBeApplied.foldLeft(tdgResult._1)(
+      { case ((dom, prob), cc@CompilerConfiguration(compiler, option, message, timingString)) =>
+        timeCapsule start timingString
+        info("Compiling " + message + " ... ")
+        val compiled = cc.run(dom, prob)
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        timeCapsule stop timingString
+        compiled
+      })
+
+    if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length) ((compiledResult, tdgResult._2), timeCapsule)
+    else runReachabilityAnalyses(compiledResult._1, compiledResult._2, runForGrounder, timeCapsule)
   }
 
+  private case class CompilerConfiguration[T](domainTransformer: DomainTransformer[T], information: T, name: String, timingName: String) {
+    def run(domain: Domain, plan: Plan) = domainTransformer.transform(domain, plan, information)
+  }
 
   def runPreprocessing(domain: Domain, problem: Plan, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     // start the timer
     timeCapsule start PREPROCESSING
     extra("Initial domain\n" + domain.statisticsString + "\n")
 
-    case class CompilerConfiguration[T](domainTransformer: DomainTransformer[T], information: T, name: String, timingName: String) {
-      def run(domain: Domain, plan: Plan) = domainTransformer.transform(domain, plan, information)
-    }
 
     val compilerToBeApplied: Seq[CompilerConfiguration[_]] =
       (if (preprocessingConfiguration.compileNegativePreconditions)
@@ -741,10 +836,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         else Nil) ::
         (if (preprocessingConfiguration.splitIndependentParameters)
           CompilerConfiguration(SplitIndependentParameters, (), "split parameters", SPLIT_PARAMETERS) :: Nil
-        else Nil) ::
-        // this one has to be the last
-        (if (preprocessingConfiguration.compileInitialPlan)
-          CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
         else Nil) ::
         Nil flatten
 
@@ -761,7 +852,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                                            )
 
     // initial run of the reachability analysis on the domain, until it has converged
-    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compiledDomain, compiledProblem, timeCapsule)
+    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compiledDomain, compiledProblem, runForGrounder = true, timeCapsule)
 
     // finished reachability analysis now we have to ground
     if (preprocessingConfiguration.groundDomain) {
@@ -815,7 +906,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
 
-      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, timeCapsule)
+      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, runForGrounder = false, timeCapsule)
 
       timeCapsule stop PREPROCESSING
       ((groundedDomainAndPlan, groundedAnalysisMap), timeCapsule)
@@ -888,6 +979,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       defaultPlanSearchConfiguration ::
         defaultProgressionConfiguration ::
         defaultSATConfiguration ::
+        defaultVerifyConfiguration ::
         NoSearch :: Nil
     case x        => x :: Nil
   }) ++ (parsingConfiguration :: preprocessingConfiguration :: postprocessingConfiguration :: Nil)
@@ -903,7 +995,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 object PlanningConfiguration {
   private val defaultPlanSearchConfiguration  = PlanBasedSearch(None, BFSType, Nil, Nil, LCFR)
   private val defaultProgressionConfiguration = ProgressionSearch(BFSType, None, PriorityQueueSearch.abstractTaskSelection.random)
-  private val defaultSATConfiguration         = SATSearch(MINISAT, 0)
+  private val defaultSATConfiguration         = SATSearch(MINISAT, SingleSATRun())
+  private val defaultVerifyConfiguration      = SATPlanVerification(MINISAT, "")
 }
 
 /**
@@ -928,7 +1021,7 @@ case class ParsingConfiguration(
                                  compileSHOPMethods: Boolean = true,
                                  eliminateEquality: Boolean = true,
                                  stripHybrid: Boolean = false,
-                                 toPlainFormulaRepresentation: Boolean = true
+                                 reduceGneralTasks: Boolean = true
                                ) extends Configuration {
   /** returns a detailed information about the object */
   override def longInfo: String = "Parsing Configuration\n---------------------\n" +
@@ -937,7 +1030,7 @@ case class ParsingConfiguration(
                   ("CompileSHOPMethods", compileSHOPMethods) ::
                   ("Eliminate Equality", eliminateEquality) ::
                   ("Strip Hybridity", stripHybrid) ::
-                  ("To Plain Formula Representation", toPlainFormulaRepresentation) :: Nil
+                  ("Reduce General Tasks", reduceGneralTasks) :: Nil
                )
 
   protected override def localModifications: Seq[(String, (ParameterMode, (Option[String]) => ParsingConfiguration.this.type))] =
@@ -968,8 +1061,10 @@ case class ParsingConfiguration(
          "-stripHybrid" ->(NoParameter, { p: Option[String] => this.copy(stripHybrid = true).asInstanceOf[this.type] }),
          "-dontStripHybrid" ->(NoParameter, { p: Option[String] => this.copy(stripHybrid = false).asInstanceOf[this.type] }),
 
-         "-toPlainFormulaRepresentation" ->(NoParameter, { p: Option[String] => this.copy(toPlainFormulaRepresentation = true).asInstanceOf[this.type] }),
-         "-generalFormulaRepresentation" ->(NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(toPlainFormulaRepresentation = false).asInstanceOf[this.type] })
+         "-toPlainFormulaRepresentation" ->(NoParameter, { p: Option[String] =>
+           (if (p.isEmpty) this.copy(reduceGneralTasks = true) else this.copy(reduceGneralTasks = p.get.toBoolean)).asInstanceOf[this.type]
+         }),
+         "-generalFormulaRepresentation" ->(NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(reduceGneralTasks = false).asInstanceOf[this.type] })
        )
 }
 
@@ -996,6 +1091,7 @@ case class PreprocessingConfiguration(
                                        compileInitialPlan: Boolean,
                                        convertToSASP: Boolean,
                                        splitIndependentParameters: Boolean,
+                                       compileUselessAbstractTasks: Boolean,
                                        liftedReachability: Boolean,
                                        groundedReachability: Option[GroundedReachabilityMode],
                                        groundedTaskDecompositionGraph: Option[TDGGeneration],
@@ -1003,7 +1099,8 @@ case class PreprocessingConfiguration(
                                        groundDomain: Boolean
                                      ) extends Configuration {
   assert(!convertToSASP || groundedReachability.isEmpty, "You can't use both SAS+ and a grouded PG")
-  assert(!convertToSASP || !compileNegativePreconditions, "You can't use both SAS+ and remove negative preconditions")
+
+  //assert(!convertToSASP || !compileNegativePreconditions, "You can't use both SAS+ and remove negative preconditions")
 
   //assert(!groundDomain || naiveGroundedTaskDecompositionGraph, "A grounded reachability analysis (grounded TDG) must be performed in order to ground.")
 
@@ -1171,19 +1268,21 @@ object SearchHeuristic {
       case "relax"                                           => Relax
 
       // pandaPRO
-      case "hhmcff" | "relaxed-composition_with_multicount_ff"  => RelaxedCompositionGraph(
-                                                                            useTDReachability = hParameterMap.getOrElse("td-reachability", "true").toBoolean,
-                                                                            heuristicExtraction = ProRcgFFMulticount.heuristicExtraction.parse(hParameterMap.getOrElse("extraction", "ff")),
-                                                                            producerSelectionStrategy = ProRcgFFMulticount.producerSelection.parse(hParameterMap.getOrElse("selection", "fcfs")))
-      case "greedy-progression"                 => GreedyProgression
-      case "hhrc"                               =>
+      case "hhmcff" | "relaxed-composition_with_multicount_ff" => RelaxedCompositionGraph(
+                                                                                           useTDReachability = hParameterMap.getOrElse("td-reachability", "true").toBoolean,
+                                                                                           heuristicExtraction = ProRcgFFMulticount.heuristicExtraction
+                                                                                             .parse(hParameterMap.getOrElse("extraction", "ff")),
+                                                                                           producerSelectionStrategy = ProRcgFFMulticount.producerSelection
+                                                                                             .parse(hParameterMap.getOrElse("selection", "fcfs")))
+      case "greedy-progression"                                => GreedyProgression
+      case "hhrc"                                              =>
         val h = hParameterMap.get("h") match {
-          case Some("ff") => SasHeuristics.hFF
-          case Some("add") => SasHeuristics.hAdd
-          case Some("max") => SasHeuristics.hMax
-          case Some("lm-cut") => SasHeuristics.hLmCut
+          case Some("ff")         => SasHeuristics.hFF
+          case Some("add")        => SasHeuristics.hAdd
+          case Some("max")        => SasHeuristics.hMax
+          case Some("lm-cut")     => SasHeuristics.hLmCut
           case Some("inc-lm-cut") => SasHeuristics.hIncLmCut
-          case None => assert(false); null
+          case None               => assert(false); null
         }
 
         HierarchicalHeuristicRelaxedComposition(h)
@@ -1410,17 +1509,49 @@ case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
 
 }
 
+sealed trait SATReductionMethod extends DefaultLongInfo
+
+object OnlyNormalise extends SATReductionMethod {override def longInfo: String = "only normalise "}
+
+object FFReduction extends SATReductionMethod {override def longInfo: String = "FF reduction"}
+
+object H2Reduction extends SATReductionMethod {override def longInfo: String = "H2 reduction"}
+
+object FFReductionWithFullTest extends SATReductionMethod {override def longInfo: String = "FF reduction with full reachability test"}
+
+
+sealed trait SATRunConfiguration extends DefaultLongInfo
+
+case class SingleSATRun(maximumPlanLength: Int = 1, overrideK: Option[Int] = None) extends SATRunConfiguration {override def longInfo: String = "XYZ"}
+
+case class FullSATRun() extends SATRunConfiguration {override def longInfo: String = "full run"}
+
+
 case class SATSearch(solverType: Solvertype,
-                     maximumPlanLength: Int,
-                     overrideK: Option[Int] = None,
-                     checkResult: Boolean = false
+                     runConfiguration: SATRunConfiguration,
+                     checkResult: Boolean = false,
+                     reductionMethod: SATReductionMethod = OnlyNormalise
                     ) extends SearchConfiguration {
+
+  protected lazy val getSingleRun: SingleSATRun = runConfiguration match {
+    case s: SingleSATRun => s
+    case _               => SingleSATRun()
+  }
+
+  protected lazy val getFullRun: FullSATRun = runConfiguration match {
+    case f: FullSATRun => f
+    case _             => FullSATRun()
+  }
 
   protected override def localModifications: Seq[(String, (ParameterMode, (Option[String] => this.type)))] =
     Seq(
-         "-planlength" ->(NecessaryParameter, { l: Option[String] => this.copy(maximumPlanLength = l.get.toInt).asInstanceOf[this.type] }),
-         "-overrideK" ->(NecessaryParameter, { l: Option[String] => this.copy(overrideK = Some(l.get.toInt)).asInstanceOf[this.type] }),
-         "-dontOverrideK" ->(NecessaryParameter, { l: Option[String] => this.copy(overrideK = None).asInstanceOf[this.type] }),
+         "-planlength" ->(NecessaryParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(maximumPlanLength = l.get.toInt)).asInstanceOf[this.type] }),
+         "-overrideK" ->(NecessaryParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(overrideK = Some(l.get.toInt))).asInstanceOf[this.type] }),
+         "-dontOverrideK" ->(NoParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(overrideK = None)).asInstanceOf[this.type] }),
+
+         "-fullRun" ->(NoParameter, { l: Option[String] => this.copy(runConfiguration = getFullRun).asInstanceOf[this.type] }),
+
+
          "-checkResult" ->(NoParameter, { l: Option[String] => this.copy(checkResult = true).asInstanceOf[this.type] }),
          "-solver" ->(NecessaryParameter, { l: Option[String] =>
            val solver = l.get.toLowerCase match {
@@ -1428,16 +1559,54 @@ case class SATSearch(solverType: Solvertype,
              case "cryptominisat" => CRYPTOMINISAT
            }
            this.copy(solverType = solver).asInstanceOf[this.type]
+         }),
+         "-reduction" ->(NecessaryParameter, { l: Option[String] =>
+           val reduction = l.get.toLowerCase match {
+             case "normalise" => OnlyNormalise
+             case "ff"        => FFReduction
+             case "h2"        => H2Reduction
+             case "ff-full"   => FFReductionWithFullTest
+           }
+           this.copy(reductionMethod = reduction).asInstanceOf[this.type]
          })
        )
 
   /** returns a detailed information about the object */
   override def longInfo: String = "SAT-Planning Configuration\n--------------------------\n" +
-    alignConfig(("solver", solverType.longInfo) ::
-                  ("maximum plan length", maximumPlanLength) ::
-                  ("override K", overrideK.getOrElse("false")) ::
-                  ("check result", checkResult) :: Nil)
+    alignConfig((("solver", solverType.longInfo) :: Nil) ++
+                  (runConfiguration match {
+                    case single: SingleSATRun =>
+                      ("maximum plan length", single.maximumPlanLength) ::
+                        ("override K", single.overrideK.getOrElse("false")) :: Nil
+                    case fullRun: FullSATRun  =>
+                      ("full planner run", "true") :: Nil
+                  }
+                    ) ++ (
+      ("reduction method", reductionMethod.longInfo) ::
+        ("check result", checkResult) :: Nil))
 
+}
+
+
+case class SATPlanVerification(solverType: Solvertype, planToVerify: String) extends SearchConfiguration {
+
+  protected override def localModifications: Seq[(String, (ParameterMode, (Option[String] => this.type)))] =
+    Seq(
+         "-solver" ->(NecessaryParameter, { l: Option[String] =>
+           val solver = l.get.toLowerCase match {
+             case "minisat"       => MINISAT
+             case "cryptominisat" => CRYPTOMINISAT
+           }
+           this.copy(solverType = solver).asInstanceOf[this.type]
+         }),
+         "-plan" ->(NecessaryParameter, { l: Option[String] =>
+           this.copy(planToVerify = l.get).asInstanceOf[this.type]
+         })
+       )
+
+  /** returns a detailed information about the object */
+  override def longInfo: String = "SAT-Plan-Verification Configuration\n--------------------------\n" +
+    alignConfig(("solver", solverType.longInfo) ::("plan", planToVerify) :: Nil)
 }
 
 object NoSearch extends SearchConfiguration {
@@ -1523,3 +1692,5 @@ sealed trait Solvertype extends DefaultLongInfo with ExternalProgram
 object MINISAT extends Solvertype {override val longInfo: String = "minisat"}
 
 object CRYPTOMINISAT extends Solvertype {override val longInfo: String = "cryptominisat"}
+
+object RISS6 extends Solvertype {override val longInfo: String = "riss6"}

@@ -79,7 +79,7 @@ public class entertainmentProbGen {
         p.addAvGoal(g);
         return p;
     }
-/* does not work, yet
+
     private static heProblem getProblem4() {
         heProblem p = new heProblem("p04-split-and-rejoin");
         heDevice dvd = new heDvdPlayer();
@@ -95,5 +95,5 @@ public class entertainmentProbGen {
         g[1] = tv;
         p.addAvGoal(g);
         return p;
-    }*/
+    }
 }

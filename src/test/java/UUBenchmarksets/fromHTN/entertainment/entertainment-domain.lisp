@@ -198,10 +198,10 @@
       )
     :effect (and
         (when (and (audio_connector ?c1)
-                   (audio_connector ?e2))
+                   (audio_connector ?c2))
               (audio_connected ?e1 ?e2))
         (when (and (video_connector ?c1)
-                   (video_connector ?e2))
+                   (video_connector ?c2))
               (video_connected ?e1 ?e2))
         (not (unused ?c1))(not (unused ?c2)))
       )

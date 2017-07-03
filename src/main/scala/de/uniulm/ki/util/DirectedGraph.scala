@@ -82,7 +82,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
 
     //
 
-    for ((i, j) <- edgeList;
+    for ((i, j) <- edgeList
          if changingEdgeMap(i) exists { k => reachable(k) contains j }
     ) {
       changingEdgeMap(i).remove(j)
@@ -453,6 +453,9 @@ object DirectedGraph {
 }
 
 case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraph[T] {
+
+  // we don't want duplicats
+  assert(vertices.length == vertices.distinct.length)
 
   private val verticesToInt: BiMap[T, Int] = BiMap(vertices.zipWithIndex)
   private val internalGraph                = SimpleDirectedGraph[Int](vertices map verticesToInt.apply, edges map { case (from, to) =>

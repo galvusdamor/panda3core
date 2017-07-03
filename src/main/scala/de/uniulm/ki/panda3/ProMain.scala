@@ -103,6 +103,7 @@ object ProMain {
                                                                         compileInitialPlan = true,
                                                                         convertToSASP = true,
                                                                         splitIndependentParameters = true,
+                                                                        compileUselessAbstractTasks = false,
                                                                         liftedReachability = true, groundedReachability = None, //Some(PlanningGraph),
                                                                         groundedTaskDecompositionGraph = Some(TwoWayTDG), // None,
                                                                         iterateReachabilityAnalysis = false, groundDomain = true),
