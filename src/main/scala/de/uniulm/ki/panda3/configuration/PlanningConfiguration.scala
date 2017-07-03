@@ -632,7 +632,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         assert(externalProgramPaths contains FastDownward, "no path to fast downward is specified")
         val fdPath = externalProgramPaths(FastDownward)
 
-        (fdPath + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl") !!
+        ("python " + fdPath + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl") !!
         // semantic empty line
 
         "rm __sasdomain.pddl __sasproblem.pddl" !
