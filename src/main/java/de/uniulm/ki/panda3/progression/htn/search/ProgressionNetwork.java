@@ -221,7 +221,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         return res;
     }
 
-    public ProgressionNetwork apply(ProgressionPlanStep ps, boolean deleteRelaxed) {
+    public ProgressionNetwork apply(ProgressionPlanStep ps) {
         ProgressionNetwork res = this.clone();
         res.numberOfTasks--;
         res.numberOfPrimitiveTasks--;
@@ -238,10 +238,8 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         assert (isApplicable(res.state, ps.action));
 
         // transfer state
-        if (!deleteRelaxed) {
-            for (int df : ProgressionNetwork.flatProblem.delLists[ps.action])
-                res.state.set(df, false);
-        }
+        for (int df : ProgressionNetwork.flatProblem.delLists[ps.action])
+            res.state.set(df, false);
         for (int af : ProgressionNetwork.flatProblem.addLists[ps.action])
             res.state.set(af, true);
 

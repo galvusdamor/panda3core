@@ -30,11 +30,10 @@ import java.util.concurrent.ExecutionException;
  */
 public class ProPlanningInstance {
 
-    public static SasPlusProblem sasp;
-
     final boolean verbose = false;
 
     public static Random random;
+    public static long randomSeed;
 
     public boolean plan(Domain d, Plan p, Map<Task, Set<SimpleDecompositionMethod>> methodsByTask,
                         InformationCapsule ic, TimeCapsule tc,
@@ -50,7 +49,8 @@ public class ProPlanningInstance {
 
         // Convert data structures
         long totaltime = System.currentTimeMillis();
-        random = new Random(randomSeed);
+        ProPlanningInstance.randomSeed = randomSeed;
+        random = new Random(ProPlanningInstance.randomSeed);
 
         ProgressionNetwork.flatProblem = d.sasPlusRepresentation().get().sasPlusProblem();
 
@@ -96,13 +96,6 @@ public class ProPlanningInstance {
         initialTasks.add(ps);
         ps.methods = methods.get(ps.getTask());
         ProgressionNetwork initialNode = new ProgressionNetwork(ProgressionNetwork.flatProblem.getS0(), initialTasks);
-        /*
-        try {
-            System.out.println("\n\n<PRESS KEY>");
-            System.in.read();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
 
         /* Spezialfälle
          * - BFS/DFS -> PriorityQueue A* & spezielle Heuristik
@@ -126,25 +119,6 @@ public class ProPlanningInstance {
             throw new IllegalArgumentException("Heuristic " + heuristic + " is not supported");
         }
 
-/*
-        // todo: this is hacky!
-        if ((taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.decompDepth) && (!TopDownReachabilityGraph.isInitialized())) {
-            int taskNo = operators.numStateFeatures;
-            HashMap<GroundTask, Integer> TaskToIndex = new HashMap<>();
-
-            for (GroundTask a : allActions) {
-                TaskToIndex.put(a, taskNo);
-                taskNo++;
-            }
-
-            for (GroundTask t : RCG.getGroundTasks(operators.methods)) {
-                TaskToIndex.put(t, taskNo);
-                taskNo++;
-            }
-
-            new TopDownReachabilityGraph(methods, initialTasks, taskNo, flatProblem.numOfOperators, TaskToIndex);
-
-        }*/
         initialNode.heuristic.build(initialNode);
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
@@ -169,7 +143,7 @@ public class ProPlanningInstance {
         } else {
             System.out.println(" - Greedy search");
         }
-        System.out.println(" - " + initialNode.heuristic.getName() + " heuristic");
+        System.out.println(" - HTN heuristic:" + initialNode.heuristic.getName());
 
         if (taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.random) {
             System.out.println(" - Abstract task choice: randomly");
@@ -195,9 +169,7 @@ public class ProPlanningInstance {
         }
 
         assert (isApplicable(solution, ProgressionNetwork.flatProblem.getS0()));
-        //System.out.println("###" + ic.keyValueListString() + ";" + tc.keyValueListString());
 
-        int n = 1;
         if (solution != null) {
             System.out.println("\nFound a solution:");
             System.out.println(solution.toString());

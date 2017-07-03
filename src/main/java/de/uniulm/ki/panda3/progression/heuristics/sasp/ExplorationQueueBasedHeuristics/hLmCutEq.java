@@ -32,6 +32,14 @@ public class hLmCutEq extends SasHeuristic {
     // necessary for debug
     //private BitSet s0;
 
+    @Override
+    public String toString() {
+        if (isIncremental)
+            return "incremental hLM-Cut based on exploration queue";
+        else
+            return "hLM-Cut based on exploration queue";
+    }
+
     public hLmCutEq(SasPlusProblem p, boolean incremental) {
         this.p = p;
         this.isIncremental = incremental;

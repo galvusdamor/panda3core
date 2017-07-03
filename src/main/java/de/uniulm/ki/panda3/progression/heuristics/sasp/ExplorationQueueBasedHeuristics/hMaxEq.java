@@ -21,6 +21,11 @@ public class hMaxEq extends SasHeuristic {
     private int[] hVal;
     private int[] maxPrec;
 
+    @Override
+    public String toString() {
+        return "hMax based on exploration queue";
+    }
+
     public hMaxEq(SasPlusProblem p) {
         this.p = p;
         this.maxPrecInit = new int[p.numOfOperators];

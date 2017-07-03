@@ -17,6 +17,15 @@ public class hAddhFFEq extends SasHeuristic {
     private final int[] hValPropInit;
     SasPlusProblem p;
     private int[] unsatPrecs;
+
+    @Override
+    public String toString() {
+        if (heuristic == SasHeuristics.hAdd)
+            return "hAdd based on exploration queue";
+        else
+            return "hFF based on exploration queue";
+    }
+
     private int numGoals;
     private int[] hValOp;
     private int[] hValProp;

@@ -27,7 +27,7 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
 
     @Override
     public String getName() {
-        return "hhRelataxedComposition";
+        return "hhRelataxedCompositionGraph with classical heuristic: " + heuristic.toString();
     }
 
     @Override
