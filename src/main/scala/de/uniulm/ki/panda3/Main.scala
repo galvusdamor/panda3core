@@ -110,6 +110,24 @@ object Main {
       outputFile.getOrElse("none") + "\n\n" + config.longInfo
   }
 
+  var globalReportCounter: Int = 0
+
+  def writeCapsulesToStdOut(dataCapsule: Option[DataCapsule], timeCapsule: Option[TimeCapsule]): Unit =
+    synchronized {
+                   val dataString = dataCapsule match {
+                     case Some(dc) => dc.keyValueListString()
+                     case None     => ""
+                   }
+                   val timeString = timeCapsule match {
+                     case Some(tc) => tc.keyValueListString()
+                     case None     => ""
+                   }
+                   // output data in a machine readable format
+                   println("#" + globalReportCounter + " " +
+                             dataString + (if (dataString.nonEmpty && timeString.nonEmpty) DataCapsule.SEPARATOR else "") + timeString)
+                   globalReportCounter += 1
+
+                 }
 
   def main(args: Array[String]) {
 
@@ -139,6 +157,14 @@ object Main {
 
     println(plannerConfiguration.longInfo)
 
+    // write domain and problem name to the output
+    {
+      val informationCapsule = new InformationCapsule
+      informationCapsule.set(Information.DOMAIN_NAME, new File(plannerConfiguration.domFile.get).getName)
+      informationCapsule.set(Information.PROBLEM_NAME, new File(plannerConfiguration.probFile.get).getName)
+
+      writeCapsulesToStdOut(Some(informationCapsule), None)
+    }
 
 
     val domInputStream = new FileInputStream(plannerConfiguration.domFile.get)
@@ -147,11 +173,6 @@ object Main {
 
 
     val results: ResultMap = plannerConfiguration.config.runResultSearch(domInputStream, probInputStream)
-    if (results.map.contains(SearchStatistics)) {
-      // add general information
-      results(SearchStatistics).set(Information.DOMAIN_NAME, new File(plannerConfiguration.domFile.get).getName)
-      results(SearchStatistics).set(Information.PROBLEM_NAME, new File(plannerConfiguration.probFile.get).getName)
-    }
 
     if (results.map.contains(SearchStatus))
       println("Panda says: " + results(SearchStatus))
@@ -166,7 +187,7 @@ object Main {
 
     if (results.map.contains(SearchStatistics) && results.map.contains(ProcessingTimings)) {
       // output data in a machine readable format
-      println("###" + results(SearchStatistics).keyValueListString() + DataCapsule.SEPARATOR + results(ProcessingTimings).keyValueListString())
+      writeCapsulesToStdOut(Some(results(SearchStatistics)), Some(results(ProcessingTimings)))
     }
 
     if (results.map.contains(SearchResult) && results(SearchResult).isDefined) {
