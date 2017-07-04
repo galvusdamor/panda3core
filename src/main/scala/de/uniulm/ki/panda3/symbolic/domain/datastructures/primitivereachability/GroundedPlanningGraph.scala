@@ -683,11 +683,10 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     */
   private def createActionInstancesForTasksWithoutPreconditions(task: ReducedTask): Set[GroundTask] = {
     // Find all legit constant combinations to instantiate every possible action.
-    task.parameters.foldLeft[Seq[Seq[Constant]]](Nil :: Nil)({ case (args, variable) => variable.sort.elements flatMap { c => args map {
-      _ :+ c
-    }
-    }
-                                                             }) map { arguments => GroundTask(task, arguments) } toSet
+    val parameterCombinaitions = task.parameters.foldLeft[Seq[Seq[Constant]]](Nil :: Nil)({ case (args, variable) =>
+      (variable.sort.elements flatMap { c => args map { _ :+ c } }) filter { vl => task.arePartialParametersAllowed(vl) }
+                                                                                         })
+    parameterCombinaitions filter { args => task.areParametersAllowed(args) } map { arguments => GroundTask(task, arguments) } toSet
   }
 
   /**
