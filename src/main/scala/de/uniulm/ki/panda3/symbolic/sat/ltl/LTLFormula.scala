@@ -13,6 +13,10 @@ sealed trait LTLFormula extends DefaultLongInfo {
   def delta(currentTask: Task, last: Boolean): LTLFormula
 
   def simplify: LTLFormula
+
+  def nnf: LTLFormula
+
+  def negate: LTLFormula
 }
 
 //case class GroundTaskAtom(groundedTask: GroundTask) extends LTLFormula
@@ -28,6 +32,10 @@ case class TaskAtom(task: Task) extends LTLFormula {
   lazy val simplify: LTLFormula = this
 
   override def longInfo: String = task.name.split('[').head
+
+  lazy val nnf: LTLFormula = this
+
+  lazy val negate: LTLFormula = LTLNot(this)
 }
 
 /**
@@ -41,6 +49,10 @@ case class TaskNameAtom(task: String) extends LTLFormula {
   lazy val simplify: LTLFormula = this
 
   override def longInfo: String = task
+
+  lazy val nnf: LTLFormula = this
+
+  lazy val negate: LTLFormula = LTLNot(this)
 }
 
 /**
@@ -59,6 +71,14 @@ case class LTLNot(subFormula: LTLFormula) extends LTLFormula {
     case LTLNot(x) => x // double negation
     case x         => LTLNot(x)
   }
+
+  lazy val nnf: LTLFormula = subFormula match {
+    case x: TaskAtom     => LTLNot(x)
+    case x: TaskNameAtom => LTLNot(x)
+    case _               => subFormula.negate.nnf
+  }
+
+  lazy val negate: LTLFormula = subFormula
 
   override def longInfo: String = "-" + subFormula.longInfo
 }
@@ -82,6 +102,10 @@ case class LTLAnd(subFormulae: Seq[LTLFormula]) extends LTLFormula {
     else if (simplifiedSubformulae.length == 1) simplifiedSubformulae.head
     else LTLAnd(simplifiedSubformulae)
   }
+
+  lazy val nnf: LTLFormula = LTLAnd(subFormulae map { _.nnf })
+
+  lazy val negate: LTLFormula = LTLOr(subFormulae map { _.negate })
 
   override def longInfo: String = "(" + subFormulae.map(_.longInfo).mkString(" & ") + ")"
 }
@@ -107,6 +131,10 @@ case class LTLOr(subFormulae: Seq[LTLFormula]) extends LTLFormula {
     else LTLOr(simplifiedSubformulae)
   }
 
+  lazy val nnf: LTLFormula = LTLOr(subFormulae map { _.nnf })
+
+  lazy val negate: LTLFormula = LTLAnd(subFormulae map { _.negate })
+
   override def longInfo: String = "(" + subFormulae.map(_.longInfo).mkString(" v ") + ")"
 }
 
@@ -120,6 +148,10 @@ case class LTLNext(subFormula: LTLFormula) extends LTLFormula {
 
   lazy val simplify: LTLFormula = LTLNext(subFormula.simplify)
 
+  lazy val nnf: LTLFormula = LTLNext(subFormula.nnf)
+
+  lazy val negate: LTLFormula = LTLWeakNext(subFormula.negate)
+
   override def longInfo: String = "X " + subFormula.longInfo
 }
 
@@ -132,6 +164,10 @@ case class LTLWeakNext(subFormula: LTLFormula) extends LTLFormula {
   def delta(currentTask: Task, last: Boolean): LTLFormula = if (last) LTLTrue else subFormula
 
   lazy val simplify: LTLFormula = LTLWeakNext(subFormula.simplify)
+
+  lazy val nnf: LTLFormula = LTLWeakNext(subFormula.nnf)
+
+  lazy val negate: LTLFormula = LTLNext(subFormula.negate)
 
   override def longInfo: String = "WX " + subFormula.longInfo
 }
@@ -147,6 +183,10 @@ case class LTLAlways(subFormula: LTLFormula) extends LTLFormula {
 
   lazy val simplify: LTLFormula = LTLAlways(subFormula.simplify)
 
+  lazy val nnf: LTLFormula = LTLAlways(subFormula.nnf)
+
+  lazy val negate: LTLFormula = LTLEventually(subFormula.negate)
+
   override def longInfo: String = "[] " + subFormula.longInfo
 }
 
@@ -160,6 +200,10 @@ case class LTLEventually(subFormula: LTLFormula) extends LTLFormula {
                                                                     LTLNext(this).delta(currentTask, last) :: Nil)
 
   lazy val simplify: LTLFormula = LTLEventually(subFormula.simplify)
+
+  lazy val nnf: LTLFormula = LTLEventually(subFormula.nnf)
+
+  lazy val negate: LTLFormula = LTLAlways(subFormula.negate)
 
   override def longInfo: String = "<> " + subFormula.longInfo
 }
@@ -176,6 +220,10 @@ case class LTLUntil(leftFormula: LTLFormula, rightFormula: LTLFormula) extends L
          )
 
   lazy val simplify: LTLFormula = LTLUntil(leftFormula.simplify, rightFormula.simplify)
+
+  lazy val nnf: LTLFormula = LTLUntil(leftFormula.nnf, rightFormula.nnf)
+
+  lazy val negate: LTLFormula = LTLRelease(leftFormula.negate, rightFormula.negate)
 
   override def longInfo: String = "(" + leftFormula.longInfo + " U " + rightFormula.longInfo + ")"
 }
@@ -194,6 +242,10 @@ case class LTLRelease(leftFormula: LTLFormula, rightFormula: LTLFormula) extends
 
   lazy val simplify: LTLFormula = LTLRelease(leftFormula.simplify, rightFormula.simplify)
 
+  lazy val nnf: LTLFormula = LTLRelease(leftFormula.nnf, rightFormula.nnf)
+
+  lazy val negate: LTLFormula = LTLUntil(leftFormula.negate, rightFormula.negate)
+
   override def longInfo: String = "(" + leftFormula.longInfo + " R " + rightFormula.longInfo + ")"
 }
 
@@ -207,6 +259,10 @@ object LTLTrue extends LTLFormula {
 
   lazy val simplify: LTLFormula = this
 
+  lazy val nnf: LTLFormula = this
+
+  lazy val negate: LTLFormula = LTLFalse
+
   override def longInfo: String = "T"
 }
 
@@ -219,6 +275,10 @@ object LTLFalse extends LTLFormula {
   def delta(currentTask: Task, last: Boolean): LTLFormula = LTLFalse
 
   lazy val simplify: LTLFormula = this
+
+  lazy val nnf: LTLFormula = this
+
+  lazy val negate: LTLFormula = LTLTrue
 
   override def longInfo: String = "F"
 }
