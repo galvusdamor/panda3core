@@ -1567,9 +1567,17 @@ case class FullSATRun() extends SATRunConfiguration {override def longInfo: Stri
 case class OptimalSATRun(overrideK: Option[Int]) extends SATRunConfiguration {override def longInfo: String = "optimal run"}
 
 
+sealed trait PlanDistanceMetric
+
+object MissingOperators extends PlanDistanceMetric
+
+object MaximumCommonSubplan extends PlanDistanceMetric
+
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      ltlFormula: Option[LTLFormula] = None,
+                     planToMinimiseDistanceTo: Option[Seq[String]] = None,
+                     planDistanceMetric: Option[PlanDistanceMetric] = None,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise
                     ) extends SearchConfiguration {
