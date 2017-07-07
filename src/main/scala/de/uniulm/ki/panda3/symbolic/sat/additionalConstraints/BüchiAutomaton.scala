@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.symbolic.sat.ltl
+package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.util.{Dot2PdfCompiler, DirectedGraphWithAlgorithms, SimpleDirectedGraph, DirectedGraph}

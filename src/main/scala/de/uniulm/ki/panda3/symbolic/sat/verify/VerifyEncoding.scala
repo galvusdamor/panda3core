@@ -111,11 +111,12 @@ trait VerifyEncoding {
 
   def notImplies(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, true)))
 
-  protected def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) ::(leftFalse, true) ::(right, false) :: Nil) :: Nil
+  def impliesLeftTrueAndFalseImpliesTrue(leftTrue: Seq[String], leftFalse: Seq[String], right: String): Clause =
+    Clause(leftTrue.map((_, false)) ++ leftFalse.map((_, true)) ++ ((right, true) :: Nil))
 
   protected def impliesAllNot(left: String, right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
 
-  protected def notImpliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = {
+  def notImpliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = {
     val leftList = left map { (_, true) }
 
     right map { r => Clause(leftList.+:((r, false))) }
@@ -134,7 +135,7 @@ trait VerifyEncoding {
     Clause(negLeft.+:(right, true))
   }
 
-  protected def impliesRightOr(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
+  def impliesRightOr(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
     val negLeft = leftConjunct map { (_, false) }
     Clause(negLeft ++ (rightConjunct map { x => (x, true) }))
   }

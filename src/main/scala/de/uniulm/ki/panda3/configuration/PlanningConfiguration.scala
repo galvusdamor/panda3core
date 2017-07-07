@@ -20,7 +20,7 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.{AddPredicate, ExchangeTask, 
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
-import de.uniulm.ki.panda3.symbolic.sat.ltl.{LTLFormula, BüchiAutomaton}
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.{LTLFormula, BüchiAutomaton}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{VerifyRunner, SATRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
@@ -321,7 +321,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           }
 
 
-          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType), automaton,
+          val referencePlan: Option[Seq[Task]] = satSearch.planToMinimiseDistanceTo map { _ map { taskName : String => domainAndPlan._1.tasks.find(_.name == taskName).get } }
+
+          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
+                                 automaton, referencePlan, satSearch.planDistanceMetric,
                                  satSearch.reductionMethod, timeCapsule, informationCapsule)
 
 

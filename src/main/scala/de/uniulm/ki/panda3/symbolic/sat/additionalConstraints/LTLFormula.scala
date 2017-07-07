@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.symbolic.sat.ltl
+package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}

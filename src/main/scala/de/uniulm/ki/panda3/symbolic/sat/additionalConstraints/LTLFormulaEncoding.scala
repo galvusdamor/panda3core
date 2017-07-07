@@ -1,11 +1,11 @@
-package de.uniulm.ki.panda3.symbolic.sat.ltl
+package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
 import de.uniulm.ki.panda3.symbolic.sat.verify.{EncodingWithLinearPlan, Clause, PathBasedEncoding}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) {
+case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends AdditionalSATConstraint {
 
   val automataStatesToIndices: Map[LTLFormula, Int] = büchiAutomaton.vertices.zipWithIndex.toMap
 
@@ -57,7 +57,7 @@ case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) {
     }
 
     val initAndGoal = Clause(state(büchiAutomaton.initialState, 0)) :: Clause(state(LTLTrue, linearEncoding.linearPlan.length)) :: Nil
-    val lastStateUnique = (linearEncoding.atMostOneOf(büchiAutomaton.vertices map { s => state(s, linearEncoding.linearPlan.length) }))
+    val lastStateUnique = linearEncoding.atMostOneOf(büchiAutomaton.vertices map { s => state(s, linearEncoding.linearPlan.length) })
 
     automatonClauses ++ initAndGoal ++ lastStateUnique
   }
