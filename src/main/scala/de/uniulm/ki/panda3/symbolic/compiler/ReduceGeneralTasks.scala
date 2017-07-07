@@ -53,41 +53,41 @@ object ReduceGeneralTasks  extends DomainTransformer[Unit] {
     Seq(problem.init.schema, problem.goal.schema)
   }
 
-  private def simplePlan(task: Task): Plan = {
+  private def simplePlan(task: Task, initAndGoalArgs : Seq[Variable]): Plan = {
     val init = GeneralTask(
-      name = "init(simplePlan)",
-      isPrimitive = true,
-      parameters = Nil,
-      artificialParametersRepresentingConstants = Nil,
-      parameterConstraints = Nil,
-      precondition = And(Nil),
-      effect = And(Nil)
-    )
+                            name = "init(simplePlan)",
+                            isPrimitive = true,
+                            parameters = initAndGoalArgs,
+                            artificialParametersRepresentingConstants = Nil,
+                            parameterConstraints = Nil,
+                            precondition = And(Nil),
+                            effect = And(Nil)
+                          )
     val goal = GeneralTask(
-      name = "goal(simplePlan)",
-      isPrimitive = true,
-      parameters = Nil,
-      artificialParametersRepresentingConstants = Nil,
-      parameterConstraints = Nil,
-      precondition = And(Nil),
-      effect = And(Nil)
-    )
-    val psInit = PlanStep(id = 0, schema = init, arguments = Nil)
+                            name = "goal(simplePlan)",
+                            isPrimitive = true,
+                            parameters = initAndGoalArgs,
+                            artificialParametersRepresentingConstants = Nil,
+                            parameterConstraints = Nil,
+                            precondition = And(Nil),
+                            effect = And(Nil)
+                          )
+    val psInit = PlanStep(id = 0, schema = init, arguments = initAndGoalArgs)
     val psTask = PlanStep(id = 1, schema = task, arguments = task.parameters)
-    val psGoal = PlanStep(id = 2, schema = goal, arguments = Nil)
+    val psGoal = PlanStep(id = 2, schema = goal, arguments = initAndGoalArgs)
     val planSteps = Seq(psInit, psTask, psGoal)
     val orderingConstraints = Seq(OrderingConstraint(psInit, psTask), OrderingConstraint(psTask, psGoal))
     Plan(
-      planStepsAndRemovedPlanSteps = planSteps,
-      causalLinksAndRemovedCausalLinks = Nil,
-      orderingConstraints = TaskOrdering(originalOrderingConstraints = orderingConstraints, tasks = planSteps),
-      parameterVariableConstraints = CSP(variables = task.parameters.toSet, constraints = Nil),
-      init = psInit,
-      goal = psGoal,
-      isModificationAllowed = NoModifications,
-      isFlawAllowed = NoFlaws,
-      planStepDecomposedByMethod = Map(),
-      planStepParentInDecompositionTree = Map())
+          planStepsAndRemovedPlanSteps = planSteps,
+          causalLinksAndRemovedCausalLinks = Nil,
+          orderingConstraints = TaskOrdering(originalOrderingConstraints = orderingConstraints, tasks = planSteps),
+          parameterVariableConstraints = CSP(variables = task.parameters.toSet, constraints = Nil),
+          init = psInit,
+          goal = psGoal,
+          isModificationAllowed = NoModifications,
+          isFlawAllowed = NoFlaws,
+          planStepDecomposedByMethod = Map(),
+          planStepParentInDecompositionTree = Map())
   }
 
   private final case class Simplification(original: Task, replacement: Task, newTasks: Seq[Task], newMethods: Seq[DecompositionMethod]) {
@@ -104,7 +104,7 @@ object ReduceGeneralTasks  extends DomainTransformer[Unit] {
       gt.copy(name = s"DISJUNCT-${i}__${gt.name}", precondition = join(g, rest))
     }
     val newMethods = newTasks map { t =>
-      SimpleDecompositionMethod(replacement, simplePlan(t), s"M-${t.name}")
+      SimpleDecompositionMethod(replacement, simplePlan(t,replacement.parameters), s"M-${t.name}")
     }
     Simplification(gt, replacement, newTasks, newMethods)
   }
@@ -112,40 +112,40 @@ object ReduceGeneralTasks  extends DomainTransformer[Unit] {
   private def conditionalSimplification(gt: GeneralTask, f: When, rest: Formula): Simplification = {
     val replacement = gt.copy(isPrimitive = false, precondition = And(Nil), effect = And(Nil))
     val t1 = gt.copy(
-      name         = s"ANTECEDENT__${gt.name}",
-      precondition = join(moveNegationsInwards(Not(f.left)), gt.precondition),
-      effect       = rest)
+                      name         = s"ANTECEDENT__${gt.name}",
+                      precondition = join(moveNegationsInwards(Not(f.left)), gt.precondition),
+                      effect       = rest)
     val t2 = gt.copy(
-      name         = s"CONSEQUENT__${gt.name}",
-      precondition = join(f.left, gt.precondition),
-      effect       = join(f.right, rest))
-    val m1 = SimpleDecompositionMethod(replacement, simplePlan(t1), s"M-${t1.name}")
-    val m2 = SimpleDecompositionMethod(replacement, simplePlan(t2), s"M-${t2.name}")
+                      name         = s"CONSEQUENT__${gt.name}",
+                      precondition = join(f.left, gt.precondition),
+                      effect       = join(f.right, rest))
+    val m1 = SimpleDecompositionMethod(replacement, simplePlan(t1,replacement.parameters), s"M-${t1.name}")
+    val m2 = SimpleDecompositionMethod(replacement, simplePlan(t2,replacement.parameters), s"M-${t2.name}")
     Simplification(gt, replacement, Seq(t1, t2), Seq(m1, m2))
   }
 
   private def existentialSimplification(gt: GeneralTask, f: Exists, rest: Formula): Simplification = {
     val v = f.v.copy(name = s"EXISTENTIAL-${Variable.nextFreeVariableID()}__${f.v.name}")
     val replacement = gt.copy(
-      precondition = join(f.formula update ExchangeVariable(f.v, v), rest),
-      parameters   = gt.parameters :+ v
-    )
+                               precondition = join(f.formula update ExchangeVariable(f.v, v), rest),
+                               parameters   = gt.parameters :+ v
+                             )
     Simplification(gt, replacement, Nil, Nil)
   }
 
   private def universalSimplification(gt: GeneralTask, f: Forall, rest: Formula, isPrec: Boolean): Simplification = {
     val vs = f.v.sort.allElements map { c =>
       f.v.copy(
-        name = s"UNIVERSAL-${Variable.nextFreeVariableID()}__${f.v.name}",
-        sort = f.v.sort.copy(name = f.v.sort.name + ">" + c.name, elements = Seq(c), subSorts = Nil)
-      )
+                name = s"UNIVERSAL-${Variable.nextFreeVariableID()}__${f.v.name}",
+                sort = f.v.sort.copy(name = f.v.sort.name + ">" + c.name, elements = Seq(c), subSorts = Nil)
+              )
     }
     val g = join(And(vs map { v => f.formula update ExchangeVariable(f.v, v) }), rest)
     val replacement = gt.copy(
-      precondition = if (isPrec)  g         else gt.precondition,
-      effect       = if (isPrec)  gt.effect else g,
-      parameters   = gt.parameters ++ vs
-    )
+                               precondition = if (isPrec)  g         else gt.precondition,
+                               effect       = if (isPrec)  gt.effect else g,
+                               parameters   = gt.parameters ++ vs
+                             )
     Simplification(gt, replacement, Nil, Nil)
   }
 
@@ -157,30 +157,30 @@ object ReduceGeneralTasks  extends DomainTransformer[Unit] {
       val (lits, nonLits) = partitionByComplexity(prec.right.get.conjuncts)
       val rest = And(nonLits.tail ++ lits) // tail ?
       Right(nonLits.head match {
-        case And(fs)        => Simplification(gt, gt.copy(precondition = And(nonLits.tail ++ fs ++ lits)), Nil, Nil)
-        case f: Or[Formula] => disjunctionSimplification(gt, f, rest)
-        case f: Exists      => existentialSimplification(gt, f, rest)
-        case f: Forall      => universalSimplification(gt, f, rest, isPrec = true)
-        case f => throw new RuntimeException(s"Expected And|Or|Exists|Forall in complex precondition but found $f")
-      })
+              case And(fs)        => Simplification(gt, gt.copy(precondition = And(nonLits.tail ++ fs ++ lits)), Nil, Nil)
+              case f: Or[Formula] => disjunctionSimplification(gt, f, rest)
+              case f: Exists      => existentialSimplification(gt, f, rest)
+              case f: Forall      => universalSimplification(gt, f, rest, isPrec = true)
+              case f => throw new RuntimeException(s"Expected And|Or|Exists|Forall in complex precondition but found $f")
+            })
     } else if (eff.isRight) {
       val (lits, nonLits) = partitionByComplexity(eff.right.get.conjuncts)
       val rest = And(nonLits.tail ++ lits)
       Right(nonLits.head match {
-        case And(fs)   => Simplification(gt, gt.copy(effect = And(nonLits.tail ++ fs ++ lits)), Nil, Nil)
-        case f: When   => conditionalSimplification(gt, f, rest)
-        case f: Forall => universalSimplification(gt, f, rest, isPrec = false)
-        case f => throw new RuntimeException(s"Expected And|When|Forall in complex effect but found $f")
-      })
+              case And(fs)   => Simplification(gt, gt.copy(effect = And(nonLits.tail ++ fs ++ lits)), Nil, Nil)
+              case f: When   => conditionalSimplification(gt, f, rest)
+              case f: Forall => universalSimplification(gt, f, rest, isPrec = false)
+              case f => throw new RuntimeException(s"Expected And|When|Forall in complex effect but found $f")
+            })
     } else {
       Left(ReducedTask(
-        gt.name,
-        gt.isPrimitive,
-        gt.parameters,
-        gt.artificialParametersRepresentingConstants,
-        gt.parameterConstraints,
-        prec.left.get,
-        eff.left.get))
+                        gt.name,
+                        gt.isPrimitive,
+                        gt.parameters,
+                        gt.artificialParametersRepresentingConstants,
+                        gt.parameterConstraints,
+                        prec.left.get,
+                        eff.left.get))
     }
   }
 
