@@ -21,15 +21,13 @@ import de.uniulm.ki.panda3.util.JavaToScala;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import scala.Tuple2;
+import scala.collection.JavaConversions;
 import scala.collection.Seq;
 import scala.collection.immutable.Map;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -75,7 +73,16 @@ public class hddlPanda3Visitor {
         return ++currentVarId;
     }
 
+    private List<String> requirements = new ArrayList<String>();
+
     public Tuple2<Domain, Plan> visitInstance(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
+        if ((ctxDomain.require_def() != null)) {
+            for (TerminalNode r : ctxDomain.require_def().require_defs().REQUIRE_NAME()) {
+                requirements.add(r.toString());
+            }
+        }
+
+        System.out.println("REQUIREMENTS: " + requirements);
 
         Seq<Sort> sorts;
         if ((ctxDomain.type_def() != null) && (ctxDomain.type_def().type_def_list() != null)) {
@@ -380,6 +387,24 @@ public class hddlPanda3Visitor {
                     initEffects.add(visitAtomFormula(vctx, predicates, sorts, constraints, true, el.literal().atomic_formula()));
                 } else if (el.literal().neg_atomic_formula() != null) {
                     initEffects.add(visitAtomFormula(vctx, predicates, sorts, constraints, false, el.literal().atomic_formula()));
+                }
+            }
+        }
+
+        if (requirements.contains(":typeof-predicate")) {
+            Predicate typeofPred = null;
+            for (Predicate p : JavaConversions.seqAsJavaList(predicates)) {
+                if (p.name().equals("typeof")) {
+                    typeofPred = p;
+                }
+            }
+            for (Sort s : JavaConversions.seqAsJavaList(sorts)) {
+                Variable sortVar = getArtificialVariable(s.name(), vctx, constraints, sorts);
+                for (Constant c : JavaConversions.seqAsJavaList(s.allElements())) {
+                    VectorBuilder<Variable> params = new VectorBuilder<>();
+                    params.$plus$eq(getArtificialVariable(c.name(), vctx, constraints, sorts));
+                    params.$plus$eq(sortVar);
+                    initEffects.add(new Literal(typeofPred, true, params.result()));
                 }
             }
         }
@@ -887,37 +912,7 @@ public class hddlPanda3Visitor {
             String pname = param.VAR_NAME().getText();
             var = vctx.getVarByName(pname);
         } else {
-            String pname = param.NAME().getText();
-
-            // - this may be an object that has already been defined in s0 -> there is already a const and a var
-            // - a const in a task/method AND it is not the fist occurrence -> there is already a variable
-            for (int i = 0; i < constraints.size(); i++) {
-                VariableConstraint vc = constraints.get(i);
-                if (vc instanceof Equal) {
-                    Equal e = (Equal) vc;
-                    if ((e.right() instanceof Constant) && (((Constant) e.right()).name().equals(pname))) {
-                        var = e.left();
-                    }
-                }
-            }
-
-            if (var == null) {
-                // (2) constants in method or action definition, need to introduce a new var, bind it to const, and
-                // add it to the parameter-list
-                loopGetConst:
-                for (int i = 0; i < sorts.size(); i++) {
-                    Sort s = sorts.apply(i);
-                    for (int j = 0; j < s.elements().size(); j++) {
-                        Constant c = s.elements().apply(j);
-                        if (c.name().equals(pname)) {
-                            var = new Variable(nextVarId(), "varToConst" + c, s);
-                            vctx.parameters.add(var);
-                            constraints.add(new Equal(var, c));
-                            break loopGetConst;
-                        }
-                    }
-                }
-            }
+            var = getArtificialVariable(param.NAME().getText(), vctx, constraints, sorts);
         }
         if (var == null) {
             if (warningOutput)
@@ -927,7 +922,40 @@ public class hddlPanda3Visitor {
         }
         return var;
     }
+    private Variable getArtificialVariable(String name, VarContext vctx, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts) {
+        Variable var = null;
 
+        // - this may be an object that has already been defined in s0 -> there is already a const and a var
+        // - a const in a task/method AND it is not the fist occurrence -> there is already a variable
+        for (int i = 0; i < constraints.size(); i++) {
+            VariableConstraint vc = constraints.get(i);
+            if (vc instanceof Equal) {
+                Equal e = (Equal) vc;
+                if ((e.right() instanceof Constant) && (((Constant) e.right()).name().equals(name))) {
+                    var = e.left();
+                }
+            }
+        }
+
+        if (var == null) {
+            // (2) constants in method or action definition, need to introduce a new var, bind it to const, and
+            // add it to the parameter-list
+            loopGetConst:
+            for (int i = 0; i < sorts.size(); i++) {
+                Sort s = sorts.apply(i);
+                for (int j = 0; j < s.elements().size(); j++) {
+                    Constant c = s.elements().apply(j);
+                    if (c.name().equals(name)) {
+                        var = new Variable(nextVarId(), "varToConst" + c, s);
+                        vctx.parameters.add(var);
+                        constraints.add(new Equal(var, c));
+                        break loopGetConst;
+                    }
+                }
+            }
+        }
+        return var;
+    }
 
     private Seq<Predicate> visitPredicateDeclaration(Seq<Sort> sorts, antlrHDDLParser.Predicates_defContext ctx) {
         VectorBuilder<Predicate> predicates = new VectorBuilder<>();
@@ -944,6 +972,24 @@ public class hddlPanda3Visitor {
 
             predicates.$plus$eq(new Predicate(predName, pSorts.result()));
         }
+
+        if (requirements.contains(":typeof-predicate")) {
+            Sort typeSort = null;
+            Sort rootSort = null;
+            for (Sort s : JavaConversions.seqAsJavaList(sorts)) {
+                if (s.name().equals(ARTIFICIAL_ROOT_SORT)) {
+                    rootSort = s;
+                }
+                if (s.name().equals("Type")) {
+                    typeSort = s;
+                }
+            }
+            VectorBuilder<Sort> pSorts = new VectorBuilder<>();
+            pSorts.$plus$eq(rootSort);
+            pSorts.$plus$eq(typeSort);
+            predicates.$plus$eq(new Predicate("typeof", pSorts.result()));
+        }
+
         return predicates.result();
     }
 
@@ -981,7 +1027,6 @@ public class hddlPanda3Visitor {
     private static final String ARTIFICIAL_ROOT_SORT = "__Object";
 
     public Seq<Sort> visitTypeAndObjDef(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
-
         // Extract type hierarchy from domain file
         internalSortsAndConsts internalSortModel = new internalSortsAndConsts(); // do not pass out, use only here
 
@@ -1003,7 +1048,6 @@ public class hddlPanda3Visitor {
         for (TerminalNode singletonType : typeDefList.NAME())
             internalSortModel.addParent(singletonType.toString(), ARTIFICIAL_ROOT_SORT);
 
-
         // Extract constant symbols from domain and problem file
         if (ctxDomain.const_def() != null) {
             List<antlrHDDLParser.Typed_objsContext> domainConsts = ctxDomain.const_def().typed_obj_list().typed_objs();
@@ -1012,6 +1056,13 @@ public class hddlPanda3Visitor {
         if (ctxProblem.p_object_declaration() != null) {
             List<antlrHDDLParser.Typed_objsContext> problemConsts = ctxProblem.p_object_declaration().typed_obj_list().typed_objs();
             addToInternalModel(internalSortModel, problemConsts);
+        }
+
+        if (requirements.contains(":typeof-predicate")) {
+            internalSortModel.addParent("Type", ARTIFICIAL_ROOT_SORT);
+            for (String type : internalSortModel.allTypeNamesInRightOrder())  {
+                internalSortModel.addConst("Type", type);
+            }
         }
 
         internalSortModel.checkConsistency();
