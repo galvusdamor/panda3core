@@ -130,9 +130,17 @@ public class hddlPanda3Visitor {
         IsModificationAllowed allowedModifications = new ModificationsByClass(JavaToScala.toScalaSeq(allowedModificationsClasses));
         IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
 
+
+        if (ctxProblem.p_htn() != null && ctxProblem.p_htn().typed_var_list() != null) {
+            seqProviderList<Variable> tniVars = typedParamsToVars(sorts, 0, ctxProblem.p_htn().typed_var_list().typed_vars());
+            vctx.addParamaters(tniVars.getList());
+        }
+
+
         if (!goal.parameterConstraints().equals(init.parameterConstraints())) {
             throw new RuntimeException("init and goal constraints should be equal: " + goal.parameterConstraints().equals(init.parameterConstraints()));
         }
+
         seqProviderList<VariableConstraint> tniConstr = new seqProviderList<>();
         //tniConstr.add(init.parameterConstraints()); //init.parameterConstraints()
         tniConstr.add(goal.parameterConstraints());
@@ -730,6 +738,8 @@ public class hddlPanda3Visitor {
             } else if (ctx.literal().neg_atomic_formula() != null) {
                 return visitAtomFormula(vctx, predicates, sorts, constraints, false, ctx.literal().neg_atomic_formula().atomic_formula());
             }
+        } else if (ctx.eff_empty() != null) {
+            return new And<Literal>(new Vector<Literal>(0, 0, 0));
         } else if (ctx.eff_conjunction() != null) {
             return new And<>(JavaToScala.toScalaSeq(ctx.eff_conjunction().effect().stream().map(x ->
                  visitEffect(vctx, constraints, sorts, predicates, x)
