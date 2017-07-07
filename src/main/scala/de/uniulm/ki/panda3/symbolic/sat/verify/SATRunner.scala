@@ -11,7 +11,7 @@ import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
-import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.{ActionDifference, AdditionalSATConstraint, LTLFormulaEncoding, BüchiAutomaton}
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints._
 import de.uniulm.ki.util._
 
 import scala.collection.{JavaConversions, Seq}
@@ -182,6 +182,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         (if (büchiAutomaton.isDefined) LTLFormulaEncoding(büchiAutomaton.get) :: Nil else Nil) ++
           (if (referencePlan.isDefined) (planDistanceMetric.get match {
             case MissingOperators => ActionDifference(referencePlan.get)
+            case MaximumCommonSubplan => LongestCommonSubplan(referencePlan.get)
           }) :: Nil
           else Nil)
 
@@ -392,6 +393,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                                                    allTrueAtoms: Set[String]): (Seq[String], Seq[(String, String)], Seq[Task]) = {
     println((allTrueAtoms filter { _.startsWith("auto") }).toSeq.sorted mkString "\n")
     println((allTrueAtoms filter { _.startsWith("badness") }).toSeq.sorted mkString "\n")
+    println((allTrueAtoms filter { _.startsWith("match") }).toSeq.sorted mkString "\n")
     encoder match {
 
       case g: GeneralEncoding =>

@@ -116,6 +116,8 @@ trait VerifyEncoding {
 
   protected def impliesAllNot(left: String, right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
 
+  def impliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
+
   def notImpliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = {
     val leftList = left map { (_, true) }
 
