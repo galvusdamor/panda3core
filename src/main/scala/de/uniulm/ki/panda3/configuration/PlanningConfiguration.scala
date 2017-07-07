@@ -518,29 +518,29 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     timeCapsule start PARSER_STRIP_HYBRID
     val noHybrid = if (parsingConfiguration.stripHybrid) StripHybrid.transform(sortsExpandedDomainAndProblem, ()) else sortsExpandedDomainAndProblem
+    if (parsingConfiguration.stripHybrid) assert(!noHybrid._1.isHybrid)
     timeCapsule stop PARSER_STRIP_HYBRID
 
-    timeCapsule start PARSER_CWA
-    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(noHybrid, true) else noHybrid
-    timeCapsule stop PARSER_CWA
-
     timeCapsule start PARSER_SHOP_METHODS
-    val simpleMethod = if (parsingConfiguration.compileSHOPMethods) SHOPMethodCompiler.transform(cwaApplied, ()) else cwaApplied
+    val simpleMethod = if (parsingConfiguration.compileSHOPMethods) SHOPMethodCompiler.transform(noHybrid, ()) else noHybrid
     timeCapsule stop PARSER_SHOP_METHODS
 
-    timeCapsule start PARSER_ELIMINATE_EQUALITY
-    val identity = if (parsingConfiguration.eliminateEquality) RemoveIdenticalVariables.transform(simpleMethod, ()) else simpleMethod
-    timeCapsule stop PARSER_ELIMINATE_EQUALITY
-
     timeCapsule start PARSER_FLATTEN_FORMULA
-    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(identity, ()) else identity
+    val flattened = if (parsingConfiguration.toPlainFormulaRepresentation) ToPlainFormulaRepresentation.transform(simpleMethod, ()) else simpleMethod
     timeCapsule stop PARSER_FLATTEN_FORMULA
+
+    timeCapsule start PARSER_CWA
+    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(flattened, true) else flattened
+    timeCapsule stop PARSER_CWA
+
+    timeCapsule start PARSER_ELIMINATE_EQUALITY
+    val identity = if (parsingConfiguration.eliminateEquality) RemoveIdenticalVariables.transform(cwaApplied, ()) else cwaApplied
+    timeCapsule stop PARSER_ELIMINATE_EQUALITY
 
     timeCapsule stop PARSING
     info("done.\n")
-    (flattened, cwaApplied, timeCapsule)
+    (identity,noHybrid, timeCapsule)
   }
-
 
   private def runLiftedForwardSearchReachabilityAnalysis(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
     val liftedRelaxedInitialState = problem.init.schema.effectsAsPredicateBool

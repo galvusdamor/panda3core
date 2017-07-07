@@ -1,8 +1,9 @@
 package de.uniulm.ki.panda3.symbolic.compiler
 
+import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.csp.Equal
 import de.uniulm.ki.panda3.symbolic.domain.updates.{AddVariableConstraints, AddVariables, ExchangePlanSteps}
-import de.uniulm.ki.panda3.symbolic.domain.{SHOPDecompositionMethod, GeneralTask, Domain, Task}
+import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
@@ -19,7 +20,7 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
   override def transform(domain: Domain, plan: Plan, dontNegateUnnecessarily: Boolean): (Domain, Plan) = {
-    val oldInit = plan.init
+    val oldInit : PlanStep = plan.init
 
     // determine whether there are all variables for constants we possibly need
     val existingVariablesForConstants: Map[Constant, Variable] = (oldInit.arguments collect { case v if plan.variableConstraints.getRepresentative(v).isConstant =>
@@ -62,10 +63,15 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
 
     val newEffects = notPresentLiterals map { _.negate }
 
-    val newInitSchema: GeneralTask = GeneralTask(oldInit.schema.name, isPrimitive = true, oldInit.schema.parameters ++ newVariables,
+    val oldInitSchema = oldInit.schema match {
+      case rt : ReducedTask => rt
+      case _ => noSupport(FORUMLASNOTSUPPORTED)
+    }
+
+    val newInitSchema: ReducedTask = ReducedTask(oldInit.schema.name, isPrimitive = true, oldInit.schema.parameters ++ newVariables,
                                                  oldInit.schema.parameters ++ newVariables,
-                                                 oldInit.schema.parameterConstraints ++ newVariableConstraints, oldInit.schema.precondition,
-                                                 And[Formula](newEffects :+ oldInit.schema.effect))
+                                                 oldInit.schema.parameterConstraints ++ newVariableConstraints, oldInitSchema.precondition,
+                                                 And[Literal](newEffects ++ oldInitSchema.effect.conjuncts))
     val newInit: PlanStep = PlanStep(oldInit.id, newInitSchema, oldInit.arguments ++ newVariables)
 
     (domain, plan.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints)).update(ExchangePlanSteps(oldInit, newInit)))
