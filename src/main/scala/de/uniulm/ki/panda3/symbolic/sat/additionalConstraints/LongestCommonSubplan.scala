@@ -8,7 +8,7 @@ import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan}
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class LongestCommonSubplan(referencePlan: Seq[Task]) extends AdditionalSATConstraint {
+case class LongestCommonSubplan(referencePlan: Seq[Task], minimumLength: Int, ignoreOrder: Boolean) extends MatchingBasedConstraints {
 
 
   def matchPathAndReference(pathPosition: Int, referencePosition: Int): String = "match_" + pathPosition + "_" + referencePosition
@@ -17,36 +17,8 @@ case class LongestCommonSubplan(referencePlan: Seq[Task]) extends AdditionalSATC
 
   override def apply(linearEncoding: EncodingWithLinearPlan): Seq[Clause] = {
 
-    // every position and path can be matched only once
-    val onlyOneMatchingPerPath = linearEncoding.linearPlan.indices flatMap { pathPosition =>
-      val matchings = referencePlan.indices map { referencePosition => matchPathAndReference(pathPosition, referencePosition) }
-      linearEncoding.atMostOneOf(matchings)
-    }
-
-    val onlyOneMatchingPerReference = referencePlan.indices flatMap { referencePosition =>
-      val matchings = linearEncoding.linearPlan.indices map { pathPosition => matchPathAndReference(pathPosition, referencePosition) }
-      linearEncoding.atMostOneOf(matchings)
-    }
-
-    // if matched, the task must be in the path
-    val ifMatchedTaskMustBeThere: Seq[Clause] = linearEncoding.linearPlan.zipWithIndex flatMap { case (possibleTasks, pathPosition) =>
-      referencePlan.zipWithIndex map { case (referenceTask, referencePosition) =>
-        if (possibleTasks contains referenceTask) {
-          linearEncoding.impliesSingle(matchPathAndReference(pathPosition, referencePosition), possibleTasks(referenceTask))
-        } else {
-          // if the path cannot contain the position, then forbid this matching
-          Clause((matchPathAndReference(pathPosition, referencePosition), false))
-        }
-      }
-    }
-
-    // forbid cross matchings
-    val crossMatching = for (path1 <- linearEncoding.linearPlan.indices; path2 <- linearEncoding.linearPlan.indices
-                             if path1 > path2;
-                             reference1 <- referencePlan.indices; reference2 <- referencePlan.indices
-                             if reference1 < reference2) yield
-      Clause((matchPathAndReference(path1, reference1), false) ::(matchPathAndReference(path2, reference2), false) :: Nil)
-
+    // generate clauses representing the matching
+    val matchingClauses = generateMatchingClauses(linearEncoding, matchPathAndReference)
 
     // compute matching size
     val automataTransition = linearEncoding.linearPlan.indices flatMap { pathPosition => linearEncoding.linearPlan.indices flatMap { subPlanLength =>
@@ -63,7 +35,7 @@ case class LongestCommonSubplan(referencePlan: Seq[Task]) extends AdditionalSATC
       // if the predecessor is true, at least one transition has to happen
       val hasToBeTransition = linearEncoding.impliesRightOr(oldState :: Nil, newStateIncrease :: newStateSame :: Nil)
 
-      ifSame :+ ifIncreasing :+ hasToBeTransition :+ hasToBeTransition
+      ifSame :+ ifIncreasing :+ hasToBeTransition
     }
     }
 
@@ -72,8 +44,11 @@ case class LongestCommonSubplan(referencePlan: Seq[Task]) extends AdditionalSATC
       linearEncoding.atMostOneOf(states)
     }
 
-    val startClause = Clause(matchingSizeAt(-1,0))
-    val endClause = Clause(matchingSizeAt(linearEncoding.linearPlan.length-1,15))
-    onlyOneMatchingPerPath ++ onlyOneMatchingPerReference ++ ifMatchedTaskMustBeThere ++ crossMatching ++ automataTransition ++ onlyOneState :+ startClause :+ endClause
+    val startClause = Clause(matchingSizeAt(-1, 0))
+
+    // go get the minimum, at least one of them must be true
+    val endClause = linearEncoding.atLeastOneOf(Range(minimumLength, linearEncoding.linearPlan.length) map { matchingSizeAt(linearEncoding.linearPlan.length - 1, _) })
+
+    matchingClauses ++ automataTransition ++ onlyOneState :+ startClause :+ endClause
   }
 }

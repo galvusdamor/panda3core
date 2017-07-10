@@ -22,7 +22,7 @@ import scala.io.Source
   */
 // scalastyle:off method.length cyclomatic.complexity
 case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
-                     büchiAutomaton: Option[BüchiAutomaton], referencePlan: Option[Seq[Task]], planDistanceMetric: Option[PlanDistanceMetric],
+                     büchiAutomaton: Option[BüchiAutomaton], referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule) {
 
   private val fileDir = "/dev/shm/"
@@ -180,11 +180,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
       val additionalConstraintsGenerators: Seq[AdditionalSATConstraint] =
         (if (büchiAutomaton.isDefined) LTLFormulaEncoding(büchiAutomaton.get) :: Nil else Nil) ++
-          (if (referencePlan.isDefined) (planDistanceMetric.get match {
-            case MissingOperators => ActionDifference(referencePlan.get)
-            case MaximumCommonSubplan => LongestCommonSubplan(referencePlan.get)
-          }) :: Nil
-          else Nil)
+          (planDistanceMetric map {
+            case MissingOperators(maximumDifference)     => ActionSetDifference(referencePlan.get, maximumDifference)
+            case MissingTaskInstances(maximumDifference) => ActionMatchingDifference(referencePlan.get, maximumDifference)
+            case MinimumCommonSubplan(minimumLength, ignoreOrder)     => LongestCommonSubplan(referencePlan.get, minimumLength, ignoreOrder)
+          })
 
       val additionalConstraintsFormula = additionalConstraintsGenerators flatMap { constraint => encoder match {
         case x: EncodingWithLinearPlan => constraint(x)
@@ -196,6 +196,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       println("NUMBER OF CLAUSES " + usedFormula.length)
       println("NUMBER OF STATE CLAUSES " + stateFormula.length)
       println("NUMBER OF DECOMPOSITION CLAUSES " + encoder.decompositionFormula.length)
+      println("NUMBER OF ADDITIONAL CONSTRAINT CLAUSES " + additionalConstraintsFormula.length)
 
       expansionPossible = encoder.expansionPossible
       //println("Done")
@@ -391,9 +392,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
   private def extractSolutionAndDecompositionGraph(encoder: VerifyEncoding, atomMap: Map[String, Int], literals: Set[Int], formulaVariables: Seq[String],
                                                    allTrueAtoms: Set[String]): (Seq[String], Seq[(String, String)], Seq[Task]) = {
-    println((allTrueAtoms filter { _.startsWith("auto") }).toSeq.sorted mkString "\n")
+    /*println((allTrueAtoms filter { _.startsWith("auto") }).toSeq.sorted mkString "\n")
     println((allTrueAtoms filter { _.startsWith("badness") }).toSeq.sorted mkString "\n")
     println((allTrueAtoms filter { _.startsWith("match") }).toSeq.sorted mkString "\n")
+    println((allTrueAtoms filter { _.startsWith("actionDifferenceMatch") }).toSeq.sorted mkString "\n")*/
+
     encoder match {
 
       case g: GeneralEncoding =>

@@ -6,7 +6,7 @@ import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class ActionDifference(referencePlan: Seq[Task]) extends AdditionalSATConstraint {
+case class ActionSetDifference(referencePlan: Seq[Task], maximumDifference: Int) extends AdditionalSATConstraint {
 
 
   def badnessAtPosition(badness: Int, position: Int): String = "badness_" + position + "_is_" + badness
@@ -51,7 +51,7 @@ case class ActionDifference(referencePlan: Seq[Task]) extends AdditionalSATConst
     }
 
     val oldPlanOffset = linearEncoding.linearPlan.length
-    val clausesForReference: Seq[Clause] = Range(0, maxBadness) flatMap { baseBadness => referencePlan.indices flatMap { case position =>
+    val clausesForReference: Seq[Clause] = Range(0, maxBadness + 1) flatMap { baseBadness => referencePlan.indices flatMap { case position =>
       // if there actually is a task
       val baseBadnessAtom = badnessAtPosition(baseBadness, position - 1 + oldPlanOffset)
       val nextBadnessAtomSame = badnessAtPosition(baseBadness, position + oldPlanOffset)
@@ -68,7 +68,7 @@ case class ActionDifference(referencePlan: Seq[Task]) extends AdditionalSATConst
 
     val assertInitial = Clause(badnessAtPosition(0, -1))
 
-    val noBadness = Range(3, maxBadness) map { bad => Clause((badnessAtPosition(bad, maxBadness - 1), false)) }
+    val noBadness = Range(maximumDifference + 1, maxBadness + 1) map { bad => Clause((badnessAtPosition(bad, maxBadness - 1), false)) }
 
     noBadness ++ clausesForReference ++ referenceTaskContainedClauses ++ clausesForNewSolution :+ assertInitial
   }

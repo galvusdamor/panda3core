@@ -321,7 +321,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           }
 
 
-          val referencePlan: Option[Seq[Task]] = satSearch.planToMinimiseDistanceTo map { _ map { taskName : String => domainAndPlan._1.tasks.find(_.name == taskName).get } }
+          val referencePlan: Option[Seq[Task]] = satSearch.planToMinimiseDistanceTo map { _ map { taskName: String => domainAndPlan._1.tasks.find(_.name == taskName).get } }
 
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
                                  automaton, referencePlan, satSearch.planDistanceMetric,
@@ -1572,15 +1572,17 @@ case class OptimalSATRun(overrideK: Option[Int]) extends SATRunConfiguration {ov
 
 sealed trait PlanDistanceMetric
 
-object MissingOperators extends PlanDistanceMetric
+case class MissingOperators(maximumDifference: Int) extends PlanDistanceMetric
 
-object MaximumCommonSubplan extends PlanDistanceMetric
+case class MissingTaskInstances(maximumDifference: Int) extends PlanDistanceMetric
+
+case class MinimumCommonSubplan(minimumSimilarity: Int, ignoreOrder : Boolean = false) extends PlanDistanceMetric
 
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      ltlFormula: Option[LTLFormula] = None,
                      planToMinimiseDistanceTo: Option[Seq[String]] = None,
-                     planDistanceMetric: Option[PlanDistanceMetric] = None,
+                     planDistanceMetric: Seq[PlanDistanceMetric] = Nil,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise
                     ) extends SearchConfiguration {
