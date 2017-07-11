@@ -394,7 +394,7 @@ public class hddlPanda3Visitor {
         if (requirements.contains(":typeof-predicate")) {
             Predicate typeofPred = null;
             for (Predicate p : JavaConversions.seqAsJavaList(predicates)) {
-                if (p.name().equals("typeof")) {
+                if (p.name().equals("typeOf")) {
                     typeofPred = p;
                 }
             }
@@ -987,7 +987,7 @@ public class hddlPanda3Visitor {
             VectorBuilder<Sort> pSorts = new VectorBuilder<>();
             pSorts.$plus$eq(rootSort);
             pSorts.$plus$eq(typeSort);
-            predicates.$plus$eq(new Predicate("typeof", pSorts.result()));
+            predicates.$plus$eq(new Predicate("typeOf", pSorts.result()));
         }
 
         return predicates.result();
