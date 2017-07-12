@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.logic
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
 import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangeSorts}
-import de.uniulm.ki.util.HashMemo
+import de.uniulm.ki.util.{Internable, HashMemo}
 
 /**
   * Sorts aggregate constants of First Order Logic
@@ -13,14 +13,15 @@ import de.uniulm.ki.util.HashMemo
 //scalastyle:off covariant.equals
 case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) extends DomainUpdatable with PrettyPrintable with HashMemo {
 
-  lazy val elementSet : Set[Constant] = elements toSet
-  lazy val allElements: Seq[Constant] = (elements ++ (subSorts flatMap {_.allElements})) distinct
+  lazy val elementSet: Set[Constant] = elements toSet
+
+  lazy val allElements: Seq[Constant] = (elements ++ (subSorts flatMap { _.allElements })) distinct
 
   override def update(domainUpdate: DomainUpdate): Sort = (domainUpdate match {
     case ExchangeSorts(map) => if (map.contains(this)) map(this) else this
     case _                  => this
   }) match {
-    case Sort(n, e, ss) => Sort(n, e, ss map { _ update domainUpdate })
+    case Sort(n, e, ss) => Sort.intern((n, e, ss map { _ update domainUpdate }))
   }
 
   /** returns a short information about the object */
@@ -40,7 +41,11 @@ case class Sort(name: String, elements: Seq[Constant], subSorts: Seq[Sort]) exte
   }
 }
 
-object Sort {
+
+object Sort extends Internable[(String, Seq[Constant], Seq[Sort]), Sort] {
+
+  override protected val applyTuple = (Sort.apply _).tupled
+
   def allPossibleInstantiations(sorts: Seq[Sort]): Seq[Seq[Constant]] =
     sorts.foldLeft[Seq[Seq[Constant]]](Nil :: Nil)({ case (args, sort) => sort.elements flatMap { c => args map { _ :+ c } } })
 

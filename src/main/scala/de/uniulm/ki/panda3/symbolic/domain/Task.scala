@@ -6,7 +6,7 @@ import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
-import de.uniulm.ki.util.HashMemo
+import de.uniulm.ki.util.{Internable, HashMemo}
 
 /**
   * Tasks are blue-prints for actions, actually contained in plans, i.e. they describe which variables a [[de.uniulm.ki.panda3.symbolic.plan.element.PlanStep]] of their type must have and
@@ -46,8 +46,8 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
         // the test for And[Literal] is not possible due to java's type erasure
         case (precAnd: And[Formula], effAnd: And[Formula]) =>
           if ((precAnd.conjuncts forall { case l: Literal => true case _ => false }) && (effAnd.conjuncts forall { case l: Literal => true case _ => false })) {
-            ReducedTask(name, isPrimitive = isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, precAnd.asInstanceOf[And[Literal]],
-                        effAnd.asInstanceOf[And[Literal]])
+            ReducedTask.intern((name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, precAnd.asInstanceOf[And[Literal]],
+                        effAnd.asInstanceOf[And[Literal]]))
           } else {
             this
           }
@@ -74,7 +74,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
             assert(newPrecondition.length == 2 * preconditionAnd.conjuncts.length)
           }
 
-          ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPrecondition), And(newEffects))
+          ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPrecondition), And(newEffects))
         case _                                                      => noSupport(FORUMLASNOTSUPPORTED)
       }
     case RemoveEffects(unnecessaryPredicates, isInverted) =>
@@ -83,8 +83,8 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
           val newEffects = effectAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
           val newPreconditions = preconditionAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
 
-          if (!isInverted) ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, preconditionAnd, And(newEffects))
-          else ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), effectAnd)
+          if (!isInverted) ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, preconditionAnd, And(newEffects))
+          else ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), effectAnd)
 
         case _ => noSupport(FORUMLASNOTSUPPORTED)
       }
@@ -95,7 +95,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
       (newPrecondition, newEffect) match {
         // the type parameter will be erased by the compiler, so we have to check it again
         case (pre: And[Literal], eff: And[Literal]) if pre.containsOnlyLiterals && eff.containsOnlyLiterals =>
-          ReducedTask(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
+          ReducedTask.intern(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
                       parameterConstraints map { _.update(domainUpdate) }, pre.asInstanceOf[And[Literal]],
                       eff.asInstanceOf[And[Literal]])
         case _                                                                                              =>
@@ -176,10 +176,10 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
   assert(artificialParametersRepresentingConstants forall parameters.contains)
   assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })
 
-  if (parameters.isEmpty){
+  if (parameters.isEmpty) {
     // if ground, don't have something both in the add and del effects!
-    effectsAsPredicateBool filterNot {_._2} foreach {case (p,false) =>
-      assert(!effectsAsPredicateBool.contains((p,true)))
+    effectsAsPredicateBool filterNot { _._2 } foreach { case (p, false) =>
+      assert(!effectsAsPredicateBool.contains((p, true)))
     }
   }
 
@@ -188,4 +188,8 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 
   override def equals(o: scala.Any): Boolean =
     if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[ReducedTask].productIterator) } else false
+}
+
+object ReducedTask extends Internable[(String, Boolean, Seq[Variable], Seq[Variable], Seq[VariableConstraint], And[Literal], And[Literal]), ReducedTask] {
+  override protected val applyTuple = (ReducedTask.apply _).tupled
 }
