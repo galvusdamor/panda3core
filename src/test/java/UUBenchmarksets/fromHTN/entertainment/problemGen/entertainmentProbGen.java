@@ -24,7 +24,7 @@ public class entertainmentProbGen {
         problems.add(getProblem1());
         problems.add(getProblem2());
         problems.add(getProblem3());
-        //problems.add(getProblem4());
+        problems.add(getProblem4());
 
         for (heProblem p : problems) {
             String filename = baseDir + p.getName() + ".lisp";
@@ -36,7 +36,7 @@ public class entertainmentProbGen {
 
     private static heProblem getProblem1() {
         heProblem p = new heProblem("p01-simple-dvd-tv");
-        heDevice dvd = new heDvdPlayer();
+        heDevice dvd = heDvdPlayer.getSimpleDVDPlayer();
         p.addDevice(dvd);
         heDevice tv = heTV.getTVwithScart();
         p.addDevice(tv);
@@ -50,11 +50,11 @@ public class entertainmentProbGen {
 
     private static heProblem getProblem2() {
         heProblem p = new heProblem("p02-split-with-adapter");
-        heDevice dvd = new heDvdPlayer();
+        heDevice dvd = heDvdPlayer.getSimpleDVDPlayer();
         p.addDevice(dvd);
         heDevice tv = heTV.getTVwithCinch();
         p.addDevice(tv);
-        heDevice adapter = new heScartToCinchAdapter();
+        heDevice adapter =  heScartToCinchAdapter.getScartToCinchAdapter();
         p.addDevice(adapter);
         p.addCable(new heScartCable());
         p.addCable(new heCinchCable());
@@ -68,7 +68,7 @@ public class entertainmentProbGen {
 
     private static heProblem getProblem3() {
         heProblem p = new heProblem("p03-split-with-cable");
-        heDevice dvd = new heDvdPlayer();
+        heDevice dvd = heDvdPlayer.getSimpleDVDPlayer();
         p.addDevice(dvd);
         heDevice tv = heTV.getTVwithCinch();
         p.addDevice(tv);
@@ -82,18 +82,20 @@ public class entertainmentProbGen {
 
     private static heProblem getProblem4() {
         heProblem p = new heProblem("p04-split-and-rejoin");
-        heDevice dvd = new heDvdPlayer();
+        heDevice dvd = heDvdPlayer.getSimpleDVDPlayer();
         p.addDevice(dvd);
         heDevice tv = heTV.getTVwithScart();
         p.addDevice(tv);
-        heDevice adapter = new heScartToCinchAdapter();
-        p.addDevice(adapter);
-        p.addCable(new heScartCable());
-        p.addCable(new heScartToCinchCable());
+        p.addDevice(heScartToCinchAdapter.getScartToCinchAdapter());
+        p.addDevice(heScartToCinchAdapter.getCinchToScartAdapter());
+
+        p.addCable(new heCinchCable());
+        p.addCable(new heCinchCable());
         heDevice[] g = new heDevice[2];
         g[0] = dvd;
         g[1] = tv;
         p.addAvGoal(g);
         return p;
+
     }
 }

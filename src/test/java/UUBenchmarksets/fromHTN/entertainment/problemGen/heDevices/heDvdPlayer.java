@@ -10,12 +10,17 @@ import java.util.List;
  * Created by dh on 19.05.17.
  */
 public class heDvdPlayer extends heDevice {
-    public heDvdPlayer() {
-        deviceType = "simple-dvd-";
-        ports.add(new heScartPort());
-        inPort.add(false);
-        outPort.add(true);
-        audioPort.add(true);
-        videoPort.add(true);
+    private heDvdPlayer() {
+    }
+
+    public static heDevice getSimpleDVDPlayer() {
+        heDvdPlayer res = new heDvdPlayer();
+        res.deviceType = "simple-dvd-";
+        res.ports.add(new heScartPort());
+        res.inPort.add(false);
+        res.outPort.add(true);
+        res.audioPort.add(true);
+        res.videoPort.add(true);
+        return res;
     }
 }

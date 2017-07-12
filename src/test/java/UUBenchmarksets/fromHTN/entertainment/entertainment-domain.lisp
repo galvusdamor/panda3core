@@ -157,6 +157,8 @@
         (plug ?e1 ?c1 ?e2 ?c2))
   )
 
+; connections via existing cable -----------------------------------------
+
 ;;   (:method m-dconnect-av
 ;;     :parameters (?e1 ?e2 - equipment)
 ;;     :task (direct_av_connect ?e1 ?e2)
@@ -191,7 +193,8 @@
     :parameters (?e1 - equipment ?c1 - connector
                  ?e2 - equipment ?c2 - connector)
     :precondition (and
-        (unused ?c1) (unused ?c2)
+        (unused ?c1)
+        (unused ?c2)
         (conn_of ?e1 ?c1)
         (conn_of ?e2 ?c2)
         (compatible ?c1 ?c2)
