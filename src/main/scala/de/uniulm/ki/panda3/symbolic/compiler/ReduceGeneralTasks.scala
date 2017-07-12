@@ -93,7 +93,7 @@ object ReduceGeneralTasks  extends DomainTransformer[Unit] {
   private final case class Simplification(original: Task, replacement: Task, newTasks: Seq[Task], newMethods: Seq[DecompositionMethod]) {
     def apply(domain: Domain, plan: Plan): (Domain, Plan, Seq[Task]) = {
       val newDomain = domain update ExchangeTask(Map(original -> replacement)) update AddTask(newTasks) update AddMethod(newMethods)
-      val newPlan   = plan   update ExchangeTask(Map(original -> replacement)) update AddTask(newTasks) update AddMethod(newMethods)
+      val newPlan   = plan   update ExchangeTask(Map(original -> replacement))
       (newDomain, newPlan, newTasks :+ replacement)
     }
   }
