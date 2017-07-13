@@ -82,8 +82,6 @@ public class hddlPanda3Visitor {
             }
         }
 
-        System.out.println("REQUIREMENTS: " + requirements);
-
         Seq<Sort> sorts;
         if ((ctxDomain.type_def() != null) && (ctxDomain.type_def().type_def_list() != null)) {
             sorts = visitTypeAndObjDef(ctxDomain, ctxProblem);
