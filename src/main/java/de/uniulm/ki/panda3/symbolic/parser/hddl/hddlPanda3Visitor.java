@@ -28,6 +28,7 @@ import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -72,12 +73,12 @@ public class hddlPanda3Visitor {
     private parseReport report = new parseReport();
 
     private int currentVarId = 0;
+
     private int nextVarId() {
         return ++currentVarId;
     }
 
     public Tuple2<Domain, Plan> visitInstance(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
-
         Seq<Sort> sorts;
         if ((ctxDomain.type_def() != null) && (ctxDomain.type_def().type_def_list() != null)) {
             sorts = visitTypeAndObjDef(ctxDomain, ctxProblem);
@@ -101,7 +102,7 @@ public class hddlPanda3Visitor {
         Seq<DecompositionMethod> decompositionMethods = visitMethodDef(ctxDomain.method_def(), sorts, predicates, tasks);
         Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
 
-        Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms, None$.empty(),None$.empty());
+        Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms, None$.empty(), None$.empty());
 
         Seq<Variable> initArguments = init.parameters();
         PlanStep psInit = new PlanStep(0, init, initArguments);
@@ -179,7 +180,7 @@ public class hddlPanda3Visitor {
         seqProviderList<PlanStep> planSteps = new seqProviderList<>();
         planSteps.add(psInit);
         planSteps.add(psGoal);
-        taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit,psGoal);
+        taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit, psGoal);
 
 
         if (tnCtx.subtask_defs() != null) {
@@ -406,6 +407,7 @@ public class hddlPanda3Visitor {
 
     private Seq<DecompositionMethod> visitMethodDef(List<antlrHDDLParser.Method_defContext> ctx, Seq<Sort> sorts, Seq<Predicate> predicates, Seq<Task> tasks) {
         seqProviderList<DecompositionMethod> methods = new seqProviderList<>();
+        HashSet<String> usedMethodNames = new HashSet<>();
         for (antlrHDDLParser.Method_defContext m : ctx) {
             // Read abstract task
             String taskname = m.task_symbol().NAME().toString();
@@ -423,6 +425,8 @@ public class hddlPanda3Visitor {
 
             // Read method's name and parameters
             String nameStr = m.method_symbol().NAME().toString();
+            assert (!usedMethodNames.contains(nameStr));
+            usedMethodNames.add(nameStr);
             seqProviderList<Variable> methodParams = typedParamsToVars(sorts, abstractTask.parameters().size(), m.typed_var_list().typed_vars());
 
             seqProviderList<Variable> tnVars = new seqProviderList<>();
@@ -431,7 +435,7 @@ public class hddlPanda3Visitor {
             tnVars.add(abstractTask.parameters());
 
             VarContext vctx = new VarContext();
-            for (Variable v: tnVars.getList()) {
+            for (Variable v : tnVars.getList()) {
                 vctx.addParameter(v);
             }
 
@@ -517,7 +521,7 @@ public class hddlPanda3Visitor {
             Variable methodVar = parserUtil.getVarByName(methodParams, param.VAR_NAME().toString());
             if (methodVar == null) {
                 if (warningOutput)
-                    System.out.println("ERROR: parameter used in method definition has not been found in method's parameter definition. (abstract task " + abstractTask.name()+ ")");
+                    System.out.println("ERROR: parameter used in method definition has not been found in method's parameter definition. (abstract task " + abstractTask.name() + ")");
                 paramsOk = false;
                 break;
             }
@@ -528,7 +532,10 @@ public class hddlPanda3Visitor {
         return paramsOk;
     }
 
+    HashSet<String> usedTaskNames;
+
     private Seq<Task> visitTaskDefs(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.DomainContext ctxDomain) {
+        usedTaskNames = new HashSet<>();
         VectorBuilder<Task> tasks = new VectorBuilder<>();
         for (antlrHDDLParser.Action_defContext a : ctxDomain.action_def()) {
             Task t = visitTaskDef(sorts, predicates, a.task_def(), true);
@@ -543,6 +550,8 @@ public class hddlPanda3Visitor {
 
     private Task visitTaskDef(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Task_defContext ctxTask, boolean isPrimitive) {
         String taskName = ctxTask.task_symbol().NAME().toString();
+        assert (!usedTaskNames.contains(taskName));
+        usedTaskNames.add(taskName);
         seqProviderList<Variable> parameters = typedParamsToVars(sorts, 0, ctxTask.typed_var_list().typed_vars());
         seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
 
@@ -671,7 +680,6 @@ public class hddlPanda3Visitor {
     }
 
 
-
     private Tuple2<Seq<Variable>, Formula> readInner(
             VarContext vctx,
             Seq<Predicate> predicates,
@@ -739,11 +747,11 @@ public class hddlPanda3Visitor {
             } else if (ctx.literal().neg_atomic_formula() != null) {
                 return visitAtomFormula(vctx, predicates, sorts, constraints, false, ctx.literal().neg_atomic_formula().atomic_formula());
             }
-        } else if (ctx.eff_empty() != null){
+        } else if (ctx.eff_empty() != null) {
             return new And<Literal>(new Vector<Literal>(0, 0, 0));
-        }else if (ctx.eff_conjunction() != null) {
+        } else if (ctx.eff_conjunction() != null) {
             return new And<>(JavaToScala.toScalaSeq(ctx.eff_conjunction().effect().stream().map(x ->
-                 visitEffect(vctx, constraints, sorts, predicates, x)
+                    visitEffect(vctx, constraints, sorts, predicates, x)
             ).collect(Collectors.toList())));
         } else if (ctx.eff_universal() != null) {
             Tuple2<Seq<Variable>, Formula> inner = readInnerEffect(
@@ -811,7 +819,7 @@ public class hddlPanda3Visitor {
      * @param ctx
      * @return
      */
-        private Literal visitAtomFormula(VarContext vctx, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, boolean isPositive, antlrHDDLParser.Atomic_formulaContext ctx) {
+    private Literal visitAtomFormula(VarContext vctx, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, boolean isPositive, antlrHDDLParser.Atomic_formulaContext ctx) {
         //
         // get predicate definition
         //
