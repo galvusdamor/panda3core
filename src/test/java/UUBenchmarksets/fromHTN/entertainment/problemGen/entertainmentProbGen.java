@@ -1,13 +1,5 @@
 package UUBenchmarksets.fromHTN.entertainment.problemGen;
 
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heCables.heCinchCable;
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heCables.heScartCable;
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heCables.heScartToCinchCable;
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heDevices.heDevice;
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heDevices.heDvdPlayer;
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heDevices.heScartToCinchAdapter;
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heDevices.heTV;
-
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.ArrayList;
@@ -36,11 +28,11 @@ public class entertainmentProbGen {
 
     private static heProblem getProblem1() {
         heProblem p = new heProblem("p01-simple-dvd-tv");
-        heDevice dvd = heDvdPlayer.getSimpleDVDPlayer();
+        heDevice dvd = DeviceFactory.getDVDPlayerWithScart();
         p.addDevice(dvd);
-        heDevice tv = heTV.getTVwithScart();
+        heDevice tv = DeviceFactory.getTVwithScart();
         p.addDevice(tv);
-        p.addCable(new heScartCable());
+        p.addDevice(DeviceFactory.getScartCable());
         heDevice[] g = new heDevice[2];
         g[0] = dvd;
         g[1] = tv;
@@ -50,15 +42,15 @@ public class entertainmentProbGen {
 
     private static heProblem getProblem2() {
         heProblem p = new heProblem("p02-split-with-adapter");
-        heDevice dvd = heDvdPlayer.getSimpleDVDPlayer();
+        heDevice dvd = DeviceFactory.getDVDPlayerWithScart();
         p.addDevice(dvd);
-        heDevice tv = heTV.getTVwithCinch();
+        heDevice tv = DeviceFactory.getTVwithCinch();
         p.addDevice(tv);
-        heDevice adapter =  heScartToCinchAdapter.getScartToCinchAdapter();
+        heDevice adapter = DeviceFactory.getScartPlugToCinchPortAdapter();
         p.addDevice(adapter);
-        p.addCable(new heScartCable());
-        p.addCable(new heCinchCable());
-        p.addCable(new heCinchCable());
+        p.addDevice(DeviceFactory.getScartCable());
+        p.addDevice(DeviceFactory.getCinchCable());
+        p.addDevice(DeviceFactory.getCinchCable());
         heDevice[] g = new heDevice[2];
         g[0] = dvd;
         g[1] = tv;
@@ -68,11 +60,11 @@ public class entertainmentProbGen {
 
     private static heProblem getProblem3() {
         heProblem p = new heProblem("p03-split-with-cable");
-        heDevice dvd = heDvdPlayer.getSimpleDVDPlayer();
+        heDevice dvd = DeviceFactory.getDVDPlayerWithScart();
         p.addDevice(dvd);
-        heDevice tv = heTV.getTVwithCinch();
+        heDevice tv = DeviceFactory.getTVwithCinch();
         p.addDevice(tv);
-        p.addCable(new heScartToCinchCable());
+        p.addDevice(DeviceFactory.getScartToCinchCable());
         heDevice[] g = new heDevice[2];
         g[0] = dvd;
         g[1] = tv;
@@ -82,15 +74,16 @@ public class entertainmentProbGen {
 
     private static heProblem getProblem4() {
         heProblem p = new heProblem("p04-split-and-rejoin");
-        heDevice dvd = heDvdPlayer.getSimpleDVDPlayer();
+        heDevice dvd = DeviceFactory.getDVDPlayerWithScart();
+        heDevice tv = DeviceFactory.getTVwithScart();
         p.addDevice(dvd);
-        heDevice tv = heTV.getTVwithScart();
         p.addDevice(tv);
-        p.addDevice(heScartToCinchAdapter.getScartToCinchAdapter());
-        p.addDevice(heScartToCinchAdapter.getCinchToScartAdapter());
+        p.addDevice(DeviceFactory.getScartPlugToCinchPortAdapter());
+        p.addDevice(DeviceFactory.getCinchPortToScartPlugAdapter());
 
-        p.addCable(new heCinchCable());
-        p.addCable(new heCinchCable());
+        p.addDevice(DeviceFactory.getCinchCable());
+        p.addDevice(DeviceFactory.getCinchCable());
+
         heDevice[] g = new heDevice[2];
         g[0] = dvd;
         g[1] = tv;
