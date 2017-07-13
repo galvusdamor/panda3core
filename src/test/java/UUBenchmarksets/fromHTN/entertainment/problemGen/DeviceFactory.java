@@ -1,8 +1,5 @@
 package UUBenchmarksets.fromHTN.entertainment.problemGen;
 
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heConnections.heCinchPort;
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heConnections.heScartPort;
-
 /**
  * Created by dh on 12.07.17.
  */

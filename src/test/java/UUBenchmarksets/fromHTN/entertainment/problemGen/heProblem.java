@@ -1,8 +1,5 @@
 package UUBenchmarksets.fromHTN.entertainment.problemGen;
 
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heCables.heCable;
-import UUBenchmarksets.fromHTN.entertainment.problemGen.heConnections.heConnection;
-
 import java.util.*;
 
 /**
