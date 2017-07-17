@@ -140,7 +140,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
     searchConfiguration match {
-      case search: PlanBasedSearch        =>
+      case search: PlanBasedSearch =>
         // some heuristics need additional preprocessing, e.g. to build datastructures they need
         timeCapsule start HEURISTICS_PREPARATION
         // TDG based heuristics need the TDG
@@ -392,7 +392,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           val (isSolution, runCompleted) = runner.runWithTimeLimit(remainingTime, taskSequenceToVerify, 0, includeGoal = true, None, timeCapsule, informationCapsule)
 
-
+          informationCapsule.set(Information.PLAN_VERIFIED, isSolution.toString)
 
           runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
         })
@@ -981,8 +981,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
            assert(splittedPath.length == 2, "paths must be specified in the program=path format")
            val program = splittedPath.head match {
              case "fd" | "fast-downward" | "fastdownward" => FastDownward
-             case "riss6" => RISS6
-             case "mapleCOMSPS" => MapleCOMSPS
+             case "riss6"                                 => RISS6
+             case "mapleCOMSPS"                           => MapleCOMSPS
            }
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
