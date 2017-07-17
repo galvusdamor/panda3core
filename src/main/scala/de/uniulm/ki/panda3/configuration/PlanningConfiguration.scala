@@ -142,7 +142,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
     searchConfiguration match {
-      case search: PlanBasedSearch        =>
+      case search: PlanBasedSearch =>
         // some heuristics need additional preprocessing, e.g. to build datastructures they need
         timeCapsule start HEURISTICS_PREPARATION
         // TDG based heuristics need the TDG
@@ -1346,10 +1346,18 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 }
 
 object PlanningConfiguration {
+<<<<<<< HEAD
   private val defaultPlanSearchConfiguration  = PlanBasedSearch(None, BFSType, Nil, Nil, LCFR)
   private val defaultProgressionConfiguration = ProgressionSearch(BFSType, None, PriorityQueueSearch.abstractTaskSelection.random)
   private val defaultSATConfiguration         = SATSearch(MINISAT, SingleSATRun())
   private val defaultVerifyConfiguration      = SATPlanVerification(MINISAT, "")
+||||||| parent of a4e70cc2... added verifier result to output
+  private val defaultPlanSearchConfiguration  = PlanBasedSearch(None, BFSType, Nil, Nil, LCFR)
+  private val defaultVerifyConfiguration      = SATPlanVerification(MINISAT, "")
+=======
+  private val defaultPlanSearchConfiguration = PlanBasedSearch(None, BFSType, Nil, Nil, LCFR)
+  private val defaultVerifyConfiguration     = SATPlanVerification(MINISAT, "")
+>>>>>>> a4e70cc2... added verifier result to output
 }
 
 /**
