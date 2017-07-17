@@ -141,7 +141,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
     searchConfiguration match {
-      case search: PlanBasedSearch        =>
+      case search: PlanBasedSearch =>
         // some heuristics need additional preprocessing, e.g. to build datastructures they need
         timeCapsule start HEURISTICS_PREPARATION
         // TDG based heuristics need the TDG
@@ -407,7 +407,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           val (isSolution, runCompleted) = runner.runWithTimeLimit(remainingTime, taskSequenceToVerify, 0, includeGoal = true, None, timeCapsule, informationCapsule)
 
-
+          informationCapsule.set(Information.PLAN_VERIFIED, isSolution.toString)
 
           runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
         })
