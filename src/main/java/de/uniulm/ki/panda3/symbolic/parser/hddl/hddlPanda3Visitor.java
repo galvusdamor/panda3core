@@ -136,7 +136,7 @@ public class hddlPanda3Visitor {
             planSteps.add(psInit);
             planSteps.add(psGoal);
             TaskOrdering taskOrderings = new TaskOrdering(new VectorBuilder<OrderingConstraint>().result(), new VectorBuilder<PlanStep>().result());
-            taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal);
+            taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit,psGoal);
             p = new Plan(planSteps.result(), new seqProviderList<CausalLink>().result(), taskOrderings, csp, psInit, psGoal,
                     allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
         }
