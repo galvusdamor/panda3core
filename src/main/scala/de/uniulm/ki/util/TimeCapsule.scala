@@ -102,10 +102,24 @@ class TimeCapsule extends DataCapsule {
   override def dataMap(): Map[String, String] = this.synchronized { currentAccumulatedTime.toMap map { case (a, b) => a -> b.toString } }
 }
 
+sealed trait TimeTakingMode
+
+object WallTime extends TimeTakingMode
+
+object ThreadCPUTime extends TimeTakingMode
+
 object TimeCapsule {
+  var timeTakingMode : TimeTakingMode = WallTime
+
   private val threadTimer = ManagementFactory.getThreadMXBean
 
-  def getCPUTimeOfCurrentThread(): Long = threadTimer.getCurrentThreadCpuTime / 1000000
+  def getCPUTimeOfCurrentThread(): Long = timeTakingMode match {
+    case ThreadCPUTime => threadTimer.getCurrentThreadCpuTime / 1000000
+    case WallTime => System.currentTimeMillis()
+  }
 
-  def getCPUTimeOfThread(id: Long): Long = threadTimer.getThreadCpuTime(id) / 1000000
+  def getCPUTimeOfThread(id: Long): Long =  timeTakingMode match {
+    case ThreadCPUTime => threadTimer.getThreadCpuTime(id) / 1000000
+    case WallTime => System.currentTimeMillis()
+  }
 }
