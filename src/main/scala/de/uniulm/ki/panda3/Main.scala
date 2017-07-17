@@ -51,7 +51,7 @@ object Main {
 
       groupedArguments.foldLeft(this)(
         { case (conf, option) => option match {
-          case Left(opt) if !opt.startsWith("-") =>
+          case Left(opt) if !opt.startsWith("-")                              =>
             opt match {
               case dom if conf.domFile.isEmpty    => conf.copy(domFile = Some(dom))
               case prob if conf.probFile.isEmpty  => conf.copy(probFile = Some(prob))
@@ -60,7 +60,15 @@ object Main {
                 println("PANDA was given a fourth non-option argument \"" + opt + "\". Only three (domain-, problem-, and output-file) will be processed. Ignoring option")
                 conf
             }
-          case _                                 => // this is a real option
+          case Left(opt) if opt.equals("-cputime") || opt.equals("-walltime") =>
+            // use side effect
+            opt match {
+              case "-cputime"  => TimeCapsule.timeTakingMode = ThreadCPUTime
+              case "-walltime" => TimeCapsule.timeTakingMode = WallTime
+            }
+
+            conf
+          case _                                                              => // this is a real option
 
             // get the key
             val (key, value) = option match {
