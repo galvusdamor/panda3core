@@ -25,11 +25,6 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public static Map<Task, List<ProMethod>> methods;
     public static Set<Integer> ShopPrecActions = new HashSet<>();
 
-
-    /* todo
-     * - does this work for empty task networks? I don't think so. Could one compile these methods in something other?
-     */
-
     public BitSet state;
     List<ProgressionPlanStep> unconstraintPrimitiveTasks;
     List<ProgressionPlanStep> unconstraintAbstractTasks;
@@ -43,6 +38,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
     public GroundedProgressionHeuristic heuristic;
 
+    public int heuristicVal = 0;
     public int metric = 0;
     public boolean goalRelaxedReachable = true;
     public int id = 0;
@@ -145,7 +141,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
             }
             sb.append(i);
             sb.append(":");
-            sb.append(ps.getTask().longInfo());
+            sb.append(ps.getTask().shortInfo());
             i++;
         }
         boolean first = true;

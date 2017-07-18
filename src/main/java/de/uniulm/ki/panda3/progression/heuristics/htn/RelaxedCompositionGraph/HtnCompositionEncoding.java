@@ -28,7 +28,6 @@ public class HtnCompositionEncoding extends SasPlusProblem {
     public int firstTaskCompIndex;
     public int lastTaskCompIndex;
 
-    public int firstHtnIndex;
     public int lastOverallIndex;
     public int methodCosts = 1;
 
@@ -72,12 +71,12 @@ public class HtnCompositionEncoding extends SasPlusProblem {
         this.lastTdrIndex = this.firstTdrIndex + this.numOfOperators - 1;
         this.firstTaskCompIndex = this.lastTdrIndex + 1;
         this.lastTaskCompIndex = this.firstTaskCompIndex + this.numTasks - 1;
-        this.firstHtnIndex = this.firstTdrIndex;
         this.lastOverallIndex = this.lastTaskCompIndex;
 
         this.numExtenedStateFeatures = this.lastOverallIndex + 1;
 
         int[][] tPrecLists = new int[numAnM][];
+        int[] tNumPrecs = new int[this.numAnM];
         int[][] tAddLists = new int[numAnM][];
         int[][] tDelLists = new int[numAnM][];
         String[] tOpNames = new String[this.numAnM];
@@ -87,7 +86,6 @@ public class HtnCompositionEncoding extends SasPlusProblem {
          * The original actions get an additional prec that represents its top-down-reachability and an additional add
          * effect that marks this action (aka primitive task) as reached via composition.
          */
-        int[] tNumPrecs = new int[this.numAnM];
         for (int iA = 0; iA < this.numOfOperators; iA++) {
             tNumPrecs[iA] = this.precLists[iA].length + 1;
 

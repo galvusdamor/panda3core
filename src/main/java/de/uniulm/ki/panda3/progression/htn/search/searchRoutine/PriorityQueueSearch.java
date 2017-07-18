@@ -109,9 +109,11 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 ProgressionNetwork node = n.apply(ps);
                 node.id = searchnodes;
                 node.heuristic = n.heuristic.update(node, ps);
-                node.metric = node.heuristic.getHeuristic();
+                node.heuristicVal = node.heuristic.getHeuristic();
                 if (aStar) {
-                    node.metric = node.metric + (node.solution.getLength() / greediness);
+                    node.metric = node.heuristicVal + (node.solution.getLength() / greediness);
+                } else {
+                    node.metric = node.heuristicVal;
                 }
 
                 node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
@@ -174,20 +176,29 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     }
                 }
             }
-
+/*
+            System.out.println("====================================");
+            System.out.println("Task:   " + oneAbs.getTask().name());
+            System.out.println("Metric: " + n.metric);
+            System.out.println("Path:   " + n.solution.getLength());*/
             methodloop:
             for (ProMethod m : oneAbs.methods) {
                 ProgressionNetwork node = n.decompose(oneAbs, m);
                 //if (visited.addIfNotIn(node))
                 //    continue methodloop;
 
+                //System.out.println("------------------------------------");
+                //System.out.println("Method: " + m.m.name());
+                //System.out.println(node.progressionTrace);
                 // todo: add unit propagation here
                 node.heuristic = n.heuristic.update(node, oneAbs, m);
-                node.metric = node.heuristic.getHeuristic();
                 node.id = searchnodes++;
 
+                node.heuristicVal = node.heuristic.getHeuristic();
                 if (aStar) {
-                    node.metric = node.metric + (node.solution.getLength() / greediness);
+                    node.metric = node.heuristicVal + (node.solution.getLength() / greediness);
+                } else {
+                    node.metric = node.heuristicVal;
                 }
 
                 node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();

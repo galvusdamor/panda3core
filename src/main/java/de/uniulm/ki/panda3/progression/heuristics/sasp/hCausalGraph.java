@@ -33,7 +33,6 @@ public class hCausalGraph extends SasHeuristic {
 
         // calculate cyclic causal graph
         System.out.println("- Building Causal Graph...");
-        int[][] arcWeights = new int[p.numOfVars][];
         BitSet[] tCg = createCG(p, tDtgs);
 
         // delete cycles
@@ -191,6 +190,7 @@ public class hCausalGraph extends SasHeuristic {
                         assert vn == p.indexToMutexGroup[j]; // should be the same variable
                         int v = p.indexToMutexGroup[pre];
                         assert v != vn;
+                        assert vn < p.numOfVars;
                         cg[v].set(vn, true);
                     }
                 }
@@ -204,6 +204,7 @@ public class hCausalGraph extends SasHeuristic {
                     int v = p.indexToMutexGroup[e1];
                     int vn = p.indexToMutexGroup[e2];
                     if (v != vn) {
+                        assert vn < p.numOfVars;
                         cg[v].set(vn, true);
                     }
                 }

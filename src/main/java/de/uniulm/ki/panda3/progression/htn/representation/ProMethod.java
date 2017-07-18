@@ -108,7 +108,7 @@ public class ProMethod {
 
     public void finalizeMethod(HashMap<Task, List<ProMethod>> methods) {
         Set<Task> distinctTasks = new HashSet<>();
-        for(Task t : this.subtasks){
+        for (Task t : this.subtasks) {
             distinctTasks.add(t);
         }
         this.numDistinctSubTasks = distinctTasks.size();

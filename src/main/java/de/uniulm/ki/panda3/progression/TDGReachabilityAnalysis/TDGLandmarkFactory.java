@@ -74,17 +74,18 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
         for (int v = root.nextSetBit(0); v > -1; v = root.nextSetBit(v + 1))
             calcPossAndNecSets(nodeToScc[v]);
 
+        /*
         taskNames = new String[nodeCount];
         taskParams = new String[nodeCount][];
         relLMs = new HashMap[nodeCount];
         for (int i = 0; i < nodeCount; i++)
             relLMs[i] = new HashMap<>();
 
-        //for (int v = root.nextSetBit(0); v > -1; v = root.nextSetBit(v + 1))
-        //    calcRelaxedLMs(nodeToScc[v]);
-
+        for (int v = root.nextSetBit(0); v > -1; v = root.nextSetBit(v + 1))
+            calcRelaxedLMs(nodeToScc[v]);
+        */
         // set the reachability of every task to the reachability of the SCC it belongs to and set also the reachable actions
-        this.reachableActions = new BitSet[numTasks]; // these are the reachable actions
+        this.reachableActions = new BitSet[numTasks];
         for (int i = 0; i < reachableActions.length; i++) {
             this.reachableActions[i] = new BitSet(numActions);
             this.reachableActions[i].set(0, numActions - 1, false);

@@ -95,6 +95,16 @@ public class TarjanSCCs {
             return i2;
     }
 
+    public void calcSccs() {
+        for (int v = U.nextClearBit(0); v >= 0; U.nextClearBit(v + 1))
+            tarjan(v);
+        int[][] old = scc;
+        scc = new int[iScc + 1][];
+        for (int i = 0; i < scc.length; i++)
+            scc[i] = old[i];
+        assert sccsOK();
+    }
+
     public void calcSccs(BitSet root) {
         for (int v = root.nextSetBit(0); (v > -1); v = root.nextSetBit(v + 1))
             tarjan(v);

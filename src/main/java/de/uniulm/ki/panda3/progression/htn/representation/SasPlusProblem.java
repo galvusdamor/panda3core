@@ -33,7 +33,7 @@ public class SasPlusProblem {
     private boolean actionCosts = false;
 
     // number of elements
-    private int numOfVars;
+    public int numOfVars;
     private int numOfMutexGroups;
     private int numOfGoalPairs;
     public int numOfOperators;

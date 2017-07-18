@@ -42,9 +42,15 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
                      SasHeuristic.SasHeuristics heuristic,
                      HashMap<Task, List<ProMethod>> methods,
                      List<ProgressionPlanStep> initialTasks) {
-
+        /*hCausalGraph gr = new hCausalGraph(flat);
+        BitSet g = new BitSet();
+        for (int f : flat.gList)
+            g.set(f);
+        gr.calcHeu(flat.getS0(), g);
+        System.exit(0);*/
         this.compEnc = new HtnCompositionEncoding(flat);
         this.compEnc.generateTaskCompGraph(methods, initialTasks);
+        //System.out.println(this.compEnc.toString());
         System.out.println("Generating Relaxed Composition Model ...");
         System.out.println(this.compEnc.getStatistics());
 
@@ -63,7 +69,6 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
         } else if (heuristic == SasHeuristic.SasHeuristics.hIncLmCut) {
             this.inc = new IncInfLmCut();
             //this.heuristic = new hLmCutRtg(this.compEnc, true);
-            this.heuristic = new hLmCutRtg(this.compEnc, true);
             this.heuristic = new hLmCutEq(this.compEnc, true);
         }
     }

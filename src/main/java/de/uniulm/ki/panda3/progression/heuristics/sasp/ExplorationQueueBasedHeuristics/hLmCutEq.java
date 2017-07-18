@@ -86,7 +86,7 @@ public class hLmCutEq extends SasHeuristic {
             return hMax;
 
         while (hMax > 0) {
-            assert implementationEquality(s0, g);
+            //assert implementationEquality(s0, g);
             //assert reachablilityOK(s0, this.hVal); // this is less restrictive than the one above
 
             BitSet goalZone = new BitSet(p.numOfStateFeatures);
