@@ -75,6 +75,24 @@ public class hddlPanda3Visitor {
 
     private List<String> requirements = new ArrayList<String>();
 
+    public Domain visitDomain(antlrHDDLParser.DomainContext domainCtx) {
+        Seq<Sort> sorts;
+        if ((domainCtx.type_def() != null) && (domainCtx.type_def().type_def_list() != null)) {
+            sorts = visitTypeAndObjDef(domainCtx, null);
+        } else {
+            sorts = new seqProviderList<Sort>().result();
+        }
+
+        Seq<Predicate> predicates = visitPredicateDeclaration(sorts, domainCtx.predicates_def());
+
+        Seq<Task> tasks = visitTaskDefs(sorts, predicates, domainCtx);
+
+        Seq<DecompositionMethod> decompositionMethods = visitMethodDef(domainCtx.method_def(), sorts, predicates, tasks);
+        Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
+
+        return new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms);
+    }
+
     public Tuple2<Domain, Plan> visitInstance(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
         if ((ctxDomain.require_def() != null)) {
             for (TerminalNode r : ctxDomain.require_def().require_defs().REQUIRE_NAME()) {
@@ -1024,7 +1042,7 @@ public class hddlPanda3Visitor {
 
     private static final String ARTIFICIAL_ROOT_SORT = "__Object";
 
-    public Seq<Sort> visitTypeAndObjDef(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
+    public Seq<Sort> visitTypeAndObjDef(@NotNull antlrHDDLParser.DomainContext ctxDomain, antlrHDDLParser.ProblemContext ctxProblem) {
         // Extract type hierarchy from domain file
         internalSortsAndConsts internalSortModel = new internalSortsAndConsts(); // do not pass out, use only here
 
@@ -1051,7 +1069,7 @@ public class hddlPanda3Visitor {
             List<antlrHDDLParser.Typed_objsContext> domainConsts = ctxDomain.const_def().typed_obj_list().typed_objs();
             addToInternalModel(internalSortModel, domainConsts);
         }
-        if (ctxProblem.p_object_declaration() != null) {
+        if (ctxProblem != null && ctxProblem.p_object_declaration() != null) {
             List<antlrHDDLParser.Typed_objsContext> problemConsts = ctxProblem.p_object_declaration().typed_obj_list().typed_objs();
             addToInternalModel(internalSortModel, problemConsts);
         }
