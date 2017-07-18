@@ -114,8 +114,7 @@
     :parameters (?e1 ?e2 - equipment ?c1 ?c2 - connector)
     :task (direct_av_connect ?e1 ?e2)
     :precondition (and
-        ;;(not (= ?pl1 ?pl2))
-        ;;(not (= ?e1 ?e2))
+        (not (= ?e1 ?e2))
         (audio_connector ?c1)
         (audio_connector ?c2)
         (video_connector ?c1)
@@ -131,8 +130,7 @@
     :parameters (?e1 ?e2 - equipment ?c1 ?c2 - connector)
     :task (direct_a_connect ?e1 ?e2)
     :precondition (and
-        ;;(not (= ?pl1 ?pl2))
-        ;;(not (= ?e1 ?e2))
+        (not (= ?e1 ?e2))
         (audio_connector ?c1)
         (audio_connector ?c2)
         (out_connector ?c1)
@@ -147,7 +145,7 @@
     :task (direct_v_connect ?e1 ?e2)
     :precondition (and
         ;;(not (= ?pl1 ?pl2))
-        ;;(not (= ?e1 ?e2))
+        (not (= ?e1 ?e2))
         (video_connector ?c1)
         (video_connector ?c2)
         (out_connector ?c1)
@@ -159,33 +157,33 @@
 
 ; connections via existing cable -----------------------------------------
 
-;;   (:method m-dconnect-av
-;;     :parameters (?e1 ?e2 - equipment)
-;;     :task (direct_av_connect ?e1 ?e2)
-;;     :precondition (and
-;;         (audio_connected ?e1 ?e2)
-;;         (video_connected ?e1 ?e2)
-;;       )
-;;     :subtasks ( )
-;;   )
-;; 
-;;   (:method m-dconnect-a
-;;     :parameters (?e1 ?e2 - equipment )
-;;     :task (direct_a_connect ?e1 ?e2)
-;;     :precondition (and
-;;         (audio_connected ?e1 ?e2)
-;;       )
-;;     :subtasks ( )
-;;   )
-;; 
-;;   (:method m-dconnect-v
-;;     :parameters (?e1 ?e2 - equipment)
-;;     :task (direct_v_connect ?e1 ?e2)
-;;     :precondition (and
-;;         (video_connected ?e1 ?e2)
-;;       )
-;;     :subtasks ( )
-;;   )
+  (:method m-dconnect-av-empty
+    :parameters (?e1 ?e2 - equipment)
+    :task (direct_av_connect ?e1 ?e2)
+    :precondition (and
+        (audio_connected ?e1 ?e2)
+        (video_connected ?e1 ?e2)
+      )
+    :subtasks ( )
+  )
+
+  (:method m-dconnect-a-empty
+    :parameters (?e1 ?e2 - equipment )
+    :task (direct_a_connect ?e1 ?e2)
+    :precondition (and
+        (audio_connected ?e1 ?e2)
+      )
+    :subtasks ( )
+  )
+
+  (:method m-dconnect-v-empty
+    :parameters (?e1 ?e2 - equipment)
+    :task (direct_v_connect ?e1 ?e2)
+    :precondition (and
+        (video_connected ?e1 ?e2)
+      )
+    :subtasks ( )
+  )
 
 ; primitives -------------------------------------------------------------
   

@@ -17,6 +17,7 @@ public class entertainmentProbGen {
         problems.add(getProblem2());
         problems.add(getProblem3());
         problems.add(getProblem4());
+        problems.add(getProblem5());
 
         for (heProblem p : problems) {
             String filename = baseDir + p.getName() + ".lisp";
@@ -90,5 +91,39 @@ public class entertainmentProbGen {
         p.addAvGoal(g);
         return p;
 
+    }
+
+    private static heProblem getProblem5() {
+        heProblem p = new heProblem("p05-use-twice");
+        heDevice dvd1 = DeviceFactory.getDVDPlayerWithScart();
+        heDevice dvd2 = DeviceFactory.getDVDPlayerWithScart();
+        heDevice dvd3 = DeviceFactory.getDVDPlayerWithScart();
+        heDevice tv = DeviceFactory.getTVwithScart();
+        p.addDevice(dvd1);
+        p.addDevice(dvd2);
+        p.addDevice(dvd3);
+        p.addDevice(tv);
+        p.addDevice(DeviceFactory.getMultiScartInput());
+
+        p.addDevice(DeviceFactory.getScartCable());
+        p.addDevice(DeviceFactory.getScartCable());
+        p.addDevice(DeviceFactory.getScartCable());
+        p.addDevice(DeviceFactory.getScartCable());
+
+        heDevice[] g1 = new heDevice[2];
+        g1[0] = dvd1;
+        g1[1] = tv;
+        p.addAvGoal(g1);
+
+        heDevice[] g2 = new heDevice[2];
+        g2[0] = dvd2;
+        g2[1] = tv;
+        p.addAvGoal(g2);
+
+        heDevice[] g3 = new heDevice[2];
+        g3[0] = dvd3;
+        g3[1] = tv;
+        p.addAvGoal(g3);
+        return p;
     }
 }

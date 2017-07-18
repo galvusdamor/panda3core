@@ -10,7 +10,7 @@ public class DeviceFactory {
     public static heDevice getDVDPlayerWithScart() {
         heDevice res = new heDevice();
         res.deviceType = "simple-dvd-";
-        res.connections.add(heDevice.connectionType.Scart);
+        res.connections.add(heDevice.connectionType.scart);
         res.isPort.add(true);
         res.inConn.add(false);
         res.outConn.add(true);
@@ -25,8 +25,8 @@ public class DeviceFactory {
     static public heDevice getTVwithCinch() {
         heDevice tv = new heDevice();
         tv.deviceType = "simple-tv-";
-        tv.connections.add(heDevice.connectionType.Cinch);
-        tv.connections.add(heDevice.connectionType.Cinch);
+        tv.connections.add(heDevice.connectionType.cinch);
+        tv.connections.add(heDevice.connectionType.cinch);
         tv.isPort.add(true);
         tv.isPort.add(true);
         tv.inConn.add(true);
@@ -43,7 +43,7 @@ public class DeviceFactory {
     static public heDevice getTVwithScart() {
         heDevice tv = new heDevice();
         tv.deviceType = "simple-tv-";
-        tv.connections.add(heDevice.connectionType.Scart);
+        tv.connections.add(heDevice.connectionType.scart);
         tv.isPort.add(true);
         tv.inConn.add(true);
         tv.outConn.add(false);
@@ -60,21 +60,21 @@ public class DeviceFactory {
         res.deviceType = "scart-to-cinch-";
 
         //res.ports.add(new heScartPort());
-        res.connections.add(heDevice.connectionType.Scart);
+        res.connections.add(heDevice.connectionType.scart);
         res.isPort.add(false);
         res.inConn.add(true);
         res.outConn.add(false);
         res.audioConn.add(true);
         res.videoConn.add(true);
 
-        res.connections.add(heDevice.connectionType.Cinch);
+        res.connections.add(heDevice.connectionType.cinch);
         res.isPort.add(true);
         res.inConn.add(false);
         res.outConn.add(true);
         res.audioConn.add(true);
         res.videoConn.add(false);
 
-        res.connections.add(heDevice.connectionType.Cinch);
+        res.connections.add(heDevice.connectionType.cinch);
         res.isPort.add(true);
         res.inConn.add(false);
         res.outConn.add(true);
@@ -87,21 +87,21 @@ public class DeviceFactory {
         heDevice res = new heDevice();
         res.deviceType = "cinch-to-scart-";
 
-        res.connections.add(heDevice.connectionType.Scart);
+        res.connections.add(heDevice.connectionType.scart);
         res.isPort.add(false);
         res.inConn.add(false);
         res.outConn.add(true);
         res.audioConn.add(true);
         res.videoConn.add(true);
 
-        res.connections.add(heDevice.connectionType.Cinch);
+        res.connections.add(heDevice.connectionType.cinch);
         res.isPort.add(true);
         res.inConn.add(true);
         res.outConn.add(false);
         res.audioConn.add(true);
         res.videoConn.add(false);
 
-        res.connections.add(heDevice.connectionType.Cinch);
+        res.connections.add(heDevice.connectionType.cinch);
         res.isPort.add(true);
         res.inConn.add(true);
         res.outConn.add(false);
@@ -115,21 +115,21 @@ public class DeviceFactory {
         heDevice res = new heDevice();
         res.deviceType = "scart-to-cinch-cable-";
 
-        res.connections.add(heDevice.connectionType.Scart);
+        res.connections.add(heDevice.connectionType.scart);
         res.isPort.add(false);
         res.inConn.add(true);
         res.outConn.add(false);
         res.audioConn.add(true);
         res.videoConn.add(true);
 
-        res.connections.add(heDevice.connectionType.Cinch);
+        res.connections.add(heDevice.connectionType.cinch);
         res.isPort.add(false);
         res.inConn.add(false);
         res.outConn.add(true);
         res.audioConn.add(true);
         res.videoConn.add(false);
 
-        res.connections.add(heDevice.connectionType.Cinch);
+        res.connections.add(heDevice.connectionType.cinch);
         res.isPort.add(false);
         res.inConn.add(false);
         res.outConn.add(true);
@@ -138,6 +138,27 @@ public class DeviceFactory {
         return res;
     }
 
+    public static heDevice getMultiScartInput(){
+        heDevice res = new heDevice();
+        res.deviceType = "multi-scart-";
+
+        res.connections.add(heDevice.connectionType.scart);
+        res.isPort.add(true);
+        res.inConn.add(false);
+        res.outConn.add(true);
+        res.audioConn.add(true);
+        res.videoConn.add(true);
+
+        for(int i = 0; i < 3; i++){
+            res.connections.add(heDevice.connectionType.scart);
+            res.isPort.add(true);
+            res.inConn.add(true);
+            res.outConn.add(false);
+            res.audioConn.add(true);
+            res.videoConn.add(true);
+        }
+        return res;
+    }
     /*
      * Cables
      */
@@ -145,14 +166,14 @@ public class DeviceFactory {
         heDevice res = new heDevice();
         res.deviceType = "cinch-cable-";
 
-        res.connections.add(heDevice.connectionType.Cinch);
+        res.connections.add(heDevice.connectionType.cinch);
         res.isPort.add(false);
         res.inConn.add(true);
         res.outConn.add(false);
         res.audioConn.add(true);
         res.videoConn.add(true);
 
-        res.connections.add(heDevice.connectionType.Cinch);
+        res.connections.add(heDevice.connectionType.cinch);
         res.isPort.add(false);
         res.inConn.add(false);
         res.outConn.add(true);
@@ -166,14 +187,14 @@ public class DeviceFactory {
         heDevice res = new heDevice();
         res.deviceType = "scart-cable-";
 
-        res.connections.add(heDevice.connectionType.Scart);
+        res.connections.add(heDevice.connectionType.scart);
         res.isPort.add(false);
         res.inConn.add(true);
         res.outConn.add(false);
         res.audioConn.add(true);
         res.videoConn.add(true);
 
-        res.connections.add(heDevice.connectionType.Scart);
+        res.connections.add(heDevice.connectionType.scart);
         res.isPort.add(false);
         res.inConn.add(false);
         res.outConn.add(true);
