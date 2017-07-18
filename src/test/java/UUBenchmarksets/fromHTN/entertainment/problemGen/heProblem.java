@@ -66,11 +66,11 @@ public class heProblem {
                 " (:init\n");
 
         for (heDevice dev : this.devices) {
+            sb.append("  ;; device " + dev.getName() + "\n");
             List<String> conns = dev.getConnections();
             for (int i = 0; i < dev.connections.size(); i++) {
                 String conn = conns.get(i);
 
-                sb.append("  ;; device " + dev.getName() + "\n");
                 sb.append("  (conn_of " + dev.getName() + " " + conn + ")\n");
                 sb.append("  (unused " + conn + ")\n");
                 if (dev.isOutConn(i)) {
@@ -85,19 +85,20 @@ public class heProblem {
                 if (dev.isVideoConn(i)) {
                     sb.append("  (video_connector " + conn + ")\n");
                 }
-                sb.append("\n");
             }
+            sb.append("\n");
         }
         sb.append("  ;; compatibility of connections\n");
-        for (heDevice dev1 : this.devices) {
+        for (int d1 = 0; d1 < this.devices.size(); d1++) {
+            heDevice dev1 = this.devices.get(d1);
             List<String> conns1 = dev1.getConnections();
             for (int i = 0; i < dev1.connections.size(); i++) {
-                for (heDevice dev2 : this.devices) {
+                for (int d2 = 0; d2 < this.devices.size(); d2++) {
+                    heDevice dev2 = this.devices.get(d2);
                     List<String> conns2 = dev2.getConnections();
                     for (int j = 0; j < dev2.connections.size(); j++) {
                         if ((dev1.connections.get(i) == dev2.connections.get(j)) && (dev1.isPort(i) != dev2.isPort(j))) {
                             sb.append("  (compatible " + conns1.get(i) + " " + conns2.get(j) + ")\n");
-                            sb.append("  (compatible " + conns2.get(j) + " " + conns1.get(i) + ")\n");
                         }
                     }
                 }
