@@ -62,15 +62,19 @@ public class hCausalGraph extends SasHeuristic {
         int hVal = 0;
         for (int f = g.nextSetBit(0); f >= 0; f = g.nextSetBit(f + 1)) {
             int v = p.indexToMutexGroup[f];
-            int vI = s0.nextSetBit(p.firstIndex[v]);
+            int vI = s0.nextSetBit(p.firstIndex[v]) - p.firstIndex[v];
             int vG = f - p.firstIndex[v];
             computeCosts(s0, v, vG);
-            if (costs[v][vI][vG] == cUnreachable)
+            if ((undefined(v, vI)) || (costs[v][vI][vG] == cUnreachable))
                 return cUnreachable;
             else
                 hVal += costs[v][vI][vG];
         }
         return hVal;
+    }
+
+    private boolean undefined(int v, int vI) {
+        return (costs[v] == null) || (costs[v][vI] == null);
     }
 
     private void computeCosts(BitSet s, int v, int d0) {
@@ -79,27 +83,30 @@ public class hCausalGraph extends SasHeuristic {
 
         initCosts(v, d0);
         BitSet[] localStates = new BitSet[p.ranges[v]];
-        localStates[d0 - p.firstIndex[v]] = (BitSet) s.clone();
-        localStates[d0 - p.firstIndex[v]].and(masks[v]);
+        localStates[d0] = (BitSet) s.clone();
+        localStates[d0].and(masks[v]);
 
         UUIntPairPriorityQueue queue = new UUIntPairPriorityQueue();
-        queue.add(0, d0);
+        queue.add(0, d0 + p.firstIndex[v]);
         boolean[] reached = new boolean[p.ranges[v]];
         while (!queue.isEmpty()) {
-            int d1 = queue.minPair()[1];
-            if (reached[d1 - p.firstIndex[v]])
+            int gd1 = queue.minPair()[1];
+            int d1 = gd1 - p.firstIndex[v];
+            if (reached[d1])
                 continue;
-            reached[d1 - p.firstIndex[v]] = true;
+            reached[d1] = true;
 
-            for (int d2 = p.firstIndex[v]; d2 <= p.lastIndex[v]; d2++) {
-                for (int[] transition : dtgs[d1][d2]) {
-                    if (reached[d2 - p.firstIndex[v]])
-                        continue;
+            for (int gd2 = p.firstIndex[v]; gd2 <= p.lastIndex[v]; gd2++) { // global index
+                int d2 = gd2 - p.firstIndex[v]; // local index
+                if (reached[d2])
+                    continue;
 
+                for (int[] transition : dtgs[gd1][gd2]) {
                     int transitionCosts = 1;
-                    for (int e1 : transition) { // these are the conditions
-                        int v1 = p.indexToMutexGroup[e1];
-                        int e0 = s.nextSetBit(p.firstIndex[v1]);
+                    for (int ge1 : transition) { // these are the conditions
+                        int v1 = p.indexToMutexGroup[ge1];
+                        int e1 = ge1 - p.firstIndex[v1];
+                        int e0 = s.nextSetBit(p.firstIndex[v1]) - p.firstIndex[v1];
                         computeCosts(s, v1, e0);
                         if (costs[v][e0][e1] < cUnreachable)
                             transitionCosts += costs[v][e0][e1];
@@ -108,25 +115,27 @@ public class hCausalGraph extends SasHeuristic {
                             break;
                         }
                     }
+
                     if ((costs[v][d0][d1] + transitionCosts) < costs[v][d0][d2]) {
                         costs[v][d0][d2] = costs[v][d0][d1] + transitionCosts;
-                        localStates[d2 - p.firstIndex[v]] = (BitSet) localStates[d1 - p.firstIndex[v]].clone();
-                        for (int e1 : transition) {
-                            int vE = p.indexToMutexGroup[e1];
-                            int oldVal = localStates[d2 - p.firstIndex[v]].nextSetBit(p.firstIndex[vE]);
-                            localStates[d2 - p.firstIndex[v]].set(oldVal, false);
-                            localStates[d2 - p.firstIndex[v]].set(e1, true);
+                        localStates[d2] = (BitSet) localStates[d1].clone();
+                        for (int ge1 : transition) {
+                            int vE = p.indexToMutexGroup[ge1];
+                            int oldVal = localStates[d2].nextSetBit(p.firstIndex[vE]);
+                            localStates[d2].set(oldVal, false);
+                            localStates[d2].set(ge1, true);
                         }
+                        queue.add(costs[v][d0][d2], d2 + p.firstIndex[v]);
                     }
                 }
             }
-
-
         }
         done[v][d0] = true;
     }
 
     private void initCosts(int v, int d) {
+        if (costs[v] == null) // the first one needs to initialize
+            costs[v] = new int[p.ranges[v]][];
         costs[v][d] = new int[p.ranges[v]];
         for (int k = 0; k < costs[v][d].length; k++) {
             if (d == k)
