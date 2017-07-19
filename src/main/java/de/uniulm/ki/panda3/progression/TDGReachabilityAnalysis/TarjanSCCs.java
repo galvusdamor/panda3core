@@ -96,7 +96,7 @@ public class TarjanSCCs {
     }
 
     public void calcSccs() {
-        for (int v = U.nextClearBit(0); v >= 0; U.nextClearBit(v + 1))
+        for (int v = U.nextClearBit(0); v < scc.length; v = U.nextClearBit(v + 1))
             tarjan(v);
         int[][] old = scc;
         scc = new int[iScc + 1][];
