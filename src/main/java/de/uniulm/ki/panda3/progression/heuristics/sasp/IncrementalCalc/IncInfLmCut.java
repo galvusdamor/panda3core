@@ -2,7 +2,6 @@ package de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc;
 
 import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntStack;
 
-import java.util.BitSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -10,14 +9,14 @@ import java.util.List;
  * Created by dh on 29.05.17.
  */
 public class IncInfLmCut extends IncrementInformation {
-    public List<BitSet> cuts;
+    public List<int[]> cuts;
     public UUIntStack costs;
 
     public IncInfLmCut() {
         this.cuts = new LinkedList<>();
-        this.costs = new UUIntStack(25);
+        this.costs = new UUIntStack(50);
     }
-
+/*
     public boolean cutsAreDisjunctive() {
         for (int cutI = 0; cutI < cuts.size(); cutI++) {
             for (int cutJ = cutI + 1; cutJ < cuts.size(); cutJ++) {
@@ -53,5 +52,5 @@ public class IncInfLmCut extends IncrementInformation {
             }
         }
         return true;
-    }
+    }*/
 }
