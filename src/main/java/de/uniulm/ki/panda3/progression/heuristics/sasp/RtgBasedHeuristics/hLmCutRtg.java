@@ -77,7 +77,7 @@ public class hLmCutRtg extends hMaxRtg {
             lmCutHeu += minCosts;
 
             if (isIncremental) {
-                incrementInfo.cuts.add(cut);
+                incrementInfo.cuts.add(toIntArray(cut));
                 incrementInfo.costs.push(minCosts);
             }
 
@@ -102,17 +102,17 @@ public class hLmCutRtg extends hMaxRtg {
     private int IncrementalLmCut(int lastAction, IncInfLmCut incrementInfo) {
         int lmCutHeu = 0;
         IncInfLmCut i = (IncInfLmCut) this.incInf;
-        assert i.costsGreaterZero(this.costs, this.opIndexToEffNode);
-        assert i.cutsAreDisjunctive();
+        // assert i.costsGreaterZero(this.costs, this.opIndexToEffNode);
+        // assert i.cutsAreDisjunctive();
         i.costs.resetIterator();
-        for (BitSet cut : i.cuts) {
+        for (int[] cut : i.cuts) {
             int costs = i.costs.next();
             assert costs > 0;
-            if (!cut.get(lastAction)) {
+            if (!binContains(cut, lastAction, 0, cut.length - 1)) {
                 lmCutHeu += costs;
                 incrementInfo.cuts.add(cut);
                 incrementInfo.costs.push(costs);
-                for (int cutted = cut.nextSetBit(0); cutted >= 0; cutted = cut.nextSetBit(cutted + 1)) {
+                for (int cutted : cut) {
                     this.costs[this.opIndexToEffNode[cutted]] -= costs;
                     assert (this.costs[this.opIndexToEffNode[cutted]] >= 0);
                     debugOut(cutted + " " + opNames[cutted] + "\n");
@@ -120,6 +120,26 @@ public class hLmCutRtg extends hMaxRtg {
             }
         }
         return lmCutHeu;
+    }
+
+    private boolean binContains(int[] ar, int elem, int firstI, int lastI) {
+        if (lastI < firstI)
+            return false;
+        int mid = (firstI + lastI) / 2;
+        if (ar[mid] == elem)
+            return true;
+        else if (ar[mid] < elem)
+            return binContains(ar, elem, mid + 1, lastI);
+        else
+            return binContains(ar, elem, firstI, mid - 1);
+    }
+
+    private int[] toIntArray(BitSet cut) {
+        int[] res = new int[cut.cardinality()];
+        int i = 0;
+        for (int op = cut.nextSetBit(0); op >= 0; op = cut.nextSetBit(op + 1))
+            res[i++] = op;
+        return res;
     }
 
     public IncrementInformation getIncInf() {

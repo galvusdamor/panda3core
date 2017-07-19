@@ -109,7 +109,7 @@ public class hLmCutEq extends SasHeuristic {
             hLmCut += minCosts;
 
             if (isIncremental) {
-                myIncInf.cuts.add(cut);
+                myIncInf.cuts.add(toIntArray(cut));
                 myIncInf.costs.push(minCosts);
             }
 
@@ -134,17 +134,17 @@ public class hLmCutEq extends SasHeuristic {
 
     private int IncrementalLmCut(int lastAction, IncInfLmCut parentIncInf) {
         int lmCutHeu = 0;
-        assert parentIncInf.costsGreaterZero(this.costs);
-        assert parentIncInf.cutsAreDisjunctive();
+        //assert parentIncInf.costsGreaterZero(this.costs);
+        //assert parentIncInf.cutsAreDisjunctive();
         parentIncInf.costs.resetIterator();
-        for (BitSet cut : parentIncInf.cuts) {
+        for (int[] cut : parentIncInf.cuts) {
             int costs = parentIncInf.costs.next();
             assert costs > 0;
-            if (!cut.get(lastAction)) {
+            if (!binContains(cut, lastAction, 0, cut.length - 1)) {
                 lmCutHeu += costs;
                 myIncInf.cuts.add(cut);
                 myIncInf.costs.push(costs);
-                for (int op = cut.nextSetBit(0); op >= 0; op = cut.nextSetBit(op + 1)) {
+                for (int op : cut) {
                     this.costs[op] -= costs;
                     assert (this.costs[op] >= 0);
                     debugOut(op + " " + p.opNames[op] + "\n");
@@ -153,6 +153,27 @@ public class hLmCutEq extends SasHeuristic {
         }
         return lmCutHeu;
     }
+
+    private boolean binContains(int[] ar, int elem, int firstI, int lastI) {
+        if (lastI < firstI)
+            return false;
+        int mid = (firstI + lastI) / 2;
+        if (ar[mid] == elem)
+            return true;
+        else if (ar[mid] < elem)
+            return binContains(ar, elem, mid + 1, lastI);
+        else
+            return binContains(ar, elem, firstI, mid - 1);
+    }
+
+    private int[] toIntArray(BitSet cut) {
+        int[] res = new int[cut.cardinality()];
+        int i = 0;
+        for (int op = cut.nextSetBit(0); op >= 0; op = cut.nextSetBit(op + 1))
+            res[i++] = op;
+        return res;
+    }
+
 
     UUIntStack fringe = new UUIntStack();
 
