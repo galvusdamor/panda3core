@@ -40,7 +40,7 @@ public class hCausalGraph extends SasHeuristic {
 
         // calculate cyclic causal graph
         System.out.println("- Building Causal Graph...");
-        BitSet[] tCg = createCG(p, tDtgs);
+        BitSet[] tCg = translate(createCG(p, tDtgs));
 
         // delete cycles
         System.out.println("- Pruning graphs");
@@ -56,7 +56,6 @@ public class hCausalGraph extends SasHeuristic {
 
         System.out.println("- Prepared heuristic in " + (System.currentTimeMillis() - t) + "ms");
     }
-
 
     private void pruneDtgs(List<BitSet>[][] tDtgs) {
         for (int i = 0; i < tDtgs.length; i++) {
@@ -249,7 +248,15 @@ public class hCausalGraph extends SasHeuristic {
         return dtgs;
     }
 
-    private int[][] createCG2(SasPlusProblem p, List<BitSet>[][] dtgs, Set<Integer> counted) {
+    private int[][] createCG(SasPlusProblem p, List<BitSet>[][] tDtgs) {
+        HashSet all = new HashSet();
+        for (int i = 0; i < p.numOfVars; i++)
+            all.add(i);
+        return createCG(p, tDtgs, all);
+    }
+
+
+    private int[][] createCG(SasPlusProblem p, List<BitSet>[][] dtgs, Set<Integer> counted) {
         int[][] cg = new int[p.numOfVars][];
         for (int i = 0; i < p.numOfVars; i++)
             cg[i] = new int[p.numOfVars];
@@ -300,46 +307,6 @@ public class hCausalGraph extends SasHeuristic {
         }
         return res;
     }
-
-    private BitSet[] createCG(SasPlusProblem p, List<BitSet>[][] dtgs) {
-        BitSet[] cg = new BitSet[p.numOfVars];
-        for (int i = 0; i < p.numOfVars; i++)
-            cg[i] = new BitSet();
-
-        // transition conditions
-        for (int i = 0; i < p.numOfStateFeatures; i++) {
-            for (int j = 0; j < p.numOfStateFeatures; j++) {
-                for (BitSet label : dtgs[i][j]) {
-                    for (int pre = label.nextSetBit(0); pre >= 0; pre = label.nextSetBit(pre + 1)) {
-                        int vn = p.indexToMutexGroup[i];
-                        assert vn == p.indexToMutexGroup[j]; // should be the same variable
-                        int v = p.indexToMutexGroup[pre];
-                        assert v != vn;
-                        assert v < p.numOfVars;
-                        assert vn < p.numOfVars;
-                        cg[v].set(vn, true);
-                    }
-                }
-            }
-        }
-
-        // co-occuring effects
-        for (int op = 0; op < p.numOfOperators; op++) {
-            for (int e1 : p.addLists[op]) {
-                for (int e2 : p.addLists[op]) {
-                    int v = p.indexToMutexGroup[e1];
-                    int vn = p.indexToMutexGroup[e2];
-                    if (v != vn) {
-                        assert v < p.numOfVars;
-                        assert vn < p.numOfVars;
-                        cg[v].set(vn, true);
-                    }
-                }
-            }
-        }
-        return cg;
-    }
-
 
     private void pruneGraphs(SasPlusProblem p, BitSet[] cg, List<BitSet>[][] dtgs) {
         TarjanSCCs tarjan = new TarjanSCCs(cg);
@@ -397,7 +364,7 @@ public class hCausalGraph extends SasHeuristic {
         if (countedNodes.size() == 1) // last node -> no edges possible
             return countedNodes.iterator().next();
 
-        int[][] tempCg = createCG2(p, dtgs, countedNodes);
+        int[][] tempCg = createCG(p, dtgs, countedNodes);
 
         int[] weights = new int[scc.length];
         for (int j = 0; j < scc.length; j++) {
