@@ -18,6 +18,8 @@ public class hAddhFFEq extends SasHeuristic {
     SasPlusProblem p;
     private int[] unsatPrecs;
 
+    public BitSet helpfulOps;
+
     @Override
     public String toString() {
         if (heuristic == SasHeuristics.hAdd)
@@ -49,6 +51,8 @@ public class hAddhFFEq extends SasHeuristic {
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
+        if (heuristic == SasHeuristics.hFF)
+            helpfulOps = new BitSet(p.numOfOperators);
         this.unsatPrecs = p.numPrecs.clone();
         this.numGoals = g.cardinality();
 
@@ -112,6 +116,11 @@ public class hAddhFFEq extends SasHeuristic {
         BitSet markedOps = new BitSet();
         for (int f = g.nextSetBit(0); f >= 0; f = g.nextSetBit(f + 1)) {
             assert hValProp[f] != cUnreachable;
+
+            // adapted HTN version of helpful actions
+            //System.out.println(p.opNames[reachedBy[f]]);
+            helpfulOps.set(reachedBy[f]);
+
             markRelaxedPlan(markedFs, markedOps, f);
         }
 
@@ -130,6 +139,12 @@ public class hAddhFFEq extends SasHeuristic {
                     markRelaxedPlan(markedFs, markedOps, prec);
                 }
                 markedOps.set(reachedBy[f]);
+
+                // classical version of helpful actions
+                /*int op = reachedBy[f];
+                if (hValOp[op] == p.costs[op]) { // the preconditions of op are free (i.e. in s0)
+                    helpfulOps.set(op);
+                }*/
             }
         }
     }
