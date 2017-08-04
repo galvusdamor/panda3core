@@ -156,8 +156,9 @@ object PredefinedConfigurations {
   val planSearchAStarRelax      = PlanBasedSearch(None, AStarActionsType(2), Relax :: Nil, Nil, LCFR)
 
   val shop2 = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
-  val pro   = ProgressionSearch(AStarActionsType(1), Some(RelaxedCompositionGraph(true, ProRcgFFMulticount.heuristicExtraction.multicount, ProRcgFFMulticount.producerSelection
-    .numOfPreconditions)), PriorityQueueSearch.abstractTaskSelection.random)
+
+  def pandaProConfig(algorithm: SearchAlgorithmType, sasHeuristic: SasHeuristics): ProgressionSearch =
+    ProgressionSearch(algorithm, Some(HierarchicalHeuristicRelaxedComposition(sasHeuristic)), PriorityQueueSearch.abstractTaskSelection.random)
 
 
   val searchConfigs = Map(
@@ -219,15 +220,32 @@ object PredefinedConfigurations {
 
   val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
     Map(
-         // A*
-         "-panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)),
+         // Old Panda
+         "-astar-panda-MAC" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR),
+         "-astar-panda-MAC-PR" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
+         "-astar-panda-MME" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR),
+         "-astar-panda-MME-PR" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
+
+         "-greedy-panda-MAC" ->(htnParsing, groundingPreprocess, GreedyActionLiftedPR),
+         "-greedy-panda-MAC-PR" ->(htnParsing, groundingPreprocess, GreedyActionLiftedPRReachability),
+         "-greedy-panda-MME" ->(htnParsing, groundingPreprocess, GreedyAPRLiftedPR),
+         "-greedy-panda-MME-PR" ->(htnParsing, groundingPreprocess, GreedyAPRLiftedPRReachability),
+
+         "-gastar-panda-MAC" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPR),
+         "-gastar-panda-MAC-PR" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPRReachability),
+         "-gastar-panda-MME" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPR),
+         "-gastar-panda-MME-PR" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPRReachability),
+
          "-Dijkstra" ->(htnParsing, groundingPreprocess, planSearchDijkstra),
          "-DFS" ->(htnParsing, groundingPreprocess, planSearchDFS),
          "-BFS" ->(htnParsing, groundingPreprocess, planSearchBFS),
 
-         "-umcpBF" -> (htnParsing, groundingPreprocess,umcpBF),
-         "-umcpDF" -> (htnParsing, groundingPreprocess,umcpDF),
-         "-umcpH" -> (htnParsing, groundingPreprocess,umcpH),
+         "-umcpBF" ->(htnParsing, groundingPreprocess, umcpBF),
+         "-umcpDF" ->(htnParsing, groundingPreprocess, umcpDF),
+         "-umcpH" ->(htnParsing, groundingPreprocess, umcpH),
+
+         // SHOP
+         "-shop2" ->(htnParsing, sasPlusPreprocess, shop2),
 
 
          // A*
@@ -272,7 +290,10 @@ object PredefinedConfigurations {
          "-oneshortTOTsatH2" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
          "-oneshortTOTsatFFFull" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
          "-poclSat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-oneshortTOTpro" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, pro),
+         "-poclSatSAS+" ->(htnParsing, sasPlusPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-classicalSat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, forceClassicalEncoding = true)),
+         "-classicalSatSAS+" ->(htnParsing, sasPlusPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, forceClassicalEncoding = true)),
+
          // Greedy-A*
          "-oneshortTOTGreedyAStarMAC-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPRReachability),
          "-oneshortTOTGreedyAStarMAC" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPR),
@@ -299,7 +320,30 @@ object PredefinedConfigurations {
          "-oneshortTOTshop2" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, shop2),
 
          // plan verification a la ICAPS'17
-         "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, ""))
+         "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, "")),
+
+
+         ///// PANDA Pro
+         "-astar-pro-FF" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFF)),
+         "-astar-pro-lmcut" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hLmCut)),
+         "-astar-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hIncLmCut)),
+         "-astar-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hAdd)),
+
+         "-gastar-pro-FF" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hFF)),
+         "-gastar-pro-lmcut" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hLmCut)),
+         "-gastar-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hIncLmCut)),
+         "-gastar-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hAdd)),
+
+         "-g3astar-pro-FF" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hFF)),
+         "-g3astar-pro-lmcut" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hLmCut)),
+         "-g3astar-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hIncLmCut)),
+         "-g3astar-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hAdd)),
+
+         "-greedy-pro-FF" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hFF)),
+         "-greedy-pro-lmcut" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hLmCut)),
+         "-greedy-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hIncLmCut)),
+         "-greedy-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd))
+
        )
 
 }
