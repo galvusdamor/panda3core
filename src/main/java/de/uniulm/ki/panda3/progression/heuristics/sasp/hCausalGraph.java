@@ -4,9 +4,9 @@ import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.TarjanSCCs;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.util.fastIntegerDataStructures.UUIntPairPriorityQueue;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.List;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
 
 /**
  * Created by dh on 16.07.17.
@@ -22,8 +22,15 @@ public class hCausalGraph extends SasHeuristic {
     // Bitsets that indicate which bits belong to the variables directly
     // preceding each variable in the causal graph
     BitSet[] masks;
+    int[][] rev;
+    int[][] cg;
 
     public hCausalGraph(SasPlusProblem p) {
+        /*for (int i = 0; i < p.numOfVars; i++) {
+            System.out.println(p.varNames[i] + " " + p.firstIndex[i] + " - " + p.lastIndex[i]);
+        }*/
+
+        //System.out.println(p.toString());
         this.p = p;
         long t = System.currentTimeMillis();
         System.out.println("Initializing Causal Graph Heuristic");
@@ -33,19 +40,63 @@ public class hCausalGraph extends SasHeuristic {
 
         // calculate cyclic causal graph
         System.out.println("- Building Causal Graph...");
-        BitSet[] tCg = createCG(p, tDtgs);
+        BitSet[] tCg = translate(createCG(p, tDtgs));
 
         // delete cycles
         System.out.println("- Pruning graphs");
-        tCg = pruneGraphs(p, tCg, tDtgs);
-
+        pruneGraphs(p, tCg, tDtgs);
+        pruneDtgs(tDtgs);
         System.out.println("- Creating final representation");
         this.dtgs = copyToArray(tDtgs);
-        int[][] cg = copyToArray(tCg);
-        int[][] preds = calcInverseMapping(cg);
-        this.masks = createBitMasks(preds);
+        this.cg = copyToArray(tCg);
+        rev = calcInverseMapping(cg);
+        this.masks = createBitMasks(rev);
 
-        System.out.println("- Prepared heuristic in " + t + "ms");
+        //dotIt(p);
+
+        System.out.println("- Prepared heuristic in " + (System.currentTimeMillis() - t) + "ms");
+    }
+
+    private void pruneDtgs(List<BitSet>[][] tDtgs) {
+        for (int i = 0; i < tDtgs.length; i++) {
+            for (int j = 0; j < tDtgs[i].length; j++) {
+                List<BitSet> labelList = tDtgs[i][j];
+                if (labelList.size() < 2)
+                    continue;
+                // delete identical label sets
+                HashSet<BitSet> labelSet = new HashSet<>();
+                for (BitSet l : labelList)
+                    labelSet.add(l);
+                labelList.clear();
+                labelList.addAll(labelSet);
+                if (labelList.size() == 1)
+                    continue;
+                // delete dominating label sets
+                HashSet<Integer> delSet = new HashSet<>();
+                for (int k = 0; k < labelList.size(); k++) {
+                    for (int l = 0; l < labelList.size(); l++) {
+                        if (k == l)
+                            continue;
+                        BitSet set1 = labelList.get(k);
+                        BitSet set2 = labelList.get(l);
+                        // contains test
+                        BitSet set3 = (BitSet) set1.clone();
+                        set3.and(set2);
+                        if (set3.equals(set1)) { // set2 contains set1
+                            delSet.add(l);
+                        }
+                    }
+                }
+                int[] delAr = new int[delSet.size()];
+                int m = 0;
+                for (int n : delSet)
+                    delAr[m++] = n;
+                Arrays.sort(delAr);
+                for (m = delAr.length - 1; m >= 0; m--) {
+                    labelList.remove(delAr[m]);
+                }
+            }
+        }
     }
 
     int[][][] costs;
@@ -61,11 +112,12 @@ public class hCausalGraph extends SasHeuristic {
 
         int hVal = 0;
         for (int f = g.nextSetBit(0); f >= 0; f = g.nextSetBit(f + 1)) {
+            System.out.println(p.factStrs[f]);
             int v = p.indexToMutexGroup[f];
-            int vI = s0.nextSetBit(p.firstIndex[v]);
+            int vI = s0.nextSetBit(p.firstIndex[v]) - p.firstIndex[v];
             int vG = f - p.firstIndex[v];
-            computeCosts(s0, v, vG);
-            if (costs[v][vI][vG] == cUnreachable)
+            computeCosts(s0, v, vI);
+            if ((undefined(v, vI)) || (costs[v][vI][vG] == cUnreachable))
                 return cUnreachable;
             else
                 hVal += costs[v][vI][vG];
@@ -73,60 +125,82 @@ public class hCausalGraph extends SasHeuristic {
         return hVal;
     }
 
+    private boolean undefined(int v, int vI) {
+        return (costs[v] == null) || (costs[v][vI] == null);
+    }
+
     private void computeCosts(BitSet s, int v, int d0) {
         if (done[v][d0])
             return;
+        //System.out.println(p.varNames[v] + " val: " + p.factStrs[p.firstIndex[v] + d0]);
 
         initCosts(v, d0);
         BitSet[] localStates = new BitSet[p.ranges[v]];
-        localStates[d0 - p.firstIndex[v]] = (BitSet) s.clone();
-        localStates[d0 - p.firstIndex[v]].and(masks[v]);
+        localStates[d0] = (BitSet) s.clone();
+        localStates[d0].and(masks[v]);
 
         UUIntPairPriorityQueue queue = new UUIntPairPriorityQueue();
-        queue.add(0, d0);
+        queue.add(0, d0 + p.firstIndex[v]);
         boolean[] reached = new boolean[p.ranges[v]];
         while (!queue.isEmpty()) {
-            int d1 = queue.minPair()[1];
-            if (reached[d1 - p.firstIndex[v]])
+            int gd1 = queue.minPair()[1];
+            int d1 = gd1 - p.firstIndex[v];
+            if (reached[d1])
                 continue;
-            reached[d1 - p.firstIndex[v]] = true;
+            reached[d1] = true;
 
-            for (int d2 = p.firstIndex[v]; d2 <= p.lastIndex[v]; d2++) {
-                for (int[] transition : dtgs[d1][d2]) {
-                    if (reached[d2 - p.firstIndex[v]])
-                        continue;
+            for (int gd2 = p.firstIndex[v]; gd2 <= p.lastIndex[v]; gd2++) { // global index
+                int d2 = gd2 - p.firstIndex[v]; // local index
+                if (reached[d2])
+                    continue;
 
+                for (int[] transition : dtgs[gd1][gd2]) {
                     int transitionCosts = 1;
-                    for (int e1 : transition) { // these are the conditions
-                        int v1 = p.indexToMutexGroup[e1];
-                        int e0 = s.nextSetBit(p.firstIndex[v1]);
+                    for (int ge1 : transition) { // these are the conditions
+                        int v1 = p.indexToMutexGroup[ge1];
+                        int e1 = ge1 - p.firstIndex[v1];
+                        assert contains(rev[v], v1);
+                        int e0 = localStates[d1].nextSetBit(p.firstIndex[v1]) - p.firstIndex[v1];
+                        assert (e0 >= 0);
+                        assert (e0 <= p.lastIndex[v1]);
                         computeCosts(s, v1, e0);
-                        if (costs[v][e0][e1] < cUnreachable)
-                            transitionCosts += costs[v][e0][e1];
+                        if (costs[v1][e0][e1] < cUnreachable)
+                            transitionCosts += costs[v1][e0][e1];
                         else {
                             transitionCosts = cUnreachable;
                             break;
                         }
                     }
+
                     if ((costs[v][d0][d1] + transitionCosts) < costs[v][d0][d2]) {
                         costs[v][d0][d2] = costs[v][d0][d1] + transitionCosts;
-                        localStates[d2 - p.firstIndex[v]] = (BitSet) localStates[d1 - p.firstIndex[v]].clone();
-                        for (int e1 : transition) {
-                            int vE = p.indexToMutexGroup[e1];
-                            int oldVal = localStates[d2 - p.firstIndex[v]].nextSetBit(p.firstIndex[vE]);
-                            localStates[d2 - p.firstIndex[v]].set(oldVal, false);
-                            localStates[d2 - p.firstIndex[v]].set(e1, true);
+                        localStates[d2] = (BitSet) localStates[d1].clone();
+                        for (int ge1 : transition) {
+                            int v1 = p.indexToMutexGroup[ge1];
+                            int oldE = localStates[d2].nextSetBit(p.firstIndex[v1]);
+                            assert oldE >= 0;
+                            assert oldE <= p.lastIndex[v1];
+                            localStates[d2].set(oldE, false);
+                            localStates[d2].set(ge1, true);
                         }
+                        queue.add(costs[v][d0][d2], d2 + p.firstIndex[v]);
                     }
                 }
             }
-
-
         }
         done[v][d0] = true;
     }
 
+    private boolean contains(int[] pred, int v1) {
+        for (int i : pred)
+            if (i == v1)
+                return true;
+        return false;
+    }
+
     private void initCosts(int v, int d) {
+        if (costs[v] == null) // the first one needs to initialize
+            costs[v] = new int[p.ranges[v]][];
         costs[v][d] = new int[p.ranges[v]];
         for (int k = 0; k < costs[v][d].length; k++) {
             if (d == k)
@@ -135,7 +209,6 @@ public class hCausalGraph extends SasHeuristic {
                 costs[v][d][k] = cUnreachable;
         }
     }
-
 
     private List<BitSet>[][] createDTGs(SasPlusProblem p) {
         // for each element in the matrix of nodes * nodes, a list of precondition labels
@@ -151,14 +224,13 @@ public class hCausalGraph extends SasHeuristic {
             for (int i = 0; i < p.addLists[op].length; i++) {
                 int dn = p.addLists[op][i];
                 int v = p.indexToMutexGroup[dn];
-
                 // prepare edge(s) and label
                 BitSet label = new BitSet();
                 int d = -1; // is there a precondition on that specific variable?
                 for (int f : p.precLists[op]) {
                     if ((f >= p.firstIndex[v]) && (f <= p.lastIndex[v])) {
+                        assert d == -1;
                         d = f;
-                        break;
                     } else {
                         label.set(f, true);
                     }
@@ -176,10 +248,18 @@ public class hCausalGraph extends SasHeuristic {
         return dtgs;
     }
 
-    private BitSet[] createCG(SasPlusProblem p, List<BitSet>[][] dtgs) {
-        BitSet[] cg = new BitSet[p.numOfVars];
+    private int[][] createCG(SasPlusProblem p, List<BitSet>[][] tDtgs) {
+        HashSet all = new HashSet();
         for (int i = 0; i < p.numOfVars; i++)
-            cg[i] = new BitSet();
+            all.add(i);
+        return createCG(p, tDtgs, all);
+    }
+
+
+    private int[][] createCG(SasPlusProblem p, List<BitSet>[][] dtgs, Set<Integer> counted) {
+        int[][] cg = new int[p.numOfVars][];
+        for (int i = 0; i < p.numOfVars; i++)
+            cg[i] = new int[p.numOfVars];
 
         // transition conditions
         for (int i = 0; i < p.numOfStateFeatures; i++) {
@@ -190,8 +270,10 @@ public class hCausalGraph extends SasHeuristic {
                         assert vn == p.indexToMutexGroup[j]; // should be the same variable
                         int v = p.indexToMutexGroup[pre];
                         assert v != vn;
+                        assert v < p.numOfVars;
                         assert vn < p.numOfVars;
-                        cg[v].set(vn, true);
+                        if (counted.contains(v) && counted.contains(vn))
+                            cg[v][vn]++;
                     }
                 }
             }
@@ -204,8 +286,10 @@ public class hCausalGraph extends SasHeuristic {
                     int v = p.indexToMutexGroup[e1];
                     int vn = p.indexToMutexGroup[e2];
                     if (v != vn) {
+                        assert v < p.numOfVars;
                         assert vn < p.numOfVars;
-                        cg[v].set(vn, true);
+                        if (counted.contains(v) && counted.contains(vn))
+                            cg[v][vn]++;
                     }
                 }
             }
@@ -213,9 +297,18 @@ public class hCausalGraph extends SasHeuristic {
         return cg;
     }
 
+    private BitSet[] translate(int[][] in) {
+        BitSet[] res = new BitSet[in.length];
+        for (int i = 0; i < in.length; i++) {
+            res[i] = new BitSet();
+            for (int j = 0; j < in[i].length; j++)
+                if (in[i][j] > 0)
+                    res[i].set(j);
+        }
+        return res;
+    }
 
-    private BitSet[] pruneGraphs(SasPlusProblem p, BitSet[] cg, List<BitSet>[][] dtgs) {
-        cg = cg.clone(); // do not change input variable
+    private void pruneGraphs(SasPlusProblem p, BitSet[] cg, List<BitSet>[][] dtgs) {
         TarjanSCCs tarjan = new TarjanSCCs(cg);
         tarjan.calcSccs();
         int[][] sccs = tarjan.getSCCs();
@@ -225,12 +318,11 @@ public class hCausalGraph extends SasHeuristic {
             if (scc.length == 1)
                 continue;
             // create ordering
-            int[] ordering = new int[scc.length];
-            for (int i = 0; i < ordering.length; i++)
-                ordering[i] = -1;
-            for (int i = 0; i < scc.length - 1; i++) {
+            HashMap<Integer, Integer> ordering = new HashMap<>();
+            for (int i = 0; i < scc.length; i++) {
                 int minArg = getMinArg(scc, dtgs, ordering);
-                ordering[minArg] = i;
+                ordering.put(minArg, i);
+                //System.out.println(minArg);
             }
 
             // make cg acyclic
@@ -238,76 +330,87 @@ public class hCausalGraph extends SasHeuristic {
                 for (int iv2 = 0; iv2 < scc.length; iv2++) {
                     int v1 = scc[iv1];
                     int v2 = scc[iv2];
-                    if (!(ordering[iv1] < ordering[iv2])) {
+                    if (ordering.get(v1) > ordering.get(v2)) { // the equal case is irrelevant
                         cg[v1].set(v2, false);
-                    } else if (v1 != v2) { // delete from v1 all conditions on vars of v2
-                        for (int i = 0; i < dtgs[v1].length; i++) {
-                            for (BitSet label : dtgs[v1][i]) {
-                                label.set(p.firstIndex[v2], p.lastIndex[v2], false);
+                    } else if (ordering.get(v1) < ordering.get(v2)) { // delete from v1 all conditions on vars of v2
+                        // loop through all arcs belonging to v1 and delete labels on v2
+                        for (int bit1 = p.firstIndex[v1]; bit1 <= p.lastIndex[v1]; bit1++) {
+                            for (int bit2 = p.firstIndex[v1]; bit2 <= p.lastIndex[v1]; bit2++) {
+                                for (BitSet label : dtgs[bit1][bit2]) {
+                                    label.set(p.firstIndex[v2], p.lastIndex[v2] + 1, false);
+                                }
                             }
                         }
                     }
                 }
             }
-
         }
-        return cg;
+        assert acyclic(cg);
     }
 
-    private int getMinArg(int[] scc, List<BitSet>[][] dtgs, int[] ordering) {
+    private boolean acyclic(BitSet[] cg) {
+        TarjanSCCs t2 = new TarjanSCCs(cg);
+        t2.calcSccs();
+        return (t2.biggestScc() == 1);
+    }
+
+    private int getMinArg(int[] scc, List<BitSet>[][] dtgs, HashMap<Integer, Integer> ordering) {
+        HashSet<Integer> countedNodes = new HashSet<>();
+        for (int i = 0; i < scc.length; i++) {
+            int n = scc[i];
+            if (!ordering.containsKey(n))
+                countedNodes.add(n);
+        }
+        if (countedNodes.size() == 1) // last node -> no edges possible
+            return countedNodes.iterator().next();
+
+        int[][] tempCg = createCG(p, dtgs, countedNodes);
+
         int[] weights = new int[scc.length];
-        overallLoop:
-        for (int i = 0; i < dtgs.length; i++) {
-            for (int j = 0; j < scc.length; j++) {
-                if ((scc[j] == i) && (ordering[j] >= 0))
-                    continue overallLoop;
-            }
-            sccLoop:
-            for (int j = 0; j < scc.length; j++) {
-                if (ordering[j] >= 0)
-                    continue sccLoop;
-                weights[j] += dtgs[i][j].size();
+        for (int j = 0; j < scc.length; j++) {
+            for (int i = 0; i < scc.length; i++) {
+                int nodeJ = scc[j];
+                int nodeI = scc[i];
+                weights[i] += tempCg[nodeJ][nodeI];
             }
         }
-        int arg = -1;
-        int w = Integer.MAX_VALUE;
+        int currentI = -1;
+        int currentVal = Integer.MAX_VALUE;
         for (int i = 0; i < weights.length; i++) {
-            if (ordering[i] >= 0)
-                continue;
-            if (weights[i] < w) {
-                w = weights[i];
-                arg = i;
+            if (!(ordering.containsKey(scc[i])) && (weights[i] < currentVal)) {
+                currentI = i;
+                currentVal = weights[i];
             }
         }
-        return arg;
+        return scc[currentI];
     }
 
     private int[][] calcInverseMapping(int[][] cg) {
-        List<Integer>[] preds = new List[cg.length];
-        for (int i = 0; i < preds.length; i++) {
-            preds[i] = new ArrayList<>();
+        List<Integer>[] tRev = new List[cg.length];
+        for (int i = 0; i < tRev.length; i++) {
+            tRev[i] = new ArrayList<>();
         }
         for (int i = 0; i < cg.length; i++) {
             for (int j = 0; j < cg[i].length; j++) {
-                preds[j].add(i);
+                tRev[cg[i][j]].add(i);
             }
         }
-        int[][] tpreds = new int[preds.length][];
-        for (int i = 0; i < preds.length; i++) {
-            tpreds[i] = new int[preds[i].size()];
-            for (int j = 0; j < tpreds[i].length; j++) {
-                tpreds[i][j] = preds[i].get(j);
+        int[][] rev = new int[tRev.length][];
+        for (int i = 0; i < tRev.length; i++) {
+            rev[i] = new int[tRev[i].size()];
+            for (int j = 0; j < rev[i].length; j++) {
+                rev[i][j] = tRev[i].get(j);
             }
         }
-        return tpreds;
+        return rev;
     }
 
-    private BitSet[] createBitMasks(int[][] preds) {
-        BitSet[] masks = new BitSet[preds.length];
-        for (int i = 0; i < preds.length; i++) {
+    private BitSet[] createBitMasks(int[][] rev) {
+        BitSet[] masks = new BitSet[rev.length];
+        for (int i = 0; i < rev.length; i++) {
             masks[i] = new BitSet();
-            for (int v : preds[i]) {
-                masks[i].set(p.firstIndex[v], p.lastIndex[v], true);
+            for (int v : rev[i]) {
+                masks[i].set(p.firstIndex[v], p.lastIndex[v] + 1, true);
             }
         }
         return masks;
@@ -342,5 +445,81 @@ public class hCausalGraph extends SasHeuristic {
             }
         }
         return res;
+    }
+
+    String dotCg(int[][] cg) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("digraph someGraph {\n");
+
+        List<String> nodes = new ArrayList<>();
+        List<String> edges = new ArrayList<>();
+        for (int i = 0; i < cg.length; i++) {
+            nodes.add("\tnode [label=\"" + p.varNames[i] + "\"] node" + i + ";\n");
+            for (int j = 0; j < cg[i].length; j++) {
+                edges.add("\tnode" + i + " -> node" + cg[i][j] + "\n");
+            }
+        }
+        for (String s : nodes)
+            sb.append(s);
+        for (String s : edges)
+            sb.append(s);
+        sb.append("}\n");
+        return sb.toString();
+    }
+
+    String dotDtg(int[][][][] dtgs, int var) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("digraph someGraph {\n");
+
+        HashSet<String> nodes = new HashSet<>();
+        HashSet<String> edges = new HashSet<>();
+        for (int i = p.firstIndex[var]; i <= p.lastIndex[var]; i++) {
+            int ival = i - p.firstIndex[var];
+            String ivalName = p.factStrs[i];
+            nodes.add("\tnode [label=\"" + ivalName + "\"] node" + ival + ";\n");
+            for (int j = p.firstIndex[var]; j <= p.lastIndex[var]; j++) {
+                for (int[] transition : dtgs[i][j]) {
+                    int jval = j - p.firstIndex[var];
+                    String label = "";
+                    for (int l = 0; l < transition.length; l++) {
+                        if (l > 0)
+                            label += ", ";
+                        label += p.factStrs[transition[l]];
+                    }
+                    String edge = "\tnode" + ival + " -> node" + jval;
+                    if (label.length() > 0)
+                        edge += " [label=\"" + label + "\"]";
+                    edge += "\n";
+                    edges.add(edge);
+                }
+            }
+        }
+        for (String s : nodes)
+            sb.append(s);
+        for (String s : edges)
+            sb.append(s);
+        sb.append("}\n");
+        return sb.toString();
+    }
+
+    private void dotIt(SasPlusProblem p) {
+        String dir = "/home/dh/Schreibtisch/dot/";
+        try {
+            FileWriter fw = new FileWriter(dir + "cg.dot");
+            fw.write(dotCg(cg));
+            fw.close();
+
+            fw = new FileWriter(dir + "rev.dot");
+            fw.write(dotCg(rev));
+            fw.close();
+
+            for (int var = 0; var < p.numOfVars; var++) {
+                fw = new FileWriter(dir + "var" + var + ".dot");
+                fw.write(dotDtg(dtgs, var));
+                fw.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

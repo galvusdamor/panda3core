@@ -562,6 +562,18 @@ public class SasPlusProblem {
         return opNames;
     }
 
+    private int[] delete(int[] list, int var) {
+        List<Integer> newList = new ArrayList<>();
+        for (int i = 0; i < list.length; i++) {
+            if (indexToMutexGroup[list[i]] != var)
+                newList.add(list[i]);
+        }
+        int[] res = new int[newList.size()];
+        for (int i = 0; i < newList.size(); i++)
+            res[i] = newList.get(i);
+        return res;
+    }
+
     public Tuple2<Map<Integer, Task>, Map<Task, Integer>> restrictTo(Set<Integer> I, Map<Integer, Task> i2t) {
         assert this.correctModel();
 
@@ -569,6 +581,25 @@ public class SasPlusProblem {
         System.out.print("Reducing SAS+ domain ... ");
         int orgOpNum = this.numOfOperators;
         int orgStateNum = this.numOfStateFeatures;
+
+        // delete artificial goal fact
+        int goalVar = -1;
+        for (int i = 0; i < numOfVars; i++) {
+            if ((ranges[i] == 2) && (factStrs[firstIndex[i]].contains("__goal()"))) {
+                goalVar = i;
+            }
+        }
+
+        if (goalVar >= 0) {
+            for (int op = 0; op < numOfOperators; op++) {
+                precLists[op] = delete(precLists[op], goalVar);
+                addLists[op] = delete(addLists[op], goalVar);
+                delLists[op] = delete(delLists[op], goalVar);
+            }
+            s0List = delete(s0List, goalVar);
+            gList = delete(gList, goalVar);
+
+        }
 
         int[] actionNewToOld = new int[actionCount];
         Map<Task, Integer> taskToIndex = new HashMap<>();
@@ -668,6 +699,7 @@ public class SasPlusProblem {
         indexToMutexGroup = indexToMutexGroupNew;
         calcMutexGroupIndices();
         calcRanges();
+        numOfVars = firstIndex.length;
 
         precLists = precListsNew;
         addLists = addListsNew;
@@ -859,12 +891,23 @@ public class SasPlusProblem {
         for (int f : this.gList)
             assert (f < numOfStateFeatures);
 
-        assert (indexToMutexGroup.length == numOfStateFeatures);
-        assert (costs.length == numOfOperators);
-        assert (opNames.length == numOfOperators);
-        assert (factStrs.length == numOfStateFeatures);
-        assert (indexToMutexGroup[numOfStateFeatures - 1] == (firstIndex.length - 1));
-        assert (firstIndex.length == lastIndex.length);
+        assert indexToMutexGroup.length == numOfStateFeatures;
+        assert costs.length == numOfOperators;
+        assert opNames.length == numOfOperators;
+        assert factStrs.length == numOfStateFeatures;
+        assert indexToMutexGroup[numOfStateFeatures - 1] == (firstIndex.length - 1);
+        assert firstIndex.length == lastIndex.length;
+        assert numOfVars == ranges.length;
+        assert firstIndex.length == ranges.length;
+
+        // every range contains one set bit
+        for (int i = 0; i < this.numOfVars; i++) {
+            int setBit = getS0().nextSetBit(firstIndex[i]);
+            assert setBit >= 0;
+            assert setBit <= lastIndex[i];
+            assert (getS0().nextSetBit(setBit + 1) == -1) || (getS0().nextSetBit(setBit + 1) >= firstIndex[i + 1]);
+        }
+
         return true;
     }
 
