@@ -667,6 +667,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       import sys.process._
 
       info("Converting to SAS+ ... ")
+      val sasStart = System.currentTimeMillis()
+
       // 1. step write pddl part of the domain to file
       val classicalDomain = liftedResult._1._1.classicalDomain
 
@@ -724,7 +726,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
       val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
 
-      info("done.\n")
+      info("done (" + (System.currentTimeMillis() - sasStart) + " ms).\n")
       info("Number of Grounded Actions " + sasPlusParser.reachableGroundPrimitiveActions.length + "\n")
       extra(pruned._1.statisticsString + "\n")
 
@@ -1477,8 +1479,7 @@ case class PlanBasedSearch(
 
 case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
                              heuristic: Option[SearchHeuristic],
-                             abstractTaskSelectionStrategy: PriorityQueueSearch.abstractTaskSelection,
-                             deleteRelaxed: Boolean = false) extends SearchConfiguration {
+                             abstractTaskSelectionStrategy: PriorityQueueSearch.abstractTaskSelection) extends SearchConfiguration {
 
   override protected def localModifications: Seq[(String, (ParameterMode, (Option[String]) => ProgressionSearch.this.type))] =
     Seq(
@@ -1493,8 +1494,6 @@ case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
            assert(parsedHeuristics.length == 1)
            this.copy(heuristic = Some(parsedHeuristics.head)).asInstanceOf[this.type]
          }),
-         "-deleteRelaxed" ->(NoParameter, { p: Option[String] => this.copy(deleteRelaxed = true).asInstanceOf[this.type] }),
-         "-dontDeleteRelax" ->(NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(deleteRelaxed = false).asInstanceOf[this.type] }),
          "-abstractSelection" ->
            (NecessaryParameter, { p: Option[String] => this.copy(abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.parse(p.get)).asInstanceOf[this.type] })
        )
@@ -1504,7 +1503,6 @@ case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
     alignConfig(("Search Algorithm", searchAlgorithm) ::
                   ("Heuristic", if (heuristic.isDefined) heuristic.get.longInfo else "none") ::
                   ("Abstract task selection strategy", abstractTaskSelectionStrategy) ::
-                  ("Delete-relaxed", deleteRelaxed) ::
                   Nil)
 
 }
