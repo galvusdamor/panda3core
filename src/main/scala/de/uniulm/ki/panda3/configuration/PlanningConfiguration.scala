@@ -593,7 +593,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     (identity,noHybrid, timeCapsule)
   }
 
-
   private def runLiftedForwardSearchReachabilityAnalysis(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
     val liftedRelaxedInitialState = problem.init.schema.effectsAsPredicateBool
     val liftedReachabilityAnalysis = LiftedForwardSearchReachabilityAnalysis(domain, liftedRelaxedInitialState.toSet)
