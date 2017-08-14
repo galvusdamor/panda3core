@@ -1,4 +1,0 @@
-# example from en.wikipedia.org/wiki/Post_correspondence_problem
-a - b a a
-a b - a a
-b b a - b b

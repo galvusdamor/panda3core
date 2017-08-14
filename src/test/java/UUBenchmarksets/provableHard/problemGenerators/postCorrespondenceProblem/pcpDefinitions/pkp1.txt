@@ -1,3 +1,0 @@
-y - y x y
-y x - x x
-x y y - y y

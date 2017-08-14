@@ -1,0 +1,5 @@
+# example from https://de.wikipedia.org/wiki/Postsches_Korrespondenzproblem
+0 0 1 - 0
+0 1 - 0 1 1
+0 1 - 1 0 1
+1 0 - 0 0 1

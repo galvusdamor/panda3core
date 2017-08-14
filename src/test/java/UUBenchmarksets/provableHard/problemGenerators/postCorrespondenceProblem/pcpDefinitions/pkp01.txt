@@ -1,4 +1,0 @@
-# example from https://de.wikipedia.org/wiki/Postsches_Korrespondenzproblem
-y - y x y
-y x - x x
-x y y - y y
