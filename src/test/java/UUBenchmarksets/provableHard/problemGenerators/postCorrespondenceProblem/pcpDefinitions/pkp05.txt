@@ -1,0 +1,5 @@
+# example from https://es.wikipedia.org/wiki/Problema_de_correspondencia_de_Post
+a b a - a
+b b b - a a a
+a a b - a b a b
+b b - b a b b a
