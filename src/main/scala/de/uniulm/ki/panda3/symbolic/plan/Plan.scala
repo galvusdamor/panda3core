@@ -46,7 +46,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       assert(orderingConstraints.lt(ps, goal))
   }
 
-  assert(orderingConstraints.lt(init,goal))
+  assert(orderingConstraints.lt(init, goal))
   assert(orderingConstraints.isConsistent)
 
   lazy val planSteps       : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
@@ -177,9 +177,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
         (PlanStep(id, ps.schema, ps.arguments map sub), ps)
     }
 
-    val newPlanSteps = planStepMapping map {
-      _._1
-    }
+    val newPlanSteps = planStepMapping map { _._1 }
 
     def substitutePlanStep(oldPS: PlanStep) = newPlanSteps(planSteps.indexOf(oldPS))
 
@@ -544,15 +542,15 @@ object Plan {
   /**
     * Creates a totally ordered plan given a sequence of tasks. Currently only supports grounded tasks
     */
-  def apply(taskSequence: Seq[Task], init : Task, goal : Task): Plan = {
-    assert((taskSequence :+ init :+ goal) forall {_.parameters.isEmpty})
+  def apply(taskSequence: Seq[Task], init: Task, goal: Task): Plan = {
+    assert((taskSequence :+ init :+ goal) forall { _.parameters.isEmpty })
 
-    val planStepSequence = ((init :: goal :: Nil) ++ taskSequence).zipWithIndex map { case (t,i) => PlanStep(i,t,Nil)}
+    val planStepSequence = ((init :: goal :: Nil) ++ taskSequence).zipWithIndex map { case (t, i) => PlanStep(i, t, Nil) }
     val orderedPSSequence = ((planStepSequence.head :: Nil) ++ planStepSequence.drop(2)) :+ planStepSequence(1)
     val totalOrdering = TaskOrdering.totalOrdering(orderedPSSequence)
 
 
-    Plan(planStepSequence, Nil, totalOrdering, CSP(Set(),Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws,Map(),Map())
+    Plan(planStepSequence, Nil, totalOrdering, CSP(Set(), Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws, Map(), Map())
   }
 }
 
