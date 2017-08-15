@@ -21,7 +21,8 @@ import scala.io.Source
   */
 // scalastyle:off method.length cyclomatic.complexity
 case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
-                     reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule) {
+                     reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
+                     forceClassicalEncoding : Boolean) {
 
   private val fileDir = "/dev/shm/"
 
@@ -152,8 +153,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
           TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK)
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
-        else SOGPOCLEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK).asInstanceOf[VerifyEncoding]
-      //else SOGClassicalEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+        else {
+          if (forceClassicalEncoding) SOGClassicalEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+          else SOGPOCLEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+        }
 
       // (3)
       /*println("K " + encoder.K)
