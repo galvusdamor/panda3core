@@ -311,7 +311,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, satSearch.reductionMethod, timeCapsule, informationCapsule)
+          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, satSearch.reductionMethod, timeCapsule, informationCapsule,
+                                 satSearch.forceClassicalEncoding)
 
 
 
@@ -1527,7 +1528,8 @@ case class FullSATRun() extends SATRunConfiguration {override def longInfo: Stri
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      checkResult: Boolean = false,
-                     reductionMethod: SATReductionMethod = OnlyNormalise
+                     reductionMethod: SATReductionMethod = OnlyNormalise,
+                     forceClassicalEncoding : Boolean = false
                     ) extends SearchConfiguration {
 
   protected lazy val getSingleRun: SingleSATRun = runConfiguration match {
