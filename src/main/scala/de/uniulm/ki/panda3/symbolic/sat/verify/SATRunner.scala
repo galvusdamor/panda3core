@@ -20,7 +20,8 @@ import scala.io.Source
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // scalastyle:off method.length cyclomatic.complexity
-case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
+case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
+                     reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
                      forceClassicalEncoding : Boolean) {
 
   private val fileDir = "/dev/shm/"
@@ -78,7 +79,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
       //satProcess.destroy()
 
       val pid = getPID()
-      println(pid)
+      //println(pid)
 
       val uuid = UUID.randomUUID().toString
       val file = new File("__pid" + uuid)
@@ -156,7 +157,6 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
           if (forceClassicalEncoding) SOGClassicalEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
           else SOGPOCLEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         }
-      //else
 
       // (3)
       /*println("K " + encoder.K)
@@ -250,7 +250,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
             case RISS6 =>
               println("Starting riss6")
               // -config=Riss6:-no-enabled_cp3
-              writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' c/home/gregor/Riss6/bin/riss6 -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier,
+              writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' " + solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier,
+                                fileDir + "__run" + uniqFileIdentifier)
+
+            case MapleCOMSPS =>
+              println("Starting mapleCOMSPS")
+              writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' " + solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier,
                                 fileDir + "__run" + uniqFileIdentifier)
           }
 
@@ -261,9 +266,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
           // wait for termination
           satProcess.get.exitValue()
           satSolver match {
-            case CRYPTOMINISAT | RISS6 =>
-              writeStringToFile(stdout.toString(), new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
-            case _                     =>
+            case CRYPTOMINISAT | RISS6 | MapleCOMSPS =>
+              val outString = stdout.toString()
+              //println("OUTSTRING " + outString)
+              writeStringToFile(outString, new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
+            case _                                   =>
           }
           // remove runscript
           ("rm " + fileDir + "__run" + uniqFileIdentifier) !
@@ -302,11 +309,25 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
         print("Preparing solver output ... ")
         val t4 = System.currentTimeMillis()
         val (solveState, literals) = satSolver match {
-          case MINISAT               =>
+          case MINISAT                             =>
             val splitted = solverOutput.split("\n")
             if (splitted.length == 1) (splitted(0), Set[Int]()) else (splitted(0), (splitted(1).split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet)
-          case CRYPTOMINISAT | RISS6 =>
-            val stateSplit = solverOutput.split("\n", 2)
+          case CRYPTOMINISAT | RISS6 | MapleCOMSPS =>
+
+            def removeCommentAtBeginning(s: String): String = {
+              var i = 0
+              while (s.charAt(i) == 'c') {
+                while (s.charAt(i) != '\n')
+                  i += 1
+                i += 1
+              }
+
+              s.substring(i)
+            }
+
+            val nonCommentOutput = removeCommentAtBeginning(solverOutput)
+
+            val stateSplit = nonCommentOutput.split("\n", 2)
             val cleanState = stateSplit.head.replaceAll("s ", "")
 
             if (stateSplit.length == 1) (cleanState, Set[Int]())
@@ -403,8 +424,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
         }
       }
       }
-      val primitiveSolution: Seq[Task] = encoder match {
-        case tot: TotallyOrderedEncoding =>
+      val primitiveSolutionWithPotentialEmptyMethodApplications: Seq[Task] = encoder match {
+        case tot: TotallyOrderedEncoding  =>
           // check executability of the plan
 
           val graph = SimpleDirectedGraph(nodes, edges)
@@ -415,12 +436,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
             println("task " + t + " " + actionIDX + " " + domain.tasks(actionIDX).name)
             domain.tasks(actionIDX) }*/
 
+
           graph.sinks sortWith { case (t1, t2) =>
             val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
             val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
             PathBasedEncoding.pathSortingFunction(path1, path2)
           } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
-
         case tree: TotallyOrderedEncoding =>
           val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
           //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
@@ -521,9 +542,14 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
           }
       }
 
+      // there may be empty methods in the domain, which would produce abstract tasks as sinks. Hence we have to filter them out
+      val primitiveSolution =
+        primitiveSolutionWithPotentialEmptyMethodApplications filterNot { t => t.isAbstract && domain.methodsForAbstractTasks(t).exists(_.subPlan.planStepsWithoutInitGoal.isEmpty) }
+
+
       print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
       //println("\n")
-      //println(primitiveSolution map { _.name } mkString "\n")
+      //println(primitiveSolution map { t => t.isPrimitive + " " + t.name } mkString "\n")
 
       primitiveSolution foreach { t => assert(t.isPrimitive) }
       checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
@@ -544,9 +570,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, r
 
     val decompGraphNames = SimpleDirectedGraph(graphNodes map changeSATNameToActionName, graphEdges map { case (a, b) => (changeSATNameToActionName(a), changeSATNameToActionName(b)) })
     val decompGraph = SimpleDirectedGraph(graphNodes, graphEdges)
-    writeStringToFile(decompGraphNames.dotString, "decompName.dot")
-    Dot2PdfCompiler.writeDotToFile(decompGraph, "decomp.pdf")
-    Dot2PdfCompiler.writeDotToFile(decompGraphNames, "decompName.pdf")
+    //writeStringToFile(decompGraphNames.dotString, "decompName.dot")
+    //Dot2PdfCompiler.writeDotToFile(decompGraph, "decomp.pdf")
+    //Dot2PdfCompiler.writeDotToFile(decompGraphNames, "decompName.pdf")
 
     // no isolated nodes
     decompGraphNames.vertices foreach { v =>

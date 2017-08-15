@@ -11,8 +11,8 @@ import scala.collection.Seq
   */
 case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
                                  domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding{
-  lazy val taskSequenceLength: Int = primitivePaths.length
-  //lazy val taskSequenceLength: Int = taskSequenceLengthQQ
+  //lazy val taskSequenceLength: Int = primitivePaths.length
+  lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position
 
