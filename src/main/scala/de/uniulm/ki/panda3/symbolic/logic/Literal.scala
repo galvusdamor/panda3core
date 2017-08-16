@@ -11,6 +11,8 @@ import de.uniulm.ki.util.HashMemo
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables: Seq[Variable]) extends Formula with PrettyPrintable with HashMemo {
+  assert(predicate.argumentSorts.length == parameterVariables.length)
+  assert(!(parameterVariables contains null))
 
   /** negated version of the literal */
   lazy val negate: Literal = copy(isPositive = !isPositive)
