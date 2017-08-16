@@ -90,5 +90,13 @@ lazy val transportProbGen = (project in (file("assembly") / "transportProbGen"))
           )
 
 
+lazy val pcpProbGen = (project in (file("assembly") / "pcpProbGen")).settings(assemblySettings: _*).
+  settings(
+    target := file("assembly") / "pcpProbGen",
+    assemblyJarName in assembly := "panda3pcpProbGen.jar",
+    mainClass in assembly := Some("de.uniulm.ki.panda3.problemGenerators.pcpGenerator.PostCorrespondenceProblemToHTN")
+  )
+
+
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 scalastyleConfig := baseDirectory.value / "project" / "scalastyle_config.xml"
