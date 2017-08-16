@@ -1,6 +1,5 @@
-package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph;
+package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition;
 
-import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.IActionReachability;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
@@ -13,15 +12,12 @@ import java.util.*;
 /**
  * Created by dh on 05.05.17.
  */
-public class HtnCompositionEncoding extends SasPlusProblem {
+public class RelaxedCompositionSAS extends RelaxedCompositionEncoding {
     int numTasks;
     int numAnM;
     int numExtenedStateFeatures;
-    int numOfNonHtnActions;
 
     public ProMethod[] IndexToMethod;
-
-    public IActionReachability tdRechability;
 
     public int firstHtnIndex;
     public int firstBurIndex;
@@ -35,11 +31,7 @@ public class HtnCompositionEncoding extends SasPlusProblem {
 
     public BitSet s0mask;
 
-    public HtnCompositionEncoding(String Filename) throws Exception {
-        super(Filename);
-    }
-
-    public HtnCompositionEncoding(SasPlusProblem p) {
+    public RelaxedCompositionSAS(SasPlusProblem p) {
         assert (p.correctModel());
 
         this.numOfStateFeatures = p.numOfStateFeatures;
@@ -223,6 +215,22 @@ public class HtnCompositionEncoding extends SasPlusProblem {
         assert (this.correctModel(true));
     }
 
+    @Override
+    public BitSet initS0() {
+        return (BitSet) this.s0mask.clone();
+    }
+
+    @Override
+    public void setReachable(BitSet bSet, int i) {
+        bSet.set(this.reachable[i]);
+        bSet.set(this.unreachable[i], false);
+    }
+
+    @Override
+    public void setReached(BitSet bSet, int i) {
+        bSet.set(this.reached[i]);
+        bSet.set(this.unreached[i], false);
+    }
 
     private int createMethodLookupTable(HashMap<Task, List<ProMethod>> methods) {
         int methodID = this.numOfOperators;

@@ -11,9 +11,9 @@ import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachabili
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps}
 import de.uniulm.ki.panda3.efficient.search.flawSelector._
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRcFFMulticount
 import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
-import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount
 import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem
 import de.uniulm.ki.panda3.symbolic.domain.updates.{AddPredicate, ExchangeTask, RemovePredicate}
@@ -21,7 +21,7 @@ import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.sat.verify.{VerifyRunner, SATRunner}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{SATRunner, VerifyRunner}
 import de.uniulm.ki.panda3.symbolic.sat.verify.SATRunner
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
@@ -39,7 +39,6 @@ import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
-
 import de.uniulm.ki.util._
 
 import scala.collection.JavaConversions
@@ -899,6 +898,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val result: (Domain, Plan) = {
         val groundedDomainAndProblem = Grounding.transform(domainAndPlan, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
 
+        SasPlusProblem.generateFromSTRIPS(groundedDomainAndProblem._1,groundedDomainAndProblem._2)
+
         if (preprocessingConfiguration.convertToSASP) {
           val sasPlusGrounder: SASPlusGrounding = analysisMap(SASPInput)
           assert(groundedDomainAndProblem._1.mappingToOriginalGrounding.isDefined)
@@ -1303,9 +1304,9 @@ object SearchHeuristic {
       // pandaPRO
       case "hhmcff" | "relaxed-composition_with_multicount_ff" => RelaxedCompositionGraph(
                                                                                            useTDReachability = hParameterMap.getOrElse("td-reachability", "true").toBoolean,
-                                                                                           heuristicExtraction = ProRcgFFMulticount.heuristicExtraction
+                                                                                           heuristicExtraction = gphRcFFMulticount.heuristicExtraction
                                                                                              .parse(hParameterMap.getOrElse("extraction", "ff")),
-                                                                                           producerSelectionStrategy = ProRcgFFMulticount.producerSelection
+                                                                                           producerSelectionStrategy = gphRcFFMulticount.producerSelection
                                                                                              .parse(hParameterMap.getOrElse("selection", "fcfs")))
       case "greedy-progression"                                => GreedyProgression
       case "hhrc"                                              =>
@@ -1397,7 +1398,7 @@ object Relax extends SearchHeuristic {override val longInfo: String = "relax"}
 
 
 // PANDAPRO heuristics
-case class RelaxedCompositionGraph(useTDReachability: Boolean, heuristicExtraction: ProRcgFFMulticount.heuristicExtraction, producerSelectionStrategy: ProRcgFFMulticount.producerSelection)
+case class RelaxedCompositionGraph(useTDReachability: Boolean, heuristicExtraction: gphRcFFMulticount.heuristicExtraction, producerSelectionStrategy: gphRcFFMulticount.producerSelection)
   extends SearchHeuristic {override val longInfo: String = "hhMcFF"}
 
 object GreedyProgression extends SearchHeuristic {override val longInfo: String = "greedy-progression"}

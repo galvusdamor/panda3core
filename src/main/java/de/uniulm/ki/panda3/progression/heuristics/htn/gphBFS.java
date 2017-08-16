@@ -7,33 +7,33 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 /**
  * Created by dh on 19.09.16.
  */
-public class ProDFS extends GroundedProgressionHeuristic {
+public class gphBFS extends GroundedProgressionHeuristic {
     int heuristic = 0;
 
-    public ProDFS() {
+    public gphBFS() {
 
     }
 
     @Override
     public String getName() {
-        return "simulated DFS";
+        return "simulated BFS";
     }
 
     @Override
     public void build(ProgressionNetwork tn) {
-        this.heuristic = -(tn.numProgressionSteps + tn.numDecompositionSteps);
+        this.heuristic = tn.solution.getLength();
     }
 
     @Override
     public GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, ProMethod m) {
-        ProDFS h = new ProDFS();
+        gphBFS h = new gphBFS();
         h.build(newTN);
         return h;
     }
 
     @Override
     public GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps) {
-        ProDFS h = new ProDFS();
+        gphBFS h = new gphBFS();
         h.build(newTN);
         return h;
     }

@@ -2,13 +2,12 @@ package de.uniulm.ki.panda3.progression.htn;
 
 import de.uniulm.ki.panda3.configuration.*;
 import de.uniulm.ki.panda3.progression.heuristics.htn.*;
-import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount;
-import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgSas;
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRcFFMulticount;
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRelaxedComposition;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.*;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
 import de.uniulm.ki.panda3.progression.htn.search.SolutionStep;
-import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -104,15 +103,15 @@ public class ProPlanningInstance {
          * - Echte Heuristik x Greedy, Greedy A* (mit Faktor)
          */
         if (search instanceof BFSType$)
-            initialNode.heuristic = new ProBFS();
+            initialNode.heuristic = new gphBFS();
         else if (search instanceof DFSType$) {
-            initialNode.heuristic = new ProDFS();
+            initialNode.heuristic = new gphDFS();
         } else if (heuristic instanceof HierarchicalHeuristicRelaxedComposition) {
             HierarchicalHeuristicRelaxedComposition h = (HierarchicalHeuristicRelaxedComposition) heuristic;
-            initialNode.heuristic = new ProRcgSas(ProgressionNetwork.flatProblem, h.classicalHeuristic(), methods, initialTasks);
+            initialNode.heuristic = new gphRelaxedComposition(ProgressionNetwork.flatProblem, h.classicalHeuristic(), methods, initialTasks);
         } else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
-            initialNode.heuristic = new ProRcgFFMulticount(methods, initialTasks, ProgressionNetwork.taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
+            initialNode.heuristic = new gphRcFFMulticount(methods, initialTasks, ProgressionNetwork.taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
         } else if (heuristic instanceof GreedyProgression$)
             initialNode.heuristic = new ProGreedyProgression();
         else {

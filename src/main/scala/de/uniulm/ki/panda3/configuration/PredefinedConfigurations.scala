@@ -1,9 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
-import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRcFFMulticount
 import de.uniulm.ki.panda3.symbolic.compiler.OneOfTheNecessaryOrderings
-
-
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
 import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
@@ -316,8 +314,8 @@ object PredefinedConfigurations {
 
          "-poclSat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
          "-poclSatSAS+" ->(htnParsing, sasPlusPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-classicalSat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, forceClassicalEncoding = true)),
-         "-classicalSatSAS+" ->(htnParsing, sasPlusPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, forceClassicalEncoding = true)),
+         //"-classicalSat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, forceClassicalEncoding = true)),
+         //"-classicalSatSAS+" ->(htnParsing, sasPlusPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, forceClassicalEncoding = true)),
 
          // Greedy-A*
          "-oneshortTOTGreedyAStarMAC-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPRReachability),
@@ -349,12 +347,16 @@ object PredefinedConfigurations {
 
 
          ///// PANDA Pro
+         "-astar-pro-CG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hCG)),
          "-astar-pro-FF" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFF)),
+         "-astar-pro-FF-ha" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFFwithHA)),
          "-astar-pro-lmcut" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hLmCut)),
          "-astar-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hIncLmCut)),
          "-astar-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hAdd)),
 
+         "-gastar-pro-CG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hCG)),
          "-gastar-pro-FF" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hFF)),
+         "-gastar-pro-FF-ha" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hFFwithHA)),
          "-gastar-pro-lmcut" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hLmCut)),
          "-gastar-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hIncLmCut)),
          "-gastar-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hAdd)),
@@ -364,7 +366,9 @@ object PredefinedConfigurations {
          "-g3astar-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hIncLmCut)),
          "-g3astar-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hAdd)),
 
+         "-greedy-pro-CG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hCG)),
          "-greedy-pro-FF" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hFF)),
+         "-greedy-pro-FF-ha" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hFFwithHA)),
          "-greedy-pro-lmcut" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hLmCut)),
          "-greedy-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hIncLmCut)),
          "-greedy-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd))

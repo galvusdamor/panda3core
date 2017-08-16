@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph;
+package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition;
 
 import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeuristic;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.*;
@@ -7,7 +7,6 @@ import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeur
 import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics.hMaxEq;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncInfLmCut;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncrementInformation;
-import de.uniulm.ki.panda3.progression.heuristics.sasp.RtgBasedHeuristics.hLmCutRtg;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
@@ -19,10 +18,9 @@ import java.util.*;
 /**
  * Created by dh on 10.05.17.
  */
-public class ProRcgSas extends GroundedProgressionHeuristic {
-    static protected HtnCompositionEncoding compEnc;
+public class gphRelaxedComposition extends GroundedProgressionHeuristic {
+    static protected RelaxedCompositionEncoding compEnc;
     static private SasHeuristic heuristic;
-    static private SasHeuristic heuristic2;
     protected IncrementInformation inc;
     private int heuristicVal;
 
@@ -41,24 +39,16 @@ public class ProRcgSas extends GroundedProgressionHeuristic {
 
     }
 
-    protected ProRcgSas() {
+    protected gphRelaxedComposition() {
     }
 
-    public ProRcgSas(SasPlusProblem flat,
-                     SasHeuristic.SasHeuristics heuristic,
-                     HashMap<Task, List<ProMethod>> methods,
-                     List<ProgressionPlanStep> initialTasks) {
-/*
-        hCausalGraph gr = new hCausalGraph(flat);
-        BitSet g = new BitSet();
-        for (int f : flat.gList)
-            g.set(f);
-        gr.calcHeu(flat.getS0(), g);
-        System.exit(0);
-*/
-        this.compEnc = new HtnCompositionEncoding(flat);
+    public gphRelaxedComposition(SasPlusProblem flat,
+                                 SasHeuristic.SasHeuristics heuristic,
+                                 HashMap<Task, List<ProMethod>> methods,
+                                 List<ProgressionPlanStep> initialTasks) {
+
+        this.compEnc = new RelaxedCompositionSAS(flat);
         this.compEnc.generateTaskCompGraph(methods, initialTasks);
-        //System.out.println(this.compEnc.toString());
         System.out.println("Generating Relaxed Composition Model ...");
         System.out.println(this.compEnc.getStatistics());
 
@@ -73,12 +63,9 @@ public class ProRcgSas extends GroundedProgressionHeuristic {
             this.heuristic = new hAddhFFEq(this.compEnc, SasHeuristic.SasHeuristics.hFF);
             supportsHelpfulActions = true;
         } else if (heuristic == SasHeuristic.SasHeuristics.hCG) {
-            //this.heuristic2 = new hMaxEq(this.compEnc);
             this.heuristic = new hCausalGraph(this.compEnc);
         } else if (heuristic == SasHeuristic.SasHeuristics.hLmCut) {
             this.heuristic = new hLmCutEq(this.compEnc, false);
-            //this.heuristic = new hCausalGraph(this.compEnc);
-            //this.heuristic2 = new hAddhFFEq(this.compEnc, SasHeuristic.SasHeuristics.hFF);
         } else if (heuristic == SasHeuristic.SasHeuristics.hIncLmCut) {
             this.inc = new IncInfLmCut();
             this.heuristic = new hLmCutEq(this.compEnc, true);
@@ -98,10 +85,12 @@ public class ProRcgSas extends GroundedProgressionHeuristic {
         for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
             prepareS0andG(first, reachableActions, htnGoal);
 
-        BitSet s0 = (BitSet) compEnc.s0mask.clone();
+        //BitSet s0 = (BitSet) compEnc.s0mask.clone();
+        BitSet s0 = compEnc.initS0();
         for (int i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
-            s0.set(compEnc.reachable[i]);
-            s0.set(compEnc.unreachable[i], false);
+            compEnc.setReachable(s0,i);
+            //s0.set(compEnc.reachable[i]);
+            //s0.set(compEnc.unreachable[i], false);
         }
         s0.or(newTN.state);
 
@@ -113,8 +102,9 @@ public class ProRcgSas extends GroundedProgressionHeuristic {
         }
 
         for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
-            g.set(compEnc.reached[goalTask]);
-            g.set(compEnc.unreached[goalTask], false);
+            compEnc.setReached(g,goalTask);
+            //g.set(compEnc.reached[goalTask]);
+            //g.set(compEnc.unreached[goalTask], false);
             //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
         }
 
@@ -125,7 +115,7 @@ public class ProRcgSas extends GroundedProgressionHeuristic {
             else
                 lastAction = ps.taskIndex;
 
-            ProRcgSas res = new ProRcgSas();
+            gphRelaxedComposition res = new gphRelaxedComposition();
             res.heuristicVal = heuristic.calcHeu(lastAction, inc, s0, g);
             res.inc = this.heuristic.getIncInf();
             return res;

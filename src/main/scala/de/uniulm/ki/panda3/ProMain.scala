@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3
 import java.io.{File, FileInputStream}
 
 import de.uniulm.ki.panda3.configuration._
-import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRcFFMulticount
 import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod
@@ -66,14 +66,14 @@ object ProMain {
       }
 
       val heuristicExtraction = if (args.length >= 6) args(5) match {
-        case "-ff"    => ProRcgFFMulticount.heuristicExtraction.ff
-        case "-multicount" => ProRcgFFMulticount.heuristicExtraction.multicount
-      } else ProRcgFFMulticount.heuristicExtraction.multicount
+        case "-ff"    => gphRcFFMulticount.heuristicExtraction.ff
+        case "-multicount" => gphRcFFMulticount.heuristicExtraction.multicount
+      } else gphRcFFMulticount.heuristicExtraction.multicount
 
       val producerSelector = if (args.length >= 7) args(6) match {
-        case "-numPrec"    => ProRcgFFMulticount.producerSelection.numOfPreconditions
-        case "-difficulty" => ProRcgFFMulticount.producerSelection.actionDifficulty
-        case "-fcfs"       => ProRcgFFMulticount.producerSelection.firstCome
+        case "-numPrec"    => gphRcFFMulticount.producerSelection.numOfPreconditions
+        case "-difficulty" => gphRcFFMulticount.producerSelection.actionDifficulty
+        case "-fcfs"       => gphRcFFMulticount.producerSelection.firstCome
       } else null
 
 

@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph;
+package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition;
 
 import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeuristic;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
@@ -9,7 +9,6 @@ import de.uniulm.ki.panda3.symbolic.domain.Task;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
-import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 
@@ -17,8 +16,8 @@ import java.util.List;
  * Created by dh on 17.05.17.
  * This is a implementation to test landmark generators or other heuristics working via preprocessing
  */
-public class ProRcgLama extends ProRcgSas {
-    private HtnCompositionEncoding compEnc;
+public class gphRcLama extends gphRelaxedComposition {
+    private RelaxedCompositionSAS compEnc;
 
     @Override
     public String getName() {
@@ -31,12 +30,12 @@ public class ProRcgLama extends ProRcgSas {
     }
 
 
-    public ProRcgLama(SasPlusProblem flat,
-                      HashMap<Task, List<ProMethod>> methods,
-                      List<ProgressionPlanStep> initialTasks,
-                      ProgressionNetwork init) {
+    public gphRcLama(SasPlusProblem flat,
+                     HashMap<Task, List<ProMethod>> methods,
+                     List<ProgressionPlanStep> initialTasks,
+                     ProgressionNetwork init) {
 
-        this.compEnc = new HtnCompositionEncoding(flat);
+        this.compEnc = new RelaxedCompositionSAS(flat);
         this.compEnc.generateTaskCompGraph(methods, initialTasks);
 
         ProgressionPlanStep ps = init.getFirstAbstractTasks().get(0);

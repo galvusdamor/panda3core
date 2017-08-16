@@ -1,4 +1,4 @@
-package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph;
+package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition;
 
 import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.TaskReachabilityGraph;
 import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeuristic;
@@ -14,7 +14,7 @@ import java.util.*;
 /**
  * Created by dhoeller on 26.07.16.
  */
-public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
+public class gphRcFFMulticount extends GroundedProgressionHeuristic {
     public static enum producerSelection {
         numOfPreconditions, actionDifficulty, firstCome;
 
@@ -86,7 +86,7 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
     private boolean goalRelaxedReachable;
     private int heuristicValue;
 
-    private ProRcgFFMulticount() { // only used by factory methods -> private
+    private gphRcFFMulticount() { // only used by factory methods -> private
     }
 
     public static boolean topDownReachability = true;
@@ -95,34 +95,34 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
     static producerSelection prod = producerSelection.actionDifficulty;
     static heuristicExtraction heuEx = heuristicExtraction.multicount;
 
-    public ProRcgFFMulticount(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Set<Task> allActions, boolean useTDReachability,
-                              producerSelection selectionStrategy, heuristicExtraction heuEx) {
-        ProRcgFFMulticount.prod = selectionStrategy;
-        ProRcgFFMulticount.heuEx = heuEx;
-        ProRcgFFMulticount.topDownReachability = useTDReachability;
+    public gphRcFFMulticount(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Set<Task> allActions, boolean useTDReachability,
+                             producerSelection selectionStrategy, heuristicExtraction heuEx) {
+        gphRcFFMulticount.prod = selectionStrategy;
+        gphRcFFMulticount.heuEx = heuEx;
+        gphRcFFMulticount.topDownReachability = useTDReachability;
 
         long time = System.currentTimeMillis();
         System.out.println("Init Relaxed Composition Graph (RCG) heuristic");
 
-        ProRcgFFMulticount.numOperators = createMethodLookupTable(methods);
-        ProRcgFFMulticount.numTasks = createTaskLookupTable(allActions, getGroundTasks(methods)) - ProgressionNetwork.flatProblem.numOfStateFeatures;
+        gphRcFFMulticount.numOperators = createMethodLookupTable(methods);
+        gphRcFFMulticount.numTasks = createTaskLookupTable(allActions, getGroundTasks(methods)) - ProgressionNetwork.flatProblem.numOfStateFeatures;
 
         if (topDownReachability || orderingInvariants) {
-            tdRechability = new TaskReachabilityGraph(methods, initialTasks, ProRcgFFMulticount.numTasks, ProRcgFFMulticount.numOperators);
+            tdRechability = new TaskReachabilityGraph(methods, initialTasks, gphRcFFMulticount.numTasks, gphRcFFMulticount.numOperators);
             //tdRechability.calcOrderingInvariants(RCG.numTasks,methods, IndexToTask);
         }
 
         // action-task-facts are true one layer after the action, this can done due to the 1-to-1 correspondence
-        ProRcgFFMulticount.numExtenedStateFeatures = ProgressionNetwork.flatProblem.numOfStateFeatures + ProRcgFFMulticount.numTasks;
+        gphRcFFMulticount.numExtenedStateFeatures = ProgressionNetwork.flatProblem.numOfStateFeatures + gphRcFFMulticount.numTasks;
 
-        ProRcgFFMulticount.prec2task = new int[numExtenedStateFeatures][]; // pointers from literals to tasks that have this literal as precondition
-        ProRcgFFMulticount.precLists = new int[numOperators][];
-        ProRcgFFMulticount.add2task = new Set[numExtenedStateFeatures]; // pointers from literals to tasks that add it
-        ProRcgFFMulticount.addLists = new int[numOperators][];
+        gphRcFFMulticount.prec2task = new int[numExtenedStateFeatures][]; // pointers from literals to tasks that have this literal as precondition
+        gphRcFFMulticount.precLists = new int[numOperators][];
+        gphRcFFMulticount.add2task = new Set[numExtenedStateFeatures]; // pointers from literals to tasks that add it
+        gphRcFFMulticount.addLists = new int[numOperators][];
 
         List<Integer>[] inverseMapping = new List[numExtenedStateFeatures];
 
-        for (int i = 0; i < ProRcgFFMulticount.numExtenedStateFeatures; i++) {
+        for (int i = 0; i < gphRcFFMulticount.numExtenedStateFeatures; i++) {
             inverseMapping[i] = new ArrayList<>();
         }
 
@@ -134,32 +134,32 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
         }
 
         // set number of operator (i.e. action and method) preconditions
-        numprecs = new int[ProRcgFFMulticount.numOperators];
+        numprecs = new int[gphRcFFMulticount.numOperators];
         for (int i = 0; i < ProgressionNetwork.flatProblem.numOfOperators; i++) {
             numprecs[i] = ProgressionNetwork.flatProblem.precLists[i].length;
         }
 
         for (int methodI = ProgressionNetwork.flatProblem.numOfOperators; methodI < numOperators; methodI++) {
-            ProMethod m = ProRcgFFMulticount.IndexToMethodGet(methodI);
+            ProMethod m = gphRcFFMulticount.IndexToMethodGet(methodI);
             numprecs[methodI] = m.numDistinctSubTasks;
             precLists[methodI] = new int[m.subtasks.length];
 
             for (int subtaskId = 0; subtaskId < m.subtasks.length; subtaskId++) {
                 Task t = m.subtasks[subtaskId];
-                int taskIndex = ProRcgFFMulticount.TaskToIndex.get(t);
+                int taskIndex = gphRcFFMulticount.TaskToIndex.get(t);
                 precLists[methodI][subtaskId] = taskIndex;
                 if (!inverseMapping[taskIndex].contains(methodI)) // this is necessary since there might be methods that have the same subtask twice
                     inverseMapping[taskIndex].add(methodI);
             }
 
-            int compTaskIndex = ProRcgFFMulticount.TaskToIndex.get(m.m.abstractTask());
+            int compTaskIndex = gphRcFFMulticount.TaskToIndex.get(m.m.abstractTask());
             addLists[methodI] = new int[1];
             addLists[methodI][0] = compTaskIndex;
         }
 
         operatorsWithoutPrec = new UUIntStack();
-        for (int i = 0; i < ProRcgFFMulticount.numOperators; i++) {
-            if (ProRcgFFMulticount.precLists[i].length == 0) {
+        for (int i = 0; i < gphRcFFMulticount.numOperators; i++) {
+            if (gphRcFFMulticount.precLists[i].length == 0) {
                 operatorsWithoutPrec.push(i);
             }
         }
@@ -178,17 +178,17 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
             addLists[i] = new int[ProgressionNetwork.flatProblem.addLists[i].length + 1];
             int j;
             for (j = 0; j < ProgressionNetwork.flatProblem.addLists[i].length; j++) {
-                ProRcgFFMulticount.addLists[i][j] = ProgressionNetwork.flatProblem.addLists[i][j];
+                gphRcFFMulticount.addLists[i][j] = ProgressionNetwork.flatProblem.addLists[i][j];
             }
-            ProRcgFFMulticount.addLists[i][j] = ProgressionNetwork.flatProblem.numOfStateFeatures + i; // actions are located after the original state features and this is the i-th action
+            gphRcFFMulticount.addLists[i][j] = ProgressionNetwork.flatProblem.numOfStateFeatures + i; // actions are located after the original state features and this is the i-th action
         }
 
         // generate lists mapping literal to lists of operators having it as add-effect
         for (int i = 0; i < numExtenedStateFeatures; i++) {
-            ProRcgFFMulticount.add2task[i] = new HashSet<>();
+            gphRcFFMulticount.add2task[i] = new HashSet<>();
         }
 
-        for (int i = 0; i < ProRcgFFMulticount.numOperators; i++) {
+        for (int i = 0; i < gphRcFFMulticount.numOperators; i++) {
             for (int addEffect : addLists[i]) {
                 add2task[addEffect].add(i);
             }
@@ -200,18 +200,18 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
 
     private int createTaskLookupTable(Set<Task> allActions, Set<Task> allTasks) {
         int taskNo = ProgressionNetwork.flatProblem.numOfStateFeatures;
-        ProRcgFFMulticount.IndexToTask = new Task[allActions.size() + allTasks.size()];
-        ProRcgFFMulticount.TaskToIndex = new HashMap<>();
+        gphRcFFMulticount.IndexToTask = new Task[allActions.size() + allTasks.size()];
+        gphRcFFMulticount.TaskToIndex = new HashMap<>();
 
         for (Task a : allActions) {
-            ProRcgFFMulticount.IndexToTaskPut(taskNo, a);
-            ProRcgFFMulticount.TaskToIndex.put(a, taskNo);
+            gphRcFFMulticount.IndexToTaskPut(taskNo, a);
+            gphRcFFMulticount.TaskToIndex.put(a, taskNo);
             taskNo++;
         }
 
         for (Task t : allTasks) {
-            ProRcgFFMulticount.IndexToTaskPut(taskNo, t);
-            ProRcgFFMulticount.TaskToIndex.put(t, taskNo);
+            gphRcFFMulticount.IndexToTaskPut(taskNo, t);
+            gphRcFFMulticount.TaskToIndex.put(t, taskNo);
             taskNo++;
         }
         return taskNo;
@@ -233,20 +233,20 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
      */
     private int createMethodLookupTable(HashMap<Task, List<ProMethod>> methods) {
         int methodID = ProgressionNetwork.flatProblem.numOfOperators;
-        ProRcgFFMulticount.MethodToIndex = new HashMap<>();
+        gphRcFFMulticount.MethodToIndex = new HashMap<>();
 
         // count methods, create array
         int anzMethods = 0;
         for (List<ProMethod> val2 : methods.values()) {
             anzMethods += val2.size();
         }
-        ProRcgFFMulticount.IndexToMethod = new ProMethod[anzMethods];
+        gphRcFFMulticount.IndexToMethod = new ProMethod[anzMethods];
 
         for (List<ProMethod> val2 : methods.values()) {
             for (ProMethod m : val2) {
-                assert (!ProRcgFFMulticount.MethodToIndex.containsKey(m));
-                ProRcgFFMulticount.MethodToIndex.put(m, methodID);
-                ProRcgFFMulticount.IndexToMethodPut(methodID, m);
+                assert (!gphRcFFMulticount.MethodToIndex.containsKey(m));
+                gphRcFFMulticount.MethodToIndex.put(m, methodID);
+                gphRcFFMulticount.IndexToMethodPut(methodID, m);
                 methodID++;
             }
         }
@@ -263,7 +263,7 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
         // [6, 1, 0, -1] means that there are 4 facts, the first one has been made true in layer 6
         // the second in layer 1... The -1 for fact 4 means that this fact has never been made true
         // contains STRIPS as well as HTN facts
-        int[] firstLayerWithFact = new int[ProRcgFFMulticount.numExtenedStateFeatures];
+        int[] firstLayerWithFact = new int[gphRcFFMulticount.numExtenedStateFeatures];
 
         // operatorDelta is a list of lists. Each inner list contains those actions that are applicable
         // in this layer for the *first time*, i.e. it is the delta of applicable actions
@@ -281,7 +281,7 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
 
         // Jörg Hoffmanns measure for choosing a supporter
         // an action's difficulty is the sum of the layers of its preconditions
-        int[] actionDifficulty = new int[ProRcgFFMulticount.numOperators];
+        int[] actionDifficulty = new int[gphRcFFMulticount.numOperators];
 
         // add literals in s0 to fringe
         UUIntStack changedLiterals = new UUIntStack();
@@ -293,7 +293,7 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
                 firstLayerWithFact[i] = -1;
         }
         // init facts concerning reachable task
-        for (int i = ProgressionNetwork.flatProblem.numOfStateFeatures; i < ProRcgFFMulticount.numExtenedStateFeatures; i++) {
+        for (int i = ProgressionNetwork.flatProblem.numOfStateFeatures; i < gphRcFFMulticount.numExtenedStateFeatures; i++) {
             firstLayerWithFact[i] = -1;
         }
 
@@ -317,10 +317,10 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
         while (!temp.isEmpty()) {
             ProgressionPlanStep ps = temp.removeFirst();
             tasksInTNI.add(ps.getTask());
-            int t = ProRcgFFMulticount.TaskToIndex.get(ps.getTask());
+            int t = gphRcFFMulticount.TaskToIndex.get(ps.getTask());
             stripsAndHtnGoals.push(t);
             if (topDownReachability) {
-                reachableActions.or(ProRcgFFMulticount.tdRechability.getReachableActions(t));
+                reachableActions.or(gphRcFFMulticount.tdRechability.getReachableActions(t));
             }
             temp.addAll(ps.successorList);
         }
@@ -357,9 +357,9 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
 
             // in first layer, add actions without preconditions
             if (layerId == 1) {
-                ProRcgFFMulticount.operatorsWithoutPrec.resetIterator();
-                while (ProRcgFFMulticount.operatorsWithoutPrec.hasNext()) {
-                    int op = ProRcgFFMulticount.operatorsWithoutPrec.next();
+                gphRcFFMulticount.operatorsWithoutPrec.resetIterator();
+                while (gphRcFFMulticount.operatorsWithoutPrec.hasNext()) {
+                    int op = gphRcFFMulticount.operatorsWithoutPrec.next();
                     if ((!topDownReachability) ||
                             (op >= ProgressionNetwork.flatProblem.numOfOperators) // it is a method
                             || (reachableActions.get(op)) // or a reachable action
@@ -471,7 +471,7 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
                     if (add2task[goalFact].contains(maybeProducer)) {
                         if (prod == producerSelection.numOfPreconditions) {
                             if (numprecs[maybeProducer] < bestDifficulty) {
-                                bestDifficulty = ProRcgFFMulticount.precLists[maybeProducer].length;
+                                bestDifficulty = gphRcFFMulticount.precLists[maybeProducer].length;
                                 producer = maybeProducer;
                             }
                         } else if (prod == producerSelection.actionDifficulty) {
@@ -500,7 +500,7 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
                         numactions += count;
                 }
 
-                for (int aPrec : ProRcgFFMulticount.precLists[producer]) {
+                for (int aPrec : gphRcFFMulticount.precLists[producer]) {
                     if (trueImm.isSet(aPrec))
                         continue;
                     int flayer = firstLayerWithFact[aPrec];
@@ -539,7 +539,7 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
                     if (action < ProgressionNetwork.flatProblem.numOfOperators) {
                         sb.append(ProgressionNetwork.indexToTask[action].mediumInfo());
                     } else
-                        sb.append(ProRcgFFMulticount.IndexToMethodGet(action).m.name());
+                        sb.append(gphRcFFMulticount.IndexToMethodGet(action).m.name());
                 }
             }
 
@@ -556,7 +556,7 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
                     if (j < ProgressionNetwork.flatProblem.numOfStateFeatures) {
                         sb.append("fact" +  j);
                     } else
-                        sb.append(ProRcgFFMulticount.IndexToTaskGet(j).mediumInfo());
+                        sb.append(gphRcFFMulticount.IndexToTaskGet(j).mediumInfo());
                 }
             }
 
@@ -573,7 +573,7 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
                 if (fact < ProgressionNetwork.flatProblem.numOfStateFeatures) {
                     sb.append("fact" +  fact);
                 } else
-                    sb.append(ProRcgFFMulticount.IndexToTaskGet(fact).mediumInfo());
+                    sb.append(gphRcFFMulticount.IndexToTaskGet(fact).mediumInfo());
                 if (goalDelta.get(i).get(fact) > 1) {
                     sb.append(" * " + goalDelta.get(i).get(fact));
                 }
@@ -596,14 +596,14 @@ public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
 
     @Override
     public GroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps, ProMethod m) {
-        ProRcgFFMulticount crpg = new ProRcgFFMulticount();
+        gphRcFFMulticount crpg = new gphRcFFMulticount();
         crpg.build(tn);
         return crpg;
     }
 
     @Override
     public GroundedProgressionHeuristic update(ProgressionNetwork tn, ProgressionPlanStep ps) {
-        ProRcgFFMulticount crpg = new ProRcgFFMulticount();
+        gphRcFFMulticount crpg = new gphRcFFMulticount();
         crpg.build(tn);
         return crpg;
     }
