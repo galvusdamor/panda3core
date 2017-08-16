@@ -42,7 +42,7 @@ public class TaskReachabilityGraph implements IActionReachability {
         this.reachableTasks = new BitSet[numTasks];
         for (int i = 0; i < numTasks; i++) {
             this.reachableTasks[i] = new BitSet(numTasks);
-            this.reachableTasks[i].set(0, numTasks - 1, false);
+            this.reachableTasks[i].set(0, numTasks, false);
             this.reachableTasks[i].set(i, true); // the task itself is reachable
         }
 
@@ -55,7 +55,7 @@ public class TaskReachabilityGraph implements IActionReachability {
 
         // set root to those tasks in the initial task network
         this.root = new BitSet(numTasks);
-        this.root.set(0, numTasks - 1, false);
+        this.root.set(0, numTasks, false);
         for (ProgressionPlanStep ps : initialTasks) {
             root.set(tToI(ps.getTask()));
         }
@@ -66,12 +66,12 @@ public class TaskReachabilityGraph implements IActionReachability {
         lowlink = new int[numTasks];
 
         U = new BitSet(numTasks);
-        U.set(0, numTasks - 1, false);
+        U.set(0, numTasks, false);
 
         S = new int[numTasks];
         iS = -1;
         nodesInS = new BitSet(numTasks);
-        nodesInS.set(0, numTasks - 1, false);
+        nodesInS.set(0, numTasks, false);
 
         scc = new int[numTasks][];
         iScc = -1;
@@ -94,11 +94,11 @@ public class TaskReachabilityGraph implements IActionReachability {
         // set reachability for each scc to the union of the tasks reachable from its component-tasks
         scc2reachableTasks = new BitSet[scc.length];
         finished = new BitSet(scc.length);
-        finished.set(0, scc.length - 1, false);
+        finished.set(0, scc.length, false);
 
         for (int i = 0; i < scc.length; i++) {
             scc2reachableTasks[i] = new BitSet(numTasks);
-            scc2reachableTasks[i].set(0, numTasks - 1, false);
+            scc2reachableTasks[i].set(0, numTasks, false);
 
             int[] current = scc[i];
             for (int j = 0; j < current.length; j++) {
@@ -123,7 +123,7 @@ public class TaskReachabilityGraph implements IActionReachability {
             reachableTasks[i] = scc2reachableTasks[taskToScc[i]];
             maxDecompDepth[i] = temp[taskToScc[i]];
             this.reachableActions[i] = new BitSet(numActions);
-            this.reachableActions[i].set(0, numActions - 1, false);
+            this.reachableActions[i].set(0, numActions, false);
             v = reachableTasks[i].nextSetBit(0);
             while ((v > -1) && (v < numActions)) {
                 this.reachableActions[i].set(v);

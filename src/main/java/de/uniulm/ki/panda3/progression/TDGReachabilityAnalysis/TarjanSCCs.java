@@ -33,12 +33,12 @@ public class TarjanSCCs {
         lowlink = new int[nodeCount];
 
         U = new BitSet(nodeCount);
-        U.set(0, nodeCount - 1, false);
+        U.set(0, nodeCount, false);
 
         S = new int[nodeCount];
         iS = -1;
         nodesInS = new BitSet(nodeCount);
-        nodesInS.set(0, nodeCount - 1, false);
+        nodesInS.set(0, nodeCount, false);
 
         scc = new int[nodeCount][];
         iScc = -1;

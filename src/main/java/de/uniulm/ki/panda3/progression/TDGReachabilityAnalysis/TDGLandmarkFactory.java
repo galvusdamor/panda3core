@@ -40,7 +40,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
     }
 
     public TDGLandmarkFactory(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
-        System.out.println("Calculating HTN invariants ...");
+        System.out.println("Calculating HTN reachability ...");
         long time = System.currentTimeMillis();
         this.numActions = numActions;
         this.numTasks = numTasks;
@@ -49,7 +49,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
 
         // set root to those tasks in the initial task network
         this.root = new BitSet(nodeCount);
-        this.root.set(0, nodeCount - 1, false);
+        this.root.set(0, nodeCount, false);
         for (ProgressionPlanStep ps : initialTasks)
             root.set(tToI(ps.getTask()));
 
@@ -88,7 +88,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
         this.reachableActions = new BitSet[numTasks];
         for (int i = 0; i < reachableActions.length; i++) {
             this.reachableActions[i] = new BitSet(numActions);
-            this.reachableActions[i].set(0, numActions - 1, false);
+            this.reachableActions[i].set(0, numActions, false);
             for (int v = possible[i].nextSetBit(0); (v > -1) && (v < numActions); v = possible[i].nextSetBit(v + 1))
                 this.reachableActions[i].set(v);
         }
@@ -166,7 +166,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
         graph = new BitSet[nodeCount];
         for (int i = 0; i < nodeCount; i++) {
             graph[i] = new BitSet(nodeCount);
-            graph[i].set(0, nodeCount - 1, false);
+            graph[i].set(0, nodeCount, false);
         }
 
         for (Task t : methods.keySet()) {
