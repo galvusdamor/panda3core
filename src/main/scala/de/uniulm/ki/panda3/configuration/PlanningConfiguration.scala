@@ -639,7 +639,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
 
-  private def runReachabilityAnalyses(domain: Domain, problem: Plan, runForGrounder: Boolean, timeCapsule: TimeCapsule = new TimeCapsule()): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
+  private def runReachabilityAnalyses(domain: Domain, problem: Plan, runForGrounder: Boolean, timeCapsule: TimeCapsule = new TimeCapsule(),
+    firstAnalysis : Boolean = false): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     val emptyAnalysis = AnalysisMap(Map())
 
     assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
@@ -662,7 +663,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { liftedResult._1._1.tasks contains _.schema })
 
     // convert to SAS+
-    val sasPlusResult = if (preprocessingConfiguration.convertToSASP && !liftedResult._1._1.isGround) {
+    val sasPlusResult = if (preprocessingConfiguration.convertToSASP && firstAnalysis) {
       import sys.process._
 
       info("Converting to SAS+ ... ")
@@ -853,7 +854,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                                            )
 
     // initial run of the reachability analysis on the domain, until it has converged
-    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compiledDomain, compiledProblem, runForGrounder = true, timeCapsule)
+    val ((domainAndPlan, analysisMap), _) = runReachabilityAnalyses(compiledDomain, compiledProblem, runForGrounder = true, timeCapsule, firstAnalysis = true)
 
     // finished reachability analysis now we have to ground
     if (preprocessingConfiguration.groundDomain) {
