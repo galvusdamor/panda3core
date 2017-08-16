@@ -1,4 +1,4 @@
-package UUBenchmarksets.provableHard.problemGenerators.cfGrammarIntersection;
+package de.uniulm.ki.panda3.problemGenerators.cfgIntersectionGenerator;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

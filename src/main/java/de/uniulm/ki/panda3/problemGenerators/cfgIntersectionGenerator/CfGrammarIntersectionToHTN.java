@@ -1,4 +1,4 @@
-package UUBenchmarksets.provableHard.problemGenerators.cfGrammarIntersection;
+package de.uniulm.ki.panda3.problemGenerators.cfgIntersectionGenerator;
 
 import de.uniulm.ki.panda3.symbolic.csp.CSP;
 import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
@@ -77,7 +77,6 @@ public class CfGrammarIntersectionToHTN {
 
     static int id = 0;
     static Task epsilon = new ReducedTask("epsilon", true, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<>(new Vector<Literal>(0, 0, 0)), new And<>(new Vector<Literal>(0, 0, 0)));
-    ;
 
     public static Tuple2<Domain, Plan> grammerInterProb(CfGrammar g1, CfGrammar g2) {
 
