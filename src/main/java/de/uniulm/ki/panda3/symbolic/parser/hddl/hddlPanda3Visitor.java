@@ -1057,8 +1057,8 @@ public class hddlPanda3Visitor {
     // Note: names of parameters or quantified variables can not be rebound:
     // ∀x:∀x:P(x) is not allowed
     //
-    private static class VarContext {
-        private java.util.List<Variable> parameters = new ArrayList<>();
+    public static class VarContext {
+        public java.util.List<Variable> parameters = new ArrayList<>();
         private java.util.List<Variable> quantifiedVars = new ArrayList<>();
 
         public VarContext child() {
