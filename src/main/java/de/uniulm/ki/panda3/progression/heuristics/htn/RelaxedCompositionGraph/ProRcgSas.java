@@ -19,15 +19,21 @@ import java.util.*;
 /**
  * Created by dh on 10.05.17.
  */
-public class ProRcgSas implements GroundedProgressionHeuristic {
+public class ProRcgSas extends GroundedProgressionHeuristic {
     static protected HtnCompositionEncoding compEnc;
     static private SasHeuristic heuristic;
+    static private SasHeuristic heuristic2;
     protected IncrementInformation inc;
     private int heuristicVal;
 
     @Override
+    public BitSet helpfulOps() {
+        return heuristic.helpfulOps;
+    }
+
+    @Override
     public String getName() {
-        return "hhRelataxedCompositionGraph with classical heuristic: " + heuristic.toString();
+        return "hhRelataxedComposition-with-" + heuristic.toString();
     }
 
     @Override
@@ -42,12 +48,14 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
                      SasHeuristic.SasHeuristics heuristic,
                      HashMap<Task, List<ProMethod>> methods,
                      List<ProgressionPlanStep> initialTasks) {
-        /*hCausalGraph gr = new hCausalGraph(flat);
+/*
+        hCausalGraph gr = new hCausalGraph(flat);
         BitSet g = new BitSet();
         for (int f : flat.gList)
             g.set(f);
         gr.calcHeu(flat.getS0(), g);
-        System.exit(0);*/
+        System.exit(0);
+*/
         this.compEnc = new HtnCompositionEncoding(flat);
         this.compEnc.generateTaskCompGraph(methods, initialTasks);
         //System.out.println(this.compEnc.toString());
@@ -55,20 +63,24 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
         System.out.println(this.compEnc.getStatistics());
 
         if (heuristic == SasHeuristic.SasHeuristics.hAdd) {
-            //this.heuristic = new hAddRtg(this.compEnc);
             this.heuristic = new hAddhFFEq(this.compEnc, SasHeuristic.SasHeuristics.hAdd);
         } else if (heuristic == SasHeuristic.SasHeuristics.hMax) {
-            //this.heuristic = new hMaxRtg(this.compEnc);
             this.heuristic = new hMaxEq(this.compEnc);
         } else if (heuristic == SasHeuristic.SasHeuristics.hFF) {
-            //this.heuristic = new hFFRtg(this.compEnc);
             this.heuristic = new hAddhFFEq(this.compEnc, SasHeuristic.SasHeuristics.hFF);
+            supportsHelpfulActions = false;
+        } else if (heuristic == SasHeuristic.SasHeuristics.hFFwithHA) {
+            this.heuristic = new hAddhFFEq(this.compEnc, SasHeuristic.SasHeuristics.hFF);
+            supportsHelpfulActions = true;
+        } else if (heuristic == SasHeuristic.SasHeuristics.hCG) {
+            //this.heuristic2 = new hMaxEq(this.compEnc);
+            this.heuristic = new hCausalGraph(this.compEnc);
         } else if (heuristic == SasHeuristic.SasHeuristics.hLmCut) {
-            //this.heuristic = new hLmCutRtg(this.compEnc, false);
             this.heuristic = new hLmCutEq(this.compEnc, false);
+            //this.heuristic = new hCausalGraph(this.compEnc);
+            //this.heuristic2 = new hAddhFFEq(this.compEnc, SasHeuristic.SasHeuristics.hFF);
         } else if (heuristic == SasHeuristic.SasHeuristics.hIncLmCut) {
             this.inc = new IncInfLmCut();
-            //this.heuristic = new hLmCutRtg(this.compEnc, true);
             this.heuristic = new hLmCutEq(this.compEnc, true);
         }
     }
@@ -77,7 +89,7 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
     public GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, ProMethod m) {
         // prepare s0 and g
         // need to modify the facts that define top-down-reachability
-        BitSet reachableActions = new BitSet(compEnc.numOfOperators);
+        BitSet reachableActions = new BitSet(compEnc.numOfNonHtnActions);
         BitSet htnGoal = new BitSet(compEnc.numOfStateFeatures);
 
         for (ProgressionPlanStep first : newTN.getFirstAbstractTasks())
@@ -86,27 +98,30 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
         for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
             prepareS0andG(first, reachableActions, htnGoal);
 
-        BitSet s0 = (BitSet) newTN.state.clone();
-        BitSet g = new BitSet(compEnc.numOfStateFeatures);
-
-        for (int reachable = reachableActions.nextSetBit(0); reachable >= 0; reachable = reachableActions.nextSetBit(reachable + 1)) {
-            s0.set(compEnc.firstTdrIndex + reachable);
+        BitSet s0 = (BitSet) compEnc.s0mask.clone();
+        for (int i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
+            s0.set(compEnc.reachable[i]);
+            s0.set(compEnc.unreachable[i], false);
         }
+        s0.or(newTN.state);
+
+        BitSet g = new BitSet();
 
         // prepare g
         for (int fact : compEnc.gList) {
             g.set(fact);
         }
 
-        for (int goalFact = htnGoal.nextSetBit(0); goalFact >= 0; goalFact = htnGoal.nextSetBit(goalFact + 1)) {
-            g.set(goalFact + this.compEnc.firstTaskCompIndex);
-            //System.out.println(compEnc.factStrs[goalFact + this.compEnc.firstTaskCompIndex]); // for debugging
+        for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
+            g.set(compEnc.reached[goalTask]);
+            g.set(compEnc.unreached[goalTask], false);
+            //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
         }
 
         if (heuristic.isIncremental()) {
             int lastAction;
             if (m != null)
-                lastAction = compEnc.MethodToIndex.get(m);
+                lastAction = m.methodID;
             else
                 lastAction = ps.taskIndex;
 
@@ -115,9 +130,47 @@ public class ProRcgSas implements GroundedProgressionHeuristic {
             res.inc = this.heuristic.getIncInf();
             return res;
         } else {
+            /*
+            if(g.cardinality() == 0)
+                System.out.println();
+            int ffVal = heuristic2.calcHeu(s0, (BitSet) g.clone());
+            if (ffVal == Integer.MAX_VALUE)
+                if (reachable(s0, g, compEnc))
+                    if (reachable(s0, g, compEnc))
+                        System.out.println("oh oh");
+            int cgVal = heuristic.calcHeu(s0, g);
+            if((ffVal == Integer.MAX_VALUE) &&(cgVal < Integer.MAX_VALUE))
+                System.out.print("");
+            */
+            //if (heuristic2.calcHeu(s0, g) == SasHeuristic.cUnreachable)
+            //    this.heuristicVal = SasHeuristic.cUnreachable;
+            //else
             this.heuristicVal = heuristic.calcHeu(s0, g);
             return this;
         }
+    }
+
+    private boolean reachable(BitSet s0, BitSet g, SasPlusProblem p) {
+        BitSet sOld = new BitSet();
+        BitSet s = (BitSet) s0.clone();
+        while (true) {
+            opLoop:
+            for (int i = 0; i < p.numOfOperators; i++) {
+                for (int prec : p.precLists[i]) {
+                    if (!s.get(prec))
+                        continue opLoop;
+                }
+                for (int add : p.addLists[i])
+                    s.set(add);
+            }
+            if (s.equals(sOld))
+                break;
+            sOld = (BitSet) s.clone();
+        }
+        for (int gf = g.nextSetBit(0); gf >= 0; gf = g.nextSetBit(gf + 1))
+            if (!s.get(gf))
+                return false;
+        return true;
     }
 
     protected void prepareS0andG(ProgressionPlanStep ps, BitSet r, BitSet g) {

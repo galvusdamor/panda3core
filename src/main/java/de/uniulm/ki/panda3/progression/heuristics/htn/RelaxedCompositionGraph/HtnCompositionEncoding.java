@@ -17,19 +17,23 @@ public class HtnCompositionEncoding extends SasPlusProblem {
     int numTasks;
     int numAnM;
     int numExtenedStateFeatures;
+    int numOfNonHtnActions;
 
-    public HashMap<ProMethod, Integer> MethodToIndex;
     public ProMethod[] IndexToMethod;
 
     public IActionReachability tdRechability;
-    public int firstTdrIndex;
-    public int lastTdrIndex;
 
-    public int firstTaskCompIndex;
-    public int lastTaskCompIndex;
-
+    public int firstHtnIndex;
+    public int firstBurIndex;
     public int lastOverallIndex;
     public int methodCosts = 1;
+
+    public int[] unreachable;
+    public int[] reachable;
+    public int[] unreached;
+    public int[] reached;
+
+    public BitSet s0mask;
 
     public HtnCompositionEncoding(String Filename) throws Exception {
         super(Filename);
@@ -61,25 +65,45 @@ public class HtnCompositionEncoding extends SasPlusProblem {
 
     public void generateTaskCompGraph(HashMap<Task, List<ProMethod>> methods,
                                       List<ProgressionPlanStep> initialTasks) {
-
+        this.numOfNonHtnActions = numOfOperators;
         this.numAnM = createMethodLookupTable(methods);
         this.numTasks = ProgressionNetwork.indexToTask.length;
         tdRechability = new TDGLandmarkFactory(methods, initialTasks, this.numTasks, this.numOfOperators);
 
-        // set indices
-        this.firstTdrIndex = this.numOfStateFeatures;
-        this.lastTdrIndex = this.firstTdrIndex + this.numOfOperators - 1;
-        this.firstTaskCompIndex = this.lastTdrIndex + 1;
-        this.lastTaskCompIndex = this.firstTaskCompIndex + this.numTasks - 1;
-        this.lastOverallIndex = this.lastTaskCompIndex;
+        unreachable = new int[numOfOperators];
+        reachable = new int[numOfOperators];
+        unreached = new int[numTasks];
+        reached = new int[numTasks];
 
+        // create reachability variables
+        int nextStateBit = this.numOfStateFeatures;
+        for (int i = 0; i < numOfOperators; i++) {
+            unreachable[i] = nextStateBit++;
+            reachable[i] = nextStateBit++;
+        }
+        firstBurIndex = nextStateBit;
+        for (int i = 0; i < numTasks; i++) {
+            unreached[i] = nextStateBit++;
+            reached[i] = nextStateBit++;
+        }
+
+        s0mask = new BitSet();
+        for (int i = 0; i < numOfNonHtnActions; i++) {
+            s0mask.set(unreachable[i]);
+        }
+        for (int i = 0; i < numTasks; i++) {
+            s0mask.set(unreached[i]);
+        }
+
+        this.firstHtnIndex = this.numOfStateFeatures;
+        this.lastOverallIndex = nextStateBit - 1;
         this.numExtenedStateFeatures = this.lastOverallIndex + 1;
 
         int[][] tPrecLists = new int[numAnM][];
-        int[] tNumPrecs = new int[this.numAnM];
+        int[] tNumPrecs = new int[numAnM];
         int[][] tAddLists = new int[numAnM][];
         int[][] tDelLists = new int[numAnM][];
-        String[] tOpNames = new String[this.numAnM];
+        String[] tOpNames = new String[numAnM];
         int[] tCosts = new int[numAnM];
 
         /**
@@ -94,14 +118,14 @@ public class HtnCompositionEncoding extends SasPlusProblem {
             for (iP = 0; iP < tNumPrecs[iA] - 1; iP++) {
                 tPrecLists[iA][iP] = this.precLists[iA][iP];
             }
-            tPrecLists[iA][iP] = firstTdrIndex + iA;
+            tPrecLists[iA][iP] = reachable[iA];
 
             tAddLists[iA] = new int[this.addLists[iA].length + 1];
             int iE;
             for (iE = 0; iE < this.addLists[iA].length; iE++) {
                 tAddLists[iA][iE] = this.addLists[iA][iE];
             }
-            tAddLists[iA][iE] = firstTaskCompIndex + iA;
+            tAddLists[iA][iE] = reached[iA];
 
             tOpNames[iA] = opNames[iA];
             tCosts[iA] = costs[iA];
@@ -118,13 +142,13 @@ public class HtnCompositionEncoding extends SasPlusProblem {
 
             for (int iSubTask = 0; iSubTask < m.subtasks.length; iSubTask++) {
                 Task t = m.subtasks[iSubTask];
-                int taskIndex = getTaskIndex(t);
-                tPrecLists[iM][iSubTask] = taskIndex;
+                int taskIndex = ProgressionNetwork.taskToIndex.get(t);
+                tPrecLists[iM][iSubTask] = reached[taskIndex];
             }
 
-            int compTaskIndex = getTaskIndex(m.m.abstractTask());
+            int compTaskIndex = ProgressionNetwork.taskToIndex.get(m.m.abstractTask());
             tAddLists[iM] = new int[1];
-            tAddLists[iM][0] = compTaskIndex;
+            tAddLists[iM][0] = reached[compTaskIndex];
 
             tOpNames[iM] = m.m.name() + "@" + m.m.abstractTask().shortInfo();
             tCosts[iM] = this.methodCosts;
@@ -150,8 +174,10 @@ public class HtnCompositionEncoding extends SasPlusProblem {
             tIndexToMutexGroup[i] = indexToMutexGroup[i];
 
         int group = indexToMutexGroup[indexToMutexGroup.length - 1] + 1;
-        for (int i = indexToMutexGroup.length; i < tIndexToMutexGroup.length; i++)
-            tIndexToMutexGroup[i] = group++;
+        for (int i = indexToMutexGroup.length; i < tIndexToMutexGroup.length; i += 2) { // new vars have 2 vals each
+            tIndexToMutexGroup[i] = group;
+            tIndexToMutexGroup[i + 1] = group++;
+        }
         indexToMutexGroup = tIndexToMutexGroup;
 
         this.removeDublicates(false);
@@ -162,25 +188,45 @@ public class HtnCompositionEncoding extends SasPlusProblem {
 
         String[] tFactStrs = new String[numOfStateFeatures];
 
-        for (int i = 0; i < firstTdrIndex; i++) {
+        for (int i = 0; i < firstHtnIndex; i++) {
             tFactStrs[i] = factStrs[i];
         }
 
-        for (int i = firstTdrIndex; i <= lastTdrIndex; i++) {
-            tFactStrs[i] = "tdr-" + opNames[i - firstTdrIndex];
+        int current = firstHtnIndex;
+        for (int i = 0; i < numOfNonHtnActions; i++) {
+            assert current == unreachable[i];
+            tFactStrs[current++] = "unreachable-" + opNames[i];
+            assert current == reachable[i];
+            tFactStrs[current++] = "reachable-" + opNames[i];
         }
 
-        for (int i = firstTaskCompIndex; i <= lastTaskCompIndex; i++) {
-            tFactStrs[i] = "bur-" + ProgressionNetwork.indexToTask[i - firstTaskCompIndex].shortInfo();
+        assert current == firstBurIndex;
+        for (int i = 0; i < numTasks; i++) {
+            assert current == unreached[i];
+            tFactStrs[current++] = "unreached-" + ProgressionNetwork.indexToTask[i].shortInfo();
+            assert current == reached[i];
+            tFactStrs[current++] = "reached-" + ProgressionNetwork.indexToTask[i].shortInfo();
         }
+        assert (current - 1) == lastOverallIndex;
+
         factStrs = tFactStrs;
+
+        int varI = varNames.length - 1;
+        int varnum = Integer.parseInt(varNames[varI].substring(3));
+        String[] tNames = new String[numOfVars];
+        for (int i = 0; i < varNames.length; i++)
+            tNames[i] = varNames[i];
+        for (int i = varNames.length; i < tNames.length; i++)
+            tNames[i] = "var" + ++varnum;
+        varNames = tNames;
         //System.out.println(this.toString());
-        assert (this.correctModel());
+        assert (this.correctModel(true));
     }
+
 
     private int createMethodLookupTable(HashMap<Task, List<ProMethod>> methods) {
         int methodID = this.numOfOperators;
-        this.MethodToIndex = new HashMap<>();
+        HashMap<ProMethod, Integer> MethodToIndex = new HashMap<>();
 
         // count methods, create array
         int anzMethods = 0;
@@ -191,8 +237,9 @@ public class HtnCompositionEncoding extends SasPlusProblem {
 
         for (List<ProMethod> val : methods.values())
             for (ProMethod m : val) {
-                assert (!this.MethodToIndex.containsKey(m));
-                this.MethodToIndex.put(m, methodID);
+                assert (!MethodToIndex.containsKey(m));
+                MethodToIndex.put(m, methodID);
+                m.methodID = methodID;
                 this.setMethodIndex(methodID, m);
                 methodID++;
             }
@@ -206,9 +253,5 @@ public class HtnCompositionEncoding extends SasPlusProblem {
 
     private void setMethodIndex(int index, ProMethod m) {
         IndexToMethod[index - this.numOfOperators] = m;
-    }
-
-    private int getTaskIndex(Task t) {
-        return this.firstTaskCompIndex + ProgressionNetwork.taskToIndex.get(t);
     }
 }

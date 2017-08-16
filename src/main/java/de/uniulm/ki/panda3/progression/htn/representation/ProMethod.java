@@ -15,40 +15,7 @@ import java.util.*;
  */
 public class ProMethod {
 
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("task ");
-        sb.append(this.m.abstractTask().longInfo());
-        sb.append("\n t { 0: ");
-        if (subtasks.length > 0) {
-            sb.append(subtasks[0].longInfo());
-        }
-        for (int i = 1; i < subtasks.length; i++) {
-            sb.append("\n     ");
-            sb.append(i);
-            sb.append(": ");
-            sb.append(subtasks[i].longInfo());
-        }
-        sb.append("}\n < { ");
-        if (orderings.size() > 0) {
-            int[] ord = orderings.get(0);
-            sb.append(ord[0]);
-            sb.append("<");
-            sb.append(ord[1]);
-
-        }
-        for (int i = 1; i < orderings.size(); i++) {
-            int[] ord = orderings.get(i);
-            sb.append(", ");
-            sb.append(ord[0]);
-            sb.append("<");
-            sb.append(ord[1]);
-        }
-        sb.append(" }\n");
-        return sb.toString();
-    }
-
+    public int methodID;
     public final SimpleDecompositionMethod m; // this is the original method that is saved for printing the solution
     public Task[] subtasks; // these are the subtasks
     public int numDistinctSubTasks = 0;
@@ -146,4 +113,37 @@ public class ProMethod {
         return new ProSubtaskNetwork(steps, f, l);
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("task ");
+        sb.append(this.m.abstractTask().longInfo());
+        sb.append("\n t { 0: ");
+        if (subtasks.length > 0) {
+            sb.append(subtasks[0].longInfo());
+        }
+        for (int i = 1; i < subtasks.length; i++) {
+            sb.append("\n     ");
+            sb.append(i);
+            sb.append(": ");
+            sb.append(subtasks[i].longInfo());
+        }
+        sb.append("}\n < { ");
+        if (orderings.size() > 0) {
+            int[] ord = orderings.get(0);
+            sb.append(ord[0]);
+            sb.append("<");
+            sb.append(ord[1]);
+
+        }
+        for (int i = 1; i < orderings.size(); i++) {
+            int[] ord = orderings.get(i);
+            sb.append(", ");
+            sb.append(ord[0]);
+            sb.append("<");
+            sb.append(ord[1]);
+        }
+        sb.append(" }\n");
+        return sb.toString();
+    }
 }
