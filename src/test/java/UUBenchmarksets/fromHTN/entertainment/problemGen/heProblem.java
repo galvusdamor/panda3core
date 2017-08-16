@@ -7,8 +7,8 @@ import java.util.*;
  */
 public class heProblem {
 
-    private List<heDevice> devices;
-    private String name;
+    public List<heDevice> devices;
+    public String name;
     private List<heDevice[]> aGoals;
     private List<heDevice[]> avGoals;
     private List<heDevice[]> vGoals;
@@ -51,7 +51,7 @@ public class heProblem {
 
         sb.append(" )\n" +
                 " (:htn\n" +
-                "  :tasks (and\n");
+                "  :ordered-tasks (and\n");
 
         for (heDevice[] goal : this.aGoals)
             sb.append("     (a_connect " + goal[0].getName() + " " + goal[1].getName() + ")\n");
