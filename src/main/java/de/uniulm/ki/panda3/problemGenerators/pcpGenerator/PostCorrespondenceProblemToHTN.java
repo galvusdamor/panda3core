@@ -1,11 +1,14 @@
-package UUBenchmarksets.provableHard.problemGenerators.postCorrespondenceProblem;
+package de.uniulm.ki.panda3.problemGenerators.pcpGenerator;
 
-import UUBenchmarksets.provableHard.problemGenerators.cfGrammarIntersection.CfGrammar;
-import UUBenchmarksets.provableHard.problemGenerators.cfGrammarIntersection.CfGrammarIntersectionToHTN;
+import de.uniulm.ki.panda3.problemGenerators.cfgIntersectionGenerator.CfGrammar;
+import de.uniulm.ki.panda3.problemGenerators.cfgIntersectionGenerator.CfGrammarIntersectionToHTN;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.ioInterface.FileHandler;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import scala.Tuple2;
+
+ // https://www8.cs.umu.se/kurser/5DV037/VT14/material/12-lecture.pdf
+ // http://wimhesselink.nl/pub/whh471.pdf
 
 /**
  * Created by dh on 22.02.17.
@@ -17,6 +20,7 @@ public class PostCorrespondenceProblemToHTN {
                     "\n program in.txt out-domain.txt out-problem.txt");
             return;
         }
+
 
         PostCorrespondenceProblem pkp = new PostCorrespondenceProblem(args[0]);
         pkp.createGrammar();

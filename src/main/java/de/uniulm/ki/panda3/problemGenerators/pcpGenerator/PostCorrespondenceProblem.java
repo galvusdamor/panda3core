@@ -1,6 +1,6 @@
-package UUBenchmarksets.provableHard.problemGenerators.postCorrespondenceProblem;
+package de.uniulm.ki.panda3.problemGenerators.pcpGenerator;
 
-import UUBenchmarksets.provableHard.problemGenerators.cfGrammarIntersection.CfGrammar;
+import de.uniulm.ki.panda3.problemGenerators.cfgIntersectionGenerator.CfGrammar;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -23,6 +23,8 @@ public class PostCorrespondenceProblem {
         BufferedReader br = new BufferedReader(new FileReader(path));
         while (br.ready()) {
             String l = br.readLine();
+            if(l.startsWith("#"))
+                continue;
             String[] split = l.split("-");
             assert (split.length == 2);
             x.add(split[0].trim());
@@ -61,7 +63,7 @@ public class PostCorrespondenceProblem {
             rulesRight.add(right);
         }
         for (int i = 0; i < seq.size(); i++) {
-            terminal.add("t" + (i + 1));
+            //terminal.add("t" + (i + 1));
             String someX = seq.get(i);
             List<String> right = new ArrayList<>();
             right.add("t" + (i + 1));
