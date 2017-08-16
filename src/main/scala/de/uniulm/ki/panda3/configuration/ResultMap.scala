@@ -210,6 +210,8 @@ object Information {
   val SOLVED                  = "40 sat:90:solved"
   val TIMEOUT                 = "40 sat:91:timeout"
 
+  val PLAN_VERIFIED = "40 sat:99:plan verified"
+
 }
 
 case class ResultMap(map: Map[ResultType, Any]) extends (ResultType => Any) {

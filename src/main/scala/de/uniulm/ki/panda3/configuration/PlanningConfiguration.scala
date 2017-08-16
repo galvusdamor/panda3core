@@ -142,7 +142,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
     searchConfiguration match {
-      case search: PlanBasedSearch        =>
+      case search: PlanBasedSearch =>
         // some heuristics need additional preprocessing, e.g. to build datastructures they need
         timeCapsule start HEURISTICS_PREPARATION
         // TDG based heuristics need the TDG
@@ -311,7 +311,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, satSearch.reductionMethod, timeCapsule, informationCapsule)
+          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
+                                 satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.forceClassicalEncoding)
 
 
 
@@ -344,6 +345,34 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               }
 
               (solution, false)
+
+
+            case OptimalSATRun(overrideK) =>
+              // start with K = 0 and loop
+              // TODO this is only good for total order ...
+              var solution: Option[Seq[Task]] = None
+              var error: Boolean = false
+              var currentLength = 1
+              var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+              var usedTime: Long = remainingTime / Math.max(1, 10 / (currentLength + 1))
+              var expansion: Boolean = true
+              while (solution.isEmpty && !error && expansion && usedTime > 0) {
+                println("\nRunning SAT search with K = " + currentLength)
+                println("Time remaining for SAT search " + remainingTime + "ms")
+                println("Time used for this run " + usedTime + "ms\n\n")
+
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, currentLength, 0, defineK = overrideK, checkSolution = satSearch.checkResult)
+                println("ERROR " + satError)
+
+                error |= satError
+                solution = satResult
+                expansion = expansionPossible
+                currentLength += 1
+                remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+                usedTime = remainingTime / Math.max(1, 10 / (currentLength + 1))
+              }
+
+              (solution, false)
           }
 
           informationCapsule.set(Information.SOLVED, if (solution.isDefined) "true" else "false")
@@ -365,7 +394,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           val (isSolution, runCompleted) = runner.runWithTimeLimit(remainingTime, taskSequenceToVerify, 0, includeGoal = true, None, timeCapsule, informationCapsule)
 
-
+          informationCapsule.set(Information.PLAN_VERIFIED, isSolution.toString)
 
           runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
         })
@@ -701,8 +730,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         assert(externalProgramPaths contains FastDownward, "no path to fast downward is specified")
         val fdPath = externalProgramPaths(FastDownward)
 
-        // semantic empty line
-        writeStringToFile("#!/bin/bash\ncd .fd" + uuid + "\npython " + fdPath + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
+        val path = if (fdPath.startsWith("/")) fdPath else "../" + fdPath
+        writeStringToFile("#!/bin/bash\ncd .fd" + uuid + "\npython " + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
 
         ("bash runFD" + uuid + ".sh") !!
         // semantic empty line
@@ -956,6 +985,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
            assert(splittedPath.length == 2, "paths must be specified in the program=path format")
            val program = splittedPath.head match {
              case "fd" | "fast-downward" | "fastdownward" => FastDownward
+             case "riss6"                                 => RISS6
+             case "mapleCOMSPS"                           => MapleCOMSPS
            }
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
@@ -1524,11 +1555,14 @@ case class SingleSATRun(maximumPlanLength: Int = 1, overrideK: Option[Int] = Non
 
 case class FullSATRun() extends SATRunConfiguration {override def longInfo: String = "full run"}
 
+case class OptimalSATRun(overrideK: Option[Int]) extends SATRunConfiguration {override def longInfo: String = "optimal run"}
+
 
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      checkResult: Boolean = false,
-                     reductionMethod: SATReductionMethod = OnlyNormalise
+                     reductionMethod: SATReductionMethod = OnlyNormalise,
+                     forceClassicalEncoding : Boolean = false
                     ) extends SearchConfiguration {
 
   protected lazy val getSingleRun: SingleSATRun = runConfiguration match {
@@ -1594,6 +1628,8 @@ case class SATPlanVerification(solverType: Solvertype, planToVerify: String) ext
            val solver = l.get.toLowerCase match {
              case "minisat"       => MINISAT
              case "cryptominisat" => CRYPTOMINISAT
+             case "riss6"         => RISS6
+             case "mapleCOMSPS"   => MapleCOMSPS
            }
            this.copy(solverType = solver).asInstanceOf[this.type]
          }),
@@ -1692,3 +1728,5 @@ object MINISAT extends Solvertype {override val longInfo: String = "minisat"}
 object CRYPTOMINISAT extends Solvertype {override val longInfo: String = "cryptominisat"}
 
 object RISS6 extends Solvertype {override val longInfo: String = "riss6"}
+
+object MapleCOMSPS extends Solvertype {override val longInfo: String = "MapleCOMSPS"}
