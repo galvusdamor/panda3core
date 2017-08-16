@@ -1,0 +1,7 @@
+# Ling Zhao - Tackling Post's Correspondence Problem
+# 1^n0  1
+# 1     01^n
+#
+# n = 5
+1 1 1 1 1 0 - 1
+1 - 0 1 1 1 1 1
