@@ -35,9 +35,9 @@ public class hLmCutEq extends SasHeuristic {
     @Override
     public String toString() {
         if (isIncremental)
-            return "incremental hLM-Cut based on exploration queue";
+            return "inc-hLM-Cut-EQ";
         else
-            return "hLM-Cut based on exploration queue";
+            return "hLM-Cut-EQ";
     }
 
     public hLmCutEq(SasPlusProblem p, boolean incremental) {

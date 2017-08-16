@@ -18,14 +18,12 @@ public class hAddhFFEq extends SasHeuristic {
     SasPlusProblem p;
     private int[] unsatPrecs;
 
-    public BitSet helpfulOps;
-
     @Override
     public String toString() {
         if (heuristic == SasHeuristics.hAdd)
-            return "hAdd based on exploration queue";
+            return "hAdd-EQ";
         else
-            return "hFF based on exploration queue";
+            return "hFF-EQ";
     }
 
     private int numGoals;
@@ -35,6 +33,7 @@ public class hAddhFFEq extends SasHeuristic {
 
     public hAddhFFEq(SasPlusProblem p, SasHeuristics heuristic) {
         this.heuristic = heuristic;
+        this.helpfulOps = new BitSet();
         this.p = p;
         List<Integer> tempPrecLess = new ArrayList<>();
         for (int i = 0; i < p.numOfOperators; i++) {
@@ -51,6 +50,8 @@ public class hAddhFFEq extends SasHeuristic {
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
+        if (g.cardinality() == 0)
+            return 0;
         if (heuristic == SasHeuristics.hFF)
             helpfulOps = new BitSet(p.numOfOperators);
         this.unsatPrecs = p.numPrecs.clone();

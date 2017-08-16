@@ -23,7 +23,7 @@ public class hMaxEq extends SasHeuristic {
 
     @Override
     public String toString() {
-        return "hMax based on exploration queue";
+        return "hMax-EQ";
     }
 
     public hMaxEq(SasPlusProblem p) {
@@ -48,6 +48,8 @@ public class hMaxEq extends SasHeuristic {
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
+        if (g.cardinality() == 0)
+            return 0;
         this.unsatPrecs = p.numPrecs.clone();
         this.maxPrec = maxPrecInit.clone();
         this.hVal = hValInit.clone();
