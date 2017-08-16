@@ -14,7 +14,7 @@ import java.util.*;
 /**
  * Created by dhoeller on 26.07.16.
  */
-public class ProRcgFFMulticount implements GroundedProgressionHeuristic {
+public class ProRcgFFMulticount extends GroundedProgressionHeuristic {
     public static enum producerSelection {
         numOfPreconditions, actionDifficulty, firstCome;
 

@@ -58,6 +58,7 @@ public class ProRcgLama extends ProRcgSas {
     private void prepareLandmarks(ProgressionNetwork init) {
         // prepare s0 and g
         // need to modify the facts that define top-down-reachability
+        /*
         BitSet reachableActions = new BitSet(compEnc.numOfOperators);
         BitSet htnGoal = new BitSet(compEnc.numOfOperators);
 
@@ -106,7 +107,7 @@ public class ProRcgLama extends ProRcgSas {
         }
         assert i == gList.length;
         this.compEnc.s0List = s0List;
-        this.compEnc.gList = gList;
+        this.compEnc.gList = gList;*/
     }
 
     @Override

@@ -7,7 +7,7 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 /**
  * Created by dh on 19.09.16.
  */
-public class ProGreedyProgression implements GroundedProgressionHeuristic {
+public class ProGreedyProgression extends GroundedProgressionHeuristic {
     int heuristic = 0;
 
     public ProGreedyProgression() {

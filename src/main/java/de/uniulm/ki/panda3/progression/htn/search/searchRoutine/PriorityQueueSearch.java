@@ -6,6 +6,9 @@ import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.SolutionStep;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
+import de.uniulm.ki.panda3.progression.htn.search.fringe.AlternatingFringe;
+import de.uniulm.ki.panda3.progression.htn.search.fringe.IFringe;
+import de.uniulm.ki.panda3.progression.htn.search.fringe.QueueBasedFringe;
 import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -84,10 +87,18 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         SolutionStep solution = null;
         long totalSearchTime = System.currentTimeMillis();
         long lastInfo = System.currentTimeMillis();
-        PriorityQueue<ProgressionNetwork> fringe = new PriorityQueue<>();
-        fringe.add(firstSearchNode);
+        //PriorityQueue<ProgressionNetwork> fringe = new PriorityQueue<>();
 
-        timing.start(SEARCH_TIME);
+        IFringe<ProgressionNetwork> fringe;
+        if (firstSearchNode.heuristic.supportsHelpfulActions) {
+            ProgressionNetwork.useHelpfulActions = true;
+            fringe = new AlternatingFringe<>();
+            firstSearchNode.helpfulActions = new BitSet();
+        } else {
+            fringe = new QueueBasedFringe<>();
+        }
+
+        fringe.add(firstSearchNode);
         long startedSearch = System.currentTimeMillis();
 
         boolean collectTlts = false;
@@ -98,6 +109,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         long restart = -1;// (2 * 60 * 1000);
         long nextRestart = -1;//restartCount * restart;
 
+        boolean helpfulAction = false;
+        timing.start(SEARCH_TIME);
         planningloop:
         while (!fringe.isEmpty()) {
             ProgressionNetwork n = fringe.poll();
@@ -109,15 +122,20 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 ProgressionNetwork node = n.apply(ps);
                 node.id = searchnodes;
                 node.heuristic = n.heuristic.update(node, ps);
-                node.heuristicVal = node.heuristic.getHeuristic();
-                if (aStar) {
-                    node.metric = node.heuristicVal + (node.solution.getLength() / greediness);
-                } else {
-                    node.metric = node.heuristicVal;
-                }
-
                 node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
                 if (node.goalRelaxedReachable) {
+                    node.heuristicVal = node.heuristic.getHeuristic();
+                    if (aStar) {
+                        node.metric = node.heuristicVal + (node.solution.getLength() / greediness);
+                    } else {
+                        node.metric = node.heuristicVal;
+                    }
+
+                    if (node.heuristic.supportsHelpfulActions) {
+                        node.helpfulActions = node.heuristic.helpfulOps();
+                        helpfulAction = n.isHelpFulAction(ps.action);
+                    }
+
                     // early goal test - NON-OPTIMAL
                     if (node.isGoal()) {
                         int numSteps = node.solution.getPrimitiveCount();
@@ -140,14 +158,12 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                             break planningloop;
                         }
                     } else {
-                        fringe.add(node);
+                        fringe.add(node, helpfulAction);
                     }
                 }
             }
 
-
             if (n.getFirstAbstractTasks().size() == 0) continue planningloop;
-
             // which task shall be decomposed?
             ProgressionPlanStep oneAbs = null;
             if (taskSelection == abstractTaskSelection.random)
@@ -176,35 +192,29 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     }
                 }
             }
-/*
-            System.out.println("====================================");
-            System.out.println("Task:   " + oneAbs.getTask().name());
-            System.out.println("Metric: " + n.metric);
-            System.out.println("Path:   " + n.solution.getLength());*/
+
             methodloop:
             for (ProMethod m : oneAbs.methods) {
                 ProgressionNetwork node = n.decompose(oneAbs, m);
-                //if (visited.addIfNotIn(node))
-                //    continue methodloop;
-
-                //System.out.println("------------------------------------");
-                //System.out.println("Method: " + m.m.name());
-                //System.out.println(node.progressionTrace);
                 // todo: add unit propagation here
                 node.heuristic = n.heuristic.update(node, oneAbs, m);
                 node.id = searchnodes++;
-
-                node.heuristicVal = node.heuristic.getHeuristic();
-                if (aStar) {
-                    node.metric = node.heuristicVal + (node.solution.getLength() / greediness);
-                } else {
-                    node.metric = node.heuristicVal;
-                }
-
                 node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
 
                 if (node.goalRelaxedReachable) {
-                    fringe.add(node);
+                    node.heuristicVal = node.heuristic.getHeuristic();
+                    if (aStar) {
+                        node.metric = node.heuristicVal + (node.solution.getLength() / greediness);
+                    } else {
+                        node.metric = node.heuristicVal;
+                    }
+
+                    if (node.heuristic.supportsHelpfulActions) {
+                        node.helpfulActions = node.heuristic.helpfulOps();
+                        helpfulAction = n.isHelpFulMethod(m);
+                    }
+
+                    fringe.add(node, helpfulAction);
                 }
             }
             if ((System.currentTimeMillis() - lastInfo) > 1000) {
@@ -271,7 +281,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             info.set(A_STAR, 0);
         }
 
-        info.set(HEURISTIC, firstSearchNode.heuristic.getClass().toString());
+        info.set(HEURISTIC, firstSearchNode.heuristic.getName());
 
         info.set(NUM_SEARCH_NODES, searchnodes);
         info.set(UNIT_PROPAGATION, unitPropagation);

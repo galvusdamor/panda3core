@@ -7,7 +7,7 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 /**
  * Created by dh on 19.09.16.
  */
-public class ProBFS implements GroundedProgressionHeuristic {
+public class ProBFS extends GroundedProgressionHeuristic {
     int heuristic = 0;
 
     public ProBFS() {

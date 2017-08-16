@@ -9,8 +9,9 @@ import java.util.BitSet;
  */
 public abstract class SasHeuristic {
     public static final int cUnreachable = Integer.MAX_VALUE;
+    public BitSet helpfulOps;
 
-    public enum SasHeuristics {hMax, hAdd, hFF, hLmCut, hIncLmCut;}
+    public enum SasHeuristics {hMax, hAdd, hFF, hFFwithHA, hCG, hLmCut, hIncLmCut;}
 
     protected boolean isIncremental = false;
 
@@ -29,6 +30,7 @@ public abstract class SasHeuristic {
     public abstract int calcHeu(BitSet s0, BitSet g);
 
     public boolean debug = false;
+
     protected void debugOut(String s) {
         if (debug)
             System.out.print(s);

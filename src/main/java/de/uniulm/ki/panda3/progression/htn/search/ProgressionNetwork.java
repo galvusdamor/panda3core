@@ -32,7 +32,6 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public int numSHOPProgressionSteps = 0;
     public int numDecompositionSteps = 0;
 
-
     private boolean printProgressionTrace = false;
     public String progressionTrace;
 
@@ -45,6 +44,22 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     private int numberOfTasks = 0;
     private int numberOfPrimitiveTasks = 0;
     public SolutionStep solution;
+
+    public static boolean useHelpfulActions = false;
+
+    public BitSet helpfulActions;
+
+    public boolean isHelpFulAction(int action) {
+        if (!useHelpfulActions)
+            return false;
+        return helpfulActions.get(action);
+    }
+
+    public boolean isHelpFulMethod(ProMethod method) {
+        if (!useHelpfulActions)
+            return false;
+        return helpfulActions.get(method.methodID);
+    }
 
     private ProgressionNetwork() {
     }
