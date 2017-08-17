@@ -38,16 +38,15 @@ public class entertainmentProbGen {
     }
 
     private static heProblem getProblemDS1(String s, int level) {
-        heProblem p = getProblem6("");
-        p.name = "p" + s;
+        heProblem p = new heProblem("p" + s);
         if (level == 0) {
-            p.name+= "-tv-ds1-one-dev";
+            p.name += "-tv-ds1-one-dev";
         } else if (level == 1) {
-            p.name+= "-tv-ds1-two-dev";
+            p.name += "-tv-ds1-two-dev";
         } else if (level == 2) {
-            p.name+= "-tv-ds1-one-dev-and-speaker";
+            p.name += "-tv-ds1-one-dev-and-speaker";
         } else if (level == 3) {
-            p.name+= "-tv-ds1-teo-dev-and-speaker";
+            p.name += "-tv-ds1-two-dev-and-speaker";
         }
         // cables
         p.addDevice(DeviceFactory.getScartToCinchCable());
