@@ -23,12 +23,96 @@ public class entertainmentProbGen {
         problems.add(getProblem8("07"));
         problems.add(getProblem9("08"));
 
+        // DS1
+        problems.add(getProblemDS1("09", 0));
+        problems.add(getProblemDS1("10", 1));
+        problems.add(getProblemDS1("11", 2));
+        problems.add(getProblemDS1("12", 3));
+
         for (heProblem p : problems) {
             String filename = baseDir + p.getName() + ".lisp";
             BufferedWriter bw = new BufferedWriter(new FileWriter(filename));
             bw.write(p.toString());
             bw.close();
         }
+    }
+
+    private static heProblem getProblemDS1(String s, int level) {
+        heProblem p = getProblem6("");
+        p.name = "p" + s;
+        if (level == 0) {
+            p.name+= "-tv-ds1-one-dev";
+        } else if (level == 1) {
+            p.name+= "-tv-ds1-two-dev";
+        } else if (level == 2) {
+            p.name+= "-tv-ds1-one-dev-and-speaker";
+        } else if (level == 3) {
+            p.name+= "-tv-ds1-teo-dev-and-speaker";
+        }
+        // cables
+        p.addDevice(DeviceFactory.getScartToCinchCable());
+        for (int i = 0; i < 4; i++)
+            p.addDevice(DeviceFactory.getCinchCable());
+        for (int i = 0; i < 2; i++)
+            p.addDevice(DeviceFactory.getHdmiCable());
+        p.addDevice(DeviceFactory.getDviCable());
+        p.addDevice(DeviceFactory.getHdmiDviCable());
+        p.addDevice(DeviceFactory.getHeadphoneCinchCable());
+        for (int i = 0; i < 2; i++)
+            p.addDevice(DeviceFactory.getHdmiDviPortCable());
+        p.addDevice(DeviceFactory.getSpdif());
+
+        // devices
+        heDevice brPlayer = DS1DeviceFactory.getBRPlayer();
+        p.addDevice(brPlayer);
+        heDevice receiver = DS1DeviceFactory.getReceiver();
+        p.addDevice(receiver);
+        heDevice tv = DS1DeviceFactory.getTV();
+        p.addDevice(tv);
+        heDevice amp = DS1DeviceFactory.getAmp();
+        p.addDevice(amp);
+
+        heDevice[] g1 = new heDevice[2];
+        g1[0] = brPlayer;
+        g1[1] = tv;
+
+        heDevice[] g2 = new heDevice[2];
+        g2[0] = brPlayer;
+        g2[1] = amp;
+
+        p.addVGoal(g1); // br to tv
+        p.addAGoal(g2); // br to amp
+        if ((level == 1) || (level == 3)) {
+            heDevice[] g3 = new heDevice[2];
+            g3[0] = receiver;
+            g3[1] = tv;
+
+            heDevice[] g4 = new heDevice[2];
+            g4[0] = receiver;
+            g4[1] = amp;
+
+            p.addVGoal(g3); // sat to tv
+            p.addAGoal(g4); // sat to amp
+        }
+        if ((level == 2) || (level == 3)) {
+            heDevice box1 = DeviceFactory.getBox();
+            heDevice box2 = DeviceFactory.getBox();
+            p.addDevice(box1);
+            p.addDevice(box2);
+            p.addDevice(DeviceFactory.getSpeakerWire());
+            p.addDevice(DeviceFactory.getSpeakerWire());
+
+            heDevice[] g5 = new heDevice[2];
+            g5[0] = amp;
+            g5[1] = box1;
+
+            heDevice[] g6 = new heDevice[2];
+            g6[0] = amp;
+            g6[1] = box2;
+            p.addAGoal(g5); // amp box1
+            p.addAGoal(g6); // amp box2
+        }
+        return p;
     }
 
     private static heProblem getProblem7(String s) {

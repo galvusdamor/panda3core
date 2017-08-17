@@ -7,7 +7,7 @@ import java.util.List;
  * Created by dh on 19.05.17.
  */
 public class heDevice {
-    enum connectionType {scart, cinch, speakerWire}
+    enum connectionType {vga, hdmi, dvi, spdif, headphone, scart, cinch, speakerWire}
 
     private String deviceName; // the name -> set by the problem and unique
     protected String deviceType; // the type -> there might be more than one

@@ -213,20 +213,20 @@ public class DeviceFactory {
         res.connections.add(heDevice.connectionType.scart);
         res.isPort.add(false);
         res.inConn.add(true);
-        res.outConn.add(false);
+        res.outConn.add(true);
         res.audioConn.add(true);
         res.videoConn.add(true);
 
         res.connections.add(heDevice.connectionType.cinch);
         res.isPort.add(false);
-        res.inConn.add(false);
+        res.inConn.add(true);
         res.outConn.add(true);
         res.audioConn.add(true);
         res.videoConn.add(false);
 
         res.connections.add(heDevice.connectionType.cinch);
         res.isPort.add(false);
-        res.inConn.add(false);
+        res.inConn.add(true);
         res.outConn.add(true);
         res.audioConn.add(false);
         res.videoConn.add(true);
@@ -258,6 +258,111 @@ public class DeviceFactory {
     /*
      * Cables
      */
+    public static heDevice getHdmiCable() {
+        heDevice res = new heDevice();
+        res.deviceType = "hdmi-cable-";
+
+        res.connections.add(heDevice.connectionType.hdmi);
+        res.isPort.add(false);
+        res.inConn.add(true);
+        res.outConn.add(false);
+        res.audioConn.add(true);
+        res.videoConn.add(true);
+
+        res.connections.add(heDevice.connectionType.hdmi);
+        res.isPort.add(false);
+        res.inConn.add(false);
+        res.outConn.add(true);
+        res.audioConn.add(true);
+        res.videoConn.add(true);
+
+        return res;
+    }
+
+    public static heDevice getDviCable() {
+        heDevice res = new heDevice();
+        res.deviceType = "dvi-cable-";
+
+        res.connections.add(heDevice.connectionType.dvi);
+        res.isPort.add(false);
+        res.inConn.add(true);
+        res.outConn.add(false);
+        res.audioConn.add(false);
+        res.videoConn.add(true);
+
+        res.connections.add(heDevice.connectionType.dvi);
+        res.isPort.add(false);
+        res.inConn.add(false);
+        res.outConn.add(true);
+        res.audioConn.add(false);
+        res.videoConn.add(true);
+
+        return res;
+    }
+
+    public static heDevice getHdmiDviCable() {
+        heDevice res = new heDevice();
+        res.deviceType = "hdmi-dvi-cable-";
+
+        res.connections.add(heDevice.connectionType.hdmi);
+        res.isPort.add(false);
+        res.inConn.add(true);
+        res.outConn.add(true);
+        res.audioConn.add(false);
+        res.videoConn.add(true);
+
+        res.connections.add(heDevice.connectionType.dvi);
+        res.isPort.add(false);
+        res.inConn.add(true);
+        res.outConn.add(true);
+        res.audioConn.add(false);
+        res.videoConn.add(true);
+
+        return res;
+    }
+
+    public static heDevice getHeadphoneCinchCable() {
+        heDevice res = new heDevice();
+        res.deviceType = "headphone-cinch-cable-";
+
+        res.connections.add(heDevice.connectionType.cinch);
+        res.isPort.add(false);
+        res.inConn.add(true);
+        res.outConn.add(true);
+        res.audioConn.add(true);
+        res.videoConn.add(false);
+
+        res.connections.add(heDevice.connectionType.headphone);
+        res.isPort.add(false);
+        res.inConn.add(true);
+        res.outConn.add(true);
+        res.audioConn.add(true);
+        res.videoConn.add(false);
+
+        return res;
+    }
+
+    public static heDevice getHdmiDviPortCable() {
+        heDevice res = new heDevice();
+        res.deviceType = "hdmi-dvip-cable-";
+
+        res.connections.add(heDevice.connectionType.hdmi);
+        res.isPort.add(false);
+        res.inConn.add(true);
+        res.outConn.add(true);
+        res.audioConn.add(false);
+        res.videoConn.add(true);
+
+        res.connections.add(heDevice.connectionType.dvi);
+        res.isPort.add(true);
+        res.inConn.add(true);
+        res.outConn.add(true);
+        res.audioConn.add(false);
+        res.videoConn.add(true);
+
+        return res;
+    }
+
     public static heDevice getCinchCable() {
         heDevice res = new heDevice();
         res.deviceType = "cinch-cable-";
@@ -275,6 +380,27 @@ public class DeviceFactory {
         res.outConn.add(true);
         res.audioConn.add(true);
         res.videoConn.add(true);
+
+        return res;
+    }
+
+    public static heDevice getSpdif() {
+        heDevice res = new heDevice();
+        res.deviceType = "spdif-cable-";
+
+        res.connections.add(heDevice.connectionType.spdif);
+        res.isPort.add(false);
+        res.inConn.add(true);
+        res.outConn.add(false);
+        res.audioConn.add(true);
+        res.videoConn.add(false);
+
+        res.connections.add(heDevice.connectionType.spdif);
+        res.isPort.add(false);
+        res.inConn.add(false);
+        res.outConn.add(true);
+        res.audioConn.add(true);
+        res.videoConn.add(false);
 
         return res;
     }
