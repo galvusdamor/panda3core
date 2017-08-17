@@ -1,0 +1,3 @@
+# R. Lorentz, R - Creating Difficult Instances of the Post Correspondence Problem
+1 0 0 - 0
+0 - 0 0 1
