@@ -65,13 +65,6 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
         this.numTasks = ProgressionNetwork.indexToTask.length;
         tdRechability = new TDGLandmarkFactory(methods, initialTasks, this.numTasks, this.numOfOperators);
 
-        reachable = new int[numOfOperators];
-        reached = new int[numTasks];
-        for (int i = 0; i < numTasks; i++)
-            reached[i] = firstTaskCompIndex + i;
-        for (int i = 0; i < this.numOfOperators; i++)
-            reachable[i] = firstTdrIndex + i;
-
         // set indices
         this.firstTdrIndex = this.numOfStateFeatures;
         this.lastTdrIndex = this.firstTdrIndex + this.numOfOperators - 1;
@@ -80,6 +73,13 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
         this.lastOverallIndex = this.lastTaskCompIndex;
 
         this.numExtenedStateFeatures = this.lastOverallIndex + 1;
+
+        reachable = new int[numOfOperators];
+        reached = new int[numTasks];
+        for (int i = 0; i < numTasks; i++)
+            reached[i] = firstTaskCompIndex + i;
+        for (int i = 0; i < this.numOfOperators; i++)
+            reachable[i] = firstTdrIndex + i;
 
         int[][] tPrecLists = new int[numAnM][];
         int[] tNumPrecs = new int[numAnM];
