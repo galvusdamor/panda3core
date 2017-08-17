@@ -26,7 +26,6 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
     public int[] reachable;
     public int[] reached;
 
-    public IActionReachability tdRechability;
     public int firstTdrIndex;
     public int lastTdrIndex;
 
@@ -35,7 +34,6 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
 
     public int lastOverallIndex;
     public int methodCosts = 1;
-
 
     public RelaxedCompositionSTRIPS(SasPlusProblem p) {
         assert (p.correctModel());

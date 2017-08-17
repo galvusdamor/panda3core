@@ -19,8 +19,8 @@ import java.util.*;
  * Created by dh on 10.05.17.
  */
 public class gphRelaxedComposition extends GroundedProgressionHeuristic {
-    static protected RelaxedCompositionEncoding compEnc;
-    static private SasHeuristic heuristic;
+    protected RelaxedCompositionEncoding compEnc;
+    private SasHeuristic heuristic;
     protected IncrementInformation inc;
     private int heuristicVal;
 
