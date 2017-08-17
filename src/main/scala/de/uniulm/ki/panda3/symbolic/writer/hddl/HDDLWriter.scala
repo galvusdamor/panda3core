@@ -245,7 +245,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
 
   def writeDomain(dom: Domain, includeAllConstants: Boolean, writeEitherWithPredicates: Boolean): String = {
     // determine whether we would have to use either types
-    val willContainEither = writeEitherWithPredicates && (dom.sorts exists { s => (dom.sortGraph.edgeList count { _._2 == s }) > 1 })
+    val willContainEither = writeEitherWithPredicates && dom.containEitherType
 
     // ATTENTION: we cannot use any CSP in here, since the domain may lack constants, i.e., probably any CSP will be unsolvable causing problems
     val builder: StringBuilder = new StringBuilder()
@@ -378,7 +378,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
 
   def writeProblem(dom: Domain, plan: Plan, writeEitherWithPredicates: Boolean): String = {
     // determine whether we would have to use either types
-    val willContainEither = writeEitherWithPredicates && (dom.sorts exists { s => (dom.sortGraph.edgeList count { _._2 == s }) > 1 })
+    val willContainEither = writeEitherWithPredicates && dom.containEitherType
 
     val builder: StringBuilder = new StringBuilder()
     builder.append("(define\n")

@@ -66,7 +66,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
       case Some(rep@SASPlusRepresentation(sasPlusProblem, sasPlusIndexToTaskMap)) =>
         sasPlusIndexToTaskMap.values foreach { task => assert(task.isPrimitive, task.name + "must be primitive"); assert(taskSet contains task, task.shortInfo + " not contained") }
         primitiveTasks foreach { task => assert(rep.taskToSASPlusIndex.keySet contains task) }
-        sasPlusIndexToTaskMap.keys foreach {i => assert(sasPlusProblem.getGroundedOperatorSignatures.length > i); assert(i >= 0)}
+        sasPlusIndexToTaskMap.keys foreach { i => assert(sasPlusProblem.getGroundedOperatorSignatures.length > i); assert(i >= 0) }
     }
   }
 
@@ -98,9 +98,9 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   lazy val primitiveConsumerOf: Map[Predicate, Seq[ReducedTask]] = consumersOf map { case (pred, cons) => pred -> cons.filter { _.isPrimitive } }
 
-  lazy val primitiveTasks: Seq[Task] = tasks filter { _.isPrimitive }
-  lazy val abstractTasks : Seq[Task] = tasks filterNot { _.isPrimitive }
-  lazy  val choicelessAbstractTasks: Set[Task] = abstractTasks filter { at => methodsForAbstractTasks(at).size == 1 } toSet
+  lazy val primitiveTasks         : Seq[Task] = tasks filter { _.isPrimitive }
+  lazy val abstractTasks          : Seq[Task] = tasks filterNot { _.isPrimitive }
+  lazy val choicelessAbstractTasks: Set[Task] = abstractTasks filter { at => methodsForAbstractTasks(at).size == 1 } toSet
 
   lazy val allGroundedPrimitiveTasks: Seq[GroundTask] = primitiveTasks flatMap { _.instantiateGround }
   lazy val allGroundedAbstractTasks : Seq[GroundTask] = abstractTasks flatMap { _.instantiateGround }
@@ -117,6 +117,8 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     (decompositionMethods exists { _.subPlan.causalLinks.nonEmpty }) || (tasks exists { t => t.isAbstract && (!t.precondition.isEmpty || !t.effect.isEmpty) })
   lazy val hasNegativePreconditions: Boolean = tasks exists { _.preconditionsAsPredicateBool exists { !_._2 } }
 
+
+  lazy val containEitherType: Boolean = sorts exists { s => (sortGraph.edgeList count { _._2 == s }) > 1 }
 
   /** A map showing for each task how deep the decomposition tree has to be, to be able to reach a primitive decomposition */
   lazy val minimumDecompositionHeightToPrimitive: Map[Task, Int] =

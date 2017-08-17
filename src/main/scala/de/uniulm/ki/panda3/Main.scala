@@ -27,6 +27,7 @@ object Main {
                                                                                                                compileUnitMethods = false,
                                                                                                                compileInitialPlan = false,
                                                                                                                convertToSASP = false,
+                                                                                                               allowSASPFromStrips = false,
                                                                                                                compileOrderInMethods = None,
                                                                                                                splitIndependentParameters = false,
                                                                                                                compileUselessAbstractTasks = false,

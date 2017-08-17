@@ -120,6 +120,7 @@ public class SasPlusProblem {
     public int[] gList;
 
     public String[] factStrs;
+    public boolean createdFromStrips = false;
 
     public BitSet getS0() {
         if (s0Bitset == null) {
@@ -1063,7 +1064,7 @@ public class SasPlusProblem {
         return f.format(count / this.precLists.length);
     }
 
-    static public Tuple2<SasPlusProblem, scala.collection.Map<Integer, Task>> generateFromSTRIPS(Domain domain, Plan plan) {
+    static public Tuple2<SasPlusProblem, ReducedTask[]> generateFromSTRIPS(Domain domain, Plan plan) {
         HashSet<Literal> usedInPrec = new HashSet<>();
         HashSet<Literal> usedInAdd = new HashSet<>();
         HashSet<Literal> usedInDel = new HashSet<>();
@@ -1140,6 +1141,7 @@ public class SasPlusProblem {
          * Prepare result
          */
         SasPlusProblem res = new SasPlusProblem();
+        res.createdFromStrips = true;
         res.numOfStateFeatures = usefulLits.size();
         int li = 0;
         HashMap<Literal, Integer> indexMap = new HashMap<>();
@@ -1251,9 +1253,6 @@ public class SasPlusProblem {
         res.calcExtendedDelLists();
         assert res.correctModel();
 
-        scala.collection.Map<Integer, Task> resMap = new scala.collection.immutable.HashMap<>();
-        for (int i = 0; i < tasks.length; i++)
-            resMap.$plus(new Tuple2<>(i, tasks[i]));
-        return new Tuple2<>(res, resMap);
+        return new Tuple2<>(res, tasks);
     }
 }

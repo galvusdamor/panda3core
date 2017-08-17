@@ -23,7 +23,7 @@ object PredefinedConfigurations {
 
   val groundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                        compileInitialPlan = true,
-                                                       convertToSASP = false,
+                                                       convertToSASP = false, allowSASPFromStrips = false,
                                                        compileOrderInMethods = None,
                                                        splitIndependentParameters = true,
                                                        compileUselessAbstractTasks = true,
@@ -35,7 +35,8 @@ object PredefinedConfigurations {
   val sasPlusPreprocess = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
                                                      compileOrderInMethods = None,
                                                      compileInitialPlan = true, splitIndependentParameters = true,
-                                                     liftedReachability = true, convertToSASP = true, compileUselessAbstractTasks = true,
+                                                     liftedReachability = true, convertToSASP = true, allowSASPFromStrips = true,
+                                                     compileUselessAbstractTasks = true,
                                                      groundedReachability = None,
                                                      groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                      iterateReachabilityAnalysis = false, groundDomain = true)
@@ -43,7 +44,8 @@ object PredefinedConfigurations {
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
                                                                //compileOrderInMethods = None, //Some(OneRandomOrdering()),
-                                                               compileInitialPlan = false, convertToSASP = false, splitIndependentParameters = true,
+                                                               compileInitialPlan = false, convertToSASP = false, allowSASPFromStrips = false,
+                                                               splitIndependentParameters = true,
                                                                compileUselessAbstractTasks = false,
                                                                liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
@@ -52,30 +54,21 @@ object PredefinedConfigurations {
                                                                compileOrderInMethods = None,
                                                                compileInitialPlan = false, splitIndependentParameters = true,
                                                                compileUselessAbstractTasks = false,
-                                                               liftedReachability = true, convertToSASP = false, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                               liftedReachability = true, convertToSASP = false, allowSASPFromStrips = false,
+                                                               groundedReachability = Some(PlanningGraphWithMutexes),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                iterateReachabilityAnalysis = false, groundDomain = false)
 
   val oneshortOrderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                        compileInitialPlan = true,
                                                                        convertToSASP = false,
+                                                                       allowSASPFromStrips = false,
                                                                        compileOrderInMethods = Some(OneOfTheNecessaryOrderings),
                                                                        splitIndependentParameters = true,
                                                                        compileUselessAbstractTasks = true,
                                                                        liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                        iterateReachabilityAnalysis = true, groundDomain = true)
-
-  val oneshortOrderingGroundingPreprocessWithSASPlus = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
-                                                                                  compileInitialPlan = true,
-                                                                                  convertToSASP = true,
-                                                                                  compileOrderInMethods = Some(OneOfTheNecessaryOrderings),
-                                                                                  splitIndependentParameters = true,
-                                                                                  compileUselessAbstractTasks = true,
-                                                                                  liftedReachability = true, groundedReachability = None,
-                                                                                  groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                                                  iterateReachabilityAnalysis = true, groundDomain = true)
-
 
   val preprocessConfigs = Map(
                                "-ordering" -> orderingGroundingPreprocess,
@@ -153,7 +146,8 @@ object PredefinedConfigurations {
   val planSearchAStarADDReusing = PlanBasedSearch(None, AStarActionsType(2), ADDReusing :: Nil, Nil, LCFR)
   val planSearchAStarRelax      = PlanBasedSearch(None, AStarActionsType(2), Relax :: Nil, Nil, LCFR)
 
-  val shop2 = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
+  val shop2         = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
+  val shop2Improved = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.random)
 
   def pandaProConfig(algorithm: SearchAlgorithmType, sasHeuristic: SasHeuristics): ProgressionSearch =
     ProgressionSearch(algorithm, Some(HierarchicalHeuristicRelaxedComposition(sasHeuristic)), PriorityQueueSearch.abstractTaskSelection.random)
@@ -244,6 +238,7 @@ object PredefinedConfigurations {
 
          // SHOP
          "-shop2" ->(htnParsing, sasPlusPreprocess, shop2),
+         "-shop2Improved" ->(htnParsing, sasPlusPreprocess, shop2),
 
 
          // A*
@@ -283,64 +278,26 @@ object PredefinedConfigurations {
 
 
          // configurations to test totSAT
-         "-oneshortTOTsat" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-oneshortTOTsatRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-oneshortTOTsatMaple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-oneshortTOTsatFF" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
-         "-oneshortTOTsatFFRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
-         "-oneshortTOTsatFFMaple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
-         "-oneshortTOTsatH2" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
-         "-oneshortTOTsatH2Riss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
-         "-oneshortTOTsatH2Maple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
-         "-oneshortTOTsatFFFull" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
-         "-oneshortTOTsatFFFullRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
-         "-oneshortTOTsatFFFullMaple" ->(htnParsing, oneshortOrderingGroundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod =
+         "-sat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-satRiss6" ->(htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-satMaple" ->(htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
+         "-satFF" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-satFFRiss6" ->(htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-satFFMaple" ->(htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-satH2" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-satH2Riss6" ->(htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-satH2Maple" ->(htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
+         "-satFFFull" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
+         "-satFFFullRiss6" ->(htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
+         "-satFFFullMaple" ->(htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod =
            FFReductionWithFullTest)),
 
-
-         "-oneshortTOTSASsat" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-oneshortTOTSASsatRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-oneshortTOTSASsatMaple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-oneshortTOTSASsatFF" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
-         "-oneshortTOTSASsatFFRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
-         "-oneshortTOTSASsatFFMaple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
-         "-oneshortTOTSASsatH2" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
-         "-oneshortTOTSASsatH2Riss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
-         "-oneshortTOTSASsatH2Maple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
-         "-oneshortTOTSASsatFFFull" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
-         "-oneshortTOTSASsatFFFullRiss6" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
-         "-oneshortTOTSASsatFFFullMaple" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod =
-           FFReductionWithFullTest)),
 
          "-poclSat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
          "-poclSatSAS+" ->(htnParsing, sasPlusPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
          //"-classicalSat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, forceClassicalEncoding = true)),
          //"-classicalSatSAS+" ->(htnParsing, sasPlusPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, forceClassicalEncoding = true)),
 
-         // Greedy-A*
-         "-oneshortTOTGreedyAStarMAC-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPRReachability),
-         "-oneshortTOTGreedyAStarMAC" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPR),
-         "-oneshortTOTGreedyAStarPR-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPRReachability),
-         "-oneshortTOTGreedyAStarPR" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchAStarActionLiftedPR),
-
-         // A*
-         "-oneshortTOTAStarMAC-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarActionLiftedPRReachability),
-         "-oneshortTOTAStarMAC" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarActionLiftedPR),
-         "-oneshortTOTAStarPR-Rec" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarAPRLiftedPRReachability),
-         "-oneshortTOTAStarPR" ->(htnParsing, oneshortOrderingGroundingPreprocess, AStarAPRLiftedPR),
-
-         // bullshit configurations
-         "-oneshortTOTDijkstra" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchDijkstra),
-         "-oneshortTOTDFS" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchDFS),
-         "-oneshortTOTBFS" ->(htnParsing, oneshortOrderingGroundingPreprocess, planSearchBFS),
-
-         // UMCP
-         "-oneshortTOTumcpBF" ->(htnParsing, oneshortOrderingGroundingPreprocess, umcpBF),
-         "-oneshortTOTumcpDF" ->(htnParsing, oneshortOrderingGroundingPreprocess, umcpDF),
-         "-oneshortTOTumcpH" ->(htnParsing, oneshortOrderingGroundingPreprocess, umcpH),
-
-         // SHOP
-         "-oneshortTOTshop2" ->(htnParsing, oneshortOrderingGroundingPreprocessWithSASPlus, shop2),
 
          // plan verification a la ICAPS'17
          "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, "")),

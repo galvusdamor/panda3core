@@ -141,7 +141,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
     searchConfiguration match {
-      case search: PlanBasedSearch =>
+      case search: PlanBasedSearch        =>
         // some heuristics need additional preprocessing, e.g. to build datastructures they need
         timeCapsule start HEURISTICS_PREPARATION
         // TDG based heuristics need the TDG
@@ -618,7 +618,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     timeCapsule stop PARSING
     info("done.\n")
-    (identity,noHybrid, timeCapsule)
+    (identity, noHybrid, timeCapsule)
   }
 
   private def runLiftedForwardSearchReachabilityAnalysis(domain: Domain, problem: Plan, analysisMap: AnalysisMap): AnalysisMap = {
@@ -668,7 +668,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
   private def runReachabilityAnalyses(domain: Domain, problem: Plan, runForGrounder: Boolean, timeCapsule: TimeCapsule = new TimeCapsule(),
-    firstAnalysis : Boolean = false): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
+                                      firstAnalysis: Boolean = false): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     val emptyAnalysis = AnalysisMap(Map())
 
     assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
@@ -691,7 +691,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { liftedResult._1._1.tasks contains _.schema })
 
     // convert to SAS+
-    val sasPlusResult = if (preprocessingConfiguration.convertToSASP && firstAnalysis) {
+    val sasPlusResult = if (preprocessingConfiguration.convertToSASP && firstAnalysis &&
+      (!liftedResult._1._1.containEitherType || !preprocessingConfiguration.allowSASPFromStrips)) {
       import sys.process._
 
       info("Converting to SAS+ ... ")
@@ -765,22 +766,24 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     // grounded reachability analysis
     if (preprocessingConfiguration.groundedReachability.isDefined) timeCapsule start GROUNDED_PLANNINGGRAPH_ANALYSIS
-    val groundedResult = if (preprocessingConfiguration.groundedReachability.isDefined) {
+    val groundedResult = if (preprocessingConfiguration.groundedReachability.isDefined ||
+      (preprocessingConfiguration.convertToSASP && sasPlusResult._1._1.containEitherType && preprocessingConfiguration.allowSASPFromStrips)) {
 
       // output info text
-      val infoText = preprocessingConfiguration.groundedReachability.get match {
-        case NaiveGroundedReachability => "Naive grounded reachability analysis"
-        case PlanningGraph             => "Grounded planning graph"
-        case PlanningGraphWithMutexes  => "Grounded planning graph with mutexes"
+      val (infoText, actualType) = preprocessingConfiguration.groundedReachability match {
+        case Some(NaiveGroundedReachability) => ("Naive grounded reachability analysis", NaiveGroundedReachability)
+        case Some(PlanningGraph)             => ("Grounded planning graph", PlanningGraph)
+        case Some(PlanningGraphWithMutexes)  => ("Grounded planning graph with mutexes", PlanningGraphWithMutexes)
+        case None                            => ("SAS+ fall-back: Grounded planning graph", PlanningGraph)
       }
       info(infoText + " ... ")
 
       // run the actual analysis
       val newAnalysisMap =
-        preprocessingConfiguration.groundedReachability.get match {
+        actualType match {
           case NaiveGroundedReachability                => runGroundedForwardSearchReachabilityAnalysis(sasPlusResult._1._1, sasPlusResult._1._2, sasPlusResult._2)
           case PlanningGraph | PlanningGraphWithMutexes =>
-            val useMutexes = preprocessingConfiguration.groundedReachability.get match {
+            val useMutexes = actualType match {
               case PlanningGraph            => false
               case PlanningGraphWithMutexes => true
             }
@@ -858,7 +861,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
     val compilerToBeApplied: Seq[CompilerConfiguration[_]] =
-      (if (preprocessingConfiguration.compileNegativePreconditions)
+      (if ((preprocessingConfiguration.compileNegativePreconditions && !preprocessingConfiguration.convertToSASP) ||
+        (preprocessingConfiguration.convertToSASP && domain.containEitherType && preprocessingConfiguration.allowSASPFromStrips))
+      // don't do this if we are going to use SAS+ conversion
         CompilerConfiguration(RemoveNegativePreconditions, (), "negative preconditions", COMPILE_NEGATIVE_PRECONFITIONS) :: Nil
       else Nil) ::
         (if (preprocessingConfiguration.compileOrderInMethods.isDefined)
@@ -898,9 +903,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val result: (Domain, Plan) = {
         val groundedDomainAndProblem = Grounding.transform(domainAndPlan, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
 
-        SasPlusProblem.generateFromSTRIPS(groundedDomainAndProblem._1,groundedDomainAndProblem._2)
-
-        if (preprocessingConfiguration.convertToSASP) {
+        if (preprocessingConfiguration.convertToSASP && (!domainAndPlan._1.containEitherType || !preprocessingConfiguration.allowSASPFromStrips)) {
           val sasPlusGrounder: SASPlusGrounding = analysisMap(SASPInput)
           assert(groundedDomainAndProblem._1.mappingToOriginalGrounding.isDefined)
           val flatTaskToGroundedTask = groundedDomainAndProblem._1.mappingToOriginalGrounding.get.taskMapping
@@ -917,7 +920,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val saspRepresentation = SASPlusRepresentation(sasPlusGrounder.sasPlusProblem,
                                                          sasPlusGrounder.sasPlusTaskIndexToNewGroundTask filter { case (i, t) => sasPlusDomain.taskSet contains t })
           (sasPlusDomain.copy(sasPlusRepresentation = Some(saspRepresentation)), sasPlusPlan)
-        } else groundedDomainAndProblem
+        } else {
+          // generate simple SAS+ representation from strips
+          val (saspProblem, sasOperatorOrdering) = SasPlusProblem.generateFromSTRIPS(groundedDomainAndProblem._1, groundedDomainAndProblem._2)
+          val saspRepresentation = SASPlusRepresentation(saspProblem, sasOperatorOrdering.zipWithIndex map { case (t, i) => i -> t } toMap)
+          (groundedDomainAndProblem._1.copy(sasPlusRepresentation = Some(saspRepresentation)), groundedDomainAndProblem._2)
+        }
       }
 
 
@@ -1124,6 +1132,7 @@ case class PreprocessingConfiguration(
                                        compileOrderInMethods: Option[TotallyOrderingOption],
                                        compileInitialPlan: Boolean,
                                        convertToSASP: Boolean,
+                                       allowSASPFromStrips: Boolean,
                                        splitIndependentParameters: Boolean,
                                        compileUselessAbstractTasks: Boolean,
                                        liftedReachability: Boolean,
@@ -1563,7 +1572,7 @@ case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
-                     forceClassicalEncoding : Boolean = false
+                     forceClassicalEncoding: Boolean = false
                     ) extends SearchConfiguration {
 
   protected lazy val getSingleRun: SingleSATRun = runConfiguration match {

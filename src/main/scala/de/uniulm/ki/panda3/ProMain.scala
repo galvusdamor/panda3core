@@ -37,7 +37,7 @@ object ProMain {
     }
     val domFile = args(0)
     val probFile = args(1)
-    val randomseed = if (args.length >= 3) {      args(2).toInt    } else 42
+    val randomseed = if (args.length >= 3) {args(2).toInt } else 42
     //val outputPDF = args(2)
     val outputPDF = "dot.dot"
 
@@ -66,7 +66,7 @@ object ProMain {
       }
 
       val heuristicExtraction = if (args.length >= 6) args(5) match {
-        case "-ff"    => gphRcFFMulticount.heuristicExtraction.ff
+        case "-ff"         => gphRcFFMulticount.heuristicExtraction.ff
         case "-multicount" => gphRcFFMulticount.heuristicExtraction.multicount
       } else gphRcFFMulticount.heuristicExtraction.multicount
 
@@ -79,17 +79,19 @@ object ProMain {
 
       args(3) match {
         case "-greedyProgression" => ProgressionSearch(GreedyType, Some(GreedyProgression), abstractTaskSelectionStrategy = abstractSelector)
-        case "-greedyRCG"         => ProgressionSearch(GreedyType, Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction,
-                                                                                                               producerSelectionStrategy = producerSelector)),
+        case "-greedyRCG"         => ProgressionSearch(GreedyType, Some(RelaxedCompositionGraph(useTDReachability = false, heuristicExtraction = heuristicExtraction,
+                                                                                                producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
-        case "-greedyRCGTDR"      => ProgressionSearch(GreedyType, Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction,
-                                                                                                               producerSelectionStrategy = producerSelector)),
+        case "-greedyRCGTDR"      => ProgressionSearch(GreedyType, Some(RelaxedCompositionGraph(useTDReachability = true, heuristicExtraction = heuristicExtraction,
+                                                                                                producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
         case "-astarRCG"          => ProgressionSearch(AStarActionsType(1),
-                                                       Some(RelaxedCompositionGraph(useTDReachability = false,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
+                                                       Some(RelaxedCompositionGraph(useTDReachability = false, heuristicExtraction = heuristicExtraction,
+                                                                                    producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
         case "-astarRCGTDR"       => ProgressionSearch(AStarActionsType(1),
-                                                       Some(RelaxedCompositionGraph(useTDReachability = true,heuristicExtraction = heuristicExtraction, producerSelectionStrategy = producerSelector)),
+                                                       Some(RelaxedCompositionGraph(useTDReachability = true, heuristicExtraction = heuristicExtraction,
+                                                                                    producerSelectionStrategy = producerSelector)),
                                                        abstractTaskSelectionStrategy = abstractSelector)
       }
     } else NoSearch
@@ -102,6 +104,7 @@ object ProMain {
                                                                         compileOrderInMethods = None,
                                                                         compileInitialPlan = true,
                                                                         convertToSASP = true,
+                                                                        allowSASPFromStrips = true,
                                                                         splitIndependentParameters = true,
                                                                         compileUselessAbstractTasks = false,
                                                                         liftedReachability = true, groundedReachability = None, //Some(PlanningGraph),
@@ -122,7 +125,7 @@ object ProMain {
                                              PostprocessingConfiguration(Set(ProcessingTimings,
                                                                              SearchStatistics,
                                                                              PreprocessedDomainAndPlan)),
-      Map(FastDownward -> "/home/dh/programme/FastDownward"))
+                                             Map(FastDownward -> "/home/dh/programme/FastDownward"))
 
     //System.in.read()
 

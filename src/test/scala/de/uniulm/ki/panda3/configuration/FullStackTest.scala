@@ -15,7 +15,7 @@ class FullStackTest extends FlatSpec {
 
   val grounded = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                             compileOrderInMethods = None,
-                                            compileInitialPlan = false, convertToSASP = false, splitIndependentParameters = false,
+                                            compileInitialPlan = false, convertToSASP = false, allowSASPFromStrips = false, splitIndependentParameters = false,
                                             compileUselessAbstractTasks = false,
                                             liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
@@ -23,7 +23,7 @@ class FullStackTest extends FlatSpec {
 
   val lifted = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                           compileOrderInMethods = None,
-                                          compileInitialPlan = false, convertToSASP = false, splitIndependentParameters = false,
+                                          compileInitialPlan = false, convertToSASP = false, allowSASPFromStrips = false, splitIndependentParameters = false,
                                           compileUselessAbstractTasks = false,
                                           liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
                                           groundedTaskDecompositionGraph = Some(TwoWayTDG),

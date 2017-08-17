@@ -47,7 +47,10 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
                                  HashMap<Task, List<ProMethod>> methods,
                                  List<ProgressionPlanStep> initialTasks) {
 
-        this.compEnc = new RelaxedCompositionSAS(flat);
+        if (flat.createdFromStrips)
+            this.compEnc = new RelaxedCompositionSTRIPS(flat);
+        else
+            this.compEnc = new RelaxedCompositionSAS(flat);
         this.compEnc.generateTaskCompGraph(methods, initialTasks);
         System.out.println("Generating Relaxed Composition Model ...");
         System.out.println(this.compEnc.getStatistics());
