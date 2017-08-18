@@ -517,10 +517,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             SearchState.TIMEOUT
           else {
             searchConfiguration match {
-              case search: PlanBasedSearch =>
-                if (informationCapsule.dataMap().contains(Information.SEARCH_SPACE_FULLY_EXPLORED)) SearchState.UNSOLVABLE else SearchState.INSEARCH
-              case sat: SATSearch          => SearchState.UNSOLVABLE
-              case _                       => SearchState.INSEARCH
+              case search: PlanBasedSearch   => if (informationCapsule.dataMap().contains(Information.SEARCH_SPACE_FULLY_EXPLORED)) SearchState.UNSOLVABLE else SearchState.INSEARCH
+              case search: ProgressionSearch => if (informationCapsule.dataMap().contains(Information.SEARCH_SPACE_FULLY_EXPLORED)) SearchState.UNSOLVABLE else SearchState.INSEARCH
+              case sat: SATSearch            => SearchState.UNSOLVABLE
+              case _                         => SearchState.INSEARCH
             }
           }
         // write search state into the information capsule
@@ -1175,11 +1175,11 @@ case class PreprocessingConfiguration(
          "-liftedReachability" ->(NoParameter, { p: Option[String] => this.copy(liftedReachability = true).asInstanceOf[this.type] }),
          "-noLiftedReachability" ->(NoParameter, { p: Option[String] => this.copy(liftedReachability = false).asInstanceOf[this.type] }),
 
-      "-sas+" ->(NoParameter, { p: Option[String] => this.copy(convertToSASP = true).asInstanceOf[this.type] }),
-      "-nosas+" ->(NoParameter, { p: Option[String] => this.copy(convertToSASP = false).asInstanceOf[this.type] }),
+         "-sas+" ->(NoParameter, { p: Option[String] => this.copy(convertToSASP = true).asInstanceOf[this.type] }),
+         "-nosas+" ->(NoParameter, { p: Option[String] => this.copy(convertToSASP = false).asInstanceOf[this.type] }),
 
-      "-allowSAS+FromStrips" ->(NoParameter, { p: Option[String] => this.copy(allowSASPFromStrips = true).asInstanceOf[this.type] }),
-      "-dontallowSAS+FromStrips" ->(NoParameter, { p: Option[String] => this.copy(allowSASPFromStrips = false).asInstanceOf[this.type] }),
+         "-allowSAS+FromStrips" ->(NoParameter, { p: Option[String] => this.copy(allowSASPFromStrips = true).asInstanceOf[this.type] }),
+         "-dontallowSAS+FromStrips" ->(NoParameter, { p: Option[String] => this.copy(allowSASPFromStrips = false).asInstanceOf[this.type] }),
 
 
          "-groundedReachability" ->(NecessaryParameter, { p: Option[String] => assert(p.isDefined)

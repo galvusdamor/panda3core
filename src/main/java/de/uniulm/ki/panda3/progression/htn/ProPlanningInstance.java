@@ -46,6 +46,13 @@ public class ProPlanningInstance {
             System.exit(-1);
         }
 
+        // check for an unsolvable planning instance
+        if (d.decompositionMethods().length() == 0){
+            // there cannot be a solution ...
+            ic.set(Information.SEARCH_SPACE_FULLY_EXPLORED(),"true");
+            return false;
+        }
+
         // Convert data structures
         long totaltime = System.currentTimeMillis();
         ProPlanningInstance.randomSeed = randomSeed;

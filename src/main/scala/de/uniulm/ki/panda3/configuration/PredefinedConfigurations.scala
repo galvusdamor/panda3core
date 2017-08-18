@@ -35,7 +35,7 @@ object PredefinedConfigurations {
   val sasPlusPreprocess = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
                                                      compileOrderInMethods = None,
                                                      compileInitialPlan = true, splitIndependentParameters = true,
-                                                     liftedReachability = true, convertToSASP = true, allowSASPFromStrips = true,
+                                                     liftedReachability = true, convertToSASP = true, allowSASPFromStrips = false,
                                                      compileUselessAbstractTasks = true,
                                                      groundedReachability = None,
                                                      groundedTaskDecompositionGraph = Some(TwoWayTDG),
@@ -238,7 +238,7 @@ object PredefinedConfigurations {
 
          // SHOP
          "-shop2" ->(htnParsing, sasPlusPreprocess, shop2),
-         "-shop2Improved" ->(htnParsing, sasPlusPreprocess, shop2),
+         "-shop2Improved" ->(htnParsing, sasPlusPreprocess, shop2Improved),
 
 
          // A*
