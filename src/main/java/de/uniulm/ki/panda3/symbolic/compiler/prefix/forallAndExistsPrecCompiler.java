@@ -28,7 +28,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
 
         Domain d = new Domain(dIn.sorts(), dIn.predicates(), dIn.tasks(), updatedMethods, dIn.decompositionAxioms());
         Plan p = new Plan(pIn.planSteps(), pIn.causalLinks(), pIn.orderingConstraints(), pIn.variableConstraints(), pIn.init(), pIn.goal(), pIn.isModificationAllowed(),pIn
-                .isFlawAllowed(),pIn.planStepDecomposedByMethod(),pIn.planStepParentInDecompositionTree());
+                .isFlawAllowed(),pIn.planStepDecomposedByMethod(),pIn.planStepParentInDecompositionTree(),false);
 
         return new Tuple2<>(d, p);
     }
@@ -54,7 +54,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
                         sdm.subPlan().isModificationAllowed(),
                         sdm.subPlan().isFlawAllowed(),
                         sdm.subPlan().planStepDecomposedByMethod(),
-                        sdm.subPlan().planStepParentInDecompositionTree());
+                        sdm.subPlan().planStepParentInDecompositionTree(),false);
 
                 // TODO reat effects
                 updatedMethods.add(new SHOPDecompositionMethod(sdm.abstractTask(), newSubPlan, updated._3(), sdm.methodEffect(), sdm.name()));

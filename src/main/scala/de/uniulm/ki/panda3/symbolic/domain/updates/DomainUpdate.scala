@@ -62,7 +62,8 @@ case class RemovePredicate(unnecessaryPredicates : Set[Predicate]) extends Domai
 
 case class PropagateEquality(protectedVariables: Set[Variable]) extends DomainUpdate
 
-object DeleteCausalLinks extends DomainUpdate
+case class SetExpandVariableConstraintsInPlans(dontExpand : Boolean) extends DomainUpdate
 
+object DeleteCausalLinks extends DomainUpdate
 
 object NoUpdate extends DomainUpdate

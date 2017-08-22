@@ -182,7 +182,7 @@ public class hddlPanda3Visitor {
             TaskOrdering taskOrderings = new TaskOrdering(new VectorBuilder<OrderingConstraint>().result(), new VectorBuilder<PlanStep>().result());
             taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit,psGoal);
             p = new Plan(planSteps.result(), new seqProviderList<CausalLink>().result(), taskOrderings, csp, psInit, psGoal,
-                    allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+                    allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false);
         }
         report.printReport();
 
@@ -378,7 +378,7 @@ public class hddlPanda3Visitor {
 
         CSP csp = new CSP(JavaToScala.toScalaSet(vctx.parameters), constraints.result());
         Plan subPlan = new Plan(planSteps.result(), causalLinks.result(), taskOrderings, csp, psInit, psGoal,
-                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false);
         return subPlan;
     }
 
