@@ -861,7 +861,7 @@ public class SasPlusProblem {
     }
 
     public boolean correctModel() {
-        return correctModel(false);
+        return correctModel(this.createdFromStrips);
     }
 
     public boolean correctModel(boolean ignoreS0) {
@@ -1072,26 +1072,27 @@ public class SasPlusProblem {
         HashSet<Literal> usedInG = new HashSet<>();
 
         // prepare tasks
-        scala.collection.Iterator<Object> taskIter = domain.primitiveTasks().toSet().iterator();
+        scala.collection.Iterator<Task> taskIter = domain.primitiveTasks().iterator();
         ReducedTask[] tasks = new ReducedTask[domain.primitiveTasks().size()];
         int ti = 0;
         while (taskIter.hasNext()) {
-            Task t = (Task) taskIter.next();
+            Task t = taskIter.next();
             assert t instanceof ReducedTask;
             ReducedTask rt = (ReducedTask) t;
             tasks[ti++] = rt;
 
             // preconditions
-            scala.collection.Iterator<Object> litIter = rt.precondition().conjuncts().toSet().iterator();
+            scala.collection.Iterator<Literal> litIter = rt.precondition().conjuncts().iterator();
             while (litIter.hasNext()) {
-                Literal l = (Literal) litIter.next();
+                Literal l = litIter.next();
+                assert l.isPositive();
                 usedInPrec.add(l);
             }
 
             // effects
-            litIter = rt.effect().conjuncts().toSet().iterator();
+            litIter = rt.effect().conjuncts().iterator();
             while (litIter.hasNext()) {
-                Literal l = (Literal) litIter.next();
+                Literal l = litIter.next();
 
                 if (l.isPositive()) {
                     usedInAdd.add(l);
@@ -1106,6 +1107,7 @@ public class SasPlusProblem {
         scala.collection.Iterator<Object> iter3 = plan.groundedInitialStateOnlyPositive().toSet().iterator();
         while (iter3.hasNext()) {
             GroundLiteral gl = (GroundLiteral) iter3.next();
+            assert gl.isPositive();
             if (gl.parameter().size() > 0) {
                 System.out.println("Error: Tried to create " + new SasPlusProblem().getClass().toString() + " from non-grounded tasks.");
                 System.exit(-1);
@@ -1177,9 +1179,9 @@ public class SasPlusProblem {
         for (int i = 0; i < tasks.length; i++) {
             ReducedTask t = tasks[i];
             Set<Integer> pre = new HashSet<>();
-            scala.collection.Iterator<Object> litIter = t.precondition().conjuncts().toSet().iterator();
+            scala.collection.Iterator<Literal> litIter = t.precondition().conjuncts().iterator();
             while (litIter.hasNext()) {
-                Literal l = (Literal) litIter.next();
+                Literal l = litIter.next();
                 if (!usefulLits.contains(l))
                     continue;
                 int iLit = indexMap.get(l);
@@ -1194,12 +1196,12 @@ public class SasPlusProblem {
 
             Set<Integer> add = new HashSet<>();
             Set<Integer> del = new HashSet<>();
-            litIter = t.effect().conjuncts().toSet().iterator();
+            litIter = t.effect().conjuncts().iterator();
             while (litIter.hasNext()) {
-                Literal l = (Literal) litIter.next();
+                Literal l = litIter.next();
                 boolean isAdd = l.isPositive();
                 if (!l.isPositive())
-                    l = new Literal(l.predicate(), true, l.parameterVariables());
+                    l = l.negate();
                 if (!usefulLits.contains(l))
                     continue;
                 int iLit = indexMap.get(l);

@@ -37,6 +37,7 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
 
     public RelaxedCompositionSTRIPS(SasPlusProblem p) {
         assert (p.correctModel());
+        this.createdFromStrips = p.createdFromStrips;
         this.numOfStateFeatures = p.numOfStateFeatures;
         this.numOfOperators = p.numOfOperators;
         this.firstIndex = p.firstIndex;

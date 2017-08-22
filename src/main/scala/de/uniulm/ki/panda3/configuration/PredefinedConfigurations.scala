@@ -41,6 +41,15 @@ object PredefinedConfigurations {
                                                      groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                      iterateReachabilityAnalysis = false, groundDomain = true)
 
+  val sasPlusPreprocessFallback = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
+                                                     compileOrderInMethods = None,
+                                                     compileInitialPlan = true, splitIndependentParameters = true,
+                                                     liftedReachability = true, convertToSASP = true, allowSASPFromStrips = true,
+                                                     compileUselessAbstractTasks = true,
+                                                     groundedReachability = None,
+                                                     groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                     iterateReachabilityAnalysis = false, groundDomain = true)
+
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
                                                                //compileOrderInMethods = None, //Some(OneRandomOrdering()),
@@ -317,6 +326,10 @@ object PredefinedConfigurations {
          "-gastar-pro-lmcut" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hLmCut)),
          "-gastar-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hIncLmCut)),
          "-gastar-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hAdd)),
+
+         "-gastar-pro-strips-FF" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hFF)),
+         "-gastar-pro-strips-lmcut" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hLmCut)),
+         "-gastar-pro-strips-add" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hAdd)),
 
          "-g3astar-pro-FF" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hFF)),
          "-g3astar-pro-lmcut" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hLmCut)),
