@@ -380,7 +380,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val potentialPlan = solution match {
             case Some((planSteps, appliedDecompositions, parentsInDecompositionTree)) =>
 
-              Plan(planSteps, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema, appliedDecompositions, parentsInDecompositionTree) :: Nil
+              Plan(planSteps, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema, appliedDecompositions, parentsInDecompositionTree).maximalDeordering :: Nil
             case None                                                                 => Nil
           }
           runPostProcessing(timeCapsule, informationCapsule, null, potentialPlan, domainAndPlan, unprocessedDomain, analysisMap)

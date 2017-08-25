@@ -442,9 +442,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
           PathBasedEncoding.pathSortingFunction(path1, path2)
         }
-        Dot2PdfCompiler.writeDotToFile(graph, "graph.pdf")
+        //Dot2PdfCompiler.writeDotToFile(graph, "graph.pdf")
 
-
+        val shortPS = nodes filterNot { _.contains("-") } map actionStringToTask map { ps => ps.id + " " + ps.schema.name + "\t" + domain.tasks.indexOf(ps.schema) }
 
         val allMethods = formulaVariables filter { _.startsWith("method^") } filter allTrueAtoms.contains
 
@@ -462,13 +462,22 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
         val parentInDecompositionMap: Map[PlanStep, (PlanStep, PlanStep)] = edges.map(_.swap) collect { case (child, father) if !child.contains("-") =>
           // find all children
-          val indexOfChild = graph.edges(father).sortWith(nodeSortingFunction).filterNot(_.contains("-"))indexOf(child)
-          val fatherPS = actionStringToTask(father)
+          def getFirstFather(f: String): PlanStep = if (planStepsMethodMap.contains(actionStringToTask(f))) actionStringToTask(f) else getFirstFather(graph.reversedEdgesSet(f).head)
+          val fatherPS = getFirstFather(father)
           val childPS = actionStringToTask(child)
-          val planStepInMethod = planStepsMethodMap(fatherPS).subPlan.planStepsWithoutInitGoal(indexOfChild)
+
+          val siblings: Seq[PlanStep] = graph.edges(father).sortWith(nodeSortingFunction).filterNot(_.contains("-")).map(actionStringToTask)
+
+          assert(siblings.count(_.schema == childPS.schema) == 1)
+
+          val planStepInMethod = planStepsMethodMap(fatherPS).subPlan.planStepsWithoutInitGoal.find(_.schema == childPS.schema).get
+
+          assert(planStepInMethod.schema == childPS.schema)
 
           childPS ->(fatherPS, planStepInMethod)
         } toMap
+
+        //println((domain.tasks.zipWithIndex map { case (t, i) => i + " : " + t.name } sorted).mkString("\n"))
 
         // can't annotate type : Seq[Task]
         val primitiveSolutionWithPotentialEmptyMethodApplications: Seq[PlanStep] = encoder match {
