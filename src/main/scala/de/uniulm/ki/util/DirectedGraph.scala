@@ -96,13 +96,13 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   override lazy val dotString: String = dotString(DirectedGraphDotOptions())
 
   /** The DOT representation of the object with options */
-  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString })
+  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString }, { case _ => "" })
 
-  def dotString(options: DirectedGraphDotOptions, nodeRenderer: T => String): String = {
+  def dotString(options: DirectedGraphDotOptions, nodeRenderer: T => String, edgeRenderer: (T, T) => String = { case _ => "" }): String = {
     val dotStringBuilder = new StringBuilder()
 
     dotStringBuilder append "digraph someDirectedGraph{\n"
-    edgeList foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + ";\n" }
+    edgeList foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + " " + "[label=" + edgeRenderer(a, b) + "];\n" }
     dotStringBuilder append "\n"
     vertices.zipWithIndex foreach { case (obj, index) =>
       val string = (if (options.labelNodesWithNumbers) index.toString else obj match {case pp: PrettyPrintable => pp.shortInfo; case x => nodeRenderer(x)}).replace('\"', '\'')
@@ -525,6 +525,15 @@ object SimpleDirectedGraph {
     //SimpleDirectedGraph(nodes, (nodes zip (nodes map { n => edges.filter({ _._1 == n }).map({ _._2 }) })).toMap)
     SimpleDirectedGraph(nodes, edgeMap)
   }
+}
+
+case class EdgeLabelledGraph[T, L](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)]) extends DirectedGraphWithAlgorithms[T] {
+  override def edges: Map[T, Seq[T]] = labelledEdges groupBy { _._1 } map { case (a, b) => a -> b.map(_._3).toSeq }
+
+  override def vertices: Seq[T] = arrayVertices.toSeq
+
+  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString },
+                                                                               { case (a,b) => labelledEdges.find({case (x,_,y) => a == x && b == y}).get._2.toString })
 }
 
 case class SimpleGraphNode(id: String, name: String) extends PrettyPrintable {
