@@ -38,7 +38,6 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, OrderingConstraint
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.{efficient, symbolic}
-import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 import de.uniulm.ki.util._
 
 import scala.collection.JavaConversions
@@ -720,33 +719,61 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       // FD can't handle either in the sort hierarchy, so we have to use predicates when writing them ...
       val uuid = UUID.randomUUID().toString
 
-      ("mkdir .fd" + uuid) !! // create directory
+      ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
 
-      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true), ".fd" + uuid + "/__sasdomain.pddl")
-      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan, writeEitherWithPredicates = true), ".fd" + uuid + "/__sasproblem.pddl")
+      val separator = System.getProperty("os.name") match {
+        case osname if osname.toLowerCase startsWith "windows" => "\\"
+        case _ => "/" // normal OSes
+      }
+
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true),
+        ".fd" + uuid + separator + "__sasdomain.pddl")
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan, writeEitherWithPredicates = true),
+        ".fd" + uuid + separator + "__sasproblem.pddl")
 
       val sasPlusParser = {
         // we need a path to FD
         assert(externalProgramPaths contains FastDownward, "no path to fast downward is specified")
         val fdPath = externalProgramPaths(FastDownward)
 
-        val path = if (fdPath.startsWith("/")) fdPath else "../" + fdPath
-        writeStringToFile("#!/bin/bash\ncd .fd" + uuid + "\npython " + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
+        val path = if (fdPath.startsWith(separator) || fdPath.contains(":")) fdPath else ".." + separator + fdPath
 
-        ("bash runFD" + uuid + ".sh") !!
-        // semantic empty line
+        //System exit 0
+
+
+        System.getProperty("os.name") match {
+          case osname if osname.toLowerCase startsWith "windows" =>
+            writeStringToFile("cd .fd" + uuid + "\n" +
+              "python " + path + "\\src\\translate\\translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".bat")
+            ("cmd.exe /c  runFD" + uuid + ".bat") !!
+
+          case _ => // OSes made by people who can think straigt
+            writeStringToFile("#!/bin/bash\n" +
+              "cd .fd" + uuid + "\n" +
+              "python " + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
+
+            ("bash runFD" + uuid + ".sh") !!
+          // semantic empty line
+        }
+
 
         // semantic empty line
-        val sasreader = new SasPlusProblem(".fd" + uuid + "/output.sas")
+        val sasreader = new SasPlusProblem(".fd" + uuid + separator +  "output.sas")
         sasreader.prepareEfficientRep()
         //ProPlanningInstance.sasp = sasreader
         //sasreader.prepareSymbolicRep(domain,problem)
 
-        ("rm -rf .fd" + uuid) !
+        System.getProperty("os.name") match {
+          case osname if osname.toLowerCase startsWith "windows" =>
+            ("cmd.exe /c  rmdir /S /Q .fd" + uuid) !
 
-        ("rm runFD" + uuid + ".sh") !!
-        // semantic empty line
+            ("cmd.exe /c del runFD" + uuid + ".bat") !!
+          case _ =>  // Linux and the like
+            ("rm -rf .fd" + uuid) !
 
+            ("rm runFD" + uuid + ".sh") !!
+          // semantic empty line
+        }
         SASPlusGrounding(liftedResult._1._1, liftedResult._1._2, sasreader)
       }
       val newAnalysisMap = liftedResult._2 + (SASPInput -> sasPlusParser) + (SymbolicGroundedReachability -> sasPlusParser)

@@ -331,6 +331,7 @@ public class SasPlusProblem {
         for (int i = 0; i < this.numOfOperators; i++) {
             readOperator(br, i);
         }
+        br.close();
     }
 
     private void readOperator(BufferedReader br, int i) throws Exception {
