@@ -1,5 +1,6 @@
 package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
+import de.uniulm.ki.panda3.configuration.Information;
 import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.TaskReachabilityGraph;
 import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
@@ -239,6 +240,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             }
         }
         System.out.println("Number of nodes in final fringe: " + fringe.size());
+        if (fringe.size() == 0) info.set(Information.SEARCH_SPACE_FULLY_EXPLORED(),"true");
         timing.stop(SEARCH_TIME);
 
         /*
