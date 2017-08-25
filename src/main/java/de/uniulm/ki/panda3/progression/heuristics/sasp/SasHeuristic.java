@@ -11,7 +11,10 @@ public abstract class SasHeuristic {
     public static final int cUnreachable = Integer.MAX_VALUE;
     public BitSet helpfulOps;
 
-    public enum SasHeuristics {hFilter, hMax, hAdd, hFF, hFFwithHA, hCG, hLmCut, hLmCutOpt, hIncLmCut}
+    public enum SasHeuristics {
+        hFilter, hMax, hAdd, hFF, hFFwithHA, hCG, hLmCut, hLmCutOpt, hIncLmCut,
+        hMS
+    }
 
     protected boolean isIncremental = false;
 

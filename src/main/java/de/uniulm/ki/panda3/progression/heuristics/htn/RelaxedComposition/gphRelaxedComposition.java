@@ -8,6 +8,7 @@ import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeur
 import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics.hMaxEq;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncInfLmCut;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncrementInformation;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.ClassicalMergeAndShrink;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
@@ -80,6 +81,8 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
             this.heuristic = new hLmCutEq(this.compEnc, true);
         } else if (heuristic == SasHeuristic.SasHeuristics.hFilter) {
             this.heuristic = new hFilter(this.compEnc);
+        } else if (heuristic == SasHeuristic.SasHeuristics.hMS) {
+            this.heuristic = new ClassicalMergeAndShrink(this.compEnc);
         }
     }
 
