@@ -253,6 +253,8 @@ object PredefinedConfigurations {
          // SHOP
          "-shop2" ->(htnParsing, sasPlusPreprocess, shop2),
          "-shop2Improved" ->(htnParsing, sasPlusPreprocess, shop2Improved),
+         "-shop2-strips" ->(htnParsing, groundingPreprocess, shop2),
+         "-shop2Improved-strips" ->(htnParsing, groundingPreprocess, shop2Improved),
 
 
          // A*
