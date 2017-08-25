@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition;
 import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeuristic;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.*;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics.hAddhFFEq;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics.hFilter;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics.hLmCutEq;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.ExplorationQueueBasedHeuristics.hMaxEq;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncInfLmCut;
@@ -51,6 +52,10 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
             this.compEnc = new RelaxedCompositionSTRIPS(flat);
         else
             this.compEnc = new RelaxedCompositionSAS(flat);
+
+        if (heuristic == SasHeuristic.SasHeuristics.hLmCutOpt)
+            this.compEnc.methodCosts = 0;
+
         this.compEnc.generateTaskCompGraph(methods, initialTasks);
         System.out.println("Generating Relaxed Composition Model ...");
         System.out.println(this.compEnc.getStatistics());
@@ -67,11 +72,14 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
             supportsHelpfulActions = true;
         } else if (heuristic == SasHeuristic.SasHeuristics.hCG) {
             this.heuristic = new hCausalGraph(this.compEnc);
-        } else if (heuristic == SasHeuristic.SasHeuristics.hLmCut) {
+        } else if ((heuristic == SasHeuristic.SasHeuristics.hLmCut)
+                || (heuristic == SasHeuristic.SasHeuristics.hLmCutOpt)) {
             this.heuristic = new hLmCutEq(this.compEnc, false);
         } else if (heuristic == SasHeuristic.SasHeuristics.hIncLmCut) {
             this.inc = new IncInfLmCut();
             this.heuristic = new hLmCutEq(this.compEnc, true);
+        } else if (heuristic == SasHeuristic.SasHeuristics.hFilter) {
+            this.heuristic = new hFilter(this.compEnc);
         }
     }
 
@@ -91,7 +99,7 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
         //BitSet s0 = (BitSet) compEnc.s0mask.clone();
         BitSet s0 = compEnc.initS0();
         for (int i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
-            compEnc.setReachable(s0,i);
+            compEnc.setReachable(s0, i);
             //s0.set(compEnc.reachable[i]);
             //s0.set(compEnc.unreachable[i], false);
         }
@@ -105,7 +113,7 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
         }
 
         for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
-            compEnc.setReached(g,goalTask);
+            compEnc.setReached(g, goalTask);
             //g.set(compEnc.reached[goalTask]);
             //g.set(compEnc.unreached[goalTask], false);
             //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging

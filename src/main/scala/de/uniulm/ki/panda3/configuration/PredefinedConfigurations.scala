@@ -113,10 +113,10 @@ object PredefinedConfigurations {
   val AStarRelax              = PlanBasedSearch(None, AStarActionsType(1), Relax :: Nil, Nil, LCFR)
   val AStarAOpenPreconditions = PlanBasedSearch(None, AStarActionsType(1), NumberOfOpenPreconditions :: Nil, Nil, LCFR)
 
-  val AStarAPRLiftedPR                = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
-  val AStarAPRLiftedPRReachability    = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
-  val AStarActionLiftedPR             = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)
-  val AStarActionLiftedPRReachability = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)
+  def AStarAPRLiftedPR(greediness : Int)                = PlanBasedSearch(None, AStarActionsType(greediness), LiftedTDGPreconditionRelaxation(NeverRecompute) :: Nil, Nil, LCFR)
+  def AStarAPRLiftedPRReachability(greediness : Int)    = PlanBasedSearch(None, AStarActionsType(greediness), LiftedTDGPreconditionRelaxation(ReachabilityRecompute) :: Nil, Nil, LCFR)
+  def AStarActionLiftedPR(greediness : Int)             = PlanBasedSearch(None, AStarActionsType(greediness), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)
+  def AStarActionLiftedPRReachability(greediness : Int) = PlanBasedSearch(None, AStarActionsType(greediness), LiftedTDGMinimumAction(ReachabilityRecompute) :: Nil, Nil, LCFR)
 
   val AStarAPRLiftedPRCompare    = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = true) :: Nil, Nil, LCFR)
   val AStarActionLiftedPRCompare = PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = false) :: Nil, Nil, LCFR)
@@ -202,10 +202,10 @@ object PredefinedConfigurations {
                            "-AStarADDReusing" -> AStarADDReusing,
                            "-AStarRelax" -> AStarRelax,
                            "-AStarAOpenPreconditions" -> AStarAOpenPreconditions,
-                           "-AStarAPRLiftedPR" -> AStarAPRLiftedPR,
-                           "-AStarAPRLiftedPRReachability" -> AStarAPRLiftedPRReachability,
-                           "-AStarActionLiftedPR" -> AStarActionLiftedPR,
-                           "-AStarActionLiftedPRReachability" -> AStarActionLiftedPRReachability,
+                           "-AStarAPRLiftedPR" -> AStarAPRLiftedPR(1),
+                           "-AStarAPRLiftedPRReachability" -> AStarAPRLiftedPRReachability(1),
+                           "-AStarActionLiftedPR" -> AStarActionLiftedPR(1),
+                           "-AStarActionLiftedPRReachability" -> AStarActionLiftedPRReachability(1),
 
                            // Greedy
                            "-GreedyADD" -> GreedyADD,
@@ -222,10 +222,10 @@ object PredefinedConfigurations {
   val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
     Map(
          // Old Panda
-         "-astar-panda-MAC" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR),
-         "-astar-panda-MAC-PR" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
-         "-astar-panda-MME" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR),
-         "-astar-panda-MME-PR" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
+         "-astar-panda-MAC" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR(1)),
+         "-astar-panda-MAC-PR" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability(1)),
+         "-astar-panda-MME" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR(1)),
+         "-astar-panda-MME-PR" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability(1)),
 
          "-greedy-panda-MAC" ->(htnParsing, groundingPreprocess, GreedyActionLiftedPR),
          "-greedy-panda-MAC-PR" ->(htnParsing, groundingPreprocess, GreedyActionLiftedPRReachability),
@@ -237,7 +237,12 @@ object PredefinedConfigurations {
          "-gastar-panda-MME" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPR),
          "-gastar-panda-MME-PR" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPRReachability),
 
-         "-Dijkstra" ->(htnParsing, groundingPreprocess, planSearchDijkstra),
+         "-g3astar-panda-MAC" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR(3)),
+         "-g3astar-panda-MAC-PR" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability(3)),
+         "-g3astar-panda-MME" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR(3)),
+         "-g3astar-panda-MME-PR" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability(3)),
+
+      "-Dijkstra" ->(htnParsing, groundingPreprocess, planSearchDijkstra),
          "-DFS" ->(htnParsing, groundingPreprocess, planSearchDFS),
          "-BFS" ->(htnParsing, groundingPreprocess, planSearchBFS),
 
@@ -257,10 +262,10 @@ object PredefinedConfigurations {
          "-AStarRelax" ->(htnParsing, groundingPreprocess, AStarRelax),
          "-AStarAOpenPreconditions" ->(htnParsing, groundingPreprocess, AStarAOpenPreconditions),
 
-         "-AStarAPRLiftedPR" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR),
-         "-AStarAPRLiftedPRReachability" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
-         "-AStarActionLiftedPR" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR),
-         "-AStarActionLiftedPRReachability" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
+         "-AStarAPRLiftedPR" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR(1)),
+         "-AStarAPRLiftedPRReachability" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability(1)),
+         "-AStarActionLiftedPR" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR(1)),
+         "-AStarActionLiftedPRReachability" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability(1)),
 
          // GA*
          "-GAStarADD" ->(htnParsing, groundingPreprocess, planSearchAStarADD),
@@ -320,6 +325,10 @@ object PredefinedConfigurations {
          "-astar-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hIncLmCut)),
          "-astar-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hAdd)),
 
+         "-astar-pro-strips-FF" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFF)),
+         "-astar-pro-strips-lmcut" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hLmCut)),
+         "-astar-pro-strips-add" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hAdd)),
+
          "-gastar-pro-CG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hCG)),
          "-gastar-pro-FF" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hFF)),
          "-gastar-pro-FF-ha" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hFFwithHA)),
@@ -336,12 +345,23 @@ object PredefinedConfigurations {
          "-g3astar-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hIncLmCut)),
          "-g3astar-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hAdd)),
 
+         "-g3astar-pro-strips-FF" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hFF)),
+         "-g3astar-pro-strips-lmcut" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hLmCut)),
+         "-g3astar-pro-strips-add" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hAdd)),
+
+         "-pro-strips-filter" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFilter)),
+         "-pro-lmcut-opt" ->(htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hLmCutOpt)),
+
          "-greedy-pro-CG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hCG)),
          "-greedy-pro-FF" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hFF)),
          "-greedy-pro-FF-ha" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hFFwithHA)),
          "-greedy-pro-lmcut" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hLmCut)),
          "-greedy-pro-lmcut-inc" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hIncLmCut)),
-         "-greedy-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd))
+         "-greedy-pro-add" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd)),
+
+         "-greedy-pro-strips-FF" ->(htnParsing, groundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hFF)),
+         "-greedy-pro-strips-lmcut" ->(htnParsing, groundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hLmCut)),
+         "-greedy-pro-strips-add" ->(htnParsing, groundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd))
 
        )
 

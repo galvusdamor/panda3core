@@ -22,7 +22,6 @@ public class RelaxedCompositionSAS extends RelaxedCompositionEncoding {
     public int firstHtnIndex;
     public int firstBurIndex;
     public int lastOverallIndex;
-    public int methodCosts = 1;
 
     public int[] unreachable;
     public int[] reachable;

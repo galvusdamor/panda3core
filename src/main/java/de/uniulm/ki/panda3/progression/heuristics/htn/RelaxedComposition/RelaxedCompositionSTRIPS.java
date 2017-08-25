@@ -33,7 +33,6 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
     public int lastTaskCompIndex;
 
     public int lastOverallIndex;
-    public int methodCosts = 1;
 
     public RelaxedCompositionSTRIPS(SasPlusProblem p) {
         assert (p.correctModel());
