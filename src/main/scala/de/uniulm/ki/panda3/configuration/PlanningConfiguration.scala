@@ -34,13 +34,13 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.hpddl.HPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, OrderingConstraint}
+import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask, OrderingConstraint}
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util._
 
-import scala.collection.JavaConversions
+import scala.collection.{Seq, JavaConversions}
 import scala.util.Random
 
 
@@ -321,7 +321,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case FullSATRun()                               =>
               // start with K = 0 and loop
               // TODO this is only good for total order ...
-              var solution: Option[Seq[Task]] = None
+              var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
               var currentK = 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
@@ -348,7 +348,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case OptimalSATRun(overrideK) =>
               // start with K = 0 and loop
               // TODO this is only good for total order ...
-              var solution: Option[Seq[Task]] = None
+              var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
               var currentLength = 1
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
@@ -378,8 +378,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           timeCapsule stop TOTAL_TIME
           val potentialPlan = solution match {
-            case Some(taskSequence) => Plan(taskSequence, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema) :: Nil
-            case None               => Nil
+            case Some((planSteps, appliedDecompositions, parentsInDecompositionTree)) =>
+
+              Plan(planSteps, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema, appliedDecompositions, parentsInDecompositionTree) :: Nil
+            case None                                                                 => Nil
           }
           runPostProcessing(timeCapsule, informationCapsule, null, potentialPlan, domainAndPlan, unprocessedDomain, analysisMap)
         })
@@ -723,13 +725,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       val separator = System.getProperty("os.name") match {
         case osname if osname.toLowerCase startsWith "windows" => "\\"
-        case _ => "/" // normal OSes
+        case _                                                 => "/" // normal OSes
       }
 
       writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true),
-        ".fd" + uuid + separator + "__sasdomain.pddl")
+                        ".fd" + uuid + separator + "__sasdomain.pddl")
       writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan, writeEitherWithPredicates = true),
-        ".fd" + uuid + separator + "__sasproblem.pddl")
+                        ".fd" + uuid + separator + "__sasproblem.pddl")
 
       val sasPlusParser = {
         // we need a path to FD
@@ -744,13 +746,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         System.getProperty("os.name") match {
           case osname if osname.toLowerCase startsWith "windows" =>
             writeStringToFile("cd .fd" + uuid + "\n" +
-              "python " + path + "\\src\\translate\\translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".bat")
+                                "python " + path + "\\src\\translate\\translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".bat")
             ("cmd.exe /c  runFD" + uuid + ".bat") !!
 
           case _ => // OSes made by people who can think straigt
             writeStringToFile("#!/bin/bash\n" +
-              "cd .fd" + uuid + "\n" +
-              "python " + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
+                                "cd .fd" + uuid + "\n" +
+                                "python " + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
 
             ("bash runFD" + uuid + ".sh") !!
           // semantic empty line
@@ -758,7 +760,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
         // semantic empty line
-        val sasreader = new SasPlusProblem(".fd" + uuid + separator +  "output.sas")
+        val sasreader = new SasPlusProblem(".fd" + uuid + separator + "output.sas")
         sasreader.prepareEfficientRep()
         //ProPlanningInstance.sasp = sasreader
         //sasreader.prepareSymbolicRep(domain,problem)
@@ -768,7 +770,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             ("cmd.exe /c  rmdir /S /Q .fd" + uuid) !
 
             ("cmd.exe /c del runFD" + uuid + ".bat") !!
-          case _ =>  // Linux and the like
+          case _                                                 => // Linux and the like
             ("rm -rf .fd" + uuid) !
 
             ("rm runFD" + uuid + ".sh") !!

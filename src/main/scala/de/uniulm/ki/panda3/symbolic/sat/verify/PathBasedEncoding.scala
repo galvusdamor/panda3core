@@ -171,9 +171,8 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       val possibleMethods: Array[(DecompositionMethod, Int)] = possibleAbstracts flatMap { case abstractTask => domain.methodsWithIndexForAbstractTasks(abstractTask) } toArray
 
 
-      val (methodToPositions, primitivePositions, positionsToPossibleTasks, intermediatePayload) =
-        computeTaskSequenceArrangement(possibleMethods map { _._1 }, possiblePrimitives)
-      val numberOfChildren = positionsToPossibleTasks.length
+      val (methodToPositions, primitivePositions, positionsToPossibleTasks, intermediatePayload) = computeTaskSequenceArrangement(possibleMethods map { _._1 }, possiblePrimitives)
+
 
       assert(possibleMethods.length == methodToPositions.length)
 

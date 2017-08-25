@@ -5,12 +5,11 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.configuration.Timings._
-import de.uniulm.ki.panda3.symbolic.domain.ReducedTask
+import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, ReducedTask, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.configuration._
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
+import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask}
 import de.uniulm.ki.util._
 
 import scala.collection.{JavaConversions, Seq}
@@ -22,7 +21,7 @@ import scala.io.Source
 // scalastyle:off method.length cyclomatic.complexity
 case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
-                     forceClassicalEncoding : Boolean) {
+                     forceClassicalEncoding: Boolean) {
 
   private val fileDir = "/dev/shm/"
 
@@ -46,13 +45,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
     method.invoke(vmManager).asInstanceOf[Int]
   }
 
-  def runWithTimeLimit(timelimit: Long, timeLimitForLastRun: Long,
-                       planLength: Int, offsetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false): (Option[Seq[Task]], Boolean, Boolean) = {
+  def runWithTimeLimit(timelimit: Long, timeLimitForLastRun: Long, planLength: Int, offsetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false):
+  (Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])], Boolean, Boolean) = {
 
     val timerSemaphore = new Semaphore(0)
 
     val runner = new Runnable {
-      var result: Option[Option[Seq[Task]]] = None
+      var result: Option[Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])]] = None
 
       override def run(): Unit = {
         timeCapsule switchTimerToCurrentThread Timings.TOTAL_TIME
@@ -138,7 +137,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
     if (checkGoal) initialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => assert(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
   }
 
-  def run(planLength: Int, offSetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false): Option[Seq[Task]] =
+  def run(planLength: Int, offSetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false):
+  Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] =
     try {
       informationCapsule.set(Information.PLAN_LENGTH, planLength)
       informationCapsule.set(Information.NUMBER_OF_CONSTANTS, domain.constants.length)
@@ -356,12 +356,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
           println("extracting solution")
-          val (graphNodes, graphEdges, solutionSequence) = extractSolutionAndDecompositionGraph(encoder, atomMap, literals, formulaVariables, allTrueAtoms)
+          val (graphNodes, graphEdges, solutionSequence, methodsForAbstractTasks, parentsInDecompositionTree) =
+            extractSolutionAndDecompositionGraph(encoder, atomMap, literals, formulaVariables, allTrueAtoms)
 
           if (checkSolution) runSolutionIntegrityCheck(encoder, graphNodes, graphEdges)
 
           // return the found solution
-          Some(solutionSequence)
+          Some(solutionSequence, methodsForAbstractTasks, parentsInDecompositionTree)
         } else None
       }
     } catch {
@@ -371,192 +372,229 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
     }
 
 
-  private def extractSolutionAndDecompositionGraph(encoder: VerifyEncoding, atomMap: Map[String, Int], literals: Set[Int], formulaVariables: Seq[String],
-                                                   allTrueAtoms: Set[String]): (Seq[String], Seq[(String, String)], Seq[Task]) = encoder match {
-    case g: GeneralEncoding =>
-      // iterate through layers
-      val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) map { pos => domain.tasks map { task =>
-        val actionString = g.action(layer, pos, task)
-        val isPres = if (atomMap contains actionString) literals contains (1 + atomMap(actionString)) else false
-        (actionString, isPres)
-      } find { _._2 }
-      } filter { _.isDefined } map { _.get._1 }
-      }
-
-      val edges: Seq[(String, String)] = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) flatMap { pos => Range(0, g
-        .numberOfActionsPerLayer) flatMap {
-        father =>
-          Range(0, encoder.DELTA) flatMap { childIndex =>
-            val childString = g.childWithIndex(layer, pos, father, childIndex)
-            if ((atomMap contains childString) && (literals contains (1 + atomMap(childString)))) {
-              // find parent and myself
-              val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
-              assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
-              val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
-              assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
-              (fatherStringOption.get, childStringOption.get) :: Nil
-            } else Nil
-          }
-      }
-      }
-      }
-
-      (nodes, edges, ???)
-
-    case pbe: PathBasedEncoding[_, _] =>
-      val nodes = formulaVariables filter { _.startsWith("action!") } filter allTrueAtoms.contains
-
-      val edges = nodes flatMap { parent => nodes flatMap { child =>
-        val parentLayer = parent.split("!").last.split("_").head.toInt
-        val childLayer = child.split("!").last.split("_").head.toInt
-
-        if (parentLayer + 1 != childLayer) Nil
-        else {
-          val parentPathString = parent.split("_").last.split(",").head
-          val childPathString = child.split("_").last.split(",").head
-
-          val parentPath = parentPathString.split(";").filter(_.nonEmpty) map { _.toInt }
-          val childPath = childPathString.split(";").filter(_.nonEmpty) map { _.toInt }
-
-          assert(parentPath.length + 1 == childPath.length)
-
-          if (parentPath sameElements childPath.take(parentPath.length)) (parent, child) :: Nil else Nil
+  private def extractSolutionAndDecompositionGraph(encoder: VerifyEncoding, atomMap: Map[String, Int], literals: Set[Int], formulaVariables: Seq[String], allTrueAtoms: Set[String]):
+  (Seq[String], Seq[(String, String)], Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)]) =
+    encoder match {
+      case g: GeneralEncoding =>
+        // iterate through layers
+        val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) map { pos => domain.tasks map { task =>
+          val actionString = g.action(layer, pos, task)
+          val isPres = if (atomMap contains actionString) literals contains (1 + atomMap(actionString)) else false
+          (actionString, isPres)
+        } find { _._2 }
+        } filter { _.isDefined } map { _.get._1 }
         }
-      }
-      }
-      val primitiveSolutionWithPotentialEmptyMethodApplications: Seq[Task] = encoder match {
-        case tot: TotallyOrderedEncoding  =>
-          // check executability of the plan
 
-          val graph = SimpleDirectedGraph(nodes, edges)
+        val edges: Seq[(String, String)] = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) flatMap { pos => Range(0, g
+          .numberOfActionsPerLayer) flatMap {
+          father =>
+            Range(0, encoder.DELTA) flatMap { childIndex =>
+              val childString = g.childWithIndex(layer, pos, father, childIndex)
+              if ((atomMap contains childString) && (literals contains (1 + atomMap(childString)))) {
+                // find parent and myself
+                val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
+                assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
+                val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
+                assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
+                (fatherStringOption.get, childStringOption.get) :: Nil
+              } else Nil
+            }
+        }
+        }
+        }
 
-          Dot2PdfCompiler.writeDotToFile(graph, "graph.pdf")
+        (nodes, edges, ???, ???, ???)
 
-          /*graph.vertices foreach { t => val actionIDX = t.split(",").last.toInt;
-            println("task " + t + " " + actionIDX + " " + domain.tasks(actionIDX).name)
-            domain.tasks(actionIDX) }*/
+      case pbe: PathBasedEncoding[_, _] =>
+        val nodes = formulaVariables filter { _.startsWith("action!") } filter allTrueAtoms.contains
+
+        val edges = nodes flatMap { parent => nodes flatMap { child =>
+          val parentLayer = parent.split("!").last.split("_").head.toInt
+          val childLayer = child.split("!").last.split("_").head.toInt
+
+          if (parentLayer + 1 != childLayer) Nil
+          else {
+            val parentPathString = parent.split("_").last.split(",").head
+            val childPathString = child.split("_").last.split(",").head
+
+            val parentPath = parentPathString.split(";").filter(_.nonEmpty) map { _.toInt }
+            val childPath = childPathString.split(";").filter(_.nonEmpty) map { _.toInt }
+
+            assert(parentPath.length + 1 == childPath.length)
+
+            if (parentPath sameElements childPath.take(parentPath.length)) (parent, child) :: Nil else Nil
+          }
+        }
+        }
+        val graph: DirectedGraph[String] = SimpleDirectedGraph(nodes, edges)
+        // give all task a unique ID
+        val nodeIDMap: Map[String, Int] = nodes.zipWithIndex.toMap
+        val idNodeMap: Map[Int, String] = nodeIDMap.map(_.swap)
+        val pathIDMap: Map[String, Int] = nodeIDMap map { case (n, id) => n.split("_").last.split(",").head -> id }
+
+        def actionStringToTask(actionString: String): PlanStep = {
+          val actionIDX = actionString.split(",").last.toInt
+          val task = domain.tasks(actionIDX)
+          PlanStep(nodeIDMap(actionString), task, Nil)
+        }
+        def nodeSortingFunction(t1: String, t2: String) = {
+          val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
+          val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
+          PathBasedEncoding.pathSortingFunction(path1, path2)
+        }
+        Dot2PdfCompiler.writeDotToFile(graph, "graph.pdf")
 
 
-          graph.sinks sortWith { case (t1, t2) =>
-            val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
-            val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
-            PathBasedEncoding.pathSortingFunction(path1, path2)
-          } map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
-        case tree: TotallyOrderedEncoding =>
-          val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
-          //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
-          val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
-          val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
-          val taskSequence = actionSequence map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
 
-          taskSequence
+        val allMethods = formulaVariables filter { _.startsWith("method^") } filter allTrueAtoms.contains
 
-        case sogTree: SOGEncoding =>
+        // attach methods to respective tasks
+        val planStepsMethodMap =
+          allMethods map { m =>
+            val extract = m.split("_").last.split(",").head
+            val ps = actionStringToTask(idNodeMap(pathIDMap(extract)))
+            val method = domain.decompositionMethods(m.split(",").last.toInt)
+            assert(method.abstractTask == ps.schema)
+            ps -> method
+          } toMap
 
-          def actionStringToInfoString(t: String): String = {
-            val actionIDX = t.split(",").last.toInt
-            domain.tasks(actionIDX).name + " " + domain.tasks(actionIDX).isPrimitive + " " + t
+        //println(planStepsMethodMap map { case (a, b) => a.schema.name + " -> " + b.name } mkString "\n")
+
+        val parentInDecompositionMap: Map[PlanStep, (PlanStep, PlanStep)] = edges.map(_.swap) collect { case (child, father) if !child.contains("-") =>
+          // find all children
+          val indexOfChild = graph.edges(father).sortWith(nodeSortingFunction).filterNot(_.contains("-"))indexOf(child)
+          val fatherPS = actionStringToTask(father)
+          val childPS = actionStringToTask(child)
+          val planStepInMethod = planStepsMethodMap(fatherPS).subPlan.planStepsWithoutInitGoal(indexOfChild)
+
+          childPS ->(fatherPS, planStepInMethod)
+        } toMap
+
+        // can't annotate type : Seq[Task]
+        val primitiveSolutionWithPotentialEmptyMethodApplications: Seq[PlanStep] = encoder match {
+          case tot: TotallyOrderedEncoding  =>
+
+            //Dot2PdfCompiler.writeDotToFile(graph, "graph.pdf")
+            /*graph.vertices foreach { t => val actionIDX = t.split(",").last.toInt;
+              println("task " + t + " " + actionIDX + " " + domain.tasks(actionIDX).name)
+              domain.tasks(actionIDX) }*/
+            graph.sinks sortWith nodeSortingFunction map actionStringToTask
+          case tree: TotallyOrderedEncoding =>
+            val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
+            //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
+            val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
+            val actionSequence: Seq[String] = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
+            val taskSequence = actionSequence map actionStringToTask
+
+            taskSequence
+
+          case sogTree: SOGEncoding =>
+
+            //def actionStringToInfoString(t: String): String = {
+            //  val actionIDX = t.split(",").last.toInt
+            //  domain.tasks(actionIDX).name + " " + domain.tasks(actionIDX).isPrimitive + " " + t
+            //}
+
+            //val graph = SimpleDirectedGraph(nodes, edges)
+            //println(graph.sinks filterNot { t => t.contains("-1") || t.contains("-2") } map actionStringToInfoString mkString "\n")
+
+            sogTree match {
+
+              case tree: SOGPOCLEncoding      =>
+                // extract partial order from formula
+                val orderClauses = allTrueAtoms filter { _ startsWith "before" } map { _.split("_").tail } map { x => (x(0), x(1)) } toSeq
+
+                val pathsToSinks: Map[String, (PlanStep, String)] = graph.sinks map { x =>
+                  val actionID = x.split(",").last.toInt
+                  val (action, id) = if (actionID == domain.tasks.length) (ReducedTask("init", true, Nil, Nil, Nil, And(Nil), And(Nil)), -1)
+                  else if (actionID == domain.tasks.length + 1) (ReducedTask("goal", true, Nil, Nil, Nil, And(Nil), And(Nil)), -2)
+                  else (domain.tasks(actionID), nodeIDMap(x))
+                  val pathID = x.split("_")(1).split(",").head
+
+                  pathID ->(PlanStep(id, action, Nil), pathID)
+                } toMap
+
+                val v: Seq[(PlanStep, String)] = pathsToSinks.values.toSeq.distinct
+                val e: Seq[((PlanStep, String), (PlanStep, String))] = orderClauses collect { case (before, after) if pathsToSinks.contains(before) && pathsToSinks.contains(after) =>
+                  (pathsToSinks(before), pathsToSinks(after))
+                }
+
+                val partiallyOrderedSolution = SimpleDirectedGraph(v, e).transitiveReduction
+
+                val graphString = partiallyOrderedSolution.dotString(options = DirectedGraphDotOptions(), nodeRenderer = {case (task, _) => task.schema.name})
+                Dot2PdfCompiler.writeDotToFile(graphString, "solutionOrder.pdf")
+
+
+                // take a topological ordering (any should to it ...) and remove init and goal
+                val withGoal = partiallyOrderedSolution.topologicalOrdering.get.tail
+                withGoal.take(withGoal.length - 1) map { _._1 }
+              case tree: SOGClassicalEncoding =>
+                val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
+                //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
+                val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
+                val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
+                val taskSequence = actionSequence map actionStringToTask
+
+
+                //println("Primitive Sequence with paths")
+                //println(actionSequence map actionStringToInfoString mkString "\n")
+
+                //val innerActions = allTrueAtoms filter { _.startsWith("action!") } filterNot { t => t.contains("-1") || t.contains("-2") }
+                //println("Inner actions with paths")
+                //println(innerActions map actionStringToInfoString mkString "\n")
+
+
+                val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
+                //println(pathToPos mkString "\n")
+                val active = allTrueAtoms filter { _.startsWith("active") }
+                //println(active mkString "\n")
+                assert(pathToPos.size == taskSequence.length)
+                assert(active.size == taskSequence.length, "ACTIVE " + active.size + " vs " + taskSequence.length)
+
+                //assert(graph.sinks.length == taskSequence.length, "SINKS " + graph.sinks.length + " vs " + taskSequence.length)
+                val nextPredicates = allTrueAtoms filter { _.startsWith("next") }
+                //println(nextPredicates mkString "\n")
+                //assert(nextPredicates.size == taskSequence.length + 1, "NEXT " + nextPredicates.size + " vs " + (taskSequence.length + 1))
+
+                val nextRel: Seq[(Array[Int], Array[Int])] =
+                  nextPredicates map { n => n.split("_").drop(1) } map { case l => (l.head, l(1)) } map { case (a, b) => (a.split(";") map { _.toInt }, b.split(";") map {
+                    _.toInt
+                  })
+                  } toSeq
+
+                //println(nextRel map { case (a, b) => (a mkString ",") + ", " + (b mkString ",") } mkString "\n")
+                //nextRel foreach { case (a, b) => assert(!(a sameElements b), "IDENTICAL " + (a mkString ",") + ", " + (b mkString ",")) }
+
+                val lastPath = nextRel.indices.foldLeft((Array(-1), nextRel))(
+                  { case ((current, pairs), _) =>
+                    val (nextNext, remaining) = pairs partition { _._1 sameElements current }
+                    assert(nextNext.length == 1)
+
+                    (nextNext.head._2, remaining)
+                  })
+
+                //assert(lastPath._1 sameElements Integer.MAX_VALUE :: Nil)
+
+                taskSequence
+            }
+        }
+
+        // there may be empty methods in the domain, which would produce abstract tasks as sinks. Hence we have to filter them out
+        val primitiveSolution =
+          primitiveSolutionWithPotentialEmptyMethodApplications filterNot { t =>
+            t.schema.isAbstract && domain.methodsForAbstractTasks(t.schema).exists(_.subPlan.planStepsWithoutInitGoal.isEmpty)
           }
 
-          val graph = SimpleDirectedGraph(nodes, edges)
-          //println(graph.sinks filterNot { t => t.contains("-1") || t.contains("-2") } map actionStringToInfoString mkString "\n")
 
-          sogTree match {
+        print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
+        //println("\n")
+        //println(primitiveSolution map { t => t.isPrimitive + " " + t.name } mkString "\n")
 
-            case tree: SOGPOCLEncoding      =>
-              // extract partial order from formula
-              val orderClauses = allTrueAtoms filter { _ startsWith "before" } map { _.split("_").tail } map { x => (x(0), x(1)) } toSeq
+        checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
+        println(" done.")
 
-              val pathsToSinks: Map[String, (Task, String)] = graph.sinks map { x =>
-                val actionID = x.split(",").last.toInt
-                val action = if (actionID == domain.tasks.length) ReducedTask("init", true, Nil, Nil, Nil, And(Nil), And(Nil))
-                else if (actionID == domain.tasks.length + 1) ReducedTask("goal", true, Nil, Nil, Nil, And(Nil), And(Nil))
-                else domain.tasks(actionID)
-                val pathID = x.split("_")(1).split(",").head
-
-                pathID ->(action, pathID)
-              } toMap
-
-              val v: Seq[(Task, String)] = pathsToSinks.values.toSeq.distinct
-              val e: Seq[((Task, String), (Task, String))] = orderClauses collect { case (before, after) if pathsToSinks.contains(before) && pathsToSinks.contains(after) =>
-                (pathsToSinks(before), pathsToSinks(after))
-              }
-
-              val partiallyOrderedSolution = SimpleDirectedGraph(v, e).transitiveReduction
-
-              val graphString = partiallyOrderedSolution.dotString(options = DirectedGraphDotOptions(), nodeRenderer = {case (task, _) => task.name})
-              Dot2PdfCompiler.writeDotToFile(graphString, "solutionOrder.pdf")
-
-
-              // take a topological ordering (any should to it ...) and remove init and goal
-              val withGoal = partiallyOrderedSolution.topologicalOrdering.get.tail
-              withGoal.take(withGoal.length - 1) map { _._1 }
-            case tree: SOGClassicalEncoding =>
-              val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
-              //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
-              val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
-              val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
-              val taskSequence = actionSequence map { t => val actionIDX = t.split(",").last.toInt; domain.tasks(actionIDX) }
-
-
-              //println("Primitive Sequence with paths")
-              //println(actionSequence map actionStringToInfoString mkString "\n")
-
-              val innerActions = allTrueAtoms filter { _.startsWith("action!") } filterNot { t => t.contains("-1") || t.contains("-2") }
-              //println("Inner actions with paths")
-              //println(innerActions map actionStringToInfoString mkString "\n")
-
-
-              val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
-              //println(pathToPos mkString "\n")
-              val active = allTrueAtoms filter { _.startsWith("active") }
-              //println(active mkString "\n")
-              assert(pathToPos.size == taskSequence.length)
-              assert(active.size == taskSequence.length, "ACTIVE " + active.size + " vs " + taskSequence.length)
-
-              //assert(graph.sinks.length == taskSequence.length, "SINKS " + graph.sinks.length + " vs " + taskSequence.length)
-              val nextPredicates = allTrueAtoms filter { _.startsWith("next") }
-              //println(nextPredicates mkString "\n")
-              //assert(nextPredicates.size == taskSequence.length + 1, "NEXT " + nextPredicates.size + " vs " + (taskSequence.length + 1))
-
-              val nextRel: Seq[(Array[Int], Array[Int])] =
-                nextPredicates map { n => n.split("_").drop(1) } map { case l => (l.head, l(1)) } map { case (a, b) => (a.split(";") map { _.toInt }, b.split(";") map {
-                  _.toInt
-                })
-                } toSeq
-
-              //println(nextRel map { case (a, b) => (a mkString ",") + ", " + (b mkString ",") } mkString "\n")
-              //nextRel foreach { case (a, b) => assert(!(a sameElements b), "IDENTICAL " + (a mkString ",") + ", " + (b mkString ",")) }
-
-              val lastPath = nextRel.indices.foldLeft((Array(-1), nextRel))(
-                { case ((current, pairs), _) =>
-                  val (nextNext, remaining) = pairs partition { _._1 sameElements current }
-                  assert(nextNext.length == 1)
-
-                  (nextNext.head._2, remaining)
-                })
-
-              //assert(lastPath._1 sameElements Integer.MAX_VALUE :: Nil)
-
-              taskSequence
-          }
-      }
-
-      // there may be empty methods in the domain, which would produce abstract tasks as sinks. Hence we have to filter them out
-      val primitiveSolution =
-        primitiveSolutionWithPotentialEmptyMethodApplications filterNot { t => t.isAbstract && domain.methodsForAbstractTasks(t).exists(_.subPlan.planStepsWithoutInitGoal.isEmpty) }
-
-
-      print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
-      //println("\n")
-      //println(primitiveSolution map { t => t.isPrimitive + " " + t.name } mkString "\n")
-
-      primitiveSolution foreach { t => assert(t.isPrimitive) }
-      checkIfTaskSequenceIsAValidPlan(primitiveSolution, checkGoal = true)
-      println(" done.")
-
-      (nodes, edges, primitiveSolution)
-  }
+        (nodes, edges, primitiveSolution, planStepsMethodMap, parentInDecompositionMap)
+    }
 
 
   private def runSolutionIntegrityCheck(encoder: VerifyEncoding, graphNodes: Seq[String], graphEdges: Seq[(String, String)]): Unit = {

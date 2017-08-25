@@ -40,6 +40,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     }
   }
 
+  planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod)) }
+
   planStepsWithoutInitGoal foreach {
     ps =>
       assert(orderingConstraints.lt(init, ps))
@@ -542,15 +544,18 @@ object Plan {
   /**
     * Creates a totally ordered plan given a sequence of tasks. Currently only supports grounded tasks
     */
-  def apply(taskSequence: Seq[Task], init: Task, goal: Task): Plan = {
-    assert((taskSequence :+ init :+ goal) forall { _.parameters.isEmpty })
+  def apply(taskSequence: Seq[PlanStep], init: Task, goal: Task, planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod],
+            planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)]): Plan = {
+    assert(taskSequence forall { _.schema.parameters.isEmpty })
 
-    val planStepSequence = ((init :: goal :: Nil) ++ taskSequence).zipWithIndex map { case (t, i) => PlanStep(i, t, Nil) }
+    val planStepSequence = ((init :: goal :: Nil).zipWithIndex map { case (t, i) => PlanStep(-i - 1, t, Nil) }) ++ taskSequence
+    val removedPlanSteps = planStepDecomposedByMethod.keys.toSeq
     val orderedPSSequence = ((planStepSequence.head :: Nil) ++ planStepSequence.drop(2)) :+ planStepSequence(1)
     val totalOrdering = TaskOrdering.totalOrdering(orderedPSSequence)
 
 
-    Plan(planStepSequence, Nil, totalOrdering, CSP(Set(), Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws, Map(), Map())
+    Plan(planStepSequence ++ removedPlanSteps, Nil, totalOrdering.addPlanSteps(removedPlanSteps), CSP(Set(), Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws,
+         planStepDecomposedByMethod, planStepParentInDecompositionTree)
   }
 }
 
