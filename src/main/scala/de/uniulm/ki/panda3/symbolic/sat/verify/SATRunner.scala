@@ -539,10 +539,19 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                 withGoal.take(withGoal.length - 1) map { _._1 }
               case tree: SOGClassicalEncoding =>
                 val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
+                val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
+                val pathToPosByPos = pathToPos groupBy { _.split("-").last } map { case (a, b) => assert(b.size == 1); a -> b.head }
                 //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
                 val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
                 val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
-                val taskSequence = actionSequence map actionStringToTask
+                val taskSequence = actionSequence map { case solAction =>
+                  val pos = solAction.split("_").last.split(",").head
+                  val ptP = pathToPosByPos(pos)
+                  val path = ptP.split("_").last.split("-").head
+
+                    // find matching atom
+                  nodes find {_ contains ("_" + path + ",")} get
+                } map actionStringToTask
 
 
                 //println("Primitive Sequence with paths")
@@ -553,7 +562,6 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                 //println(innerActions map actionStringToInfoString mkString "\n")
 
 
-                val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
                 //println(pathToPos mkString "\n")
                 val active = allTrueAtoms filter { _.startsWith("active") }
                 //println(active mkString "\n")
