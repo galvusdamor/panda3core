@@ -1043,11 +1043,20 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       } else (result._1, result._2)
       timeCapsule stop COMPILE_UNIT_METHODS
 
-
       val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, runForGrounder = false, timeCapsule)
 
+      timeCapsule start COMPILE_UNIT_METHODS
+      val methodsWithIdenticalTasks = if (searchConfiguration.isInstanceOf[SATSearch]) {
+        info("Compiling methods with identical tasks ... ")
+        val compiled = MakeTasksInMethodsUnique.transform(result._1, result._2, ())
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        compiled
+      } else groundedDomainAndPlan
+      timeCapsule stop COMPILE_UNIT_METHODS
+
       timeCapsule stop PREPROCESSING
-      ((groundedDomainAndPlan, groundedAnalysisMap), timeCapsule)
+      ((methodsWithIdenticalTasks, groundedAnalysisMap), timeCapsule)
     } else {
       timeCapsule stop PREPROCESSING
       ((domainAndPlan, analysisMap), timeCapsule)
