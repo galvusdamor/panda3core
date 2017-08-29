@@ -13,7 +13,8 @@ import scala.collection.{mutable, Seq}
   */
 trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrimitivePlanEncoding {
 
-  assert(initialPlan.planStepsWithoutInitGoal.length == 1, "This formula is only correct if the initial plan has been replaced by an artificial top task")
+  assert(initialPlan.planStepsWithoutInitGoal.length == 1, "This formula is only correct if the initial plan has been replaced by an artificial top task, but it contained\n" + initialPlan
+    .planStepsWithoutInitGoal.map(_.schema.name).mkString("\n"))
 
   // this is only needed in the tree encoding
   override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, taskOrdering: Seq[Task]): Seq[Clause] = Nil
