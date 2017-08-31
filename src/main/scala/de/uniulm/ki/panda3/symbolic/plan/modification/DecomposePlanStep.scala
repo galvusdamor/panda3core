@@ -51,7 +51,7 @@ case class DecomposePlanStep(decomposedPS: PlanStep, nonPresentDecomposedPS: Pla
 
 object DecomposePlanStep {
 
-  def apply(plan: Plan, decomposedPS: PlanStep, domain: Domain): Seq[DecomposePlanStep] = domain.decompositionMethods flatMap { method =>
+  def apply(plan: Plan, decomposedPS: PlanStep, domain: Domain): Seq[DecomposePlanStep] = domain.methodsForAbstractTasks(decomposedPS.schema) flatMap { method =>
     if (!method.isInstanceOf[SimpleDecompositionMethod]) noSupport(NONSIMPLEMETHOD)
     apply(plan, decomposedPS, method.asInstanceOf[SimpleDecompositionMethod])
   }
