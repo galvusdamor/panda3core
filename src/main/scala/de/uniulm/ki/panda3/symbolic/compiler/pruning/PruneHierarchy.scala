@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.compiler.pruning
 
-import de.uniulm.ki.panda3.symbolic.compiler.DomainTransformer
+import de.uniulm.ki.panda3.symbolic.compiler.{DomainTransformer, RemoveChoicelessAbstractTasks}
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 
@@ -41,10 +41,16 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
 
     val propagated = propagateInHierarchy(initialPruning._1)
 
-    // all abstract tasks should have at least one method
-    assert(propagated.abstractTasks forall { at => propagated.methodsForAbstractTasks(at).nonEmpty || plan.planStepTasksSet.contains(at)})
+    // TODO this is wrong for TI HTN
+    val reachablePrimitiveTasks = propagated.decompositionMethods flatMap {_.subPlan.planStepsWithoutInitGoal.map(_.schema).filter(_.isPrimitive)} toSet
+    val reachableAbstract = propagated.tasks filter {_.isAbstract}
 
-    (propagated, plan)
+    val primitivesRemoved = propagated.copy(tasks = reachableAbstract ++ reachablePrimitiveTasks)
+
+    // all abstract tasks should have at least one method
+    assert(primitivesRemoved.abstractTasks forall { at => primitivesRemoved.methodsForAbstractTasks(at).nonEmpty || plan.planStepTasksSet.contains(at)})
+
+    (primitivesRemoved, plan)
   }
 }
 
