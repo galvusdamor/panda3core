@@ -79,6 +79,7 @@ public class hLmCutEq extends SasHeuristic {
             hLmCut = IncrementalLmCut(lastAction, (IncInfLmCut) inc);
         }
 
+        g.andNot(s0);
         int hMax = hMax(s0, g);
         if (hMax == 0)
             return hLmCut;
@@ -304,6 +305,8 @@ public class hLmCutEq extends SasHeuristic {
 
     public int hMax(BitSet s0, BitSet g) {
         //this.s0 = s0; // for debug
+        if (g.cardinality() == 0)
+            return 0;
         this.unsatPrecs = p.numPrecs.clone();
         this.hVal = hValInit.clone();
         this.maxPrec = maxPrecInit.clone();

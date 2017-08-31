@@ -48,6 +48,7 @@ public class hMaxEq extends SasHeuristic {
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
+        g.andNot(s0);
         if (g.cardinality() == 0)
             return 0;
         this.unsatPrecs = p.numPrecs.clone();

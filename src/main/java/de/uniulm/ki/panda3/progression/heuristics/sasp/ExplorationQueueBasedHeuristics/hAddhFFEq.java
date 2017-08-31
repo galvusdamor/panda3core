@@ -45,11 +45,12 @@ public class hAddhFFEq extends SasHeuristic {
             precLessOps[i] = tempPrecLess.get(i);
         this.hValPropInit = new int[p.numOfStateFeatures];
         for (int i = 0; i < hValPropInit.length; i++)
-            hValPropInit[i] = cUnreachable;
+            hValPropInit[i] = cUnreachable;//todo: precless actions
     }
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
+        g.andNot(s0);
         if (g.cardinality() == 0)
             return 0;
         if (heuristic == SasHeuristics.hFF)
