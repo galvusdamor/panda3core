@@ -333,4 +333,10 @@ object TaskOrdering {
   val BEFORE  : Byte = -1
   val SAME    : Byte = 0
   val DONTKNOW: Byte = 2
+
+  def totalOrdering(tasks: Seq[PlanStep]): TaskOrdering = {
+    val contraints = tasks.zipWithIndex flatMap { case (ps, i) => tasks.take(i) map { before => OrderingConstraint(before, ps) } }
+
+    TaskOrdering(contraints,tasks)
+  }
 }

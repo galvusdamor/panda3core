@@ -8,8 +8,8 @@ import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
-import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.search.{IsModificationAllowed, IsFlawAllowed}
+import de.uniulm.ki.panda3.symbolic.plan.ordering._
+import de.uniulm.ki.panda3.symbolic.search._
 import de.uniulm.ki.util.{DotPrintable, HashMemo}
 import de.uniulm.ki.panda3.symbolic.writer._
 

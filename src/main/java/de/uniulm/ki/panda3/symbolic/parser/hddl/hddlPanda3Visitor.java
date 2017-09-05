@@ -407,11 +407,36 @@ public class hddlPanda3Visitor {
             }
         }
 
+        if (requirements.contains(":equals-predicate")) {
+            Predicate eqPred = null;
+            for (Predicate p : JavaConversions.seqAsJavaList(predicates)) {
+                if (p.name().equals("equals")) {
+                    eqPred = p;
+                    break;
+                }
+            }
+            Sort rootSort = null;
+            for (Sort s : JavaConversions.seqAsJavaList(sorts)) {
+                if (s.name().equals(ARTIFICIAL_ROOT_SORT)) {
+                    rootSort = s;
+                    break;
+                }
+            }
+            for (Constant c : JavaConversions.seqAsJavaList(rootSort.allElements())) {
+                VectorBuilder<Variable> params = new VectorBuilder<>();
+                Variable cVar = getArtificialVariable(c.name(), vctx, constraints, sorts);
+                params.$plus$eq(cVar);
+                params.$plus$eq(cVar);
+                initEffects.add(new Literal(eqPred, true, params.result()));
+            }
+        }
+
         if (requirements.contains(":typeof-predicate")) {
             Predicate typeofPred = null;
             for (Predicate p : JavaConversions.seqAsJavaList(predicates)) {
                 if (p.name().equals("typeOf")) {
                     typeofPred = p;
+                    break;
                 }
             }
             for (Sort s : JavaConversions.seqAsJavaList(sorts)) {
@@ -987,6 +1012,20 @@ public class hddlPanda3Visitor {
             readTypedList(pSorts, new VectorBuilder<String>(), sorts, def.typed_var_list().typed_vars(), "Predicate \"" + predName + "\"");
 
             predicates.$plus$eq(new Predicate(predName, pSorts.result()));
+        }
+
+        if (requirements.contains(":equals-predicate")) {
+            Sort rootSort = null;
+            for (Sort s : JavaConversions.seqAsJavaList(sorts)) {
+                if (s.name().equals(ARTIFICIAL_ROOT_SORT)) {
+                    rootSort = s;
+                    break;
+                }
+            }
+            VectorBuilder<Sort> pSorts = new VectorBuilder<>();
+            pSorts.$plus$eq(rootSort);
+            pSorts.$plus$eq(rootSort);
+            predicates.$plus$eq(new Predicate("equals", pSorts.result()));
         }
 
         if (requirements.contains(":typeof-predicate")) {
