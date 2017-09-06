@@ -35,6 +35,12 @@ object SearchResult extends ResultType {
   override def longInfo: String = "search result"
 }
 
+object SearchResultWithDecompositionTree extends ResultType {
+  type ResultType = Option[Plan]
+
+  override def longInfo: String = "search result with Decomposition Tree"
+}
+
 
 object InternalSearchResult extends ResultType {
   type ResultType = Option[Plan]
@@ -141,7 +147,7 @@ object Timings {
   val SEARCH_GENERATE_SUCCESSORS      = "20 search:30:apply modifications"
   val SEARCH_COMPUTE_HEURISTIC        = "20 search:40:compute heuristic"
   val SEARCH_COMPUTE_FILTER           = "20 search:50:compute filter"
-  val SEARCH_FAPE                          = "20 search:99:FAPE"
+  val SEARCH_FAPE                     = "20 search:99:FAPE"
 
   val VERIFY_TOTAL     = "40 sat:00:total"
   val GENERATE_FORMULA = "40 sat:10:generate formula"

@@ -21,7 +21,7 @@ import scala.io.Source
 // scalastyle:off method.length cyclomatic.complexity
 case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
-                     forceClassicalEncoding: Boolean) {
+                     forceClassicalEncoding: Boolean, extractSolutionWithHierarchy: Boolean) {
 
   private val fileDir = "/dev/shm/"
 
@@ -114,7 +114,6 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
     timerSemaphore.release()
 
     JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t => t.stop() }
-
 
 
     if (runner.result.isEmpty) {
@@ -377,30 +376,34 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
     encoder match {
       case g: GeneralEncoding =>
         // iterate through layers
-        val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) map { pos => domain.tasks map { task =>
-          val actionString = g.action(layer, pos, task)
-          val isPres = if (atomMap contains actionString) literals contains (1 + atomMap(actionString)) else false
-          (actionString, isPres)
-        } find { _._2 }
-        } filter { _.isDefined } map { _.get._1 }
+        val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer =>
+          Range(0, g.numberOfActionsPerLayer) map { pos =>
+            domain.tasks map { task =>
+              val actionString = g.action(layer, pos, task)
+              val isPres = if (atomMap contains actionString) literals contains (1 + atomMap(actionString)) else false
+              (actionString, isPres)
+            } find { _._2 }
+          } filter { _.isDefined } map { _.get._1 }
         }
 
-        val edges: Seq[(String, String)] = Range(-1, encoder.numberOfLayers) flatMap { layer => Range(0, g.numberOfActionsPerLayer) flatMap { pos => Range(0, g
-          .numberOfActionsPerLayer) flatMap {
-          father =>
-            Range(0, encoder.DELTA) flatMap { childIndex =>
-              val childString = g.childWithIndex(layer, pos, father, childIndex)
-              if ((atomMap contains childString) && (literals contains (1 + atomMap(childString)))) {
-                // find parent and myself
-                val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
-                assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
-                val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
-                assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
-                (fatherStringOption.get, childStringOption.get) :: Nil
-              } else Nil
+        val edges: Seq[(String, String)] = Range(-1, encoder.numberOfLayers) flatMap { layer =>
+          Range(0, g.numberOfActionsPerLayer) flatMap { pos =>
+            Range(0, g
+              .numberOfActionsPerLayer) flatMap {
+              father =>
+                Range(0, encoder.DELTA) flatMap { childIndex =>
+                  val childString = g.childWithIndex(layer, pos, father, childIndex)
+                  if ((atomMap contains childString) && (literals contains (1 + atomMap(childString)))) {
+                    // find parent and myself
+                    val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
+                    assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
+                    val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
+                    assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
+                    (fatherStringOption.get, childStringOption.get) :: Nil
+                  } else Nil
+                }
             }
-        }
-        }
+          }
         }
 
         (nodes, edges, ???, ???, ???)
@@ -408,23 +411,24 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       case pbe: PathBasedEncoding[_, _] =>
         val nodes = formulaVariables filter { _.startsWith("action!") } filter allTrueAtoms.contains
 
-        val edges = nodes flatMap { parent => nodes flatMap { child =>
-          val parentLayer = parent.split("!").last.split("_").head.toInt
-          val childLayer = child.split("!").last.split("_").head.toInt
+        val edges = nodes flatMap { parent =>
+          nodes flatMap { child =>
+            val parentLayer = parent.split("!").last.split("_").head.toInt
+            val childLayer = child.split("!").last.split("_").head.toInt
 
-          if (parentLayer + 1 != childLayer) Nil
-          else {
-            val parentPathString = parent.split("_").last.split(",").head
-            val childPathString = child.split("_").last.split(",").head
+            if (parentLayer + 1 != childLayer) Nil
+            else {
+              val parentPathString = parent.split("_").last.split(",").head
+              val childPathString = child.split("_").last.split(",").head
 
-            val parentPath = parentPathString.split(";").filter(_.nonEmpty) map { _.toInt }
-            val childPath = childPathString.split(";").filter(_.nonEmpty) map { _.toInt }
+              val parentPath = parentPathString.split(";").filter(_.nonEmpty) map { _.toInt }
+              val childPath = childPathString.split(";").filter(_.nonEmpty) map { _.toInt }
 
-            assert(parentPath.length + 1 == childPath.length)
+              assert(parentPath.length + 1 == childPath.length)
 
-            if (parentPath sameElements childPath.take(parentPath.length)) (parent, child) :: Nil else Nil
+              if (parentPath sameElements childPath.take(parentPath.length)) (parent, child) :: Nil else Nil
+            }
           }
-        }
         }
         val graph: DirectedGraph[String] = SimpleDirectedGraph(nodes, edges)
         // give all task a unique ID
@@ -437,11 +441,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           val task = domain.tasks(actionIDX)
           PlanStep(nodeIDMap(actionString), task, Nil)
         }
+
         def nodeSortingFunction(t1: String, t2: String) = {
           val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
           val path2 = t2.split("_").last.split(",").head.split(";") map { _.toInt }
           PathBasedEncoding.pathSortingFunction(path1, path2)
         }
+
         //Dot2PdfCompiler.writeDotToFile(graph, "graph.pdf")
 
         val shortPS = nodes filterNot { _.contains("-") } map actionStringToTask map { ps => ps.id + " " + ps.schema.name + "\t" + domain.tasks.indexOf(ps.schema) }
@@ -449,7 +455,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         val allMethods = formulaVariables filter { _.startsWith("method^") } filter allTrueAtoms.contains
 
         // attach methods to respective tasks
-        val planStepsMethodMap =
+        val planStepsMethodMap :Map[PlanStep, DecompositionMethod] = if (!extractSolutionWithHierarchy) Map() else
           allMethods map { m =>
             val extract = m.split("_").last.split(",").head
             val ps = actionStringToTask(idNodeMap(pathIDMap(extract)))
@@ -460,22 +466,24 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
         //println(planStepsMethodMap map { case (a, b) => a.schema.name + " -> " + b.name } mkString "\n")
 
-        val parentInDecompositionMap: Map[PlanStep, (PlanStep, PlanStep)] = edges.map(_.swap) collect { case (child, father) if !child.contains("-") =>
-          // find all children
-          def getFirstFather(f: String): PlanStep = if (planStepsMethodMap.contains(actionStringToTask(f))) actionStringToTask(f) else getFirstFather(graph.reversedEdgesSet(f).head)
-          val fatherPS = getFirstFather(father)
-          val childPS = actionStringToTask(child)
+        val parentInDecompositionMap: Map[PlanStep, (PlanStep, PlanStep)] = if (!extractSolutionWithHierarchy) Map() else
+          edges.map(_.swap) collect { case (child, father) if !child.contains("-") =>
+            // find all children
+            def getFirstFather(f: String): PlanStep = if (planStepsMethodMap.contains(actionStringToTask(f))) actionStringToTask(f) else getFirstFather(graph.reversedEdgesSet(f).head)
 
-          val siblings: Seq[PlanStep] = graph.edges(father).sortWith(nodeSortingFunction).filterNot(_.contains("-")).map(actionStringToTask)
+            val fatherPS = getFirstFather(father)
+            val childPS = actionStringToTask(child)
 
-          assert(siblings.count(_.schema == childPS.schema) == 1)
+            val siblings: Seq[PlanStep] = graph.edges(father).sortWith(nodeSortingFunction).filterNot(_.contains("-")).map(actionStringToTask)
 
-          val planStepInMethod = planStepsMethodMap(fatherPS).subPlan.planStepsWithoutInitGoal.find(_.schema == childPS.schema).get
+            assert(siblings.count(_.schema == childPS.schema) == 1)
 
-          assert(planStepInMethod.schema == childPS.schema)
+            val planStepInMethod = planStepsMethodMap(fatherPS).subPlan.planStepsWithoutInitGoal.find(_.schema == childPS.schema).get
 
-          childPS ->(fatherPS, planStepInMethod)
-        } toMap
+            assert(planStepInMethod.schema == childPS.schema)
+
+            childPS -> (fatherPS, planStepInMethod)
+          } toMap
 
         //println((domain.tasks.zipWithIndex map { case (t, i) => i + " : " + t.name } sorted).mkString("\n"))
 
@@ -520,7 +528,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                   else (domain.tasks(actionID), nodeIDMap(x))
                   val pathID = x.split("_")(1).split(",").head
 
-                  pathID ->(PlanStep(id, action, Nil), pathID)
+                  pathID -> (PlanStep(id, action, Nil), pathID)
                 } toMap
 
                 val v: Seq[(PlanStep, String)] = pathsToSinks.values.toSeq.distinct
@@ -549,8 +557,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                   val ptP = pathToPosByPos(pos)
                   val path = ptP.split("_").last.split("-").head
 
-                    // find matching atom
-                  nodes find {_ contains ("_" + path + ",")} get
+                  // find matching atom
+                  nodes find { _ contains ("_" + path + ",") } get
                 } map actionStringToTask
 
 

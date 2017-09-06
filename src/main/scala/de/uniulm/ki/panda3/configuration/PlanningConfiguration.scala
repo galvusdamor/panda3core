@@ -311,7 +311,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
-                                 satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.forceClassicalEncoding)
+                                 satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.forceClassicalEncoding,
+                                 postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree))
 
 
           // depending on whether we are doing a single or a full run, we have either to do a loop or just one run
@@ -379,9 +380,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           timeCapsule stop TOTAL_TIME
           val potentialPlan = solution match {
             case Some((planSteps, appliedDecompositions, parentsInDecompositionTree)) =>
+              val initialPlan = Plan(planSteps, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema, appliedDecompositions, parentsInDecompositionTree)
+              if (postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree))
+                initialPlan.maximalDeordering :: Nil
+              else
+                initialPlan :: Nil
 
-              Plan(planSteps, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema, appliedDecompositions, parentsInDecompositionTree).maximalDeordering :: Nil
-            case None                                                                 => Nil
+            case None => Nil
           }
           runPostProcessing(timeCapsule, informationCapsule, null, potentialPlan, domainAndPlan, unprocessedDomain, analysisMap)
         })
@@ -578,7 +583,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       (resultType, resultType match {
         case ProcessingTimings => timeCapsule
 
-        case SearchStatus                   =>
+        case SearchStatus                                     =>
           val determinedSearchSate =
             if (informationCapsule.dataMap().contains(Information.ERROR)) SearchState.INSEARCH
             else if (result.nonEmpty) SearchState.SOLUTION
@@ -597,20 +602,20 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           informationCapsule.set(Information.SOLVED_STATE, determinedSearchSate.toString)
 
           determinedSearchSate
-        case InternalSearchResult           => result.headOption
-        case SearchResult                   =>
+        case InternalSearchResult                             => result.headOption
+        case SearchResult | SearchResultWithDecompositionTree =>
           // start process of translating the solution back to something readable (i.e. lifted)
           result.headOption
-        case AllFoundPlans                  => result
-        case SearchStatistics               => informationCapsule
-        case SearchSpace                    => rootNode
-        case SolutionInternalString         => if (result.nonEmpty) Some(result.head.shortInfo) else None
-        case SolutionDotString              => if (result.nonEmpty) Some(result.head.dotString) else None
-        case FinalTaskDecompositionGraph    => analysisMap(SymbolicGroundedTaskDecompositionGraph)
-        case FinalGroundedReachability      => analysisMap(SymbolicGroundedReachability)
-        case PreprocessedDomainAndPlan      => domainAndPlan
-        case UnprocessedDomainAndPlan       => unprocessedDomainAndPlan
-        case AllFoundSolutionPathsWithHStar =>
+        case AllFoundPlans                                    => result
+        case SearchStatistics                                 => informationCapsule
+        case SearchSpace                                      => rootNode
+        case SolutionInternalString                           => if (result.nonEmpty) Some(result.head.shortInfo) else None
+        case SolutionDotString                                => if (result.nonEmpty) Some(result.head.dotString) else None
+        case FinalTaskDecompositionGraph                      => analysisMap(SymbolicGroundedTaskDecompositionGraph)
+        case FinalGroundedReachability                        => analysisMap(SymbolicGroundedReachability)
+        case PreprocessedDomainAndPlan                        => domainAndPlan
+        case UnprocessedDomainAndPlan                         => unprocessedDomainAndPlan
+        case AllFoundSolutionPathsWithHStar                   =>
           // we have to find all solutions paths, so first compute the solution state of each node to only traverse the paths to the actual solutions
           rootNode.recomputeSearchState()
 
@@ -1046,7 +1051,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, runForGrounder = false, timeCapsule)
 
       timeCapsule start COMPILE_UNIT_METHODS
-      val methodsWithIdenticalTasks = if (searchConfiguration.isInstanceOf[SATSearch]) {
+      val methodsWithIdenticalTasks = if (searchConfiguration.isInstanceOf[SATSearch] && postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree)) {
         info("Compiling methods with identical tasks ... ")
         val compiled = MakeTasksInMethodsUnique.transform(result._1, result._2, ())
         info("done.\n")
