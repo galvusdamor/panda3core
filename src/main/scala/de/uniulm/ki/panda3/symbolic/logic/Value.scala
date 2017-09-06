@@ -10,6 +10,7 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
 trait Value extends DomainUpdatable with PrettyPrintable {
+  def name : String
   override def update(domainUpdate: DomainUpdate): Value
 
   val isConstant: Boolean
