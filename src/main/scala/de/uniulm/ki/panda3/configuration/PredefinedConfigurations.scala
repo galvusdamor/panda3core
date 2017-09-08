@@ -12,8 +12,8 @@ import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
   */
 object PredefinedConfigurations {
 
-  val hybridParsing = ParsingConfiguration(eliminateEquality = true, stripHybrid = false)
-  val htnParsing    = ParsingConfiguration(eliminateEquality = true, stripHybrid = true)
+  val hybridParsing = ParsingConfiguration(eliminateEquality = false, stripHybrid = false)
+  val htnParsing    = ParsingConfiguration(eliminateEquality = false, stripHybrid = true)
 
   val parsingConfigs = Map(
                             "-hybrid" -> hybridParsing,

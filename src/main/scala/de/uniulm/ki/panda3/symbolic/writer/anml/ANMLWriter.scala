@@ -14,7 +14,7 @@ import de.uniulm.ki.panda3.symbolic.writer.{Writer, toPDDLIdentifier}
 object ANMLWriter extends Writer {
 
   private def toANMLLabel(s: String): String = s.replace("+", "_plus_").replace("-", "_minus_").replace("[", "_ob_").replace("]", "_cb_").replace(",", "_").replace(".", "_").
-    replace("?", "_question_")
+    replace("?", "_question_").replace(":", "_")
 
   private lazy val indentMap: Map[Int, String] = Map().withDefault({ x => (Range(0, x) map { _ => "\t" }).mkString("") })
 
@@ -40,11 +40,11 @@ object ANMLWriter extends Writer {
   private def writeCSP(csp: CSP, indent: Int, builder: StringBuilder): Unit = {
     // variable constraints
     csp.constraints foreach {
-      case Equal(left, right : Variable)    => builder append (indentMap(indent) + toANMLLabel(left.name + "_" + left.id) + " == " + toANMLLabel(right.name  + "_" + right.id ) + ";\n")
-      case Equal(left, right : Constant)    => builder append (indentMap(indent) + toANMLLabel(left.name + "_" + left.id) + " == " + toANMLLabel(right.name) + ";\n")
-      case NotEqual(left, right : Variable)    => builder append (indentMap(indent) + toANMLLabel(left.name + "_" + left.id) + " != " + toANMLLabel(right.name  + "_" + right.id ) + ";\n")
-      case NotEqual(left, right : Constant)    => builder append (indentMap(indent) + toANMLLabel(left.name + "_" + left.id) + " != " + toANMLLabel(right.name) + ";\n")
-      case _                     => // TODO we should not ignore them
+      case Equal(left, right: Variable)    => builder append (indentMap(indent) + toANMLLabel(left.name + "_" + left.id) + " == " + toANMLLabel(right.name + "_" + right.id) + ";\n")
+      case Equal(left, right: Constant)    => builder append (indentMap(indent) + toANMLLabel(left.name + "_" + left.id) + " == " + toANMLLabel(right.name) + ";\n")
+      case NotEqual(left, right: Variable) => builder append (indentMap(indent) + toANMLLabel(left.name + "_" + left.id) + " != " + toANMLLabel(right.name + "_" + right.id) + ";\n")
+      case NotEqual(left, right: Constant) => builder append (indentMap(indent) + toANMLLabel(left.name + "_" + left.id) + " != " + toANMLLabel(right.name) + ";\n")
+      case _                               => // TODO we should not ignore them
     }
 
   }
@@ -117,26 +117,36 @@ object ANMLWriter extends Writer {
     //dom.tasks foreach { t =>
     dom.taskSchemaTransitionGraph.condensation.topologicalOrdering.get.flatten.reverse foreach { t =>
       builder append ("\naction " + toANMLLabel(t.name) + "(")
-      builder append (t.parameters map { v => (if (dom.containEitherType) "__object" else toANMLLabel(v.sort.name)) + " " + toANMLLabel(v.name + "_" + v.id) }).mkString(",")
+      builder append (t.parameters map { v =>
+        assert(dom.sorts.contains(v.sort) || v.sort.elements.size == 1)
+        (if (dom.containEitherType || (!dom.sorts.contains(v.sort) && v.sort.elements.size == 1)) "__object" else toANMLLabel(v.sort.name)) + " " + toANMLLabel(v.name + "_" + v.id)
+      }).mkString(",")
       builder append ") {\n"
       builder append "\tmotivated;\n"
       if (t.isPrimitive) builder append "\tduration := 1;\n"
+      // if we have a non-declared parameter sort
+      t.parameters filter { v => !dom.sorts.contains(v.sort) && v.sort.elements.size == 1 } foreach { v =>
+        builder append ("\t" + toANMLLabel(v.name + "_" + v.id) + " == " + toANMLLabel(v.sort.elements.head.name) + ";\n")
+      }
       if (dom.containEitherType)
         t.parameters map { v => "\t[start] " + toANMLLabel(v.sort.name) + "(" + toANMLLabel(v.name + "_" + v.id) + ") == true;\n" } foreach builder.append
 
+      // ensure that the FAPE parser won't creep out
+      t.parameters foreach {v => builder append ("\t " + toANMLLabel(v.name + "_" + v.id) + "!= __nothing;\n")}
 
       if (t.isPrimitive) {
         writeCSP(t.taskCSP, 1, builder)
         // preconditions
         formulaToLiteralSeq(t.precondition) foreach { l => writeLiteral(l, None, 1, builder, "[start]", assert = false) }
         // effects
-        formulaToLiteralSeq(t.effect) foreach { l => writeLiteral(l, None, 1, builder, "[end]", assert = true) }
+        val effects = formulaToLiteralSeq(t.effect)
+        effects filter { e => e.isPositive || !effects.contains(e.negate) } foreach { l => writeLiteral(l, None, 1, builder, "[end]", assert = true) }
       } else {
         val possibleMethods = dom.methodsForAbstractTasks(t)
 
         possibleMethods foreach { case SimpleDecompositionMethod(_, subplan, _) =>
           builder append "\t:decomposition{\n"
-          assert(subplan.variableConstraints.variables map { _.sort } forall dom.sorts.contains)
+          assert(subplan.variableConstraints.variables map { _.sort } forall { s => dom.sorts.contains(s) || s.elements.size == 1 })
           writePlan(subplan, dom, t.parameters, 2, builder)
 
           builder append "\t};\n"
@@ -168,6 +178,8 @@ object ANMLWriter extends Writer {
       }
       builder append (toANMLLabel(c.name) + ";\n")
     }
+    // add dummy constant
+    builder append "instance __object __nothing;\n"
 
     if (dom.containEitherType)
       dom.sorts foreach { s => s.elements foreach { c => builder append ("[start]" + toANMLLabel(s.name) + "(" + toANMLLabel(c.name) + ") := true;\n") } }

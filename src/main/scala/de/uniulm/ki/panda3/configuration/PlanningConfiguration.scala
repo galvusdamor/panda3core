@@ -407,6 +407,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
         val notTranslatable = domainAndPlan._1.taskSchemaTransitionGraph.stronglyConnectedComponents exists { _.size > 1 }
         if (notTranslatable) {
+          println("TSTG contains non-self recursion ... can't translate into anything FAPE would understand ... ")
           // return nothing meaningful
           (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
             timeCapsule stop TOTAL_TIME
@@ -433,7 +434,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             timeCapsule start SEARCH_FAPE
 
             //("java -Xmx10G -Xms10G -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo.0.pb.anml") #| "grep iter, --after 1" ! new ProcessLogger {
-            ("java -Xmx1G -Xms1G -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo" + uuid + ".0.pb.anml") ! new ProcessLogger {
+            ("java -Xmx4G -Xms4G -XX:+UseSerialGC -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo" + uuid + ".0.pb.anml") ! new ProcessLogger {
+            //("java -Xmx1G -Xms1G -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo" + uuid + ".0.pb.anml") ! new ProcessLogger {
               override def err(s: => String): Unit = output = output + s + "\n"
 
               override def out(s: => String): Unit = output = output + s + "\n"
@@ -456,7 +458,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           //System exit 0
 
-          if (result.contains(timeout) || result.contains(unsol)) {
+          if (result.contains(timeout) || result.contains(unsol) || !result.contains("=== Actions ===")) {
             // return nothing meaningful
             (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
               timeCapsule stop TOTAL_TIME
