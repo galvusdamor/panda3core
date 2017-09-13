@@ -1,13 +1,13 @@
 Many have contributed to this work, some via discussions concerning design choices, others via implementing certain parts of the planner. Here, we give a list of some of the contributors of this work, ordered by the time their contributions were incorporated.
 
 Pascal Bercher, http://www.uni-ulm.de/in/ki/bercher
-He contributed in terms of various discussions concerning design choices of the planner and by providing his knowledge and experience in HTN planning, POCL planning, and hybrid planning in general, and with PANDA2 in particular, which was mainly developed by a former colleague and him. Furthermore, several techniques and heuristics were developed (in theory and practically in PANDA2) by him and reimplemented in PANDA3.
+Our colleague Pascal contributed in terms of various discussions concerning design choices of the planner and by providing his knowledge and experience in HTN planning, POCL planning, and hybrid planning in general, and with PANDA2 (a predecessor of PANDA3) in particular. PANDA2 was mainly developed by our former colleague Bastian Seegebarth and by Pascal. Furthermore, several techniques and heuristics were developed (in theory and practically in PANDA2) by Pascal and reimplemented in PANDA3.
 
 Thomas Geier, http://www.uni-ulm.de/in/ki/geier
-We thank him for supporting us with his Scala knowledge during the early stages of the planning system. Also, several program configuration files are by him. Lastly, the code for the Sample-FF heuristic is written by him. This code is taken unaltered from the PANDA2 system.
+We thank our former colleague Thomas for supporting us with his Scala knowledge during the early stages of developing the planning system. Also, several program configuration files are by him. Lastly, the code for the Sample-FF heuristic is written by him. This code is taken unaltered from the PANDA2 system.
 
 Kadir Dede
-He implemented the parser for an earlier standard in XML in which HTN, POCL, and hybrid planning problems can be expressed.
+Our former student assistant Kadir implemented the parser for an earlier planning description standard in XML, in which HTN, POCL, and hybrid planning problems can be expressed.
 
 Kristof Mickeleit
-He implemented the efficient version of the planning graph and a parser for an early version of PDDL, which does not require types.
+Our student assistant Kristof implemented the efficient version of the planning graph and a parser for an early version of PDDL, which does not require types.

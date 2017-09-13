@@ -1,10 +1,12 @@
 This is PANDA3 - An architecture for Planning and Acting in a Network Decomposition Architecture
 Believe us: It's great, it's fantastic! 
 
-Copyright: Ulm University 2014-2017
 Main Developers: 
 - Gregor Behnke, http://www.uni-ulm.de/in/ki/behnke
 - Daniel Höller, http://www.uni-ulm.de/in/ki/hoeller
 
 With many thanks to various further contributors. Call PANDA3
 with flag --contributors for an extensive list.
+
+PANDA3 is licensed under the GNU GENERAL PUBLIC LICENSE, Version 3
+(https://www.gnu.org/licenses/gpl-3.0.txt)
