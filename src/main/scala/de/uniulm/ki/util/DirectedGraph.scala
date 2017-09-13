@@ -1,5 +1,7 @@
 package de.uniulm.ki.util
 
+import java.util
+
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 
 import scala.collection.mutable
@@ -527,13 +529,22 @@ object SimpleDirectedGraph {
   }
 }
 
-case class EdgeLabelledGraph[T, L](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)]) extends DirectedGraphWithAlgorithms[T] {
+case class EdgeLabelledGraphSingle[T, L](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)]) extends DirectedGraphWithAlgorithms[T] {
   override def edges: Map[T, Seq[T]] = labelledEdges groupBy { _._1 } map { case (a, b) => a -> b.map(_._3).toSeq }
 
   override def vertices: Seq[T] = arrayVertices.toSeq
 
   override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString },
                                                                                { case (a,b) => labelledEdges.find({case (x,_,y) => a == x && b == y}).get._2.toString })
+}
+
+case class EdgeLabelledGraph[T, L, M](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M ) extends DirectedGraphWithAlgorithms[T] {
+  override def edges: Map[T, Seq[T]] = labelledEdges groupBy { _._1 } map { case (a, b) => a -> b.map(_._3).toSeq }
+
+  override def vertices: Seq[T] = arrayVertices.toSeq
+
+  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString },
+    { case (a,b) => labelledEdges.find({case (x,_,y) => a == x && b == y}).get._2.toString })
 }
 
 case class SimpleGraphNode(id: String, name: String) extends PrettyPrintable {
