@@ -6,9 +6,10 @@ import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
-import de.uniulm.ki.panda3.symbolic.sat.verify.CRYPTOMINISAT
-import de.uniulm.ki.panda3.symbolic.search.{SearchState}
+import de.uniulm.ki.panda3.symbolic.search.SearchState
 import de.uniulm.ki.util._
+
+import scala.io.Source
 
 
 /**
@@ -127,18 +128,13 @@ object Main {
 
   def main(args: Array[String]) {
 
-
-    //PlanningConfiguration(true,true,null,null,SATSearch(None,null,0).modifyOnOptionString("-planlength")(Some("2")),null)
-
-    println("This is PANDA3\nBelieve us: It is great!")
-    println("\nCopyright: Ulm University 2014-2017")
-    println("Developer: Gregor Behnke, Daniel Höller, Kristof Mickeleit, Tobias Welz, Kadir Dede, Matthias Englert, and Thomas Geier")
-    println("Thanks to Pascal Bercher for his moral support while writing PANDA3\n\n")
+    // print the general information of the planner
+    println(Source.fromInputStream(getClass.getResourceAsStream("help.txt")).getLines().mkString("\n"))
 
     val initialConfiguration = RunConfiguration()
 
     // test if we have to print the help
-    if (args.length > 0 && args(0) == "-help") {
+    if (args.length > 0 && (args(0) == "-help" || args(0) == "--help")) {
       if (args.length > 1) {
         val helpForKey = args(1)
         println("Help for key " + helpForKey + "\n" + initialConfiguration.config.helpTexts(helpForKey))
@@ -146,6 +142,9 @@ object Main {
         println("Available Keys (specific help can be requested using -help KEY):")
         println(initialConfiguration.config.optionStrings map { s => "\t" + s } mkString "\n")
       }
+      System exit 0
+    } else if (args.length > 0 && (args(0) == "-contributors" || args(0) == "--contributors")){
+      println(Source.fromInputStream(getClass.getResourceAsStream("contributors.txt")).getLines().mkString("\n"))
       System exit 0
     }
 
