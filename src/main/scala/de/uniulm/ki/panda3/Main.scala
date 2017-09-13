@@ -183,6 +183,16 @@ object Main {
 
     println(plannerConfiguration.longInfo)
 
+    if (plannerConfiguration.domFile.isEmpty){
+      println("No domain file given. Exiting ... ")
+      System exit 0
+    }
+
+    if (plannerConfiguration.probFile.isEmpty){
+      println("No problem file given. Exiting ... ")
+      System exit 0
+    }
+
     // write domain and problem name to the output
     {
       val informationCapsule = new InformationCapsule
