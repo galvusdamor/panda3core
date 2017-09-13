@@ -1,24 +1,7 @@
-// PANDA 3 -- a domain-independent planner for classical and hierarchical planning
-// Copyright (C) 2014-2017 the original author or authors.
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 package de.uniulm.ki.panda3
 
 import java.io.{File, FileInputStream}
 
-import de.uniulm.ki.panda3.Main.helpDB
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.plan.PlanDotOptions
@@ -45,10 +28,7 @@ object Main {
                                                                                     PreprocessingConfiguration(compileNegativePreconditions = false,
                                                                                                                compileUnitMethods = false,
                                                                                                                compileInitialPlan = false,
-                                                                                                               removeUnnecessaryPredicates = false,
-                                                                                                               ensureMethodsHaveLastTask = false,
                                                                                                                convertToSASP = false,
-                                                                                                               allowSASPFromStrips = false,
                                                                                                                compileOrderInMethods = None,
                                                                                                                splitIndependentParameters = false,
                                                                                                                compileUselessAbstractTasks = false,
@@ -56,8 +36,7 @@ object Main {
                                                                                                                groundedReachability = None,
                                                                                                                groundedTaskDecompositionGraph = None,
                                                                                                                iterateReachabilityAnalysis = false,
-                                                                                                               groundDomain = false,
-                                                                                                               stopDirectlyAfterGrounding = false),
+                                                                                                               groundDomain = false),
                                                                                     NoSearch, PostprocessingConfiguration(Set()))) extends PrettyPrintable {
 
     def processCommandLineArguments(args: Seq[String]): RunConfiguration = {
@@ -86,7 +65,7 @@ object Main {
 
       groupedArguments.foldLeft(this)(
         { case (conf, option) => option match {
-          case Left(opt) if !opt.startsWith("-")                              =>
+          case Left(opt) if !opt.startsWith("-") =>
             opt match {
               case dom if conf.domFile.isEmpty    => conf.copy(domFile = Some(dom))
               case prob if conf.probFile.isEmpty  => conf.copy(probFile = Some(prob))
@@ -95,15 +74,7 @@ object Main {
                 println("PANDA was given a fourth non-option argument \"" + opt + "\". Only three (domain-, problem-, and output-file) will be processed. Ignoring option")
                 conf
             }
-          case Left(opt) if opt.equals("-cputime") || opt.equals("-walltime") =>
-            // use side effect
-            opt match {
-              case "-cputime"  => TimeCapsule.timeTakingMode = ThreadCPUTime
-              case "-walltime" => TimeCapsule.timeTakingMode = WallTime
-            }
-
-            conf
-          case _                                                              => // this is a real option
+          case _                                 => // this is a real option
 
             // get the key
             val (key, value) = option match {
@@ -160,132 +131,31 @@ object Main {
 
                  }
 
-  var lineWidth: Int = 80
+  def main(args: Array[String]) {
 
-  def transformTo80Chars(text: String): String = {
-    val lineSplitted = text.replace("\t", "    ") split "\n"
-
-    val redistributedLines = lineSplitted flatMap { line =>
-      val initialIndent = line.takeWhile(c => c == ' ')
-      val noIndent: Seq[String] = line.drop(initialIndent.length).split(" ")
-      val (lines, lastLine) = noIndent.drop(1).foldLeft[(Seq[String], String)]((Nil, initialIndent + noIndent.head))(
-        {
-          case ((list, buf), c) =>
-            val newBuf = buf + " " + c
-            if (newBuf.length > lineWidth) (list :+ buf, initialIndent + c) else (list, newBuf)
-        }
-                                                                                                                    )
-
-      lines :+ lastLine
-    }
-
-    redistributedLines mkString "\n"
-  }
-
-  val helpDB: Map[String, (String, String, Seq[String], Seq[String])] = {
-    val dbLines: Seq[String] = Source.fromInputStream(getClass.getResourceAsStream("helpdb.txt")).getLines().toSeq
-
-    val parsed: Seq[Seq[String]] = dbLines.foldLeft[(Seq[Seq[String]], Seq[String])]((Nil, Nil))(
-      {
-        case ((processed, current), newLine) =>
-          val x: Seq[String] = current :+ newLine
-          if (newLine.startsWith("$")) (processed :+ x, Nil) else (processed, x)
-      })._1
-
-    val entries: Seq[(String, (String, String, Seq[String], Seq[String]))] = parsed map { entry =>
-      val keys: Seq[String] = entry.head split " "
-      val short: String = entry(1)
-      val long: String = entry.drop(2).dropRight(1).mkString("\n")
-      val children: Seq[String] = entry.last.split(" ").drop(1)
-
-      (keys, (short, long, children))
-    } flatMap { case (as, (s, l, c)) => as map { a => (a, (s, l, as.filter(_ != a), c)) } }
-
-    val entryMap = Map(entries: _*)
-
-    // consistency
-    entries foreach { case (_, (_, _, _, children)) => children foreach { c => assert(entryMap contains c) } }
-
-    entryMap
-  }
-
-
-  def getHelpTextFor(item: String): String = {
-    val (_, longText, _, children) = helpDB(item)
-
-    if (children.isEmpty) longText else {
-      val childrenTexts = children map { c =>
-        val alternates = helpDB(c)._3
-        val optionText = if (alternates.isEmpty) c else c + "|" + alternates.mkString("|")
-        optionText -> helpDB(c)._1
-      }
-      val maxChildLength = childrenTexts map { _._1.length } max
-
-      val childrenLines = childrenTexts map { case (i, t) =>
-        "\t" + i + (Range(i.length, maxChildLength + 4) map { _ => " " }).mkString("") + t
-      }
-
-      longText + "\n\n\nAvailable Options:\n" + childrenLines.mkString("\n")
-    }
-  }
-
-  def main(originalArgs: Array[String]) {
-    val args = originalArgs filter { _ != "-no80" }
-    if (originalArgs contains "-no80") lineWidth = Integer.MAX_VALUE
-
-    val titleLines = Source.fromInputStream(getClass.getResourceAsStream("help.txt")).getLines().toSeq
-    val shortTitle = transformTo80Chars(titleLines.take(6).mkString("\n")) + "\n\n"
-    val longTitle = transformTo80Chars(titleLines.mkString("\n"))
-
+    // print the general information of the planner
+    println(Source.fromInputStream(getClass.getResourceAsStream("help.txt")).getLines().mkString("\n"))
 
     val initialConfiguration = RunConfiguration()
 
     // test if we have to print the help
     if (args.length > 0 && (args(0) == "-help" || args(0) == "--help")) {
-      println(shortTitle)
       if (args.length > 1) {
         val helpForKey = args(1)
-        println("Help for key " + helpForKey + "\n")
-        println(transformTo80Chars(getHelpTextFor(helpForKey)))
+        println("Help for key " + helpForKey + "\n" + initialConfiguration.config.helpTexts(helpForKey))
       } else {
-        //println("Available Keys (specific help can be requested using -help KEY):")
-        //println(initialConfiguration.config.optionStrings map { s => "\t" + s } mkString "\n")
-        println(transformTo80Chars(getHelpTextFor("main")))
+        println("Available Keys (specific help can be requested using -help KEY):")
+        println(initialConfiguration.config.optionStrings map { s => "\t" + s } mkString "\n")
       }
       System exit 0
-    } else if (args.length > 0 && (args(0) == "-contributors" || args(0) == "--contributors")) {
-      println(shortTitle)
-      println(transformTo80Chars(Source.fromInputStream(getClass.getResourceAsStream("contributors.txt")).getLines().mkString("\n")))
-      System exit 0
-    } else if (args.length > 0 && (args(0) == "-licence" || args(0) == "--licence")) {
-      println(shortTitle)
-      if (args.length == 1)
-        println(transformTo80Chars(Source.fromInputStream(getClass.getResourceAsStream("licences.txt")).getLines().mkString("\n")))
-      else {
-        println(transformTo80Chars(Source.fromInputStream(getClass.getResourceAsStream("licence" + args(1) + ".txt")).getLines().mkString("\n")))
-      }
+    } else if (args.length > 0 && (args(0) == "-contributors" || args(0) == "--contributors")){
+      println(Source.fromInputStream(getClass.getResourceAsStream("contributors.txt")).getLines().mkString("\n"))
       System exit 0
     }
-
-    // print the general information of the planner
-    println(longTitle)
-    println()
-    println()
-
 
     val plannerConfiguration = initialConfiguration.processCommandLineArguments(args)
 
     println(plannerConfiguration.longInfo)
-
-    if (plannerConfiguration.domFile.isEmpty) {
-      println("No domain file given. Exiting ... ")
-      System exit 0
-    }
-
-    if (plannerConfiguration.probFile.isEmpty) {
-      println("No problem file given. Exiting ... ")
-      System exit 0
-    }
 
     // write domain and problem name to the output
     {
@@ -301,15 +171,15 @@ object Main {
     val probInputStream = new FileInputStream(plannerConfiguration.probFile.get)
 
 
+
     val results: ResultMap = plannerConfiguration.config.runResultSearch(domInputStream, probInputStream)
 
     if (results.map.contains(SearchStatus))
       println("Panda says: " + results(SearchStatus))
 
 
-    if (results.map.contains(SearchStatistics)) {
+    if (results.map.contains(SearchStatistics))
       println(results(SearchStatistics).shortInfo)
-    }
     if (results.map.contains(ProcessingTimings)) {
       println("----------------- TIMINGS -----------------")
       println(results(ProcessingTimings).shortInfo)
@@ -346,10 +216,6 @@ object Main {
 
         println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
       }
-    }
-
-    if (results.map.contains(SearchResultInVerificationFormat)){
-      println("%%R " + results(SearchResultInVerificationFormat))
     }
 
     if (results.map.contains(SearchResult) && results.map.contains(SearchStatus) && results(SearchStatus) == SearchState.SOLUTION && plannerConfiguration.outputFile.isDefined) {
