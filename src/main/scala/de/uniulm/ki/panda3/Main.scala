@@ -57,7 +57,7 @@ object Main {
         }) match {
         case (None, l)          => l
         case (Some(command), l) =>
-          this.config.modifyOnOptionString.getOrElse(command,(NoParameter,()))._1 match {
+          this.config.modifyOnOptionString.getOrElse(command, (NoParameter, ()))._1 match {
             case NecessaryParameter => assert(false, "no argument provided for " + command); l // this will never be reached. it is just for the sake of completeness
             case _                  => l :+ Left(command)
           }
@@ -135,6 +135,9 @@ object Main {
 
     // print the general information of the planner
     println(Source.fromInputStream(getClass.getResourceAsStream("help.txt")).getLines().mkString("\n"))
+    println()
+    println()
+
 
     val initialConfiguration = RunConfiguration()
 
@@ -148,8 +151,15 @@ object Main {
         println(initialConfiguration.config.optionStrings map { s => "\t" + s } mkString "\n")
       }
       System exit 0
-    } else if (args.length > 0 && (args(0) == "-contributors" || args(0) == "--contributors")){
+    } else if (args.length > 0 && (args(0) == "-contributors" || args(0) == "--contributors")) {
       println(Source.fromInputStream(getClass.getResourceAsStream("contributors.txt")).getLines().mkString("\n"))
+      System exit 0
+    } else if (args.length > 0 && (args(0) == "-licence" || args(0) == "--licence")) {
+      if (args.length == 1)
+        println(Source.fromInputStream(getClass.getResourceAsStream("licences.txt")).getLines().mkString("\n"))
+      else {
+        println(Source.fromInputStream(getClass.getResourceAsStream("licence" + args(1) + ".txt")).getLines().mkString("\n"))
+      }
       System exit 0
     }
 
@@ -169,7 +179,6 @@ object Main {
 
     val domInputStream = new FileInputStream(plannerConfiguration.domFile.get)
     val probInputStream = new FileInputStream(plannerConfiguration.probFile.get)
-
 
 
     val results: ResultMap = plannerConfiguration.config.runResultSearch(domInputStream, probInputStream)

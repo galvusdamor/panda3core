@@ -1,14 +1,12 @@
 PANDA 3 is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 The source code of PANDA 3 is available under the same licence (URL).
-Run PANDA 3 with the command-line option --licence 0 to see the licence's full text.
 
 This compiled version of PANDA 3 contains further software, which is necessary for PANDA 3 to work correctly.
 These components are licenced as follows.
-To access the full text of licences under which these software components are available, run PANDA 3 with the command-line options --licence XYZ, where XYZ is the number prefixed to the component in the below list.
+To access the full text of these licences, run PANDA 3 with the command-line options --licence XYZ, where XYZ is the number prefixed to the component in the below list.
 
 0 -- PANDA 3 -- GNU GPL3
 1 -- Scala Runtime -- BSD-3 (https://www.scala-lang.org/license/)
 2 -- ANTLR v4 -- BSD-3 (https://github.com/antlr/antlr4/)
 3 -- codepointat.js and fromcodepoint.js within ANTLR v3 -- MIT-Licence (https://git.io/codepointat and https://git.io/vDW1m)
-4 -- abego TreeLayout -- BSD-3 (https://github.com/abego/treelayout/blob/master/README.md)
