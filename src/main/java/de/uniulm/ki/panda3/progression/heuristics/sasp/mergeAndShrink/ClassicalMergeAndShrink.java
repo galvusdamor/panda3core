@@ -18,34 +18,39 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
     public ClassicalMergeAndShrink(SasPlusProblem p) {
 
 
+
+
+        //printSingleGraphForVarIndex(p, 4, "graph.pdf");
+
+        printMultiGraphForVarIndexes(p, 0, 1, "graph.pdf");
+
+
+        System.exit(0);
+
+
         ArrayList<Integer> varIndexes = new ArrayList<>();
         varIndexes.add(0);
         varIndexes.add(1);
 
         Tuple3<Integer[],Tuple3[],HashMap<Integer, ArrayList<Integer>>> multiGraphData = getNodesAndEdgesForVarIndexes(p,varIndexes);
+        Integer[] nodeIDS = multiGraphData._3().keySet().toArray(new Integer[multiGraphData._3().keySet().size()]);
 
-        EdgeLabelledGraph<Integer,Integer,HashMap<Integer, ArrayList<Integer>>> multiGraph = new EdgeLabelledGraph(multiGraphData._1(), multiGraphData._2(),multiGraphData._3());
+        for (Tuple3 t : multiGraphData._2()) {
+
+            //  System.out.println(t);
+        }
+
+        EdgeLabelledGraph<Integer,Integer,HashMap<Integer, ArrayList<Integer>>> multiGraph = new EdgeLabelledGraph(nodeIDS, multiGraphData._2(),multiGraphData._3());
 
         EdgeLabelledGraph<String,String,HashMap<Integer, ArrayList<Integer>>> stringMultiGraph = convertMultiGraphToStringGraph(p, multiGraph);
 
         Dot2PdfCompiler.writeDotToFile(stringMultiGraph,"graph.pdf");
 
+        System.out.println(multiGraphData._2().length);
+
         System.out.println("test");
 
         System.exit(0);
-
-
-
-        Tuple2<Integer[],Tuple3[]> graphData = getSingleNodesAndEdgesForVarIndex(p,0);
-
-        EdgeLabelledGraphSingle<Integer,Integer> graph = new EdgeLabelledGraphSingle(graphData._1(), graphData._2());
-
-        EdgeLabelledGraphSingle<String,String> stringGraph = convertSingleGraphToStringGraph(p, graph);
-
-        Dot2PdfCompiler.writeDotToFile(stringGraph,"graph.pdf");
-
-
-
 
 
         System.exit(0);
@@ -68,7 +73,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         mapping.put(1, second);
 
 
-        EdgeLabelledGraph<Integer,Integer,HashMap> multiGraph2 = new EdgeLabelledGraph<>(graphData._1(), graphData._2(), mapping);
+        EdgeLabelledGraph<Integer,Integer,HashMap> multiGraph2 = new EdgeLabelledGraph<>(multiGraphData._1(), multiGraphData._2(), mapping);
 
         System.out.println(multiGraph2.idMapping());
 
@@ -96,8 +101,18 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
             edges.addAll(edgesForOp);
         }
 
+        //System.out.println(edges.size());
+
+
+
 
         ArrayList<Tuple3<Integer,Integer,Integer>> multiEdges = convertSingleEdgesToMultiEdges(idMapping, edges);
+
+        //System.out.println(multiEdges.size());
+
+        /*for (Tuple3<Integer,Integer,Integer> e : multiEdges) {
+            System.out.println(e);
+        }*/
 
         return multiEdges;
     }
@@ -119,7 +134,9 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
                 for (int endIndex : endContainingIDs){
 
                     Tuple3<Integer,Integer,Integer> multiEdge = new Tuple3<>(startIndex, opIndex, endIndex);
-                    multiEdges.add(multiEdge);
+                    if (!Utils.containsEdge(multiEdges, multiEdge)) {
+                        multiEdges.add(multiEdge);
+                    }
                 }
             }
 
@@ -187,7 +204,9 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
                 //String labelEdge = "\"" + p.opNames[OpIndex] + "\"";
 
                 Tuple3<Integer,Integer,Integer> edge = new Tuple3<>(startEdge,OpIndex,endEdge);
-                edges.add(edge);
+                if (!Utils.containsEdge(edges, edge)) {
+                    edges.add(edge);
+                }
 
             }
 
@@ -201,7 +220,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
             //Zusätzlich abklären?: nicht in pres enthalten
             if (!addListDismissed.contains(index) && !delListDismissed.contains(index)){
                 Tuple3<Integer,Integer,Integer> edge = new Tuple3<>(index,OpIndex,index);
-                edges.add(edge);
+                if (!Utils.containsEdge(edges, edge)) edges.add(edge);
             }
         }
 
@@ -267,7 +286,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
             }
         }
 
-        /*for (int nodeID: selfLoops.keySet()){
+        for (int nodeID: selfLoops.keySet()){
 
             String varString = getMultiIDString(p, nodeID, idMapping);
             String labelEdge = "\"" + selfLoops.get(nodeID) + "\"";
@@ -275,7 +294,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
             Tuple3<String, String, String> newEdge = new Tuple3<>(varString,labelEdge,varString);
             newEdges.add(newEdge);
 
-        }*/
+        }
 
         Tuple3[] newEdgeArray = new Tuple3[newEdges.size()];
         for (int i=0; i<newEdges.size(); i++){
@@ -555,16 +574,51 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
     public String getMultiIDString(SasPlusProblem p, int multiID, HashMap<Integer, ArrayList<Integer>> idMapping){
 
-        String s =  multiID + ": ";
+        String s =  multiID + ": \n";
 
         ArrayList<Integer> varIDs = idMapping.get(multiID);
 
         for (int i: varIDs){
-            s += p.factStrs[i] +"\n";
+            s += i + ": " +p.factStrs[i] +"\n";
         }
 
         return s;
 
     }
+
+    public void printSingleGraphForVarIndex(SasPlusProblem p, int varIndex, String outputfile){
+
+        Tuple2<Integer[],Tuple3[]> graphData = getSingleNodesAndEdgesForVarIndex(p,varIndex);
+
+        EdgeLabelledGraphSingle<Integer,Integer> graph = new EdgeLabelledGraphSingle(graphData._1(), graphData._2());
+
+        EdgeLabelledGraphSingle<String,String> stringGraph = convertSingleGraphToStringGraph(p, graph);
+
+        Dot2PdfCompiler.writeDotToFile(stringGraph,outputfile);
+
+
+    }
+
+    public void printMultiGraphForVarIndexes(SasPlusProblem p, int varIndex1, int varIndex2, String outputfile){
+        ArrayList<Integer> varIndexes = new ArrayList<>();
+        varIndexes.add(varIndex1);
+        varIndexes.add(varIndex2);
+
+        Tuple3<Integer[],Tuple3[],HashMap<Integer, ArrayList<Integer>>> multiGraphData = getNodesAndEdgesForVarIndexes(p,varIndexes);
+        Integer[] nodeIDS = multiGraphData._3().keySet().toArray(new Integer[multiGraphData._3().keySet().size()]);
+
+        /*for (Tuple3 t : multiGraphData._2()) {
+
+              System.out.println(t);
+        }*/
+
+        EdgeLabelledGraph<Integer,Integer,HashMap<Integer, ArrayList<Integer>>> multiGraph = new EdgeLabelledGraph(nodeIDS, multiGraphData._2(),multiGraphData._3());
+
+        EdgeLabelledGraph<String,String,HashMap<Integer, ArrayList<Integer>>> stringMultiGraph = convertMultiGraphToStringGraph(p, multiGraph);
+
+        Dot2PdfCompiler.writeDotToFile(stringMultiGraph, outputfile);
+    }
+
+
 
 }
