@@ -1,8 +1,8 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.util.TimeCapsule
+import de.uniulm.ki.util.{DirectedGraph, DirectedGraphDotOptions, Dot2PdfCompiler, TimeCapsule}
 
 import scala.collection.Seq
 
@@ -10,9 +10,11 @@ import scala.collection.Seq
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
-                                 domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding{
-  //lazy val taskSequenceLength: Int = primitivePaths.length
-  lazy val taskSequenceLength: Int = taskSequenceLengthQQ
+                                domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding {
+  lazy val taskSequenceLength: Int = primitivePaths.length
+  //lazy val taskSequenceLength: Int = taskSequenceLengthQQ
+
+  protected final val useImplicationForbiddenness = false
 
   protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position
 
@@ -23,16 +25,8 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
   override lazy val noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
-    val sog = rootPayload.ordering.transitiveReduction
-
-    println(sog.isAcyclic)
-
-    /*val string = sog.dotString(options = DirectedGraphDotOptions(),
-                               //nodeRenderer = {case (path, tasks) => tasks map { _.name } mkString ","})
-                               nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + path})
-    Dot2PdfCompiler.writeDotToFile(string, "sog.pdf")*/
-
-    println("TREE P:" + primitivePaths.length + " S: " + taskSequenceLength)
+    // force computation of SOG
+    sog
 
     //////
     // select mapping
@@ -108,8 +102,6 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
       }
     }
     println("G " + forbiddennessImplications.length)
-
-
 
 
     val forbiddennessGetsInherited: Seq[Clause] = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>

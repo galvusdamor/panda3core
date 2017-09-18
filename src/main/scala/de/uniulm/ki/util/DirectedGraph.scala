@@ -27,6 +27,9 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   /** Replace all edges by non-edges and vice versa */
   def complementGraph: DirectedGraph[T]
 
+  /** invert the directions of all edges */
+  def inverseGraph: DirectedGraph[T]
+
   /** list of all edges as a list of pairs */
   def edgeList: Seq[(T, T)]
 
@@ -137,6 +140,10 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
 
   final lazy val complementGraph: DirectedGraph[T] = SimpleDirectedGraph(vertices, edges map { case (v, ns) => v -> (vertices filterNot ns.contains) })
 
+  /** invert the directions of all edges */
+  override lazy val inverseGraph: DirectedGraph[T] = SimpleDirectedGraph(vertices, edgeList map { case (a, b) => (b, a) })
+
+
   /** in- and out- degrees of all nodes */
   lazy val degrees: Map[T, (Int, Int)] = {
     val degCount: mutable.Map[T, (Int, Int)] = mutable.Map()
@@ -198,6 +205,7 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
         recursionResult :+ sccNodes.toSet
       } else recursionResult
     }
+
     vertices flatMap { node => if (!dfsNumber.contains(node)) tarjan(node) else Nil }
   }
 
@@ -246,6 +254,7 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
         scc foreach { reachabilityMap(_) = reachableSet }
       }
     }
+
     // run the dfs on all source SCCs of the condensation
     condensation.sources foreach dfs
     assert(reachabilityMap.size == vertices.size)
@@ -287,6 +296,7 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
         color.put(v, 2)
         ordering = ordering.+:(v)
       }
+
     // run dfs on every vertex
     vertices foreach dfs
 
@@ -378,8 +388,9 @@ object DirectedGraph {
           val nextNodeToMap = (nextGraphToMap map { case ((m, _), g) => g.vertices filterNot m.contains }).get.head
           val ((thisMapping, mappingIndex), thisGraph) = nextGraphToMap.get
 
-          val (conntectedNodes, unconntectedNodes) = thisMapping.keys.toSeq partition { ov => thisGraph.edgesSet(ov).contains(nextNodeToMap) || thisGraph.edgesSet(nextNodeToMap)
-            .contains(ov)
+          val (conntectedNodes, unconntectedNodes) = thisMapping.keys.toSeq partition { ov =>
+            thisGraph.edgesSet(ov).contains(nextNodeToMap) || thisGraph.edgesSet(nextNodeToMap)
+              .contains(ov)
           }
 
           // find all already existing nodes we can map this one possibly to
@@ -407,7 +418,7 @@ object DirectedGraph {
 
           // get selection preference
           val preferenceOrdering = mappingPreference(nextNodeToMap,
-                                                     (mappabileExistingNodes map { v => (v, currentMapping flatMap { m => m collect { case (a, b) if b == v => a } }) }) :+(newNode, Nil))
+                                                     (mappabileExistingNodes map { v => (v, currentMapping flatMap { m => m collect { case (a, b) if b == v => a } }) }) :+ (newNode, Nil))
 
           val (minGraph, minMapping) = preferenceOrdering.foldLeft[(Option[DirectedGraph[Int]], Seq[Map[T, Int]])]((None, currentMapping))(
             {
@@ -468,6 +479,9 @@ case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, S
   override lazy val longestPathLength: Option[Int] = internalGraph.longestPathLength
 
   override lazy val complementGraph: DirectedGraphWithInternalMapping[T] = DirectedGraphWithInternalMapping(vertices, edges map { case (v, ns) => v -> (vertices filterNot ns.contains) })
+
+  /** invert the directions of all edges */
+  override lazy val inverseGraph: DirectedGraph[T] = DirectedGraphWithInternalMapping(vertices, edgeList map { case (a, b) => (b, a) })
 
   /**
     * This is not a fast implementation^^

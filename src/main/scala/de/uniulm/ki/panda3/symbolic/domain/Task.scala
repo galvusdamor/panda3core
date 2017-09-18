@@ -88,6 +88,16 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
 
         case _ => noSupport(FORUMLASNOTSUPPORTED)
       }
+    case RemovePredicate(unnecessaryPredicates)           =>
+      this match {
+        case ReducedTask(_, _, _, _, _, preconditionAnd, effectAnd) =>
+          val newEffects = effectAnd.conjuncts filterNot { case Literal(predicate, _, _) => unnecessaryPredicates contains predicate }
+          val newPreconditions = preconditionAnd.conjuncts filterNot { case Literal(predicate, _, _) => unnecessaryPredicates contains predicate }
+
+          ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), And(newEffects))
+
+        case _ => noSupport(FORUMLASNOTSUPPORTED)
+      }
 
     case _ =>
       val newPrecondition = precondition.update(domainUpdate)
@@ -109,6 +119,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
     // check all constraints
     val allValidInstantiations = allInstantiations filter { params =>
       def constForVar(v: Variable): Constant = params(parameters indexOf v)
+
       parameterConstraints forall {
         case Equal(v1, c: Constant)     => constForVar(v1) == c
         case Equal(v1, v2: Variable)    => constForVar(v1) == constForVar(v2)
@@ -175,17 +186,17 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
   }*/
   assert(artificialParametersRepresentingConstants forall parameters.contains)
   assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })
-  if (parameters.isEmpty){
+  if (parameters.isEmpty) {
     // if ground, don't have something both in the add and del effects!
-    effectsAsPredicateBool filterNot {_._2} foreach {case (p,false) =>
-      assert(!effectsAsPredicateBool.contains((p,true)))
+    effectsAsPredicateBool filterNot { _._2 } foreach { case (p, false) =>
+      assert(!effectsAsPredicateBool.contains((p, true)))
     }
   }
 
-  if (parameters.isEmpty){
+  if (parameters.isEmpty) {
     // if ground, don't have something both in the add and del effects!
-    effectsAsPredicateBool filterNot {_._2} foreach {case (p,false) =>
-      assert(!effectsAsPredicateBool.contains((p,true)))
+    effectsAsPredicateBool filterNot { _._2 } foreach { case (p, false) =>
+      assert(!effectsAsPredicateBool.contains((p, true)))
     }
   }
 

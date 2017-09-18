@@ -282,7 +282,7 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
       val foundAnyTaskToRemove = tasksToRemoveFromPaths exists { _.nonEmpty }
       if (!foundAnyTaskToRemove) {
         // plot PDT to file
-        Dot2PdfCompiler.writeDotToFile(pdt.treeBelowAsGraph, "pdtN.pdf")
+        //Dot2PdfCompiler.writeDotToFile(pdt.treeBelowAsGraph, "pdtN.pdf")
 
         pdt.normalise
       }

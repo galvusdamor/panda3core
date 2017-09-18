@@ -5,6 +5,7 @@ import de.uniulm.ki.panda3.symbolic.compiler.OneOfTheNecessaryOrderings
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
 import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
+import de.uniulm.ki.panda3.symbolic.sat.verify.{ClassicalEncoding, POCLDeleterEncoding, POCLDirectEncoding, POStateEncoding}
 
 
 /**
@@ -297,10 +298,17 @@ object PredefinedConfigurations {
 
 
          // configurations to test totSAT
-         "-sat" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-satRiss6" -> (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-satMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-satFF" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
+         "-poclDirectsat" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding)),
+         "-poclDirectsatRiss6" -> (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding)),
+         "-poclDirectsatMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding)),
+
+         "-poclDeletesat" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse =
+           POCLDeleterEncoding)),
+         "-poclDeletesatRiss6" -> (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleterEncoding)),
+         "-poclDeletesatMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse =
+           POCLDeleterEncoding)),
+
+         /*"-satFF" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
          "-satFFRiss6" -> (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
          "-satFFMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = FFReduction)),
          "-satH2" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
@@ -308,16 +316,17 @@ object PredefinedConfigurations {
          "-satH2Maple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = H2Reduction)),
          "-satFFFull" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
          "-satFFFullRiss6" -> (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest)),
-         "-satFFFullMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod =
-           FFReductionWithFullTest)),
+         "-satFFFullMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod =        FFReductionWithFullTest)),
+         */
 
 
-         "-poclSat" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-poclSatRiss6" -> (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         "-poclSatMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         //"-poclSatSAS+" -> (htnParsing, sasPlusPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise)),
-         //"-classicalSat" ->(htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, forceClassicalEncoding = true)),
-         //"-classicalSatSAS+" ->(htnParsing, sasPlusPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, forceClassicalEncoding = true)),
+         "-classicalSat" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalEncoding)),
+         "-classicalSatRiss6" -> (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalEncoding)),
+         "-classicalSatMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalEncoding)),
+
+         "-statePOSat" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POStateEncoding)),
+         "-statePOSatRiss6" -> (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POStateEncoding)),
+         "-statePOSatMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POStateEncoding)),
 
 
          // plan verification a la ICAPS'17

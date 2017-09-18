@@ -13,8 +13,6 @@ import scala.collection.{mutable, Seq}
   */
 trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrimitivePlanEncoding {
 
-  protected final val useImplicationForbiddenness = false
-
   assert(initialPlan.planStepsWithoutInitGoal.length == 1, "This formula is only correct if the initial plan has been replaced by an artificial top task")
 
   // this is only needed in the tree encoding
@@ -119,6 +117,49 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
 
     pdt.restrictPathDecompositionTree(dontRemovePrimitives)
   }
+
+  lazy val sog: DirectedGraph[(Seq[Int], Set[Task])] = {
+    println("Final SOG has " + rootPayload.ordering.vertices.length + " vertices")
+    // assert correctness
+
+    val pl: DirectedGraph[(Seq[Int], Set[Task])] = rootPayload.ordering.map(
+      {
+        case (path, tasks) =>
+          val matchingPaths = primitivePaths.filter(_._1 == path)
+          if (matchingPaths.isEmpty)
+            (path, Set[Task]())
+          else
+            (path, matchingPaths.head._2)
+      })
+
+    /*rootPayload.ordering.vertices foreach { case (path, tasks) =>
+      val matchingPaths = primitivePaths.filter(_._1 == path)
+      if (matchingPaths.isEmpty)
+        assert(tasks.isEmpty)
+      else
+        assert(matchingPaths.length == 1 && matchingPaths.head._2 == tasks)
+
+    }*/
+
+    print("Compute Transitive reducton ... ")
+    //val sog = rootPayload.ordering.transitiveReduction
+    val ss = pl.transitiveClosure
+    val nodesToKeep = ss.vertices filter { _._2.exists(_.isPrimitive) } toSet
+    val finalSOG: DirectedGraph[(Seq[Int], Set[Task])] =
+      SimpleDirectedGraph(nodesToKeep.toSeq, ss.edgeList filter { case (a, b) => (nodesToKeep contains a) && (nodesToKeep contains b) }).transitiveReduction
+    println("done")
+
+
+    /*val string = finalSOG.dotString(options = DirectedGraphDotOptions(),
+                                    //nodeRenderer = {case (path, tasks) => tasks map { _.name } mkString ","})
+                                    nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + tasks.size + " " + path})
+    Dot2PdfCompiler.writeDotToFile(string, "sog.pdf")*/
+
+    println("TREE P: " + primitivePaths.length + " S: " + taskSequenceLength)
+
+    finalSOG
+  }
+
 }
 
 case class NonExpandedSOG(ordering: DirectedGraph[Int])

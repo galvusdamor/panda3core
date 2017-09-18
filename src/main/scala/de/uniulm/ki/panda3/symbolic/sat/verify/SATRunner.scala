@@ -21,7 +21,7 @@ import scala.io.Source
 // scalastyle:off method.length cyclomatic.complexity
 case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
-                     forceClassicalEncoding: Boolean, extractSolutionWithHierarchy: Boolean) {
+                     encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean) {
 
   private val fileDir = "/dev/shm/"
 
@@ -153,8 +153,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK)
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
-          if (forceClassicalEncoding) SOGClassicalEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK).asInstanceOf[VerifyEncoding]
-          else SOGPOCLEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK).asInstanceOf[VerifyEncoding]
+          encodingToUse match {
+            case ClassicalEncoding => SOGClassicalEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
+            case POCLDirectEncoding => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
+            case POCLDeleterEncoding => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
+            case POStateEncoding => SOGPOREncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
+          }
         }
 
       // (3)
@@ -215,6 +219,16 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
       //println(timeCapsule.integralDataMap())
 
+      def removeCommentAtBeginning(s: String): String = {
+        var i = 0
+        while (s.charAt(i) == 'c') {
+          while (s.length > i && s.charAt(i) != '\n')
+            i += 1
+          i += 1
+        }
+
+        s.substring(i)
+      }
 
       // if we can't reach a primitive decomposition the whole PDT will be pruned, resulting in a trivially satisfiable SAT formula,
       // but the planning problem is clearly unsatisfiable
@@ -275,7 +289,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           ("rm " + fileDir + "__run" + uniqFileIdentifier) !
 
           // get time measurement
-          val totalTime = (stderr.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
+          val errString = removeCommentAtBeginning(stderr.toString())
+          //println(errString)
+
+          val totalTime = (errString.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
           println("Time command gave the following runtime for the solver: " + totalTime)
 
           timeCapsule.addTo(SAT_SOLVER, totalTime)
@@ -284,6 +301,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
         } catch {
           case rt: RuntimeException => println("Minisat exitcode problem ..." + rt.toString)
+            rt.printStackTrace()
+            System exit 0
         }
         timeCapsule stop Timings.VERIFY_TOTAL
 
@@ -313,16 +332,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
             if (splitted.length == 1) (splitted(0), Set[Int]()) else (splitted(0), (splitted(1).split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet)
           case CRYPTOMINISAT | RISS6 | MapleCOMSPS =>
 
-            def removeCommentAtBeginning(s: String): String = {
-              var i = 0
-              while (s.charAt(i) == 'c') {
-                while (s.charAt(i) != '\n')
-                  i += 1
-                i += 1
-              }
-
-              s.substring(i)
-            }
+            //println(solverOutput)
+            //System exit 0
 
             val nonCommentOutput = removeCommentAtBeginning(solverOutput)
 
@@ -354,15 +365,29 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
           //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
+          /*val db = allTrueAtoms filter { _ contains "direct_before" }
+
+          val v: Set[String] = db flatMap { a => a.split("_").drop(2) }
+          val e :Set[(String,String)]= db map { a => val x = a.split("_").drop(2); (x(0), x(1)) }
+
+          val gg = SimpleDirectedGraph(v.toSeq, e.toSeq)
+          Dot2PdfCompiler.writeDotToFile(gg,"graph.pdf")*/
+
+          //System exit 0
+
           println("extracting solution")
           val (graphNodes, graphEdges, solutionSequence, methodsForAbstractTasks, parentsInDecompositionTree) =
             extractSolutionAndDecompositionGraph(encoder, atomMap, literals, formulaVariables, allTrueAtoms)
+
 
           if (checkSolution) runSolutionIntegrityCheck(encoder, graphNodes, graphEdges)
 
           // return the found solution
           Some(solutionSequence, methodsForAbstractTasks, parentsInDecompositionTree)
-        } else None
+        } else {
+          //System exit 0
+          None
+        }
       }
     } catch {
       case t: Throwable =>
@@ -431,6 +456,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           }
         }
         val graph: DirectedGraph[String] = SimpleDirectedGraph(nodes, edges)
+        //Dot2PdfCompiler.writeDotToFile(graph,"dectree.pdf")
         // give all task a unique ID
         val nodeIDMap: Map[String, Int] = nodes.zipWithIndex.toMap
         val idNodeMap: Map[Int, String] = nodeIDMap.map(_.swap)
@@ -455,7 +481,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         val allMethods = formulaVariables filter { _.startsWith("method^") } filter allTrueAtoms.contains
 
         // attach methods to respective tasks
-        val planStepsMethodMap :Map[PlanStep, DecompositionMethod] = if (!extractSolutionWithHierarchy) Map() else
+        val planStepsMethodMap: Map[PlanStep, DecompositionMethod] = if (!extractSolutionWithHierarchy) Map() else
           allMethods map { m =>
             val extract = m.split("_").last.split(",").head
             val ps = actionStringToTask(idNodeMap(pathIDMap(extract)))
@@ -517,7 +543,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
             sogTree match {
 
-              case tree: SOGPOCLEncoding      =>
+              case tree: SOGPartialNoPath     =>
                 // extract partial order from formula
                 val orderClauses = allTrueAtoms filter { _ startsWith "before" } map { _.split("_").tail } map { x => (x(0), x(1)) } toSeq
 
@@ -695,3 +721,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
   }
 
 }
+
+sealed trait POEncoding
+
+object ClassicalEncoding extends POEncoding
+object POCLDirectEncoding extends POEncoding
+object POCLDeleterEncoding extends POEncoding
+object POStateEncoding extends POEncoding

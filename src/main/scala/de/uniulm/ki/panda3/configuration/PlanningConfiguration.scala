@@ -21,10 +21,9 @@ import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.sat.verify.{SATRunner, VerifyRunner}
-import de.uniulm.ki.panda3.symbolic.sat.verify.SATRunner
+import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
+import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy, PrunePredicates}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, SASPlusGrounding}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
@@ -311,7 +310,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
-                                 satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.forceClassicalEncoding,
+                                 satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.encodingToUse,
                                  postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree))
 
 
@@ -435,7 +434,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
             //("java -Xmx10G -Xms10G -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo.0.pb.anml") #| "grep iter, --after 1" ! new ProcessLogger {
             ("java -Xmx4G -Xms4G -XX:+UseSerialGC -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo" + uuid + ".0.pb.anml") ! new ProcessLogger {
-            //("java -Xmx1G -Xms1G -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo" + uuid + ".0.pb.anml") ! new ProcessLogger {
+              //("java -Xmx1G -Xms1G -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo" + uuid + ".0.pb.anml") ! new ProcessLogger {
               override def err(s: => String): Unit = output = output + s + "\n"
 
               override def out(s: => String): Unit = output = output + s + "\n"
@@ -1055,15 +1054,24 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       timeCapsule start COMPILE_UNIT_METHODS
       val methodsWithIdenticalTasks = if (searchConfiguration.isInstanceOf[SATSearch] && postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree)) {
         info("Compiling methods with identical tasks ... ")
-        val compiled = MakeTasksInMethodsUnique.transform(result._1, result._2, ())
+        val compiled = MakeTasksInMethodsUnique.transform(groundedDomainAndPlan._1, groundedDomainAndPlan._2, ())
         info("done.\n")
         extra(compiled._1.statisticsString + "\n")
         compiled
       } else groundedDomainAndPlan
       timeCapsule stop COMPILE_UNIT_METHODS
 
+
+      val predicatedPruned = {
+        info("Removing unnecessary predicates ... ")
+        val compiled = PrunePredicates.transform(methodsWithIdenticalTasks._1, methodsWithIdenticalTasks._2, ())
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        compiled
+      }
+
       timeCapsule stop PREPROCESSING
-      ((methodsWithIdenticalTasks, groundedAnalysisMap), timeCapsule)
+      ((predicatedPruned, groundedAnalysisMap), timeCapsule)
     } else {
       timeCapsule stop PREPROCESSING
       ((domainAndPlan, analysisMap), timeCapsule)
@@ -1693,7 +1701,7 @@ case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
-                     forceClassicalEncoding: Boolean = false
+                     encodingToUse: POEncoding = POCLDeleterEncoding
                     ) extends SearchConfiguration {
 
   protected lazy val getSingleRun: SingleSATRun = runConfiguration match {
