@@ -6,6 +6,8 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic}
+import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic, EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
@@ -39,6 +41,7 @@ import de.uniulm.ki.panda3.symbolic.writer.anml.ANMLWriter
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.symbolic.writer.shop2.SHOP2Writer
 import de.uniulm.ki.panda3.{efficient, symbolic}
+import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 import de.uniulm.ki.util._
 
 import scala.collection.{JavaConversions, JavaConverters, Seq}
@@ -577,7 +580,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         timeCapsule stop TOTAL_TIME
         runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
       })
-
     }
   }
 
@@ -588,8 +590,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case LiftedTDGMinimumADD(_, _) | TDGMinimumADD(_) =>
         // TODO experimental
         val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
-        val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
-          (wrapper.unwrap(task), args map wrapper.unwrap toArray)
+        val initialState = domainAndPlan._2.groundedInitialState collect {
+          case GroundLiteral(task, true, args) =>
+            (wrapper.unwrap(task), args map wrapper.unwrap toArray)
         }
         // TODO check that we have compiled negative preconditions away
         Some(AddHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray, resuingAsVHPOP = false))
@@ -599,7 +602,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     // get the inner heuristic if one exists
     val innerHeuristic = heuristicConfig match {
-      case inner: SearchHeuristicWithInner => inner.innerHeuristic map { h => constructEfficientHeuristic(h, wrapper, analysisMap, domainAndPlan) }
+      case inner: SearchHeuristicWithInner => inner.innerHeuristic map {
+        h => constructEfficientHeuristic(h, wrapper, analysisMap, domainAndPlan)
+      }
       case _                               => None
     }
 
@@ -666,8 +671,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         val initialState = domainAndPlan._2.groundedInitialState collect {
           case GroundLiteral(task, true, args) =>
             (wrapper.unwrap(task), args map wrapper.unwrap toArray)
-        }
-
         heuristicConfig match {
           case ADD | ADDReusing =>
             val reusing = if (heuristicConfig == ADDReusing) true else false
@@ -861,7 +864,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                       firstAnalysis: Boolean = false): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     val emptyAnalysis = AnalysisMap(Map())
 
-    assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
+    assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall {
+      domain.tasks contains _.schema
+    })
 
 
     val predicatesRemoved = if (domain.isGround && preprocessingConfiguration.removeUnnecessaryPredicates) {
@@ -889,7 +894,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else (predicatesRemoved, emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
-    assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { liftedResult._1._1.tasks contains _.schema })
+    assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {
+      liftedResult._1._1.tasks contains _.schema
+    })
 
     // convert to SAS+
     val sasPlusResult = if (preprocessingConfiguration.convertToSASP && firstAnalysis &&
@@ -906,10 +913,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val goalLiteral = Literal(artificialGoal, true, Nil)
 
       val pddlDomain = Domain(classicalDomain.sorts, classicalDomain.predicates :+ artificialGoal,
-                              classicalDomain.tasks map { case rt: ReducedTask => rt.copy(effect = And(rt.effect.conjuncts :+ goalLiteral)) }, Nil, Nil, None, None)
+                              classicalDomain.tasks map {
+                                case rt: ReducedTask => rt.copy(effect = And(rt.effect.conjuncts :+ goalLiteral))
+                              }, Nil, Nil, None, None)
 
       val withGoalPlan = {
-        val oldGoal = liftedResult._1._2.goal.schema match {case rt: ReducedTask => rt}
+        val oldGoal = liftedResult._1._2.goal.schema match {
+          case rt: ReducedTask => rt
+        }
         val newGoal = oldGoal.copy(precondition = And(oldGoal.precondition.conjuncts :+ goalLiteral))
 
         liftedResult._1._2.update(ExchangeTask(Map(oldGoal -> newGoal)))
@@ -1062,7 +1073,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else sasPlusResult
     if (preprocessingConfiguration.groundedReachability.isDefined) timeCapsule stop GROUNDED_PLANNINGGRAPH_ANALYSIS
 
-    assert(groundedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { groundedResult._1._1.tasks contains _.schema })
+    assert(groundedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {
+      groundedResult._1._1.tasks contains _.schema
+    })
 
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
@@ -1082,7 +1095,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
-    assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { tdgResult._1._1.tasks contains _.schema })
+    assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {
+      tdgResult._1._1.tasks contains _.schema
+    })
 
     val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
       if (!runForGrounder || !preprocessingConfiguration.groundDomain) (if (preprocessingConfiguration.compileUselessAbstractTasks)
@@ -1100,16 +1115,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       else Nil
 
     // don't run compilation if we are still ground
-    val compiledResult = groundedCompilersToBeApplied.foldLeft(tdgResult._1)(
-      { case ((dom, prob), cc@CompilerConfiguration(compiler, option, message, timingString)) =>
-        timeCapsule start timingString
-        info("Compiling " + message + " ... ")
-        val compiled = cc.run(dom, prob)
-        info("done.\n")
-        extra(compiled._1.statisticsString + "\n")
-        timeCapsule stop timingString
-        compiled
-      })
+    val compiledResult = groundedCompilersToBeApplied.foldLeft(tdgResult._1)({
+                                                                               case ((dom, prob), cc@CompilerConfiguration(compiler, option, message, timingString)) =>
+                                                                                 timeCapsule start timingString
+                                                                                 info("Compiling " + message + " ... ")
+                                                                                 val compiled = cc.run(dom, prob)
+                                                                                 info("done.\n")
+                                                                                 extra(compiled._1.statisticsString + "\n")
+                                                                                 timeCapsule stop timingString
+                                                                                 compiled
+                                                                             })
 
     if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length ||
       (compiledResult._1.abstractTasks.nonEmpty && compiledResult._1.decompositionMethods.isEmpty)) ((compiledResult, tdgResult._2), timeCapsule)
@@ -1143,16 +1158,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         else Nil) ::
         Nil flatten
 
-    val (compiledDomain, compiledProblem) = compilerToBeApplied.foldLeft((domain, problem))(
-      { case ((dom, prob), cc@CompilerConfiguration(compiler, option, message, timingString)) =>
-        timeCapsule start timingString
-        info("Compiling " + message + " ... ")
-        val compiled = cc.run(dom, prob)
-        info("done.\n")
-        extra(compiled._1.statisticsString + "\n")
-        timeCapsule stop timingString
-        compiled
-      }
+    val (compiledDomain, compiledProblem) = compilerToBeApplied.foldLeft((domain, problem))({
+                                                                                              case ((dom, prob), cc@CompilerConfiguration(compiler, option, message, timingString)) =>
+                                                                                                timeCapsule start timingString
+                                                                                                info("Compiling " + message + " ... ")
+                                                                                                val compiled = cc.run(dom, prob)
+                                                                                                info("done.\n")
+                                                                                                extra(compiled._1.statisticsString + "\n")
+                                                                                                timeCapsule stop timingString
+                                                                                                compiled
+                                                                                            }
                                                                                            )
 
     // initial run of the reachability analysis on the domain, until it has converged
@@ -1178,8 +1193,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           assert(groundedDomainAndProblem._1.mappingToOriginalGrounding.isDefined)
           val flatTaskToGroundedTask = groundedDomainAndProblem._1.mappingToOriginalGrounding.get.taskMapping
 
-          val exchangeMap = flatTaskToGroundedTask collect { case (currentTask, groundTask) if sasPlusGrounder.groundedTasksToNewGroundTasksMapping contains groundTask =>
-            currentTask -> sasPlusGrounder.groundedTasksToNewGroundTasksMapping(groundTask)
+          val exchangeMap = flatTaskToGroundedTask collect {
+            case (currentTask, groundTask) if sasPlusGrounder.groundedTasksToNewGroundTasksMapping contains groundTask =>
+              currentTask -> sasPlusGrounder.groundedTasksToNewGroundTasksMapping(groundTask)
           }
 
           val sasPlusDomain = groundedDomainAndProblem._1.update(AddPredicate(sasPlusGrounder.sasPlusPredicates)).update(ExchangeTask(exchangeMap)).
@@ -1190,6 +1206,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val saspRepresentation = SASPlusRepresentation(sasPlusGrounder.sasPlusProblem,
                                                          sasPlusGrounder.sasPlusTaskIndexToNewGroundTask filter { case (i, t) => sasPlusDomain.taskSet contains t },
                                                          sasPlusGrounder.sasPlusPredicates.zipWithIndex map { case (p, i) => i -> p } toMap)
+
           (sasPlusDomain.copy(sasPlusRepresentation = Some(saspRepresentation)), sasPlusPlan)
         } else {
           // generate simple SAS+ representation from strips
@@ -1242,7 +1259,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         compiled
       } else groundedDomainAndPlan
       timeCapsule stop COMPILE_UNIT_METHODS
-
 
       val predicatedPruned = if (preprocessingConfiguration.removeUnnecessaryPredicates) {
         info("Removing unnecessary predicates ... ")
@@ -1338,26 +1354,26 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }) ++ (parsingConfiguration :: preprocessingConfiguration :: postprocessingConfiguration :: Nil)
 
   protected override def recursiveMethods(conf: Configuration): (conf.type) => PlanningConfiguration.this.type = conf match {
-    case _: ParsingConfiguration        => {case p: ParsingConfiguration => this.copy(parsingConfiguration = p).asInstanceOf[this.type]}
-    case _: PreprocessingConfiguration  => {case p: PreprocessingConfiguration => this.copy(preprocessingConfiguration = p).asInstanceOf[this.type]}
-    case _: SearchConfiguration         => {case p: SearchConfiguration => this.copy(searchConfiguration = p).asInstanceOf[this.type]}
-    case _: PostprocessingConfiguration => {case p: PostprocessingConfiguration => this.copy(postprocessingConfiguration = p).asInstanceOf[this.type]}
+    case _: ParsingConfiguration        => {
+      case p: ParsingConfiguration => this.copy(parsingConfiguration = p).asInstanceOf[this.type]
+    }
+    case _: PreprocessingConfiguration  => {
+      case p: PreprocessingConfiguration => this.copy(preprocessingConfiguration = p).asInstanceOf[this.type]
+    }
+    case _: SearchConfiguration         => {
+      case p: SearchConfiguration => this.copy(searchConfiguration = p).asInstanceOf[this.type]
+    }
+    case _: PostprocessingConfiguration => {
+      case p: PostprocessingConfiguration => this.copy(postprocessingConfiguration = p).asInstanceOf[this.type]
+    }
   }
 }
 
 object PlanningConfiguration {
-<<<<<<< HEAD
   private val defaultPlanSearchConfiguration  = PlanBasedSearch(None, BFSType, Nil, Nil, LCFR)
   private val defaultProgressionConfiguration = ProgressionSearch(BFSType, None, PriorityQueueSearch.abstractTaskSelection.random)
   private val defaultSATConfiguration         = SATSearch(MINISAT, SingleSATRun())
   private val defaultVerifyConfiguration      = SATPlanVerification(MINISAT, "")
-||||||| parent of a4e70cc2... added verifier result to output
-  private val defaultPlanSearchConfiguration  = PlanBasedSearch(None, BFSType, Nil, Nil, LCFR)
-  private val defaultVerifyConfiguration      = SATPlanVerification(MINISAT, "")
-=======
-  private val defaultPlanSearchConfiguration = PlanBasedSearch(None, BFSType, Nil, Nil, LCFR)
-  private val defaultVerifyConfiguration     = SATPlanVerification(MINISAT, "")
->>>>>>> a4e70cc2... added verifier result to output
 }
 
 /**
