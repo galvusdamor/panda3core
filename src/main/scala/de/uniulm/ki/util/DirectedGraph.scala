@@ -51,6 +51,10 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
 
   def getVerticesInDistance(v: T, distance: Int): Set[T]
 
+  def getVerticesPerDistances(v: T): Map[Int, Set[T]]
+
+  def getVerticesWithDistance(v: T): Seq[(T, Int)] = getVerticesPerDistances(v) flatMap { case (i, vs) => vs map { v => (v, i) } } toSeq
+
   /** computes for each node, which other nodes can be reached from it using the edges of the graph */
   def reachable: Map[T, Set[T]]
 
@@ -198,6 +202,7 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
         recursionResult :+ sccNodes.toSet
       } else recursionResult
     }
+
     vertices flatMap { node => if (!dfsNumber.contains(node)) tarjan(node) else Nil }
   }
 
@@ -224,6 +229,16 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
     }
   }
 
+  // TODO: I just was not in the mood to implement dijkstra's, so this only works for trees
+  def getVerticesPerDistances(v: T): Map[Int, Set[T]] = {
+    val recMap: Map[Int, Set[T]] = edges(v) flatMap { vv => getVerticesPerDistances(vv) map { case (i, x) => (i + 1, x) } } groupBy { _._1 } map { case (i, xs) =>
+      i -> (xs flatMap { _._2 }).toSet
+    }
+
+    recMap + ((0, Set(v)))
+  }
+
+
   /** computes for each node, which other nodes can be reached from it using the edges of the graph */
   // TODO: this computation might be inefficient
   lazy val reachable: Map[T, Set[T]] = {
@@ -246,6 +261,7 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
         scc foreach { reachabilityMap(_) = reachableSet }
       }
     }
+
     // run the dfs on all source SCCs of the condensation
     condensation.sources foreach dfs
     assert(reachabilityMap.size == vertices.size)
@@ -287,6 +303,7 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
         color.put(v, 2)
         ordering = ordering.+:(v)
       }
+
     // run dfs on every vertex
     vertices foreach dfs
 
@@ -378,8 +395,9 @@ object DirectedGraph {
           val nextNodeToMap = (nextGraphToMap map { case ((m, _), g) => g.vertices filterNot m.contains }).get.head
           val ((thisMapping, mappingIndex), thisGraph) = nextGraphToMap.get
 
-          val (conntectedNodes, unconntectedNodes) = thisMapping.keys.toSeq partition { ov => thisGraph.edgesSet(ov).contains(nextNodeToMap) || thisGraph.edgesSet(nextNodeToMap)
-            .contains(ov)
+          val (conntectedNodes, unconntectedNodes) = thisMapping.keys.toSeq partition { ov =>
+            thisGraph.edgesSet(ov).contains(nextNodeToMap) || thisGraph.edgesSet(nextNodeToMap)
+              .contains(ov)
           }
 
           // find all already existing nodes we can map this one possibly to
@@ -407,7 +425,7 @@ object DirectedGraph {
 
           // get selection preference
           val preferenceOrdering = mappingPreference(nextNodeToMap,
-                                                     (mappabileExistingNodes map { v => (v, currentMapping flatMap { m => m collect { case (a, b) if b == v => a } }) }) :+(newNode, Nil))
+                                                     (mappabileExistingNodes map { v => (v, currentMapping flatMap { m => m collect { case (a, b) if b == v => a } }) }) :+ (newNode, Nil))
 
           val (minGraph, minMapping) = preferenceOrdering.foldLeft[(Option[DirectedGraph[Int]], Seq[Map[T, Int]])]((None, currentMapping))(
             {
@@ -487,6 +505,8 @@ case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, S
 
   override def getVerticesInDistance(v: T, distance: Int): Set[T] = internalGraph.getVerticesInDistance(verticesToInt(v), distance) map verticesToInt.back
 
+  override def getVerticesPerDistances(v: T): Map[Int, Set[T]] = internalGraph.getVerticesPerDistances(verticesToInt(v)) map { case (i, xs) => i -> xs.map(verticesToInt.back) }
+
   /** list of all edges as a list of pairs */
   override lazy val edgeList: Seq[(T, T)] = internalGraph.edgeList map { case (a, b) => (verticesToInt.back(a), verticesToInt.back(b)) }
 
@@ -506,6 +526,8 @@ object DirectedGraphWithInternalMapping {
 }
 
 case class SimpleDirectedGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraphWithAlgorithms[T] {
+  edges foreach { case (a, bs) => assert(vertices contains a); bs foreach { case b => assert(vertices contains b) } }
+
   override def equals(o: scala.Any): Boolean = o match {
     case g: SimpleDirectedGraph[T] => vertices.toSet == g.vertices.toSet && edgeList.toSet == g.edgeList.toSet
     case _                         => false
