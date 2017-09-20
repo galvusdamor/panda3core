@@ -1,16 +1,16 @@
 package de.uniulm.ki.panda3.symbolic.plan
 
-import de.uniulm.ki.panda3.symbolic.csp.{Equal, OfSort, CSP, PartialSubstitution}
+import de.uniulm.ki.panda3.symbolic.csp.{CSP, Equal, OfSort, PartialSubstitution}
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.logic._
-import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, CausalLink, OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, GroundTask, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
 import de.uniulm.ki.panda3.symbolic.plan.ordering._
 import de.uniulm.ki.panda3.symbolic.search._
-import de.uniulm.ki.util.{DotPrintable, HashMemo}
+import de.uniulm.ki.util.{DirectedGraph, DotPrintable, HashMemo, SimpleDirectedGraph}
 import de.uniulm.ki.panda3.symbolic.writer._
 
 /**
@@ -41,6 +41,9 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
           assert(parameterVariableConstraints.variables.contains(v), ps.id + " - " + ps.schema.name + ": var " + v)
       }
   }
+
+  planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod),
+                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo) }
 
   planStepsWithoutInitGoal foreach {
     ps =>
