@@ -1,7 +1,10 @@
 package de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink;
 
+import scala.ScalaReflectionException;
 import scala.Tuple3;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.util.ArrayList;
 
 /**
@@ -39,4 +42,28 @@ public final class Utils {
         return contained;
 
     }
+
+
+    public static String eliminateDoubleRows(String inputString){
+
+        String[] data = inputString.split("\n");
+
+        String output = "";
+
+        ArrayList<String > lines = new ArrayList<>();
+
+
+        for (int i=0; i<data.length; i++) {
+            String s = data[i];
+            if (!lines.contains(s)){
+                lines.add(s);
+                output += "\n" + s;
+            }
+        }
+
+        return output;
+    }
+
+
+
 }

@@ -9,6 +9,7 @@ import scala.Tuple2;
 import scala.Tuple3;
 
 
+import javax.rmi.CORBA.Util;
 import java.util.*;
 
 
@@ -128,16 +129,32 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
             int endEdge = singleEdge._3();
 
             ArrayList<Integer> startContainingIDs = findContainedIDs(idMapping, startEdge);
-            ArrayList<Integer> endContainingIDs = findContainedIDs(idMapping, endEdge);
 
-            for (int startIndex : startContainingIDs){
-                for (int endIndex : endContainingIDs){
+            if (startEdge != endEdge) {
 
-                    Tuple3<Integer,Integer,Integer> multiEdge = new Tuple3<>(startIndex, opIndex, endIndex);
-                    if (!Utils.containsEdge(multiEdges, multiEdge)) {
-                        multiEdges.add(multiEdge);
+                ArrayList<Integer> endContainingIDs = findContainedIDs(idMapping, endEdge);
+
+                for (int startIndex : startContainingIDs) {
+                    for (int endIndex : endContainingIDs) {
+
+                        Tuple3<Integer, Integer, Integer> multiEdge = new Tuple3<>(startIndex, opIndex, endIndex);
+                        if (!Utils.containsEdge(multiEdges, multiEdge)) {
+                            multiEdges.add(multiEdge);
+                        }
                     }
                 }
+            }else {
+
+                for (int startIndex : startContainingIDs) {
+
+                        Tuple3<Integer, Integer, Integer> multiEdge = new Tuple3<>(startIndex, opIndex, startIndex);
+                        if (!Utils.containsEdge(multiEdges, multiEdge)) {
+                            multiEdges.add(multiEdge);
+                        }
+
+                }
+
+
             }
 
         }
@@ -220,7 +237,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
             //Zusätzlich abklären?: nicht in pres enthalten
             if (!addListDismissed.contains(index) && !delListDismissed.contains(index)){
                 Tuple3<Integer,Integer,Integer> edge = new Tuple3<>(index,OpIndex,index);
-                if (!Utils.containsEdge(edges, edge)) edges.add(edge);
+        //        if (!Utils.containsEdge(edges, edge)) edges.add(edge);
             }
         }
 
@@ -616,7 +633,18 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
         EdgeLabelledGraph<String,String,HashMap<Integer, ArrayList<Integer>>> stringMultiGraph = convertMultiGraphToStringGraph(p, multiGraph);
 
-        Dot2PdfCompiler.writeDotToFile(stringMultiGraph, outputfile);
+        // stringMultiGraph.dotString = Utils.eliminateDoubleRows(stringMultiGraph.dotString());
+
+
+        Dot2PdfCompiler.writeDotToFile(Utils.eliminateDoubleRows(stringMultiGraph.dotString()), outputfile);
+
+        System.out.println(stringMultiGraph.dotString());
+
+        System.out.println(Utils.eliminateDoubleRows(stringMultiGraph.dotString()));
+
+        System.out.println(stringMultiGraph.dotString().length());
+
+        System.out.println(Utils.eliminateDoubleRows(stringMultiGraph.dotString()).length());
     }
 
 
