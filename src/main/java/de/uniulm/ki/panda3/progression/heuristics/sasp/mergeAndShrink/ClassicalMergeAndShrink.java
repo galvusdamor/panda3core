@@ -9,7 +9,6 @@ import scala.Tuple2;
 import scala.Tuple3;
 
 
-import javax.rmi.CORBA.Util;
 import java.util.*;
 
 
@@ -98,7 +97,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         ArrayList<Tuple3<Integer,Integer,Integer>> edges = new ArrayList<>();
 
         for (int i=0; i<p.numOfOperators; i++){
-            ArrayList<Tuple3<Integer,Integer,Integer>> edgesForOp = getEdgesForOp(p, i, containedVarIndexes);
+            ArrayList<Tuple3<Integer,Integer,Integer>> edgesForOp = getEdgesForOpOld(p, i, containedVarIndexes);
             edges.addAll(edgesForOp);
         }
 
@@ -183,14 +182,14 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         ArrayList<Tuple3<Integer,Integer,Integer>> edges = new ArrayList<>();
 
         for (int i=0; i<p.numOfOperators; i++){
-            ArrayList<Tuple3<Integer,Integer,Integer>> edgesForOp = getEdgesForOp(p, i, containedVarIndexes);
+            ArrayList<Tuple3<Integer,Integer,Integer>> edgesForOp = getEdgesForOpOld(p, i, containedVarIndexes);
             edges.addAll(edgesForOp);
         }
 
         return edges;
     }
 
-    public ArrayList<Tuple3<Integer,Integer,Integer>> getEdgesForOp(SasPlusProblem p, int OpIndex, ArrayList<Integer> containedVarIndexes){
+    public ArrayList<Tuple3<Integer,Integer,Integer>> getEdgesForOpOld(SasPlusProblem p, int OpIndex, ArrayList<Integer> containedVarIndexes){
 
         int[] pres = p.precLists[OpIndex];
         int[] adds = p.addLists[OpIndex];
@@ -229,6 +228,8 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
         }
 
+
+
         
         //Schritt 2:
 
@@ -237,7 +238,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
             //Zusätzlich abklären?: nicht in pres enthalten
             if (!addListDismissed.contains(index) && !delListDismissed.contains(index)){
                 Tuple3<Integer,Integer,Integer> edge = new Tuple3<>(index,OpIndex,index);
-        //        if (!Utils.containsEdge(edges, edge)) edges.add(edge);
+                if (!Utils.containsEdge(edges, edge)) edges.add(edge);
             }
         }
 
@@ -245,6 +246,82 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         return edges;
 
     }
+
+
+    public ArrayList<Tuple3<Integer,Integer,Integer>> getEdgesForOp(SasPlusProblem p, int OpIndex, ArrayList<Integer> containedVarIndexes, HashMap<Integer, ArrayList<Integer>> idMapping){
+
+        int[] pres = p.precLists[OpIndex];
+        int[] adds = p.addLists[OpIndex];
+        int[] dels = p.delLists[OpIndex];
+
+        //Schritt 1: OpIndexes in den pres, adds und dels aussortieren, die nicht in den containedVarIndexes sind
+
+        //Schritt 2:
+        //1) von allen dels zu allen adds
+        //2) self-loops von allen bei denens weder in dels noch in adds ist
+        //3) self-loops von allen, bei denens in beiden ist (ist bereits in Punkt 1 enthalten)
+
+
+        ArrayList<Tuple3<Integer,Integer,Integer>> edges = new ArrayList<>();
+
+
+        //Schritt 1:
+
+        ArrayList<Integer> preListDismissed = dismissNotContainedIndexes(pres, containedVarIndexes);
+        ArrayList<Integer> addListDismissed = dismissNotContainedIndexes(adds, containedVarIndexes);
+        ArrayList<Integer> delListDismissed = dismissNotContainedIndexes(dels, containedVarIndexes);
+
+        for (int id : idMapping.keySet()){
+
+            ArrayList<Integer> assignedVarIndexes = idMapping.get(id);
+
+            ArrayList<Integer> assignedPreListDismissed = dismissNotContainedIndexes(pres, assignedVarIndexes);
+            ArrayList<Integer> assignedAddListDismissed = dismissNotContainedIndexes(adds, assignedVarIndexes);
+            ArrayList<Integer> assignedDelListDismissed = dismissNotContainedIndexes(dels, assignedVarIndexes);
+
+        }
+
+
+/*
+
+        for (int startEdge : delListDismissed){
+
+            for (int endEdge : addListDismissed){
+
+
+                //String labelEdge = "\"" + p.opNames[OpIndex] + "\"";
+
+                Tuple3<Integer,Integer,Integer> edge = new Tuple3<>(startEdge,OpIndex,endEdge);
+                if (!Utils.containsEdge(edges, edge)) {
+                    edges.add(edge);
+                }
+
+            }
+
+        }*/
+
+
+
+
+        //Schritt 2:
+
+
+/*
+        for (int index : containedVarIndexes){
+            //Zusätzlich abklären?: nicht in pres enthalten
+            if (!addListDismissed.contains(index) && !delListDismissed.contains(index)){
+                Tuple3<Integer,Integer,Integer> edge = new Tuple3<>(index,OpIndex,index);
+                if (!Utils.containsEdge(edges, edge)) edges.add(edge);
+            }
+        }
+*/
+
+
+        return edges;
+
+    }
+
+
 
 
     public ArrayList<Integer> dismissNotContainedIndexes(int[] allIndexes, ArrayList<Integer> containedIndexes){
@@ -636,15 +713,18 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         // stringMultiGraph.dotString = Utils.eliminateDoubleRows(stringMultiGraph.dotString());
 
 
+
+
+        //System.out.println(stringMultiGraph.dotString());
+
         Dot2PdfCompiler.writeDotToFile(Utils.eliminateDoubleRows(stringMultiGraph.dotString()), outputfile);
 
-        System.out.println(stringMultiGraph.dotString());
+        //System.out.println(Utils.eliminateDoubleRows(stringMultiGraph.dotString()));
 
-        System.out.println(Utils.eliminateDoubleRows(stringMultiGraph.dotString()));
+        //System.out.println(stringMultiGraph.dotString().length());
 
-        System.out.println(stringMultiGraph.dotString().length());
+        //System.out.println(Utils.eliminateDoubleRows(stringMultiGraph.dotString()).length());
 
-        System.out.println(Utils.eliminateDoubleRows(stringMultiGraph.dotString()).length());
     }
 
 

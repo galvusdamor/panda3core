@@ -55,7 +55,12 @@ public final class Utils {
 
         for (int i=0; i<data.length; i++) {
             String s = data[i];
-            if (!lines.contains(s)){
+            if(s.contains("->")) {
+                if (!lines.contains(s)) {
+                    lines.add(s);
+                    output += "\n" + s;
+                }
+            }else{
                 lines.add(s);
                 output += "\n" + s;
             }
