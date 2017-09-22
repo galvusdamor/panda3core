@@ -20,9 +20,9 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 
 
-        //printSingleGraphForVarIndex(p, 4, "graph.pdf");
+        printSingleGraphForVarIndex(p, 3, "graph.pdf");
 
-        printMultiGraphForVarIndexes(p, 0, 1, "graph.pdf");
+        //printMultiGraphForVarIndexes(p, 0, 1, "graph.pdf");
 
 
         System.exit(0);
@@ -235,7 +235,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 
         for (int index : containedVarIndexes){
-            //Zus‰tzlich abkl‰ren?: nicht in pres enthalten
+            //Zus√§tzlich abkl√§ren?: nicht in pres enthalten
             if (!addListDismissed.contains(index) && !delListDismissed.contains(index)){
                 Tuple3<Integer,Integer,Integer> edge = new Tuple3<>(index,OpIndex,index);
                 if (!Utils.containsEdge(edges, edge)) edges.add(edge);
@@ -308,7 +308,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 /*
         for (int index : containedVarIndexes){
-            //Zus‰tzlich abkl‰ren?: nicht in pres enthalten
+            //Zus√§tzlich abkl√§ren?: nicht in pres enthalten
             if (!addListDismissed.contains(index) && !delListDismissed.contains(index)){
                 Tuple3<Integer,Integer,Integer> edge = new Tuple3<>(index,OpIndex,index);
                 if (!Utils.containsEdge(edges, edge)) edges.add(edge);

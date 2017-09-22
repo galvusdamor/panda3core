@@ -100,7 +100,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   /** The DOT representation of the object with options */
   override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString }, { case _ => "" })
 
-  def dotString(options: DirectedGraphDotOptions, nodeRenderer: T => String, edgeRenderer: (T, T) => String = { case _ => "" }): String = {
+  def dotString(options: DirectedGraphDotOptions, nodeRenderer: T => String, edgeRenderer: (T, T) => String = {case _ => ""}): String = {
     val dotStringBuilder = new StringBuilder()
 
     dotStringBuilder append "digraph someDirectedGraph{\n"
@@ -200,6 +200,7 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
         recursionResult :+ sccNodes.toSet
       } else recursionResult
     }
+
     vertices flatMap { node => if (!dfsNumber.contains(node)) tarjan(node) else Nil }
   }
 
@@ -248,6 +249,7 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
         scc foreach { reachabilityMap(_) = reachableSet }
       }
     }
+
     // run the dfs on all source SCCs of the condensation
     condensation.sources foreach dfs
     assert(reachabilityMap.size == vertices.size)
@@ -289,6 +291,7 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
         color.put(v, 2)
         ordering = ordering.+:(v)
       }
+
     // run dfs on every vertex
     vertices foreach dfs
 
@@ -380,8 +383,9 @@ object DirectedGraph {
           val nextNodeToMap = (nextGraphToMap map { case ((m, _), g) => g.vertices filterNot m.contains }).get.head
           val ((thisMapping, mappingIndex), thisGraph) = nextGraphToMap.get
 
-          val (conntectedNodes, unconntectedNodes) = thisMapping.keys.toSeq partition { ov => thisGraph.edgesSet(ov).contains(nextNodeToMap) || thisGraph.edgesSet(nextNodeToMap)
-            .contains(ov)
+          val (conntectedNodes, unconntectedNodes) = thisMapping.keys.toSeq partition { ov =>
+            thisGraph.edgesSet(ov).contains(nextNodeToMap) || thisGraph.edgesSet(nextNodeToMap)
+              .contains(ov)
           }
 
           // find all already existing nodes we can map this one possibly to
@@ -409,7 +413,7 @@ object DirectedGraph {
 
           // get selection preference
           val preferenceOrdering = mappingPreference(nextNodeToMap,
-                                                     (mappabileExistingNodes map { v => (v, currentMapping flatMap { m => m collect { case (a, b) if b == v => a } }) }) :+(newNode, Nil))
+                                                     (mappabileExistingNodes map { v => (v, currentMapping flatMap { m => m collect { case (a, b) if b == v => a } }) }) :+ (newNode, Nil))
 
           val (minGraph, minMapping) = preferenceOrdering.foldLeft[(Option[DirectedGraph[Int]], Seq[Map[T, Int]])]((None, currentMapping))(
             {
@@ -534,17 +538,34 @@ case class EdgeLabelledGraphSingle[T, L](arrayVertices: Array[T], labelledEdges:
 
   override def vertices: Seq[T] = arrayVertices.toSeq
 
-  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString },
-                                                                               { case (a,b) => labelledEdges.find({case (x,_,y) => a == x && b == y}).get._2.toString })
+  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString }, {
+
+    val countMap: mutable.Map[(T, T), Int] = new mutable.HashMap[(T, T), Int]()
+
+    val labelFunction: (T, T) => String = {
+      case (a, b) =>
+        val possibleLabels = labelledEdges.filter({ case (x, _, y) => a == x && b == y })
+        if (countMap.contains((a, b))) {
+          val r = possibleLabels(countMap((a, b)))
+          countMap((a, b)) = countMap((a, b)) + 1
+          r._2.toString
+        } else {
+          countMap((a, b)) = 1
+          possibleLabels.head._2.toString
+        }
+    }
+
+    labelFunction
+  })
 }
 
-case class EdgeLabelledGraph[T, L, M](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M ) extends DirectedGraphWithAlgorithms[T] {
+case class EdgeLabelledGraph[T, L, M](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M) extends DirectedGraphWithAlgorithms[T] {
   override def edges: Map[T, Seq[T]] = labelledEdges groupBy { _._1 } map { case (a, b) => a -> b.map(_._3).toSeq }
 
   override def vertices: Seq[T] = arrayVertices.toSeq
 
   override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString },
-    { case (a,b) => labelledEdges.find({case (x,_,y) => a == x && b == y}).get._2.toString })
+                                                                               { case (a, b) => labelledEdges.find({ case (x, _, y) => a == x && b == y }).get._2.toString })
 }
 
 case class SimpleGraphNode(id: String, name: String) extends PrettyPrintable {

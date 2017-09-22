@@ -119,6 +119,9 @@ public class ProPlanningInstance {
         } else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
             initialNode.heuristic = new gphRcFFMulticount(methods, initialTasks, ProgressionNetwork.taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
+        } else if (heuristic instanceof PureSASPlusEncoding) {
+            PureSASPlusEncoding h = (PureSASPlusEncoding) heuristic;
+            initialNode.heuristic = new PureSASHeuristic(ProgressionNetwork.flatProblem, h.classicalHeuristic(), methods, initialTasks);
         } else if (heuristic instanceof GreedyProgression$)
             initialNode.heuristic = new ProGreedyProgression();
         else {

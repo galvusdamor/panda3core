@@ -161,6 +161,9 @@ object PredefinedConfigurations {
   def pandaProConfig(algorithm: SearchAlgorithmType, sasHeuristic: SasHeuristics): ProgressionSearch =
     ProgressionSearch(algorithm, Some(HierarchicalHeuristicRelaxedComposition(sasHeuristic)), PriorityQueueSearch.abstractTaskSelection.random)
 
+  def sasPlusConfig(algorithm: SearchAlgorithmType, sasHeuristic: SasHeuristics): ProgressionSearch =
+    ProgressionSearch(algorithm, Some(PureSASPlusEncoding(sasHeuristic)), PriorityQueueSearch.abstractTaskSelection.random)
+
 
   val searchConfigs = Map(
                            "-GAStarAPR" -> planSearchAStarAPR,

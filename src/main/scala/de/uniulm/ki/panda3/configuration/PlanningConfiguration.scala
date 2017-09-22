@@ -198,7 +198,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
             val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, GroundedPlanningGraphConfiguration(computeMutexes = preprocessingConfiguration
               .groundedReachability.contains(PlanningGraphWithMutexes)))
-            analysisMap = analysisMap +(EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic(symbolicPlanningGraph, wrapper))
+            analysisMap = analysisMap + (EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic(symbolicPlanningGraph, wrapper))
           }
           timeCapsule stop HEURISTICS_PREPARATION
 
@@ -311,7 +311,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
                                  satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.forceClassicalEncoding)
-
 
 
           // depending on whether we are doing a single or a full run, we have either to do a loop or just one run
@@ -504,60 +503,61 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Seq[Plan], domainAndPlan: (Domain, Plan),
                         unprocessedDomainAndPlan: (Domain, Plan),
                         analysisMap: AnalysisMap): ResultMap =
-    ResultMap(postprocessingConfiguration.resultsToProduce map { resultType => (resultType, resultType match {
-      case ProcessingTimings => timeCapsule
+    ResultMap(postprocessingConfiguration.resultsToProduce map { resultType =>
+      (resultType, resultType match {
+        case ProcessingTimings => timeCapsule
 
-      case SearchStatus                   =>
-        val determinedSearchSate =
-          if (informationCapsule.dataMap().contains(Information.ERROR)) SearchState.INSEARCH
-          else if (result.nonEmpty) SearchState.SOLUTION
-          else if (timeCapsule.integralDataMap().contains(Timings.TOTAL_TIME) && timeCapsule.integralDataMap()(Timings.TOTAL_TIME) >=
-            1000 * timeLimit.getOrElse(Integer.MAX_VALUE / 1000))
-            SearchState.TIMEOUT
-          else {
-            searchConfiguration match {
-              case search: PlanBasedSearch   => if (informationCapsule.dataMap().contains(Information.SEARCH_SPACE_FULLY_EXPLORED)) SearchState.UNSOLVABLE else SearchState.INSEARCH
-              case search: ProgressionSearch => if (informationCapsule.dataMap().contains(Information.SEARCH_SPACE_FULLY_EXPLORED)) SearchState.UNSOLVABLE else SearchState.INSEARCH
-              case sat: SATSearch            => SearchState.UNSOLVABLE
-              case _                         => SearchState.INSEARCH
+        case SearchStatus                   =>
+          val determinedSearchSate =
+            if (informationCapsule.dataMap().contains(Information.ERROR)) SearchState.INSEARCH
+            else if (result.nonEmpty) SearchState.SOLUTION
+            else if (timeCapsule.integralDataMap().contains(Timings.TOTAL_TIME) && timeCapsule.integralDataMap()(Timings.TOTAL_TIME) >=
+              1000 * timeLimit.getOrElse(Integer.MAX_VALUE / 1000))
+              SearchState.TIMEOUT
+            else {
+              searchConfiguration match {
+                case search: PlanBasedSearch   => if (informationCapsule.dataMap().contains(Information.SEARCH_SPACE_FULLY_EXPLORED)) SearchState.UNSOLVABLE else SearchState.INSEARCH
+                case search: ProgressionSearch => if (informationCapsule.dataMap().contains(Information.SEARCH_SPACE_FULLY_EXPLORED)) SearchState.UNSOLVABLE else SearchState.INSEARCH
+                case sat: SATSearch            => SearchState.UNSOLVABLE
+                case _                         => SearchState.INSEARCH
+              }
+            }
+          // write search state into the information capsule
+          informationCapsule.set(Information.SOLVED_STATE, determinedSearchSate.toString)
+
+          determinedSearchSate
+        case InternalSearchResult           => result.headOption
+        case SearchResult                   =>
+          // start process of translating the solution back to something readable (i.e. lifted)
+          result.headOption
+        case AllFoundPlans                  => result
+        case SearchStatistics               => informationCapsule
+        case SearchSpace                    => rootNode
+        case SolutionInternalString         => if (result.nonEmpty) Some(result.head.shortInfo) else None
+        case SolutionDotString              => if (result.nonEmpty) Some(result.head.dotString) else None
+        case FinalTaskDecompositionGraph    => analysisMap(SymbolicGroundedTaskDecompositionGraph)
+        case FinalGroundedReachability      => analysisMap(SymbolicGroundedReachability)
+        case PreprocessedDomainAndPlan      => domainAndPlan
+        case UnprocessedDomainAndPlan       => unprocessedDomainAndPlan
+        case AllFoundSolutionPathsWithHStar =>
+          // we have to find all solutions paths, so first compute the solution state of each node to only traverse the paths to the actual solutions
+          rootNode.recomputeSearchState()
+
+          def getAllSolutions(node: SearchNode): (Int, Seq[Seq[(SearchNode, Int)]]) = {
+            assert(node.searchState == SearchState.SOLUTION)
+            if (node.children.isEmpty) (node.plan.planSteps.length, ((node, 0) :: Nil) :: Nil)
+            else {
+              val solvableChildren = node.children filter { _._1.searchState == SearchState.SOLUTION } map { _._1 }
+              val children = solvableChildren map getAllSolutions
+              val minimalLength = children map { _._1 } min
+
+              // semantic empty line
+              (minimalLength, children flatMap { _._2 } map { case p => p.+:(node, minimalLength - node.plan.planSteps.length) })
             }
           }
-        // write search state into the information capsule
-        informationCapsule.set(Information.SOLVED_STATE, determinedSearchSate.toString)
 
-        determinedSearchSate
-      case InternalSearchResult           => result.headOption
-      case SearchResult                   =>
-        // start process of translating the solution back to something readable (i.e. lifted)
-        result.headOption
-      case AllFoundPlans                  => result
-      case SearchStatistics               => informationCapsule
-      case SearchSpace                    => rootNode
-      case SolutionInternalString         => if (result.nonEmpty) Some(result.head.shortInfo) else None
-      case SolutionDotString              => if (result.nonEmpty) Some(result.head.dotString) else None
-      case FinalTaskDecompositionGraph    => analysisMap(SymbolicGroundedTaskDecompositionGraph)
-      case FinalGroundedReachability      => analysisMap(SymbolicGroundedReachability)
-      case PreprocessedDomainAndPlan      => domainAndPlan
-      case UnprocessedDomainAndPlan       => unprocessedDomainAndPlan
-      case AllFoundSolutionPathsWithHStar =>
-        // we have to find all solutions paths, so first compute the solution state of each node to only traverse the paths to the actual solutions
-        rootNode.recomputeSearchState()
-
-        def getAllSolutions(node: SearchNode): (Int, Seq[Seq[(SearchNode, Int)]]) = {
-          assert(node.searchState == SearchState.SOLUTION)
-          if (node.children.isEmpty) (node.plan.planSteps.length, ((node, 0) :: Nil) :: Nil)
-          else {
-            val solvableChildren = node.children filter { _._1.searchState == SearchState.SOLUTION } map { _._1 }
-            val children = solvableChildren map getAllSolutions
-            val minimalLength = children map { _._1 } min
-
-            // semantic empty line
-            (minimalLength, children flatMap { _._2 } map { case p => p.+:(node, minimalLength - node.plan.planSteps.length) })
-          }
-        }
-
-        if (rootNode.searchState == SearchState.SOLUTION) getAllSolutions(rootNode)._2 else Nil
-    })
+          if (rootNode.searchState == SearchState.SOLUTION) getAllSolutions(rootNode)._2 else Nil
+      })
     } toMap
              )
 
@@ -719,17 +719,22 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       // FD can't handle either in the sort hierarchy, so we have to use predicates when writing them ...
       val uuid = UUID.randomUUID().toString
 
-      ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
+      System.getProperty("os.name") match {
+        case osname if osname.toLowerCase startsWith "windows" => ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
+
+        case _ => ("mkdir .fd" + uuid) !!
+      }
+
 
       val separator = System.getProperty("os.name") match {
         case osname if osname.toLowerCase startsWith "windows" => "\\"
-        case _ => "/" // normal OSes
+        case _                                                 => "/" // normal OSes
       }
 
       writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true),
-        ".fd" + uuid + separator + "__sasdomain.pddl")
+                        ".fd" + uuid + separator + "__sasdomain.pddl")
       writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan, writeEitherWithPredicates = true),
-        ".fd" + uuid + separator + "__sasproblem.pddl")
+                        ".fd" + uuid + separator + "__sasproblem.pddl")
 
       val sasPlusParser = {
         // we need a path to FD
@@ -744,13 +749,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         System.getProperty("os.name") match {
           case osname if osname.toLowerCase startsWith "windows" =>
             writeStringToFile("cd .fd" + uuid + "\n" +
-              "python " + path + "\\src\\translate\\translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".bat")
+                                "python " + path + "\\src\\translate\\translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".bat")
             ("cmd.exe /c  runFD" + uuid + ".bat") !!
 
           case _ => // OSes made by people who can think straigt
             writeStringToFile("#!/bin/bash\n" +
-              "cd .fd" + uuid + "\n" +
-              "python " + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
+                                "cd .fd" + uuid + "\n" +
+                                "python " + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
 
             ("bash runFD" + uuid + ".sh") !!
           // semantic empty line
@@ -758,7 +763,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
         // semantic empty line
-        val sasreader = new SasPlusProblem(".fd" + uuid + separator +  "output.sas")
+        val sasreader = new SasPlusProblem(".fd" + uuid + separator + "output.sas")
         sasreader.prepareEfficientRep()
         //ProPlanningInstance.sasp = sasreader
         //sasreader.prepareSymbolicRep(domain,problem)
@@ -768,7 +773,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             ("cmd.exe /c  rmdir /S /Q .fd" + uuid) !
 
             ("cmd.exe /c del runFD" + uuid + ".bat") !!
-          case _ =>  // Linux and the like
+          case _                                                 => // Linux and the like
             ("rm -rf .fd" + uuid) !
 
             ("rm runFD" + uuid + ".sh") !!
@@ -972,7 +977,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       timeCapsule stop COMPILE_UNIT_METHODS
 
 
-
       val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, runForGrounder = false, timeCapsule)
 
       timeCapsule stop PREPROCESSING
@@ -990,8 +994,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   /** returns a detailed information about the object */
   override def longInfo: String = "Planning Configuration\n======================\n" +
-    alignConfig(("\tprintGeneralInformation", printGeneralInformation) ::("\tprintAdditionalData", printAdditionalData) ::
-                  ("\trandom seed", randomSeed) ::("\ttime limit (in seconds)", timeLimit.getOrElse("none")) :: Nil) + "\n\n" +
+    alignConfig(("\tprintGeneralInformation", printGeneralInformation) :: ("\tprintAdditionalData", printAdditionalData) ::
+                  ("\trandom seed", randomSeed) :: ("\ttime limit (in seconds)", timeLimit.getOrElse("none")) :: Nil) + "\n\n" +
     "\texternal programs" + (externalProgramPaths map { case (prog, path) => "\t\t" + prog + " at " + path } mkString "\n") + "\n\n" + {
     parsingConfiguration.longInfo + "\n\n" + preprocessingConfiguration.longInfo + "\n\n" + searchConfiguration.longInfo + "\n\n" + postprocessingConfiguration.longInfo
   }.split("\n").map(x => "\t" + x).mkString("\n")
@@ -1002,21 +1006,21 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   protected def localModificationsByKey: Seq[(String, (ParameterMode, (Option[String]) => PlanningConfiguration.this.type))] =
     Seq(
-         "-printGeneralInfo" ->(NoParameter, { l: Option[String] => this.copy(printGeneralInformation = true).asInstanceOf[this.type] }),
-         "-noGeneralInfo" ->(NoParameter, { l: Option[String] => this.copy(printGeneralInformation = false).asInstanceOf[this.type] }),
-         "-printAdditionalInfo" ->(NoParameter, { l: Option[String] => this.copy(printAdditionalData = true).asInstanceOf[this.type] }),
-         "-noAdditionalInfo" ->(NoParameter, { l: Option[String] => this.copy(printAdditionalData = false).asInstanceOf[this.type] }),
+         "-printGeneralInfo" -> (NoParameter, { l: Option[String] => this.copy(printGeneralInformation = true).asInstanceOf[this.type] }),
+         "-noGeneralInfo" -> (NoParameter, { l: Option[String] => this.copy(printGeneralInformation = false).asInstanceOf[this.type] }),
+         "-printAdditionalInfo" -> (NoParameter, { l: Option[String] => this.copy(printAdditionalData = true).asInstanceOf[this.type] }),
+         "-noAdditionalInfo" -> (NoParameter, { l: Option[String] => this.copy(printAdditionalData = false).asInstanceOf[this.type] }),
 
-         "-noSearch" ->(NoParameter, { l: Option[String] => this.copy(searchConfiguration = NoSearch).asInstanceOf[this.type] }),
-         "-planSearch" ->(NoParameter, { l: Option[String] => this.copy(searchConfiguration = defaultPlanSearchConfiguration).asInstanceOf[this.type] }),
-         "-progression" ->(NoParameter, { l: Option[String] => this.copy(searchConfiguration = defaultProgressionConfiguration).asInstanceOf[this.type] }),
-         "-SAT" ->(NoParameter, { l: Option[String] => this.copy(searchConfiguration = defaultSATConfiguration).asInstanceOf[this.type] }),
+         "-noSearch" -> (NoParameter, { l: Option[String] => this.copy(searchConfiguration = NoSearch).asInstanceOf[this.type] }),
+         "-planSearch" -> (NoParameter, { l: Option[String] => this.copy(searchConfiguration = defaultPlanSearchConfiguration).asInstanceOf[this.type] }),
+         "-progression" -> (NoParameter, { l: Option[String] => this.copy(searchConfiguration = defaultProgressionConfiguration).asInstanceOf[this.type] }),
+         "-SAT" -> (NoParameter, { l: Option[String] => this.copy(searchConfiguration = defaultSATConfiguration).asInstanceOf[this.type] }),
 
-         "-seed" ->(NecessaryParameter, { l: Option[String] => this.copy(randomSeed = l.get.toInt).asInstanceOf[this.type] }),
-         "-timelimit" ->(NecessaryParameter, { l: Option[String] => this.copy(timeLimit = Some(l.get.toInt)).asInstanceOf[this.type] }),
+         "-seed" -> (NecessaryParameter, { l: Option[String] => this.copy(randomSeed = l.get.toInt).asInstanceOf[this.type] }),
+         "-timelimit" -> (NecessaryParameter, { l: Option[String] => this.copy(timeLimit = Some(l.get.toInt)).asInstanceOf[this.type] }),
 
          // paths to external programs
-         "-programPath" ->(NecessaryParameter, { l: Option[String] =>
+         "-programPath" -> (NecessaryParameter, { l: Option[String] =>
            val splittedPath = l.get.split("=")
            assert(splittedPath.length == 2, "paths must be specified in the program=path format")
            val program = splittedPath.head match {
@@ -1030,13 +1034,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   protected def predefinedConfigurations: Seq[(String, (ParameterMode, (Option[String]) => PlanningConfiguration.this.type))] =
     (PredefinedConfigurations.parsingConfigs.toSeq map { case (k, p) =>
-      k ->(NoParameter, { l: Option[String] => this.copy(parsingConfiguration = p).asInstanceOf[this.type] })
+      k -> (NoParameter, { l: Option[String] => this.copy(parsingConfiguration = p).asInstanceOf[this.type] })
     }) ++
       (PredefinedConfigurations.preprocessConfigs.toSeq map { case (k, p) =>
-        k ->(NoParameter, { l: Option[String] => this.copy(preprocessingConfiguration = p).asInstanceOf[this.type] })
+        k -> (NoParameter, { l: Option[String] => this.copy(preprocessingConfiguration = p).asInstanceOf[this.type] })
       }) ++
       (PredefinedConfigurations.defaultConfigurations.toSeq map {
-        case (k, (parse, pre, search)) => k ->(NoParameter, { l: Option[String] =>
+        case (k, (parse, pre, search)) => k -> (NoParameter, { l: Option[String] =>
           this.copy(parsingConfiguration = parse, preprocessingConfiguration = pre, searchConfiguration =
             search).asInstanceOf[this.type]
         })
@@ -1094,7 +1098,7 @@ case class ParsingConfiguration(
                                ) extends Configuration {
   /** returns a detailed information about the object */
   override def longInfo: String = "Parsing Configuration\n---------------------\n" +
-    alignConfig(("Parser", parserType.longInfo) ::("Expand Sort Hierarchy", expandSortHierarchy) ::
+    alignConfig(("Parser", parserType.longInfo) :: ("Expand Sort Hierarchy", expandSortHierarchy) ::
                   ("ClosedWordAssumption", closedWorldAssumption) ::
                   ("CompileSHOPMethods", compileSHOPMethods) ::
                   ("Eliminate Equality", eliminateEquality) ::
@@ -1104,7 +1108,7 @@ case class ParsingConfiguration(
 
   protected override def localModifications: Seq[(String, (ParameterMode, (Option[String]) => ParsingConfiguration.this.type))] =
     Seq(
-         "-parser" ->(NecessaryParameter, { p: Option[String] =>
+         "-parser" -> (NecessaryParameter, { p: Option[String] =>
            val parser = p.get.toLowerCase match {
              case "xml"           => XMLParserType
              case "hddl" | "pddl" => HDDLParserType
@@ -1115,25 +1119,25 @@ case class ParsingConfiguration(
            this.copy(parserType = parser).asInstanceOf[this.type]
          }),
 
-         "-expandSortHierarchy" ->(NoParameter, { p: Option[String] => this.copy(expandSortHierarchy = true).asInstanceOf[this.type] }),
-         "-dontExpandSortHierarchy" ->(NoParameter, { p: Option[String] => this.copy(expandSortHierarchy = false).asInstanceOf[this.type] }),
+         "-expandSortHierarchy" -> (NoParameter, { p: Option[String] => this.copy(expandSortHierarchy = true).asInstanceOf[this.type] }),
+         "-dontExpandSortHierarchy" -> (NoParameter, { p: Option[String] => this.copy(expandSortHierarchy = false).asInstanceOf[this.type] }),
 
-         "-closedWorldAssumption" ->(NoParameter, { p: Option[String] => this.copy(closedWorldAssumption = true).asInstanceOf[this.type] }),
-         "-noClosedWorldAssumption" ->(NoParameter, { p: Option[String] => this.copy(closedWorldAssumption = false).asInstanceOf[this.type] }),
+         "-closedWorldAssumption" -> (NoParameter, { p: Option[String] => this.copy(closedWorldAssumption = true).asInstanceOf[this.type] }),
+         "-noClosedWorldAssumption" -> (NoParameter, { p: Option[String] => this.copy(closedWorldAssumption = false).asInstanceOf[this.type] }),
 
-         "-compileSHOPMethods" ->(NoParameter, { p: Option[String] => this.copy(compileSHOPMethods = true).asInstanceOf[this.type] }),
-         "-dontCompileSHOPMethods" ->(NoParameter, { p: Option[String] => this.copy(compileSHOPMethods = false).asInstanceOf[this.type] }),
+         "-compileSHOPMethods" -> (NoParameter, { p: Option[String] => this.copy(compileSHOPMethods = true).asInstanceOf[this.type] }),
+         "-dontCompileSHOPMethods" -> (NoParameter, { p: Option[String] => this.copy(compileSHOPMethods = false).asInstanceOf[this.type] }),
 
-         "-eliminateEquality" ->(NoParameter, { p: Option[String] => this.copy(eliminateEquality = true).asInstanceOf[this.type] }),
-         "-dontEliminateEquality" ->(NoParameter, { p: Option[String] => this.copy(eliminateEquality = false).asInstanceOf[this.type] }),
+         "-eliminateEquality" -> (NoParameter, { p: Option[String] => this.copy(eliminateEquality = true).asInstanceOf[this.type] }),
+         "-dontEliminateEquality" -> (NoParameter, { p: Option[String] => this.copy(eliminateEquality = false).asInstanceOf[this.type] }),
 
-         "-stripHybrid" ->(NoParameter, { p: Option[String] => this.copy(stripHybrid = true).asInstanceOf[this.type] }),
-         "-dontStripHybrid" ->(NoParameter, { p: Option[String] => this.copy(stripHybrid = false).asInstanceOf[this.type] }),
+         "-stripHybrid" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = true).asInstanceOf[this.type] }),
+         "-dontStripHybrid" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = false).asInstanceOf[this.type] }),
 
-         "-toPlainFormulaRepresentation" ->(NoParameter, { p: Option[String] =>
+         "-toPlainFormulaRepresentation" -> (NoParameter, { p: Option[String] =>
            (if (p.isEmpty) this.copy(reduceGneralTasks = true) else this.copy(reduceGneralTasks = p.get.toBoolean)).asInstanceOf[this.type]
          }),
-         "-generalFormulaRepresentation" ->(NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(reduceGneralTasks = false).asInstanceOf[this.type] })
+         "-generalFormulaRepresentation" -> (NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(reduceGneralTasks = false).asInstanceOf[this.type] })
        )
 }
 
@@ -1176,13 +1180,13 @@ case class PreprocessingConfiguration(
 
   override protected def localModifications: Seq[(String, (ParameterMode, (Option[String]) => PreprocessingConfiguration.this.type))] =
     Seq(
-         "-compileNegativePreconditions" ->(NoParameter, { p: Option[String] => this.copy(compileNegativePreconditions = true).asInstanceOf[this.type] }),
-         "-dontCompileNegativePreconditions" ->(NoParameter, { p: Option[String] => this.copy(compileNegativePreconditions = false).asInstanceOf[this.type] }),
+         "-compileNegativePreconditions" -> (NoParameter, { p: Option[String] => this.copy(compileNegativePreconditions = true).asInstanceOf[this.type] }),
+         "-dontCompileNegativePreconditions" -> (NoParameter, { p: Option[String] => this.copy(compileNegativePreconditions = false).asInstanceOf[this.type] }),
 
-         "-compileUnitMethods" ->(NoParameter, { p: Option[String] => this.copy(compileUnitMethods = true).asInstanceOf[this.type] }),
-         "-dontCompileUnitMethods" ->(NoParameter, { p: Option[String] => this.copy(compileUnitMethods = false).asInstanceOf[this.type] }),
+         "-compileUnitMethods" -> (NoParameter, { p: Option[String] => this.copy(compileUnitMethods = true).asInstanceOf[this.type] }),
+         "-dontCompileUnitMethods" -> (NoParameter, { p: Option[String] => this.copy(compileUnitMethods = false).asInstanceOf[this.type] }),
 
-         "-totallyOrder" ->(NecessaryParameter, { p: Option[String] =>
+         "-totallyOrder" -> (NecessaryParameter, { p: Option[String] =>
            val orderingOption: TotallyOrderingOption = p.get match {
              case "all"                        => AllOrderings
              case "all-necessary"              => AllNecessaryOrderings
@@ -1191,25 +1195,26 @@ case class PreprocessingConfiguration(
            }
            this.copy(compileOrderInMethods = Some(orderingOption)).asInstanceOf[this.type]
          }),
-         "-dontTotallyOrder" ->(NoParameter, { p: Option[String] => this.copy(compileOrderInMethods = None).asInstanceOf[this.type] }),
+         "-dontTotallyOrder" -> (NoParameter, { p: Option[String] => this.copy(compileOrderInMethods = None).asInstanceOf[this.type] }),
 
-         "-compileInitialPlan" ->(NoParameter, { p: Option[String] => this.copy(compileInitialPlan = true).asInstanceOf[this.type] }),
-         "-dontCompileInitialPlan" ->(NoParameter, { p: Option[String] => this.copy(compileInitialPlan = false).asInstanceOf[this.type] }),
+         "-compileInitialPlan" -> (NoParameter, { p: Option[String] => this.copy(compileInitialPlan = true).asInstanceOf[this.type] }),
+         "-dontCompileInitialPlan" -> (NoParameter, { p: Option[String] => this.copy(compileInitialPlan = false).asInstanceOf[this.type] }),
 
-         "-splitIndependentParameters" ->(NoParameter, { p: Option[String] => this.copy(splitIndependentParameters = true).asInstanceOf[this.type] }),
-         "-dontSplitIndependentParameters" ->(NoParameter, { p: Option[String] => this.copy(splitIndependentParameters = false).asInstanceOf[this.type] }),
+         "-splitIndependentParameters" -> (NoParameter, { p: Option[String] => this.copy(splitIndependentParameters = true).asInstanceOf[this.type] }),
+         "-dontSplitIndependentParameters" -> (NoParameter, { p: Option[String] => this.copy(splitIndependentParameters = false).asInstanceOf[this.type] }),
 
-         "-liftedReachability" ->(NoParameter, { p: Option[String] => this.copy(liftedReachability = true).asInstanceOf[this.type] }),
-         "-noLiftedReachability" ->(NoParameter, { p: Option[String] => this.copy(liftedReachability = false).asInstanceOf[this.type] }),
+         "-liftedReachability" -> (NoParameter, { p: Option[String] => this.copy(liftedReachability = true).asInstanceOf[this.type] }),
+         "-noLiftedReachability" -> (NoParameter, { p: Option[String] => this.copy(liftedReachability = false).asInstanceOf[this.type] }),
 
-         "-sas+" ->(NoParameter, { p: Option[String] => this.copy(convertToSASP = true).asInstanceOf[this.type] }),
-         "-nosas+" ->(NoParameter, { p: Option[String] => this.copy(convertToSASP = false).asInstanceOf[this.type] }),
+         "-sas+" -> (NoParameter, { p: Option[String] => this.copy(convertToSASP = true).asInstanceOf[this.type] }),
+         "-nosas+" -> (NoParameter, { p: Option[String] => this.copy(convertToSASP = false).asInstanceOf[this.type] }),
 
-         "-allowSAS+FromStrips" ->(NoParameter, { p: Option[String] => this.copy(allowSASPFromStrips = true).asInstanceOf[this.type] }),
-         "-dontallowSAS+FromStrips" ->(NoParameter, { p: Option[String] => this.copy(allowSASPFromStrips = false).asInstanceOf[this.type] }),
+         "-allowSAS+FromStrips" -> (NoParameter, { p: Option[String] => this.copy(allowSASPFromStrips = true).asInstanceOf[this.type] }),
+         "-dontallowSAS+FromStrips" -> (NoParameter, { p: Option[String] => this.copy(allowSASPFromStrips = false).asInstanceOf[this.type] }),
 
 
-         "-groundedReachability" ->(NecessaryParameter, { p: Option[String] => assert(p.isDefined)
+         "-groundedReachability" -> (NecessaryParameter, { p: Option[String] =>
+           assert(p.isDefined)
            val mode = p.get match {
              case "planningGraph" | "pg"             => PlanningGraph
              case "planningGraphWithMutexes" | "pgm" => PlanningGraphWithMutexes
@@ -1217,11 +1222,12 @@ case class PreprocessingConfiguration(
            }
            this.copy(groundedReachability = Some(mode)).asInstanceOf[this.type]
          }),
-         "-planningGraph" ->(NoParameter, { p: Option[String] => this.copy(groundedReachability = Some(PlanningGraph)).asInstanceOf[this.type] }),
-         "-planningGraphWithMutexes" ->(NoParameter, { p: Option[String] => this.copy(groundedReachability = Some(PlanningGraphWithMutexes)).asInstanceOf[this.type] }),
-         "-noGroundedReachability" ->(NoParameter, { p: Option[String] => this.copy(groundedReachability = None).asInstanceOf[this.type] }),
+         "-planningGraph" -> (NoParameter, { p: Option[String] => this.copy(groundedReachability = Some(PlanningGraph)).asInstanceOf[this.type] }),
+         "-planningGraphWithMutexes" -> (NoParameter, { p: Option[String] => this.copy(groundedReachability = Some(PlanningGraphWithMutexes)).asInstanceOf[this.type] }),
+         "-noGroundedReachability" -> (NoParameter, { p: Option[String] => this.copy(groundedReachability = None).asInstanceOf[this.type] }),
 
-         "-groundedTaskDecompositionGraph" ->(NecessaryParameter, { p: Option[String] => assert(p.isDefined)
+         "-groundedTaskDecompositionGraph" -> (NecessaryParameter, { p: Option[String] =>
+           assert(p.isDefined)
            val mode = p.get match {
              case "topDown" => TopDownTDG
              case "twoWay"  => TwoWayTDG
@@ -1229,16 +1235,16 @@ case class PreprocessingConfiguration(
            }
            this.copy(groundedTaskDecompositionGraph = Some(mode)).asInstanceOf[this.type]
          }),
-         "-topDownTDG" ->(NoParameter, { p: Option[String] => this.copy(groundedTaskDecompositionGraph = Some(TopDownTDG)).asInstanceOf[this.type] }),
-         "-twoWayTDG" ->(NoParameter, { p: Option[String] => this.copy(groundedTaskDecompositionGraph = Some(TwoWayTDG)).asInstanceOf[this.type] }),
-         "-tdg" ->(NoParameter, { p: Option[String] => this.copy(groundedTaskDecompositionGraph = Some(TwoWayTDG)).asInstanceOf[this.type] }),
-         "-noHierarchicalReachability" ->(NoParameter, { p: Option[String] => this.copy(groundedTaskDecompositionGraph = None).asInstanceOf[this.type] }),
+         "-topDownTDG" -> (NoParameter, { p: Option[String] => this.copy(groundedTaskDecompositionGraph = Some(TopDownTDG)).asInstanceOf[this.type] }),
+         "-twoWayTDG" -> (NoParameter, { p: Option[String] => this.copy(groundedTaskDecompositionGraph = Some(TwoWayTDG)).asInstanceOf[this.type] }),
+         "-tdg" -> (NoParameter, { p: Option[String] => this.copy(groundedTaskDecompositionGraph = Some(TwoWayTDG)).asInstanceOf[this.type] }),
+         "-noHierarchicalReachability" -> (NoParameter, { p: Option[String] => this.copy(groundedTaskDecompositionGraph = None).asInstanceOf[this.type] }),
 
-         "-iterateReachabilityAnalysis" ->(NoParameter, { p: Option[String] => this.copy(iterateReachabilityAnalysis = true).asInstanceOf[this.type] }),
-         "-dontIterateReachabilityAnalysis" ->(NoParameter, { p: Option[String] => this.copy(iterateReachabilityAnalysis = false).asInstanceOf[this.type] }),
+         "-iterateReachabilityAnalysis" -> (NoParameter, { p: Option[String] => this.copy(iterateReachabilityAnalysis = true).asInstanceOf[this.type] }),
+         "-dontIterateReachabilityAnalysis" -> (NoParameter, { p: Option[String] => this.copy(iterateReachabilityAnalysis = false).asInstanceOf[this.type] }),
 
-         "-groundDomain" ->(NoParameter, { p: Option[String] => this.copy(groundDomain = true).asInstanceOf[this.type] }),
-         "-liftedDomain" ->(NoParameter, { p: Option[String] => this.copy(groundDomain = false).asInstanceOf[this.type] })
+         "-groundDomain" -> (NoParameter, { p: Option[String] => this.copy(groundDomain = true).asInstanceOf[this.type] }),
+         "-liftedDomain" -> (NoParameter, { p: Option[String] => this.copy(groundDomain = false).asInstanceOf[this.type] })
        )
 
   override def longInfo: String = "Preprocessing Configuration\n---------------------------\n" +
@@ -1445,6 +1451,9 @@ object GreedyProgression extends SearchHeuristic {override val longInfo: String 
 case class HierarchicalHeuristicRelaxedComposition(classicalHeuristic: SasHeuristics)
   extends SearchHeuristic {override val longInfo: String = "hhRC(" + classicalHeuristic.toString + ")"}
 
+case class PureSASPlusEncoding(classicalHeuristic: SasHeuristics)
+  extends SearchHeuristic {override val longInfo: String = "id(" + classicalHeuristic.toString + ")"}
+
 
 sealed trait PruningTechnique extends DefaultLongInfo
 
@@ -1527,24 +1536,24 @@ case class PlanBasedSearch(
 
   override protected def localModifications: Seq[(String, (ParameterMode, (Option[String]) => PlanBasedSearch.this.type))] =
     Seq(
-         "-efficientSearch" ->(NoParameter, { p: Option[String] => this.copy(efficientSearch = true).asInstanceOf[this.type] }),
-         "-symbolicSearch" ->(NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(efficientSearch = false).asInstanceOf[this.type] }),
+         "-efficientSearch" -> (NoParameter, { p: Option[String] => this.copy(efficientSearch = true).asInstanceOf[this.type] }),
+         "-symbolicSearch" -> (NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(efficientSearch = false).asInstanceOf[this.type] }),
 
-         "-continueOnSolution" ->(NoParameter, { p: Option[String] => this.copy(continueOnSolution = true).asInstanceOf[this.type] }),
-         "-stopAtSoltuion" ->(NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(continueOnSolution = false).asInstanceOf[this.type] }),
+         "-continueOnSolution" -> (NoParameter, { p: Option[String] => this.copy(continueOnSolution = true).asInstanceOf[this.type] }),
+         "-stopAtSoltuion" -> (NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(continueOnSolution = false).asInstanceOf[this.type] }),
 
-         "-printSearchInfo" ->(NoParameter, { p: Option[String] => this.copy(printSearchInfo = true).asInstanceOf[this.type] }),
-         "-dontPrintSearchInfo" ->(NoParameter, { p: Option[String] => this.copy(printSearchInfo = false).asInstanceOf[this.type] }),
+         "-printSearchInfo" -> (NoParameter, { p: Option[String] => this.copy(printSearchInfo = true).asInstanceOf[this.type] }),
+         "-dontPrintSearchInfo" -> (NoParameter, { p: Option[String] => this.copy(printSearchInfo = false).asInstanceOf[this.type] }),
 
-         "-search" ->(NecessaryParameter, { algo: Option[String] => this.copy(searchAlgorithm = SearchAlgorithmType.parse(algo.get)).asInstanceOf[this.type] }),
+         "-search" -> (NecessaryParameter, { algo: Option[String] => this.copy(searchAlgorithm = SearchAlgorithmType.parse(algo.get)).asInstanceOf[this.type] }),
 
-         "-heuristic" ->(NecessaryParameter, { h: Option[String] => this.copy(heuristic = SearchHeuristic.parse(h.get)).asInstanceOf[this.type] }),
-         "-h" ->(NecessaryParameter, { h: Option[String] => this.copy(heuristic = SearchHeuristic.parse(h.get)).asInstanceOf[this.type] }),
+         "-heuristic" -> (NecessaryParameter, { h: Option[String] => this.copy(heuristic = SearchHeuristic.parse(h.get)).asInstanceOf[this.type] }),
+         "-h" -> (NecessaryParameter, { h: Option[String] => this.copy(heuristic = SearchHeuristic.parse(h.get)).asInstanceOf[this.type] }),
 
-         "-flaw" ->(NecessaryParameter, { f: Option[String] => this.copy(flawSelector = SearchFlawSelector.parse(f.get)).asInstanceOf[this.type] }),
-         "-f" ->(NecessaryParameter, { f: Option[String] => this.copy(flawSelector = SearchFlawSelector.parse(f.get)).asInstanceOf[this.type] }),
+         "-flaw" -> (NecessaryParameter, { f: Option[String] => this.copy(flawSelector = SearchFlawSelector.parse(f.get)).asInstanceOf[this.type] }),
+         "-f" -> (NecessaryParameter, { f: Option[String] => this.copy(flawSelector = SearchFlawSelector.parse(f.get)).asInstanceOf[this.type] }),
 
-         "-prune" ->(NecessaryParameter, { p: Option[String] => this.copy(pruningTechniques = PruningTechnique.parse(p.get)).asInstanceOf[this.type] })
+         "-prune" -> (NecessaryParameter, { p: Option[String] => this.copy(pruningTechniques = PruningTechnique.parse(p.get)).asInstanceOf[this.type] })
        )
 }
 
@@ -1554,13 +1563,13 @@ case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
 
   override protected def localModifications: Seq[(String, (ParameterMode, (Option[String]) => ProgressionSearch.this.type))] =
     Seq(
-         "-search" ->(NecessaryParameter, { algo: Option[String] => this.copy(searchAlgorithm = SearchAlgorithmType.parse(algo.get)).asInstanceOf[this.type] }),
-         "-heuristic" ->(NecessaryParameter, { h: Option[String] =>
+         "-search" -> (NecessaryParameter, { algo: Option[String] => this.copy(searchAlgorithm = SearchAlgorithmType.parse(algo.get)).asInstanceOf[this.type] }),
+         "-heuristic" -> (NecessaryParameter, { h: Option[String] =>
            val parsedHeuristics = SearchHeuristic.parse(h.get)
            assert(parsedHeuristics.length == 1)
            this.copy(heuristic = Some(parsedHeuristics.head)).asInstanceOf[this.type]
          }),
-         "-h" ->(NecessaryParameter, { h: Option[String] =>
+         "-h" -> (NecessaryParameter, { h: Option[String] =>
            val parsedHeuristics = SearchHeuristic.parse(h.get)
            assert(parsedHeuristics.length == 1)
            this.copy(heuristic = Some(parsedHeuristics.head)).asInstanceOf[this.type]
@@ -1617,22 +1626,22 @@ case class SATSearch(solverType: Solvertype,
 
   protected override def localModifications: Seq[(String, (ParameterMode, (Option[String] => this.type)))] =
     Seq(
-         "-planlength" ->(NecessaryParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(maximumPlanLength = l.get.toInt)).asInstanceOf[this.type] }),
-         "-overrideK" ->(NecessaryParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(overrideK = Some(l.get.toInt))).asInstanceOf[this.type] }),
-         "-dontOverrideK" ->(NoParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(overrideK = None)).asInstanceOf[this.type] }),
+         "-planlength" -> (NecessaryParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(maximumPlanLength = l.get.toInt)).asInstanceOf[this.type] }),
+         "-overrideK" -> (NecessaryParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(overrideK = Some(l.get.toInt))).asInstanceOf[this.type] }),
+         "-dontOverrideK" -> (NoParameter, { l: Option[String] => this.copy(runConfiguration = getSingleRun.copy(overrideK = None)).asInstanceOf[this.type] }),
 
-         "-fullRun" ->(NoParameter, { l: Option[String] => this.copy(runConfiguration = getFullRun).asInstanceOf[this.type] }),
+         "-fullRun" -> (NoParameter, { l: Option[String] => this.copy(runConfiguration = getFullRun).asInstanceOf[this.type] }),
 
 
-         "-checkResult" ->(NoParameter, { l: Option[String] => this.copy(checkResult = true).asInstanceOf[this.type] }),
-         "-solver" ->(NecessaryParameter, { l: Option[String] =>
+         "-checkResult" -> (NoParameter, { l: Option[String] => this.copy(checkResult = true).asInstanceOf[this.type] }),
+         "-solver" -> (NecessaryParameter, { l: Option[String] =>
            val solver = l.get.toLowerCase match {
              case "minisat"       => MINISAT
              case "cryptominisat" => CRYPTOMINISAT
            }
            this.copy(solverType = solver).asInstanceOf[this.type]
          }),
-         "-reduction" ->(NecessaryParameter, { l: Option[String] =>
+         "-reduction" -> (NecessaryParameter, { l: Option[String] =>
            val reduction = l.get.toLowerCase match {
              case "normalise" => OnlyNormalise
              case "ff"        => FFReduction
@@ -1664,7 +1673,7 @@ case class SATPlanVerification(solverType: Solvertype, planToVerify: String) ext
 
   protected override def localModifications: Seq[(String, (ParameterMode, (Option[String] => this.type)))] =
     Seq(
-         "-solver" ->(NecessaryParameter, { l: Option[String] =>
+         "-solver" -> (NecessaryParameter, { l: Option[String] =>
            val solver = l.get.toLowerCase match {
              case "minisat"       => MINISAT
              case "cryptominisat" => CRYPTOMINISAT
@@ -1673,14 +1682,14 @@ case class SATPlanVerification(solverType: Solvertype, planToVerify: String) ext
            }
            this.copy(solverType = solver).asInstanceOf[this.type]
          }),
-         "-plan" ->(NecessaryParameter, { l: Option[String] =>
+         "-plan" -> (NecessaryParameter, { l: Option[String] =>
            this.copy(planToVerify = l.get).asInstanceOf[this.type]
          })
        )
 
   /** returns a detailed information about the object */
   override def longInfo: String = "SAT-Plan-Verification Configuration\n--------------------------\n" +
-    alignConfig(("solver", solverType.longInfo) ::("plan", planToVerify) :: Nil)
+    alignConfig(("solver", solverType.longInfo) :: ("plan", planToVerify) :: Nil)
 }
 
 object NoSearch extends SearchConfiguration {
@@ -1697,20 +1706,20 @@ case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) extend
 
   override protected def localModifications: Seq[(String, (ParameterMode, (Option[String]) => PostprocessingConfiguration.this.type))] =
     Seq(
-         "-timings" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + ProcessingTimings).asInstanceOf[this.type] }),
-         "-outputStatus" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchStatus).asInstanceOf[this.type] }),
-         "-outputPlan" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchResult).asInstanceOf[this.type] }),
-         "-outputInternalPlan" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + InternalSearchResult).asInstanceOf[this.type] }),
-         "-outputAllPlans" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + AllFoundPlans).asInstanceOf[this.type] }),
-         "-outputAllPlansWithH*" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + AllFoundSolutionPathsWithHStar).asInstanceOf[this.type] }),
-         "-statistics" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchStatistics).asInstanceOf[this.type] }),
-         "-searchspace" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchSpace).asInstanceOf[this.type] }),
-         "-outputPlanInternal" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SolutionInternalString).asInstanceOf[this.type] }),
-         "-planToDot" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SolutionDotString).asInstanceOf[this.type] }),
-         "-finalDomainAndPlan" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + PreprocessedDomainAndPlan).asInstanceOf[this.type] }),
-         "-initialDomainAndPlan" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + UnprocessedDomainAndPlan).asInstanceOf[this.type] }),
-         "-finalTDG" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + FinalTaskDecompositionGraph).asInstanceOf[this.type] }),
-         "-finalReachability" ->(NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + FinalGroundedReachability).asInstanceOf[this.type] })
+         "-timings" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + ProcessingTimings).asInstanceOf[this.type] }),
+         "-outputStatus" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchStatus).asInstanceOf[this.type] }),
+         "-outputPlan" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchResult).asInstanceOf[this.type] }),
+         "-outputInternalPlan" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + InternalSearchResult).asInstanceOf[this.type] }),
+         "-outputAllPlans" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + AllFoundPlans).asInstanceOf[this.type] }),
+         "-outputAllPlansWithH*" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + AllFoundSolutionPathsWithHStar).asInstanceOf[this.type] }),
+         "-statistics" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchStatistics).asInstanceOf[this.type] }),
+         "-searchspace" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchSpace).asInstanceOf[this.type] }),
+         "-outputPlanInternal" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SolutionInternalString).asInstanceOf[this.type] }),
+         "-planToDot" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SolutionDotString).asInstanceOf[this.type] }),
+         "-finalDomainAndPlan" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + PreprocessedDomainAndPlan).asInstanceOf[this.type] }),
+         "-initialDomainAndPlan" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + UnprocessedDomainAndPlan).asInstanceOf[this.type] }),
+         "-finalTDG" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + FinalTaskDecompositionGraph).asInstanceOf[this.type] }),
+         "-finalReachability" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + FinalGroundedReachability).asInstanceOf[this.type] })
        )
 }
 
@@ -1736,11 +1745,12 @@ trait Configuration extends DefaultLongInfo {
 
   protected final lazy val modifyOnOptionStringOrdered: Seq[(String, (ParameterMode, (Option[String] => this.type)))] =
     localModifications ++ potentialRecursiveChildren.flatMap(
-      { child => child.modifyOnOptionStringOrdered.map(
-        { case (k, (op, f)) =>
-          val function: (Option[String] => this.type) = {case p: Option[String] => recursiveMethods(child)(f(p))}
-          (k, (op, function))
-        })
+      { child =>
+        child.modifyOnOptionStringOrdered.map(
+          { case (k, (op, f)) =>
+            val function: (Option[String] => this.type) = {case p: Option[String] => recursiveMethods(child)(f(p))}
+            (k, (op, function))
+          })
       })
 
   final lazy val modifyOnOptionString: Map[String, (ParameterMode, (Option[String] => this.type))] = modifyOnOptionStringOrdered.toMap
