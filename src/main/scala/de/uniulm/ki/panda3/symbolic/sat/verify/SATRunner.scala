@@ -154,10 +154,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
           encodingToUse match {
-            case ClassicalEncoding => SOGClassicalEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
-            case POCLDirectEncoding => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
-            case POCLDeleterEncoding => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
-            case POStateEncoding => SOGPOREncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
+            case ClassicalForbiddenEncoding   => SOGClassicalForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = false)
+            case ClassicalImplicationEncoding => SOGClassicalForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = true)
+            case ClassicalN4Encoding          => SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
+            case POCLDirectEncoding           => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
+            case POCLDeleterEncoding          => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
+            case POStateEncoding              => SOGPOREncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
           }
         }
 
@@ -724,7 +726,14 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
 sealed trait POEncoding
 
-object ClassicalEncoding extends POEncoding
+object ClassicalForbiddenEncoding extends POEncoding
+
+object ClassicalImplicationEncoding extends POEncoding
+
+object ClassicalN4Encoding extends POEncoding
+
 object POCLDirectEncoding extends POEncoding
+
 object POCLDeleterEncoding extends POEncoding
+
 object POStateEncoding extends POEncoding

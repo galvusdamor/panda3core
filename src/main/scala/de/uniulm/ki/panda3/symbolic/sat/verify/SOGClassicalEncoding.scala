@@ -4,27 +4,21 @@ import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.util.{DirectedGraph, DirectedGraphDotOptions, Dot2PdfCompiler, TimeCapsule}
 
-import scala.collection.Seq
+import scala.collection.{Seq, mutable}
 
-/**
-  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
-  */
-case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
-                                domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding {
+
+trait SOGClassicalEncoding extends SOGEncoding {
+
   lazy val taskSequenceLength: Int = primitivePaths.length
   //lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
-  protected final val useImplicationForbiddenness = false
-
   protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position
-
-  protected def pathPosForbidden(path: Seq[Int], position: Int): String = "forbidden_" + path.mkString(";") + "-" + position
 
   protected def pathActive(p1: Seq[Int]) = "active!" + "_" + p1.mkString(";")
 
   override lazy val noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
 
-  override lazy val stateTransitionFormula: Seq[Clause] = {
+  protected lazy val connectionFormula: Seq[Clause] = {
     // force computation of SOG
     sog
 
@@ -79,6 +73,23 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
 
     val connection = atMostOneConstraints ++ selected ++ onlySelectableIfChosen ++ onlyPrimitiveIfChosen ++ sameAction
 
+    connection.toSeq
+  }
+}
+
+/**
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
+case class SOGClassicalForbiddenEncoding(timeCapsule: TimeCapsule,
+                                         domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
+                                         useImplicationForbiddenness: Boolean) extends SOGClassicalEncoding {
+
+  protected def pathPosForbidden(path: Seq[Int], position: Int): String = "forbidden_" + path.mkString(";") + "-" + position
+
+  override lazy val stateTransitionFormula: Seq[Clause] = {
+    // force computation of SOG
+    sog
+
     /////////////////
     // forbid certain connections if disallowed by the SOG
     /////////////////
@@ -122,7 +133,47 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
     // this generates the actual state transition formula
     val primitiveSequence = stateTransitionFormulaOfLength(taskSequenceLength)
 
-    primitiveSequence ++ connection ++ forbiddenness
+    primitiveSequence ++ connectionFormula ++ forbiddenness
+  }
+
+}
+
+
+case class SOGClassicalN4Encoding(timeCapsule: TimeCapsule,
+                                  domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGClassicalEncoding {
+
+  override lazy val stateTransitionFormula: Seq[Clause] = {
+    // force computation of SOG
+    sog
+
+    /////////////////
+    // forbid certain connections if disallowed by the SOG
+    /////////////////
+    val forbiddenness: Array[Clause] = {
+      val builder = new mutable.ArrayBuffer[Clause]()
+
+      primitivePaths foreach { case (pathBefore, _) =>
+        val successors = sog.reachable.find(_._1._1 == pathBefore).get._2.toSeq
+
+        successors foreach { case (pathAfter, _) =>
+          // all positions
+          Range(0, taskSequenceLength) foreach { case position1 =>
+            Range(position1 + 1, taskSequenceLength) foreach { case position2 =>
+              builder append Clause((pathToPos(pathBefore, position2), false) :: (pathToPos(pathAfter, position1), false) :: Nil)
+            }
+          }
+        }
+      }
+      builder.toArray
+    }
+
+
+    //System exit 0
+
+    // this generates the actual state transition formula
+    val primitiveSequence = stateTransitionFormulaOfLength(taskSequenceLength)
+
+    primitiveSequence ++ connectionFormula ++ forbiddenness
   }
 
 }
