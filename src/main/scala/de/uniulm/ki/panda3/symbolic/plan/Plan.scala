@@ -43,7 +43,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   }
 
   planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod),
-                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo) }
+                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)
+  }
 
   planStepsWithoutInitGoal foreach {
     ps =>
@@ -552,7 +553,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   lazy val maximalDeordering: Plan = {
     assert(planStepsAndRemovedPlanSteps forall { _.arguments.isEmpty })
     // first step: compute a total ordering of all primitive plan steps
-    val primitiveOrdering = orderingConstraints.graph.topologicalOrdering.get.filter(planStepsWithoutInitGoal.contains)
+    val primitiveOrdering = orderingConstraints.graph.topologicalOrdering.get.filter(planStepsWithoutInitGoal.contains) :+ goal
     //println(primitiveOrdering mkString "\n")
 
     def getParentPath(ps: PlanStep): Seq[PlanStep] = if (planStepParentInDecompositionTree.contains(ps)) getParentPath(planStepParentInDecompositionTree(ps)._1) :+ ps else ps :: Nil
@@ -578,7 +579,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     // get all the constraints implied by the hierarchy
     val constraintsImpliedByHierarchy: Seq[OrderingConstraint] = primitiveOrdering flatMap { ps1 =>
       primitiveOrdering flatMap { ps2 =>
-        if (ps1 != ps2) {
+        if (ps1 != ps2 && ps1 != goal && ps2 != goal) {
           val (parent, (child1, child2)) = getCommonParent(ps1, ps2)
           val methodOfParent = planStepDecomposedByMethod(parent)
 
@@ -619,7 +620,14 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     // build the final plan
     val allBetween = OrderingConstraint.allBetween(init, goal, planStepsAndRemovedPlanStepsWithoutInitGoal: _*)
     val taskOrdering = TaskOrdering(constraintsImpliedByHierarchy ++ inferredCLOrdering ++ allBetween, orderingConstraints.tasks)
-    copy(orderingConstraints = taskOrdering, causalLinksAndRemovedCausalLinks = inferredCausalLinks)
+    val causalPlan = copy(orderingConstraints = taskOrdering, causalLinksAndRemovedCausalLinks = inferredCausalLinks)
+
+    val constraintsToRemoveThreats: Seq[OrderingConstraint] = causalPlan.causalThreats map { case CausalThreat(_, CausalLink(prod, cons, _), threater, _) =>
+      if (primitiveOrdering.indexOf(threater) < primitiveOrdering.indexOf(prod)) OrderingConstraint(threater, prod) else OrderingConstraint(cons, threater)
+    }
+
+    val nonThreateningTaskOrdering = TaskOrdering(constraintsImpliedByHierarchy ++ inferredCLOrdering ++ allBetween ++ constraintsToRemoveThreats, orderingConstraints.tasks)
+    copy(orderingConstraints = nonThreateningTaskOrdering, causalLinksAndRemovedCausalLinks = inferredCausalLinks)
   }
 
   lazy val decompositionTree: DirectedGraph[PlanStep] =
@@ -661,11 +669,11 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     val initialAbstraction = orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive }
 
     def reduce(seq: Seq[PlanStep]): Seq[PlanStep] = {
-      val psTooConcrete = seq filter { ps => !(decompositionTree.getVerticesWithDistance(ps) exists { case (ps, i) => i <= level && decompositionTree.sinks.contains(ps) } )}
+      val psTooConcrete = seq filter { ps => !(decompositionTree.getVerticesWithDistance(ps) exists { case (ps, i) => i <= level && decompositionTree.sinks.contains(ps) }) }
 
       if (psTooConcrete.isEmpty) seq else {
-        psTooConcrete map {ps => abstractFromPS(seq,ps)} find(_.isDefined) match {
-          case None => seq // further abstraction not possible
+        psTooConcrete map { ps => abstractFromPS(seq, ps) } find (_.isDefined) match {
+          case None    => seq // further abstraction not possible
           case Some(x) => reduce(x.get)
         }
       }
