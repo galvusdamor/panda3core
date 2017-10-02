@@ -300,7 +300,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       val newConstraints = representatives collect { case (v, allowedValues) if v.sort.elements.toSet != allowedValues => OfSort(v, Sort("adhocSort_" + v.name, allowedValues.toSeq, Nil)) }
 
-      val newPlan = (replacement map { case (oldV, newV) => ExchangeVariable(oldV, newV) }).foldLeft(this)({ case (p, u) => p update u })
+      val newPlan = this update ExchangeVariables(replacement.toMap)
 
       newPlan.variableConstraints.constraints foreach { case Equal(_, vari: Variable) => assert(protectedVariables contains vari, protectedVariables + " " + vari); case _ => () }
 

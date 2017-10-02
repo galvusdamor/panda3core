@@ -2,8 +2,8 @@ package de.uniulm.ki.panda3.symbolic.logic
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp.CSP
-import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeVariable, DomainUpdate}
-import de.uniulm.ki.util.{Internable, HashMemo}
+import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangeVariable, ExchangeVariables}
+import de.uniulm.ki.util.{HashMemo, Internable}
 
 /**
   * Represents variables of a [[CSP]].
@@ -15,6 +15,7 @@ case class Variable(id: Int, name: String, sort: Sort) extends Value with Pretty
   /** the map must contain EVERY sort of the domain, even if does not change */
   override def update(domainUpdate: DomainUpdate): Variable = domainUpdate match {
     case ExchangeVariable(oldVariable, newVariable) => if (this == oldVariable) newVariable else this
+    case ExchangeVariables(exchangeMap) => if (exchangeMap contains this) exchangeMap(this) else this
     case _                                          => Variable.intern(id, name, sort.update(domainUpdate))
   }
 

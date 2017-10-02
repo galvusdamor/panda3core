@@ -69,7 +69,8 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends Dom
       val additionalParameters = exchangeMap(schema).parameters.drop(arguments.length) map { v => v.copy(name = v.name + "_ps" + id) }
       PlanStep.intern((id, exchangeMap(schema), arguments ++ additionalParameters))
     } else this
-    case ExchangeVariable(oldVar, newVar) => PlanStep.intern((id, schema update PropagateEquality(Set()), arguments map { _.update(domainUpdate) }))
+    case ExchangeVariable(_, _) => PlanStep.intern((id, schema update PropagateEquality(Set()), arguments map { _.update(domainUpdate) }))
+    case ExchangeVariables(_) => PlanStep.intern((id, schema update PropagateEquality(Set()), arguments map { _.update(domainUpdate) }))
     // propagate irrelevant update to reduce task
     case _ => PlanStep.intern((id, schema.update(domainUpdate), arguments map { _.update(domainUpdate) }))
   }

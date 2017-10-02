@@ -21,6 +21,8 @@ import scala.collection.mutable
   */
 case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends DomainUpdatable with HashMemo {
 
+  CSP.fuck += 1
+
   constraints foreach { _.getVariables foreach { v => assert(variables contains v)}}
 
   // holds equivalent variables
@@ -348,6 +350,8 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
 
 object CSP {
   private val CHECKCSPINTEGRITY : Boolean = false
+
+  var fuck : Int = 0
 }
 
 
