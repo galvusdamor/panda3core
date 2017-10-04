@@ -43,15 +43,16 @@ object Grounding extends DomainTransformer[GroundedReachabilityAnalysis] {
           case GroundLiteral(predicate, isPositive, parameter) =>
             Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)
         } distinct
-        val effectLiteralsUnfiltered = g.substitutedEffects map {
+
+        val effectLiteralsUnfiltered: Set[Literal] = g.substitutedEffects map {
           case GroundLiteral(predicate, isPositive, parameter) => Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)
-        } distinct
+        } toSet
 
         // remove effects that occur also in the preconditions
         val effectLiterals = effectLiteralsUnfiltered filterNot { l => l.isNegative && (effectLiteralsUnfiltered contains l.negate) }
 
         // TODO: here we assume that the grounding we get always fulfills the parameter constraints ... we have to assert this at some point
-        ReducedTask(newTaskName, isPrimitive, Nil, Nil, Nil, And(preconditionLiterals), And(effectLiterals))
+        ReducedTask(newTaskName, isPrimitive, Nil, Nil, Nil, And(preconditionLiterals), And(effectLiterals.toSeq))
       case _                                                                      => noSupport(FORUMLASNOTSUPPORTED)
     }
 

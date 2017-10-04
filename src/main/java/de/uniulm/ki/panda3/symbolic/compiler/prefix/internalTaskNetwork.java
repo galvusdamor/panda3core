@@ -223,7 +223,7 @@ public class internalTaskNetwork {
 
         Plan subPlan = new Plan(ps, causalLinks.result(), this.taskOrderings, this.csp, psInit, psGoal,
                 NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,
-                hddlPanda3Visitor.planStepsDecompositionParents);
+                hddlPanda3Visitor.planStepsDecompositionParents,false);
         return subPlan;
     }
 

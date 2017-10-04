@@ -348,7 +348,7 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
 }
 
 object CSP {
-  private val CHECKCSPINTEGRITY: Boolean = false
+  private val CHECKCSPINTEGRITY : Boolean = false
 }
 
 

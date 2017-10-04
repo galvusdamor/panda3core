@@ -6,15 +6,16 @@ import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, DomainUpdatable, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.util.HashMemo
+import de.uniulm.ki.util.{Internable, HashMemo}
+
+import scala.collection.mutable
 
 /**
   *
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
-  extends DomainUpdatable with PrettyPrintable {
+case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends DomainUpdatable with PrettyPrintable {
 
   arguments foreach { v => assert(v != null) }
 
@@ -66,10 +67,12 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
     case ExchangePlanSteps(exchangeMap)   => if (exchangeMap contains this) exchangeMap(this) else this
     case ExchangeTask(exchangeMap)        => if (exchangeMap contains schema) {
       val additionalParameters = exchangeMap(schema).parameters.drop(arguments.length) map { v => v.copy(name = v.name + "_ps" + id) }
-      PlanStep(id, exchangeMap(schema), arguments ++ additionalParameters)
+      PlanStep.intern((id, exchangeMap(schema), arguments ++ additionalParameters))
     } else this
-    case ExchangeVariable(oldVar, newVar) => PlanStep(id, schema update PropagateEquality(Set()), arguments map { _.update(domainUpdate) }) // propagate irrelevant update to reduce task
-    case _                                => PlanStep(id, schema.update(domainUpdate), arguments map { _.update(domainUpdate) })
+    case ExchangeVariable(_, _) => PlanStep.intern((id, schema, arguments map { _.update(domainUpdate) }))
+    case ExchangeVariables(_) => PlanStep.intern((id, schema, arguments map { _.update(domainUpdate) }))
+    // propagate irrelevant update to reduce task
+    case _ => PlanStep.intern((id, schema.update(domainUpdate), arguments map { _.update(domainUpdate) }))
   }
 
   /** returns a short information about the object */
@@ -88,6 +91,11 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable])
     "\t" + _.shortInfo
   }).mkString("\n")
 }
+
+object PlanStep extends Internable[(Int, Task, Seq[Variable]), PlanStep] {
+  override protected val applyTuple = (PlanStep.apply _).tupled
+}
+
 
 /**
   * A ground task is basically a planstep without an id.

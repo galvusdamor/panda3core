@@ -685,8 +685,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule start PARSER_CWA
-    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption
-      .transform(flattened, searchConfiguration match { case FAPESearch => false; case _ => true; }) else flattened
+    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(flattened, true) else flattened
     timeCapsule stop PARSER_CWA
 
     timeCapsule start PARSER_ELIMINATE_EQUALITY

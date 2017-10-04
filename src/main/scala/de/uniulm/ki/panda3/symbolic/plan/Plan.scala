@@ -1,16 +1,17 @@
 package de.uniulm.ki.panda3.symbolic.plan
 
-import de.uniulm.ki.panda3.symbolic.csp.{Equal, OfSort, CSP, PartialSubstitution}
+import de.uniulm.ki.panda3.symbolic.csp.{CSP, Equal, OfSort, PartialSubstitution}
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.logic._
-import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, CausalLink, OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, GroundTask, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
+import de.uniulm.ki.panda3.symbolic.search.{NoModifications, NoFlaws}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.search.{NoModifications, NoFlaws, IsModificationAllowed, IsFlawAllowed}
-import de.uniulm.ki.util._
+import de.uniulm.ki.panda3.symbolic.search.{IsModificationAllowed, IsFlawAllowed}
+import de.uniulm.ki.util.{DirectedGraph, DotPrintable, HashMemo, SimpleDirectedGraph}
 import de.uniulm.ki.panda3.symbolic.writer._
 
 /**
@@ -24,7 +25,8 @@ import de.uniulm.ki.panda3.symbolic.writer._
 case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemovedCausalLinks: Seq[CausalLink], orderingConstraints: TaskOrdering,
                 @Deprecated parameterVariableConstraints: CSP,
                 init: PlanStep, goal: PlanStep, isModificationAllowed: IsModificationAllowed, isFlawAllowed: IsFlawAllowed,
-                planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)]) extends
+                planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)],
+                dontExpandVariableConstraints: Boolean = false) extends
   DomainUpdatable with PrettyPrintable with HashMemo with DotPrintable[PlanDotOptions] {
 
   assert(planStepsAndRemovedPlanSteps.toSet == orderingConstraints.tasks.toSet)
@@ -41,7 +43,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       }
   }
 
-  planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod)) }
+  planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod),
+                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)}
 
   planStepsWithoutInitGoal foreach {
     ps =>
@@ -53,6 +56,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   assert(orderingConstraints.isConsistent)
 
   planStepParentInDecompositionTree foreach { case (a, (_, b)) => assert(a.schema == b.schema) }
+
 
   lazy val planSteps       : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
   lazy val planStepTasksSet: Set[Task]       = planSteps map { _.schema } toSet
@@ -77,8 +81,11 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
   // TODO: this is extremely inefficient
   // add all constraints inherited from tasks to the CSP
-  val variableConstraints = planSteps.foldLeft(parameterVariableConstraints)(
-    { case (csp, ps) => ps.schema.parameterConstraints.foldLeft(csp)({ case (csp2, c) => csp2.addConstraint(c.substitute(ps.schemaParameterSubstitution)) }) })
+  val variableConstraints = if (dontExpandVariableConstraints) parameterVariableConstraints
+  else
+    planSteps.foldLeft(parameterVariableConstraints)(
+      { case (csp, ps) => ps.schema.parameterConstraints.foldLeft(csp)({ case (csp2, c) => csp2.addConstraint(c.substitute(ps.schemaParameterSubstitution)) }) })
+
 
   /** all causal threads in this plan */
   lazy val causalThreats: Seq[CausalThreat] =
@@ -215,6 +222,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   }
 
   def update(domainUpdate: DomainUpdate): Plan = domainUpdate match {
+    case SetExpandVariableConstraintsInPlans(dontExpand)                   => this.copy(dontExpandVariableConstraints = dontExpand)
     case AddVariables(newVariables)                                        => Plan(planStepsAndRemovedPlanSteps, causalLinksAndRemovedCausalLinks, orderingConstraints,
                                                                                    variableConstraints.addVariables(newVariables), init, goal, isModificationAllowed, isFlawAllowed,
                                                                                    planStepDecomposedByMethod, planStepParentInDecompositionTree)
@@ -256,19 +264,26 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
            orderingConstraints update exchangeInit update exchangeGoal, variableConstraints, newInit, goal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod,
            planStepParentInDecompositionTree)
 
-    case ExchangeTask(taskMap) =>
-      // if any planstep will get more arguments ... just add them
-      val newPlanSteps = planSteps map { ps => (ps, ps update domainUpdate) }
-      val newVariables = newPlanSteps flatMap { case (ps1, ps2) => ps2.arguments drop ps1.arguments.length }
+    case ExchangeTask(taskMap)                 =>
+      // check if we are actually have to change anything
+      val allContainedTasks = planSteps map { _.schema } toSet
 
-      val newPlan = copy(parameterVariableConstraints = parameterVariableConstraints.addVariables(newVariables))
+      if (taskMap.keySet.forall({ t => !allContainedTasks.contains(t) })) this
+      else {
 
-      Plan(newPlan.planStepsAndRemovedPlanSteps map { _ update domainUpdate }, newPlan.causalLinksAndRemovedCausalLinks map { _ update domainUpdate },
-           newPlan.orderingConstraints update domainUpdate, newPlan.parameterVariableConstraints, newPlan.init update domainUpdate, newPlan.goal update domainUpdate,
-           newPlan.isModificationAllowed, newPlan.isFlawAllowed,
-           newPlan.planStepDecomposedByMethod map { case (a, b) => (a update domainUpdate, b update domainUpdate) },
-           newPlan.planStepParentInDecompositionTree map { case (a, (b, c)) => (a update domainUpdate, (b update domainUpdate, c update domainUpdate)) })
+        //println("FF " + planSteps.length)
+        // if any planstep will get more arguments ... just add them
+        val newPlanSteps = planSteps map { ps => (ps, ps update domainUpdate) }
+        val newVariables = newPlanSteps flatMap { case (ps1, ps2) => ps2.arguments drop ps1.arguments.length }
 
+        val newPlan = this // copy(parameterVariableConstraints = )
+
+        Plan(newPlan.planStepsAndRemovedPlanSteps map { _ update domainUpdate }, newPlan.causalLinksAndRemovedCausalLinks map { _ update domainUpdate },
+             newPlan.orderingConstraints update domainUpdate, parameterVariableConstraints.addVariables(newVariables), newPlan.init update domainUpdate, newPlan.goal update domainUpdate,
+             newPlan.isModificationAllowed, newPlan.isFlawAllowed,
+             newPlan.planStepDecomposedByMethod map { case (a, b) => (a update domainUpdate, b update domainUpdate) },
+             newPlan.planStepParentInDecompositionTree map { case (a, (b, c)) => (a update domainUpdate, (b update domainUpdate, c update domainUpdate)) })
+      }
     case PropagateEquality(protectedVariables) =>
       // determine all variables that can be eliminated
       val initialRepresentatives = protectedVariables map { v => v -> v.sort.elements.toSet } toMap
@@ -285,7 +300,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       val newConstraints = representatives collect { case (v, allowedValues) if v.sort.elements.toSet != allowedValues => OfSort(v, Sort("adhocSort_" + v.name, allowedValues.toSeq, Nil)) }
 
-      val newPlan = (replacement map { case (oldV, newV) => ExchangeVariable(oldV, newV) }).foldLeft(this)({ case (p, u) => p update u })
+      val newPlan = this update ExchangeVariables(replacement.toMap)
 
       newPlan.variableConstraints.constraints foreach { case Equal(_, vari: Variable) => assert(protectedVariables contains vari, protectedVariables + " " + vari); case _ => () }
 
@@ -543,6 +558,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     GroundTask(goal.schema, arguments)
   }
 
+
   lazy val normalise: Plan = Plan(planSteps, causalLinks, orderingConstraintsWithoutRemovedPlanSteps, parameterVariableConstraints, init, goal, isModificationAllowed, isFlawAllowed, Map(),
                                   Map())
 
@@ -550,7 +566,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   lazy val maximalDeordering: Plan = {
     assert(planStepsAndRemovedPlanSteps forall { _.arguments.isEmpty })
     // first step: compute a total ordering of all primitive plan steps
-    val primitiveOrdering = orderingConstraints.graph.topologicalOrdering.get.filter(planStepsWithoutInitGoal.contains)
+    val primitiveOrdering = orderingConstraints.graph.topologicalOrdering.get.filter(planStepsWithoutInitGoal.contains) :+ goal
     //println(primitiveOrdering mkString "\n")
 
     def getParentPath(ps: PlanStep): Seq[PlanStep] = if (planStepParentInDecompositionTree.contains(ps)) getParentPath(planStepParentInDecompositionTree(ps)._1) :+ ps else ps :: Nil
@@ -576,7 +592,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     // get all the constraints implied by the hierarchy
     val constraintsImpliedByHierarchy: Seq[OrderingConstraint] = primitiveOrdering flatMap { ps1 =>
       primitiveOrdering flatMap { ps2 =>
-        if (ps1 != ps2) {
+        if (ps1 != ps2 && ps1 != goal && ps2 != goal) {
           val (parent, (child1, child2)) = getCommonParent(ps1, ps2)
           val methodOfParent = planStepDecomposedByMethod(parent)
 
@@ -617,13 +633,73 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     // build the final plan
     val allBetween = OrderingConstraint.allBetween(init, goal, planStepsAndRemovedPlanStepsWithoutInitGoal: _*)
     val taskOrdering = TaskOrdering(constraintsImpliedByHierarchy ++ inferredCLOrdering ++ allBetween, orderingConstraints.tasks)
-    copy(orderingConstraints = taskOrdering, causalLinksAndRemovedCausalLinks = inferredCausalLinks)
+    val causalPlan = copy(orderingConstraints = taskOrdering, causalLinksAndRemovedCausalLinks = inferredCausalLinks)
+
+    val constraintsToRemoveThreats: Seq[OrderingConstraint] = causalPlan.causalThreats map { case CausalThreat(_, CausalLink(prod, cons, _), threater, _) =>
+      if (primitiveOrdering.indexOf(threater) < primitiveOrdering.indexOf(prod)) OrderingConstraint(threater, prod) else OrderingConstraint(cons, threater)
+    }
+
+    val nonThreateningTaskOrdering = TaskOrdering(constraintsImpliedByHierarchy ++ inferredCLOrdering ++ allBetween ++ constraintsToRemoveThreats, orderingConstraints.tasks)
+    copy(orderingConstraints = nonThreateningTaskOrdering, causalLinksAndRemovedCausalLinks = inferredCausalLinks)
+  }
+
+  lazy val decompositionTree: DirectedGraph[PlanStep] =
+    SimpleDirectedGraph(planStepsAndRemovedPlanStepsWithoutInitGoal, planStepParentInDecompositionTree.toSeq map { case (a, (b, _)) => a -> b })
+
+  def isConsistentAbstractionSequence(abstraction: Seq[PlanStep]): Boolean = {
+
+    // for all actions in the plan, exactly one action from the abstraction must be on that way
+    def abstractionCoundDFS(ps: PlanStep): Int = (if (abstraction contains ps) 1 else 0) + (decompositionTree.edges(ps) map { pss => abstractionCoundDFS(pss) } sum)
+
+    val abstractionIsBlocking = planStepsWithoutInitGoal forall { ps => abstractionCoundDFS(ps) == 1 }
+
+    val abstractionIsOrderedCorrectly = abstraction.zipWithIndex forall { case (ps1, i) => abstraction.drop(i) forall {
+      case ps2 =>
+        !(planStepsWithoutInitGoal exists { case c1 => planStepsWithoutInitGoal exists { case c2 =>
+          decompositionTree.reachable(c1).contains(ps1) && decompositionTree.reachable(c2).contains(ps2) && orderingConstraints.lt(c2, c1)
+        }
+        })
+    }
+    }
+
+    abstractionIsBlocking
+  }
+
+  def abstractFromPS(abstraction: Seq[PlanStep], ps: PlanStep): Option[Seq[PlanStep]] = if (decompositionTree.sinks contains ps) None else {
+    val parent = decompositionTree.edges(ps).head
+    // find potential sublings
+    val siblings = decompositionTree.reversedEdgesSet(parent)
+
+    val newAbstraction = abstraction collect {
+      case `ps`                        => parent
+      case x if !(siblings contains x) => x
+    }
+
+    Some(newAbstraction).filter(isConsistentAbstractionSequence)
+  }
+
+  def goToAbstractionLevel(level: Int): Seq[PlanStep] = {
+    val initialAbstraction = orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive }
+
+    def reduce(seq: Seq[PlanStep]): Seq[PlanStep] = {
+      val psTooConcrete = seq filter { ps => !(decompositionTree.getVerticesWithDistance(ps) exists { case (ps, i) => i <= level && decompositionTree.sinks.contains(ps) }) }
+
+      if (psTooConcrete.isEmpty) seq else {
+        psTooConcrete map { ps => abstractFromPS(seq, ps) } find (_.isDefined) match {
+          case None    => seq // further abstraction not possible
+          case Some(x) => reduce(x.get)
+        }
+      }
+    }
+
+    reduce(initialAbstraction)
   }
 
   override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[Plan] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[Plan].productIterator) } else false
 
   override lazy val dotString: String = dotString(PlanDotOptions())
 }
+
 
 object Plan {
   /**
