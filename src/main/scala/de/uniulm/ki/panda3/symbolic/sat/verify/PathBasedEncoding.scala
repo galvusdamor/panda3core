@@ -146,8 +146,9 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       // if there is nothing select at the current position we are not allowed to create new tasks
       val noneApplied: Seq[Clause] = {
         val allChildren = Range(0, numberOfChildren) flatMap { index => tree.children(index).possibleTasks map { task => possibleChildTasks(index)(task) } }
+        val allMethods = possibleMethods map { case (_, methodIndex) => method(layer, path, methodIndex) }
 
-        notImpliesAllNot(possibleTasksToActions, allChildren)
+        notImpliesAllNot(possibleTasksToActions, allChildren ++ allMethods)
       }
 
       possibleTasksClauses ++ keepPrimitives ++ decomposeAbstract ++ noneApplied ++ methodChildren ++ recursiveFormula
