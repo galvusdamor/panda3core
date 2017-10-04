@@ -24,7 +24,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                      encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean) {
 
   private val fileDir = System.getProperty("os.name").toLowerCase() match {
-    case osname if osname startsWith "windows"  => ".\\"
+    case osname if osname startsWith "windows"  => ""
     case osname if osname startsWith "mac os x" => "./"
     case _                                      => "/dev/shm/" // normal OSes
   }
@@ -78,7 +78,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         println("Still waiting ... running for " + (System.currentTimeMillis() - startTime) + " will abort at " + (if (expansionPossible) timelimit else timeLimitForLastRun))
     }
 
-    if (satProcess.isDefined) {
+    if (satProcess.isDefined && System.getProperty("os.name").toLowerCase().startsWith("linux")) {
       //satProcess.destroy()
 
       val pid = getPID()
@@ -254,33 +254,46 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         try {
           val stdout = new StringBuilder
           val stderr = new StringBuilder
-          val logger = ProcessLogger({ s => stdout append (s + "\n") }, { s => stderr append (s + "\n") })
+          val logger = ProcessLogger({ s => stdout append (s + "\n") }, { s => /*stderr append (s + "\n")*/ })
 
-          satSolver match {
-            case MINISAT       =>
+          val outerScriptString = System.getProperty("os.name").toLowerCase match {
+            case osname if osname startsWith "windows"  => ""
+            case osname if osname startsWith "mac os x" => "#!/bin/bash\n"
+            case _                                      => "#!/bin/bash\n/usr/bin/time -f '%U %S' "
+          }
+
+          val scriptFileName = fileDir + "__run" + uniqFileIdentifier + ".bat"
+
+          val solverCallString = satSolver match {
+            case MINISAT =>
               println("Starting minisat")
-              writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' minisat " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt",
-                                fileDir + "__run" + uniqFileIdentifier)
+              solverPath.get + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
+
             case CRYPTOMINISAT =>
               println("Starting cryptominisat5")
-              writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' cryptominisat5 --verb 0 " + fileDir + "__cnfString" + uniqFileIdentifier,
-                                fileDir + "__run" + uniqFileIdentifier)
+              solverPath.get + " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
 
             case RISS6 =>
               println("Starting riss6")
               // -config=Riss6:-no-enabled_cp3
-              writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' " + solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier,
-                                fileDir + "__run" + uniqFileIdentifier)
+              solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
 
             case MapleCOMSPS =>
               println("Starting mapleCOMSPS")
-              writeStringToFile("#!/bin/bash\n/usr/bin/time -f '%U %S' " + solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier,
-                                fileDir + "__run" + uniqFileIdentifier)
+              solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
           }
+
+          writeStringToFile(outerScriptString + solverCallString, scriptFileName)
 
           solverLastStarted = System.currentTimeMillis()
           println("Setting starttime of solver to " + solverLastStarted)
-          satProcess = Some(("bash " + fileDir + "__run" + uniqFileIdentifier).run(logger))
+          val runScriptString = System.getProperty("os.name").toLowerCase match {
+            case osname if osname startsWith "windows"  => "cmd.exe /q /c  " + scriptFileName
+            case osname if osname startsWith "mac os x" => "bash " + scriptFileName
+            case _                                      => "bash " + scriptFileName
+          }
+
+          satProcess = Some(runScriptString.run(logger))
 
           // wait for termination
           satProcess.get.exitValue()
@@ -291,14 +304,26 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
               writeStringToFile(outString, new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
             case _                                   =>
           }
+
           // remove runscript
-          ("rm " + fileDir + "__run" + uniqFileIdentifier) !
+          System.getProperty("os.name").toLowerCase match {
+            case osname if osname startsWith "windows"  => ("cmd.exe /q /c del " + scriptFileName) !!
+            case osname if osname startsWith "mac os x" => ("rm " + scriptFileName) !
+            case _                                      => ("rm " + scriptFileName) !
+          }
+
 
           // get time measurement
-          val errString = removeCommentAtBeginning(stderr.toString())
-          //println(errString)
+          val totalTime = System.getProperty("os.name").toLowerCase match {
+            case osname if osname startsWith "windows"  => 0
+            case osname if osname startsWith "mac os x" => 0
+            case _                                      =>
+              val errString = removeCommentAtBeginning(stderr.toString())
+              //println(errString)
 
-          val totalTime = (errString.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
+              (errString.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
+          }
+
           println("Time command gave the following runtime for the solver: " + totalTime)
 
           timeCapsule.addTo(SAT_SOLVER, totalTime)
@@ -571,7 +596,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                 val partiallyOrderedSolution = SimpleDirectedGraph(v, e).transitiveReduction
 
                 val graphString = partiallyOrderedSolution.dotString(options = DirectedGraphDotOptions(), nodeRenderer = {case (task, _) => task.schema.name})
-                Dot2PdfCompiler.writeDotToFile(graphString, "solutionOrder.pdf")
+                //Dot2PdfCompiler.writeDotToFile(graphString, "solutionOrder.pdf")
 
 
                 // take a topological ordering (any should to it ...) and remove init and goal

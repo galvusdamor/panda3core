@@ -1118,6 +1118,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
              case "riss6"                                 => RISS6
              case "mapleCOMSPS"                           => MapleCOMSPS
              case "FAPE"                                  => FAPE
+             case "minisat"                               => MINISAT
+             case "cryptominisat"                         => CRYPTOMINISAT
            }
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
