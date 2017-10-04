@@ -93,7 +93,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     //println("\n\nGraph minisation")
     //println(childrenIndicesToPossibleTasks map {s => s map {t => t.name + " " + t.isAbstract} mkString " "} mkString "\n")
 
-    val maxVertex = minimalSuperGraph.vertices.max
+    val maxVertex = if (minimalSuperGraph.vertices.isEmpty) -1 else minimalSuperGraph.vertices.max
     assert(minimalSuperGraph.vertices.length - 1 == maxVertex, "SOG has " + minimalSuperGraph.vertices.length + " vertices, but maximum vertex is " + maxVertex)
 
     (tasksPerMethodToChildrenMapping, childrenForPrimitives, childrenIndicesToPossibleTasks map { _.toSet } toArray, NonExpandedSOG(minimalSuperGraph))
