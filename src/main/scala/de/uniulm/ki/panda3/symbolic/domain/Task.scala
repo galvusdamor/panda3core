@@ -47,7 +47,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
         case (precAnd: And[Formula], effAnd: And[Formula]) =>
           if ((precAnd.conjuncts forall { case l: Literal => true case _ => false }) && (effAnd.conjuncts forall { case l: Literal => true case _ => false })) {
             ReducedTask.intern((name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, precAnd.asInstanceOf[And[Literal]],
-                        effAnd.asInstanceOf[And[Literal]]))
+                                 effAnd.asInstanceOf[And[Literal]]))
           } else {
             this
           }
@@ -96,8 +96,8 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
         // the type parameter will be erased by the compiler, so we have to check it again
         case (pre: And[Literal], eff: And[Literal]) if pre.containsOnlyLiterals && eff.containsOnlyLiterals =>
           ReducedTask.intern(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
-                      parameterConstraints map { _.update(domainUpdate) }, pre.asInstanceOf[And[Literal]],
-                      eff.asInstanceOf[And[Literal]])
+                             parameterConstraints map { _.update(domainUpdate) }, pre.asInstanceOf[And[Literal]],
+                             eff.asInstanceOf[And[Literal]])
         case _                                                                                              =>
           GeneralTask(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
                       parameterConstraints map { _.update(domainUpdate) }, newPrecondition, newEffect)
@@ -109,6 +109,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
     // check all constraints
     val allValidInstantiations = allInstantiations filter { params =>
       def constForVar(v: Variable): Constant = params(parameters indexOf v)
+
       parameterConstraints forall {
         case Equal(v1, c: Constant)     => constForVar(v1) == c
         case Equal(v1, v2: Variable)    => constForVar(v1) == constForVar(v2)
@@ -179,12 +180,13 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
   if (parameters.isEmpty) {
     // if ground, don't have something both in the add and del effects!
     effectsAsPredicateBool filterNot { _._2 } foreach { case (p, false) =>
-      assert(!effectsAsPredicateBool.contains((p, true)))
+      assert(!effectsAsPredicateBoolSet.contains((p, true)))
     }
   }
 
   lazy val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)] = (precondition.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
   lazy val effectsAsPredicateBool      : Seq[(Predicate, Boolean)] = (effect.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
+  lazy val effectsAsPredicateBoolSet   : Set[(Predicate, Boolean)] = effectsAsPredicateBool.toSet
 
   override def equals(o: scala.Any): Boolean =
     if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[ReducedTask].productIterator) } else false
