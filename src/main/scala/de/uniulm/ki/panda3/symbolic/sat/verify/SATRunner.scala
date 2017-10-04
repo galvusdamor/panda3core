@@ -23,7 +23,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
                      encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean) {
 
-  private val fileDir = "/dev/shm/"
+  private val fileDir = System.getProperty("os.name").toLowerCase() match {
+    case osname if osname startsWith "windows"  => ".\\"
+    case osname if osname startsWith "mac os x" => "./"
+    case _                                      => "/dev/shm/" // normal OSes
+  }
 
 
   import sys.process._
