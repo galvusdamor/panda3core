@@ -254,7 +254,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         try {
           val stdout = new StringBuilder
           val stderr = new StringBuilder
-          val logger = ProcessLogger({ s => stdout append (s + "\n") }, { s => /*stderr append (s + "\n")*/ })
+          val logger = ProcessLogger({ s => stdout append (s + "\n") }, { s => stderr append (s + "\n") })
 
           val outerScriptString = System.getProperty("os.name").toLowerCase match {
             case osname if osname startsWith "windows"  => ""
@@ -317,7 +317,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           val totalTime = System.getProperty("os.name").toLowerCase match {
             case osname if osname startsWith "windows"  => 0
             case osname if osname startsWith "mac os x" => 0
-            case _                                      =>
+            case _ =>
               val errString = removeCommentAtBeginning(stderr.toString())
               //println(errString)
 
@@ -327,8 +327,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           println("Time command gave the following runtime for the solver: " + totalTime)
 
           timeCapsule.addTo(SAT_SOLVER, totalTime)
-          timeCapsule.addTo(TOTAL_TIME, totalTime)
-          timeCapsule.addTo(VERIFY_TOTAL, totalTime)
+          //timeCapsule.addTo(TOTAL_TIME, totalTime)
+          //timeCapsule.addTo(VERIFY_TOTAL, totalTime)
 
         } catch {
           case rt: RuntimeException => println("Minisat exitcode problem ..." + rt.toString)
