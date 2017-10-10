@@ -565,7 +565,11 @@ case class EdgeLabelledGraph[T, L, M](arrayVertices: Array[T], labelledEdges: Ar
   override def vertices: Seq[T] = arrayVertices.toSeq
 
   override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString },
-                                                                               { case (a, b) => labelledEdges.find({ case (x, _, y) => a == x && b == y }).get._2.toString })
+                                                                               { case (a, b) => labelledEdges.find({ case (x, _, y) => a == x && b == y }).get._2 match {
+                                                                                 case p: PrettyPrintable => p.longInfo
+                                                                                 case x                  => x.toString
+                                                                               }
+                                                                               })
 }
 
 case class SimpleGraphNode(id: String, name: String) extends PrettyPrintable {

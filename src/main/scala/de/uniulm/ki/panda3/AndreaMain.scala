@@ -30,8 +30,8 @@ object MainAndrea {
     val outputPDF = "dot.pdf"
 
     // TRANSPORT
-    val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp"
-    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1"
+    val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\',File.separatorChar)
+    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1".replace('\\',File.separatorChar)
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
@@ -59,9 +59,10 @@ object MainAndrea {
           groundedReachability = None,
           groundedTaskDecompositionGraph = Some(TwoWayTDG),
           iterateReachabilityAnalysis = true, groundDomain = true),
-        PredefinedConfigurations.pandaProConfig(AStarActionsType(2), SasHeuristics.hMS),
+        PredefinedConfigurations.sasPlusConfig(AStarActionsType(2), SasHeuristics.hMS),
         postprocessing,
         Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
+        //Map(FastDownward -> "../../fd"))
 
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
