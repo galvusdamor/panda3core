@@ -34,7 +34,10 @@ public class JavaToScala {
     }
 
     public static <T> Seq<T> toScalaSeq(List<T> javaList) {
-        return JavaConversions.asScalaBuffer(javaList);
+        // actually copy the list to avoid side effects
+        ArrayList<T> l = new ArrayList<>();
+        l.addAll(javaList);
+        return JavaConversions.asScalaBuffer(l);
 
     }
 
