@@ -13,22 +13,52 @@ trait NodeValue extends DefaultLongInfo {
   def sasPlusProblem: SasPlusProblem
 
   def isContained(state: util.BitSet): Boolean
+
+  def containsShrink() : Boolean
 }
 
 case class ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem) extends NodeValue {
   override def isContained(state: util.BitSet): Boolean = state get value
 
   override def longInfo: String = value + ": " + sasPlusProblem.factStrs(value)
+
+  override def containsShrink() : Boolean = false
 }
 
 case class MergeNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPlusProblem) extends NodeValue {
   override def isContained(state: util.BitSet): Boolean = left.isContained(state) && right.isContained(state)
 
-  override def longInfo: String = "(" + left.longInfo + " or " + right.longInfo + ")"
+  override def containsShrink() : Boolean = left.containsShrink() || right.containsShrink()
+
+  //override def longInfo: String = "(" + left.longInfo + ", \n" + right.longInfo + ")"
+  override def longInfo: String = {
+/*    left match {
+      case ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem) =>
+        right match {
+          case ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem) =>
+            "(" +left.longInfo + ", \n" + right.longInfo + ")"
+          case _ =>
+            "(" +left.longInfo + "\n and \n" + right.longInfo + ")"
+        }
+      case _ =>
+        "(" +left.longInfo + "\n and \n" + right.longInfo + ")"
+    }*/
+
+    containsShrink() match {
+
+      case true =>
+        "(" +left.longInfo + "\n and \n" + right.longInfo + ")"
+      case _ =>
+        "(" +left.longInfo + ", \n" + right.longInfo + ")"
+    }
+
+  }
 }
 
 case class ShrinkNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPlusProblem) extends NodeValue {
   override def isContained(state: util.BitSet): Boolean = left.isContained(state) || right.isContained(state)
 
-  override def longInfo: String = "(" + left.longInfo + " and " + right.longInfo + ")"
+  override def longInfo: String = "(" + left.longInfo + "\n or \n" + right.longInfo + ")"
+
+  override def containsShrink() : Boolean = true
 }

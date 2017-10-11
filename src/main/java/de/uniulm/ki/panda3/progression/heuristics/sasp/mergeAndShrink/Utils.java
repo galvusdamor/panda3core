@@ -1,6 +1,8 @@
 package de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink;
 
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
+import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ElementaryNode;
+import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.NodeValue;
 import scala.ScalaReflectionException;
 import scala.Tuple3;
 
@@ -46,45 +48,7 @@ public final class Utils {
     }
 
 
-    public static String eliminateDoubleRows(String inputString){
 
-        String[] data = inputString.split("\n");
-
-        String output = "";
-
-        ArrayList<String > lines = new ArrayList<>();
-
-
-        for (int i=0; i<data.length; i++) {
-            String s = data[i];
-            if(s.contains("->")) {
-                if (!lines.contains(s)) {
-                    lines.add(s);
-                    output += "\n" + s;
-                }
-            }else{
-                lines.add(s);
-                output += "\n" + s;
-            }
-        }
-
-        return output;
-    }
-
-
-
-    public static ArrayList<Integer> findContainedIDs(HashMap<Integer, ArrayList<Integer>> idMapping, int varIndex){
-
-        ArrayList<Integer> containedIDs = new ArrayList<>();
-
-        for (int i: idMapping.keySet()){
-            if (idMapping.get(i).contains(varIndex)){
-                containedIDs.add(i);
-            }
-        }
-
-        return containedIDs;
-    }
 
 
     public static ArrayList<Integer> dismissNotContainedIndexes(int[] allIndexes, ArrayList<Integer> containedIndexes){
@@ -99,7 +63,7 @@ public final class Utils {
     }
 
 
-    public static String getMultiIDString(SasPlusProblem p, int multiID, HashMap<Integer, ArrayList<Integer>> idMapping){
+    public static String getMultiIDStringOld(SasPlusProblem p, int multiID, HashMap<Integer, ArrayList<Integer>> idMapping){
 
         String s =  multiID + ": \n";
 
@@ -108,6 +72,17 @@ public final class Utils {
         for (int i: varIDs){
             s += i + ": " +p.factStrs[i] +"\n";
         }
+
+        return s;
+
+    }
+
+    public static String getMultiIDString(SasPlusProblem p, int multiID, HashMap<Integer, NodeValue> idMapping){
+
+        NodeValue nodeValue = idMapping.get(multiID);
+
+        String s =  multiID + ": \n" + nodeValue.longInfo();
+
 
         return s;
 
@@ -125,7 +100,8 @@ public final class Utils {
 
     }
 
-    public static Integer[] convertNodeIDArrayListToArray(HashMap<Integer, ArrayList<Integer>> idMapping){
+
+    public static Integer[] convertNodeIDArrayListToArray(HashMap<Integer, NodeValue> idMapping){
 
         Integer[] nodeIDS = idMapping.keySet().toArray(new Integer[idMapping.keySet().size()]);
 
