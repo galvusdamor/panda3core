@@ -18,6 +18,7 @@ import scala.collection.mutable
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends DomainUpdatable with PrettyPrintable {
 
   arguments foreach { v => assert(v != null) }
+  assert(arguments.length == schema.parameters.length)
 
 
   // TODO: this might cause problems in the wrapper (two decompositon methods might be judged as equal if they really are not), but is necessary to achieve at least a decent performance
