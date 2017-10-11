@@ -44,7 +44,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   }
 
   planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod),
-                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)}
+                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)
+  }
 
   planStepsWithoutInitGoal foreach {
     ps =>
@@ -343,6 +344,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     val newInitGoalArguments = newInit.argumentSet ++ newGoal.argumentSet
     val variablesToRemove = (init.arguments ++ goal.arguments) filterNot { v => planStepsWithoutInitGoal exists { _.arguments.contains(v) } } filterNot
       variablesToKeep.contains filterNot newInitGoalArguments
+    val variablesToAdd = newInitGoalArguments filterNot parameterVariableConstraints.variables.contains
 
     val topPlanTasks = planStepsAndRemovedPlanStepsWithoutInitGoal :+ newInit :+ newGoal
     val initialPlanInternalOrderings = orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(initAndGoal: _*) }
@@ -352,7 +354,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       CausalLink(replace(p), replace(c), cond)
     }
-    Plan(topPlanTasks, newCausalLinks, topOrdering, parameterVariableConstraints update RemoveVariables(variablesToRemove), newInit, newGoal,
+    Plan(topPlanTasks, newCausalLinks, topOrdering, parameterVariableConstraints update RemoveVariables(variablesToRemove) update AddVariables(variablesToAdd.toSeq), newInit, newGoal,
          isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
   }
 
