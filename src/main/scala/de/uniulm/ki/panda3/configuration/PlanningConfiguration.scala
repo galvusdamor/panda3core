@@ -1325,7 +1325,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
          })
        )
 
-
   protected def predefinedConfigurations: Seq[(String, (ParameterMode, (Option[String]) => PlanningConfiguration.this.type))] =
     (PredefinedConfigurations.parsingConfigs.toSeq map { case (k, p) =>
       k -> (NoParameter, { l: Option[String] => this.copy(parsingConfiguration = p).asInstanceOf[this.type] })

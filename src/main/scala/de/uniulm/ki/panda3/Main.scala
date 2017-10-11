@@ -164,7 +164,13 @@ object Main {
         println("Help for key " + helpForKey + "\n" + initialConfiguration.config.helpTexts(helpForKey))
       } else {
         println("Available Keys (specific help can be requested using -help KEY):")
-        println(initialConfiguration.config.optionStrings map { s => "\t" + s } mkString "\n")
+        val allKeys = initialConfiguration.config.optionStrings
+        val configKeys = initialConfiguration.config.predefinedConfigurations.map(_._1)
+        val actualKeys = allKeys filterNot configKeys.contains
+        println(actualKeys map { s => "\t" + s } mkString "\n")
+
+        println("\n\nPredefined Configurations:")
+        println(configKeys map { s => "\t" + s } mkString "\n")
       }
       System exit 0
     } else if (args.length > 0 && (args(0) == "-contributors" || args(0) == "--contributors")) {
