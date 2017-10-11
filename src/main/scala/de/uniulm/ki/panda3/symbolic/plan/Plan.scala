@@ -35,13 +35,14 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   //assert(planSteps forall { ps => ps.arguments forall { v => parameterVariableConstraints.variables.contains(v) } })
   planStepsAndRemovedPlanSteps foreach {
     ps => ps.arguments foreach {
-      v =>
-        assert(parameterVariableConstraints.variables.contains(v), ps.id + " - " + ps.schema.name + ": var " + v)
-    }
+        v =>
+          assert(parameterVariableConstraints.variables.contains(v), ps.id + " - " + ps.schema.name + ": var " + v)
+      }
   }
 
   planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod),
-                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo) }
+                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)
+  }
 
   planStepsWithoutInitGoal foreach {
     ps =>
@@ -50,7 +51,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   }
 
 
-  assert(orderingConstraints.lt(init,goal))
+  assert(orderingConstraints.lt(init, goal))
   assert(orderingConstraints.isConsistent)
 
   lazy val planSteps       : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
@@ -129,9 +130,10 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   // =================== Local Helper ==================== //
   /** list containing all preconditions in this plan */
   lazy val allPreconditions: Seq[(PlanStep, Literal)] = planSteps flatMap {
-    ps => ps.substitutedPreconditions map {
-      prec => (ps, prec)
-    }
+    ps =>
+      ps.substitutedPreconditions map {
+        prec => (ps, prec)
+      }
   }
 
   def modify(modification: Modification): Plan = {
@@ -180,9 +182,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
         (PlanStep(id, ps.schema, ps.arguments map sub), ps)
     }
 
-    val newPlanSteps = planStepMapping map {
-      _._1
-    }
+    val newPlanSteps = planStepMapping map { _._1 }
 
     def substitutePlanStep(oldPS: PlanStep) = newPlanSteps(planSteps.indexOf(oldPS))
 
@@ -277,7 +277,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
             representativeVariables.keys find { v => variableConstraints.equal(v, nextVariable) } match {
               case Some(v) =>
                 val newDomain = representativeVariables(v) intersect nextVariable.sort.elements.toSet
-                (representativeVariables + (v -> newDomain), deletedVariables :+(nextVariable, v))
+                (representativeVariables + (v -> newDomain), deletedVariables :+ (nextVariable, v))
               case None    => (representativeVariables + (nextVariable -> nextVariable.sort.elements.toSet), deletedVariables)
             }
           })
@@ -327,15 +327,17 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     val newInitGoalArguments = newInit.argumentSet ++ newGoal.argumentSet
     val variablesToRemove = (init.arguments ++ goal.arguments) filterNot { v => planStepsWithoutInitGoal exists { _.arguments.contains(v) } } filterNot
       variablesToKeep.contains filterNot newInitGoalArguments
+    val variablesToAdd = newInitGoalArguments filterNot parameterVariableConstraints.variables.contains
 
     val topPlanTasks = planStepsAndRemovedPlanStepsWithoutInitGoal :+ newInit :+ newGoal
     val initialPlanInternalOrderings = orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(initAndGoal: _*) }
     val topOrdering = TaskOrdering(initialPlanInternalOrderings ++ OrderingConstraint.allBetween(newInit, newGoal, planStepsAndRemovedPlanStepsWithoutInitGoal: _*), topPlanTasks)
     val newCausalLinks = causalLinksAndRemovedCausalLinks map { case CausalLink(p, c, cond) =>
       def replace(ps: PlanStep): PlanStep = if (ps == init) newInit else if (ps == goal) newGoal else ps
+
       CausalLink(replace(p), replace(c), cond)
     }
-    Plan(topPlanTasks, newCausalLinks, topOrdering, parameterVariableConstraints update RemoveVariables(variablesToRemove), newInit, newGoal,
+    Plan(topPlanTasks, newCausalLinks, topOrdering, parameterVariableConstraints update RemoveVariables(variablesToRemove) update AddVariables(variablesToAdd.toSeq), newInit, newGoal,
          isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
   }
 
@@ -360,6 +362,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
   lazy val layersOfDecompositionHierarchy: Seq[Seq[PlanStep]] = {
     def depthInHierarchy(ps: PlanStep): Int = if (!(planStepParentInDecompositionTree contains ps)) 0 else 1 + depthInHierarchy(planStepParentInDecompositionTree(ps)._1)
+
     val depthMap = removedPlanSteps map { ps => (ps, depthInHierarchy(ps)) } groupBy { _._2 }
     depthMap.toSeq.sortBy(_._1) map { case (_, pss) => pss map { _._1 } sortBy { _.id } }
   }
@@ -406,10 +409,11 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     //dotStringBuilder append "\trankdir=\"LR\";"
     // init and goal
 
-    def variablesToString(vars: Seq[Variable]): String = (vars map { v => variableConstraints.getRepresentative(v) match {
-      case vv: Variable => toPDDLIdentifier(vv.name)
-      case c: Constant  => c.name
-    }
+    def variablesToString(vars: Seq[Variable]): String = (vars map { v =>
+      variableConstraints.getRepresentative(v) match {
+        case vv: Variable => toPDDLIdentifier(vv.name)
+        case c: Constant  => c.name
+      }
     }).mkString(",")
 
     // ordinary plan steps
@@ -423,6 +427,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
         if (ps.schema.isPrimitive) dotStringBuilder append ",shape=box"
         dotStringBuilder append "];\n"
     }
+
     planStepsWithoutInitGoal foreach printPS("")
 
 
@@ -492,7 +497,6 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
     // end of the inner graph
     dotStringBuilder append "}\n"
-
 
 
     dotStringBuilder append "}"
