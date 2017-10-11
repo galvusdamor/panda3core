@@ -11,3 +11,4 @@ To access the full text of licences under which these software components are av
 1 -- Scala Runtime -- BSD-3 (https://www.scala-lang.org/license/)
 2 -- ANTLR v4 -- BSD-3 (https://github.com/antlr/antlr4/)
 3 -- codepointat.js and fromcodepoint.js within ANTLR v3 -- MIT-Licence (https://git.io/codepointat and https://git.io/vDW1m)
+4 -- abego TreeLayout -- BSD-3 (https://github.com/abego/treelayout/blob/master/README.md)
