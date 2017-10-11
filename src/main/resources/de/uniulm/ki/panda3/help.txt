@@ -1,13 +1,13 @@
 PANDA3 - Planning and Acting in a Network Decomposition Architecture
 Believe us: It's great, it's fantastic! 
 
-PANDA3  Copyright (C) 2014-2017 Gregor Behnke, Thomas Geier, Kadir Dede, Daniel Höller, Kristof Mickeleit, Matthias Englert
+PANDA3 Copyright (C) 2014-2017 Gregor Behnke, Thomas Geier, Kadir Dede, Daniel Höller, Kristof Mickeleit, Matthias Englert
 This program comes with ABSOLUTELY NO WARRANTY
-This , and you are welcome to redistribute it under certain conditions; run it with --license for details.
+This is free software, and you are welcome to redistribute it under certain conditions; run PANDA3 with --license for details.
 
 Main Developers:
 - Gregor Behnke, http://www.uni-ulm.de/in/ki/behnke
 - Daniel Höller, http://www.uni-ulm.de/in/ki/hoeller
 
 With many thanks to various further contributors.
-Call PANDA3 with flag --contributors for an extensive list.
+Run PANDA3 with the command-line argument --contributors for an extensive list.
