@@ -5,9 +5,8 @@ import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.EfficientDomain
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic}
 import de.uniulm.ki.panda3.efficient.heuristic._
-
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps}
@@ -19,7 +18,7 @@ import de.uniulm.ki.panda3.progression.relaxedPlanningGraph.RCG
 import de.uniulm.ki.panda3.symbolic.{DefaultLongInfo, PrettyPrintable}
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
-import de.uniulm.ki.panda3.symbolic.sat.verify.{CRYPTOMINISAT, MINISAT, Solvertype, SATRunner}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{CRYPTOMINISAT, MINISAT, SATRunner, Solvertype}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.GroundedPrimitiveReachabilityAnalysis
@@ -38,7 +37,6 @@ import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 
 import scala.collection.JavaConversions
 import scala.util.Random
-
 import scala.collection.JavaConversions
 
 /**
@@ -177,19 +175,35 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             analysisMap = createEfficientTDGFromSymbolic(wrapper, analysisMap)
 
           val efficientPGNeeded = search.heuristic exists {
-            case ADD | ADDReusing | Relax | TDGMinimumADD(_) | LiftedTDGMinimumADD(_, _) => true
-            case f: TDGBasedHeuristic                                                    =>
-              f.innerHeuristic.exists({ case ADD | ADDReusing | Relax | TDGMinimumADD(_) | LiftedTDGMinimumADD(_, _) => true; case _ => false })
-
-            case _ => false
+            case ADD | ADDReusing | TDGMinimumADD(_) | LiftedTDGMinimumADD(_, _) => true
+            case f: TDGBasedHeuristic                                            =>
+              f.innerHeuristic.exists({ case ADD | ADDReusing | TDGMinimumADD(_) | LiftedTDGMinimumADD(_, _) => true; case _ => false })
+            case _                                                               => false
+          }
+          val efficientRelaxPGNeeded = search.heuristic exists {
+            case Relax                => true
+            case f: TDGBasedHeuristic =>
+              f.innerHeuristic.exists({ case Relax => true; case _ => false })
+            case _                    => false
           }
 
-          if (efficientPGNeeded) {
+          if (efficientPGNeeded || efficientRelaxPGNeeded) {
             // do the whole preparation, i.e. planning graph
             val initialState = domainAndPlan._2.groundedInitialState filter { _.isPositive } toSet
-            val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, GroundedPlanningGraphConfiguration(computeMutexes = preprocessingConfiguration
-              .groundedReachability.contains(PlanningGraphWithMutexes)))
-            analysisMap = analysisMap +(EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic(symbolicPlanningGraph, wrapper))
+            val pgConfig = GroundedPlanningGraphConfiguration(computeMutexes = preprocessingConfiguration.groundedReachability.contains(PlanningGraphWithMutexes))
+            val pgConfigRelax = GroundedPlanningGraphConfiguration(isSerial = true)
+
+            val symbolicPlanningGraph = GroundedPlanningGraph(domainAndPlan._1, initialState, pgConfig)
+            val symbolicPlanningGraphRelax = GroundedPlanningGraph(domainAndPlan._1, initialState, pgConfigRelax)
+
+            if (efficientPGNeeded) {
+              println("Creating efficient PG for heuristic ... ")
+              analysisMap = analysisMap + (EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic(symbolicPlanningGraph, wrapper))
+            }
+            if (efficientRelaxPGNeeded) {
+              println("Creating efficient serial PG for Relax heuristic ... ")
+              analysisMap = analysisMap + (EfficientGroundedPlanningGraphForRelax, EfficientGroundedPlanningGraphFromSymbolic(symbolicPlanningGraphRelax, wrapper))
+            }
           }
           timeCapsule stop HEURISTICS_PREPARATION
 
@@ -408,9 +422,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       // classical heuristics
       case ADD | ADDReusing | Relax =>
-        val efficientPlanningGraph = analysisMap(EfficientGroundedPlanningGraph)
-        val initialState = domainAndPlan._2.groundedInitialState collect { case GroundLiteral(task, true, args) =>
-          (wrapper.unwrap(task), args map wrapper.unwrap toArray)
+        val efficientPlanningGraph : EfficientGroundedPlanningGraph =
+          analysisMap( if (heuristicConfig == Relax) EfficientGroundedPlanningGraphForRelax else EfficientGroundedPlanningGraph).asInstanceOf[EfficientGroundedPlanningGraph]
+        val initialState = domainAndPlan._2.groundedInitialState collect {
+          case GroundLiteral(task, true, args) =>
+            (wrapper.unwrap(task), args map wrapper.unwrap toArray)
         }
 
         heuristicConfig match {

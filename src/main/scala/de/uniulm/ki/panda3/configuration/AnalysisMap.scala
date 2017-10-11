@@ -21,6 +21,10 @@ object EfficientGroundedTDG extends AnalysisType {type ResultType = EfficientGro
 
 object EfficientGroundedPlanningGraph extends AnalysisType {type ResultType = de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph}
 
+object EfficientGroundedPlanningGraphForRelax extends AnalysisType {
+  type ResultType = de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph
+}
+
 case class AnalysisMap(map: Map[AnalysisType, Any]) extends (AnalysisType => Any) {
   // this assertion is useless due to Java Type erasure
   //map foreach { case (anaType, elem) => assert(elem.isInstanceOf[anaType.ResultType]) }
