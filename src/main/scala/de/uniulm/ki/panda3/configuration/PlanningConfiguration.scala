@@ -1264,8 +1264,6 @@ case class PlanBasedSearch(
                   Nil)
 
 
-  override protected def localHelpTexts: Map[String, String] = super.localHelpTexts
-
   override protected def localModifications: Seq[(String, (Option[String]) => PlanBasedSearch.this.type)] =
     Seq(
          "-efficientSearch" -> { p => (if (p.isEmpty) this.copy(efficientSearch = true) else this.copy(efficientSearch = p.get.toBoolean)).asInstanceOf[this.type] },
@@ -1388,8 +1386,6 @@ trait Configuration extends DefaultLongInfo {
 
   protected def localModifications: Seq[(String, (Option[String] => this.type))] = Nil
 
-  protected def localHelpTexts: Map[String, String] = Map()
-
   def potentialRecursiveChildren: Seq[Configuration] = Nil
 
   protected def recursiveMethods(conf: Configuration): (conf.type => this.type) = Map()
@@ -1404,8 +1400,6 @@ trait Configuration extends DefaultLongInfo {
       })
 
   final lazy val modifyOnOptionString: Map[String, (Option[String] => this.type)] = modifyOnOptionStringOrdered.toMap
-
-  final lazy val helpTexts: Map[String, String] = localHelpTexts ++ potentialRecursiveChildren.flatMap(_.helpTexts)
 
   /** returns a detailed information about the object */
   override def longInfo: String = "-- literally nothing --"
