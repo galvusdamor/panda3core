@@ -8,7 +8,6 @@ lazy val commonSettings = Seq(
                                resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
                                libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test",
                                libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.7",
-                               libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
                                startYear := Some(2014),
                                //licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
                                compileOrder in Compile := CompileOrder.Mixed,
