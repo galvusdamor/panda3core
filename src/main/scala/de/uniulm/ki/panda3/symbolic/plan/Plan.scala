@@ -50,6 +50,9 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod), "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)
   }
 
+  planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod),
+                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)}
+
   planStepsWithoutInitGoal foreach {
     ps =>
       assert(orderingConstraints.lt(init, ps))
