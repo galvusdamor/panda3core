@@ -3,13 +3,10 @@ package de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.util.Dot2PdfCompiler;
 import de.uniulm.ki.util.EdgeLabelledGraph;
-import de.uniulm.ki.util.EdgeLabelledGraphSingle;
-import scala.Tuple2;
 import scala.Tuple3;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.*;
 
@@ -24,7 +21,7 @@ public final class SingleGraphMethods {
 
         //Tuple2<Integer[],Tuple3[]> graphData = getSingleNodesAndEdgesForVarIndex(p,varIndex);
 
-        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>> graph = getSingleGraphForVarIndex(p,varIndex);
+        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer> graph = getSingleGraphForVarIndex(p,varIndex);
 
         //EdgeLabelledGraphSingle<String,String> stringGraph = convertSingleGraphToStringGraph(p, graph);
 
@@ -34,7 +31,7 @@ public final class SingleGraphMethods {
     }
 
 
-    public static EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>> getSingleGraphForVarIndex(SasPlusProblem p, int varIndex){
+    public static EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer> getSingleGraphForVarIndex(SasPlusProblem p, int varIndex){
 
         int firstIndex = p.firstIndex[varIndex];
         int lastIndex = p.lastIndex[varIndex];
@@ -67,10 +64,35 @@ public final class SingleGraphMethods {
 
         Tuple3<Integer,Integer,Integer>[] multiEdges = Utils.convertEdgeArrayListToTuple3(convertSingleEdgesToMultiEdges(tempReverseIDMapping, edges));
 
+        int startID = findStartNodeIDinSingleVarGraph(p, idMapping, containedIndexes);
 
-        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>> graph = new EdgeLabelledGraph<>(nodeIDs, multiEdges, idMapping);
+
+        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer> graph = new EdgeLabelledGraph<>(nodeIDs, multiEdges, idMapping, startID);
 
         return graph;
+    }
+
+    public static int findStartNodeIDinSingleVarGraph(SasPlusProblem p, HashMap<Integer, NodeValue> idMapping, ArrayList<Integer> containedIndexes){
+
+        int[] s0 = p.s0List;
+
+        ArrayList<Integer> s0Dismissed = Utils.dismissNotContainedIndexes(s0, containedIndexes);
+
+        if (s0Dismissed.size()>1) System.out.println("The start state of this variable is not valid");
+
+        for (int id : idMapping.keySet()){
+
+            NodeValue nodeValue = idMapping.get(id);
+
+            if (nodeValue instanceof ElementaryNode){
+                if (((ElementaryNode) nodeValue).value() == s0Dismissed.get(0)){
+                    return id;
+                }
+            }
+        }
+
+
+        return -1;
     }
 
 
@@ -102,6 +124,8 @@ public final class SingleGraphMethods {
 
         return edges;
     }
+
+
 
 
     public static ArrayList<Tuple3<Integer,Integer,Integer>> getEdgesForOpSingle(SasPlusProblem p, int OpIndex, ArrayList<Integer> containedVarIndexes){
@@ -163,9 +187,15 @@ public final class SingleGraphMethods {
 
         if ((addListDismissed.size()==0) && (delListDismissed.size()==0)){
 
-            for (int index : containedVarIndexes){
+            if (preListDismissed.size()==0) {
 
-                Tuple3<Integer,Integer,Integer> edge = new Tuple3<>(index,OpIndex,index);
+                for (int index : containedVarIndexes) {
+
+                    Tuple3<Integer, Integer, Integer> edge = new Tuple3<>(index, OpIndex, index);
+                    if (!Utils.containsEdge(edges, edge)) edges.add(edge);
+                }
+            }else{
+                Tuple3<Integer, Integer, Integer> edge = new Tuple3<>(preListDismissed.get(0), OpIndex, preListDismissed.get(0));
                 if (!Utils.containsEdge(edges, edge)) edges.add(edge);
             }
 
@@ -173,6 +203,14 @@ public final class SingleGraphMethods {
 
 
         return edges;
+
+    }
+
+    public static String getOpString(SasPlusProblem p, int OpIndex){
+
+        String s = "\"" + OpIndex + ": " + p.opNames[OpIndex] +  "\"";
+
+        return s;
 
     }
 

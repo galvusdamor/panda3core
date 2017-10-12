@@ -63,19 +63,6 @@ public final class Utils {
     }
 
 
-    public static String getMultiIDStringOld(SasPlusProblem p, int multiID, HashMap<Integer, ArrayList<Integer>> idMapping){
-
-        String s =  multiID + ": \n";
-
-        ArrayList<Integer> varIDs = idMapping.get(multiID);
-
-        for (int i: varIDs){
-            s += i + ": " +p.factStrs[i] +"\n";
-        }
-
-        return s;
-
-    }
 
     public static String getMultiIDString(SasPlusProblem p, int multiID, HashMap<Integer, NodeValue> idMapping){
 

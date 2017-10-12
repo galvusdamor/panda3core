@@ -15,6 +15,7 @@ trait NodeValue extends DefaultLongInfo {
   def isContained(state: util.BitSet): Boolean
 
   def containsShrink() : Boolean
+
 }
 
 case class ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem) extends NodeValue {
