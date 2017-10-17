@@ -48,9 +48,9 @@ case class MergeNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPlusP
     containsShrink() match {
 
       case true =>
-        "(" +left.longInfo + "\n and \n" + right.longInfo + ")"
+        "(" +left.longInfo + ")\n and \n(" + right.longInfo + ")"
       case _ =>
-        "(" +left.longInfo + ", \n" + right.longInfo + ")"
+        left.longInfo + ", \n" + right.longInfo
     }
 
   }
@@ -59,7 +59,7 @@ case class MergeNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPlusP
 case class ShrinkNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPlusProblem) extends NodeValue {
   override def isContained(state: util.BitSet): Boolean = left.isContained(state) || right.isContained(state)
 
-  override def longInfo: String = "(" + left.longInfo + "\n or \n" + right.longInfo + ")"
+  override def longInfo: String = "(" + left.longInfo + ")\n or \n(" + right.longInfo + ")"
 
   override def containsShrink() : Boolean = true
 }

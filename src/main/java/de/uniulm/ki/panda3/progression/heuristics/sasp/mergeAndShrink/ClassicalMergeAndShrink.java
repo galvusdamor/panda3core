@@ -42,6 +42,8 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
         graph = mergeWithVar(p, graph,2);
 
+        //graph = shrinkingStep(p, graph, aggregatedIDs);
+
         graph = mergeWithVar(p, graph,3);
 
         graph = mergeWithVar(p, graph,4);
@@ -54,6 +56,8 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         aggregatedIDs2.add(18);
 
         aggregatedIDs.add(aggregatedIDs2);
+
+        //graph = shrinkingStep(p, graph, aggregatedIDs);
 
 
         printMultiGraph(p, graph, "graph4.pdf");

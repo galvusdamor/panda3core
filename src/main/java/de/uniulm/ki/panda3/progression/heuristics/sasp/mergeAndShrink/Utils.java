@@ -68,7 +68,7 @@ public final class Utils {
 
         NodeValue nodeValue = idMapping.get(multiID);
 
-        String s =  multiID + ": \n" + nodeValue.longInfo();
+        String s =  multiID + ": \n(" + nodeValue.longInfo() + ")";
 
 
         return s;
