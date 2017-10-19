@@ -567,6 +567,14 @@ case class EdgeLabelledGraph[T, L, M, S](arrayVertices: Array[T], labelledEdges:
 
   override def vertices: Seq[T] = arrayVertices.toSeq
 
+  /*var distancesFromStart: java.util.HashMap[Integer, Integer] = _;
+
+  def setDistanceMap (A : java.util.HashMap[Integer, Integer]) : java.util.HashMap[Integer, Integer] = {
+
+    distancesFromStart = A;
+    return distancesFromStart;
+  }*/
+
   override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString },
                                                                                { case (a, b) => labelledEdges.find({ case (x, _, y) => a == x && b == y }).get._2 match {
                                                                                  case p: PrettyPrintable => p.longInfo

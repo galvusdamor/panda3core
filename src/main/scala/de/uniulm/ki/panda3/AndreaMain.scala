@@ -31,7 +31,7 @@ object MainAndrea {
 
     // TRANSPORT
     val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\',File.separatorChar)
-    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1".replace('\\',File.separatorChar)
+    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\',File.separatorChar)
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
