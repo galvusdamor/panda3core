@@ -104,7 +104,8 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
       val newEffect = effect.update(domainUpdate)
       (newPrecondition, newEffect) match {
         // the type parameter will be erased by the compiler, so we have to check it again
-        case (pre: And[Literal], eff: And[Literal]) if pre.containsOnlyLiterals && eff.containsOnlyLiterals =>
+        case (pre: And[Literal], eff: And[Literal]) if pre.containsOnlyLiterals && eff.containsOnlyLiterals &&
+          (!domainUpdate.isInstanceOf[SetExpandVariableConstraintsInPlans] || this.isInstanceOf[ReducedTask]) =>
           ReducedTask.intern(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
                              parameterConstraints map { _.update(domainUpdate) }, pre.asInstanceOf[And[Literal]],
                              eff.asInstanceOf[And[Literal]])
