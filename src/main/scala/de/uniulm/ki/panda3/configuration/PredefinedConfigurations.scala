@@ -398,6 +398,8 @@ object PredefinedConfigurations {
          "-greedy-pro-strips-lmcut" -> (htnParsing, groundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hLmCut)),
          "-greedy-pro-strips-add" -> (htnParsing, groundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd)),
 
+         "-shop2Original" -> (htnParsing, groundingPreprocess, SHOP2Search),
+         "-shop2OriginalLifted" -> (htnParsing, liftedPreprocess, SHOP2Search),
 
          "-fape" -> (htnParsing, groundingPreprocess, FAPESearch),
          "-fapeLifted" -> (htnParsing, liftedPreprocess, FAPESearch)

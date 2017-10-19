@@ -37,6 +37,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, OrderingConstraint
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.symbolic.writer.anml.ANMLWriter
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
+import de.uniulm.ki.panda3.symbolic.writer.shop2.SHOP2Writer
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util._
 
@@ -472,7 +473,85 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           }
         }
-      case NoSearch                                      => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+
+
+      case SHOP2Search =>
+        val writer = SHOP2Writer
+
+        val domainString = writer.writeDomain(domainAndPlan._1)
+        val problemString = writer.writeProblem(domainAndPlan._1, domainAndPlan._2)
+
+        // check for unsolvability in principle
+
+        val uuid = UUID.randomUUID().toString
+        writeStringToFile(domainString, "fooD" + uuid)
+        writeStringToFile(problemString, "fooP" + uuid)
+        //System exit 0
+        writeStringToFile("#!/bin/bash\n\njava -jar " + externalProgramPaths(SHOP2) + " fooD" + uuid + "\n" +
+                            "java -jar " + externalProgramPaths(SHOP2) + " -r fooP" + uuid + "\n" +
+                            "javac -cp " + externalProgramPaths(SHOP2) + " *java\n" +
+                            "rm *java\n" +
+                            "echo starting SHOP\n" +
+                            "java -Xmx4G -Xms4G -XX:+UseSerialGC -cp " + externalProgramPaths(SHOP2) + " problem\n" +
+                            "rm *class", "run" + uuid + ".sh")
+
+        val result = {
+          import sys.process._
+          // run SHOP2
+          var output: String = ""
+
+          // start self destruct ...
+          val t = new Thread(new Runnable {
+            override def run(): Unit = {
+              Thread.sleep(10 * 60 * 1000)
+              // TODO: just kill all java processes ... (which might be a *bit* dangerous, but ok for once)
+              "killall -9 java" !
+            }
+          })
+
+          t.setDaemon(true)
+          t.start()
+
+          timeCapsule start SEARCH_SHOP
+
+          ("bash run" + uuid + ".sh") ! new ProcessLogger {
+            override def err(s: => String): Unit = output = output + s + "\n"
+
+            override def out(s: => String): Unit = output = output + s + "\n"
+
+            override def buffer[T](f: => T): T = f
+          }
+
+          ("rm fooD" + uuid) !
+
+          ("rm fooP" + uuid) !
+
+          ("rm run" + uuid + ".sh") !
+
+          timeCapsule stop SEARCH_SHOP
+
+          output
+        }
+        val timeout = "TIMEOUT"
+        val unsol = "INFEASIBLE"
+
+        println(result)
+
+        if (!(result contains "1 plan(s) were found:")) {
+          // return nothing meaningful
+          (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+            timeCapsule stop TOTAL_TIME
+            runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
+          })
+        } else {
+          // return something signifying a solution
+          (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+            timeCapsule stop TOTAL_TIME
+            runPostProcessing(timeCapsule, informationCapsule, null, null :: Nil, domainAndPlan, unprocessedDomain, analysisMap)
+          })
+
+        }
+      case NoSearch    => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
         timeCapsule stop TOTAL_TIME
         runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
       })
@@ -928,12 +1007,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { tdgResult._1._1.tasks contains _.schema })
 
     val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
-      if (!runForGrounder) (if (preprocessingConfiguration.compileUselessAbstractTasks)
+      if (!runForGrounder || !preprocessingConfiguration.groundDomain) (if (preprocessingConfiguration.compileUselessAbstractTasks)
         CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand useless abstract tasks", USELESS_ABSTRACT_TASKS) :: Nil
       else Nil) ::
         // this one has to be the last
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
+        else Nil) ::
+        (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
+          CompilerConfiguration(CompileGoalIntoAction, (), "goal", TOP_TASK) :: CompilerConfiguration(ForceGroundedInitTop, (), "force top", TOP_TASK) :: Nil
         else Nil) ::
         Nil flatten
       else Nil
@@ -1118,6 +1200,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
              case "riss6"                                 => RISS6
              case "mapleCOMSPS"                           => MapleCOMSPS
              case "FAPE"                                  => FAPE
+             case "SHOP2"                                 => SHOP2
              case "minisat"                               => MINISAT
              case "cryptominisat"                         => CRYPTOMINISAT
            }
@@ -1147,7 +1230,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         defaultSATConfiguration ::
         defaultVerifyConfiguration ::
         NoSearch ::
-        FAPESearch :: Nil
+        FAPESearch ::
+        SHOP2Search :: Nil
     case x        => x :: Nil
   }) ++ (parsingConfiguration :: preprocessingConfiguration :: postprocessingConfiguration :: Nil)
 
@@ -1789,6 +1873,11 @@ object FAPESearch extends SearchConfiguration {
   override def longInfo: String = "Use FAPE for the search"
 }
 
+object SHOP2Search extends SearchConfiguration {
+  /** returns a detailed information about the object */
+  override def longInfo: String = "Use JSHOP2 for the search"
+}
+
 object NoSearch extends SearchConfiguration {
   /** returns a detailed information about the object */
   override def longInfo: String = "No Search"
@@ -1869,6 +1958,8 @@ sealed trait ExternalProgram
 object FastDownward extends ExternalProgram
 
 object FAPE extends ExternalProgram
+
+object SHOP2 extends ExternalProgram
 
 sealed trait Solvertype extends DefaultLongInfo with ExternalProgram
 

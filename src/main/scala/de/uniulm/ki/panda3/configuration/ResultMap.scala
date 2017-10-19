@@ -148,6 +148,7 @@ object Timings {
   val SEARCH_COMPUTE_HEURISTIC        = "20 search:40:compute heuristic"
   val SEARCH_COMPUTE_FILTER           = "20 search:50:compute filter"
   val SEARCH_FAPE                     = "20 search:99:FAPE"
+  val SEARCH_SHOP                     = "20 search:98:SHOP"
 
   val VERIFY_TOTAL     = "40 sat:00:total"
   val GENERATE_FORMULA = "40 sat:10:generate formula"
@@ -203,6 +204,10 @@ object Information {
   val PLAN_LENGTH             = "40 sat:00:plan length"
   val NUMBER_OF_VARIABLES     = "40 sat:01:number of variables"
   val NUMBER_OF_CLAUSES       = "40 sat:02:number of clauses"
+  val AVERAGE_SIZE_OF_CLAUSES = "40 sat:03:average size of clauses"
+  val NUMBER_OF_ASSERT        = "40 sat:03:number of assert"
+  val NUMBER_OF_ONE_SIDED     = "40 sat:03:number of one-sided"
+  val NUMBER_OF_HORN          = "40 sat:03:number of horn"
   val ICAPS_K                 = "40 sat:10:K ICAPS"
   val LOG_K                   = "40 sat:11:K LOG"
   val TSTG_K                  = "40 sat:12:K task schema transition graph"
