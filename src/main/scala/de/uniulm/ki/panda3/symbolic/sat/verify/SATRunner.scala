@@ -317,7 +317,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           val totalTime = System.getProperty("os.name").toLowerCase match {
             case osname if osname startsWith "windows"  => 0
             case osname if osname startsWith "mac os x" => 0
-            case _ =>
+            case _                                      =>
               val errString = removeCommentAtBeginning(stderr.toString())
               //println(errString)
 
@@ -339,8 +339,17 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
         print("Logging statistical information about the run ... ")
         val formulaVariables: Seq[String] = atomMap.keys.toSeq
+        val averageClauseLength = (usedFormula map { _.disjuncts.length } sum).toDouble / usedFormula.length
+        val assertClauses = usedFormula count {c => c.disjuncts.length == 1 && c.disjuncts.head._2}
+        val oneSided = usedFormula count {c => val x = c.disjuncts.head._2; c.disjuncts forall {_._2 == x}}
+        val horn = usedFormula count {c => c.disjuncts.count(_._2) <= 1}
         informationCapsule.set(Information.NUMBER_OF_VARIABLES, formulaVariables.size)
         informationCapsule.set(Information.NUMBER_OF_CLAUSES, usedFormula.length)
+        informationCapsule.set(Information.AVERAGE_SIZE_OF_CLAUSES, "" + averageClauseLength)
+        informationCapsule.set(Information.NUMBER_OF_ASSERT, assertClauses)
+        informationCapsule.set(Information.NUMBER_OF_ONE_SIDED, oneSided)
+        informationCapsule.set(Information.NUMBER_OF_HORN, horn)
+
         informationCapsule.set(Information.STATE_FORMULA, stateFormula.length)
         informationCapsule.set(Information.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
         informationCapsule.set(Information.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
