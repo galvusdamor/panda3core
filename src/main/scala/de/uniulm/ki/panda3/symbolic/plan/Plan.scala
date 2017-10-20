@@ -29,11 +29,10 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
                 dontExpandVariableConstraints: Boolean = false) extends
   DomainUpdatable with PrettyPrintable with HashMemo with DotPrintable[PlanDotOptions] {
 
+
   assert(planStepsAndRemovedPlanSteps.toSet == orderingConstraints.tasks.toSet)
 
-  assert(planStepsAndRemovedPlanSteps forall {
-    ps => ps.arguments.size == ps.schema.parameters.size
-  })
+  assert(planStepsAndRemovedPlanSteps forall { ps => ps.arguments.size == ps.schema.parameters.size })
   //assert(planSteps forall { ps => ps.arguments forall { v => parameterVariableConstraints.variables.contains(v) } })
   planStepsAndRemovedPlanSteps foreach {
     ps =>
