@@ -132,12 +132,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
     val groundTasks = sequenceToVerify map { task => GroundTask(task, Nil) }
     val finalState = groundTasks.foldLeft(initialPlan.groundedInitialState)(
       { case (state, action) =>
-        action.substitutedPreconditions foreach { prec => assert(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
+        action.substitutedPreconditions foreach { prec => exitIfNot(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
 
         (state diff action.substitutedDelEffects) ++ action.substitutedAddEffects
       })
 
-    if (checkGoal) initialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => assert(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
+    if (checkGoal) initialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => exitIfNot(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
   }
 
   def run(planLength: Int, offSetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false):
@@ -340,9 +340,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         print("Logging statistical information about the run ... ")
         val formulaVariables: Seq[String] = atomMap.keys.toSeq
         val averageClauseLength = (usedFormula map { _.disjuncts.length } sum).toDouble / usedFormula.length
-        val assertClauses = usedFormula count {c => c.disjuncts.length == 1 && c.disjuncts.head._2}
-        val oneSided = usedFormula count {c => val x = c.disjuncts.head._2; c.disjuncts forall {_._2 == x}}
-        val horn = usedFormula count {c => c.disjuncts.count(_._2) <= 1}
+        val assertClauses = usedFormula count { c => c.disjuncts.length == 1 && c.disjuncts.head._2 }
+        val oneSided = usedFormula count { c => val x = c.disjuncts.head._2; c.disjuncts forall { _._2 == x } }
+        val horn = usedFormula count { c => c.disjuncts.count(_._2) <= 1 }
         informationCapsule.set(Information.NUMBER_OF_VARIABLES, formulaVariables.size)
         informationCapsule.set(Information.NUMBER_OF_CLAUSES, usedFormula.length)
         informationCapsule.set(Information.AVERAGE_SIZE_OF_CLAUSES, "" + averageClauseLength)
@@ -461,9 +461,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                   if ((atomMap contains childString) && (literals contains (1 + atomMap(childString)))) {
                     // find parent and myself
                     val fatherStringOption = nodes find { _.startsWith("action^" + (layer - 1) + "_" + father) }
-                    assert(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
+                    exitIfNot(fatherStringOption.isDefined, "action^" + (layer - 1) + "_" + father + " is not present but is a fathers")
                     val childStringOption = nodes find { _.startsWith("action^" + layer + "_" + pos) }
-                    assert(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
+                    exitIfNot(childStringOption.isDefined, "action^" + layer + "_" + pos + " is not present but is a child")
                     (fatherStringOption.get, childStringOption.get) :: Nil
                   } else Nil
                 }
@@ -489,7 +489,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
               val parentPath = parentPathString.split(";").filter(_.nonEmpty) map { _.toInt }
               val childPath = childPathString.split(";").filter(_.nonEmpty) map { _.toInt }
 
-              assert(parentPath.length + 1 == childPath.length)
+              exitIfNot(parentPath.length + 1 == childPath.length)
 
               if (parentPath sameElements childPath.take(parentPath.length)) (parent, child) :: Nil else Nil
             }
@@ -526,7 +526,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
             val extract = m.split("_").last.split(",").head
             val ps = actionStringToTask(idNodeMap(pathIDMap(extract)))
             val method = domain.decompositionMethods(m.split(",").last.toInt)
-            assert(method.abstractTask == ps.schema)
+            exitIfNot(method.abstractTask == ps.schema, method.abstractTask.name + " != " + ps.schema.name + "\n" + m + "\n" + pathIDMap(extract) + "\n" + idNodeMap(pathIDMap(extract)))
             ps -> method
           } toMap
 
@@ -542,11 +542,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
             val siblings: Seq[PlanStep] = graph.edges(father).sortWith(nodeSortingFunction).filterNot(_.contains("-")).map(actionStringToTask)
 
-            assert(siblings.count(_.schema == childPS.schema) == 1)
+            exitIfNot(siblings.count(_.schema == childPS.schema) == 1)
 
             val planStepInMethod = planStepsMethodMap(fatherPS).subPlan.planStepsWithoutInitGoal.find(_.schema == childPS.schema).get
 
-            assert(planStepInMethod.schema == childPS.schema)
+            exitIfNot(planStepInMethod.schema == childPS.schema)
 
             childPS -> (fatherPS, planStepInMethod)
           } toMap
@@ -566,7 +566,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
             val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
             //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
             val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
-            val actionSequence: Seq[String] = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
+            val actionSequence: Seq[String] = actionsPerPosition.keySet.toSeq.sorted map { pos => exitIfNot(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
             val taskSequence = actionSequence map actionStringToTask
 
             taskSequence
@@ -595,7 +595,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                   val pathID = x.split("_")(1).split(",").head
 
                   pathID -> (PlanStep(id, action, Nil), pathID)
-                } toMap
+                } filter { _._2._1.schema.isPrimitive } toMap
 
                 val v: Seq[(PlanStep, String)] = pathsToSinks.values.toSeq.distinct
                 val e: Seq[((PlanStep, String), (PlanStep, String))] = orderClauses collect { case (before, after) if pathsToSinks.contains(before) && pathsToSinks.contains(after) =>
@@ -607,17 +607,17 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                 val graphString = partiallyOrderedSolution.dotString(options = DirectedGraphDotOptions(), nodeRenderer = {case (task, _) => task.schema.name})
                 //Dot2PdfCompiler.writeDotToFile(graphString, "solutionOrder.pdf")
 
-
                 // take a topological ordering (any should to it ...) and remove init and goal
                 val withGoal = partiallyOrderedSolution.topologicalOrdering.get.tail
+                println(withGoal.map(_._1.schema.name) mkString "\n")
                 withGoal.take(withGoal.length - 1) map { _._1 }
               case tree: SOGClassicalEncoding =>
                 val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
                 val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
-                val pathToPosByPos = pathToPos groupBy { _.split("-").last } map { case (a, b) => assert(b.size == 1); a -> b.head }
+                val pathToPosByPos = pathToPos groupBy { _.split("-").last } map { case (a, b) => exitIfNot(b.size == 1); a -> b.head }
                 //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
                 val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
-                val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => assert(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
+                val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => exitIfNot(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
                 val taskSequence = actionSequence map { case solAction =>
                   val pos = solAction.split("_").last.split(",").head
                   val ptP = pathToPosByPos(pos)
@@ -639,13 +639,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                 //println(pathToPos mkString "\n")
                 val active = allTrueAtoms filter { _.startsWith("active") }
                 //println(active mkString "\n")
-                assert(pathToPos.size == taskSequence.length)
-                assert(active.size == taskSequence.length, "ACTIVE " + active.size + " vs " + taskSequence.length)
+                exitIfNot(pathToPos.size == taskSequence.length)
+                exitIfNot(active.size == taskSequence.length)
 
-                //assert(graph.sinks.length == taskSequence.length, "SINKS " + graph.sinks.length + " vs " + taskSequence.length)
+                //exitIfNot(graph.sinks.length == taskSequence.length, "SINKS " + graph.sinks.length + " vs " + taskSequence.length)
                 val nextPredicates = allTrueAtoms filter { _.startsWith("next") }
                 //println(nextPredicates mkString "\n")
-                //assert(nextPredicates.size == taskSequence.length + 1, "NEXT " + nextPredicates.size + " vs " + (taskSequence.length + 1))
+                //exitIfNot(nextPredicates.size == taskSequence.length + 1, "NEXT " + nextPredicates.size + " vs " + (taskSequence.length + 1))
 
                 val nextRel: Seq[(Array[Int], Array[Int])] =
                   nextPredicates map { n => n.split("_").drop(1) } map { case l => (l.head, l(1)) } map { case (a, b) => (a.split(";") map { _.toInt }, b.split(";") map {
@@ -654,17 +654,17 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                   } toSeq
 
                 //println(nextRel map { case (a, b) => (a mkString ",") + ", " + (b mkString ",") } mkString "\n")
-                //nextRel foreach { case (a, b) => assert(!(a sameElements b), "IDENTICAL " + (a mkString ",") + ", " + (b mkString ",")) }
+                //nextRel foreach { case (a, b) => exitIfNot(!(a sameElements b), "IDENTICAL " + (a mkString ",") + ", " + (b mkString ",")) }
 
                 val lastPath = nextRel.indices.foldLeft((Array(-1), nextRel))(
                   { case ((current, pairs), _) =>
                     val (nextNext, remaining) = pairs partition { _._1 sameElements current }
-                    assert(nextNext.length == 1)
+                    exitIfNot(nextNext.length == 1)
 
                     (nextNext.head._2, remaining)
                   })
 
-                //assert(lastPath._1 sameElements Integer.MAX_VALUE :: Nil)
+                //exitIfNot(lastPath._1 sameElements Integer.MAX_VALUE :: Nil)
 
                 taskSequence
             }
@@ -707,7 +707,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
     decompGraphNames.vertices foreach { v =>
       val (indeg, outdeg) = decompGraphNames.degrees(v)
       if (!v.id.contains("-1") && !v.id.contains("-2"))
-        assert(indeg + outdeg != 0, "unconnected action " + v)
+        exitIfNot(indeg + outdeg != 0) // , "unconnected action " + v
     }
 
     if (encoder.isInstanceOf[PathBasedEncoding[_, _]]) {
@@ -717,8 +717,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         val nei = decompGraphNames.edges(v)
         val myAction = domain.tasks(v.id.split(",").last.toInt)
         if (myAction.isPrimitive) {
-          assert(nei.size == 1)
-          assert(nei.head.name == v.name)
+          exitIfNot(nei.size == 1)
+          exitIfNot(nei.head.name == v.name)
         } else {
           val subTasks: Seq[Task] = nei map { n => n.id.split(",").last.toInt } collect { case i if domain.tasks.length > i => domain.tasks(i) }
           val tasksSchemaCount = subTasks groupBy { p => p }
@@ -729,7 +729,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
             if (sameSize && sameTasks) tasksSchemaCount.keys forall { t => planSchemaCount(t).size == tasksSchemaCount(t).size } else false
           }
-          assert(possibleMethods.nonEmpty, "Node " + v + " has no valid decomposition")
+          exitIfNot(possibleMethods.nonEmpty, "Node " + v + " has no valid decomposition")
         }
       }
 
@@ -739,8 +739,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         val nei = decompGraphNames.edges(v)
         val myAction = domain.tasks(v.id.split(",").last.toInt)
         if (myAction.isPrimitive) {
-          assert(nei.size == 1)
-          assert(nei.head.name == v.name)
+          exitIfNot(nei.size == 1)
+          exitIfNot(nei.head.name == v.name)
         } else if (encoder.isInstanceOf[TotallyOrderedEncoding]) {
           val subTasks: Seq[Task] = nei map { n => (n.id, domain.tasks(n.id.split(",").last.toInt)) } sortWith { case ((t1, _), (t2, _)) =>
             val path1 = t1.split("_").last.split(",").head.split(";") map { _.toInt }
@@ -750,13 +750,27 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
           val orderedMethods =
             domain.methodsForAbstractTasks(myAction) map { _.subPlan } map { plan =>
-              assert(plan.orderingConstraints.graph.allTotalOrderings.get.size == 1)
+              exitIfNot(plan.orderingConstraints.graph.allTotalOrderings.get.size == 1)
               plan.orderingConstraints.graph.allTotalOrderings.get.head map { _.schema }
             } filter { _ == subTasks }
 
-          assert(orderedMethods.nonEmpty, "Node " + v + " has no correctly ordered decomposition")
+          exitIfNot(orderedMethods.nonEmpty, "Node " + v + " has no correctly ordered decomposition")
         }
       }
+    }
+  }
+
+  def exitIfNot(f: Boolean, mess: String = ""): Unit = {
+    if (!f) {
+      println("ATTENTION! AN ERROR OCCURRED")
+      if (mess != "") println(mess)
+      println(Thread.currentThread().getStackTrace() map { _.toString } mkString "\n")
+      System exit 0
+    }
+    assert(f)
+    if (!f) {
+      println(Thread.currentThread().getStackTrace() map { _.toString } mkString "\n")
+      System exit 0
     }
   }
 
