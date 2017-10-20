@@ -112,9 +112,10 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
         // one method must be applied
         val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, atPossibleMethods map { _._2 })
+        val applicationForcesAbstractTask = atPossibleMethods map {_._2} map {m => impliesSingle(m,possibleTasksToActions(abstractIndex))}
         val atMostOneCanBeApplied = atMostOneOf(atPossibleMethods map { _._2 })
 
-        atMostOneCanBeApplied :+ oneMustBeApplied
+        applicationForcesAbstractTask ++ atMostOneCanBeApplied :+ oneMustBeApplied
       }
 
 
