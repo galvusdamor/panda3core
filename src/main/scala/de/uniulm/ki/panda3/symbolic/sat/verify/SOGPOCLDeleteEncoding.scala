@@ -15,6 +15,8 @@ case class SOGPOCLDeleteEncoding(timeCapsule: TimeCapsule, domain: Domain, initi
                             taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, overrideK: Option[Int] = None) extends SOGPOCLEncoding{
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
+  protected def deletes(path: Seq[Int], precondition: Predicate): String = "del^" + path.mkString(";") + "_" + precondition.name
+
   def causalThreatsFormula(supporterLiterals: Seq[(Seq[Int], Seq[Int], Predicate)]) : Seq[Clause] = {
 
     val willDelete: Seq[Clause] = extendedSOG.vertices flatMap { case (path, tasks) =>

@@ -15,8 +15,6 @@ abstract class SOGPartialNoPath extends SOGEncoding {
   protected val before: ((Seq[Int], Seq[Int])) => String =
     memoise[(Seq[Int], Seq[Int]), String]({ case (pathA: Seq[Int], pathB: Seq[Int]) => assert(pathA != pathB); "before_" + pathA.mkString(";") + "_" + pathB.mkString(";") })
 
-  protected def supporter(pathA: Seq[Int], pathB: Seq[Int], precondition: Predicate): String = "supp^" + pathA.mkString(";") + "_" + pathB.mkString(";") + "_" + precondition.name
-
   override lazy val noAbstractsFormula: Seq[Clause] = primitivePaths flatMap { case (p, ts) => ts filter { _.isAbstract } map { t => Clause((pathAction(p.length - 1, p, t), false)) } }
 
 

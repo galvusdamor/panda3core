@@ -51,7 +51,7 @@ trait SOGClassicalEncoding extends SOGEncoding {
     }
     println("C " + onlySelectableIfChosen.length)
 
-    // positions may only contain primitive tasks is mapped to a path
+    // positions may only contain primitive tasks if mapped to a path
     val onlyPrimitiveIfChosen = Range(0, taskSequenceLength) flatMap { case position =>
       val actionAtoms = domain.primitiveTasks map { action(K - 1, position, _) }
       val atMostOne = atMostOneOf(actionAtoms)

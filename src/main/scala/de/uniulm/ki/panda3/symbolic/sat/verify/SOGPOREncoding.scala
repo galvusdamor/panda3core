@@ -28,6 +28,7 @@ case class SOGPOREncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan:
 
   protected def trueBefore(pathA: Seq[Int], precondition: Predicate): String = "true^" + pathA.mkString(";") + "_" + precondition.name
 
+  protected def supporter(pathA: Seq[Int], pathB: Seq[Int], precondition: Predicate): String = "supp^" + pathA.mkString(";") + "_" + pathB.mkString(";") + "_" + precondition.name
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
     // init and goal must be contaiend in the final plan

@@ -18,7 +18,9 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath {
 
   protected def preconditionOfPath(path: Seq[Int], precondition: Predicate): String = "prec^" + path.mkString(";") + "_" + precondition.name
 
-  protected def deletes(path: Seq[Int], precondition: Predicate): String = "del^" + path.mkString(";") + "_" + precondition.name
+  protected def effectOfPath(path: Seq[Int], precondition: Predicate): String = "eff^" + path.mkString(";") + "_" + precondition.name
+
+  protected def supporter(pathA: Seq[Int], pathB: Seq[Int], precondition: Predicate): String = "supp^" + pathA.mkString(";") + "_" + pathB.mkString(";") + "_" + precondition.name
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
 
@@ -37,6 +39,15 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath {
     }
     }
 
+    val ifEffectThenPresent = extendedSOG.vertices flatMap { case node@(path, tasks) =>
+      val allEffects: Set[Predicate] = tasks flatMap { _.effectsAsPredicateBool collect { case (eff, true) => eff } }
+
+      allEffects map { case eff =>
+        val producers = tasks.toSeq filter { _.effectsAsPredicateBool contains ((eff, true)) } map { t => pathAction(path.length, path, t) }
+        impliesRightOr(effectOfPath(path, eff) :: Nil, producers)
+      }
+    }
+
     val preconditionsMustBeSupported = preconditionsMustBeSupportedTemp map { _._1 }
     println("Preconditions must supported: " + preconditionsMustBeSupported.length + " clauses")
     val preconditions = preconditionsMustBeSupportedTemp map { _._2 } distinct
@@ -49,18 +60,12 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath {
       val potentialSupportingTasks = extendedSOG.vertices filterNot excludedTasks flatMap { case supporter@(sPath, sTasks) =>
         sTasks filter { _.effectsAsPredicateBool exists { case (p, s) => s && p == prec } } map { t => (supporter, t) }
       }
-      val supporterLiterals = potentialSupportingTasks map { _._1._1 } map { p => supporter(p, path, prec) }
+      val supporterLiterals = potentialSupportingTasks map { _._1._1 } map { p => (supporter(p, path, prec), p) }
 
-      val supportedPrecMustHaveSupporter = impliesRightOr(preconditionOfPath(path, prec) :: Nil, supporterLiterals.distinct)
-      // TODO add AMO constraint?
-      val supporterMustBePresent: Seq[Clause] = (supporterLiterals zip potentialSupportingTasks).groupBy(_._2._1) map { case (supporter@(sPath, _), taskList) =>
-        assert((taskList map { _._1 }).distinct.length == 1)
-        val supportLiteral = taskList.head._1
+      val supportedPrecMustHaveSupporter = impliesRightOr(preconditionOfPath(path, prec) :: Nil, supporterLiterals.map(_._1).distinct)
+      val supportLeadsToProduction = supporterLiterals map {case (supportLiteral,path) => impliesSingle(supportLiteral, effectOfPath(path,prec))}
 
-        impliesRightOr(supportLiteral :: Nil, taskList map { _._2._2 } map { t => pathAction(sPath.length, sPath, t) })
-      } toSeq
-
-      (supporterMustBePresent :+ supportedPrecMustHaveSupporter, potentialSupportingTasks zip supporterLiterals map { x => (x._1._1._1, path, prec) })
+      (supportLeadsToProduction :+ supportedPrecMustHaveSupporter, potentialSupportingTasks map { x => (x._1._1, path, prec) })
     }
 
     val supportedPreconditionsMustHaveSupporter = supportedPreconditionsMustHaveSupporterTemp flatMap { _._1 }
@@ -83,12 +88,12 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath {
     var endTime = System.currentTimeMillis()
     println("Order is transitive and respects SOG: " + orderMustBeTransitive.length + " clauses, time needed " + (endTime - startTime).toDouble./(1000))
 
-    val noCausalThreat :Seq[Clause] = causalThreatsFormula(supporterLiterals)
+    val noCausalThreat: Seq[Clause] = causalThreatsFormula(supporterLiterals)
 
     initAndGoalMustBePresent ++ preconditionsMustBeSupported ++ supportedPreconditionsMustHaveSupporter ++
-      supportImpliesOrder ++ orderMustBeTransitive ++ noCausalThreat
+      supportImpliesOrder ++ ifEffectThenPresent ++ orderMustBeTransitive ++ noCausalThreat
   }
 
-  def causalThreatsFormula(supporterLiterals: Seq[(Seq[Int], Seq[Int], Predicate)]) : Seq[Clause]
+  def causalThreatsFormula(supporterLiterals: Seq[(Seq[Int], Seq[Int], Predicate)]): Seq[Clause]
 
 }
