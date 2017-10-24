@@ -16,6 +16,8 @@ trait NodeValue extends DefaultLongInfo {
 
   def containsShrink() : Boolean
 
+  var containsFactIndexes: Set[Int]
+
 }
 
 case class ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem) extends NodeValue {
@@ -24,12 +26,17 @@ case class ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem) extends No
   override def longInfo: String = value + ": " + sasPlusProblem.factStrs(value)
 
   override def containsShrink() : Boolean = false
+
+  override var containsFactIndexes = Set(value)
+
 }
 
 case class MergeNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPlusProblem) extends NodeValue {
   override def isContained(state: util.BitSet): Boolean = left.isContained(state) && right.isContained(state)
 
-  override def containsShrink() : Boolean = left.containsShrink() || right.containsShrink()
+  override def containsShrink() : Boolean = left.containsShrink() || right.containsShrink();
+
+  override var containsFactIndexes: Set[Int] = left.containsFactIndexes | right.containsFactIndexes;
 
   //override def longInfo: String = "(" + left.longInfo + ", \n" + right.longInfo + ")"
   override def longInfo: String = {
@@ -61,5 +68,7 @@ case class ShrinkNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPlus
 
   override def longInfo: String = "(" + left.longInfo + ")\n or \n(" + right.longInfo + ")"
 
-  override def containsShrink() : Boolean = true
+  override def containsShrink() : Boolean = true;
+
+  override var containsFactIndexes: Set[Int] = left.containsFactIndexes | right.containsFactIndexes;
 }

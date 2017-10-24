@@ -3,10 +3,13 @@ package de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.util.Dot2PdfCompiler;
 import de.uniulm.ki.util.EdgeLabelledGraph;
+import scala.Int;
 import scala.Tuple3;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.*;
 
@@ -21,7 +24,7 @@ public final class SingleGraphMethods {
 
         //Tuple2<Integer[],Tuple3[]> graphData = getSingleNodesAndEdgesForVarIndex(p,varIndex);
 
-        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer> graph = getSingleGraphForVarIndex(p,varIndex);
+        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph = getSingleGraphForVarIndex(p,varIndex);
 
         //EdgeLabelledGraphSingle<String,String> stringGraph = convertSingleGraphToStringGraph(p, graph);
 
@@ -31,7 +34,7 @@ public final class SingleGraphMethods {
     }
 
 
-    public static EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer> getSingleGraphForVarIndex(SasPlusProblem p, int varIndex){
+    public static EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> getSingleGraphForVarIndex(SasPlusProblem p, int varIndex){
 
         int firstIndex = p.firstIndex[varIndex];
         int lastIndex = p.lastIndex[varIndex];
@@ -66,8 +69,10 @@ public final class SingleGraphMethods {
 
         int startID = findStartNodeIDinSingleVarGraph(p, idMapping, containedIndexes);
 
+        Set<Integer> usedFactIndexes = new HashSet<>(containedIndexes);
 
-        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer> graph = new EdgeLabelledGraph<>(nodeIDs, multiEdges, idMapping, startID);
+
+        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph = new EdgeLabelledGraph<>(nodeIDs, multiEdges, idMapping, startID, usedFactIndexes);
 
         return graph;
     }
