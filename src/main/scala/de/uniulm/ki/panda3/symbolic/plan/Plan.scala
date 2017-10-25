@@ -598,6 +598,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
           val methodOfParent = planStepDecomposedByMethod(parent)
 
           if (methodOfParent.subPlan.orderingConstraints.lt(child1, child2)) {
+            assert(primitiveOrdering.indexOf(ps1) < primitiveOrdering.indexOf(ps2), ps1.schema.name + " not before " + ps2.schema.name)
             //println("ORDER " + ps1.schema.name + " < " + ps2.schema.name + " parent " + parent.schema.name)
             OrderingConstraint(ps1, ps2) :: Nil
           } else Nil
