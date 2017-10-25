@@ -116,9 +116,9 @@ case class VerifyRunner(domain: Domain, initialPlan: Plan, satsolver: Solvertype
       }
 
       encoder match {
-        case tot: TotallyOrderedEncoding => informationCapsule.set(VerifyRunner.MAX_PLAN_LENGTH, tot.primitivePaths.length)
-        case tree: TreeEncoding          => informationCapsule.set(VerifyRunner.MAX_PLAN_LENGTH, tree.taskSequenceLength)
-        case _                           =>
+        case tot: TotallyOrderedEncoding     => informationCapsule.set(VerifyRunner.MAX_PLAN_LENGTH, tot.primitivePaths.length)
+        case tree: TreeVariableOrderEncoding => informationCapsule.set(VerifyRunner.MAX_PLAN_LENGTH, tree.taskSequenceLength)
+        case _                               =>
       }
 
       println(timeCapsule.integralDataMap())

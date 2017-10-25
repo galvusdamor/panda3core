@@ -17,7 +17,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     .planStepsWithoutInitGoal.map(_.schema.name).mkString("\n"))
 
   // this is only needed in the tree encoding
-  override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, taskOrdering: Seq[Task]): Seq[Clause] = Nil
+  override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions : Map[Int,Int]): Seq[Clause] = Nil
 
   override lazy val goalState: Seq[Clause] = goalStateOfLength(taskSequenceLength)
 

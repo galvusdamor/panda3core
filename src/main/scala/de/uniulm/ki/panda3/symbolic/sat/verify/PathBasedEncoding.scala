@@ -31,7 +31,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
   ///// methods to make the formula generation configurable
 
-  protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, taskOrdering: Seq[Task]): Seq[Clause]
+  protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions: Map[Int,Int]): Seq[Clause]
 
   protected def initialPayload(possibleTasks: Set[Task], path: Seq[Int]): Payload
 
@@ -112,12 +112,11 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
         // one method must be applied
         val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, atPossibleMethods map { _._2 })
-        val applicationForcesAbstractTask = atPossibleMethods map {_._2} map {m => impliesSingle(m,possibleTasksToActions(abstractIndex))}
+        val applicationForcesAbstractTask = atPossibleMethods map { _._2 } map { m => impliesSingle(m, possibleTasksToActions(abstractIndex)) }
         val atMostOneCanBeApplied = atMostOneOf(atPossibleMethods map { _._2 })
 
         applicationForcesAbstractTask ++ atMostOneCanBeApplied :+ oneMustBeApplied
       }
-
 
 
       // 2. part: determine children according to selected method
@@ -139,9 +138,16 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
         val methodToken = method(layer, path, methodIndex)
 
+        // prepare method representation for additionalClauses
+        val methodChildrenPositions: Map[Int, Int] = decompositionMethod.subPlan.planStepsWithoutInitGoal map { case ps =>
+          val psBefore = decompositionMethod.subPlan.planStepsWithoutInitGoal.filter(_.schema == ps.schema)
+          val psIndexOnSameType = psBefore.indexOf(ps)
+          val psIndex = methodTasks.zipWithIndex.filter(_._1 == ps.schema)(psIndexOnSameType)._2
+          ps.id -> methodToPositions(methodIndexOnApplicableMethods)(psIndex)
+        } toMap
 
         impliesRightAnd(methodToken :: Nil, childAtoms) ++ impliesAllNot(methodToken, unusedActions) ++
-          additionalClausesForMethod(layer, path, decompositionMethod, methodToken, null) // TODO: This was originally taskOrdering)
+          additionalClausesForMethod(layer, path, decompositionMethod, methodToken, methodChildrenPositions) // TODO: This was originally taskOrdering)
       }
 
       // if there is nothing select at the current position we are not allowed to create new tasks

@@ -158,6 +158,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
           encodingToUse match {
+            case TreeBeforeEncoding           => TreeVariableOrderEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
             case ClassicalForbiddenEncoding   => SOGClassicalForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = false)
             case ClassicalImplicationEncoding => SOGClassicalForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = true)
             case ClassicalN4Encoding          => SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
@@ -218,9 +219,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       }
 
       encoder match {
-        case tot: TotallyOrderedEncoding => informationCapsule.set(Information.MAX_PLAN_LENGTH, tot.primitivePaths.length)
-        case tree: TreeEncoding          => informationCapsule.set(Information.MAX_PLAN_LENGTH, tree.taskSequenceLength)
-        case _                           =>
+        case tot: TotallyOrderedEncoding     => informationCapsule.set(Information.MAX_PLAN_LENGTH, tot.primitivePaths.length)
+        case tree: TreeVariableOrderEncoding => informationCapsule.set(Information.MAX_PLAN_LENGTH, tree.taskSequenceLength)
+        case _                               =>
       }
 
       //println(timeCapsule.integralDataMap())
@@ -496,11 +497,14 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           }
         }
         val graph: DirectedGraph[String] = SimpleDirectedGraph(nodes, edges)
-        //Dot2PdfCompiler.writeDotToFile(graph,"dectree.pdf")
+        Dot2PdfCompiler.writeDotToFile(graph,"dt-tree.pdf")
         // give all task a unique ID
         val nodeIDMap: Map[String, Int] = nodes.zipWithIndex.toMap
         val idNodeMap: Map[Int, String] = nodeIDMap.map(_.swap)
         val pathIDMap: Map[String, Int] = nodeIDMap map { case (n, id) => n.split("_").last.split(",").head -> id }
+
+        //println(domain.tasks.zipWithIndex map {case (t,i) => i + ": " + t.name} mkString "\n")
+        //println(domain.decompositionMethods.zipWithIndex map {case (t,i) => i + ": " + t.name} mkString "\n")
 
         def actionStringToTask(actionString: String): PlanStep = {
           val actionIDX = actionString.split(",").last.toInt
@@ -519,6 +523,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         val shortPS = nodes filterNot { _.contains("-") } map actionStringToTask map { ps => ps.id + " " + ps.schema.name + "\t" + domain.tasks.indexOf(ps.schema) }
 
         val allMethods = formulaVariables filter { _.startsWith("method^") } filter allTrueAtoms.contains
+
+        //println(allMethods.sorted mkString "\n")
 
         // attach methods to respective tasks
         val planStepsMethodMap: Map[PlanStep, DecompositionMethod] = if (!extractSolutionWithHierarchy) Map() else
@@ -562,12 +568,60 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
               println("task " + t + " " + actionIDX + " " + domain.tasks(actionIDX).name)
               domain.tasks(actionIDX) }*/
             graph.sinks sortWith nodeSortingFunction map actionStringToTask
-          case tree: TotallyOrderedEncoding =>
+          case tree: TreeVariableOrderEncoding =>
             val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
+            val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
+            val pathToPosByPos = pathToPos groupBy { _.split("-").last } map { case (a, b) => exitIfNot(b.size == 1); a -> b.head }
             //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
             val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
-            val actionSequence: Seq[String] = actionsPerPosition.keySet.toSeq.sorted map { pos => exitIfNot(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
-            val taskSequence = actionSequence map actionStringToTask
+            val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => exitIfNot(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
+            val taskSequence = actionSequence map { case solAction =>
+              val pos = solAction.split("_").last.split(",").head
+              val ptP = pathToPosByPos(pos)
+              val path = ptP.split("_").last.split("-").head
+
+              // find matching atom
+              nodes find { _ contains ("_" + path + ",") } get
+            } map actionStringToTask
+
+
+            //println("Primitive Sequence with paths")
+            //println(actionSequence map actionStringToInfoString mkString "\n")
+
+            //val innerActions = allTrueAtoms filter { _.startsWith("action!") } filterNot { t => t.contains("-1") || t.contains("-2") }
+            //println("Inner actions with paths")
+            //println(innerActions map actionStringToInfoString mkString "\n")
+
+
+            //println(pathToPos mkString "\n")
+            val active = allTrueAtoms filter { _.startsWith("active") }
+            //println(active mkString "\n")
+            exitIfNot(pathToPos.size == taskSequence.length)
+            exitIfNot(active.size == taskSequence.length)
+
+            //exitIfNot(graph.sinks.length == taskSequence.length, "SINKS " + graph.sinks.length + " vs " + taskSequence.length)
+            val nextPredicates = allTrueAtoms filter { _.startsWith("next") }
+            //println(nextPredicates mkString "\n")
+            //exitIfNot(nextPredicates.size == taskSequence.length + 1, "NEXT " + nextPredicates.size + " vs " + (taskSequence.length + 1))
+
+            val nextRel: Seq[(Array[Int], Array[Int])] =
+              nextPredicates map { n => n.split("_").drop(1) } map { case l => (l.head, l(1)) } map { case (a, b) => (a.split(";") map { _.toInt }, b.split(";") map {
+                _.toInt
+              })
+              } toSeq
+
+            //println(nextRel map { case (a, b) => (a mkString ",") + ", " + (b mkString ",") } mkString "\n")
+            //nextRel foreach { case (a, b) => exitIfNot(!(a sameElements b), "IDENTICAL " + (a mkString ",") + ", " + (b mkString ",")) }
+
+            val lastPath = nextRel.indices.foldLeft((Array(-1), nextRel))(
+              { case ((current, pairs), _) =>
+                val (nextNext, remaining) = pairs partition { _._1 sameElements current }
+                exitIfNot(nextNext.length == 1)
+
+                (nextNext.head._2, remaining)
+              })
+
+            //exitIfNot(lastPath._1 sameElements Integer.MAX_VALUE :: Nil)
 
             taskSequence
 
@@ -679,7 +733,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
         //println("\n")
-        //println(primitiveSolution map { t => t.isPrimitive + " " + t.name } mkString "\n")
+        //println(primitiveSolution map { t => t.schema.isPrimitive + " " + t.schema.name } mkString "\n")
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")
@@ -777,6 +831,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 }
 
 sealed trait POEncoding
+
+object TreeBeforeEncoding extends POEncoding
 
 object ClassicalForbiddenEncoding extends POEncoding
 
