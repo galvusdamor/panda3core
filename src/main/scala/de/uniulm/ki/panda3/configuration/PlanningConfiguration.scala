@@ -825,19 +825,28 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
 
+
+    val predicatesRemoved = if (domain.isGround) {
+        info("Removing unnecessary predicates ... ")
+        val compiled = PrunePredicates.transform(domain, problem, ())
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        compiled
+    } else (domain,problem)
+
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
     val liftedResult = if (preprocessingConfiguration.liftedReachability) {
       info("Lifted reachability analysis ... ")
-      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(domain, problem, emptyAnalysis)
+      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(predicatesRemoved._1,predicatesRemoved._2, emptyAnalysis)
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
-      val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
+      val hierarchyPruned = PruneHierarchy.transform(predicatesRemoved._1,predicatesRemoved._2, disallowedTasks.toSet)
       val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
-    } else ((domain, problem), emptyAnalysis)
+    } else (predicatesRemoved, emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
     assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { liftedResult._1._1.tasks contains _.schema })
