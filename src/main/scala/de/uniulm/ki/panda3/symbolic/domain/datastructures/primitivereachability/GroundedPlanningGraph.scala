@@ -579,7 +579,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       Set()
     } else {
       // TODO: could possibly removed
-      assignmentMap foreach { case (v, c) => assert(v.sort.elements contains c) }
+      //assignmentMap foreach { case (v, c) => assert(v.sort.elements contains c) }
       val remainingLiteralPairs = literalPairs.tail
       val remainingUnfulfilledPreconditions = unfulfilledPreconditions filterNot (precondition => literalPairs.head._2 == precondition)
       val updatedUsedPropositions = usedPropositions :+ literalPairs.head._1
