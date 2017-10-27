@@ -23,7 +23,7 @@ import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy, PrunePredicates}
+import de.uniulm.ki.panda3.symbolic.compiler.pruning._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, SASPlusGrounding}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
@@ -1016,6 +1016,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       if (!runForGrounder || !preprocessingConfiguration.groundDomain) (if (preprocessingConfiguration.compileUselessAbstractTasks)
         CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand useless abstract tasks", USELESS_ABSTRACT_TASKS) :: Nil
       else Nil) ::
+        (CompilerConfiguration(PruneUselessAbstractTasks, (), "abstract tasks without methods", USELESS_ABSTRACT_TASKS) :: Nil) ::
         // this one has to be the last
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
