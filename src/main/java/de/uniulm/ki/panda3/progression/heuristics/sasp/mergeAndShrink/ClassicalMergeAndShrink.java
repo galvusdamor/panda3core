@@ -10,6 +10,7 @@ import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ShrinkNode;
 import de.uniulm.ki.util.Dot2PdfCompiler;
 import de.uniulm.ki.util.EdgeLabelledGraph;
 
+import scala.Int;
 import scala.Tuple2;
 import scala.Tuple3;
 
@@ -22,16 +23,36 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
     public ClassicalMergeAndShrink(SasPlusProblem p) {
 
-/*        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> testGraph = getMultiGraphUntilVarID(p, 1);
-
-        printMultiGraph(p, testGraph, "graph4.pdf");
-
-        System.out.println(getGoalNodes(p, testGraph));
-
-        System.exit(0);*/
 
 
         EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph = getMultiGraphUntilVarID(p, 1);
+
+        graph = shrinkingStrategy1(p, graph);
+
+        graph = mergeWithVar(p, graph,2);
+
+        graph = shrinkingStrategy1(p, graph);
+
+        graph = mergeWithVar(p, graph,3);
+
+
+        printMultiGraph(p, graph, "graph4.pdf");
+
+        /*HashMap<Integer,Integer> distancesFromStart = getDistancesFromStart(p, graph);
+
+        System.out.println(distancesFromStart);
+
+        HashMap<Integer,Integer> distancesFromClosestGoal = getDistancesFromGoal(p, graph);
+
+        System.out.println(distancesFromClosestGoal);*/
+
+        graph = shrinkingStrategy1(p, graph);
+
+
+        printMultiGraph(p, graph, "graph5.pdf");
+
+
+        System.exit(0);
 
         //printMultiGraph(p, graph, "graph4.pdf");
 
@@ -104,6 +125,16 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         goalNodes = getGoalNodes(p, graph);
 
         System.out.println(goalNodes);
+
+        HashMap<Integer,Integer> distancesFromStart2 = getDistancesFromStart(p, graph);
+
+        System.out.println(distancesFromStart2);
+
+        HashMap<Integer,Integer> distancesFromClosestGoal2 = getDistancesFromGoal(p, graph);
+
+        System.out.println(distancesFromClosestGoal2);
+
+        shrinkingStrategy1(p,graph);
 
 
         System.exit(0);
@@ -500,7 +531,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         return newGraph;
     }
 
-    public HashMap<Integer, Integer> getDistancesFromStart(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+    public static HashMap<Integer, Integer> getDistancesFromStart(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
 
         int startNodeID = graph.startNodeID();
 
@@ -525,30 +556,6 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         return distancesFromStartMap;
     }
 
-    public HashMap<Integer, Integer> getDistancesFromGoal(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
-
-        int startNodeID = graph.startNodeID();
-
-        ArrayList<Integer> nodesToKeep = new ArrayList<>();
-
-        ArrayList<Integer> nextNodes = new ArrayList<>();
-
-        nextNodes.add(startNodeID);
-
-        nodesToKeep.add(startNodeID);
-
-        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = getIDToOutgoingEdgesMap(graph);
-
-        HashMap<Integer, Integer> distancesFromStartMap = new HashMap<>();
-
-        distancesFromStartMap.put(graph.startNodeID(), 0);
-
-        Tuple2<ArrayList<Integer>,HashMap<Integer, Integer>> result = reverseBreadthSearchToFindDistances(p, nextNodes, nodesToKeep, outgoingEdgesMap, distancesFromStartMap);
-
-        distancesFromStartMap = result._2();
-
-        return distancesFromStartMap;
-    }
 
     public HashMap<Integer, NodeValue> dismissIDMappingOfNotReachableNodeIDs(HashMap<Integer, NodeValue> oldIDMapping, ArrayList<Integer> nodesToDismiss){
 
@@ -608,7 +615,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
     }
 
-    public Tuple2<ArrayList<Integer>,HashMap<Integer, Integer>> breadthSearchToFindDistances(SasPlusProblem p, ArrayList<Integer> nextNodes, ArrayList<Integer> nodesToKeep,
+    public static Tuple2<ArrayList<Integer>,HashMap<Integer, Integer>> breadthSearchToFindDistances(SasPlusProblem p, ArrayList<Integer> nextNodes, ArrayList<Integer> nodesToKeep,
                                                                               HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap, HashMap<Integer, Integer> distancesFromStart){
 
         ArrayList<Integer> newNextNodes = new ArrayList<>(nextNodes);
@@ -642,39 +649,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
     }
 
-    public Tuple2<ArrayList<Integer>,HashMap<Integer, Integer>> reverseBreadthSearchToFindDistances(SasPlusProblem p, ArrayList<Integer> nextNodes, ArrayList<Integer> nodesToKeep,
-                                                                                             HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap, HashMap<Integer, Integer> distancesFromStart){
 
-        ArrayList<Integer> newNextNodes = new ArrayList<>(nextNodes);
-
-        ArrayList<Integer> reachedNodes = new ArrayList<>(nodesToKeep);
-
-        if (nextNodes.size()>0) {
-
-            int nextNode = nextNodes.get(0);
-
-            int distanceOfNextNodeFromStartNode = distancesFromStart.get(nextNode);
-
-            ArrayList<Tuple3<Integer, Integer, Integer>> outgoingEdges = outgoingEdgesMap.get(nextNode);
-            newNextNodes.remove(0);
-            for (Tuple3<Integer, Integer, Integer> outgoingEdge : outgoingEdges){
-                int endID = outgoingEdge._3();
-                if (!reachedNodes.contains(endID)){
-                    reachedNodes.add(endID);
-                    newNextNodes.add(endID);
-                    int nextDistance = distanceOfNextNodeFromStartNode + p.costs[outgoingEdge._2()];
-                    //distanceOfNextNodeFromStartNode + 1;
-                    distancesFromStart.put(endID, nextDistance);
-                }
-            }
-
-            return breadthSearchToFindDistances(p, newNextNodes, reachedNodes, outgoingEdgesMap, distancesFromStart);
-
-        }
-
-        return new Tuple2<ArrayList<Integer>,HashMap<Integer, Integer>>(reachedNodes, distancesFromStart);
-
-    }
 
     public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToOutgoingEdgesMap(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
 
@@ -696,22 +671,42 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
     }
 
 
-    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getOpIDToEdgesMap(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToIncomingEdgesMap(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
 
-        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> opIDToEdgesMap = new HashMap<>();
+        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
 
-        for (int i=0; i<p.numOfOperators; i++){
+        for (int i: graph.idMapping().keySet()){
             ArrayList<Tuple3<Integer, Integer, Integer>> edges = new ArrayList<>();
-            opIDToEdgesMap.put(i,edges);
+            outgoingEdgesMap.put(i,edges);
         }
 
         for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges()){
 
-            opIDToEdgesMap.get(edge._2()).add(edge);
+            outgoingEdgesMap.get(edge._3()).add(edge);
 
         }
 
-        return opIDToEdgesMap;
+        return outgoingEdgesMap;
+
+    }
+
+
+    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getOpIDToEdgesMap(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+
+        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> opIDToOutgoingEdgesMap = new HashMap<>();
+
+        for (int i=0; i<p.numOfOperators; i++){
+            ArrayList<Tuple3<Integer, Integer, Integer>> edges = new ArrayList<>();
+            opIDToOutgoingEdgesMap.put(i,edges);
+        }
+
+        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges()){
+
+            opIDToOutgoingEdgesMap.get(edge._2()).add(edge);
+
+        }
+
+        return opIDToOutgoingEdgesMap;
 
     }
 
@@ -817,6 +812,184 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
         return null;
 
+
+    }
+
+
+/*    public HashMap<Integer, Integer> getDistancesFromGoal(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+
+        int startNodeID = graph.startNodeID();
+
+        ArrayList<Integer> nodesToKeep = new ArrayList<>();
+
+        ArrayList<Integer> nextNodes = new ArrayList<>();
+
+        nextNodes.add(startNodeID);
+
+        nodesToKeep.add(startNodeID);
+
+        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = getIDToIncomingEdgesMap(graph);
+
+        HashMap<Integer, Integer> distancesFromStartMap = new HashMap<>();
+
+        distancesFromStartMap.put(graph.startNodeID(), 0);
+
+        Tuple2<ArrayList<Integer>,HashMap<Integer, Integer>> result = reverseBreadthSearchToFindDistances(p, nextNodes, outgoingEdgesMap, distancesFromStartMap);
+
+        distancesFromStartMap = result._2();
+
+        return distancesFromStartMap;
+    }*/
+
+    public HashMap<Integer,Integer> getDistancesFromGoal(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+
+        HashMap<Integer, Integer> distancesToGoalMap = new HashMap<>();
+
+        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> incomingEdgesMap = getIDToIncomingEdgesMap(graph);
+
+        ArrayList<Integer> nextNodes = new ArrayList<>();
+
+        Set<Integer> goalNodes = getGoalNodes(p, graph);
+
+        for (int i: goalNodes){
+            distancesToGoalMap.put(i,0);
+            nextNodes.add(i);
+        }
+
+        distancesToGoalMap = reverseBreadthSearchToFindDistances(p, nextNodes, incomingEdgesMap, distancesToGoalMap);
+
+
+        return distancesToGoalMap;
+
+    }
+
+    public HashMap<Integer, Integer> reverseBreadthSearchToFindDistances(SasPlusProblem p, ArrayList<Integer> nextNodes,
+                                                                                                    HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> incomingEdgesMap, HashMap<Integer, Integer> distancesFromGoal){
+
+        ArrayList<Integer> newNextNodes = new ArrayList<>(nextNodes);
+
+        if (nextNodes.size()>0) {
+
+            int nextNode = nextNodes.get(0);
+
+            int distanceOfNextNodeFromGoalNode = distancesFromGoal.get(nextNode);
+
+            ArrayList<Tuple3<Integer, Integer, Integer>> incomingEdges = incomingEdgesMap.get(nextNode);
+            newNextNodes.remove(0);
+            for (Tuple3<Integer, Integer, Integer> incomingEdge : incomingEdges){
+                int startID = incomingEdge._1();
+                int nextDistance = distanceOfNextNodeFromGoalNode + p.costs[incomingEdge._2()];
+                if (!distancesFromGoal.keySet().contains(startID) || (nextDistance<distancesFromGoal.get(startID))){
+                    newNextNodes.add(startID);
+
+                    //distanceOfNextNodeFromGoalNode + 1;
+                    distancesFromGoal.put(startID, nextDistance);
+                }
+            }
+
+            return reverseBreadthSearchToFindDistances(p, newNextNodes, incomingEdgesMap, distancesFromGoal);
+
+        }
+
+        return distancesFromGoal;
+
+    }
+
+
+
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> shrinkingStrategy1(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+
+
+
+        HashMap<Integer,Integer> distancesFromClosestGoalNode = getDistancesFromGoal(p, graph);
+
+        HashMap<Integer,Integer> distancesFromStartNode = getDistancesFromStart(p, graph);
+
+
+        HashMap<Integer,Integer> summedDistances = new HashMap<>();
+
+        for (int id:graph.idMapping().keySet()){
+
+            int distanceFromStart = distancesFromStartNode.get(id);
+            int distanceFromGoal = distancesFromClosestGoalNode.get(id);
+            summedDistances.put(id,distanceFromStart+distanceFromGoal);
+        }
+
+        //System.out.println(summedDistances);
+
+        ArrayList<Integer> farthestNodesFromStartAndGoal = getNodesFarthestFromStartAndGoal(graph, summedDistances);
+
+        ArrayList<ArrayList<Integer>> nodesToShrink = new ArrayList<>();
+
+        nodesToShrink.add(farthestNodesFromStartAndGoal);
+
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> shrinkedGraph = shrinkingStep(p,graph, nodesToShrink);
+
+
+        return shrinkedGraph;
+
+    }
+
+    public static ArrayList<Integer> getNodesFarthestFromStartAndGoal(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph, HashMap<Integer,Integer> summedDistances){
+
+        ArrayList<Integer> farthestNodes = new ArrayList<>();
+
+        int maximumDistance = Collections.max(summedDistances.values());
+
+        int counter = Collections.frequency(summedDistances.values(),maximumDistance);
+
+        //System.out.println("Maximum: " + maximumDistance + ", Frequency: " + counter);
+
+        if (counter>1) {
+            for (int id : graph.idMapping().keySet()) {
+                if (summedDistances.get(id) == maximumDistance) {
+                    farthestNodes.add(id);
+                }
+            }
+        }else{
+
+           /* ArrayList<Integer> summedDistancesWithoutHighest = new ArrayList<Integer>();
+            summedDistancesWithoutHighest.addAll(summedDistances.values());
+            System.out.println(summedDistancesWithoutHighest);
+            summedDistancesWithoutHighest.remove(maximumDistance);
+            System.out.println(summedDistancesWithoutHighest);*/
+
+
+            HashMap<Integer,Integer> summedDistancesWithoutHighest = new HashMap<>();
+
+            summedDistancesWithoutHighest.putAll(summedDistances);
+
+            //System.out.println(summedDistances);
+            //System.out.println(summedDistancesWithoutHighest);
+
+
+            for (int id : graph.idMapping().keySet()) {
+                if (summedDistances.get(id) == maximumDistance) {
+                    farthestNodes.add(id);
+                    summedDistancesWithoutHighest.remove(id);
+                    break;
+                }
+            }
+
+
+            //System.out.println(summedDistancesWithoutHighest);
+
+
+            int secondMaximumDistance = Collections.max(summedDistancesWithoutHighest.values());
+
+            //System.out.println("Second Maximum: " + secondMaximumDistance);
+
+            for (int id : graph.idMapping().keySet()) {
+                if (summedDistances.get(id) == secondMaximumDistance) {
+                    farthestNodes.add(id);
+                }
+            }
+
+        }
+
+        //System.out.println(farthestNodes);
+
+        return farthestNodes;
 
     }
 
