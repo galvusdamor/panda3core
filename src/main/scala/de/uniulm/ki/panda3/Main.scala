@@ -169,36 +169,39 @@ object Main {
     redistributedLines mkString "\n"
   }
 
-  val helpDB: Map[String, (String, String, Seq[String], Seq[String])] = {
+  val helpDB: Map[String, (String, String, Seq[String], String, Seq[String])] = {
     val dbLines: Seq[String] = Source.fromInputStream(getClass.getResourceAsStream("helpdb.txt")).getLines().toSeq
 
     val parsed: Seq[Seq[String]] = dbLines.foldLeft[(Seq[Seq[String]], Seq[String])]((Nil, Nil))(
       {
         case ((processed, current), newLine) =>
-          val x: Seq[String] = current :+ newLine
-          if (newLine.startsWith("$")) (processed :+ x, Nil) else (processed, x)
+          val x: Seq[String] = current :+ (if (newLine.trim == "\\n") "" else newLine)
+          if (newLine.isEmpty || newLine.trim.startsWith("%")) (processed, current)
+          else if (newLine.startsWith("$")) (processed :+ x, Nil)
+          else (processed, x)
       })._1
 
-    val entries: Seq[(String, (String, String, Seq[String], Seq[String]))] = parsed map { entry =>
+    val entries: Seq[(String, (String, String, Seq[String], String, Seq[String]))] = parsed map { entry =>
       val keys: Seq[String] = entry.head split " "
       val short: String = entry(1)
-      val long: String = entry.drop(2).dropRight(1).mkString("\n")
+      val optionsHeader : String = entry(2)
+      val long: String = entry.drop(3).dropRight(1).mkString("\n")
       val children: Seq[String] = entry.last.split(" ").drop(1)
 
-      (keys, (short, long, children))
-    } flatMap { case (as, (s, l, c)) => as map { a => (a, (s, l, as.filter(_ != a), c)) } }
+      (keys, (short, long, optionsHeader, children))
+    } flatMap { case (as, (s, l, o, c)) => as map { a => (a, (s, l, as.filter(_ != a), o, c)) } }
 
     val entryMap = Map(entries: _*)
 
     // consistency
-    entries foreach { case (_, (_, _, _, children)) => children foreach { c => assert(entryMap contains c) } }
+    entries foreach { case (_, (_, _, _, _ , children)) => children foreach { c => assert(entryMap contains c) } }
 
     entryMap
   }
 
 
   def getHelpTextFor(item: String): String = {
-    val (_, longText, _, children) = helpDB(item)
+    val (_, longText, _, optionsText, children) = helpDB(item)
 
     if (children.isEmpty) longText else {
       val childrenTexts = children map { c =>
@@ -212,14 +215,12 @@ object Main {
         "\t" + i + (Range(i.length, maxChildLength + 4) map { _ => " " }).mkString("") + t
       }
 
-      longText + "\n\n\nAvailable Options:\n" + childrenLines.mkString("\n")
+      longText + "\n\n\n" + optionsText + "\n" + childrenLines.mkString("\n")
     }
   }
-  def main(originalArgs: Array[String]): Unit = {
-    main2(Array("-help","-no80"))
-  }
 
-  def main2(originalArgs: Array[String]) {
+
+  def main(originalArgs: Array[String]) {
     val args = originalArgs filter { _ != "-no80" }
     if (originalArgs contains "-no80") lineWidth = Integer.MAX_VALUE
 

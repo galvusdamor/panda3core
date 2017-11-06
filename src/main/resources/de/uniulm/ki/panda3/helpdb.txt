@@ -1,22 +1,57 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 main
 ---- no text necessary
+Available Options:
+
 To run PANDA3, you have to specify at least a domain and a problem file.
 For most parameters, their order does not matter.
 Parameters can be freely interleaved with the specification of domain-, problem-, and output-file.
-
+\n
 PANDA3's general call syntax is as follows:
     java -jar panda3.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
-$ -heuristic
+$ -help -heuristic
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-help
+displays help
+Available Options:
+
+Run with option to show help for that option
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -heuristic -h
 the heuristic to use during search
+Available Heuristics:
+
 Specify the heuristic to use during search. Most heuristics have additional arguments, which can be passed using the following syntax
-    HEURISTIC_NAME(PARAM1=VALUE1,PARAM2=VALUE2)
+    -heuristic HEURISTIC_NAME(PARAM1=VALUE1,PARAM2=VALUE2)
 $ random #flaw
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 random
 random heuristic
+Available Options:
+
 The random heuristic, initialised with the default random seed.
 $
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #flaw number-of-flaws
 number of flaws
+Available Options:
+
 The number of flaws in the plan
 $
