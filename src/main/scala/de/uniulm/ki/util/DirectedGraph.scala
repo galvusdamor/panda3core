@@ -539,7 +539,7 @@ object DirectedGraphWithInternalMapping {
 }
 
 case class SimpleDirectedGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraphWithAlgorithms[T] {
-  edges foreach { case (a, bs) => assert(vertices contains a); bs foreach { case b => assert(vertices contains b) } }
+  //edges foreach { case (a, bs) => assert(vertices contains a); bs foreach { case b => assert(vertices contains b) } }
 
   override def equals(o: scala.Any): Boolean = o match {
     case g: SimpleDirectedGraph[T] => vertices.toSet == g.vertices.toSet && edgeList.toSet == g.edgeList.toSet
