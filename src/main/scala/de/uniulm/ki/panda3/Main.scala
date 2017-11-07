@@ -26,6 +26,7 @@ object Main {
                                                                                     PreprocessingConfiguration(compileNegativePreconditions = false,
                                                                                                                compileUnitMethods = false,
                                                                                                                compileInitialPlan = false,
+                                                                                                               removeUnnecessaryPredicates = false,
                                                                                                                convertToSASP = false,
                                                                                                                allowSASPFromStrips = false,
                                                                                                                compileOrderInMethods = None,
@@ -35,7 +36,8 @@ object Main {
                                                                                                                groundedReachability = None,
                                                                                                                groundedTaskDecompositionGraph = None,
                                                                                                                iterateReachabilityAnalysis = false,
-                                                                                                               groundDomain = false),
+                                                                                                               groundDomain = false,
+                                                                                                               stopDirectlyAfterGrounding = false),
                                                                                     NoSearch, PostprocessingConfiguration(Set()))) extends PrettyPrintable {
 
     def processCommandLineArguments(args: Seq[String]): RunConfiguration = {

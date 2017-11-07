@@ -15,19 +15,21 @@ class FullStackTest extends FlatSpec {
 
   val grounded = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                             compileOrderInMethods = None,
-                                            compileInitialPlan = false, convertToSASP = false, allowSASPFromStrips = false, splitIndependentParameters = false,
+                                            compileInitialPlan = false, removeUnnecessaryPredicates = false,
+                                            convertToSASP = false, allowSASPFromStrips = false, splitIndependentParameters = false,
                                             compileUselessAbstractTasks = false,
                                             liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
                                             groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                            iterateReachabilityAnalysis = false, groundDomain = true)
+                                            iterateReachabilityAnalysis = false, groundDomain = true, stopDirectlyAfterGrounding = false)
 
   val lifted = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                           compileOrderInMethods = None,
-                                          compileInitialPlan = false, convertToSASP = false, allowSASPFromStrips = false, splitIndependentParameters = false,
+                                          compileInitialPlan = false, removeUnnecessaryPredicates = false,
+                                          convertToSASP = false, allowSASPFromStrips = false, splitIndependentParameters = false,
                                           compileUselessAbstractTasks = false,
                                           liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
                                           groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                          iterateReachabilityAnalysis = false, groundDomain = false)
+                                          iterateReachabilityAnalysis = false, groundDomain = false, stopDirectlyAfterGrounding = false)
 
 
   val algos =

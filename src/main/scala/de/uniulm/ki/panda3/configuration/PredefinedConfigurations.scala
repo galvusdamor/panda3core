@@ -24,61 +24,67 @@ object PredefinedConfigurations {
 
   val groundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                        compileInitialPlan = true,
+                                                       removeUnnecessaryPredicates = false,
                                                        convertToSASP = false, allowSASPFromStrips = false,
                                                        compileOrderInMethods = None,
                                                        splitIndependentParameters = true,
                                                        compileUselessAbstractTasks = true,
                                                        liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                       iterateReachabilityAnalysis = true, groundDomain = true)
+                                                       iterateReachabilityAnalysis = true, groundDomain = true, stopDirectlyAfterGrounding = false)
 
 
   val sasPlusPreprocess = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
                                                      compileOrderInMethods = None,
                                                      compileInitialPlan = true, splitIndependentParameters = true,
+                                                     removeUnnecessaryPredicates = false,
                                                      liftedReachability = true, convertToSASP = true, allowSASPFromStrips = false,
                                                      compileUselessAbstractTasks = true,
                                                      groundedReachability = None,
                                                      groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                     iterateReachabilityAnalysis = false, groundDomain = true)
+                                                     iterateReachabilityAnalysis = false, groundDomain = true, stopDirectlyAfterGrounding = false)
 
   val sasPlusPreprocessFallback = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
                                                              compileOrderInMethods = None,
                                                              compileInitialPlan = true, splitIndependentParameters = true,
+                                                             removeUnnecessaryPredicates = false,
                                                              liftedReachability = true, convertToSASP = true, allowSASPFromStrips = true,
                                                              compileUselessAbstractTasks = true,
                                                              groundedReachability = None,
                                                              groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                             iterateReachabilityAnalysis = false, groundDomain = true)
+                                                             iterateReachabilityAnalysis = false, groundDomain = true, stopDirectlyAfterGrounding = false)
 
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
                                                                //compileOrderInMethods = None, //Some(OneRandomOrdering()),
-                                                               compileInitialPlan = false, convertToSASP = false, allowSASPFromStrips = false,
+                                                               compileInitialPlan = false, removeUnnecessaryPredicates = false,
+                                                               convertToSASP = false, allowSASPFromStrips = false,
                                                                splitIndependentParameters = true,
                                                                compileUselessAbstractTasks = false,
                                                                liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                               iterateReachabilityAnalysis = false, groundDomain = true)
+                                                               iterateReachabilityAnalysis = false, groundDomain = true, stopDirectlyAfterGrounding = false)
   val liftedPreprocess            = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = None,
                                                                compileInitialPlan = false, splitIndependentParameters = true,
                                                                compileUselessAbstractTasks = false,
+                                                               removeUnnecessaryPredicates = false,
                                                                liftedReachability = true, convertToSASP = false, allowSASPFromStrips = false,
                                                                groundedReachability = None,
                                                                groundedTaskDecompositionGraph = None,
-                                                               iterateReachabilityAnalysis = false, groundDomain = false)
+                                                               iterateReachabilityAnalysis = false, groundDomain = false, stopDirectlyAfterGrounding = false)
 
   val oneshortOrderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                        compileInitialPlan = true,
                                                                        convertToSASP = false,
+                                                                       removeUnnecessaryPredicates = false,
                                                                        allowSASPFromStrips = false,
                                                                        compileOrderInMethods = Some(OneOfTheNecessaryOrderings),
                                                                        splitIndependentParameters = true,
                                                                        compileUselessAbstractTasks = true,
                                                                        liftedReachability = true, groundedReachability = Some(PlanningGraph),
                                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                                       iterateReachabilityAnalysis = true, groundDomain = true)
+                                                                       iterateReachabilityAnalysis = true, groundDomain = true, stopDirectlyAfterGrounding = false)
 
   val preprocessConfigs = Map(
                                "-ordering" -> orderingGroundingPreprocess,

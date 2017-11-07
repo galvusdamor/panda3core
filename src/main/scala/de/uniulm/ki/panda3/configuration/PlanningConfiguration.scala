@@ -1130,7 +1130,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       } else (result._1, result._2)
       timeCapsule stop COMPILE_UNIT_METHODS
 
-      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, runForGrounder = false, timeCapsule)
+      val ((groundedDomainAndPlan, groundedAnalysisMap), _) =
+        if (!preprocessingConfiguration.stopDirectlyAfterGrounding) runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, runForGrounder = false, timeCapsule)
+        else ((unitMethodsCompiled, AnalysisMap(Map())), null)
 
       timeCapsule start COMPILE_UNIT_METHODS
       val methodsWithIdenticalTasks = if (searchConfiguration.isInstanceOf[SATSearch] && postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree)) {
@@ -1143,13 +1145,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       timeCapsule stop COMPILE_UNIT_METHODS
 
 
-      val predicatedPruned = {
+      val predicatedPruned = if (preprocessingConfiguration.removeUnnecessaryPredicates) {
         info("Removing unnecessary predicates ... ")
         val compiled = PrunePredicates.transform(methodsWithIdenticalTasks._1, methodsWithIdenticalTasks._2, ())
         info("done.\n")
         extra(compiled._1.statisticsString + "\n")
         compiled
-      }
+      } else methodsWithIdenticalTasks
 
       timeCapsule stop PREPROCESSING
       ((predicatedPruned, groundedAnalysisMap), timeCapsule)
@@ -1340,6 +1342,7 @@ case class PreprocessingConfiguration(
                                        compileUnitMethods: Boolean,
                                        compileOrderInMethods: Option[TotallyOrderingOption],
                                        compileInitialPlan: Boolean,
+                                       removeUnnecessaryPredicates: Boolean,
                                        convertToSASP: Boolean,
                                        allowSASPFromStrips: Boolean,
                                        splitIndependentParameters: Boolean,
@@ -1348,7 +1351,8 @@ case class PreprocessingConfiguration(
                                        groundedReachability: Option[GroundedReachabilityMode],
                                        groundedTaskDecompositionGraph: Option[TDGGeneration],
                                        iterateReachabilityAnalysis: Boolean,
-                                       groundDomain: Boolean
+                                       groundDomain: Boolean,
+                                       stopDirectlyAfterGrounding: Boolean
                                      ) extends Configuration {
   assert(!convertToSASP || groundedReachability.isEmpty, "You can't use both SAS+ and a grouded PG")
 
@@ -1380,6 +1384,9 @@ case class PreprocessingConfiguration(
 
          "-splitIndependentParameters" -> (NoParameter, { p: Option[String] => this.copy(splitIndependentParameters = true).asInstanceOf[this.type] }),
          "-dontSplitIndependentParameters" -> (NoParameter, { p: Option[String] => this.copy(splitIndependentParameters = false).asInstanceOf[this.type] }),
+
+         "-removeUnnecessaryPredicates" -> (NoParameter, { p: Option[String] => this.copy(removeUnnecessaryPredicates = true).asInstanceOf[this.type] }),
+         "-dontRemoveUnnecessaryPredicates" -> (NoParameter, { p: Option[String] => this.copy(removeUnnecessaryPredicates = false).asInstanceOf[this.type] }),
 
          "-liftedReachability" -> (NoParameter, { p: Option[String] => this.copy(liftedReachability = true).asInstanceOf[this.type] }),
          "-noLiftedReachability" -> (NoParameter, { p: Option[String] => this.copy(liftedReachability = false).asInstanceOf[this.type] }),
@@ -1422,7 +1429,10 @@ case class PreprocessingConfiguration(
          "-dontIterateReachabilityAnalysis" -> (NoParameter, { p: Option[String] => this.copy(iterateReachabilityAnalysis = false).asInstanceOf[this.type] }),
 
          "-groundDomain" -> (NoParameter, { p: Option[String] => this.copy(groundDomain = true).asInstanceOf[this.type] }),
-         "-liftedDomain" -> (NoParameter, { p: Option[String] => this.copy(groundDomain = false).asInstanceOf[this.type] })
+         "-liftedDomain" -> (NoParameter, { p: Option[String] => this.copy(groundDomain = false).asInstanceOf[this.type] }),
+
+         "-stopAfterGrounding" -> (NoParameter, { p: Option[String] => this.copy(stopDirectlyAfterGrounding = true).asInstanceOf[this.type] }),
+         "-dontStopAfterGrounding" -> (NoParameter, { p: Option[String] => this.copy(stopDirectlyAfterGrounding = false).asInstanceOf[this.type] })
        )
 
   override def longInfo: String = "Preprocessing Configuration\n---------------------------\n" +
@@ -1430,14 +1440,16 @@ case class PreprocessingConfiguration(
                   ("Compile unit methods", compileUnitMethods) ::
                   ("Compile order in methods", if (compileOrderInMethods.isEmpty) "false" else compileOrderInMethods.get) ::
                   ("Compile initial plan", compileInitialPlan) ::
+                  ("Remove unnecessary predicates", removeUnnecessaryPredicates) ::
                   ("Convert to SAS+", convertToSASP) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
-                  ("Split indipendent parameters", splitIndependentParameters) ::
+                  ("Split independent parameters", splitIndependentParameters) ::
                   ("Lifted Reachability Analysis", liftedReachability) ::
                   ("Grounded Reachability Analysis", if (groundedReachability.isEmpty) "false" else groundedReachability.get.longInfo) ::
                   ("Grounded Task Decomposition Graph", if (groundedTaskDecompositionGraph.isEmpty) "false" else groundedTaskDecompositionGraph.get) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
                   ("Ground domain", groundDomain) ::
+                  ("Stop directly after grounding", stopDirectlyAfterGrounding) ::
                   Nil)
 
 }
