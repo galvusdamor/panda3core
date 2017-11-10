@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.writer.Writer
+import de.uniulm.ki.util.{ElementaryDecomposition, GraphDecomposition, ParallelDecomposition, SequentialDecomposition}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -140,7 +141,7 @@ object SHOP2Writer extends Writer {
     dom.primitiveTasks foreach { t =>
       assert(t.preconditionsAsPredicateBool forall { _._2 }) // no negative preconditions
 
-      builder append "\t(:operator (!" + toSHOP2Name(t.name,isVar = false)
+      builder append "\t(:operator (!" + toSHOP2Name(t.name, isVar = false)
       writeVarList(t.parameters, builder)
       builder append ")\n"
 
@@ -191,14 +192,39 @@ object SHOP2Writer extends Writer {
         builder append "\t\t)\n"
 
         // assert it is totally ordered
-        assert(plan.orderingConstraints.isTotalOrder())
+        //assert(plan.orderingConstraints.isTotalOrder())
 
         builder append "\t\t(\n"
-        plan.orderingConstraints.graph.topologicalOrdering.get foreach { case PlanStep(_, schema, args) =>
+        val orderingDecompositionOption = plan.orderingConstraints.graph.decomposition
+        assert(orderingDecompositionOption.isDefined)
+        val orderingDecomposition = orderingDecompositionOption.get
+
+        def writeOrder(dec: GraphDecomposition[PlanStep]): Unit = dec match {
+          case ElementaryDecomposition(ps)   =>
+            builder append ("\t\t\t(" + (if (ps.schema.isPrimitive) "!" else "") + toSHOP2Name(ps.schema.name, isVar = false))
+            writeVarList(ps.arguments, builder)
+            builder append ")\n"
+          case ParallelDecomposition(decs)   =>
+            builder append "\t\t(:unordered\n"
+            decs foreach { elem =>
+              writeOrder(elem)
+            }
+            builder append "\t\t)\n"
+          case SequentialDecomposition(decs) =>
+            builder append "\t\t(\n"
+            decs foreach { elem =>
+              writeOrder(elem)
+            }
+            builder append "\t\t)\n"
+        }
+
+        writeOrder(orderingDecomposition)
+
+        /*.topologicalOrdering.get foreach { case PlanStep(_, schema, args) =>
           builder append ("\t\t\t(" + (if (schema.isPrimitive) "!" else "") + toSHOP2Name(schema.name, isVar = false))
           writeVarList(args, builder)
           builder append ")\n"
-        }
+        }*/
 
         builder append "\t\t)\n"
 
@@ -228,7 +254,7 @@ object SHOP2Writer extends Writer {
       builder append "\t\t(" + toSHOP2Name(p.name, isVar = false)
       params foreach { c => builder append (" " + toSHOP2Name(c.name, isVar = false)) }
       builder append ")\n"
-    case _ => // do nothing
+    case _                                                                  => // do nothing
     }
 
     // sort membership
