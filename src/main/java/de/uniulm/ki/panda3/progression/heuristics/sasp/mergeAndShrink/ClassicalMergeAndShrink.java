@@ -615,6 +615,8 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
     }
 
+
+    //to find distances from the start node
     public static Tuple2<ArrayList<Integer>,HashMap<Integer, Integer>> breadthSearchToFindDistances(SasPlusProblem p, ArrayList<Integer> nextNodes, ArrayList<Integer> nodesToKeep,
                                                                               HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap, HashMap<Integer, Integer> distancesFromStart){
 
@@ -863,6 +865,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
     }
 
+    //to find distances from the goal nodes
     public HashMap<Integer, Integer> reverseBreadthSearchToFindDistances(SasPlusProblem p, ArrayList<Integer> nextNodes,
                                                                                                     HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> incomingEdgesMap, HashMap<Integer, Integer> distancesFromGoal){
 
