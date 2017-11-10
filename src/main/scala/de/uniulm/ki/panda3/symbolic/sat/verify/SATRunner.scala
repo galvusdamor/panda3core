@@ -497,7 +497,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           }
         }
         val graph: DirectedGraph[String] = SimpleDirectedGraph(nodes, edges)
-        Dot2PdfCompiler.writeDotToFile(graph,"dt-tree.pdf")
+        //Dot2PdfCompiler.writeDotToFile(graph,"dt-tree.pdf")
         // give all task a unique ID
         val nodeIDMap: Map[String, Int] = nodes.zipWithIndex.toMap
         val idNodeMap: Map[Int, String] = nodeIDMap.map(_.swap)
