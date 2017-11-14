@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Random;
 
 /**
  * Created by biederma on 07.09.2017.
@@ -68,7 +69,18 @@ public final class Utils {
 
         NodeValue nodeValue = idMapping.get(multiID);
 
-        String s =  multiID + ": \n(" + nodeValue.longInfo() + ")";
+        String s;
+
+        if (nodeValue.isGoalNode()){
+
+            s =  multiID + " (goal): \n(" + nodeValue.longInfo() + ")";
+
+        }else{
+
+            s =  multiID + " (no goal): \n(" + nodeValue.longInfo() + ")";
+
+        }
+
 
 
         return s;
@@ -95,4 +107,12 @@ public final class Utils {
         return nodeIDS;
     }
 
+
+
+    public static int randomIntGenerator(int count, long seed) {
+        Random generator = new Random(seed);
+        int number = generator.nextInt(count);
+
+        return number;
+    }
 }

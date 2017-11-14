@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.util.Dot2PdfCompiler;
 import de.uniulm.ki.util.EdgeLabelledGraph;
+import scala.Boolean;
 import scala.Int;
 import scala.Tuple3;
 
@@ -12,6 +13,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.*;
+
+import javax.rmi.CORBA.Util;
+
 
 /**
  * Created by biederma on 05.10.2017.
@@ -24,7 +28,7 @@ public final class SingleGraphMethods {
 
         //Tuple2<Integer[],Tuple3[]> graphData = getSingleNodesAndEdgesForVarIndex(p,varIndex);
 
-        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph = getSingleGraphForVarIndex(p,varIndex);
+        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph = getSingleGraphForVarIndex(p,varIndex);
 
         //EdgeLabelledGraphSingle<String,String> stringGraph = convertSingleGraphToStringGraph(p, graph);
 
@@ -34,7 +38,7 @@ public final class SingleGraphMethods {
     }
 
 
-    public static EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> getSingleGraphForVarIndex(SasPlusProblem p, int varIndex){
+    public static EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> getSingleGraphForVarIndex(SasPlusProblem p, int varIndex){
 
         int firstIndex = p.firstIndex[varIndex];
         int lastIndex = p.lastIndex[varIndex];
@@ -54,14 +58,33 @@ public final class SingleGraphMethods {
 
         HashMap<Integer, Integer> tempReverseIDMapping = new HashMap<>();
 
+        int[] goals = p.gList;
+
+        ArrayList<Integer> dismissedGoals = Utils.dismissNotContainedIndexes(goals, containedIndexes);
+
+
         for (int i=0; i<containedIndexes.size(); i++){
 
-            NodeValue nodeValue = new ElementaryNode(containedIndexes.get(i), p);
-            tempReverseIDMapping.put(containedIndexes.get(i), i);
+            int factID = containedIndexes.get(i);
+
+            java.lang.Boolean isGoalNode;
+
+            if (dismissedGoals.size()==0){
+
+                isGoalNode = true;
+
+            }else {
+                isGoalNode = dismissedGoals.contains(factID);
+            }
+
+            NodeValue nodeValue = new ElementaryNode(factID, p, isGoalNode);
+            tempReverseIDMapping.put(factID, i);
 
             nodeIDs[i] = i;
 
             idMapping.put(i, nodeValue);
+
+
 
         }
 
@@ -71,11 +94,26 @@ public final class SingleGraphMethods {
 
         Set<Integer> usedFactIndexes = new HashSet<>(containedIndexes);
 
+        HashSet<Integer> usedVariables = new HashSet<>();
 
-        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph = new EdgeLabelledGraph<>(nodeIDs, multiEdges, idMapping, startID, usedFactIndexes);
+        usedVariables.add(varIndex);
+
+        HashSet<Integer> allVariables = new HashSet<>();
+
+        for (int i = 0; i < p.numOfVars; i++) {
+            allVariables.add(i);
+        }
+
+        HashSet<Integer> notYetUsedVariables = new HashSet<>(allVariables);
+        notYetUsedVariables.remove(varIndex);
+
+
+        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph = new EdgeLabelledGraph<>(nodeIDs, multiEdges, idMapping, startID, usedFactIndexes, usedVariables, notYetUsedVariables, allVariables);
 
         return graph;
     }
+
+
 
     public static int findStartNodeIDinSingleVarGraph(SasPlusProblem p, HashMap<Integer, NodeValue> idMapping, ArrayList<Integer> containedIndexes){
 

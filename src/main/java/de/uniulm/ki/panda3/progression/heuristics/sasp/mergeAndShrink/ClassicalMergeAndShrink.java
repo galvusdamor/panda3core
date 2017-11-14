@@ -10,12 +10,13 @@ import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ShrinkNode;
 import de.uniulm.ki.util.Dot2PdfCompiler;
 import de.uniulm.ki.util.EdgeLabelledGraph;
 
-import scala.Int;
 import scala.Tuple2;
 import scala.Tuple3;
 
 
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.function.Function;
 
 
 public class ClassicalMergeAndShrink extends SasHeuristic {
@@ -25,7 +26,16 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph = getMultiGraphUntilVarID(p, 1);
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> testGraph = mergeAndShrinkProcess(p, 15);
+
+        printMultiGraph(p, testGraph, "graph6.pdf");
+
+
+        System.exit(0);
+
+
+
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph = getMultiGraphUntilVarID(p, 1);
 
         graph = shrinkingStrategy1(p, graph);
 
@@ -139,9 +149,9 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
         System.exit(0);
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> singleNodeGraph = SingleGraphMethods.getSingleGraphForVarIndex(p,2);
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> singleNodeGraph = SingleGraphMethods.getSingleGraphForVarIndex(p,2);
 
-        EdgeLabelledGraph<String , String, HashMap<Integer, NodeValue>, Integer, Set<Integer>> multiNodeGraph = convertMultiGraphToStringGraph(p, singleNodeGraph);
+        EdgeLabelledGraph<String , String, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> multiNodeGraph = convertMultiGraphToStringGraph(p, singleNodeGraph);
 
         Dot2PdfCompiler.writeDotToFile(multiNodeGraph, "graph3.pdf");
 
@@ -154,9 +164,9 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         return 0;
     }
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> getMultiGraphUntilVarID(SasPlusProblem p, int lastVarID) {
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> getMultiGraphUntilVarID(SasPlusProblem p, int lastVarID) {
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph1 = SingleGraphMethods.getSingleGraphForVarIndex(p,0);
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph1 = SingleGraphMethods.getSingleGraphForVarIndex(p,0);
 
         //EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>> graph2;
 
@@ -174,7 +184,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
     }
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> mergeWithVar(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph1, int varIndex){
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> mergeWithVar(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph1, int varIndex){
 
         if (varIndex >= p.numOfVars){
 
@@ -183,10 +193,10 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         }
 
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph2 = SingleGraphMethods.getSingleGraphForVarIndex(p, varIndex);
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph2 = SingleGraphMethods.getSingleGraphForVarIndex(p, varIndex);
 
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> newGraph = mergingStep(p, graph1, graph2);
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> newGraph = mergingStep(p, graph1, graph2);
 
         newGraph = dismissNotReachableNodes(newGraph);
 
@@ -195,7 +205,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
     }
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> mergingStep(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph1, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph2) {
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> mergingStep(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph1, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph2) {
 
         Integer[] graph1Nodes = (Integer[]) graph1.arrayVertices();
 
@@ -301,14 +311,23 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         usedFactIndexes.addAll(graph2.usedFactIndexes());
 
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> newMultiGraph = new EdgeLabelledGraph<>(nodeIDS, newEdgeTuple, newIdMapping, newStartID, usedFactIndexes);
+        HashSet<Integer> usedVariables = new HashSet<>(graph1.usedVariables());
+
+        usedVariables.addAll(graph2.usedVariables());
+
+        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph1.allVariables());
+
+        notYetUsedVariables.removeAll(usedVariables);
+
+
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> newMultiGraph = new EdgeLabelledGraph<>(nodeIDS, newEdgeTuple, newIdMapping, newStartID, usedFactIndexes, usedVariables, notYetUsedVariables, graph1.allVariables());
 
 
         return newMultiGraph;
 
     }
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> shrinkingStep(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> multiGraph, ArrayList<ArrayList<Integer>> aggregatedIDs) {
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> shrinkingStep(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> multiGraph, ArrayList<ArrayList<Integer>> aggregatedIDs) {
 
         HashMap<Integer, NodeValue> newIDMapping = new HashMap<>();
 
@@ -368,7 +387,13 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
         Set<Integer> usedFactIndexes = new HashSet<>(multiGraph.usedFactIndexes());
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> newGraph = new EdgeLabelledGraph<>(Utils.convertNodeIDArrayListToArray(newIDMapping), newEdges, newIDMapping, newStartID, usedFactIndexes);
+        Set<Integer> usedVariables = new HashSet<>(multiGraph.usedVariables());
+
+        HashSet<Integer> notYetUsedVariables = new HashSet<>(multiGraph.notYetUsedVariables());
+
+
+
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> newGraph = new EdgeLabelledGraph<>(Utils.convertNodeIDArrayListToArray(newIDMapping), newEdges, newIDMapping, newStartID, usedFactIndexes, usedVariables, notYetUsedVariables, multiGraph.allVariables());
 
         return newGraph;
     }
@@ -391,7 +416,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 
 
-    public EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>> convertMultiGraphToStringGraph(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph) {
+    public EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> convertMultiGraphToStringGraph(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph) {
 
 
         HashMap<Integer, NodeValue> idMapping = graph.idMapping();
@@ -401,8 +426,13 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
         Set<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes());
 
+        Set<Integer> usedVariables = new HashSet<>(graph.usedVariables());
 
-        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>> newGraph = new EdgeLabelledGraph<>(newNodes, newEdges, idMapping, graph.startNodeID(), usedFactIndexes);
+        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph.notYetUsedVariables());
+
+
+
+        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> newGraph = new EdgeLabelledGraph<>(newNodes, newEdges, idMapping, graph.startNodeID(), usedFactIndexes, usedVariables, notYetUsedVariables, graph.allVariables());
 
 
         return newGraph;
@@ -486,16 +516,16 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         return newEdgeArray;
     }
 
-    public void printMultiGraph(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> multiGraph, String outputfile) {
+    public void printMultiGraph(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> multiGraph, String outputfile) {
 
 
-        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>> stringMultiGraph = convertMultiGraphToStringGraph(p, multiGraph);
+        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> stringMultiGraph = convertMultiGraphToStringGraph(p, multiGraph);
 
         Dot2PdfCompiler.writeDotToFile(stringMultiGraph, outputfile);
 
     }
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> dismissNotReachableNodes(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> dismissNotReachableNodes(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
 
         int startNodeID = graph.startNodeID();
 
@@ -522,16 +552,21 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
         HashMap<Integer, NodeValue> dismissedIDMapping = dismissIDMappingOfNotReachableNodeIDs(graph.idMapping(), nodesToDismiss);
 
-        Set<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes());
+        HashSet<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes());
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> newGraph = new EdgeLabelledGraph<>(Utils.convertNodeIDArrayListToArray(dismissedIDMapping), dismissedEdges, dismissedIDMapping, graph.startNodeID(), usedFactIndexes);
+        HashSet<Integer> usedVariables = new HashSet<>(graph.usedVariables());
+
+        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph.notYetUsedVariables());
+
+
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> newGraph = new EdgeLabelledGraph<>(Utils.convertNodeIDArrayListToArray(dismissedIDMapping), dismissedEdges, dismissedIDMapping, graph.startNodeID(), usedFactIndexes, usedVariables, notYetUsedVariables, graph.allVariables());
 
 
 
         return newGraph;
     }
 
-    public static HashMap<Integer, Integer> getDistancesFromStart(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+    public static HashMap<Integer, Integer> getDistancesFromStart(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
 
         int startNodeID = graph.startNodeID();
 
@@ -653,7 +688,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 
 
-    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToOutgoingEdgesMap(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToOutgoingEdgesMap(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
 
         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
 
@@ -673,7 +708,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
     }
 
 
-    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToIncomingEdgesMap(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToIncomingEdgesMap(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
 
         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
 
@@ -693,7 +728,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
     }
 
 
-    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getOpIDToEdgesMap(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getOpIDToEdgesMap(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
 
         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> opIDToOutgoingEdgesMap = new HashMap<>();
 
@@ -712,7 +747,25 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
     }
 
-    public static Set<Integer> getGoalNodes(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+    public static Set<Integer> getGoalNodes(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
+
+        HashSet<Integer> goalNodes = new HashSet<>();
+
+        for (int id : graph.idMapping().keySet()){
+
+            NodeValue nodeValue = graph.idMapping().get(id);
+            if (nodeValue.isGoalNode()) goalNodes.add(id);
+
+        }
+
+
+        return goalNodes;
+
+
+    }
+
+
+/*    public static Set<Integer> getGoalNodes(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
 
         Set<Integer> goalNodeIDs = new HashSet<>();
 
@@ -816,9 +869,10 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 
     }
+    */
 
 
-/*    public HashMap<Integer, Integer> getDistancesFromGoal(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+/*    public HashMap<Integer, Integer> getDistancesFromGoal(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
 
         int startNodeID = graph.startNodeID();
 
@@ -843,7 +897,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         return distancesFromStartMap;
     }*/
 
-    public HashMap<Integer,Integer> getDistancesFromGoal(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+    public HashMap<Integer,Integer> getDistancesFromGoal(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
 
         HashMap<Integer, Integer> distancesToGoalMap = new HashMap<>();
 
@@ -900,7 +954,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> shrinkingStrategy1(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph){
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> shrinkingStrategy1(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
 
 
 
@@ -926,14 +980,14 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
         nodesToShrink.add(farthestNodesFromStartAndGoal);
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> shrinkedGraph = shrinkingStep(p,graph, nodesToShrink);
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> shrinkedGraph = shrinkingStep(p,graph, nodesToShrink);
 
 
         return shrinkedGraph;
 
     }
 
-    public static ArrayList<Integer> getNodesFarthestFromStartAndGoal(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>> graph, HashMap<Integer,Integer> summedDistances){
+    public static ArrayList<Integer> getNodesFarthestFromStartAndGoal(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph, HashMap<Integer,Integer> summedDistances){
 
         ArrayList<Integer> farthestNodes = new ArrayList<>();
 
@@ -995,6 +1049,114 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         return farthestNodes;
 
     }
+
+
+
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> mergingStrategy1(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph, long seed){
+
+
+
+        Set<Integer> notYetUsedVariables = getNotYetUsedVariables(p, graph);
+
+        ArrayList<Integer> variablesToMerge = new ArrayList<>(notYetUsedVariables);
+
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> newGraph;
+
+        if (!(graph==null)) {
+
+            //System.out.println("Not yet used Variables: " + notYetUsedVariables);
+
+            int randomVarIndex = Utils.randomIntGenerator(notYetUsedVariables.size(), seed);
+
+            int randomVar = variablesToMerge.get(randomVarIndex);
+
+            System.out.println("Merge with Variable: " + randomVar);
+
+
+            newGraph = mergeWithVar(p, graph, randomVar);
+
+
+        }else{
+
+            int randomVarIndex = Utils.randomIntGenerator(notYetUsedVariables.size(), seed);
+
+            int randomVar = variablesToMerge.get(randomVarIndex);
+
+            System.out.println("Start with Variable: " + randomVar);
+
+            newGraph = SingleGraphMethods.getSingleGraphForVarIndex(p, randomVar);
+
+        }
+
+        return newGraph;
+
+
+    }
+
+    public static HashSet<Integer> getNotYetUsedVariables(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
+
+        HashSet<Integer> notYetUsedVariables;
+
+        if (!(graph==null)) {
+
+            //System.out.println("All Variables: " + graph.allVariables());
+            notYetUsedVariables = new HashSet<>(graph.allVariables());
+
+            Set<Integer> usedVariables = graph.usedVariables();
+
+            //System.out.println("Used Variables: " + usedVariables);
+
+            notYetUsedVariables.removeAll(graph.usedVariables());
+
+            //System.out.println("Not yet Used Variables: " + notYetUsedVariables);
+
+
+            /*for (int i = 0; i < p.numOfVars; i++) {
+                if (!usedVariables.contains(i)) notYetUsedVariables.add(i);
+            }*/
+
+        }else{
+
+            notYetUsedVariables = new HashSet<>();
+
+            for (int i = 0; i < p.numOfVars; i++) {
+                notYetUsedVariables.add(i);
+            }
+
+        }
+
+        return notYetUsedVariables;
+
+    }
+
+
+
+
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> mergeAndShrinkProcess(SasPlusProblem p, int shrinkingBound){
+
+
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph = mergingStrategy1(p, null, 0);
+
+        while (graph.notYetUsedVariables().size()!=0){
+
+            while (graph.idMapping().keySet().size()>shrinkingBound){
+                graph = shrinkingStrategy1(p, graph);
+            }
+
+            graph = mergingStrategy1(p, graph, 0);
+
+        }
+
+        while (graph.idMapping().keySet().size()>shrinkingBound){
+            graph = shrinkingStrategy1(p, graph);
+        }
+
+
+        return graph;
+
+    }
+
+
 
 
 

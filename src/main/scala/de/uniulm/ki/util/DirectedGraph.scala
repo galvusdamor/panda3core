@@ -559,7 +559,7 @@ case class EdgeLabelledGraphSingle[T, L](arrayVertices: Array[T], labelledEdges:
   })
 }
 
-case class EdgeLabelledGraph[T, L, M, S, V](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M, startNodeID: S, usedFactIndexes: V) extends DirectedGraphWithAlgorithms[T] {
+case class EdgeLabelledGraph[T, L, M, S, F, U, N, V](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M, startNodeID: S, usedFactIndexes: F, usedVariables: U, notYetUsedVariables: N, allVariables: V) extends DirectedGraphWithAlgorithms[T] {
 
   //def startNode = startNodeID
 
