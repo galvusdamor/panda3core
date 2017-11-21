@@ -45,4 +45,6 @@ case class DomainPropertyAnalyser(domain: Domain, tdg: TaskDecompositionGraph) {
   }
 
   val isTotallyOrdered : Boolean = domain.isTotallyOrdered
+
+  val hasLastTaskInAllMethods : Boolean = domain.decompositionMethods.forall(_.subPlan.orderingConstraints.graph.sinks.size == 1)
 }

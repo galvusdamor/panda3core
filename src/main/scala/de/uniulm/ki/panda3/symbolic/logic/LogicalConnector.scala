@@ -1,11 +1,12 @@
 package de.uniulm.ki.panda3.symbolic.logic
 
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
+import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint
 
 //import de.uniulm.ki.panda3.symbolic.domain.updates.{ReduceFormula, DomainUpdate}
 
 import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeVariable, ReduceFormula, DomainUpdate}
-import de.uniulm.ki.util.HashMemo
+import de.uniulm.ki.util.{Internable, HashMemo}
 
 /**
   *
@@ -81,8 +82,8 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
           case And(sub) => sub
           case f        => f :: Nil
         }
-        And[Formula](flattenedSubs)
-      case _               => And[Formula](subreduced)
+        And.intern(flattenedSubs)
+      case _               => And.intern(subreduced)
     }
   }
 
@@ -90,21 +91,21 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
 
   lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = conjuncts flatMap { case f: Formula => f.containedPredicatesWithSign } toSet
 
-  override def longInfo: String = (conjuncts map {
-    _.longInfo
-  }).mkString("\n")
+  override def longInfo: String = (conjuncts map { _.longInfo }).mkString("\n")
 
-  override val isEmpty: Boolean = conjuncts forall {
-    _.isEmpty
-  }
+  override val isEmpty: Boolean = conjuncts forall { _.isEmpty }
 
   lazy val containsOnlyLiterals = conjuncts forall { case l: Literal => true; case _ => false }
 
   override def compileQuantors(): (Formula, Seq[Variable]) = {
     val (newconj, newvars) = conjuncts map { _.compileQuantors() } unzip
 
-    (And(newconj), newvars flatten)
+    (And.intern(newconj), newvars flatten)
   }
+}
+
+object And extends Internable[Seq[Formula], And[Formula]] {
+  override protected val applyTuple: Seq[Formula] => And[Formula] = { f => And.apply(f) }
 }
 
 case class Identity[SubFormulas <: Formula]() extends LogicalConnector with DefaultLongInfo with HashMemo {
@@ -164,6 +165,25 @@ case class Implies(left: Formula, right: Formula) extends LogicalConnector with 
   }
 }
 
+case class When(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo {
+  override def update(domainUpdate: DomainUpdate): When = When(left.update(domainUpdate), right.update(domainUpdate))
+
+  lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
+
+  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
+
+  override def longInfo: String = left.longInfo + " ~> " + right.longInfo
+
+  override val isEmpty: Boolean = left.isEmpty && right.isEmpty
+
+  override def compileQuantors(): (Formula, Seq[Variable]) = {
+    val (lForm, lVars) = left.compileQuantors()
+    val (rForm, rVars) = right.compileQuantors()
+
+    (Implies(lForm, rForm), lVars ++ rVars)
+  }
+}
+
 case class Equivalence(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo {
   override def update(domainUpdate: DomainUpdate): Equivalence = Equivalence(left.update(domainUpdate), right.update(domainUpdate))
 
@@ -204,6 +224,12 @@ case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLon
   }
 }
 
+object Exists {
+  def apply(vs: Seq[Variable], f: Formula): Formula = {
+    if (vs.isEmpty) {f } else {Exists(vs.head, Exists(vs.tail, f)) }
+  }
+}
+
 case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLongInfo with HashMemo {
   override def update(domainUpdate: DomainUpdate): Forall = Forall(v.update(domainUpdate), formula.update(domainUpdate))
 
@@ -225,6 +251,13 @@ case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLon
       (innerFormula update ExchangeVariable(v, newVar), innerVars :+ newVar)
     }
 
-    (And(newForlumaeAndVars map {_._1}), newForlumaeAndVars flatMap {_._2})
+    (And(newForlumaeAndVars map { _._1 }), newForlumaeAndVars flatMap { _._2 })
   }
 }
+
+object Forall {
+  def apply(vs: Seq[Variable], f: Formula): Formula = {
+    if (vs.isEmpty) {f } else {Forall(vs.head, Forall(vs.tail, f)) }
+  }
+}
+

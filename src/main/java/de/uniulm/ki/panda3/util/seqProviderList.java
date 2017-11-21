@@ -67,6 +67,7 @@ public class seqProviderList<T> {
 
     /**
      * returns the elements starting by the given index
+     *
      * @param startIndex the first element that is returned
      * @return
      */
@@ -86,5 +87,14 @@ public class seqProviderList<T> {
 
     public boolean contains(T t) {
         return this.contains(t);
+    }
+
+    public java.util.Iterator<T> getIterator() {
+        return list.iterator();
+    }
+
+    public void add(java.util.Iterator<T> iterator) {
+        while (iterator.hasNext())
+            list.add(iterator.next());
     }
 }

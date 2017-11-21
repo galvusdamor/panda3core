@@ -33,12 +33,12 @@ public class TarjanSCCs {
         lowlink = new int[nodeCount];
 
         U = new BitSet(nodeCount);
-        U.set(0, nodeCount - 1, false);
+        U.set(0, nodeCount, false);
 
         S = new int[nodeCount];
         iS = -1;
         nodesInS = new BitSet(nodeCount);
-        nodesInS.set(0, nodeCount - 1, false);
+        nodesInS.set(0, nodeCount, false);
 
         scc = new int[nodeCount][];
         iScc = -1;
@@ -93,6 +93,16 @@ public class TarjanSCCs {
             return i1;
         else
             return i2;
+    }
+
+    public void calcSccs() {
+        for (int v = U.nextClearBit(0); v < scc.length; v = U.nextClearBit(v + 1))
+            tarjan(v);
+        int[][] old = scc;
+        scc = new int[iScc + 1][];
+        for (int i = 0; i < scc.length; i++)
+            scc[i] = old[i];
+        assert sccsOK();
     }
 
     public void calcSccs(BitSet root) {

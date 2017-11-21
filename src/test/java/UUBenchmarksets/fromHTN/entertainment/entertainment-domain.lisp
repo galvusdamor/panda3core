@@ -114,8 +114,7 @@
     :parameters (?e1 ?e2 - equipment ?c1 ?c2 - connector)
     :task (direct_av_connect ?e1 ?e2)
     :precondition (and
-        ;;(not (= ?pl1 ?pl2))
-        ;;(not (= ?e1 ?e2))
+        (not (= ?e1 ?e2))
         (audio_connector ?c1)
         (audio_connector ?c2)
         (video_connector ?c1)
@@ -131,8 +130,7 @@
     :parameters (?e1 ?e2 - equipment ?c1 ?c2 - connector)
     :task (direct_a_connect ?e1 ?e2)
     :precondition (and
-        ;;(not (= ?pl1 ?pl2))
-        ;;(not (= ?e1 ?e2))
+        (not (= ?e1 ?e2))
         (audio_connector ?c1)
         (audio_connector ?c2)
         (out_connector ?c1)
@@ -147,7 +145,7 @@
     :task (direct_v_connect ?e1 ?e2)
     :precondition (and
         ;;(not (= ?pl1 ?pl2))
-        ;;(not (= ?e1 ?e2))
+        (not (= ?e1 ?e2))
         (video_connector ?c1)
         (video_connector ?c2)
         (out_connector ?c1)
@@ -157,33 +155,35 @@
         (plug ?e1 ?c1 ?e2 ?c2))
   )
 
-;;   (:method m-dconnect-av
-;;     :parameters (?e1 ?e2 - equipment)
-;;     :task (direct_av_connect ?e1 ?e2)
-;;     :precondition (and
-;;         (audio_connected ?e1 ?e2)
-;;         (video_connected ?e1 ?e2)
-;;       )
-;;     :subtasks ( )
-;;   )
-;; 
-;;   (:method m-dconnect-a
-;;     :parameters (?e1 ?e2 - equipment )
-;;     :task (direct_a_connect ?e1 ?e2)
-;;     :precondition (and
-;;         (audio_connected ?e1 ?e2)
-;;       )
-;;     :subtasks ( )
-;;   )
-;; 
-;;   (:method m-dconnect-v
-;;     :parameters (?e1 ?e2 - equipment)
-;;     :task (direct_v_connect ?e1 ?e2)
-;;     :precondition (and
-;;         (video_connected ?e1 ?e2)
-;;       )
-;;     :subtasks ( )
-;;   )
+; connections via existing cable -----------------------------------------
+
+  (:method m-dconnect-av-empty
+    :parameters (?e1 ?e2 - equipment)
+    :task (direct_av_connect ?e1 ?e2)
+    :precondition (and
+        (audio_connected ?e1 ?e2)
+        (video_connected ?e1 ?e2)
+      )
+    :subtasks ( )
+  )
+
+  (:method m-dconnect-a-empty
+    :parameters (?e1 ?e2 - equipment )
+    :task (direct_a_connect ?e1 ?e2)
+    :precondition (and
+        (audio_connected ?e1 ?e2)
+      )
+    :subtasks ( )
+  )
+
+  (:method m-dconnect-v-empty
+    :parameters (?e1 ?e2 - equipment)
+    :task (direct_v_connect ?e1 ?e2)
+    :precondition (and
+        (video_connected ?e1 ?e2)
+      )
+    :subtasks ( )
+  )
 
 ; primitives -------------------------------------------------------------
   
@@ -191,17 +191,18 @@
     :parameters (?e1 - equipment ?c1 - connector
                  ?e2 - equipment ?c2 - connector)
     :precondition (and
-        (unused ?c1) (unused ?c2)
+        (unused ?c1)
+        (unused ?c2)
         (conn_of ?e1 ?c1)
         (conn_of ?e2 ?c2)
         (compatible ?c1 ?c2)
       )
     :effect (and
         (when (and (audio_connector ?c1)
-                   (audio_connector ?e2))
+                   (audio_connector ?c2))
               (audio_connected ?e1 ?e2))
         (when (and (video_connector ?c1)
-                   (video_connector ?e2))
+                   (video_connector ?c2))
               (video_connected ?e1 ?e2))
         (not (unused ?c1))(not (unused ?c2)))
       )

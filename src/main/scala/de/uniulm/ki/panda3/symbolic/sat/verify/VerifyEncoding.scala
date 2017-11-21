@@ -57,7 +57,6 @@ trait VerifyEncoding {
     (methodIndices(method), method.subPlan.planStepsWithoutInitGoal.zipWithIndex.toMap)
   }).toMap
 
-
   protected def methodIndex(method: DecompositionMethod): Int = methodIndices(method)
 
   def predicateIndex(predicate: Predicate): Int = predicateIndices(predicate)
@@ -77,8 +76,8 @@ trait VerifyEncoding {
 
     atoms.zipWithIndex foreach { case (atom, index) =>
       bits foreach { case (bitString, b) =>
-        if ((index & (1 << b)) == 0) buffer append Clause((atom, false) ::(bitString, false) :: Nil)
-        else buffer append Clause((atom, false) ::(bitString, true) :: Nil)
+        if ((index & (1 << b)) == 0) buffer append Clause((atom, false) :: (bitString, false) :: Nil)
+        else buffer append Clause((atom, false) :: (bitString, true) :: Nil)
       }
     }
 
@@ -101,20 +100,23 @@ trait VerifyEncoding {
     buffer.toSeq*/
   }
 
-  protected def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms).+:(atLeastOneOf(atoms))
+  def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms).+:(atLeastOneOf(atoms))
 
-  def impliesNot(left: String, right: String): Clause = Clause((left, false) ::(right, false) :: Nil)
+  def impliesNot(left: String, right: String): Clause = Clause((left, false) :: (right, false) :: Nil)
 
-  protected def impliesNot(left: Seq[String], right: String): Clause = Clause((left map { l => (l, false) }).+:(right, false))
-
-  protected def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
+  def impliesNot(left: Seq[String], right: String): Clause = Clause((left map { l => (l, false) }).+:(right, false))
 
   def notImplies(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, true)))
+
+  def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
+
+
+  def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) :: (leftFalse, true) :: (right, false) :: Nil) :: Nil
 
   def impliesLeftTrueAndFalseImpliesTrue(leftTrue: Seq[String], leftFalse: Seq[String], right: String): Clause =
     Clause(leftTrue.map((_, false)) ++ leftFalse.map((_, true)) ++ ((right, true) :: Nil))
 
-  protected def impliesAllNot(left: String, right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
+  def impliesAllNot(left: String, right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
 
   def impliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
 
@@ -124,12 +126,18 @@ trait VerifyEncoding {
     right map { r => Clause(leftList.+:((r, false))) }
   }
 
-  def impliesSingle(left: String, right: String): Clause = Clause((left, false) ::(right, true) :: Nil)
+  def impliesSingle(left: String, right: String): Clause = Clause((left, false) :: (right, true) :: Nil)
 
 
-  protected def impliesRightAnd(leftConjunct: Seq[String], rightConjunct: Seq[String]): Seq[Clause] = {
+  def impliesRightAnd(leftConjunct: Seq[String], rightConjunct: Seq[String]): Seq[Clause] = {
     val negLeft = leftConjunct map { (_, false) }
     rightConjunct map { r => Clause(negLeft.+:(r, true)) }
+  }
+
+  def impliesRightNotAll(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
+    val negLeft = leftConjunct map { (_, false) }
+    val negRight = rightConjunct map { (_, false) }
+    Clause(negLeft ++ negRight)
   }
 
   def impliesRightAndSingle(leftConjunct: Seq[String], right: String): Clause = {
@@ -137,12 +145,12 @@ trait VerifyEncoding {
     Clause(negLeft.+:(right, true))
   }
 
-  def impliesRightOr(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
+  def impliesRightOr(leftConjunct: Seq[String], rightDisjunct: Seq[String]): Clause = {
     val negLeft = leftConjunct map { (_, false) }
-    Clause(negLeft ++ (rightConjunct map { x => (x, true) }))
+    Clause(negLeft ++ (rightDisjunct map { x => (x, true) }))
   }
 
-  protected def allImply(left: Seq[String], target: String): Seq[Clause] = left flatMap { x => impliesRightAnd(x :: Nil, target :: Nil) }
+  def allImply(left: Seq[String], target: String): Seq[Clause] = left flatMap { x => impliesRightAnd(x :: Nil, target :: Nil) }
 
 
   lazy val possibleAndImpossibleActionsPerLayer: Map[Int, (Seq[Task], Seq[Task])] = Range(-1, K) map { layer =>
@@ -225,7 +233,7 @@ object VerifyEncoding {
 
   def computeICAPSK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = 2 * taskSequenceLength * (domain.abstractTasks.length + 1)
 
-  def computeTSTGK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = domain.taskSchemaTransitionGraph.longestPathLength match {case Some(x) => x; case _ => Integer.MAX_VALUE }
+  def computeTSTGK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = domain.taskSchemaTransitionGraph.longestPathLength match {case Some(x) => x; case _ => Integer.MAX_VALUE}
 
   def computeMethodSize(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
     // recognize the case where only top has a unit method
@@ -264,6 +272,7 @@ object VerifyEncoding {
           cached((currentTask, remainingLength)) = result
           result
         }
+
         totalLength -> minimumByDistribution(0, totalLength)
       } collect { case (length, Some(height)) => length -> (1 + height) } toMap
     }

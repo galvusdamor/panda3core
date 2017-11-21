@@ -1,0 +1,5 @@
+# example from Sipser
+b - c a
+a - a b
+c a - a
+a b c - c

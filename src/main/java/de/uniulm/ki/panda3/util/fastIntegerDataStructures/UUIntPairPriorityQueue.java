@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.util.fastIntegerDataStructures;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -56,6 +57,24 @@ public class UUIntPairPriorityQueue {
 
     public int size() {
         return (nextIndex - 1);
+    }
+
+    @Override
+    public String toString() {
+        boolean first = true;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i < this.nextIndex; i++) {
+            if (first)
+                first = false;
+            else
+                sb.append(", ");
+            sb.append("(");
+            sb.append(pairs[i][0]);
+            sb.append(", ");
+            sb.append(pairs[i][1]);
+            sb.append(")");
+        }
+        return sb.toString();
     }
 
     public void add(int sortBy, int someInt) {

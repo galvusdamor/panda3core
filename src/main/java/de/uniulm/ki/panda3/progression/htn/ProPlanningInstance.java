@@ -2,13 +2,12 @@ package de.uniulm.ki.panda3.progression.htn;
 
 import de.uniulm.ki.panda3.configuration.*;
 import de.uniulm.ki.panda3.progression.heuristics.htn.*;
-import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgFFMulticount;
-import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedCompositionGraph.ProRcgSas;
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRcFFMulticount;
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRelaxedComposition;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.*;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
 import de.uniulm.ki.panda3.progression.htn.search.SolutionStep;
-import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -30,11 +29,10 @@ import java.util.concurrent.ExecutionException;
  */
 public class ProPlanningInstance {
 
-    public static SasPlusProblem sasp;
-
     final boolean verbose = false;
 
     public static Random random;
+    public static long randomSeed;
 
     public boolean plan(Domain d, Plan p, Map<Task, Set<SimpleDecompositionMethod>> methodsByTask,
                         InformationCapsule ic, TimeCapsule tc,
@@ -48,9 +46,17 @@ public class ProPlanningInstance {
             System.exit(-1);
         }
 
+        // check for an unsolvable planning instance
+        if (d.decompositionMethods().length() == 0){
+            // there cannot be a solution ...
+            ic.set(Information.SEARCH_SPACE_FULLY_EXPLORED(),"true");
+            return false;
+        }
+
         // Convert data structures
         long totaltime = System.currentTimeMillis();
-        random = new Random(randomSeed);
+        ProPlanningInstance.randomSeed = randomSeed;
+        random = new Random(ProPlanningInstance.randomSeed);
 
         ProgressionNetwork.flatProblem = d.sasPlusRepresentation().get().sasPlusProblem();
 
@@ -96,13 +102,6 @@ public class ProPlanningInstance {
         initialTasks.add(ps);
         ps.methods = methods.get(ps.getTask());
         ProgressionNetwork initialNode = new ProgressionNetwork(ProgressionNetwork.flatProblem.getS0(), initialTasks);
-        /*
-        try {
-            System.out.println("\n\n<PRESS KEY>");
-            System.in.read();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
 
         /* Spezialfälle
          * - BFS/DFS -> PriorityQueue A* & spezielle Heuristik
@@ -111,45 +110,26 @@ public class ProPlanningInstance {
          * - Echte Heuristik x Greedy, Greedy A* (mit Faktor)
          */
         if (search instanceof BFSType$)
-            initialNode.heuristic = new ProBFS();
+            initialNode.heuristic = new gphBFS();
         else if (search instanceof DFSType$) {
-            initialNode.heuristic = new ProDFS();
+            initialNode.heuristic = new gphDFS();
         } else if (heuristic instanceof HierarchicalHeuristicRelaxedComposition) {
             HierarchicalHeuristicRelaxedComposition h = (HierarchicalHeuristicRelaxedComposition) heuristic;
-            initialNode.heuristic = new ProRcgSas(ProgressionNetwork.flatProblem, h.classicalHeuristic(), methods, initialTasks);
+            initialNode.heuristic = new gphRelaxedComposition(ProgressionNetwork.flatProblem, h.classicalHeuristic(), methods, initialTasks);
         } else if (heuristic instanceof RelaxedCompositionGraph) {
             RelaxedCompositionGraph heu = (RelaxedCompositionGraph) heuristic;
-            initialNode.heuristic = new ProRcgFFMulticount(methods, initialTasks, ProgressionNetwork.taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
+            initialNode.heuristic = new gphRcFFMulticount(methods, initialTasks, ProgressionNetwork.taskToIndex.keySet(), heu.useTDReachability(), heu.producerSelectionStrategy(), heu.heuristicExtraction());
         } else if (heuristic instanceof GreedyProgression$)
             initialNode.heuristic = new ProGreedyProgression();
         else {
             throw new IllegalArgumentException("Heuristic " + heuristic + " is not supported");
         }
 
-/*
-        // todo: this is hacky!
-        if ((taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.decompDepth) && (!TopDownReachabilityGraph.isInitialized())) {
-            int taskNo = operators.numStateFeatures;
-            HashMap<GroundTask, Integer> TaskToIndex = new HashMap<>();
-
-            for (GroundTask a : allActions) {
-                TaskToIndex.put(a, taskNo);
-                taskNo++;
-            }
-
-            for (GroundTask t : RCG.getGroundTasks(operators.methods)) {
-                TaskToIndex.put(t, taskNo);
-                taskNo++;
-            }
-
-            new TopDownReachabilityGraph(methods, initialTasks, taskNo, flatProblem.numOfOperators, TaskToIndex);
-
-        }*/
         initialNode.heuristic.build(initialNode);
         initialNode.metric = initialNode.heuristic.getHeuristic();
 
         PriorityQueueSearch routine;
-        boolean printOutput = false;
+        boolean printOutput = true;
         boolean findShortest = false;
 
         boolean aStar = true;
@@ -169,7 +149,7 @@ public class ProPlanningInstance {
         } else {
             System.out.println(" - Greedy search");
         }
-        System.out.println(" - " + initialNode.heuristic.getName() + " heuristic");
+        System.out.println(" - HTN heuristic:" + initialNode.heuristic.getName());
 
         if (taskSelectionStrategy == PriorityQueueSearch.abstractTaskSelection.random) {
             System.out.println(" - Abstract task choice: randomly");
@@ -195,9 +175,7 @@ public class ProPlanningInstance {
         }
 
         assert (isApplicable(solution, ProgressionNetwork.flatProblem.getS0()));
-        //System.out.println("###" + ic.keyValueListString() + ";" + tc.keyValueListString());
 
-        int n = 1;
         if (solution != null) {
             System.out.println("\nFound a solution:");
             System.out.println(solution.toString());

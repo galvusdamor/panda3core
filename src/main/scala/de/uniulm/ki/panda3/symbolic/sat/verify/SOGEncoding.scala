@@ -13,12 +13,11 @@ import scala.collection.{mutable, Seq}
   */
 trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrimitivePlanEncoding {
 
-  protected final val useImplicationForbiddenness = false
-
-  assert(initialPlan.planStepsWithoutInitGoal.length == 1, "This formula is only correct if the initial plan has been replaced by an artificial top task")
+  assert(initialPlan.planStepsWithoutInitGoal.length == 1, "This formula is only correct if the initial plan has been replaced by an artificial top task, but it contained\n" + initialPlan
+    .planStepsWithoutInitGoal.map(_.schema.name).mkString("\n"))
 
   // this is only needed in the tree encoding
-  override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, taskOrdering: Seq[Task]): Seq[Clause] = Nil
+  override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions : Map[Int,Int]): Seq[Clause] = Nil
 
   override lazy val goalState: Seq[Clause] = goalStateOfLength(taskSequenceLength)
 
@@ -94,7 +93,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     //println("\n\nGraph minisation")
     //println(childrenIndicesToPossibleTasks map {s => s map {t => t.name + " " + t.isAbstract} mkString " "} mkString "\n")
 
-    val maxVertex = minimalSuperGraph.vertices.max
+    val maxVertex = if (minimalSuperGraph.vertices.isEmpty) -1 else minimalSuperGraph.vertices.max
     assert(minimalSuperGraph.vertices.length - 1 == maxVertex, "SOG has " + minimalSuperGraph.vertices.length + " vertices, but maximum vertex is " + maxVertex)
 
     (tasksPerMethodToChildrenMapping, childrenForPrimitives, childrenIndicesToPossibleTasks map { _.toSet } toArray, NonExpandedSOG(minimalSuperGraph))
@@ -119,6 +118,49 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
 
     pdt.restrictPathDecompositionTree(dontRemovePrimitives)
   }
+
+  lazy val sog: DirectedGraph[(Seq[Int], Set[Task])] = {
+    println("Final SOG has " + rootPayload.ordering.vertices.length + " vertices")
+    // assert correctness
+
+    val pl: DirectedGraph[(Seq[Int], Set[Task])] = rootPayload.ordering.map(
+      {
+        case (path, tasks) =>
+          val matchingPaths = primitivePaths.filter(_._1 == path)
+          if (matchingPaths.isEmpty)
+            (path, Set[Task]())
+          else
+            (path, matchingPaths.head._2)
+      })
+
+    /*rootPayload.ordering.vertices foreach { case (path, tasks) =>
+      val matchingPaths = primitivePaths.filter(_._1 == path)
+      if (matchingPaths.isEmpty)
+        assert(tasks.isEmpty)
+      else
+        assert(matchingPaths.length == 1 && matchingPaths.head._2 == tasks)
+
+    }*/
+
+    print("Compute Transitive reducton ... ")
+    //val sog = rootPayload.ordering.transitiveReduction
+    val ss = pl.transitiveClosure
+    val nodesToKeep = ss.vertices filter { _._2.exists(_.isPrimitive) } toSet
+    val finalSOG: DirectedGraph[(Seq[Int], Set[Task])] =
+      SimpleDirectedGraph(nodesToKeep.toSeq, ss.edgeList filter { case (a, b) => (nodesToKeep contains a) && (nodesToKeep contains b) }).transitiveReduction
+    println("done")
+
+
+    /*val string = finalSOG.dotString(options = DirectedGraphDotOptions(),
+                                    //nodeRenderer = {case (path, tasks) => tasks map { _.name } mkString ","})
+                                    nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + tasks.size + " " + path})
+    Dot2PdfCompiler.writeDotToFile(string, "sog.pdf")*/
+
+    println("TREE P: " + primitivePaths.length + " S: " + taskSequenceLength)
+
+    finalSOG
+  }
+
 }
 
 case class NonExpandedSOG(ordering: DirectedGraph[Int])

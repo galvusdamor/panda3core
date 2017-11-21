@@ -3,22 +3,24 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.domain._
-import de.uniulm.ki.panda3.symbolic.logic.{And, Predicate, Literal}
+import de.uniulm.ki.panda3.symbolic.logic.{And, Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
-import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.{NativeOptimiser, GreedyNumberOfChildrenFromTotallyOrderedOptimiser, GreedyNumberOfAbstractChildrenOptimiser}
+import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.GreedyNumberOfChildrenFromTotallyOrderedOptimiser
 import de.uniulm.ki.util._
 
-import scala.annotation.elidable
-import scala.annotation.elidable._
-import scala.collection.{mutable, Seq}
+import scala.collection.Seq
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
                                   domain: Domain, initialPlan: Plan, reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
-  extends PathBasedEncoding[Unit, Unit] with EncodingWithLinearPlan {
+  extends TreeEncoding with EncodingWithLinearPlan{
+
+
+  assert(domain.decompositionMethods forall { _.subPlan.orderingConstraints.fullGraph.allTotalOrderings.get.length == 1 })
+
+  override val optimiser = GreedyNumberOfChildrenFromTotallyOrderedOptimiser
 
   val numberOfChildrenClauses: Int = 0
 
@@ -29,7 +31,7 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
     memoise[(Int, Int, Predicate), String]({ case (l, pos, pred) => "predicate^" + l + "_" + pos + "," + predicateIndex(pred) })
 
 
-  override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, taskOrdering: scala.Seq[Task]): Seq[Clause] = Nil
+  override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions : Map[Int,Int]): Seq[Clause] = Nil
 
   private def primitivesApplicable(layer: Int, position: Int): Seq[Clause] = primitivePaths(position)._2.toSeq filter { _.isPrimitive } flatMap {
     case task: ReducedTask =>
@@ -97,51 +99,6 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
   override protected def initialPayload(possibleTasks: Set[Task], path: scala.Seq[Int]): Unit = ()
 
   override protected def combinePayloads(childrenPayload: Seq[Unit], intermediate: Unit): Unit = ()
-
-  override protected def computeTaskSequenceArrangement(possibleMethods: Array[DecompositionMethod],
-                                                        possiblePrimitives: scala.Seq[Task]): (Array[Array[Int]], Array[Int], Array[Set[Task]], Unit) = {
-    val methodTaskGraphs = (possibleMethods map { _.subPlan.orderingConstraints.fullGraph }) ++ (
-      possiblePrimitives map { t => SimpleDirectedGraph(PlanStep(-1, t, Nil) :: Nil, Nil) })
-
-    assert(methodTaskGraphs forall { _.allTotalOrderings.get.length == 1 })
-
-    // TODO we are currently mapping plansteps, maybe we should prefer plansteps with identical tasks to be mapped together
-    //println("MINI " + possibleMethods.length + " " + possiblePrimitives.length)
-    val lb = if (methodTaskGraphs.nonEmpty) methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max else 0
-    // TODO what to do?
-    //val g = DirectedGraph.minimalInducedSuperGraph[PlanStep](methodTaskGraphs) //, minimiseAbstractTaskOccurencesMetric)
-    //val g = GreedyNumberOfAbstractChildrenOptimiser.minimalSOG(methodTaskGraphs)
-    val g = GreedyNumberOfChildrenFromTotallyOrderedOptimiser.minimalSOG(methodTaskGraphs)
-    //val g = NativeOptimiser.minimalSOG(methodTaskGraphs)
-    //println("done")
-    val minimalSuperGraph = g._1
-    val planStepToIndexMappings: Seq[Map[PlanStep, Int]] = g._2
-    val topologicalOrdering = minimalSuperGraph.topologicalOrdering.get
-
-    val (methodMappings, primitiveMappings) = planStepToIndexMappings map { m => m map { case (ps, node) => (ps, topologicalOrdering.indexOf(node)) } } splitAt possibleMethods.length
-
-    val childrenIndicesToPossibleTasks = minimalSuperGraph.vertices map { _ => new mutable.HashSet[Task]() }
-
-    val tasksPerMethodToChildrenMapping = methodMappings.zipWithIndex map { case (mapping, methodIndex) =>
-      val methodPlanSteps = possibleMethods(methodIndex).subPlan.planStepsWithoutInitGoal
-      (methodPlanSteps map { ps =>
-        childrenIndicesToPossibleTasks(mapping(ps)) add ps.schema
-        mapping(ps)
-      }).toArray
-    } toArray
-
-    val childrenForPrimitives = primitiveMappings.zipWithIndex map { case (mapping, primitiveIndex) =>
-      assert(mapping.size == 1)
-      childrenIndicesToPossibleTasks(mapping.head._2) add mapping.head._1.schema
-      mapping.head._2
-    } toArray
-
-    //println("\n\nGraph minisation")
-    //println(childrenIndicesToPossibleTasks map {s => s map {t => t.name + " " + t.isAbstract} mkString " "} mkString "\n")
-
-    (tasksPerMethodToChildrenMapping, childrenForPrimitives, childrenIndicesToPossibleTasks map { _.toSet } toArray, ())
-  }
-
 
   private def canBeAchieved(prec: Seq[Seq[(Int, Task)]]): Boolean = {
     def dfs(remaining: Seq[Seq[(Int, Task)]], asserted: Map[Int, Task]): Boolean = if (remaining.isEmpty) true
@@ -285,7 +242,7 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
       val foundAnyTaskToRemove = tasksToRemoveFromPaths exists { _.nonEmpty }
       if (!foundAnyTaskToRemove) {
         // plot PDT to file
-        Dot2PdfCompiler.writeDotToFile(pdt.treeBelowAsGraph, "pdtN.pdf")
+        //Dot2PdfCompiler.writeDotToFile(pdt.treeBelowAsGraph, "pdtN.pdf")
 
         pdt.normalise
       }

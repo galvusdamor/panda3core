@@ -20,7 +20,7 @@ class NaiveVSTopDownTDG extends FlatSpec {
     "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml", "Smartphone VerySmall") ::
     ("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/SmartPhone-HierarchicalNoAxioms.xml",
       "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_Small.xml", "Smartphone Small") ::
-    ("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/domain-htn.lisp",
+    ("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/transport-domain-part-ord.lisp",
       "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/hpddl/htn-strips-pairs/IPC7-Transport/p00-htn.lisp", "HTN Transport 00") :: Nil
 
   testInstanes foreach { case (domFile, probFile, name) =>

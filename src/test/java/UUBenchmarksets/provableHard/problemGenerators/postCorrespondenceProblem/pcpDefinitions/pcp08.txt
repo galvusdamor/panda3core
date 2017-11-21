@@ -1,0 +1,4 @@
+# example from Witt - Grundkurs Theoretische Informatik
+a a - a
+a b b - b b
+a b - a b a

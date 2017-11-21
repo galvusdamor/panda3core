@@ -4,20 +4,28 @@ import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 
+import java.util.BitSet;
+
 /**
  * Created by dhoeller on 25.07.16.
  */
-public interface GroundedProgressionHeuristic {
+public abstract class GroundedProgressionHeuristic {
 
-    String getName();
+    public abstract String getName();
 
-    void build(ProgressionNetwork tn);
+    public boolean supportsHelpfulActions = false;
 
-    GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, ProMethod m);
+    public BitSet helpfulOps() {
+        return null;
+    }
 
-    GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps);
+    public abstract void build(ProgressionNetwork tn);
 
-    int getHeuristic();
+    public abstract GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, ProMethod m);
 
-    boolean goalRelaxedReachable();
+    public abstract GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps);
+
+    public abstract int getHeuristic();
+
+    public abstract boolean goalRelaxedReachable();
 }

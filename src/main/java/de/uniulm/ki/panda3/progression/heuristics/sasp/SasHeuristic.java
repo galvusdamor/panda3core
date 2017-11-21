@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.progression.heuristics.sasp;
 
-import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.IncrementalCalc.IncrementInformation;
 
 import java.util.BitSet;
 
@@ -8,39 +8,31 @@ import java.util.BitSet;
  * Created by dh on 02.05.17.
  */
 public abstract class SasHeuristic {
+    public static final int cUnreachable = Integer.MAX_VALUE;
+    public BitSet helpfulOps;
+
+    public enum SasHeuristics {hFilter, hMax, hAdd, hFF, hFFwithHA, hCG, hLmCut, hLmCutOpt, hIncLmCut}
 
     protected boolean isIncremental = false;
-    protected int lastAction;
-    protected IncrementInformation increment;
 
-    public enum SasHeuristics {hMax, hAdd, hFF, hLmCut, hIncLmCut}
-
-    public SasHeuristic(SasPlusProblem p) {
+    public boolean isIncremental() {
+        return this.isIncremental;
     }
 
-    private SasHeuristic() {
+    public IncrementInformation getIncInf() {
+        return null;
     }
 
-    public boolean isIncremental(){
-        return isIncremental;
+    public int calcHeu(int lastAction, IncrementInformation inc, BitSet s0, BitSet g) {
+        return this.calcHeu(s0, g);
     }
-
-    public void setIncrement(int lastAction, IncrementInformation i){
-        this.increment = i;
-        this.lastAction = lastAction;
-    }
-
-    public IncrementInformation getIncrement(){
-        return this.increment;
-    }
-
-    public abstract int calcHeu(int[] s0, int[] g);
 
     public abstract int calcHeu(BitSet s0, BitSet g);
 
     public boolean debug = false;
+
     protected void debugOut(String s) {
-        if(debug)
-        System.out.print(s);
+        if (debug)
+            System.out.print(s);
     }
 }

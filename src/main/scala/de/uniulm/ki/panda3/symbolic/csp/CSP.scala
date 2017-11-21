@@ -21,7 +21,7 @@ import scala.collection.mutable
   */
 case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) extends DomainUpdatable with HashMemo {
 
-  constraints foreach { _.getVariables foreach { v => assert(variables contains v)}}
+  constraints foreach { _.getVariables foreach { v => assert(variables contains v) } }
 
   // holds equivalent variables
   private val unionFind      : SymbolicUnionFind                            = new SymbolicUnionFind
@@ -36,7 +36,8 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
   private var isPotentiallySolvable = true
 
 
-  private def checkIntegrity() = if (!CSP.CHECKCSPINTEGRITY) true else {
+  private def checkIntegrity() = if (!CSP.CHECKCSPINTEGRITY) true
+  else {
     assert(unequal forall { _._2 forall { remainingDomain.contains } })
     assert(unequal forall { _._2 forall { variables.contains } })
     assert(unequal forall { case (v1, vals) => vals forall { case v2 => unequal(v2).contains(v1) } })
@@ -85,7 +86,7 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
   }
 
   /** returns a new CSP containing all current constraints and the constraints passed as arguments */
-  def addConstraints(constraints: Seq[VariableConstraint]): CSP = (constraints foldLeft this)({ case (c, vc) => c.addConstraint(vc) })
+  def addConstraints(constraints: Seq[VariableConstraint]): CSP = (constraints foldLeft this) ({ case (c, vc) => c.addConstraint(vc) })
 
   /** returns a new CSP containing all current constraints and the constraint passed as an argument */
   def addConstraint(constraint: VariableConstraint): CSP = {
@@ -107,7 +108,7 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
   }
 
   /** returns a new CSP containing all current variables and the variables passed as arguments */
-  def addVariables(variables: Seq[Variable]): CSP = (variables foldLeft this)({ case (c, v) => c.addVariable(v) })
+  def addVariables(variables: Seq[Variable]): CSP = (variables foldLeft this) ({ case (c, v) => c.addVariable(v) })
 
   /** returns a new CSP containing all current variables and the variable passed as an argument */
   def addVariable(variable: Variable): CSP = {
@@ -164,7 +165,7 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
   /** returns best known unique representative for a given variable or constant */
   def getRepresentative(value: Value): Value = value match {
     case v: Variable => getVariableRepresentative(v)
-    case _ => value // constant
+    case _           => value // constant
   }
 
   /** returns best known unique representative for a given variable */
@@ -331,9 +332,9 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
   }
 
   override def update(domainUpdate: DomainUpdate): CSP = domainUpdate match {
-    case AddVariables(newVars) => CSP(variables ++ newVars, constraints)
-    case RemoveVariables(deletedVariables) => CSP(variables -- deletedVariables, constraints filterNot {_.getVariables exists deletedVariables.contains})
-    case _ => CSP(variables map { _.update(domainUpdate) }, constraints map { _.update(domainUpdate) } filterNot {_.isTautologic})
+    case AddVariables(newVars)             => CSP(variables ++ newVars, constraints)
+    case RemoveVariables(deletedVariables) => CSP(variables -- deletedVariables, constraints filterNot { _.getVariables exists deletedVariables.contains })
+    case _                                 => CSP(variables map { _.update(domainUpdate) }, constraints map { _.update(domainUpdate) } filterNot { _.isTautologic })
   }
 
   /** determines whether two variables or constants must be equal in this CSP */
@@ -371,13 +372,13 @@ object UnsolvableCSP extends CSP(Set(), Nil) {
   override protected def getVariableRepresentative(v: Variable): Value = v
 }
 
-object NoConstraintsCSP extends CSP(Set(),Nil) {
+object NoConstraintsCSP extends CSP(Set(), Nil) {
 
   override def reducedDomainOf(v: Variable): Seq[Constant] = v.sort.elements
 
   override def areCompatible(v1: Variable, v2: Variable): Option[Boolean] = None
 
-  override def solution: Option[Map[Variable, Constant]] = Some(new HashMap[Variable, Constant]() {override def default(v: Variable) = v.sort.elements.head})
+  override def solution: Option[Map[Variable, Constant]] = Some(new HashMap[Variable, Constant]().withDefault({ case v: Variable => v.sort.elements.head }))
 
   override def addConstraint(constraint: VariableConstraint): CSP = throw new UnsupportedOperationException()
 

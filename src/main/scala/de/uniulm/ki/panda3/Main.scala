@@ -26,7 +26,10 @@ object Main {
                                                                                     PreprocessingConfiguration(compileNegativePreconditions = false,
                                                                                                                compileUnitMethods = false,
                                                                                                                compileInitialPlan = false,
+                                                                                                               removeUnnecessaryPredicates = false,
+                                                                                                               ensureMethodsHaveLastTask = false,
                                                                                                                convertToSASP = false,
+                                                                                                               allowSASPFromStrips = false,
                                                                                                                compileOrderInMethods = None,
                                                                                                                splitIndependentParameters = false,
                                                                                                                compileUselessAbstractTasks = false,
@@ -34,7 +37,8 @@ object Main {
                                                                                                                groundedReachability = None,
                                                                                                                groundedTaskDecompositionGraph = None,
                                                                                                                iterateReachabilityAnalysis = false,
-                                                                                                               groundDomain = false),
+                                                                                                               groundDomain = false,
+                                                                                                               stopDirectlyAfterGrounding = false),
                                                                                     NoSearch, PostprocessingConfiguration(Set()))) extends PrettyPrintable {
 
     def processCommandLineArguments(args: Seq[String]): RunConfiguration = {
@@ -63,7 +67,7 @@ object Main {
 
       groupedArguments.foldLeft(this)(
         { case (conf, option) => option match {
-          case Left(opt) if !opt.startsWith("-") =>
+          case Left(opt) if !opt.startsWith("-")                              =>
             opt match {
               case dom if conf.domFile.isEmpty    => conf.copy(domFile = Some(dom))
               case prob if conf.probFile.isEmpty  => conf.copy(probFile = Some(prob))
@@ -72,7 +76,15 @@ object Main {
                 println("PANDA was given a fourth non-option argument \"" + opt + "\". Only three (domain-, problem-, and output-file) will be processed. Ignoring option")
                 conf
             }
-          case _                                 => // this is a real option
+          case Left(opt) if opt.equals("-cputime") || opt.equals("-walltime") =>
+            // use side effect
+            opt match {
+              case "-cputime"  => TimeCapsule.timeTakingMode = ThreadCPUTime
+              case "-walltime" => TimeCapsule.timeTakingMode = WallTime
+            }
+
+            conf
+          case _                                                              => // this is a real option
 
             // get the key
             val (key, value) = option match {
@@ -136,7 +148,7 @@ object Main {
 
     println("This is PANDA3\nBelieve us: It is great!")
     println("\nCopyright: Ulm University 2014-2017")
-    println("Developer: Gregor Behnke, Daniel Höller, Kristof Mickeleit, Tobias Welz, Kadir Dede, Matthias Englert, and Thomas Geier")
+    println("Developer: Gregor Behnke, Daniel Höller, Kristof Mickeleit, Tobias Welz, Kadir Dede, Matthias Englert, Mario Schmautz and Thomas Geier")
     println("Thanks to Pascal Bercher for his moral support while writing PANDA3\n\n")
 
     val initialConfiguration = RunConfiguration()

@@ -25,11 +25,6 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public static Map<Task, List<ProMethod>> methods;
     public static Set<Integer> ShopPrecActions = new HashSet<>();
 
-
-    /* todo
-     * - does this work for empty task networks? I don't think so. Could one compile these methods in something other?
-     */
-
     public BitSet state;
     List<ProgressionPlanStep> unconstraintPrimitiveTasks;
     List<ProgressionPlanStep> unconstraintAbstractTasks;
@@ -37,18 +32,34 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public int numSHOPProgressionSteps = 0;
     public int numDecompositionSteps = 0;
 
-
     private boolean printProgressionTrace = false;
     public String progressionTrace;
 
     public GroundedProgressionHeuristic heuristic;
 
+    public int heuristicVal = 0;
     public int metric = 0;
     public boolean goalRelaxedReachable = true;
     public int id = 0;
     private int numberOfTasks = 0;
     private int numberOfPrimitiveTasks = 0;
     public SolutionStep solution;
+
+    public static boolean useHelpfulActions = false;
+
+    public BitSet helpfulActions;
+
+    public boolean isHelpFulAction(int action) {
+        if (!useHelpfulActions)
+            return false;
+        return helpfulActions.get(action);
+    }
+
+    public boolean isHelpFulMethod(ProMethod method) {
+        if (!useHelpfulActions)
+            return false;
+        return helpfulActions.get(method.methodID);
+    }
 
     private ProgressionNetwork() {
     }
@@ -145,7 +156,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
             }
             sb.append(i);
             sb.append(":");
-            sb.append(ps.getTask().longInfo());
+            sb.append(ps.getTask().shortInfo());
             i++;
         }
         boolean first = true;
@@ -221,7 +232,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         return res;
     }
 
-    public ProgressionNetwork apply(ProgressionPlanStep ps, boolean deleteRelaxed) {
+    public ProgressionNetwork apply(ProgressionPlanStep ps) {
         ProgressionNetwork res = this.clone();
         res.numberOfTasks--;
         res.numberOfPrimitiveTasks--;
@@ -238,10 +249,8 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         assert (isApplicable(res.state, ps.action));
 
         // transfer state
-        if (!deleteRelaxed) {
-            for (int df : ProgressionNetwork.flatProblem.delLists[ps.action])
-                res.state.set(df, false);
-        }
+        for (int df : ProgressionNetwork.flatProblem.delLists[ps.action])
+            res.state.set(df, false);
         for (int af : ProgressionNetwork.flatProblem.addLists[ps.action])
             res.state.set(af, true);
 

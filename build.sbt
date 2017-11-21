@@ -4,10 +4,10 @@ lazy val commonSettings = Seq(
                                homepage := Some(url("http://www.uni-ulm.de/in/ki/staff/gregor-behnke.html")),
                                organization := "de.uni-ulm.ki",
                                version := "0.2.1-SNAPSHOT",
-                               scalaVersion := "2.11.8",
+                               scalaVersion := "2.12.3",
                                resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-                               libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.5" % "test",
-                               libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.5",
+                               libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+                               libraryDependencies += "org.antlr" % "antlr4-runtime" % "4.7",
                                libraryDependencies += "org.sat4j" % "org.sat4j.core" % "2.3.1",
                                startYear := Some(2014),
                                //licenses += "MIT" -> url("http://opensource.org/licenses/MIT")
@@ -88,6 +88,14 @@ lazy val transportProbGen = (project in (file("assembly") / "transportProbGen"))
             assemblyJarName in assembly := "panda3transportProbGen.jar",
             mainClass in assembly := Some("de.uniulm.ki.panda3.problemGenerators.derivedFromSTRIPS.transport.transportProbGen")
           )
+
+
+lazy val pcpProbGen = (project in (file("assembly") / "pcpProbGen")).settings(assemblySettings: _*).
+  settings(
+    target := file("assembly") / "pcpProbGen",
+    assemblyJarName in assembly := "panda3pcpProbGen.jar",
+    mainClass in assembly := Some("de.uniulm.ki.panda3.problemGenerators.pcpGenerator.PostCorrespondenceProblemToHTN")
+  )
 
 
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")

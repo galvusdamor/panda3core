@@ -40,7 +40,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
     }
 
     public TDGLandmarkFactory(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, int numTasks, int numActions) {
-        System.out.println("Calculating HTN invariants ...");
+        System.out.println("Calculating HTN reachability ...");
         long time = System.currentTimeMillis();
         this.numActions = numActions;
         this.numTasks = numTasks;
@@ -49,7 +49,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
 
         // set root to those tasks in the initial task network
         this.root = new BitSet(nodeCount);
-        this.root.set(0, nodeCount - 1, false);
+        this.root.set(0, nodeCount, false);
         for (ProgressionPlanStep ps : initialTasks)
             root.set(tToI(ps.getTask()));
 
@@ -74,6 +74,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
         for (int v = root.nextSetBit(0); v > -1; v = root.nextSetBit(v + 1))
             calcPossAndNecSets(nodeToScc[v]);
 
+        /*
         taskNames = new String[nodeCount];
         taskParams = new String[nodeCount][];
         relLMs = new HashMap[nodeCount];
@@ -82,17 +83,17 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
 
         for (int v = root.nextSetBit(0); v > -1; v = root.nextSetBit(v + 1))
             calcRelaxedLMs(nodeToScc[v]);
-
+        */
         // set the reachability of every task to the reachability of the SCC it belongs to and set also the reachable actions
-        this.reachableActions = new BitSet[numTasks]; // these are the reachable actions
+        this.reachableActions = new BitSet[numTasks];
         for (int i = 0; i < reachableActions.length; i++) {
             this.reachableActions[i] = new BitSet(numActions);
-            this.reachableActions[i].set(0, numActions - 1, false);
+            this.reachableActions[i].set(0, numActions, false);
             for (int v = possible[i].nextSetBit(0); (v > -1) && (v < numActions); v = possible[i].nextSetBit(v + 1))
                 this.reachableActions[i].set(v);
         }
-        collectRelaxedLMs();
-        printDisLMTranslation();
+        //collectRelaxedLMs();
+        //printDisLMTranslation();
 
         //printBS(necessary);
         //printDisLMs();
@@ -165,7 +166,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
         graph = new BitSet[nodeCount];
         for (int i = 0; i < nodeCount; i++) {
             graph[i] = new BitSet(nodeCount);
-            graph[i].set(0, nodeCount - 1, false);
+            graph[i].set(0, nodeCount, false);
         }
 
         for (Task t : methods.keySet()) {
@@ -349,6 +350,7 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
     }
 
     private void unify(List<String[]> taskParamSets, List<String[]> methParamSets) {
+        //System.out.println("UNIFY " + taskParamSets.size()  );
         for (int iLM = 0; iLM < taskParamSets.size(); iLM++) {
             int currentCost = Integer.MAX_VALUE;
             String[] currentUnified = null;
@@ -435,12 +437,17 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
     private void extractParams(int node) {
         Task task = iToT(node);
         String n = task.name();
-        String tName = n.substring(0, n.indexOf("["));
-        taskNames[node] = tName;
-        String paramStrs = n.substring(n.indexOf("["));
-        paramStrs = paramStrs.substring(1, paramStrs.length() - 1);
-        String[] params = paramStrs.split(",");
-        taskParams[node] = params;
+        if (!n.contains("[")) {
+            taskNames[node] = n;
+            taskParams[node] = new String[0];
+        } else {
+            String tName = n.substring(0, n.indexOf("["));
+            taskNames[node] = tName;
+            String paramStrs = n.substring(n.indexOf("["));
+            paramStrs = paramStrs.substring(1, paramStrs.length() - 1);
+            String[] params = paramStrs.split(",");
+            taskParams[node] = params;
+        }
     }
 
     private boolean isAbstract(int node) {

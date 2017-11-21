@@ -1,7 +1,16 @@
 package de.uniulm.ki.panda3.progression.htn.representation;
 
+import de.uniulm.ki.panda3.symbolic.domain.Domain;
+import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
+import de.uniulm.ki.panda3.symbolic.logic.And;
+import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
+import de.uniulm.ki.panda3.symbolic.logic.Literal;
+import de.uniulm.ki.panda3.symbolic.logic.Variable;
+import de.uniulm.ki.panda3.symbolic.plan.Plan;
+import de.uniulm.ki.panda3.util.seqProviderList;
 import scala.Tuple2;
+import scala.collection.Seq;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -33,7 +42,7 @@ public class SasPlusProblem {
     private boolean actionCosts = false;
 
     // number of elements
-    private int numOfVars;
+    public int numOfVars;
     private int numOfMutexGroups;
     private int numOfGoalPairs;
     public int numOfOperators;
@@ -111,6 +120,7 @@ public class SasPlusProblem {
     public int[] gList;
 
     public String[] factStrs;
+    public boolean createdFromStrips = false;
 
     public BitSet getS0() {
         if (s0Bitset == null) {
@@ -321,6 +331,7 @@ public class SasPlusProblem {
         for (int i = 0; i < this.numOfOperators; i++) {
             readOperator(br, i);
         }
+        br.close();
     }
 
     private void readOperator(BufferedReader br, int i) throws Exception {
@@ -562,6 +573,18 @@ public class SasPlusProblem {
         return opNames;
     }
 
+    private int[] delete(int[] list, int var) {
+        List<Integer> newList = new ArrayList<>();
+        for (int i = 0; i < list.length; i++) {
+            if (indexToMutexGroup[list[i]] != var)
+                newList.add(list[i]);
+        }
+        int[] res = new int[newList.size()];
+        for (int i = 0; i < newList.size(); i++)
+            res[i] = newList.get(i);
+        return res;
+    }
+
     public Tuple2<Map<Integer, Task>, Map<Task, Integer>> restrictTo(Set<Integer> I, Map<Integer, Task> i2t) {
         assert this.correctModel();
 
@@ -569,6 +592,25 @@ public class SasPlusProblem {
         System.out.print("Reducing SAS+ domain ... ");
         int orgOpNum = this.numOfOperators;
         int orgStateNum = this.numOfStateFeatures;
+
+        // delete artificial goal fact
+        int goalVar = -1;
+        for (int i = 0; i < numOfVars; i++) {
+            if ((ranges[i] == 2) && (factStrs[firstIndex[i]].contains("__goal()"))) {
+                goalVar = i;
+            }
+        }
+
+        if (goalVar >= 0) {
+            for (int op = 0; op < numOfOperators; op++) {
+                precLists[op] = delete(precLists[op], goalVar);
+                addLists[op] = delete(addLists[op], goalVar);
+                delLists[op] = delete(delLists[op], goalVar);
+            }
+            s0List = delete(s0List, goalVar);
+            gList = delete(gList, goalVar);
+
+        }
 
         int[] actionNewToOld = new int[actionCount];
         Map<Task, Integer> taskToIndex = new HashMap<>();
@@ -668,6 +710,7 @@ public class SasPlusProblem {
         indexToMutexGroup = indexToMutexGroupNew;
         calcMutexGroupIndices();
         calcRanges();
+        numOfVars = firstIndex.length;
 
         precLists = precListsNew;
         addLists = addListsNew;
@@ -724,6 +767,7 @@ public class SasPlusProblem {
         lastIndex = new int[lastI.size()];
         for (int i = 0; i < lastI.size(); i++)
             lastIndex[i] = lastI.get(i);
+        numOfVars = firstIndex.length;
         assert (firstIndex.length == lastIndex.length);
     }
 
@@ -792,7 +836,36 @@ public class SasPlusProblem {
         }
     }
 
+    public void removeDublicates(boolean showWarning) {
+        removeDublicates(this.precLists, true, showWarning);
+        removeDublicates(this.addLists, false, showWarning);
+        removeDublicates(this.delLists, false, showWarning);
+    }
+
+    private void removeDublicates(int[][] someAr, boolean isPrec, boolean showWarning) {
+        for (int op = 0; op < someAr.length; op++) {
+            Set<Integer> temp = new HashSet<>();
+            for (int i = 0; i < someAr[op].length; i++) {
+                if (showWarning && temp.contains(someAr[op][i]))
+                    System.out.println("The operator " + opNames[op] + " has duplicates in its prec/add/del lists. These will be removed.");
+                temp.add(someAr[op][i]);
+            }
+            if (temp.size() < someAr[op].length) {
+                if (isPrec)
+                    numPrecs[op] = temp.size();
+                someAr[op] = new int[temp.size()];
+                int i = 0;
+                for (int f : temp)
+                    someAr[op][i++] = f;
+            }
+        }
+    }
+
     public boolean correctModel() {
+        return correctModel(this.createdFromStrips);
+    }
+
+    public boolean correctModel(boolean ignoreS0) {
         assert precLists.length == numOfOperators;
         assert addLists.length == numOfOperators;
         assert delLists.length == numOfOperators;
@@ -834,12 +907,25 @@ public class SasPlusProblem {
         for (int f : this.gList)
             assert (f < numOfStateFeatures);
 
-        assert (indexToMutexGroup.length == numOfStateFeatures);
-        assert (costs.length == numOfOperators);
-        assert (opNames.length == numOfOperators);
-        assert (factStrs.length == numOfStateFeatures);
-        assert (indexToMutexGroup[numOfStateFeatures - 1] == (firstIndex.length - 1));
-        assert (firstIndex.length == lastIndex.length);
+        assert indexToMutexGroup.length == numOfStateFeatures;
+        assert costs.length == numOfOperators;
+        assert opNames.length == numOfOperators;
+        assert factStrs.length == numOfStateFeatures;
+        assert indexToMutexGroup[numOfStateFeatures - 1] == (firstIndex.length - 1);
+        assert firstIndex.length == lastIndex.length;
+        assert numOfVars == ranges.length;
+        assert firstIndex.length == ranges.length;
+
+        // every range contains one set bit
+        if (!ignoreS0) {
+            for (int i = 0; i < this.numOfVars; i++) {
+                int setBit = getS0().nextSetBit(firstIndex[i]);
+                assert setBit >= 0;
+                assert setBit <= lastIndex[i];
+                assert (getS0().nextSetBit(setBit + 1) == -1) || (getS0().nextSetBit(setBit + 1) >= firstIndex[i + 1]);
+            }
+        }
+
         return true;
     }
 
@@ -977,5 +1063,199 @@ public class SasPlusProblem {
         for (int[] list : lists)
             count += list.length;
         return f.format(count / this.precLists.length);
+    }
+
+    static public Tuple2<SasPlusProblem, ReducedTask[]> generateFromSTRIPS(Domain domain, Plan plan) {
+        HashSet<Literal> usedInPrec = new HashSet<>();
+        HashSet<Literal> usedInAdd = new HashSet<>();
+        HashSet<Literal> usedInDel = new HashSet<>();
+        HashSet<Literal> usedInS0 = new HashSet<>();
+        HashSet<Literal> usedInG = new HashSet<>();
+
+        // prepare tasks
+        scala.collection.Iterator<Task> taskIter = domain.primitiveTasks().iterator();
+        ReducedTask[] tasks = new ReducedTask[domain.primitiveTasks().size()];
+        int ti = 0;
+        while (taskIter.hasNext()) {
+            Task t = taskIter.next();
+            assert t instanceof ReducedTask;
+            ReducedTask rt = (ReducedTask) t;
+            tasks[ti++] = rt;
+
+            // preconditions
+            scala.collection.Iterator<Literal> litIter = rt.precondition().conjuncts().iterator();
+            while (litIter.hasNext()) {
+                Literal l = litIter.next();
+                assert l.isPositive();
+                usedInPrec.add(l);
+            }
+
+            // effects
+            litIter = rt.effect().conjuncts().iterator();
+            while (litIter.hasNext()) {
+                Literal l = litIter.next();
+
+                if (l.isPositive()) {
+                    usedInAdd.add(l);
+                } else {
+                    Literal posL = new Literal(l.predicate(), true, l.parameterVariables());
+                    usedInDel.add(posL);
+                }
+            }
+        }
+
+        // prepare s0
+        scala.collection.Iterator<Object> iter3 = plan.groundedInitialStateOnlyPositive().toSet().iterator();
+        while (iter3.hasNext()) {
+            GroundLiteral gl = (GroundLiteral) iter3.next();
+            assert gl.isPositive();
+            if (gl.parameter().size() > 0) {
+                System.out.println("Error: Tried to create " + new SasPlusProblem().getClass().toString() + " from non-grounded tasks.");
+                System.exit(-1);
+            }
+            Literal l = new Literal(gl.predicate(), true, new seqProviderList<Variable>().result());
+            usedInS0.add(l);
+        }
+        iter3 = plan.groundedGoalState().toSet().iterator();
+        while (iter3.hasNext()) {
+            GroundLiteral gl = (GroundLiteral) iter3.next();
+            if (gl.parameter().size() > 0) {
+                System.out.println("Error: Tried to create " + new SasPlusProblem().getClass().toString() + " from non-grounded tasks.");
+                System.exit(-1);
+            }
+            if (!gl.isPositive()) {
+                System.out.println("Error: Tried to create " + new SasPlusProblem().getClass().toString() + " from domain with negative preconditions.");
+                System.exit(-1);
+            }
+            Literal l = new Literal(gl.predicate(), true, new seqProviderList<Variable>().result());
+            usedInG.add(l);
+        }
+
+        HashSet<Literal> staticLits = new HashSet<>();
+        staticLits.addAll(usedInS0);
+        staticLits.removeAll(usedInDel);
+
+        HashSet<Literal> usefulLits = new HashSet<>();
+        usefulLits.addAll(usedInPrec);
+        usefulLits.addAll(usedInG);
+        usefulLits.removeAll(staticLits);
+
+        /*
+         * Prepare result
+         */
+        SasPlusProblem res = new SasPlusProblem();
+        res.createdFromStrips = true;
+        res.numOfStateFeatures = usefulLits.size();
+        int li = 0;
+        HashMap<Literal, Integer> indexMap = new HashMap<>();
+        res.varNames = new String[res.numOfStateFeatures];
+        res.factStrs = new String[res.numOfStateFeatures];
+        for (Literal l : usefulLits) {
+            int i = li++;
+            indexMap.put(l, i);
+            res.varNames[i] = l.predicate().shortInfo();
+            res.factStrs[i] = l.predicate().shortInfo() + "=T";
+        }
+
+        res.numOfVars = res.numOfStateFeatures;
+        res.firstIndex = new int[res.numOfStateFeatures];
+        res.lastIndex = new int[res.numOfStateFeatures];
+        res.indexToMutexGroup = new int[res.numOfStateFeatures];
+        res.ranges = new int[res.numOfStateFeatures];
+        for (int i = 0; i < res.numOfStateFeatures; i++) {
+            res.firstIndex[i] = i;
+            res.lastIndex[i] = i;
+            res.indexToMutexGroup[i] = i;
+            res.ranges[i] = 1;
+        }
+
+        res.numOfOperators = tasks.length;
+        res.precLists = new int[res.numOfOperators][];
+        res.addLists = new int[res.numOfOperators][];
+        res.delLists = new int[res.numOfOperators][];
+        res.numPrecs = new int[res.numOfOperators];
+        res.opNames = new String[res.numOfOperators];
+        res.costs = new int[res.numOfOperators];
+
+        for (int i = 0; i < tasks.length; i++) {
+            ReducedTask t = tasks[i];
+            Set<Integer> pre = new HashSet<>();
+            scala.collection.Iterator<Literal> litIter = t.precondition().conjuncts().iterator();
+            while (litIter.hasNext()) {
+                Literal l = litIter.next();
+                if (!usefulLits.contains(l))
+                    continue;
+                int iLit = indexMap.get(l);
+                pre.add(iLit);
+            }
+            res.precLists[i] = new int[pre.size()];
+            int j = 0;
+            for (int iPre : pre) {
+                res.precLists[i][j++] = iPre;
+            }
+            res.numPrecs[i] = pre.size();
+
+            Set<Integer> add = new HashSet<>();
+            Set<Integer> del = new HashSet<>();
+            litIter = t.effect().conjuncts().iterator();
+            while (litIter.hasNext()) {
+                Literal l = litIter.next();
+                boolean isAdd = l.isPositive();
+                if (!l.isPositive())
+                    l = l.negate();
+                if (!usefulLits.contains(l))
+                    continue;
+                int iLit = indexMap.get(l);
+                if (isAdd)
+                    add.add(iLit);
+                else
+                    del.add(iLit);
+            }
+            res.addLists[i] = new int[add.size()];
+            j = 0;
+            for (int iAdd : add) {
+                res.addLists[i][j++] = iAdd;
+            }
+            res.delLists[i] = new int[del.size()];
+            j = 0;
+            for (int iDel : del) {
+                res.delLists[i][j++] = iDel;
+            }
+            res.opNames[i] = t.name();
+            res.costs[i] = 1;
+        }
+        res.expandedDelLists = res.delLists;
+
+        HashSet<Integer> s0 = new HashSet<>();
+        for (Literal lit : usedInS0) {
+            if (!usefulLits.contains(lit))
+                continue;
+            int iLit = indexMap.get(lit);
+            s0.add(iLit);
+        }
+        res.s0List = new int[s0.size()];
+        int j = 0;
+        for (int iS0 : s0) {
+            res.s0List[j++] = iS0;
+        }
+
+        HashSet<Integer> g = new HashSet<>();
+        for (Literal lit : usedInG) {
+            if (!usefulLits.contains(lit))
+                continue;
+            int iLit = indexMap.get(lit);
+            g.add(iLit);
+        }
+        res.gList = new int[g.size()];
+        j = 0;
+        for (int iG : g) {
+            res.gList[j++] = iG;
+        }
+
+        res.calcInverseMappings();
+        res.calcExtendedDelLists();
+        assert res.correctModel();
+
+        return new Tuple2<>(res, tasks);
     }
 }

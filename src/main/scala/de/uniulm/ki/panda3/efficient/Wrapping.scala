@@ -387,7 +387,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val parentsInDecompositionTree = ((plan.planStepParentInDecompositionTree zip plan.planStepIsInstanceOfSubPlanPlanStep).zipWithIndex collect {
       case ((parent, subPlanPS), ps) if parent != -1 =>
         assert(subPlanPS != -1)
-        (planStepArray(ps), (planStepArray(parent), planStepArray(subPlanPS)))
+        val appliedDecompositionMethod = planStepDecomposedByMethod(planStepArray(parent))
+        (planStepArray(ps), (planStepArray(parent), appliedDecompositionMethod.subPlan.planStepsAndRemovedPlanStepsWithoutInitGoal(subPlanPS - 2)))
     }).toMap
 
     // and return the actual plan
@@ -421,7 +422,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         assert(plan.flaws.size == efficientSearchNode.plan.flaws.length)
 
         plan
-      }, parent, if (efficientSearchNode.heuristic.length > 0)efficientSearchNode.heuristic(0) else 0)
+      }, parent, if (efficientSearchNode.heuristic.length > 0) efficientSearchNode.heuristic(0) else 0)
 
       def computeContentIfNotDirty(unit: Unit): Unit = {
         searchNode.dirty = false
