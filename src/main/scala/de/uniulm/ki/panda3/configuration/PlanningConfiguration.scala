@@ -317,10 +317,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val automaton: Option[BüchiAutomaton] = satSearch.ltlFormula match {
             case None          => None
             case Some(formula) =>
-              val formulaInNNF = formula.parse(domainAndPlan._1).nnf
+              val formulaInNNF = formula.nnf.parseAndGround(domainAndPlan._1,domainAndPlanFullyParsed._1,Map()).simplify
               info("Using LTL Formula in NNF: " + formulaInNNF.longInfo)
+              //System exit 0
 
-              Some(BüchiAutomaton(domainAndPlan._1, formulaInNNF.nnf))
+              Some(BüchiAutomaton(domainAndPlan._1, formulaInNNF))
           }
 
 

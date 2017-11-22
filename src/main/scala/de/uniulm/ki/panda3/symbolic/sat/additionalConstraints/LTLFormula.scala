@@ -2,13 +2,16 @@ package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
+import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 sealed trait LTLFormula extends DefaultLongInfo {
-  def parse(domain: Domain): LTLFormula
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String]
 
   def delta(currentTask: Task, last: Boolean): LTLFormula
 
@@ -21,17 +24,171 @@ sealed trait LTLFormula extends DefaultLongInfo {
 
 //case class GroundTaskAtom(groundedTask: GroundTask) extends LTLFormula
 
+
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+// LTL only for parsing
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+
+
+/**
+  * Task Atom as String
+  */
+case class TaskNameAtom(task: String, arguments: Seq[String]) extends LTLFormula {
+  assert(!task.contains("["))
+
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = {
+    val fullName = task + arguments.map({ a => if (a.startsWith("?")) variableContext(a) else a }).mkString("[", ",", "]")
+
+    domain.tasks.find(_.name == fullName) match {
+      case Some(t) => TaskAtom(t)
+      case None    => LTLFalse
+    }
+  }
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = if (!(arguments contains variable)) Nil
+  else {
+    val matchingTasks = domain.primitiveTasks filter { _.name startsWith (task + "[") }
+
+    matchingTasks flatMap { t =>
+      val consts = t.name.split('[')(1).dropRight(1).split(',')
+
+      // check with variable context ...
+      val isCompatibleWithConstants = arguments zip consts forall { case (a, b) => a.startsWith("?") || b.startsWith("?") || a == b }
+      val isCompatibleWithContext = variableContext forall { case (v, c) => arguments.zipWithIndex forall { case (a, i) => a != v || consts(i) == c } }
+
+      val allValuesForVar = arguments.zipWithIndex collect { case (a, i) if a == variable => consts(i) } distinct
+
+      // only possible if unique value ...
+      if (allValuesForVar.size == 1 && isCompatibleWithConstants && isCompatibleWithContext) allValuesForVar else Nil
+    }
+  }
+
+  def delta(currentTask: Task, last: Boolean): LTLFormula = ???
+
+  lazy val simplify: LTLFormula = ???
+
+  override def longInfo: String = task + arguments.mkString("(", ",", ")")
+
+  lazy val nnf: LTLFormula = this
+
+  lazy val negate: LTLFormula = LTLNot(this)
+}
+
+case class PredicateNameAtom(predicate: String, arguments: Seq[String]) extends LTLFormula {
+  assert(!predicate.contains("["))
+
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = {
+    val fullName = predicate + arguments.map({ a => if (a.startsWith("?")) variableContext(a) else a }).mkString("[", ",", "]")
+    //println("PRED " + fullName)
+    //println(domain.predicates.map(_.name).mkString("\n"))
+
+    domain.predicates.find(_.name == fullName) match {
+      case Some(p) => PredicateAtom(p)
+      case None    => LTLFalse
+    }
+  }
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = if (!(arguments contains variable)) Nil
+  else {
+    val matchingPredicates = domain.predicates filter { p => p.name.startsWith("+" + predicate + "[") || p.name.startsWith("-" + predicate + "[") }
+    //println("Preds: " + matchingPredicates.map(_.name).mkString("\n"))
+
+    matchingPredicates flatMap { t =>
+      val consts = t.name.split('[')(1).dropRight(1).split(',')
+
+      // check with variable context ...
+      val isCompatibleWithConstants = arguments zip consts forall { case (a, b) => a.startsWith("?") || b.startsWith("?") || a == b }
+      val isCompatibleWithContext = variableContext forall { case (v, c) => arguments.zipWithIndex forall { case (a, i) => a != v || consts(i) == c } }
+
+      val allValuesForVar = arguments.zipWithIndex collect { case (a, i) if a == variable => consts(i) } distinct
+
+      // only possible if unique value ...
+      if (allValuesForVar.size == 1 && isCompatibleWithConstants && isCompatibleWithContext) allValuesForVar else Nil
+    }
+  }
+
+  def delta(currentTask: Task, last: Boolean): LTLFormula = ???
+
+  lazy val simplify: LTLFormula = ???
+
+  override def longInfo: String = predicate + arguments.mkString("(", ",", ")")
+
+  lazy val nnf: LTLFormula = this.copy(predicate = "+" + predicate)
+
+  lazy val negate: LTLFormula = LTLNot(this)
+}
+
+
+case class LTLForall(variable: String, sort : String, subFormula: LTLFormula) extends LTLFormula {
+  assert(variable.startsWith("?"))
+
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = {
+    val values = liftedDomain.sorts.find({_.name == sort}).get.elements map {_.name}
+    println("∀ Variable " + variable + ": " + values.mkString(", "))
+
+    LTLAnd(values map { v => subFormula.parseAndGround(domain, liftedDomain, variableContext + ((variable, v))) })
+  }
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
+    if (variable == this.variable) Nil else subFormula.valuesForVariable(domain, variable, variableContext)
+
+  def delta(currentTask: Task, last: Boolean): LTLFormula = ???
+
+  lazy val simplify: LTLFormula = ???
+
+  override def longInfo: String = "∀" + variable + " : " + subFormula.longInfo
+
+  lazy val nnf: LTLFormula = this.copy(subFormula = subFormula.nnf)
+
+  lazy val negate: LTLFormula = LTLExists(variable,sort,subFormula.negate)
+}
+
+case class LTLExists(variable: String, sort : String, subFormula: LTLFormula) extends LTLFormula {
+  assert(variable.startsWith("?"))
+
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = {
+    val values = subFormula.valuesForVariable(domain, variable, variableContext)
+    println("Variable " + variable + ": " + values.mkString(", "))
+
+    LTLOr(values map { v => subFormula.parseAndGround(domain, liftedDomain, variableContext + ((variable, v))) })
+  }
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
+    if (variable == this.variable) Nil else subFormula.valuesForVariable(domain, variable, variableContext)
+
+  def delta(currentTask: Task, last: Boolean): LTLFormula = ???
+
+  lazy val simplify: LTLFormula = ???
+
+  override def longInfo: String = "∃ " + variable + " : " + subFormula.longInfo
+
+  lazy val nnf: LTLFormula = this.copy(subFormula = subFormula.nnf)
+
+  lazy val negate: LTLFormula = LTLForall(variable,sort,subFormula.negate)
+}
+
+
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+// Actual LTL constructs
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+
 /**
   * Task Atom
   */
 case class TaskAtom(task: Task) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = this
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = this
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = Nil
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = if (task == currentTask) LTLTrue else LTLFalse
 
   lazy val simplify: LTLFormula = this
 
-  override def longInfo: String = task.name.split('[').head
+  override def longInfo: String = task.name//.split('[').head
 
   lazy val nnf: LTLFormula = this
 
@@ -39,30 +196,37 @@ case class TaskAtom(task: Task) extends LTLFormula {
 }
 
 /**
-  * Task Atom as String
+  * Task Atom
   */
-case class TaskNameAtom(task: String) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = TaskAtom(domain.tasks.find(_.name == task).get)
+case class PredicateAtom(predicate: Predicate) extends LTLFormula {
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = this
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = Nil
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = ???
 
   lazy val simplify: LTLFormula = this
 
-  override def longInfo: String = task
+  override def longInfo: String = predicate.name//.split('[').head
 
   lazy val nnf: LTLFormula = this
 
   lazy val negate: LTLFormula = LTLNot(this)
 }
 
+
 /**
   * Not
   */
 case class LTLNot(subFormula: LTLFormula) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLNot(subFormula.parse(domain))
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula =
+    LTLNot(subFormula.parseAndGround(domain, liftedDomain, variableContext))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = subFormula.valuesForVariable(domain, variable, variableContext)
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = subFormula match {
-    case TaskAtom(task) => if (task == currentTask) LTLFalse else LTLTrue
+    case TaskAtom(task)           => if (task == currentTask) LTLFalse else LTLTrue
+    case PredicateAtom(predicate) => ???
   }
 
   lazy val simplify: LTLFormula = subFormula.simplify match {
@@ -73,9 +237,11 @@ case class LTLNot(subFormula: LTLFormula) extends LTLFormula {
   }
 
   lazy val nnf: LTLFormula = subFormula match {
-    case x: TaskAtom     => LTLNot(x)
-    case x: TaskNameAtom => LTLNot(x)
-    case _               => subFormula.negate.nnf
+    case x: TaskAtom          => LTLNot(x)
+    case x: TaskNameAtom      => LTLNot(x)
+    case x: PredicateAtom     => LTLNot(x)
+    case x: PredicateNameAtom => x.copy(predicate = "-" + x.predicate)
+    case _                    => subFormula.negate.nnf
   }
 
   lazy val negate: LTLFormula = subFormula
@@ -87,7 +253,11 @@ case class LTLNot(subFormula: LTLFormula) extends LTLFormula {
   * And
   */
 case class LTLAnd(subFormulae: Seq[LTLFormula]) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLAnd(subFormulae.map(_.parse(domain)))
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula =
+    LTLAnd(subFormulae.map(_.parseAndGround(domain, liftedDomain, variableContext)))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
+    subFormulae flatMap { _.valuesForVariable(domain, variable, variableContext) } distinct
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = LTLAnd(subFormulae map { _.delta(currentTask, last) })
 
@@ -114,7 +284,11 @@ case class LTLAnd(subFormulae: Seq[LTLFormula]) extends LTLFormula {
   * Or
   */
 case class LTLOr(subFormulae: Seq[LTLFormula]) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLOr(subFormulae.map(_.parse(domain)))
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula =
+    LTLOr(subFormulae.map(_.parseAndGround(domain, liftedDomain, variableContext)))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
+    subFormulae flatMap { _.valuesForVariable(domain, variable, variableContext) } distinct
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = LTLOr(subFormulae map { _.delta(currentTask, last) })
 
@@ -138,11 +312,50 @@ case class LTLOr(subFormulae: Seq[LTLFormula]) extends LTLFormula {
   override def longInfo: String = "(" + subFormulae.map(_.longInfo).mkString(" v ") + ")"
 }
 
+case class LTLImply(left: LTLFormula, right: LTLFormula) extends LTLFormula {
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula =
+    LTLImply(left.parseAndGround(domain, liftedDomain, variableContext), right.parseAndGround(domain, liftedDomain, variableContext))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
+    (left.valuesForVariable(domain, variable, variableContext) ++ right.valuesForVariable(domain, variable, variableContext)) distinct
+
+  def delta(currentTask: Task, last: Boolean): LTLFormula = ??? // not needed
+
+  lazy val simplify: LTLFormula = ???
+
+  lazy val nnf: LTLFormula = LTLOr(LTLNot(left).nnf :: right.nnf :: Nil)
+
+  lazy val negate: LTLFormula = ???
+
+  override def longInfo: String = "(" + left.longInfo + " -> " + right.longInfo + ")"
+}
+
+
+case class LTLEquiv(left: LTLFormula, right: LTLFormula) extends LTLFormula {
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula =
+    LTLEquiv(left.parseAndGround(domain, liftedDomain, variableContext), right.parseAndGround(domain, liftedDomain, variableContext))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
+    (left.valuesForVariable(domain, variable, variableContext) ++ right.valuesForVariable(domain, variable, variableContext)) distinct
+
+  def delta(currentTask: Task, last: Boolean): LTLFormula = ??? // not needed
+
+  lazy val simplify: LTLFormula = ???
+
+  lazy val nnf: LTLFormula = LTLAnd(LTLImply(left, right).nnf :: LTLImply(right, left).nnf :: Nil)
+
+  lazy val negate: LTLFormula = ???
+
+  override def longInfo: String = "(" + left.longInfo + " <-> " + right.longInfo + ")"
+}
+
 /**
   * Next
   */
 case class LTLNext(subFormula: LTLFormula) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLNext(subFormula.parse(domain))
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = LTLNext(subFormula.parseAndGround(domain, liftedDomain, variableContext))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = subFormula.valuesForVariable(domain, variable, variableContext)
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = if (last) LTLFalse else subFormula
 
@@ -159,7 +372,9 @@ case class LTLNext(subFormula: LTLFormula) extends LTLFormula {
   * Weak Next
   */
 case class LTLWeakNext(subFormula: LTLFormula) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLWeakNext(subFormula.parse(domain))
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = LTLWeakNext(subFormula.parseAndGround(domain, liftedDomain, variableContext))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = subFormula.valuesForVariable(domain, variable, variableContext)
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = if (last) LTLTrue else subFormula
 
@@ -176,7 +391,9 @@ case class LTLWeakNext(subFormula: LTLFormula) extends LTLFormula {
   * Always
   */
 case class LTLAlways(subFormula: LTLFormula) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLAlways(subFormula.parse(domain))
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = LTLAlways(subFormula.parseAndGround(domain, liftedDomain, variableContext))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = subFormula.valuesForVariable(domain, variable, variableContext)
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = LTLAnd(subFormula.delta(currentTask, last) ::
                                                                      LTLWeakNext(this).delta(currentTask, last) :: Nil)
@@ -194,7 +411,9 @@ case class LTLAlways(subFormula: LTLFormula) extends LTLFormula {
   * Eventually
   */
 case class LTLEventually(subFormula: LTLFormula) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLEventually(subFormula.parse(domain))
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = LTLEventually(subFormula.parseAndGround(domain, liftedDomain, variableContext))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = subFormula.valuesForVariable(domain, variable, variableContext)
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = LTLOr(subFormula.delta(currentTask, last) ::
                                                                     LTLNext(this).delta(currentTask, last) :: Nil)
@@ -212,7 +431,11 @@ case class LTLEventually(subFormula: LTLFormula) extends LTLFormula {
   * Until
   */
 case class LTLUntil(leftFormula: LTLFormula, rightFormula: LTLFormula) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLUntil(leftFormula.parse(domain), rightFormula.parse(domain))
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula =
+    LTLUntil(leftFormula.parseAndGround(domain, liftedDomain, variableContext), rightFormula.parseAndGround(domain, liftedDomain, variableContext))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
+    (leftFormula.valuesForVariable(domain, variable, variableContext) ++ rightFormula.valuesForVariable(domain, variable, variableContext)) distinct
 
   def delta(currentTask: Task, last: Boolean): LTLFormula =
     LTLOr(rightFormula.delta(currentTask, last) ::
@@ -232,7 +455,11 @@ case class LTLUntil(leftFormula: LTLFormula, rightFormula: LTLFormula) extends L
   * Release
   */
 case class LTLRelease(leftFormula: LTLFormula, rightFormula: LTLFormula) extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLRelease(leftFormula.parse(domain), rightFormula.parse(domain))
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula =
+    LTLRelease(leftFormula.parseAndGround(domain, liftedDomain, variableContext), rightFormula.parseAndGround(domain, liftedDomain, variableContext))
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
+    (leftFormula.valuesForVariable(domain, variable, variableContext) ++ rightFormula.valuesForVariable(domain, variable, variableContext)) distinct
 
   def delta(currentTask: Task, last: Boolean): LTLFormula =
     LTLAnd(rightFormula.delta(currentTask, last) ::
@@ -253,7 +480,9 @@ case class LTLRelease(leftFormula: LTLFormula, rightFormula: LTLFormula) extends
   * True
   */
 object LTLTrue extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLTrue
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = LTLTrue
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = Nil
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = LTLTrue
 
@@ -270,7 +499,9 @@ object LTLTrue extends LTLFormula {
   * False
   */
 object LTLFalse extends LTLFormula {
-  def parse(domain: Domain): LTLFormula = LTLTrue
+  def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = LTLTrue
+
+  def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = Nil
 
   def delta(currentTask: Task, last: Boolean): LTLFormula = LTLFalse
 
