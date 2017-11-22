@@ -732,8 +732,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
-        //println("\n")
-        //println(primitiveSolution map { t => t.schema.isPrimitive + " " + t.schema.name } mkString "\n")
+        //println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.schema.name } mkString "\n"))
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")
