@@ -117,8 +117,7 @@ case class SOGClassicalForbiddenEncoding(timeCapsule: TimeCapsule,
     else primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
       val successors = if (useImplicationForbiddenness) sog.reachable.find(_._1._1 == path).get._2.toSeq else sog.edges.find(_._1._1 == path).get._2
 
-      // start from 1 as we have to access the predecessor position
-      Range(1, taskSequenceLength) flatMap { pos =>
+      Range(0, taskSequenceLength) flatMap { pos =>
         impliesRightAnd(pathPosForbidden(path, pos) :: Nil, successors map { case (succP, _) => pathPosForbidden(succP, pos) })
       }
     }
@@ -126,6 +125,7 @@ case class SOGClassicalForbiddenEncoding(timeCapsule: TimeCapsule,
 
 
     val forbiddennessGetsInherited: Seq[Clause] = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
+      // start from 1 as we have to access the predecessor position
       Range(1, taskSequenceLength) map { pos => impliesSingle(pathPosForbidden(path, pos), pathPosForbidden(path, pos - 1)) }
     }
     println("H " + forbiddennessGetsInherited.length)

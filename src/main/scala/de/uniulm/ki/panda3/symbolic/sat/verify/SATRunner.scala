@@ -218,7 +218,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       //System.in.read()
       timeCapsule stop Timings.GENERATE_FORMULA
 
-      writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
+      //writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
 
       timeCapsule start Timings.TRANSFORM_DIMACS
       println("READY TO WRITE")
@@ -428,7 +428,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         if (solved) {
           println("")
           val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-          writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+          //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
           /*val db = allTrueAtoms filter { _ contains "direct_before" }
 
@@ -757,8 +757,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
-        //println("\n")
-        //println(primitiveSolution map { t => t.schema.isPrimitive + " " + t.schema.name } mkString "\n")
+        //println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.schema.name } mkString "\n"))
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")
