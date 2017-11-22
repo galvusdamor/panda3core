@@ -896,7 +896,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       // FD can't handle either in the sort hierarchy, so we have to use predicates when writing them ...
       val uuid = UUID.randomUUID().toString
 
-      ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
+      System.getProperty("os.name") match {
+        case osname if osname.toLowerCase startsWith "windows" =>
+          ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
+        case _ => // OSes made by people who can think straight
+          ("mkdir .fd" + uuid) !! // create directory
+      }
 
       val separator = System.getProperty("os.name") match {
         case osname if osname.toLowerCase startsWith "windows" => "\\"
@@ -924,7 +929,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                 "python " + path + "\\src\\translate\\translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".bat")
             ("cmd.exe /c  runFD" + uuid + ".bat") !!
 
-          case _ => // OSes made by people who can think straigt
+          case _ => // OSes made by people who can think straight
             writeStringToFile("#!/bin/bash\n" +
                                 "cd .fd" + uuid + "\n" +
                                 "python " + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
