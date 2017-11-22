@@ -43,6 +43,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
   // returns all clauses needed for the decomposition and all paths to the last layer
   private def generateDecompositionFormula(tree: PathDecompositionTree[Payload]): Seq[Clause] = {
+    assert(tree.isNormalised)
     val possibleTasks = tree.possibleTasks.toSeq
     val layer = tree.layer
     val path = tree.path
@@ -180,7 +181,9 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
 
       val (methodToPositions, primitivePositions, positionsToPossibleTasks, intermediatePayload) = computeTaskSequenceArrangement(possibleMethods map { _._1 }, possiblePrimitives)
-
+      possibleMethods.zipWithIndex foreach { case ((m, _), index) =>
+        methodToPositions(index) zip m.subPlan.planStepSchemaArray foreach { case (p, t) => assert(positionsToPossibleTasks(p) contains t) }
+      }
 
       assert(possibleMethods.length == methodToPositions.length)
 

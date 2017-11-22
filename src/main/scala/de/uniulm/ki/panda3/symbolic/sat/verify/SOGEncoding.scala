@@ -71,12 +71,13 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     //println("OP " + met + " of " + metOp)
     val minimalSuperGraph = g._1
     val planStepToIndexMappings: Seq[Map[PlanStep, Int]] = g._2
+    possibleMethods zip planStepToIndexMappings foreach { case (m, map) => m.subPlan.planStepsWithoutInitGoal foreach { ps => assert(map contains ps) } }
 
     val (methodMappings, primitiveMappings) = planStepToIndexMappings.splitAt(possibleMethods.length)
 
     val childrenIndicesToPossibleTasks = minimalSuperGraph.vertices map { _ => new mutable.HashSet[Task]() }
 
-    val tasksPerMethodToChildrenMapping = methodMappings.zipWithIndex map { case (mapping, methodIndex) =>
+    val tasksPerMethodToChildrenMapping: Array[Array[Int]] = methodMappings.zipWithIndex map { case (mapping, methodIndex) =>
       val methodPlanSteps = possibleMethods(methodIndex).subPlan.planStepsWithoutInitGoal
       (methodPlanSteps map { ps =>
         childrenIndicesToPossibleTasks(mapping(ps)) add ps.schema
@@ -96,7 +97,11 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     val maxVertex = if (minimalSuperGraph.vertices.isEmpty) -1 else minimalSuperGraph.vertices.max
     assert(minimalSuperGraph.vertices.length - 1 == maxVertex, "SOG has " + minimalSuperGraph.vertices.length + " vertices, but maximum vertex is " + maxVertex)
 
-    (tasksPerMethodToChildrenMapping, childrenForPrimitives, childrenIndicesToPossibleTasks map { _.toSet } toArray, NonExpandedSOG(minimalSuperGraph))
+    val childrenTasks: Array[Set[Task]] = childrenIndicesToPossibleTasks map { _.toSet } toArray
+
+    //tasksPerMethodToChildrenMapping zip
+
+    (tasksPerMethodToChildrenMapping, childrenForPrimitives, childrenTasks, NonExpandedSOG(minimalSuperGraph))
   }
 
   protected def combinePayloads(childrenPayload: Seq[SOG], intermediate: NonExpandedSOG): SOG = {
@@ -157,6 +162,8 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     Dot2PdfCompiler.writeDotToFile(string, "sog.pdf")*/
 
     println("TREE P: " + primitivePaths.length + " S: " + taskSequenceLength)
+
+    assert(primitivePaths forall { p => finalSOG.vertices contains p })
 
     finalSOG
   }
