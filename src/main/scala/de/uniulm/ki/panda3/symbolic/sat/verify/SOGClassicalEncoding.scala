@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
+import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.util.TimeCapsule
 
@@ -23,6 +24,12 @@ trait SOGClassicalEncoding extends SOGEncoding with EncodingWithLinearPlan {
     val allTasksArePossibleEverywhere: Set[Task] = primitivePaths flatMap { _._2 } toSet
 
     Range(0, taskSequenceLength) map { case i => allTasksArePossibleEverywhere map { t => t -> { action(K - 1, i, t) } } toMap }
+  }
+
+
+  override def linearStateFeatures: scala.Seq[Map[Predicate, String]] = {
+    // there is one more state
+    Range(0, taskSequenceLength + 1) map { case i => domain.predicates map { p => p -> { statePredicate(K - 1, i, p) } } toMap }
   }
 
 
@@ -93,6 +100,7 @@ trait SOGClassicalEncoding extends SOGEncoding with EncodingWithLinearPlan {
 case class SOGClassicalForbiddenEncoding(timeCapsule: TimeCapsule,
                                          domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
                                          useImplicationForbiddenness: Boolean) extends SOGClassicalEncoding {
+  override lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected def pathPosForbidden(path: Seq[Int], position: Int): String = "forbidden_" + path.mkString(";") + "-" + position
 

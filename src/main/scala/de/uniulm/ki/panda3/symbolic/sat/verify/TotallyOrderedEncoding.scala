@@ -94,6 +94,8 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
 
   override def linearPlan: scala.Seq[Map[Task, String]] = primitivePaths map { case (path, tasks) => tasks map { t => t -> pathAction(path.length, path, t) } toMap }
 
+  override def linearStateFeatures = ???
+
   override lazy val givenActionsFormula: Seq[Clause] = ???
 
   override protected def initialPayload(possibleTasks: Set[Task], path: scala.Seq[Int]): Unit = ()

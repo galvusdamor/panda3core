@@ -319,9 +319,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case Some(formula) =>
               val formulaInNNF = formula.nnf.parseAndGround(domainAndPlan._1,domainAndPlanFullyParsed._1,Map()).simplify
               info("Using LTL Formula in NNF: " + formulaInNNF.longInfo)
+
+              val auto = BüchiAutomaton(domainAndPlan._1, formulaInNNF)
+
+              Dot2PdfCompiler.writeDotToFile(auto,"büchi.pdf")
               //System exit 0
 
-              Some(BüchiAutomaton(domainAndPlan._1, formulaInNNF))
+              Some(auto)
           }
 
 

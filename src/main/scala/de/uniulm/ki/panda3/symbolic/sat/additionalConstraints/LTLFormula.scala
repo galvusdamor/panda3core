@@ -13,13 +13,18 @@ sealed trait LTLFormula extends DefaultLongInfo {
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String]
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula
 
   def simplify: LTLFormula
 
   def nnf: LTLFormula
 
   def negate: LTLFormula
+
+  def allPredicates: Set[Predicate]
+
+  lazy val allStates          : Seq[Set[Predicate]]                   = de.uniulm.ki.util.allSubsets(allPredicates.toSeq) map { _.toSet }
+  lazy val allStatesAndCounter: Seq[(Set[Predicate], Set[Predicate])] = allStates map { s => (s, allPredicates -- s) }
 }
 
 //case class GroundTaskAtom(groundedTask: GroundTask) extends LTLFormula
@@ -65,7 +70,7 @@ case class TaskNameAtom(task: String, arguments: Seq[String]) extends LTLFormula
     }
   }
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = ???
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = ???
 
   lazy val simplify: LTLFormula = ???
 
@@ -74,6 +79,8 @@ case class TaskNameAtom(task: String, arguments: Seq[String]) extends LTLFormula
   lazy val nnf: LTLFormula = this
 
   lazy val negate: LTLFormula = LTLNot(this)
+
+  lazy val allPredicates: Set[Predicate] = ???
 }
 
 case class PredicateNameAtom(predicate: String, arguments: Seq[String]) extends LTLFormula {
@@ -109,7 +116,7 @@ case class PredicateNameAtom(predicate: String, arguments: Seq[String]) extends 
     }
   }
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = ???
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = ???
 
   lazy val simplify: LTLFormula = ???
 
@@ -118,14 +125,16 @@ case class PredicateNameAtom(predicate: String, arguments: Seq[String]) extends 
   lazy val nnf: LTLFormula = this.copy(predicate = "+" + predicate)
 
   lazy val negate: LTLFormula = LTLNot(this)
+
+  lazy val allPredicates: Set[Predicate] = ???
 }
 
 
-case class LTLForall(variable: String, sort : String, subFormula: LTLFormula) extends LTLFormula {
+case class LTLForall(variable: String, sort: String, subFormula: LTLFormula) extends LTLFormula {
   assert(variable.startsWith("?"))
 
   def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = {
-    val values = liftedDomain.sorts.find({_.name == sort}).get.elements map {_.name}
+    val values = liftedDomain.sorts.find({ _.name == sort }).get.elements map { _.name }
     println("∀ Variable " + variable + ": " + values.mkString(", "))
 
     LTLAnd(values map { v => subFormula.parseAndGround(domain, liftedDomain, variableContext + ((variable, v))) })
@@ -134,7 +143,7 @@ case class LTLForall(variable: String, sort : String, subFormula: LTLFormula) ex
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
     if (variable == this.variable) Nil else subFormula.valuesForVariable(domain, variable, variableContext)
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = ???
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = ???
 
   lazy val simplify: LTLFormula = ???
 
@@ -142,10 +151,12 @@ case class LTLForall(variable: String, sort : String, subFormula: LTLFormula) ex
 
   lazy val nnf: LTLFormula = this.copy(subFormula = subFormula.nnf)
 
-  lazy val negate: LTLFormula = LTLExists(variable,sort,subFormula.negate)
+  lazy val negate: LTLFormula = LTLExists(variable, sort, subFormula.negate)
+
+  lazy val allPredicates: Set[Predicate] = ???
 }
 
-case class LTLExists(variable: String, sort : String, subFormula: LTLFormula) extends LTLFormula {
+case class LTLExists(variable: String, sort: String, subFormula: LTLFormula) extends LTLFormula {
   assert(variable.startsWith("?"))
 
   def parseAndGround(domain: Domain, liftedDomain: Domain, variableContext: Map[String, String]): LTLFormula = {
@@ -158,7 +169,7 @@ case class LTLExists(variable: String, sort : String, subFormula: LTLFormula) ex
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
     if (variable == this.variable) Nil else subFormula.valuesForVariable(domain, variable, variableContext)
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = ???
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = ???
 
   lazy val simplify: LTLFormula = ???
 
@@ -166,7 +177,9 @@ case class LTLExists(variable: String, sort : String, subFormula: LTLFormula) ex
 
   lazy val nnf: LTLFormula = this.copy(subFormula = subFormula.nnf)
 
-  lazy val negate: LTLFormula = LTLForall(variable,sort,subFormula.negate)
+  lazy val negate: LTLFormula = LTLForall(variable, sort, subFormula.negate)
+
+  lazy val allPredicates: Set[Predicate] = ???
 }
 
 
@@ -184,15 +197,17 @@ case class TaskAtom(task: Task) extends LTLFormula {
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = Nil
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = if (task == currentTask) LTLTrue else LTLFalse
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = if (task == currentTask) LTLTrue else LTLFalse
 
   lazy val simplify: LTLFormula = this
 
-  override def longInfo: String = task.name//.split('[').head
+  override def longInfo: String = task.name //.split('[').head
 
   lazy val nnf: LTLFormula = this
 
   lazy val negate: LTLFormula = LTLNot(this)
+
+  lazy val allPredicates: Set[Predicate] = Set()
 }
 
 /**
@@ -203,15 +218,17 @@ case class PredicateAtom(predicate: Predicate) extends LTLFormula {
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = Nil
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = ???
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = if (state contains predicate) LTLTrue else LTLFalse
 
   lazy val simplify: LTLFormula = this
 
-  override def longInfo: String = predicate.name//.split('[').head
+  override def longInfo: String = predicate.name //.split('[').head
 
   lazy val nnf: LTLFormula = this
 
   lazy val negate: LTLFormula = LTLNot(this)
+
+  lazy val allPredicates: Set[Predicate] = Set(predicate)
 }
 
 
@@ -224,9 +241,9 @@ case class LTLNot(subFormula: LTLFormula) extends LTLFormula {
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = subFormula.valuesForVariable(domain, variable, variableContext)
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = subFormula match {
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = subFormula match {
     case TaskAtom(task)           => if (task == currentTask) LTLFalse else LTLTrue
-    case PredicateAtom(predicate) => ???
+    case PredicateAtom(predicate) => if (state contains predicate) LTLFalse else LTLTrue
   }
 
   lazy val simplify: LTLFormula = subFormula.simplify match {
@@ -247,6 +264,8 @@ case class LTLNot(subFormula: LTLFormula) extends LTLFormula {
   lazy val negate: LTLFormula = subFormula
 
   override def longInfo: String = "-" + subFormula.longInfo
+
+  lazy val allPredicates: Set[Predicate] = subFormula.allPredicates
 }
 
 /**
@@ -259,7 +278,7 @@ case class LTLAnd(subFormulae: Seq[LTLFormula]) extends LTLFormula {
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
     subFormulae flatMap { _.valuesForVariable(domain, variable, variableContext) } distinct
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = LTLAnd(subFormulae map { _.delta(currentTask, last) })
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = LTLAnd(subFormulae map { _.delta(currentTask, state, last) })
 
   lazy val simplify: LTLFormula = {
     val simplifiedSubformulae = subFormulae map { _.simplify } flatMap {
@@ -278,6 +297,8 @@ case class LTLAnd(subFormulae: Seq[LTLFormula]) extends LTLFormula {
   lazy val negate: LTLFormula = LTLOr(subFormulae map { _.negate })
 
   override def longInfo: String = "(" + subFormulae.map(_.longInfo).mkString(" & ") + ")"
+
+  lazy val allPredicates: Set[Predicate] = subFormulae flatMap { _.allPredicates } toSet
 }
 
 /**
@@ -290,7 +311,7 @@ case class LTLOr(subFormulae: Seq[LTLFormula]) extends LTLFormula {
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
     subFormulae flatMap { _.valuesForVariable(domain, variable, variableContext) } distinct
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = LTLOr(subFormulae map { _.delta(currentTask, last) })
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = LTLOr(subFormulae map { _.delta(currentTask, state, last) })
 
   lazy val simplify: LTLFormula = {
     val simplifiedSubformulae = subFormulae map { _.simplify } flatMap {
@@ -310,6 +331,8 @@ case class LTLOr(subFormulae: Seq[LTLFormula]) extends LTLFormula {
   lazy val negate: LTLFormula = LTLAnd(subFormulae map { _.negate })
 
   override def longInfo: String = "(" + subFormulae.map(_.longInfo).mkString(" v ") + ")"
+
+  lazy val allPredicates: Set[Predicate] = subFormulae flatMap { _.allPredicates } toSet
 }
 
 case class LTLImply(left: LTLFormula, right: LTLFormula) extends LTLFormula {
@@ -319,7 +342,7 @@ case class LTLImply(left: LTLFormula, right: LTLFormula) extends LTLFormula {
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
     (left.valuesForVariable(domain, variable, variableContext) ++ right.valuesForVariable(domain, variable, variableContext)) distinct
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = ??? // not needed
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = ??? // not needed
 
   lazy val simplify: LTLFormula = ???
 
@@ -328,6 +351,8 @@ case class LTLImply(left: LTLFormula, right: LTLFormula) extends LTLFormula {
   lazy val negate: LTLFormula = ???
 
   override def longInfo: String = "(" + left.longInfo + " -> " + right.longInfo + ")"
+
+  lazy val allPredicates: Set[Predicate] = ???
 }
 
 
@@ -338,7 +363,7 @@ case class LTLEquiv(left: LTLFormula, right: LTLFormula) extends LTLFormula {
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
     (left.valuesForVariable(domain, variable, variableContext) ++ right.valuesForVariable(domain, variable, variableContext)) distinct
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = ??? // not needed
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = ??? // not needed
 
   lazy val simplify: LTLFormula = ???
 
@@ -347,6 +372,8 @@ case class LTLEquiv(left: LTLFormula, right: LTLFormula) extends LTLFormula {
   lazy val negate: LTLFormula = ???
 
   override def longInfo: String = "(" + left.longInfo + " <-> " + right.longInfo + ")"
+
+  lazy val allPredicates: Set[Predicate] = ???
 }
 
 /**
@@ -357,7 +384,7 @@ case class LTLNext(subFormula: LTLFormula) extends LTLFormula {
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = subFormula.valuesForVariable(domain, variable, variableContext)
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = if (last) LTLFalse else subFormula
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = if (last) LTLFalse else subFormula
 
   lazy val simplify: LTLFormula = LTLNext(subFormula.simplify)
 
@@ -366,6 +393,8 @@ case class LTLNext(subFormula: LTLFormula) extends LTLFormula {
   lazy val negate: LTLFormula = LTLWeakNext(subFormula.negate)
 
   override def longInfo: String = "X " + subFormula.longInfo
+
+  lazy val allPredicates: Set[Predicate] = subFormula.allPredicates
 }
 
 /**
@@ -376,7 +405,7 @@ case class LTLWeakNext(subFormula: LTLFormula) extends LTLFormula {
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = subFormula.valuesForVariable(domain, variable, variableContext)
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = if (last) LTLTrue else subFormula
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = if (last) LTLTrue else subFormula
 
   lazy val simplify: LTLFormula = LTLWeakNext(subFormula.simplify)
 
@@ -385,6 +414,8 @@ case class LTLWeakNext(subFormula: LTLFormula) extends LTLFormula {
   lazy val negate: LTLFormula = LTLNext(subFormula.negate)
 
   override def longInfo: String = "WX " + subFormula.longInfo
+
+  lazy val allPredicates: Set[Predicate] = subFormula.allPredicates
 }
 
 /**
@@ -395,8 +426,8 @@ case class LTLAlways(subFormula: LTLFormula) extends LTLFormula {
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = subFormula.valuesForVariable(domain, variable, variableContext)
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = LTLAnd(subFormula.delta(currentTask, last) ::
-                                                                     LTLWeakNext(this).delta(currentTask, last) :: Nil)
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = LTLAnd(subFormula.delta(currentTask, state, last) ::
+                                                                                            LTLWeakNext(this).delta(currentTask, state, last) :: Nil)
 
   lazy val simplify: LTLFormula = LTLAlways(subFormula.simplify)
 
@@ -405,6 +436,8 @@ case class LTLAlways(subFormula: LTLFormula) extends LTLFormula {
   lazy val negate: LTLFormula = LTLEventually(subFormula.negate)
 
   override def longInfo: String = "[] " + subFormula.longInfo
+
+  lazy val allPredicates: Set[Predicate] = subFormula.allPredicates
 }
 
 /**
@@ -415,8 +448,8 @@ case class LTLEventually(subFormula: LTLFormula) extends LTLFormula {
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = subFormula.valuesForVariable(domain, variable, variableContext)
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = LTLOr(subFormula.delta(currentTask, last) ::
-                                                                    LTLNext(this).delta(currentTask, last) :: Nil)
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = LTLOr(subFormula.delta(currentTask, state, last) ::
+                                                                                           LTLNext(this).delta(currentTask, state, last) :: Nil)
 
   lazy val simplify: LTLFormula = LTLEventually(subFormula.simplify)
 
@@ -425,6 +458,8 @@ case class LTLEventually(subFormula: LTLFormula) extends LTLFormula {
   lazy val negate: LTLFormula = LTLAlways(subFormula.negate)
 
   override def longInfo: String = "<> " + subFormula.longInfo
+
+  lazy val allPredicates: Set[Predicate] = subFormula.allPredicates
 }
 
 /**
@@ -437,9 +472,9 @@ case class LTLUntil(leftFormula: LTLFormula, rightFormula: LTLFormula) extends L
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
     (leftFormula.valuesForVariable(domain, variable, variableContext) ++ rightFormula.valuesForVariable(domain, variable, variableContext)) distinct
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula =
-    LTLOr(rightFormula.delta(currentTask, last) ::
-            LTLAnd(leftFormula.delta(currentTask, last) :: LTLNext(this).delta(currentTask, last) :: Nil) :: Nil
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula =
+    LTLOr(rightFormula.delta(currentTask, state, last) ::
+            LTLAnd(leftFormula.delta(currentTask, state, last) :: LTLNext(this).delta(currentTask, state, last) :: Nil) :: Nil
          )
 
   lazy val simplify: LTLFormula = LTLUntil(leftFormula.simplify, rightFormula.simplify)
@@ -449,6 +484,8 @@ case class LTLUntil(leftFormula: LTLFormula, rightFormula: LTLFormula) extends L
   lazy val negate: LTLFormula = LTLRelease(leftFormula.negate, rightFormula.negate)
 
   override def longInfo: String = "(" + leftFormula.longInfo + " U " + rightFormula.longInfo + ")"
+
+  lazy val allPredicates: Set[Predicate] = leftFormula.allPredicates ++ rightFormula.allPredicates
 }
 
 /**
@@ -461,9 +498,9 @@ case class LTLRelease(leftFormula: LTLFormula, rightFormula: LTLFormula) extends
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] =
     (leftFormula.valuesForVariable(domain, variable, variableContext) ++ rightFormula.valuesForVariable(domain, variable, variableContext)) distinct
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula =
-    LTLAnd(rightFormula.delta(currentTask, last) ::
-             LTLAnd(leftFormula.delta(currentTask, last) :: LTLWeakNext(this).delta(currentTask, last) :: Nil) :: Nil
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula =
+    LTLAnd(rightFormula.delta(currentTask, state, last) ::
+             LTLAnd(leftFormula.delta(currentTask, state, last) :: LTLWeakNext(this).delta(currentTask, state, last) :: Nil) :: Nil
           )
 
 
@@ -474,6 +511,8 @@ case class LTLRelease(leftFormula: LTLFormula, rightFormula: LTLFormula) extends
   lazy val negate: LTLFormula = LTLUntil(leftFormula.negate, rightFormula.negate)
 
   override def longInfo: String = "(" + leftFormula.longInfo + " R " + rightFormula.longInfo + ")"
+
+  lazy val allPredicates: Set[Predicate] = leftFormula.allPredicates ++ rightFormula.allPredicates
 }
 
 /**
@@ -484,7 +523,7 @@ object LTLTrue extends LTLFormula {
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = Nil
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = LTLTrue
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = LTLTrue
 
   lazy val simplify: LTLFormula = this
 
@@ -493,6 +532,8 @@ object LTLTrue extends LTLFormula {
   lazy val negate: LTLFormula = LTLFalse
 
   override def longInfo: String = "T"
+
+  lazy val allPredicates: Set[Predicate] = Set()
 }
 
 /**
@@ -503,7 +544,7 @@ object LTLFalse extends LTLFormula {
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = Nil
 
-  def delta(currentTask: Task, last: Boolean): LTLFormula = LTLFalse
+  def delta(currentTask: Task, state: Set[Predicate], last: Boolean): LTLFormula = LTLFalse
 
   lazy val simplify: LTLFormula = this
 
@@ -512,4 +553,6 @@ object LTLFalse extends LTLFormula {
   lazy val negate: LTLFormula = LTLTrue
 
   override def longInfo: String = "F"
+
+  lazy val allPredicates: Set[Predicate] = Set()
 }

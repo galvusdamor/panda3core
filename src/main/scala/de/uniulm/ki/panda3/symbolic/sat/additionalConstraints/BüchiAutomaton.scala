@@ -1,12 +1,13 @@
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
-import de.uniulm.ki.util.{Dot2PdfCompiler, DirectedGraphWithAlgorithms, SimpleDirectedGraph, DirectedGraph}
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, Task}
+import de.uniulm.ki.panda3.symbolic.logic.{And, Predicate}
+import de.uniulm.ki.util.{DirectedGraph, DirectedGraphWithAlgorithms, Dot2PdfCompiler, SimpleDirectedGraph}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class BüchiAutomaton(initialState: LTLFormula, transitions: Map[LTLFormula, Map[(Task, Boolean), LTLFormula]]) extends DirectedGraphWithAlgorithms[LTLFormula] {
+case class BüchiAutomaton(initialState: LTLFormula, transitions: Map[LTLFormula, Map[(Task, Boolean, Set[Predicate]), LTLFormula]]) extends DirectedGraphWithAlgorithms[LTLFormula] {
   /** a list of all node of the graph */
   val vertices: Seq[LTLFormula] = transitions.keys.toSeq
 
@@ -23,17 +24,22 @@ case class BüchiAutomaton(initialState: LTLFormula, transitions: Map[LTLFormula
   }
 }
 
+object TaskAfterLastOne extends ReducedTask("--after-last",isPrimitive = true,Nil,Nil,Nil,And(Nil),And(Nil))
+
 object BüchiAutomaton {
   def apply(domain: Domain, formula: LTLFormula): BüchiAutomaton = {
 
     // construct the automaton
-    def dfs(states: Set[LTLFormula], newStates: Set[LTLFormula], transitions: Map[LTLFormula, Map[(Task, Boolean), LTLFormula]]):
-    (Set[LTLFormula], Map[LTLFormula, Map[(Task, Boolean), LTLFormula]]) = {
+    def dfs(states: Set[LTLFormula], newStates: Set[LTLFormula], transitions: Map[LTLFormula, Map[(Task, Boolean, Set[Predicate]), LTLFormula]]):
+    (Set[LTLFormula], Map[LTLFormula, Map[(Task, Boolean, Set[Predicate]), LTLFormula]]) = {
       // get the transitions for every new state
-      val newTransitions: Map[LTLFormula, Map[(Task, Boolean), LTLFormula]] = newStates map { state =>
+      val newTransitions: Map[LTLFormula, Map[(Task, Boolean, Set[Predicate]), LTLFormula]] = newStates map { state =>
+        val allPrimitiveStates = state.allStates
         // iterate over all tasks that might be executed
-        val transition: Map[(Task, Boolean), LTLFormula] = domain.primitiveTasks flatMap { nextTask =>
-          true :: false :: Nil map { last => ((nextTask, last), state.delta(nextTask, last).simplify) }
+        val transition: Map[(Task, Boolean, Set[Predicate]), LTLFormula] = (domain.primitiveTasks :+ TaskAfterLastOne) flatMap { nextTask =>
+          allPrimitiveStates flatMap { primState =>
+            true :: false :: Nil map { last => ((nextTask, last, primState), state.delta(nextTask, primState, last).simplify) }
+          }
         } toMap
 
         state -> transition

@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
-import de.uniulm.ki.panda3.symbolic.sat.verify.{EncodingWithLinearPlan, Clause, PathBasedEncoding}
+import de.uniulm.ki.panda3.symbolic.logic.Predicate
+import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, PathBasedEncoding}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -19,6 +20,8 @@ case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends Addition
 
 
   def apply(linearEncoding: EncodingWithLinearPlan): Seq[Clause] = {
+    println("START")
+    val sss = System.currentTimeMillis()
     val automatonClauses: Seq[Clause] = linearEncoding.linearPlan.zipWithIndex flatMap { case (taskMap, position) =>
       // at most one of the states of the automaton is true
       val atMostOneState: Seq[Clause] = linearEncoding.atMostOneOf(büchiAutomaton.vertices map { s => state(s, position) })
@@ -36,16 +39,38 @@ case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends Addition
         Clause(Array(noAfter(position), anyAfter(position))) :: Nil
 
       // if a task gets selected, execute the rule
-      val transitionRule: Seq[Clause] = büchiAutomaton.vertices flatMap { s => taskMap flatMap { case (task, atom) =>
-        val nextStateNotLast = büchiAutomaton.transitions(s)((task, false))
-        val notLast = linearEncoding.impliesRightAndSingle(state(s, position) :: anyAfter(position) :: atom :: Nil, state(nextStateNotLast, position + 1))
+      val ss = System.currentTimeMillis()
+      println("T - Rule " + büchiAutomaton.vertices.length)
+      val transitionRule: Seq[Clause] = büchiAutomaton.vertices flatMap { s =>
+        val relevantStateFeatures = s.allPredicates
+        //println("S " + allStates.length)
 
-        val nextStateLast = büchiAutomaton.transitions(s)((task, true))
-        val last = linearEncoding.impliesRightAndSingle(state(s, position) :: noAfter(position) :: atom :: Nil, state(nextStateLast, position + 1))
+        s.allStatesAndCounter flatMap { case (primitiveState, negativeState) =>
+          val stateTrue = primitiveState map { p => linearEncoding.linearStateFeatures(position)(p) } toSeq
+          val stateFalse = negativeState map { p => linearEncoding.linearStateFeatures(position)(p) } toSeq
 
-        notLast :: last :: Nil
+          taskMap flatMap { case (task, atom) =>
+
+
+            // TODO
+            val nextStateNotLast = büchiAutomaton.transitions(s)((task, false, primitiveState))
+            val notLast = linearEncoding.impliesLeftTrueAndFalseImpliesTrue((state(s, position) :: anyAfter(position) :: atom :: Nil) ++ stateTrue,
+                                                                            stateFalse,
+                                                                            state(nextStateNotLast, position + 1))
+
+
+            // last Action, last state is handled differently ...
+            //val nextStateLast = büchiAutomaton.transitions(s)((task, false, primitiveState))
+            //val last = linearEncoding.impliesLeftTrueAndFalseImpliesTrue((state(s, position) :: noAfter(position) :: atom :: Nil) ++ stateTrue.map(_._1),
+            //                                                             stateFalse map { _._1 },
+            //                                                             state(nextStateLast, position + 1))
+
+            //notLast :: last :: Nil
+            notLast :: Nil
+          }
+        }
       }
-      }
+      println("T - Rule - END " + (System.currentTimeMillis() - ss))
 
       val setNoPresent: Seq[Clause] = (linearEncoding.notImplies(taskMap.values.toSeq, noPresent(position)) :: Nil) ++
         (taskMap.values map { a => linearEncoding.impliesNot(noPresent(position), a) })
@@ -56,9 +81,36 @@ case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends Addition
       atMostOneState ++ afterClauses ++ turnAround ++ transitionRule ++ setNoPresent ++ noTaskRule
     }
 
-    val initAndGoal = Clause(state(büchiAutomaton.initialState, 0)) :: Clause(state(LTLTrue, linearEncoding.linearPlan.length)) :: Nil
-    val lastStateUnique = linearEncoding.atMostOneOf(büchiAutomaton.vertices map { s => state(s, linearEncoding.linearPlan.length) })
+    val lastAutomationTranstion: Seq[Clause] = {
+      val position = linearEncoding.linearPlan.length
+      val atMostOneState: Seq[Clause] = linearEncoding.atMostOneOf(büchiAutomaton.vertices map { s => state(s, position) })
 
-    automatonClauses ++ initAndGoal ++ lastStateUnique
+      val transitionRule: Seq[Clause] = büchiAutomaton.vertices flatMap { s =>
+        val relevantStateFeatures = s.allPredicates
+        val allStates = s.allStates
+
+        allStates flatMap { primitiveState =>
+          val (stateTrue, stateFalse) = relevantStateFeatures map { l => (linearEncoding.linearStateFeatures(position)(l), primitiveState contains l) } partition { _._2 }
+
+
+          // last Action, last state is handled differently ...
+          val nextStateLast = büchiAutomaton.transitions(s)((TaskAfterLastOne, true, primitiveState))
+          val last = linearEncoding.impliesLeftTrueAndFalseImpliesTrue((state(s, position) :: Nil) ++ stateTrue.toSeq.map(_._1),
+                                                                       stateFalse.toSeq map { _._1 },
+                                                                       state(nextStateLast, position + 1))
+
+          //notLast :: last :: Nil
+          last :: Nil
+        }
+      }
+
+      atMostOneState
+    }
+
+    val initAndGoal = Clause(state(büchiAutomaton.initialState, 0)) :: Clause(state(LTLTrue, linearEncoding.linearPlan.length + 1)) :: Nil
+    val lastStateUnique = linearEncoding.atMostOneOf(büchiAutomaton.vertices map { s => state(s, linearEncoding.linearPlan.length + 1) })
+
+    println("END " + (System.currentTimeMillis() - sss))
+    automatonClauses ++ initAndGoal ++ lastAutomationTranstion ++ lastStateUnique
   }
 }
