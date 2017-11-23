@@ -13,9 +13,9 @@ object PrunePredicates extends DomainTransformer[Unit] {
   override def transform(domain: Domain, plan: Plan, info: Unit) : (Domain,Plan)= {
     val unnecessaryPredicates = domain.predicates filter { p =>
       // it might be true and cannot be made false
-      if ((plan.groundInitialStateSetOnlyPredicates contains p) && !(domain.tasks exists { _.effectsAsPredicateBool.contains((p, false)) })) {
+      if ((plan.groundInitialStateOnlyPositivesSetOnlyPredicates contains p) && !(domain.tasks exists { _.effectsAsPredicateBool.contains((p, false)) })) {
         true
-      } else if (!(plan.groundInitialStateSetOnlyPredicates contains p) && !(domain.tasks exists { _.effectsAsPredicateBool.contains((p, true)) })) {
+      } else if (!(plan.groundInitialStateOnlyPositivesSetOnlyPredicates contains p) && !(domain.tasks exists { _.effectsAsPredicateBool.contains((p, true)) })) {
         true
       } else {
         false

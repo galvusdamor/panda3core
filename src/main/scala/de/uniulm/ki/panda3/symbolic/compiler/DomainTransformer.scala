@@ -57,8 +57,9 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
     val topInit = PlanStep(plan.init.id, initAndGoalNOOP, Nil)
     val topGoal = PlanStep(plan.goal.id, initAndGoalNOOP, Nil)
     val initialPlanWithout = plan.replaceInitAndGoal(topInit, topGoal, plan.init.arguments ++ plan.goal.arguments)
-    val topTask = ReducedTask("__" + transformationName + "Compilation__top", isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
-    val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top")
+    val topTask = ReducedTask("__" + transformationName + "Compilation__top_" + DecompositionMethodTransformer.instanceCounter, isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
+    val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top_" + DecompositionMethodTransformer.instanceCounter)
+    DecompositionMethodTransformer.instanceCounter += 1
 
     val (extendedMethods, newTasks) = transformMethods(domain.decompositionMethods, topMethod, info, domain)
 
@@ -83,4 +84,8 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
       (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks :+ topTask), initialPlan)
     }
   }
+}
+
+object DecompositionMethodTransformer {
+  private var instanceCounter = 0
 }

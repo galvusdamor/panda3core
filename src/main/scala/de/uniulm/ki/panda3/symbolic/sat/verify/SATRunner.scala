@@ -497,7 +497,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           }
         }
         val graph: DirectedGraph[String] = SimpleDirectedGraph(nodes, edges)
-        Dot2PdfCompiler.writeDotToFile(graph,"dt-tree.pdf")
+        //Dot2PdfCompiler.writeDotToFile(graph,"dt-tree.pdf")
         // give all task a unique ID
         val nodeIDMap: Map[String, Int] = nodes.zipWithIndex.toMap
         val idNodeMap: Map[Int, String] = nodeIDMap.map(_.swap)
@@ -732,8 +732,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
-        //println("\n")
-        //println(primitiveSolution map { t => t.schema.isPrimitive + " " + t.schema.name } mkString "\n")
+        //println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.schema.name } mkString "\n"))
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")

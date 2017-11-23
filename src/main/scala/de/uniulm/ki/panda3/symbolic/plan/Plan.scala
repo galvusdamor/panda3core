@@ -58,10 +58,11 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   planStepParentInDecompositionTree foreach { case (a, (_, b)) => assert(a.schema == b.schema) }
 
 
-  lazy val planSteps       : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
-  lazy val planStepTasksSet: Set[Task]       = planSteps map { _.schema } toSet
-  lazy val causalLinks     : Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter { cl => isPresent(cl.producer) && isPresent(cl.consumer) }
-  lazy val removedPlanSteps: Seq[PlanStep]   = planStepsAndRemovedPlanSteps filterNot isPresent
+  lazy val planSteps                          : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filter isPresent
+  lazy val planStepTasksSet                   : Set[Task]       = planSteps map { _.schema } toSet
+  lazy val planStepsWithoutInitAndGoalTasksSet: Set[Task]       = planStepsWithoutInitGoal map { _.schema } toSet
+  lazy val causalLinks                        : Seq[CausalLink] = causalLinksAndRemovedCausalLinks filter { cl => isPresent(cl.producer) && isPresent(cl.consumer) }
+  lazy val removedPlanSteps                   : Seq[PlanStep]   = planStepsAndRemovedPlanSteps filterNot isPresent
 
   lazy val flaws: Seq[Flaw] = {
     val hardFlaws = causalThreats ++ openPreconditions ++ abstractPlanSteps // ++ notInsertedByDecomposition
@@ -530,7 +531,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     })
   }
 
-  lazy val groundInitialStateSetOnlyPredicates: Set[Predicate] = groundedInitialState map { _.predicate } toSet
+  lazy val groundInitialStateOnlyPositivesSetOnlyPredicates: Set[Predicate] = groundedInitialStateOnlyPositiveSet map { _.predicate }
 
   lazy val groundedInitialTask: GroundTask = {
     val arguments = init.arguments map variableConstraints.getRepresentative map {

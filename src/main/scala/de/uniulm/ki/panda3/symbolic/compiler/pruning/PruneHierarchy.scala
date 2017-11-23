@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.symbolic.compiler.pruning
 import de.uniulm.ki.panda3.symbolic.compiler.{DomainTransformer, RemoveChoicelessAbstractTasks}
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.plan.modification.InsertPlanStepWithLink
 
 /**
   * Prunes decomposition methods if any of their tasks do not occur in the domain any more ...
@@ -40,6 +41,11 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
     }
 
     val propagated = propagateInHierarchy(initialPruning._1)
+    // gather all reachable primitives
+    val usefulPrimitives: Set[Task] = (propagated.decompositionMethods flatMap { _.subPlan.planStepsWithoutInitAndGoalTasksSet filter { _.isPrimitive } } toSet) ++
+      plan.planStepsWithoutInitAndGoalTasksSet.filter(_.isPrimitive)
+    val withoutPrimitives = if (plan.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) propagated
+    else propagated.copy(tasks = propagated.abstractTasks ++ usefulPrimitives)
 
     // TODO this is wrong for TI HTN
     val reachablePrimitiveTasks = propagated.decompositionMethods flatMap {_.subPlan.planStepsWithoutInitGoal.map(_.schema).filter(_.isPrimitive)} toSet

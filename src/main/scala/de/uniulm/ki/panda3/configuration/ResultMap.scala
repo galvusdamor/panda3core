@@ -129,6 +129,7 @@ object Timings {
   val SPLIT_PARAMETERS                = "02 preprocessing:04:split parameter"
   val USELESS_ABSTRACT_TASKS          = "02 preprocessing:05:expand useless abstract tasks"
   val TOP_TASK                        = "02 preprocessing:99:create artificial top task"
+  val LAST_TASK                        = "02 preprocessing:98:ensure last task in method"
   val LIFTED_REACHABILITY_ANALYSIS    = "02 preprocessing:11:lifted reachabiltiy analysis"
   val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:12:grounded planning graph analysis"
   val GROUNDED_TDG_ANALYSIS           = "02 preprocessing:23:grounded task decomposition graph analysis"
@@ -174,6 +175,7 @@ object Information {
   val REGULAR                      = "02 properties:03:regular"
   val TAIL_RECURSIVE               = "02 properties:04:tail recursive"
   val TOTALLY_ORDERED              = "02 properties:05:totally ordered"
+  val LAST_TASK_IN_METHODS              = "02 properties:06:last task in all methods"
   val MINIMUM_DECOMPOSITION_HEIGHT = "02 properties:10:minimum decomposition height"
 
   val NUMBER_OF_NODES             = "10 search nodes:00:total"

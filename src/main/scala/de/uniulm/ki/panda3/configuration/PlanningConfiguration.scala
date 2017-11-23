@@ -23,7 +23,7 @@ import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy, PrunePredicates}
+import de.uniulm.ki.panda3.symbolic.compiler.pruning._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, SASPlusGrounding}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
@@ -113,12 +113,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       informationCapsule.set(Information.REGULAR, if (domainStructureAnalysis.isRegular) "true" else "false")
       informationCapsule.set(Information.TAIL_RECURSIVE, if (domainStructureAnalysis.isTailRecursive) "true" else "false")
       informationCapsule.set(Information.TOTALLY_ORDERED, if (domainStructureAnalysis.isTotallyOrdered) "true" else "false")
+      informationCapsule.set(Information.LAST_TASK_IN_METHODS, if (domainStructureAnalysis.hasLastTaskInAllMethods) "true" else "false")
 
       extra("Domain is acyclic: " + domainStructureAnalysis.isAcyclic + "\n")
       extra("Domain is mostly acyclic: " + domainStructureAnalysis.isMostlyAcyclic + "\n")
       extra("Domain is regular: " + domainStructureAnalysis.isRegular + "\n")
       extra("Domain is tail recursive: " + domainStructureAnalysis.isTailRecursive + "\n")
       extra("Domain is totally ordered: " + domainStructureAnalysis.isTotallyOrdered + "\n")
+      extra("Domain has last task in all methods: " + domainStructureAnalysis.hasLastTaskInAllMethods + "\n")
     }
 
     //informationCapsule.set(Information.MINIMUM_DECOMPOSITION_HEIGHT, domainAndPlan._1.minimumDecompositionHeightToPrimitiveForPlan(domainAndPlan._2))
@@ -487,34 +489,27 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         writeStringToFile(domainString, "fooD" + uuid)
         writeStringToFile(problemString, "fooP" + uuid)
         //System exit 0
-        writeStringToFile("#!/bin/bash\n\njava -jar " + externalProgramPaths(SHOP2) + " fooD" + uuid + "\n" +
-                            "java -jar " + externalProgramPaths(SHOP2) + " -r fooP" + uuid + "\n" +
+        writeStringToFile("#!/bin/bash\n\n" +
+                            "mkdir .shop" + uuid + "\n" +
+                            "cd .shop" + uuid + "\n" +
+                            "java -jar " + externalProgramPaths(SHOP2) + " ../fooD" + uuid + "\n" +
+                            "java -jar " + externalProgramPaths(SHOP2) + " -r ../fooP" + uuid + "\n" +
                             "javac -cp " + externalProgramPaths(SHOP2) + " *java\n" +
                             "rm *java\n" +
                             "echo starting SHOP\n" +
-                            "java -Xmx4G -Xms4G -XX:+UseSerialGC -cp " + externalProgramPaths(SHOP2) + " problem\n" +
-                            "rm *class", "run" + uuid + ".sh")
+                            "java -Xmx4G -Xms4G -Xss4G -XX:+UseSerialGC -cp " + externalProgramPaths(SHOP2) + ":. problem\n" +
+                            //"java -Xmx1G -Xms1G -Xss1G -XX:+UseSerialGC -cp " + externalProgramPaths(SHOP2) + ":. problem\n" +
+                            "rm *class", "run" + uuid + ".sh"
+                         )
 
         val result = {
           import sys.process._
           // run SHOP2
           var output: String = ""
 
-          // start self destruct ...
-          val t = new Thread(new Runnable {
-            override def run(): Unit = {
-              Thread.sleep(10 * 60 * 1000)
-              // TODO: just kill all java processes ... (which might be a *bit* dangerous, but ok for once)
-              "killall -9 java" !
-            }
-          })
-
-          t.setDaemon(true)
-          t.start()
-
           timeCapsule start SEARCH_SHOP
 
-          ("bash run" + uuid + ".sh") ! new ProcessLogger {
+          ("timeout " + remainingTime / 1000 + "s bash run" + uuid + ".sh") ! new ProcessLogger {
             override def err(s: => String): Unit = output = output + s + "\n"
 
             override def out(s: => String): Unit = output = output + s + "\n"
@@ -527,6 +522,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           ("rm fooP" + uuid) !
 
           ("rm run" + uuid + ".sh") !
+
+          ("rm -rf .shop" + uuid) !
 
           timeCapsule stop SEARCH_SHOP
 
@@ -828,19 +825,28 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
 
+
+    val predicatesRemoved = if (domain.isGround) {
+        info("Removing unnecessary predicates ... ")
+        val compiled = PrunePredicates.transform(domain, problem, ())
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        compiled
+    } else (domain,problem)
+
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
     val liftedResult = if (preprocessingConfiguration.liftedReachability) {
       info("Lifted reachability analysis ... ")
-      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(domain, problem, emptyAnalysis)
+      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(predicatesRemoved._1,predicatesRemoved._2, emptyAnalysis)
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
-      val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
+      val hierarchyPruned = PruneHierarchy.transform(predicatesRemoved._1,predicatesRemoved._2, disallowedTasks.toSet)
       val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
-    } else ((domain, problem), emptyAnalysis)
+    } else (predicatesRemoved, emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
     assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { liftedResult._1._1.tasks contains _.schema })
@@ -875,7 +881,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       // FD can't handle either in the sort hierarchy, so we have to use predicates when writing them ...
       val uuid = UUID.randomUUID().toString
 
-      ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
+      System.getProperty("os.name") match {
+        case osname if osname.toLowerCase startsWith "windows" =>
+          ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
+        case _ => // OSes made by people who can think straight
+          ("mkdir .fd" + uuid) !! // create directory
+      }
 
       val separator = System.getProperty("os.name") match {
         case osname if osname.toLowerCase startsWith "windows" => "\\"
@@ -903,7 +914,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                 "python " + path + "\\src\\translate\\translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".bat")
             ("cmd.exe /c  runFD" + uuid + ".bat") !!
 
-          case _ => // OSes made by people who can think straigt
+          case _ => // OSes made by people who can think straight
             writeStringToFile("#!/bin/bash\n" +
                                 "cd .fd" + uuid + "\n" +
                                 "python " + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
@@ -1016,6 +1027,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       if (!runForGrounder || !preprocessingConfiguration.groundDomain) (if (preprocessingConfiguration.compileUselessAbstractTasks)
         CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand useless abstract tasks", USELESS_ABSTRACT_TASKS) :: Nil
       else Nil) ::
+        (CompilerConfiguration(PruneUselessAbstractTasks, (), "abstract tasks without methods", USELESS_ABSTRACT_TASKS) :: Nil) ::
         // this one has to be the last
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
@@ -1063,6 +1075,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         else Nil) ::
         (if (preprocessingConfiguration.splitIndependentParameters)
           CompilerConfiguration(SplitIndependentParameters, (), "split parameters", SPLIT_PARAMETERS) :: Nil
+        else Nil) ::
+        (if (preprocessingConfiguration.ensureMethodsHaveLastTask)
+          CompilerConfiguration(EnsureEveryMethodHasLastTask, (), "ensure last task", LAST_TASK) :: Nil
         else Nil) ::
         Nil flatten
 
@@ -1348,6 +1363,7 @@ case class PreprocessingConfiguration(
                                        compileUnitMethods: Boolean,
                                        compileOrderInMethods: Option[TotallyOrderingOption],
                                        compileInitialPlan: Boolean,
+                                       ensureMethodsHaveLastTask: Boolean,
                                        removeUnnecessaryPredicates: Boolean,
                                        convertToSASP: Boolean,
                                        allowSASPFromStrips: Boolean,
@@ -1394,6 +1410,10 @@ case class PreprocessingConfiguration(
          "-removeUnnecessaryPredicates" -> (NoParameter, { p: Option[String] => this.copy(removeUnnecessaryPredicates = true).asInstanceOf[this.type] }),
          "-dontRemoveUnnecessaryPredicates" -> (NoParameter, { p: Option[String] => this.copy(removeUnnecessaryPredicates = false).asInstanceOf[this.type] }),
 
+         "-ensureLastTaskInMethods" -> (NoParameter, { p: Option[String] => this.copy(ensureMethodsHaveLastTask = true).asInstanceOf[this.type] }),
+         "-dontEnsureLastTaskInMethods" -> (NoParameter, { p: Option[String] => this.copy(ensureMethodsHaveLastTask = false).asInstanceOf[this.type] }),
+
+
          "-liftedReachability" -> (NoParameter, { p: Option[String] => this.copy(liftedReachability = true).asInstanceOf[this.type] }),
          "-noLiftedReachability" -> (NoParameter, { p: Option[String] => this.copy(liftedReachability = false).asInstanceOf[this.type] }),
 
@@ -1439,8 +1459,9 @@ case class PreprocessingConfiguration(
 
          "-stopAfterGrounding" -> (NoParameter, { p: Option[String] => this.copy(stopDirectlyAfterGrounding = true).asInstanceOf[this.type] }),
          "-dontStopAfterGrounding" -> (NoParameter, { p: Option[String] => this.copy(stopDirectlyAfterGrounding = false).asInstanceOf[this.type] }),
-         "-compileUselessAbstracts" ->(NoParameter, { p: Option[String] => this.copy(compileUselessAbstractTasks = true).asInstanceOf[this.type] }),
-         "-dontCompileUselessAbstracts" ->(NoParameter, { p: Option[String] => this.copy(compileUselessAbstractTasks = false).asInstanceOf[this.type] })
+
+         "-compileUselessAbstracts" -> (NoParameter, { p: Option[String] => this.copy(compileUselessAbstractTasks = true).asInstanceOf[this.type] }),
+         "-dontCompileUselessAbstracts" -> (NoParameter, { p: Option[String] => this.copy(compileUselessAbstractTasks = false).asInstanceOf[this.type] })
        )
 
   override def longInfo: String = "Preprocessing Configuration\n---------------------------\n" +
@@ -1448,6 +1469,7 @@ case class PreprocessingConfiguration(
                   ("Compile unit methods", compileUnitMethods) ::
                   ("Compile order in methods", if (compileOrderInMethods.isEmpty) "false" else compileOrderInMethods.get) ::
                   ("Compile initial plan", compileInitialPlan) ::
+                  ("Ensure Methods Have Last Task", ensureMethodsHaveLastTask) ::
                   ("Remove unnecessary predicates", removeUnnecessaryPredicates) ::
                   ("Convert to SAS+", convertToSASP) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
