@@ -111,6 +111,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         long nextRestart = -1;//restartCount * restart;
 
         boolean helpfulAction = false;
+        int checkAfter = 5000;
+        int sinceCheck = 0;
         timing.start(SEARCH_TIME);
         planningloop:
         while (!fringe.isEmpty()) {
@@ -121,7 +123,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     continue actionloop;
 
                 ProgressionNetwork node = n.apply(ps);
-                node.id = searchnodes;
+                node.id = searchnodes++;
+                sinceCheck++;
                 node.heuristic = n.heuristic.update(node, ps);
                 node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
                 if (node.goalRelaxedReachable) {
@@ -200,6 +203,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                 // todo: add unit propagation here
                 node.heuristic = n.heuristic.update(node, oneAbs, m);
                 node.id = searchnodes++;
+                sinceCheck++;
                 node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
 
                 if (node.goalRelaxedReachable) {
@@ -218,7 +222,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     fringe.add(node, helpfulAction);
                 }
             }
-            if ((System.currentTimeMillis() - lastInfo) > 1000) {
+            if ((sinceCheck >= checkAfter) && ((System.currentTimeMillis() - lastInfo) > 1000)) {
+                sinceCheck = 0;
                 if ((restart > 0) && ((System.currentTimeMillis() - totalSearchTime) > nextRestart)) {
                     restartCount++;
                     nextRestart = restartCount * restart;
@@ -240,25 +245,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             }
         }
         System.out.println("Number of nodes in final fringe: " + fringe.size());
-        if (fringe.size() == 0) info.set(Information.SEARCH_SPACE_FULLY_EXPLORED(),"true");
+        if (fringe.size() == 0) info.set(Information.SEARCH_SPACE_FULLY_EXPLORED(), "true");
         timing.stop(SEARCH_TIME);
-
-        /*
-        try {
-            BufferedWriter bwAllSols = new BufferedWriter(new FileWriter("/home/dh/Schreibtisch/anytime/times.txt"));
-            Iterator<Long> iter1 = timeStamps.iterator();
-            Iterator<String> iter2 = tlts.iterator();
-            while (iter1.hasNext()) {
-                int time = (int) (iter1.next() - startedSearch);
-                bwAllSols.write(" " + time);
-                bwAllSols.write(" ");
-                bwAllSols.write(iter2.next());
-                bwAllSols.write("\n");
-            }
-            bwAllSols.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
 
         if (this.findShortest)
             info.add("30 progression:91:findShortestPlan", 1);
@@ -334,7 +322,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
                 ProgressionNetwork node = n.apply(ps);
 
-                node.id = searchnodes;
+                node.id = searchnodes++;
                 node.heuristic = n.heuristic.update(node, ps);
                 node.metric = node.heuristic.getHeuristic();
                 if (aStar) {
@@ -374,7 +362,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                             System.out.println(getInfoStr(searchnodes, fringe.size(), greediness, n, totalSearchTime));
                     }
                 }
-                searchnodes++;
             }
 
             for (ProgressionPlanStep oneAbs : n.getFirstAbstractTasks()) {
@@ -384,6 +371,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
                     // todo: add unit propagation here
                     node.heuristic = n.heuristic.update(node, oneAbs, m);
+                    node.id = searchnodes++;
                     node.metric = node.heuristic.getHeuristic();
                     if (aStar) {
                         node.metric += node.solution.getLength();
@@ -400,7 +388,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                                 System.out.println(getInfoStr(searchnodes, fringe.size(), greediness, n, totalSearchTime));
                         }
                     }
-                    searchnodes++;
                 }
             }
             if ((System.currentTimeMillis() - lastInfo) > 1000) {
@@ -521,14 +508,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     }
                 } else {
                     SimpleDecompositionMethod dm = (SimpleDecompositionMethod) a;
-                    if (dm.abstractTask().name().startsWith("tlt") && (dm.subPlan().planStepsWithoutInitGoal().size() > 0)) {
-                        for (int i = 0; i < dm.subPlan().planStepsWithoutInitGoal().size(); i++) {
-                            Task ps = dm.subPlan().planStepsWithoutInitGoal().apply(i).schema();
-                            if (FirstDecTask.length() > 0)
-                                FirstDecTask += "&";
-                            FirstDecTask += ps.longInfo();
-                        }
-                    }
                     numDec++;
                 }
             }

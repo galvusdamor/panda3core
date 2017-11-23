@@ -981,7 +981,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               case PlanningGraph            => false
               case PlanningGraphWithMutexes => true
             }
-            runGroundedPlanningGraph(sasPlusResult._1._1, sasPlusResult._1._2, useMutexes, sasPlusResult._2)
+            val x = runGroundedPlanningGraph(sasPlusResult._1._1, sasPlusResult._1._2, useMutexes, sasPlusResult._2)
+            /*if (firstAnalysis) {
+              println("Writing File")
+              writeStringToFile(x(SymbolicGroundedReachability).reachableGroundPrimitiveActions.map(_.shortInfo).mkString("\n"), "allPrimAct.txt")
+              println("File written")
+            }*/
+            x
         }
 
       val reachable = newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.toSet
@@ -1490,6 +1496,7 @@ object SearchAlgorithmType {
     case "greedy"                                                => GreedyType
     case "dijkstra" | "uniform-cost"                             => DijkstraType
     case "astar" | "a*"                                          => AStarActionsType(weight = 1)
+    case x if x.startsWith("externalsearch")                     => ExternalSearchEngine(x.replace(')', '(').split("\\(")(1))
     case "depth-astar" | "depth-a*" | "astar-depth" | "a*-depth" => AStarDepthType(weight = 1)
     case x if x.startsWith("astar") || x.startsWith("a*")        => AStarActionsType(weight = x.replace(')', '(').split("\\(")(1).toDouble)
     case x if x.startsWith("depth-astar") || x.startsWith("depth-a*") ||
@@ -1513,6 +1520,7 @@ object GreedyType extends SearchAlgorithmType {override def longInfo: String = "
 
 object DijkstraType extends SearchAlgorithmType {override def longInfo: String = "Dijkstra"}
 
+case class ExternalSearchEngine(uuid: String) extends SearchAlgorithmType {override def longInfo: String = "Write model for external search engine"}
 
 object ArgumentListParser {
   def parse[T](text: String, extractor: (String, Map[String, String]) => T): Seq[T] = text.replace(" ", ";").split(";") map { singleH =>
@@ -1787,7 +1795,7 @@ case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
          }),
          "-abstractSelection" ->
            (NecessaryParameter, { p: Option[String] => this.copy(abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.parse(p.get)).asInstanceOf[this.type] })
-       )
+    )
 
   /** returns a detailed information about the object */
   override def longInfo: String = "Progression-search Configuration\n--------------------------------\n" +

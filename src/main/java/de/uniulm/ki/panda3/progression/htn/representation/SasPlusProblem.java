@@ -12,8 +12,7 @@ import de.uniulm.ki.panda3.util.seqProviderList;
 import scala.Tuple2;
 import scala.collection.Seq;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.*;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.BitSet;
@@ -42,10 +41,10 @@ public class SasPlusProblem {
     private boolean actionCosts = false;
 
     // number of elements
-    public int numOfVars;
+    public int numOfVars; // how many variables are in the problem
     private int numOfMutexGroups;
     private int numOfGoalPairs;
-    public int numOfOperators;
+    public int numOfOperators; // how many actions are in the problem
 
     private int[] axioms;
     public int[] ranges; // variable-index -> number of values the var can have
@@ -462,10 +461,40 @@ public class SasPlusProblem {
     @Override
     public String toString() {
         String overall = "";
+        overall = printVariables(overall);
+        overall = printOperator(overall);
+        overall += "s0 = {\n";
+        for (int i = 0; i < s0List.length; i++) {
+            overall += "\t" + factStrs[s0List[i]] + "\n";
+        }
+        overall += "}\n";
+        overall += "g = {\n";
+        for (int i = 0; i < gList.length; i++) {
+            overall += "\t" + factStrs[gList[i]] + "\n";
+        }
+        overall += "}\n";
+        return overall;
+    }
+
+    private String printVariables(String overall) {
+        for (int i = 0; i < numOfStateFeatures; i++) {
+            int varNum = indexToMutexGroup[i];
+            if (firstIndex[varNum] == i) {
+                overall += "{\n";
+            }
+            overall += "\t" + factStrs[i] + "\n";
+            if (lastIndex[varNum] == i) {
+                overall += "}\n";
+            }
+        }
+        return overall;
+    }
+
+    private String printOperator(String overall) {
         for (int i = 0; i < this.numOfOperators; i++) {
-            String opStr = opNames[i] + "\n\tp{";
-            opStr += listToString(precLists[i]) + "}\n\ta{";
-            opStr += listToString(addLists[i]) + "}\n\td{";
+            String opStr = opNames[i] + "\n\tprec {";
+            opStr += listToString(precLists[i]) + "}\n\tadd  {";
+            opStr += listToString(addLists[i]) + "}\n\tdel  {";
             opStr += listToString(delLists[i]) + "}";
             overall += opStr + "\n";
         }
@@ -589,7 +618,7 @@ public class SasPlusProblem {
         assert this.correctModel();
 
         int actionCount = I.size();
-        System.out.print("Reducing SAS+ domain ... ");
+        System.out.print("Reducing flat domain ... ");
         int orgOpNum = this.numOfOperators;
         int orgStateNum = this.numOfStateFeatures;
 
@@ -922,6 +951,7 @@ public class SasPlusProblem {
                 int setBit = getS0().nextSetBit(firstIndex[i]);
                 assert setBit >= 0;
                 assert setBit <= lastIndex[i];
+                // no second bit is set
                 assert (getS0().nextSetBit(setBit + 1) == -1) || (getS0().nextSetBit(setBit + 1) >= firstIndex[i + 1]);
             }
         }
@@ -1257,5 +1287,72 @@ public class SasPlusProblem {
         assert res.correctModel();
 
         return new Tuple2<>(res, tasks);
+    }
+
+    public void writeToDisk(PrintStream bw, boolean writeActionNames) throws IOException {
+        bw.print(";; State Features\n");
+        bw.print(this.numOfStateFeatures + "\n");
+        for (int i = 0; i < this.numOfStateFeatures; i++) {
+            bw.print(factStrs[i] + "\n");
+        }
+        bw.print("\n;; Mutex Groups\n");
+        bw.print(this.numOfVars + "\n");
+        for (int i = 0; i < this.numOfVars; i++) {
+            bw.print(firstIndex[i] + " " + lastIndex[i] + " " + varNames[i] + "\n");
+        }
+        bw.print("\n;; Actions\n");
+        bw.print(this.numOfOperators + "\n");
+        for (int i = 0; i < this.numOfOperators; i++) {
+            bw.print(this.costs[i] + "\n");
+            for (int j = 0; j < this.precLists[i].length; j++) {
+                if (j > 0)
+                    bw.print(" ");
+                bw.print(this.precLists[i][j]);
+            }
+            if (this.precLists[i].length > 0)
+                bw.print(" ");
+            bw.print("-1\n");
+            for (int j = 0; j < this.addLists[i].length; j++) {
+                if (j > 0)
+                    bw.print(" ");
+                bw.print(this.addLists[i][j]);
+            }
+            if (this.addLists[i].length > 0)
+                bw.print(" ");
+            bw.print("-1\n");
+            for (int j = 0; j < this.delLists[i].length; j++) {
+                if (j > 0)
+                    bw.print(" ");
+                bw.print(this.delLists[i][j]);
+            }
+            if (this.delLists[i].length > 0)
+                bw.print(" ");
+            bw.print("-1\n");
+        }
+        bw.print("\n;; s0\n");
+        for (int i = 0; i < this.s0List.length; i++) {
+            if (i > 0)
+                bw.print(" ");
+            bw.print(this.s0List[i]);
+        }
+        bw.print("-1\n");
+        bw.print("\n;; g\n");
+        for (int i = 0; i < this.gList.length; i++) {
+            if (i > 0)
+                bw.print(" ");
+            bw.print(this.gList[i]);
+        }
+        bw.print("-1\n");
+
+        if (writeActionNames) {
+            bw.print("\n;; Tasks\n");
+
+            bw.print(this.opNames.length + "\n");
+            for (int i = 0; i < this.opNames.length; i++) {
+                bw.print("0 ");
+                bw.print(this.opNames[i]);
+                bw.print("\n");
+            }
+        }
     }
 }

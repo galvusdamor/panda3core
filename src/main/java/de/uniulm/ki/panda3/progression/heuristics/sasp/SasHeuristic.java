@@ -11,7 +11,11 @@ public abstract class SasHeuristic {
     public static final int cUnreachable = Integer.MAX_VALUE;
     public BitSet helpfulOps;
 
-    public enum SasHeuristics {hFilter, hMax, hAdd, hFF, hFFwithHA, hCG, hLmCut, hLmCutOpt, hIncLmCut}
+<<<<<<< Updated upstream
+    public enum SasHeuristics {hFilter, hMax, hAdd, hFF, hFFwithHA, hCG, hLmCut, hLmCutOpt, hIncLmCut, noSearch}
+=======
+    public enum SasHeuristics {hFilter, hMax, hAdd, hFF, hFFwithHA, hCG, hhCG, hLmCut, hLmCutOpt, hIncLmCut}
+>>>>>>> Stashed changes
 
     protected boolean isIncremental = false;
 

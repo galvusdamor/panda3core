@@ -1,9 +1,14 @@
 package de.uniulm.ki.panda3.progression.htn;
 
 import de.uniulm.ki.panda3.configuration.*;
+import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.TDGLandmarkFactory;
+import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.TaskReachabilityGraph;
 import de.uniulm.ki.panda3.progression.heuristics.htn.*;
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.RelaxedCompositionSAS;
+import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.RelaxedCompositionSTRIPS;
 import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRcFFMulticount;
 import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRelaxedComposition;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.*;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
@@ -16,6 +21,7 @@ import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
 import scala.Tuple2;
 
+import java.io.*;
 import java.util.*;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -47,9 +53,9 @@ public class ProPlanningInstance {
         }
 
         // check for an unsolvable planning instance
-        if (d.decompositionMethods().length() == 0){
+        if (d.decompositionMethods().length() == 0) {
             // there cannot be a solution ...
-            ic.set(Information.SEARCH_SPACE_FULLY_EXPLORED(),"true");
+            ic.set(Information.SEARCH_SPACE_FULLY_EXPLORED(), "true");
             return false;
         }
 
@@ -91,6 +97,7 @@ public class ProPlanningInstance {
 
         HashMap<Task, List<ProMethod>> methods = getEfficientMethodRep(methodsByTask);
         finalizeMethods(methods);
+        ProgressionNetwork.methods = methods;
 
         if (!(p.planStepsWithoutInitGoal().size() == 1)) {
             System.out.println("Error: Progression search algorithm found more than one task in the initial task network.");
@@ -113,6 +120,10 @@ public class ProPlanningInstance {
             initialNode.heuristic = new gphBFS();
         else if (search instanceof DFSType$) {
             initialNode.heuristic = new gphDFS();
+        } else if (search instanceof ExternalSearchEngine) {
+            ExternalSearchEngine searchEngine = (ExternalSearchEngine) search;
+            writeModelToHD(methods, initialTasks, initialNode, searchEngine.uuid());
+            System.exit(0);
         } else if (heuristic instanceof HierarchicalHeuristicRelaxedComposition) {
             HierarchicalHeuristicRelaxedComposition h = (HierarchicalHeuristicRelaxedComposition) heuristic;
             initialNode.heuristic = new gphRelaxedComposition(ProgressionNetwork.flatProblem, h.classicalHeuristic(), methods, initialTasks);
@@ -138,7 +149,7 @@ public class ProPlanningInstance {
 
         routine = new PriorityQueueSearch(aStar, printOutput, findShortest, taskSelectionStrategy);
         if (search instanceof AStarActionsType) {
-            routine.greediness = (int)((AStarActionsType)search).weight();
+            routine.greediness = (int) ((AStarActionsType) search).weight();
         }
 
         routine.wallTime = quitAfterMs;
@@ -181,9 +192,59 @@ public class ProPlanningInstance {
             System.out.println(solution.toString());
             System.out.println("It contains " + solution.getLength() + " modifications, including " + solution.getPrimitiveCount() + " actions.");
         } else System.out.println("Problem unsolvable.");
-        System.out.println("Total program runtime: " + (System.currentTimeMillis() - totaltime) + " ms");
 
         return solution != null;
+    }
+
+    private void writeModelToHD(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, ProgressionNetwork initialNode, String uuid) {
+        String htnModelFile = "./" + uuid + ".htn";
+        String heuristicModelFile = "./" + uuid + ".rc";
+        String topDownReachabilityFile = "./" + uuid + ".tr";
+
+        System.out.print("Writing HTN model...");
+        initialNode.writeToDisk(htnModelFile);
+        System.out.println("done");
+
+        System.out.println("Generating RC model");
+        RelaxedCompositionSTRIPS compEnc = new RelaxedCompositionSTRIPS(ProgressionNetwork.flatProblem);
+        compEnc.generateTaskCompGraph(methods, initialTasks);
+
+        try {
+            System.out.print("Writing RC model...");
+            PrintStream ps2 = new PrintStream(new BufferedOutputStream(new FileOutputStream(heuristicModelFile)));
+            compEnc.writeToDisk(ps2, true);
+            ps2.close();
+            System.out.println("done");
+
+            System.out.print("Writing TDR model...");
+            ps2 = new PrintStream(new BufferedOutputStream(new FileOutputStream(topDownReachabilityFile)));
+            //((TDGLandmarkFactory) compEnc.tdRechability).writeToDisk(ps2);
+            ((TaskReachabilityGraph) compEnc.tdRechability).writeToDisk(ps2);
+            ps2.close();
+            System.out.println("done");
+/*
+            ps2 = new PrintStream(new FileOutputStream("/home/dh/Schreibtisch/instanceForC/instance.tr2"));
+            ((TaskReachabilityGraph) compEnc.tdRechability2).writeToDisk(ps2);
+            ps2.close();
+            System.exit(0);
+
+            Process process = new ProcessBuilder(
+                    "/media/dh/Volume/repositories/private-source-code/cpp-code/SearchEngine/Debug/SearchEngine"//,"param1","param2"
+            ).start();
+            InputStream is = process.getInputStream();
+            InputStreamReader isr = new InputStreamReader(is);
+            BufferedReader br = new BufferedReader(isr);
+            String line;
+
+            //System.out.printf("Output of running %s is:", Arrays.toString(args));
+
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+            //System.exit(0);*/
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private Map<Integer, Task> mapTomap(scala.collection.immutable.Map<Object, Task> key2task) {

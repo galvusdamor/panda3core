@@ -11,7 +11,9 @@ public class UnblockActions {
     enum context {declaration, precondition, effect}
 
     public static void main(String[] args) throws Exception {
-        String inDir = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/07-partial-observable/02-unblock-actions/";
+        //String inDir = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/07-partial-observable/02-unblock-actions/";
+        //String inDir = "/media/dh/Volume/repositories/private-documents/evaluation-domains/kitchen-partobs/06-unlocked";
+        String inDir = "/home/dh/Schreibtisch/ICAPS-ExpsFromSamwise/05-plan-rec-instances";
         File dir = new File(inDir);
         for (File f : dir.listFiles()) {
             BufferedReader br = new BufferedReader(new FileReader(f));

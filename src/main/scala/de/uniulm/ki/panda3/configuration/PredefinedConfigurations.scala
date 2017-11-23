@@ -34,6 +34,16 @@ object PredefinedConfigurations {
                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                        iterateReachabilityAnalysis = true, groundDomain = true, stopDirectlyAfterGrounding = false)
 
+  val lightGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                       compileInitialPlan = true,
+                                                       removeUnnecessaryPredicates = false,
+                                                       convertToSASP = false, allowSASPFromStrips = false,
+                                                       compileOrderInMethods = None,
+                                                       splitIndependentParameters = true,
+                                                       compileUselessAbstractTasks = false,
+                                                       liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                       iterateReachabilityAnalysis = false, groundDomain = true, stopDirectlyAfterGrounding = true)
 
   val sasPlusPreprocess = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
                                                      compileOrderInMethods = None,
@@ -303,9 +313,9 @@ object PredefinedConfigurations {
          "-GreedyAStar-PR-Recompute-Compare" -> (htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare),
 
          // PRO
-         "-GreedyAStarPro-hhRC-lm-cut" -> (htnParsing, sasPlusPreprocess, ProgressionSearch(AStarActionsType(2),
-                                                                                            Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hLmCut)), PriorityQueueSearch
-                                                                                              .abstractTaskSelection.random)),
+         "-GreedyAStarPro-hhRC-lm-cut" ->(htnParsing, sasPlusPreprocess, ProgressionSearch(AStarActionsType(2),
+                                                                                           Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hLmCut)), PriorityQueueSearch
+                                                                                             .abstractTaskSelection.random)),
 
 
          // configurations to test totSAT
@@ -367,8 +377,12 @@ object PredefinedConfigurations {
 
 
          // plan verification a la ICAPS'17
-         "-verify" -> (htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, "")),
-
+         "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, "")),
+/*
+         "-astar-pro-DCG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hCG)),
+         "-g3astar-pro-DCG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hCG)),
+         "-greedy-pro-DCG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hCG)),
+*/
 
          ///// PANDA Pro
          "-astar-pro-CG" -> (htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hCG)),
@@ -421,6 +435,7 @@ object PredefinedConfigurations {
 
          "-fape" -> (htnParsing, groundingPreprocess, FAPESearch),
          "-fapeLifted" -> (htnParsing, liftedPreprocess, FAPESearch)
+
        )
 
 }
