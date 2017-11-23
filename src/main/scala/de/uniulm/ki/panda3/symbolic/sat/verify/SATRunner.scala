@@ -199,7 +199,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       //System.in.read()
       timeCapsule stop Timings.GENERATE_FORMULA
 
-      writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
+      //writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
 
       timeCapsule start Timings.TRANSFORM_DIMACS
       println("READY TO WRITE")
@@ -247,6 +247,15 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       if (tritivallUnsatisfiable) {
         println("Problem is trivially unsatisfiable ... exiting")
         timeCapsule stop Timings.VERIFY_TOTAL
+        println("Removing files ... ")
+        System.getProperty("os.name").toLowerCase match {
+          case osname if osname startsWith "windows"  =>
+            ("cmd.exe /q /c del " + fileDir + "__cnfString" + uniqFileIdentifier) !!
+
+          case osname if osname startsWith "mac os x" => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier) !
+          case _                                      => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier) !
+
+        }
         None
       } else {
         //System exit 0
@@ -398,7 +407,17 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //println("done " + (t5 - t4))
 
         // delete files
-        //("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+        System.getProperty("os.name").toLowerCase match {
+          case osname if osname startsWith "windows"  =>
+            ("cmd.exe /q /c del " + fileDir + "__cnfString" + uniqFileIdentifier) !!
+
+            ("cmd.exe /q /c del " + fileDir + "__res" + uniqFileIdentifier) !!
+
+          case osname if osname startsWith "mac os x" => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+          case _                                      => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+
+        }
+
 
         // report on the result
         println("SAT-Solver says: " + solveState)
@@ -569,7 +588,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
         // can't annotate type : Seq[Task]
         val primitiveSolutionWithPotentialEmptyMethodApplications: Seq[PlanStep] = encoder match {
-          case tot: TotallyOrderedEncoding  =>
+          case tot: TotallyOrderedEncoding     =>
 
             //Dot2PdfCompiler.writeDotToFile(graph, "graph.pdf")
             /*graph.vertices foreach { t => val actionIDX = t.split(",").last.toInt;
