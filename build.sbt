@@ -36,23 +36,7 @@ lazy val main = (project in (file("assembly") / "main")).settings(assemblySettin
             mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
           )
 
-// sbt pro/assembly
-lazy val pro = (project in (file("assembly") / "pro")).settings(assemblySettings: _*).
-  settings(
-            target := file("assembly") / "pro",
-            assemblyJarName in assembly := "panda3pro.jar",
-            mainClass in assembly := Some("de.uniulm.ki.panda3.ProMain")
-          )
-
-lazy val sat = (project in (file("assembly") / "sat")).settings(assemblySettings: _*).
-  settings(
-            target := file("assembly") / "sat",
-            assemblyJarName in assembly := "panda3sat.jar",
-            mainClass in assembly := Some("de.uniulm.ki.panda3.symbolic.sat.verify.VerifyRunner")
-          )
-
-
-lazy val singleToMultiTLT = (project in (file("assembly") / "singleToMultiTLT")).settings(assemblySettings: _*).
+/*lazy val singleToMultiTLT = (project in (file("assembly") / "singleToMultiTLT")).settings(assemblySettings: _*).
   settings(
             target := file("assembly") / "singleToMultiTLT",
             assemblyJarName in assembly := "singleToMultiTLT.jar",
@@ -65,17 +49,9 @@ lazy val switchTLT = (project in (file("assembly") / "switchTLT")).settings(asse
             assemblyJarName in assembly := "tlt.jar",
             mainClass in assembly := Some("de.uniulm.ki.panda3.planRecognition.switchTLT")
           )
+*/
 
-lazy val monroe = (project in (file("assembly") / "monroe")).settings(assemblySettings: _*).
-  settings(
-            target := file("assembly") / "monroe",
-            assemblyJarName in assembly := "panda3monroe.jar",
-            mainClass in assembly := Some("de.uniulm.ki.panda3.MonroeMain")
-          )
-
-
-
-lazy val csvExtractor = (project in (file("assembly") / "csvExtractor")).settings(assemblySettings: _*).
+/*lazy val csvExtractor = (project in (file("assembly") / "csvExtractor")).settings(assemblySettings: _*).
   settings(
             target := file("assembly") / "csvExtractor",
             assemblyJarName in assembly := "panda3csvExtractor.jar",
@@ -96,7 +72,7 @@ lazy val pcpProbGen = (project in (file("assembly") / "pcpProbGen")).settings(as
     assemblyJarName in assembly := "panda3pcpProbGen.jar",
     mainClass in assembly := Some("de.uniulm.ki.panda3.problemGenerators.pcpGenerator.PostCorrespondenceProblemToHTN")
   )
-
+*/
 
 //mainClass in assembly := Some("de.uniulm.ki.panda3.translation.PANDAtranslator")
 scalastyleConfig := baseDirectory.value / "project" / "scalastyle_config.xml"

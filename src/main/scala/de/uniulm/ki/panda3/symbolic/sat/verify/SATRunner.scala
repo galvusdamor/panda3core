@@ -130,11 +130,16 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
   def checkIfTaskSequenceIsAValidPlan(sequenceToVerify: Seq[Task], checkGoal: Boolean = true): Unit = {
     val groundTasks = sequenceToVerify map { task => GroundTask(task, Nil) }
-    val finalState = groundTasks.foldLeft(initialPlan.groundedInitialState)(
+    val finalState = groundTasks.foldLeft(initialPlan.groundedInitialStateOnlyPositive)(
       { case (state, action) =>
-        action.substitutedPreconditions foreach { prec => exitIfNot(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
+        //println("STATE")
+        //println(state map {x => "\t" + x.predicate.name} mkString("\n"))
+        //println("PREC " + action.task.name)
+        //println(action.task.preconditionsAsPredicateBool map {x => "\t" + x._1.name} mkString "\n")
+        //println()
 
-        (state diff action.substitutedDelEffects) ++ action.substitutedAddEffects
+        action.substitutedPreconditions foreach { prec => exitIfNot(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
+        (state diff action.substitutedDelEffects.map(_.copy(isPositive = true))) ++ action.substitutedAddEffects
       })
 
     if (checkGoal) initialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => exitIfNot(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
@@ -194,7 +199,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       //System.in.read()
       timeCapsule stop Timings.GENERATE_FORMULA
 
-      //writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
+      writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
 
       timeCapsule start Timings.TRANSFORM_DIMACS
       println("READY TO WRITE")
@@ -405,6 +410,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           println("")
           val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
           //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+
+          //println(allTrueAtoms filter {_.startsWith("auto_")} mkString "\n")
+          //println((allTrueAtoms filter {_.startsWith("auto_state")}).toSeq sortBy {case x => x.split('_').last.toInt}  mkString "\n")
 
           /*val db = allTrueAtoms filter { _ contains "direct_before" }
 
