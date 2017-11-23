@@ -39,6 +39,7 @@ object PredefinedConfigurations {
                                                        removeUnnecessaryPredicates = false,
                                                        convertToSASP = false, allowSASPFromStrips = false,
                                                        compileOrderInMethods = None,
+                                                       ensureMethodsHaveLastTask = false,
                                                        splitIndependentParameters = true,
                                                        compileUselessAbstractTasks = false,
                                                        liftedReachability = true, groundedReachability = Some(PlanningGraph),
