@@ -24,7 +24,7 @@ public class ProMethod {
     int[] actionID;
     List<ProMethod>[] methods;
 
-    List<int[]> orderings;
+    public List<int[]> orderings;
     HashSet<Integer> firsts;
     HashSet<Integer> lasts;
     public int numberOfPrimSubtasks = 0;
@@ -117,16 +117,16 @@ public class ProMethod {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("task ");
-        sb.append(this.m.abstractTask().longInfo());
+        sb.append(this.m.abstractTask().shortInfo());
         sb.append("\n t { 0: ");
         if (subtasks.length > 0) {
-            sb.append(subtasks[0].longInfo());
+            sb.append(subtasks[0].shortInfo());
         }
         for (int i = 1; i < subtasks.length; i++) {
             sb.append("\n     ");
             sb.append(i);
             sb.append(": ");
-            sb.append(subtasks[i].longInfo());
+            sb.append(subtasks[i].shortInfo());
         }
         sb.append("}\n < { ");
         if (orderings.size() > 0) {
