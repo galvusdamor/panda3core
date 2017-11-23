@@ -37,7 +37,7 @@ public class hAddhFFEq extends SasHeuristic {
         this.p = p;
         List<Integer> tempPrecLess = new ArrayList<>();
         for (int i = 0; i < p.numOfOperators; i++) {
-            if (p.addLists[i].length == 0)
+            if (p.precLists[i].length == 0)
                 tempPrecLess.add(i);
         }
         precLessOps = new int[tempPrecLess.size()];
@@ -50,7 +50,6 @@ public class hAddhFFEq extends SasHeuristic {
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
-        g.andNot(s0);
         if (g.cardinality() == 0)
             return 0;
         if (heuristic == SasHeuristics.hFF)
@@ -68,7 +67,7 @@ public class hAddhFFEq extends SasHeuristic {
             hValProp[f] = 0;
         }
         // actions without preconditions
-        for (int a = 0; a < precLessOps.length; a++) {
+        for (int a : precLessOps) {
             for (int f : p.addLists[a]) {
                 hValProp[f] = p.costs[a];
                 queue.add(hValProp[f], f);

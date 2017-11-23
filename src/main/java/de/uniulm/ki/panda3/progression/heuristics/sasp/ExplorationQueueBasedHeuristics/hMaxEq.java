@@ -38,7 +38,7 @@ public class hMaxEq extends SasHeuristic {
         // get actions without preconditions
         List<Integer> tempPrecLess = new ArrayList<>();
         for (int i = 0; i < p.numOfOperators; i++) {
-            if (p.addLists[i].length == 0)
+            if (p.precLists[i].length == 0)
                 tempPrecLess.add(i);
         }
         precLessOps = new int[tempPrecLess.size()];
