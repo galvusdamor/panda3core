@@ -5,15 +5,15 @@ import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends AdditionalSATConstraint {
+case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton, id : String) extends AdditionalSATConstraint {
 
   val automataStatesToIndices: Map[LTLFormula, Int] = büchiAutomaton.vertices.zipWithIndex.toMap
 
   //println(automataStatesToIndices map {case (f,i) => i + " " + f.longInfo} mkString "\n")
 
-  private def state(formula: LTLFormula, position: Int) = "auto_state_" + automataStatesToIndices(formula) + "_" + position
+  private def state(formula: LTLFormula, position: Int) = id + "_auto_state_" + automataStatesToIndices(formula) + "_" + position
 
-  private def noPresent(position: Int) = "auto_Present" + position
+  private def noPresent(position: Int) = id + "_auto_Present" + position
 
 
   def apply(linearEncoding: EncodingWithLinearPlan): Seq[Clause] = {

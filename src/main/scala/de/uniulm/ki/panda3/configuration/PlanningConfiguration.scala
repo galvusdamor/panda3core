@@ -20,7 +20,7 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.{AddPredicate, ExchangeTask, 
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
-import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.{LTLFormula, BüchiAutomaton}
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.{BüchiAutomaton, LTLAnd, LTLFormula}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
@@ -314,18 +314,23 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           // if a formula is provided, translate it into a Büchi automaton
-          val automaton: Option[BüchiAutomaton] = satSearch.ltlFormula match {
-            case None          => None
+          val automaton: Seq[BüchiAutomaton] = satSearch.ltlFormula match {
+            case None          => Nil
             case Some(formula) =>
-              val formulaInNNF = formula.nnf.parseAndGround(domainAndPlan._1,domainAndPlanFullyParsed._1,Map()).simplify
-              info("Using LTL Formula in NNF: " + formulaInNNF.longInfo)
+              val formulaInNNF = formula.nnf.parseAndGround(domainAndPlan._1, domainAndPlanFullyParsed._1, Map()).simplify
+              val separatedFormulae = formulaInNNF match {
+                case LTLAnd(conj) => conj
+                case x            => x :: Nil
+              }
+              val automata = separatedFormulae map { f => BüchiAutomaton(domainAndPlan._1, f) }
 
-              val auto = BüchiAutomaton(domainAndPlan._1, formulaInNNF)
+              separatedFormulae.zip(automata).zipWithIndex foreach { case ((f, a), i) =>
+                info("Using LTL Formula in NNF: " + f.longInfo + "\n")
+                Dot2PdfCompiler.writeDotToFile(a, "büchi" + i + ".pdf")
+              }
 
-              Dot2PdfCompiler.writeDotToFile(auto,"büchi.pdf")
               //System exit 0
-
-              Some(auto)
+              automata
           }
 
 
@@ -847,21 +852,21 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
     val predicatesRemoved = if (domain.isGround) {
-        info("Removing unnecessary predicates ... ")
-        val compiled = PrunePredicates.transform(domain, problem, ())
-        info("done.\n")
-        extra(compiled._1.statisticsString + "\n")
-        compiled
-    } else (domain,problem)
+      info("Removing unnecessary predicates ... ")
+      val compiled = PrunePredicates.transform(domain, problem, ())
+      info("done.\n")
+      extra(compiled._1.statisticsString + "\n")
+      compiled
+    } else (domain, problem)
 
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
     val liftedResult = if (preprocessingConfiguration.liftedReachability) {
       info("Lifted reachability analysis ... ")
-      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(predicatesRemoved._1,predicatesRemoved._2, emptyAnalysis)
+      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(predicatesRemoved._1, predicatesRemoved._2, emptyAnalysis)
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
-      val hierarchyPruned = PruneHierarchy.transform(predicatesRemoved._1,predicatesRemoved._2, disallowedTasks.toSet)
+      val hierarchyPruned = PruneHierarchy.transform(predicatesRemoved._1, predicatesRemoved._2, disallowedTasks.toSet)
       val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
@@ -904,7 +909,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       System.getProperty("os.name") match {
         case osname if osname.toLowerCase startsWith "windows" =>
           ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
-        case _ => // OSes made by people who can think straight
+        case _                                                 => // OSes made by people who can think straight
           ("mkdir .fd" + uuid) !! // create directory
       }
 
@@ -1815,7 +1820,7 @@ case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
          }),
          "-abstractSelection" ->
            (NecessaryParameter, { p: Option[String] => this.copy(abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.parse(p.get)).asInstanceOf[this.type] })
-    )
+       )
 
   /** returns a detailed information about the object */
   override def longInfo: String = "Progression-search Configuration\n--------------------------------\n" +
@@ -1851,7 +1856,7 @@ case class MissingOperators(maximumDifference: Int) extends PlanDistanceMetric
 
 case class MissingTaskInstances(maximumDifference: Int) extends PlanDistanceMetric
 
-case class MinimumCommonSubplan(minimumSimilarity: Int, ignoreOrder : Boolean = false) extends PlanDistanceMetric
+case class MinimumCommonSubplan(minimumSimilarity: Int, ignoreOrder: Boolean = false) extends PlanDistanceMetric
 
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,

@@ -9,9 +9,7 @@ import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, ReducedTask, Do
 import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints._
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask}
 import de.uniulm.ki.util._
 
@@ -23,7 +21,7 @@ import scala.io.Source
   */
 // scalastyle:off method.length cyclomatic.complexity
 case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
-                     büchiAutomaton: Option[BüchiAutomaton], referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
+                     büchiAutomata: Seq[BüchiAutomaton], referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
                      encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean) {
 
@@ -199,17 +197,18 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       val planningFormula = (encoder.decompositionFormula ++ stateFormula).toArray
 
       val additionalConstraintsGenerators: Seq[AdditionalSATConstraint] =
-        (if (büchiAutomaton.isDefined) LTLFormulaEncoding(büchiAutomaton.get) :: Nil else Nil) ++
+        büchiAutomata.zipWithIndex.map({ case (b, i) => LTLFormulaEncoding(b, "büchi_ " + i) }) ++
           (planDistanceMetric map {
-            case MissingOperators(maximumDifference)     => ActionSetDifference(referencePlan.get, maximumDifference)
-            case MissingTaskInstances(maximumDifference) => ActionMatchingDifference(referencePlan.get, maximumDifference)
-            case MinimumCommonSubplan(minimumLength, ignoreOrder)     => LongestCommonSubplan(referencePlan.get, minimumLength, ignoreOrder)
+            case MissingOperators(maximumDifference)              => ActionSetDifference(referencePlan.get, maximumDifference)
+            case MissingTaskInstances(maximumDifference)          => ActionMatchingDifference(referencePlan.get, maximumDifference)
+            case MinimumCommonSubplan(minimumLength, ignoreOrder) => LongestCommonSubplan(referencePlan.get, minimumLength, ignoreOrder)
           })
 
-      val additionalConstraintsFormula = additionalConstraintsGenerators flatMap { constraint => encoder match {
-        case x: EncodingWithLinearPlan => constraint(x)
-        case _                         => assert(false); Nil
-      }
+      val additionalConstraintsFormula = additionalConstraintsGenerators flatMap { constraint =>
+        encoder match {
+          case x: EncodingWithLinearPlan => constraint(x)
+          case _                         => assert(false); Nil
+        }
       }
 
       val usedFormula = planningFormula ++ additionalConstraintsFormula
@@ -469,7 +468,6 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
     }
 
 
-
   private def extractSolutionAndDecompositionGraph(encoder: VerifyEncoding, atomMap: Map[String, Int], literals: Set[Int], formulaVariables: Seq[String], allTrueAtoms: Set[String]):
   (Seq[String], Seq[(String, String)], Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)]) =
     encoder match {
@@ -594,7 +592,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
         // can't annotate type : Seq[Task]
         val primitiveSolutionWithPotentialEmptyMethodApplications: Seq[PlanStep] = encoder match {
-          case tot: TotallyOrderedEncoding  =>
+          case tot: TotallyOrderedEncoding     =>
 
             //Dot2PdfCompiler.writeDotToFile(graph, "graph.pdf")
             /*graph.vertices foreach { t => val actionIDX = t.split(",").last.toInt;
