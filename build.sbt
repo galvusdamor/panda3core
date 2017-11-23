@@ -82,6 +82,13 @@ lazy val csvExtractor = (project in (file("assembly") / "csvExtractor")).setting
             mainClass in assembly := Some("de.uniulm.ki.util.collectPlanningInfo")
           )
 
+lazy val renameTltInst = (project in (file("assembly") / "renameTltInst")).settings(assemblySettings: _*).
+  settings(
+    target := file("assembly") / "renameTltInst",
+    assemblyJarName in assembly := "renameTltInst.jar",
+    mainClass in assembly := Some("de.uniulm.ki.panda3.progression.proUtil.renameTltInstances")
+  )
+
 lazy val transportProbGen = (project in (file("assembly") / "transportProbGen")).settings(assemblySettings: _*).
   settings(
             target := file("assembly") / "transportProbGen",
