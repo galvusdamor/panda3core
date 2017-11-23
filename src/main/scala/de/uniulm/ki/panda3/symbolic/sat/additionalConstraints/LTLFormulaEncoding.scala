@@ -1,7 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
-import de.uniulm.ki.panda3.symbolic.logic.Predicate
-import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, PathBasedEncoding}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -9,6 +8,8 @@ import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, 
 case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends AdditionalSATConstraint {
 
   val automataStatesToIndices: Map[LTLFormula, Int] = büchiAutomaton.vertices.zipWithIndex.toMap
+
+  //println(automataStatesToIndices map {case (f,i) => i + " " + f.longInfo} mkString "\n")
 
   private def state(formula: LTLFormula, position: Int) = "auto_state_" + automataStatesToIndices(formula) + "_" + position
 
@@ -20,8 +21,6 @@ case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends Addition
 
 
   def apply(linearEncoding: EncodingWithLinearPlan): Seq[Clause] = {
-    println("START")
-    val sss = System.currentTimeMillis()
     val automatonClauses: Seq[Clause] = linearEncoding.linearPlan.zipWithIndex flatMap { case (taskMap, position) =>
       // at most one of the states of the automaton is true
       val atMostOneState: Seq[Clause] = linearEncoding.atMostOneOf(büchiAutomaton.vertices map { s => state(s, position) })
@@ -39,8 +38,6 @@ case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends Addition
         Clause(Array(noAfter(position), anyAfter(position))) :: Nil
 
       // if a task gets selected, execute the rule
-      val ss = System.currentTimeMillis()
-      println("T - Rule " + büchiAutomaton.vertices.length)
       val transitionRule: Seq[Clause] = büchiAutomaton.vertices flatMap { s =>
         val relevantStateFeatures = s.allPredicates
         //println("S " + allStates.length)
@@ -54,7 +51,7 @@ case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends Addition
 
             // TODO
             val nextStateNotLast = büchiAutomaton.transitions(s)((task, false, primitiveState))
-            val notLast = linearEncoding.impliesLeftTrueAndFalseImpliesTrue((state(s, position) :: anyAfter(position) :: atom :: Nil) ++ stateTrue,
+            val notLast = linearEncoding.impliesLeftTrueAndFalseImpliesTrue((state(s, position) :: /*anyAfter(position) :: */atom :: Nil) ++ stateTrue,
                                                                             stateFalse,
                                                                             state(nextStateNotLast, position + 1))
 
@@ -70,7 +67,6 @@ case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends Addition
           }
         }
       }
-      println("T - Rule - END " + (System.currentTimeMillis() - ss))
 
       val setNoPresent: Seq[Clause] = (linearEncoding.notImplies(taskMap.values.toSeq, noPresent(position)) :: Nil) ++
         (taskMap.values map { a => linearEncoding.impliesNot(noPresent(position), a) })
@@ -81,7 +77,7 @@ case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends Addition
       atMostOneState ++ afterClauses ++ turnAround ++ transitionRule ++ setNoPresent ++ noTaskRule
     }
 
-    val lastAutomationTranstion: Seq[Clause] = {
+    val lastAutomationTransition: Seq[Clause] = {
       val position = linearEncoding.linearPlan.length
       val atMostOneState: Seq[Clause] = linearEncoding.atMostOneOf(büchiAutomaton.vertices map { s => state(s, position) })
 
@@ -104,13 +100,12 @@ case class LTLFormulaEncoding(büchiAutomaton: BüchiAutomaton) extends Addition
         }
       }
 
-      atMostOneState
+      atMostOneState ++ transitionRule
     }
 
     val initAndGoal = Clause(state(büchiAutomaton.initialState, 0)) :: Clause(state(LTLTrue, linearEncoding.linearPlan.length + 1)) :: Nil
     val lastStateUnique = linearEncoding.atMostOneOf(büchiAutomaton.vertices map { s => state(s, linearEncoding.linearPlan.length + 1) })
 
-    println("END " + (System.currentTimeMillis() - sss))
-    automatonClauses ++ initAndGoal ++ lastAutomationTranstion ++ lastStateUnique
+    automatonClauses ++ initAndGoal ++ lastAutomationTransition ++ lastStateUnique
   }
 }
