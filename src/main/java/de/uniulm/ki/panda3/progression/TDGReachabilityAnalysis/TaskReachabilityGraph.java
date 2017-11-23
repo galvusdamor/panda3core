@@ -5,6 +5,7 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 
+import java.io.PrintStream;
 import java.util.*;
 
 /**
@@ -41,8 +42,7 @@ public class TaskReachabilityGraph implements IActionReachability {
         // build a graph that, for each task, has edges to every subtask of every method decomposing it
         this.reachableTasks = new BitSet[numTasks];
         for (int i = 0; i < numTasks; i++) {
-            this.reachableTasks[i] = new BitSet(numTasks);
-            this.reachableTasks[i].set(0, numTasks, false);
+            this.reachableTasks[i] = new BitSet();
             this.reachableTasks[i].set(i, true); // the task itself is reachable
         }
 
@@ -54,8 +54,7 @@ public class TaskReachabilityGraph implements IActionReachability {
         }
 
         // set root to those tasks in the initial task network
-        this.root = new BitSet(numTasks);
-        this.root.set(0, numTasks, false);
+        this.root = new BitSet();
         for (ProgressionPlanStep ps : initialTasks) {
             root.set(tToI(ps.getTask()));
         }
@@ -219,6 +218,19 @@ public class TaskReachabilityGraph implements IActionReachability {
             return i1;
         else
             return i2;
+    }
+
+
+    public void writeToDisk(PrintStream ps2) {
+        for (int i = 0; i < reachableActions.length; i++) {
+            int j = reachableActions[i].nextSetBit(0);
+            while (j >= 0) {
+                ps2.print(j);
+                ps2.print(" ");
+                j = reachableActions[i].nextSetBit(j + 1);
+            }
+            ps2.print("-1\n");
+        }
     }
 
     public BitSet getReachableActions(int task) {

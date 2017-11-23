@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.compiler.pruning
 
-import de.uniulm.ki.panda3.symbolic.compiler.DomainTransformer
+import de.uniulm.ki.panda3.symbolic.compiler.{DomainTransformer, RemoveChoicelessAbstractTasks}
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.modification.InsertPlanStepWithLink
@@ -47,10 +47,16 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
     val withoutPrimitives = if (plan.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) propagated
     else propagated.copy(tasks = propagated.abstractTasks ++ usefulPrimitives)
 
-    // all abstract tasks should have at least one method
-    assert(withoutPrimitives.abstractTasks forall { at => withoutPrimitives.methodsForAbstractTasks(at).nonEmpty || plan.planStepTasksSet.contains(at) })
+    // TODO this is wrong for TI HTN
+    val reachablePrimitiveTasks = propagated.decompositionMethods flatMap {_.subPlan.planStepsWithoutInitGoal.map(_.schema).filter(_.isPrimitive)} toSet
+    val unreachablePrimitives = propagated.primitiveTasks filterNot reachablePrimitiveTasks.contains
 
-    (withoutPrimitives, plan)
+    val primitivesRemoved = PruneTasks.transform(propagated,plan,unreachablePrimitives.toSet)._1
+
+    // all abstract tasks should have at least one method
+    assert(primitivesRemoved.abstractTasks forall { at => primitivesRemoved.methodsForAbstractTasks(at).nonEmpty || plan.planStepTasksSet.contains(at)})
+
+    (primitivesRemoved, plan)
   }
 }
 

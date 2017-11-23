@@ -56,7 +56,7 @@ public class hLmCutEq extends SasHeuristic {
         // get actions without preconditions
         List<Integer> tempPrecLess = new ArrayList<>();
         for (int i = 0; i < p.numOfOperators; i++) {
-            if (p.addLists[i].length == 0)
+            if (p.precLists[i].length == 0)
                 tempPrecLess.add(i);
         }
         precLessOps = new int[tempPrecLess.size()];
@@ -79,6 +79,7 @@ public class hLmCutEq extends SasHeuristic {
             hLmCut = IncrementalLmCut(lastAction, (IncInfLmCut) inc);
         }
 
+        g.andNot(s0);
         int hMax = hMax(s0, g);
         if (hMax == 0)
             return hLmCut;
@@ -304,6 +305,8 @@ public class hLmCutEq extends SasHeuristic {
 
     public int hMax(BitSet s0, BitSet g) {
         //this.s0 = s0; // for debug
+        if (g.cardinality() == 0)
+            return 0;
         this.unsatPrecs = p.numPrecs.clone();
         this.hVal = hValInit.clone();
         this.maxPrec = maxPrecInit.clone();

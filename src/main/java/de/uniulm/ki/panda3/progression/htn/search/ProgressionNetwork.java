@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeurist
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -48,6 +49,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public static boolean useHelpfulActions = false;
 
     public BitSet helpfulActions;
+    private Task initialTask;
 
     public boolean isHelpFulAction(int action) {
         if (!useHelpfulActions)
@@ -268,6 +270,7 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
             potentialPredecessors.addAll(f.successorList);
         }
 
+        // todo: do I really need to do that?
         // todo: this could be done in preprocessing
         for (ProgressionPlanStep f : ps.successorList) {
             potentialPredecessors.addAll(f.successorList);
@@ -359,5 +362,71 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
 
     public int getNumberOfPrimitiveTasks() {
         return this.numberOfPrimitiveTasks;
+    }
+
+    public void writeToDisk(String path) {
+        try {
+
+            PrintStream ps = new PrintStream(new BufferedOutputStream(new FileOutputStream(path)));
+
+            flatProblem.writeToDisk(ps, false);
+            this.writeToDisk(ps);
+            ps.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void writeToDisk(PrintStream bw) throws Exception {
+        bw.print("\n;; Tasks\n");
+        bw.print(this.indexToTask.length + "\n");
+        for (int i = 0; i < this.indexToTask.length; i++) {
+            if (indexToTask[i].isPrimitive())
+                bw.print("0 ");
+            else
+                bw.print("1 ");
+            bw.print(indexToTask[i].shortInfo());
+            bw.print("\n");
+        }
+        bw.print("\n;; Initial Task\n");
+        if (this.getFirstAbstractTasks().size() > 1)
+            throw new Exception("More than one task in the initial task network.");
+
+        bw.print(taskToIndex.get(this.getFirstAbstractTasks().get(0).getTask()) + "\n");
+
+        bw.print("\n;; Methods\n");
+        //bw.print(methods.keySet().size() + "\n");
+        ArrayList<String> lines = new ArrayList<>();
+        int numMethods = 0;
+        for (Task t : methods.keySet()) {
+            int task = taskToIndex.get(t);
+            List<ProMethod> mSet = methods.get(t);
+            for (ProMethod m : mSet) {
+                numMethods++;
+                lines.add(m.m.name() + "\n");
+                lines.add(task + "\n");
+                String line = "";
+                for (int i = 0; i < m.subtasks.length; i++) {
+                    Task subT = m.subtasks[i];
+                    if (i > 0)
+                        line += (" ");
+                    line += (taskToIndex.get(subT));
+                }
+                if (m.subtasks.length > 0)
+                    line += (" ");
+                line += ("-1\n");
+                lines.add(line);
+                line = "";
+                for (int i = 0; i < m.orderings.size(); i++) {
+                    if (line.length() > 0)
+                        line += " ";
+                    line += m.orderings.get(i)[0] + " " + m.orderings.get(i)[1];
+                }
+                lines.add(line + "-1\n");
+            }
+        }
+        bw.print(numMethods + "\n");
+        for (String s : lines)
+            bw.print(s);
     }
 }

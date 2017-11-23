@@ -5,6 +5,7 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 
+import java.io.PrintStream;
 import java.util.*;
 
 /**
@@ -63,12 +64,17 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
 
         // build tree of SCCs
         this.sccTree = buildTreeOfSCCs();
-
+        /*TarjanSCCs tarjan2 = new TarjanSCCs(this.sccTree);
+        BitSet bs = new BitSet();
+        bs.set(nodeToScc[root.nextSetBit(0)]);
+        tarjan2.calcSccs(bs);
+        System.out.println(" - Found " + tarjan2.numOfSCCs() + " SCCs with up to " + tarjan2.biggestScc() + " tasks.");
+*/
         necessary = new BitSet[nodeCount];
         possible = new BitSet[nodeCount];
         for (int i = 0; i < nodeCount; i++) {
-            necessary[i] = new BitSet(nodeCount);
-            possible[i] = new BitSet(nodeCount);
+            necessary[i] = new BitSet();
+            possible[i] = new BitSet();
         }
 
         for (int v = root.nextSetBit(0); v > -1; v = root.nextSetBit(v + 1))
@@ -544,4 +550,28 @@ public class TDGLandmarkFactory implements IActionReachability, IDisjunctiveLand
 
         return true;
     }
+
+    public void writeToDisk(PrintStream ps2) {
+        for (int i = 0; i < numTasks; i++) {
+            for (int j = 0; j < numActions; j++) {
+                if (reachableActions[i].get(j)) {
+                    ps2.print(j);
+                    ps2.print(" ");
+                }
+            }
+            ps2.print("-1\n");
+        }
+    }
+    /*
+    public void writeToDisk(PrintStream ps2) {
+        for (int i = 0; i < numTasks; i++) {
+            for (int j = 0; j < numActions; j++) {
+                if (reachableActions[i].get(j))
+                    ps2.print("1");
+                else
+                    ps2.print("0");
+            }
+            ps2.print("\n");
+        }
+    }*/
 }

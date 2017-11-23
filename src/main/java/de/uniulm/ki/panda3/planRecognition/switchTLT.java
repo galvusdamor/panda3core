@@ -12,6 +12,9 @@ public class switchTLT {
     public static void main(String[] str) throws Exception {
         if (str.length == 0)
             System.out.println("Please specify the file to translate");
+        String task = "tlt";
+        if (str.length > 1)
+            task = str[1];
         BufferedReader br = new BufferedReader(new FileReader(str[0]));
         int addPos = str[0].lastIndexOf(".");
         String newName = str[0].substring(0, addPos) + "-tlt" + str[0].substring(addPos);
@@ -25,7 +28,7 @@ public class switchTLT {
                     line = br.readLine();
                     bw.write(";;" + line + "\n");
                 } while (line.trim().startsWith("(task"));
-                bw.write("                :subtasks (and (mtlt)\n");
+                bw.write("                :subtasks (and (" + task + ")\n");
             }
             bw.write(line + "\n");
         }
