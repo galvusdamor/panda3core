@@ -43,9 +43,9 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
 
     // TODO this is wrong for TI HTN
     val reachablePrimitiveTasks = propagated.decompositionMethods flatMap {_.subPlan.planStepsWithoutInitGoal.map(_.schema).filter(_.isPrimitive)} toSet
-    val reachableAbstract = propagated.tasks filter {_.isAbstract}
+    val unreachablePrimitives = propagated.primitiveTasks filterNot reachablePrimitiveTasks.contains
 
-    val primitivesRemoved = propagated.copy(tasks = reachableAbstract ++ reachablePrimitiveTasks)
+    val primitivesRemoved = PruneTasks.transform(propagated,plan,unreachablePrimitives.toSet)._1
 
     // all abstract tasks should have at least one method
     assert(primitivesRemoved.abstractTasks forall { at => primitivesRemoved.methodsForAbstractTasks(at).nonEmpty || plan.planStepTasksSet.contains(at)})
