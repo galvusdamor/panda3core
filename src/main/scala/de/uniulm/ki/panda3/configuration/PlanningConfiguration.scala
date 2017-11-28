@@ -826,7 +826,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
 
 
-    val predicatesRemoved = if (domain.isGround) {
+    val predicatesRemoved = if (domain.isGround && preprocessingConfiguration.removeUnnecessaryPredicates) {
         info("Removing unnecessary predicates ... ")
         val compiled = PrunePredicates.transform(domain, problem, ())
         info("done.\n")
