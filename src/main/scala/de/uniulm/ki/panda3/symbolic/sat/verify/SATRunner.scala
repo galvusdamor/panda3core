@@ -199,7 +199,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       //System.in.read()
       timeCapsule stop Timings.GENERATE_FORMULA
 
-      writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
+      //writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
 
       timeCapsule start Timings.TRANSFORM_DIMACS
       println("READY TO WRITE")
@@ -428,9 +428,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         if (solved) {
           println("")
           val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-          writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+          //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
-          println((allTrueAtoms filter {_.startsWith("act_")}).toSeq.sorted mkString "\n")
+          //println((allTrueAtoms filter {_.startsWith("act_")}).toSeq.sorted mkString "\n")
           //println((allTrueAtoms filter {_.startsWith("auto_state")}).toSeq sortBy {case x => x.split('_').last.toInt}  mkString "\n")
 
           /*val db = allTrueAtoms filter { _ contains "direct_before" }

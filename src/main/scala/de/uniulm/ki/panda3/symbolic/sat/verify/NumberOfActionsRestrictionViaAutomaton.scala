@@ -15,15 +15,6 @@ trait NumberOfActionsRestrictionViaAutomaton[P,I] extends PathBasedEncoding[P,I]
 
   def numberOfActionsFormula(vertexOrder : Seq[(Seq[Int], Set[Task])]): Seq[Clause] = if (taskSequenceLength <= 0) Nil else {
 
-    /**/
-
-    // we need a fixed total order on the leafs of the SOG ...
-    //val vertexOrder = extendedSOG.topologicalOrdering.get.drop(1).dropRight(1)
-
-    /*val notPossibleImpliesHigherNotPossible = vertexOrder flatMap { case node@(path, tasks) =>
-      Range(1, taskSequenceLength + 1) map { l => notImpliesNot(actionsRemainingAtPath(path, l) :: Nil, actionsRemainingAtPath(path, l - 1)) }
-    }*/
-
     val notPossibleImpliesNextNotPossible = vertexOrder.zip(vertexOrder.drop(1)) flatMap { case ((path1, _), (path2, _)) =>
       Range(0, taskSequenceLength) map { l => notImpliesNot(actionsRemainingAtPath(path1, l) :: Nil, actionsRemainingAtPath(path2, l)) }
     }
