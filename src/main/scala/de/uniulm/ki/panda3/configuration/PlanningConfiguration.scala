@@ -382,6 +382,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           timeCapsule stop TOTAL_TIME
           val potentialPlan = solution match {
             case Some((planSteps, appliedDecompositions, parentsInDecompositionTree)) =>
+              val allPlanSteps = planSteps ++ parentsInDecompositionTree.flatMap({ case (a, (b, _)) =>
+                if ((appliedDecompositions contains a) && appliedDecompositions(a).subPlan.planStepsWithoutInitGoal.isEmpty)
+                  a :: b :: Nil
+                else b :: Nil
+                                                                                 })
+
               val initialPlan = Plan(planSteps, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema, appliedDecompositions, parentsInDecompositionTree)
               if (postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree))
                 initialPlan.maximalDeordering :: Nil
@@ -827,21 +833,21 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
     val predicatesRemoved = if (domain.isGround && preprocessingConfiguration.removeUnnecessaryPredicates) {
-        info("Removing unnecessary predicates ... ")
-        val compiled = PrunePredicates.transform(domain, problem, ())
-        info("done.\n")
-        extra(compiled._1.statisticsString + "\n")
-        compiled
-    } else (domain,problem)
+      info("Removing unnecessary predicates ... ")
+      val compiled = PrunePredicates.transform(domain, problem, ())
+      info("done.\n")
+      extra(compiled._1.statisticsString + "\n")
+      compiled
+    } else (domain, problem)
 
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
     val liftedResult = if (preprocessingConfiguration.liftedReachability) {
       info("Lifted reachability analysis ... ")
-      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(predicatesRemoved._1,predicatesRemoved._2, emptyAnalysis)
+      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(predicatesRemoved._1, predicatesRemoved._2, emptyAnalysis)
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
-      val hierarchyPruned = PruneHierarchy.transform(predicatesRemoved._1,predicatesRemoved._2, disallowedTasks.toSet)
+      val hierarchyPruned = PruneHierarchy.transform(predicatesRemoved._1, predicatesRemoved._2, disallowedTasks.toSet)
       val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
@@ -884,7 +890,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       System.getProperty("os.name") match {
         case osname if osname.toLowerCase startsWith "windows" =>
           ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
-        case _ => // OSes made by people who can think straight
+        case _                                                 => // OSes made by people who can think straight
           ("mkdir .fd" + uuid) !! // create directory
       }
 
@@ -1795,7 +1801,7 @@ case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
          }),
          "-abstractSelection" ->
            (NecessaryParameter, { p: Option[String] => this.copy(abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.parse(p.get)).asInstanceOf[this.type] })
-    )
+       )
 
   /** returns a detailed information about the object */
   override def longInfo: String = "Progression-search Configuration\n--------------------------------\n" +

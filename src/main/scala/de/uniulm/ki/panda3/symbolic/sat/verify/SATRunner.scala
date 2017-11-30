@@ -569,7 +569,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //println(planStepsMethodMap map { case (a, b) => a.schema.name + " -> " + b.name } mkString "\n")
 
         val parentInDecompositionMap: Map[PlanStep, (PlanStep, PlanStep)] = if (!extractSolutionWithHierarchy) Map() else
-          edges.map(_.swap) collect { case (child, father) if !child.contains("-") =>
+          edges.map(_.swap) collect { case (child, father) if !child.contains("-") && (actionStringToTask(child).schema.isAbstract || graph.edges(child).isEmpty)=>
             // find all children
             def getFirstFather(f: String): PlanStep = if (planStepsMethodMap.contains(actionStringToTask(f))) actionStringToTask(f) else getFirstFather(graph.reversedEdgesSet(f).head)
 
@@ -762,7 +762,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
-        //println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.schema.name } mkString "\n"))
+        println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")

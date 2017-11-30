@@ -115,7 +115,7 @@ trait VerifyEncoding {
   protected def notImpliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = {
     val leftList = left map { (_, true) }
 
-    right map { r => Clause(leftList.+:((r, false))) }
+    right map { r => Clause(leftList.:+((r, false))) }
   }
 
   protected def impliesSingle(left: String, right: String): Clause = Clause((left, false) :: (right, true) :: Nil)
@@ -123,7 +123,7 @@ trait VerifyEncoding {
 
   protected def impliesRightAnd(leftConjunct: Seq[String], rightConjunct: Seq[String]): Seq[Clause] = {
     val negLeft = leftConjunct map { (_, false) }
-    rightConjunct map { r => Clause(negLeft.+:(r, true)) }
+    rightConjunct map { r => Clause(negLeft.:+(r, true)) }
   }
 
   protected def impliesRightNotAll(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
