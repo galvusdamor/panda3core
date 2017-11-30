@@ -156,10 +156,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domain.primitiveTasks.length)
       informationCapsule.set(Information.NUMBER_OF_METHODS, domain.decompositionMethods.length)
 
+      //val restrictionMethod: RestrictionMethod = SlotGloballyRestriction
+      val restrictionMethod: RestrictionMethod = SlotOverTimeRestriction
+
       // start verification
       val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
         if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
-          TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK)
+          TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
           encodingToUse match {
@@ -167,8 +170,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
             case ClassicalForbiddenEncoding   => SOGClassicalForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = false)
             case ClassicalImplicationEncoding => SOGClassicalForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = true)
             case ClassicalN4Encoding          => SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
-            case POCLDirectEncoding           => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
-            case POCLDeleterEncoding          => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
+            case POCLDirectEncoding           => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
+            case POCLDeleterEncoding          => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
             case POStateEncoding              => SOGPOREncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
           }
         }
@@ -249,7 +252,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         timeCapsule stop Timings.VERIFY_TOTAL
         println("Removing files ... ")
         System.getProperty("os.name").toLowerCase match {
-          case osname if osname startsWith "windows"  =>
+          case osname if osname startsWith "windows" =>
             ("cmd.exe /q /c del " + fileDir + "__cnfString" + uniqFileIdentifier) !!
 
           case osname if osname startsWith "mac os x" => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier) !
@@ -408,7 +411,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
         // delete files
         System.getProperty("os.name").toLowerCase match {
-          case osname if osname startsWith "windows"  =>
+          case osname if osname startsWith "windows" =>
             ("cmd.exe /q /c del " + fileDir + "__cnfString" + uniqFileIdentifier) !!
 
             ("cmd.exe /q /c del " + fileDir + "__res" + uniqFileIdentifier) !!

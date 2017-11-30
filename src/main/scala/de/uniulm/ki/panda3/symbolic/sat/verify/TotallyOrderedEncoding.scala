@@ -17,7 +17,8 @@ import scala.collection.{mutable, Seq}
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
-                                   domain: Domain, initialPlan: Plan, reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
+                                   domain: Domain, initialPlan: Plan, reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None,
+                                  restrictionMethod: RestrictionMethod)
   extends TreeEncoding with NumberOfActionsRestrictionViaAutomaton[Unit,Unit]{
 
 
