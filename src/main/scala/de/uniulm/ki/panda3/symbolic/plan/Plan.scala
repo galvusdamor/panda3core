@@ -30,6 +30,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   DomainUpdatable with PrettyPrintable with HashMemo with DotPrintable[PlanDotOptions] {
 
 
+  assert(planStepsAndRemovedPlanSteps.distinct.size == planStepsAndRemovedPlanSteps.size)
   assert(planStepsAndRemovedPlanSteps.toSet == orderingConstraints.tasks.toSet)
 
   assert(planStepsAndRemovedPlanSteps forall { ps => ps.arguments.size == ps.schema.parameters.size })
@@ -42,8 +43,10 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       }
   }
 
-  planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod),
-                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)
+  planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) =>
+    assert(planStepsAndRemovedPlanSteps contains ps, "PS " + ps.schema.name + " id: " + ps.id + " prim: " + ps.schema.isPrimitive + " is not contained.")
+    assert(planStepsAndRemovedPlanSteps contains parent, "PS " + parent.schema.name + " id: " + parent.id + " prim: " + parent.schema.isPrimitive + " is not contained.")
+    assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod), "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)
   }
 
   planStepsWithoutInitGoal foreach {
@@ -692,6 +695,25 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
           case None    => seq // further abstraction not possible
           case Some(x) => reduce(x.get)
         }
+      }
+    }
+
+    reduce(initialAbstraction)
+  }
+
+  def toToAbstractionWithActions(targetLength: Int): Seq[PlanStep] = {
+    val initialAbstraction = orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive }
+
+    def reduce(seq: Seq[PlanStep]): Seq[PlanStep] = if (seq.length <= targetLength) seq else {
+      val psSortedByConcreteness = seq sortBy { ps => -decompositionTree.getVerticesWithDistance(ps).map(_._2).max }
+
+      psSortedByConcreteness.foldLeft[Option[Seq[PlanStep]]](None)(
+        {
+          case (Some(x), _) => Some(x)
+          case (None, ps)   => abstractFromPS(seq, ps)
+        }) match {
+        case None    => seq // further abstraction not possible
+        case Some(x) => reduce(x)
       }
     }
 
