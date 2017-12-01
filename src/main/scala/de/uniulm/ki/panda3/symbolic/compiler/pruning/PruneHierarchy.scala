@@ -48,7 +48,8 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
     else propagated.copy(tasks = propagated.abstractTasks ++ usefulPrimitives)
 
     // TODO this is wrong for TI HTN
-    val reachablePrimitiveTasks = propagated.decompositionMethods flatMap {_.subPlan.planStepsWithoutInitGoal.map(_.schema).filter(_.isPrimitive)} toSet
+    val reachablePrimitiveTasks = (propagated.decompositionMethods flatMap {_.subPlan.planStepsWithoutInitGoal.map(_.schema).filter(_.isPrimitive)} toSet) ++
+      plan.planStepsWithoutInitAndGoalTasksSet.filter(_.isPrimitive)
     val unreachablePrimitives = propagated.primitiveTasks filterNot reachablePrimitiveTasks.contains
 
     val primitivesRemoved = PruneTasks.transform(propagated,plan,unreachablePrimitives.toSet)._1
