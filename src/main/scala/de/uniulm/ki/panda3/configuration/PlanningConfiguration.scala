@@ -5,7 +5,8 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic,
+EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
@@ -339,7 +340,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
                                  automaton, referencePlan, satSearch.planDistanceMetric,
                                  satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.encodingToUse,
-                                 postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree))
+                                 postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree),
+                                 randomSeed, satSearch.threads)
 
 
           // depending on whether we are doing a single or a full run, we have either to do a loop or just one run
@@ -407,6 +409,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           timeCapsule stop TOTAL_TIME
           val potentialPlan = solution match {
             case Some((planSteps, appliedDecompositions, parentsInDecompositionTree)) =>
+              val allPlanSteps = planSteps ++ parentsInDecompositionTree.flatMap({ case (a, (b, _)) =>
+                if ((appliedDecompositions contains a) && appliedDecompositions(a).subPlan.planStepsWithoutInitGoal.isEmpty)
+                  a :: b :: Nil
+                else b :: Nil
+                                                                                 })
+
               val initialPlan = Plan(planSteps, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema, appliedDecompositions, parentsInDecompositionTree)
               if (postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree))
                 initialPlan.maximalDeordering :: Nil
@@ -851,13 +859,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
 
 
-    val predicatesRemoved = if (domain.isGround) {
+    val predicatesRemoved = if (domain.isGround && preprocessingConfiguration.removeUnnecessaryPredicates) {
       info("Removing unnecessary predicates ... ")
       val compiled = PrunePredicates.transform(domain, problem, ())
       info("done.\n")
       extra(compiled._1.statisticsString + "\n")
       compiled
     } else (domain, problem)
+
+    assert(predicatesRemoved._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { predicatesRemoved._1.tasks contains _.schema })
 
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
@@ -993,6 +1003,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         case Some(NaiveGroundedReachability) => ("Naive grounded reachability analysis", NaiveGroundedReachability)
         case Some(PlanningGraph)             => ("Grounded planning graph", PlanningGraph)
         case Some(PlanningGraphWithMutexes)  => ("Grounded planning graph with mutexes", PlanningGraphWithMutexes)
+        case Some(IntegerPlanningGraph)      => ("Planning graph with integer representation", IntegerPlanningGraph)
         case None                            => ("SAS+ fall-back: Grounded planning graph", PlanningGraph)
       }
       info(infoText + " ... ")
@@ -1013,6 +1024,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               println("File written")
             }*/
             x
+          case IntegerPlanningGraph                     =>
+            val wrapper = Wrapping(sasPlusResult._1)
+            val pgConfig = EFGPGConfiguration(serial = false, computeMutexes = false, new Array(0), new Array(0))
+            val initialState = wrapper.unwrap(wrapper.initialPlan).groundInitialState
+            println("StartPG")
+            val pg = EfficientGroundedPlanningGraphImplementation(wrapper.efficientDomain, initialState, pgConfig)
+            println("Done")
+            println(pg.factSpikeIDs mkString "\n")
+            System exit 0
+            null
         }
 
       val reachable = newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.toSet
@@ -1382,6 +1403,8 @@ object NaiveGroundedReachability extends GroundedReachabilityMode {override def 
 object PlanningGraph extends GroundedReachabilityMode {override def longInfo: String = "Planning Graph"}
 
 object PlanningGraphWithMutexes extends GroundedReachabilityMode {override def longInfo: String = "Planning Graph with Mutexes"}
+
+object IntegerPlanningGraph extends GroundedReachabilityMode {override def longInfo: String = "Integer Planning Graph"}
 
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
@@ -1865,7 +1888,8 @@ case class SATSearch(solverType: Solvertype,
                      planDistanceMetric: Seq[PlanDistanceMetric] = Nil,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
-                     encodingToUse: POEncoding = POCLDeleterEncoding
+                     encodingToUse: POEncoding = POCLDeleterEncoding,
+                     threads : Int = 1
                     ) extends SearchConfiguration {
 
   protected lazy val getSingleRun: SingleSATRun = runConfiguration match {

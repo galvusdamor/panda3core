@@ -1,13 +1,14 @@
 package de.uniulm.ki.panda3.efficient.plan
 
 import de.uniulm.ki.panda3.efficient.csp.EfficientCSP
-import de.uniulm.ki.panda3.efficient.domain.{EfficientTask, EfficientDomain}
+import de.uniulm.ki.panda3.efficient.domain.{EfficientDomain, EfficientGroundTask, EfficientTask}
+import de.uniulm.ki.panda3.efficient.logic.{EfficientGroundLiteral, EfficientLiteral}
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw._
-import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientInsertPlanStepWithLink, EfficientInsertCausalLink, EfficientModification}
+import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientInsertCausalLink, EfficientInsertPlanStepWithLink, EfficientModification}
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
 
-import scala.collection.{mutable, BitSet}
+import scala.collection.{BitSet, mutable}
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -56,6 +57,13 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
 
   //assert(possibleSupportersByDecompositionPerLiteral.length == 2 * domain.predicates.length)
+
+  lazy val groundInitialState: Array[(Int, Array[Int])] = {
+    val initSchema = domain.tasks(planStepTasks(0))
+    val groundedInit = EfficientGroundTask(planStepTasks(0), planStepParameters(0) map variableConstraints.getRepresentativeConstant)
+
+    initSchema.precondition.indices map { i => groundedInit.substitutedPrecondition(i, domain) } collect { case EfficientGroundLiteral(pred, true, args) => (pred, args) } toArray
+  }
 
   def isPlanStepPresentInPlan(planStep: Int): Boolean = planStepDecomposedByMethod(planStep) == -1
 

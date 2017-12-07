@@ -14,8 +14,9 @@ import scala.collection.Seq
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
-                                  domain: Domain, initialPlan: Plan, reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None)
-  extends TreeEncoding with EncodingWithLinearPlan{
+                                   domain: Domain, initialPlan: Plan, reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None,
+                                  restrictionMethod: RestrictionMethod)
+  extends TreeEncoding with EncodingWithLinearPlan with NumberOfActionsRestrictionViaAutomaton[Unit,Unit]{
 
 
   assert(domain.decompositionMethods forall { _.subPlan.orderingConstraints.fullGraph.allTotalOrderings.get.length == 1 })
@@ -72,9 +73,9 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
       }
   }
 
-  override lazy val stateTransitionFormula: Seq[Clause] = primitivePaths.indices flatMap { position =>
+  override lazy val stateTransitionFormula: Seq[Clause] = {primitivePaths.indices flatMap { position =>
     primitivesApplicable(K, position) ++ stateChange(K, position) ++ maintainState(K, position)
-  }
+  }} ++ numberOfActionsFormula(primitivePaths)
 
   override lazy val noAbstractsFormula: Seq[Clause] =
     primitivePaths flatMap { case (position, tasks) => tasks filter { _.isAbstract } map { task => Clause((pathAction(position.length, position, task), false)) } }

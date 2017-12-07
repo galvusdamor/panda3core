@@ -23,7 +23,8 @@ import scala.io.Source
 case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
                      büchiAutomata: Seq[BüchiAutomaton], referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
-                     encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean) {
+                     encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean,
+                     randomSeed: Long, solverThreads : Int) {
 
   private val fileDir = System.getProperty("os.name").toLowerCase() match {
     case osname if osname startsWith "windows"  => ""
@@ -158,10 +159,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domain.primitiveTasks.length)
       informationCapsule.set(Information.NUMBER_OF_METHODS, domain.decompositionMethods.length)
 
+      //val restrictionMethod: RestrictionMethod = SlotGloballyRestriction
+      val restrictionMethod: RestrictionMethod = SlotOverTimeRestriction
+
       // start verification
       val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
         if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
-          TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK)
+          TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
           encodingToUse match {
@@ -169,8 +173,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
             case ClassicalForbiddenEncoding   => SOGClassicalForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = false)
             case ClassicalImplicationEncoding => SOGClassicalForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = true)
             case ClassicalN4Encoding          => SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
-            case POCLDirectEncoding           => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
-            case POCLDeleterEncoding          => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
+            case POCLDirectEncoding           => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
+            case POCLDeleterEncoding          => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
             case POStateEncoding              => SOGPOREncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
           }
         }
@@ -222,7 +226,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       //System.in.read()
       timeCapsule stop Timings.GENERATE_FORMULA
 
-      writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
+      //writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
 
       timeCapsule start Timings.TRANSFORM_DIMACS
       println("READY TO WRITE")
@@ -270,6 +274,15 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       if (tritivallUnsatisfiable) {
         println("Problem is trivially unsatisfiable ... exiting")
         timeCapsule stop Timings.VERIFY_TOTAL
+        println("Removing files ... ")
+        System.getProperty("os.name").toLowerCase match {
+          case osname if osname startsWith "windows" =>
+            ("cmd.exe /q /c del " + fileDir + "__cnfString" + uniqFileIdentifier) !!
+
+          case osname if osname startsWith "mac os x" => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier) !
+          case _                                      => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier) !
+
+        }
         None
       } else {
         //System exit 0
@@ -296,20 +309,20 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           val solverCallString = satSolver match {
             case MINISAT =>
               println("Starting minisat")
-              solverPath.get + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
+              solverPath.get + " -rnd-seed=" + randomSeed + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
 
             case CRYPTOMINISAT =>
               println("Starting cryptominisat5")
-              solverPath.get + " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              solverPath.get + " -t " + solverThreads + " -r " + randomSeed + " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
 
             case RISS6 =>
               println("Starting riss6")
               // -config=Riss6:-no-enabled_cp3
-              solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
 
             case MapleCOMSPS =>
               println("Starting mapleCOMSPS")
-              solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
           }
 
           writeStringToFile(outerScriptString + solverCallString, scriptFileName)
@@ -348,7 +361,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
             case osname if osname startsWith "mac os x" => 0
             case _                                      =>
               val errString = removeCommentAtBeginning(stderr.toString())
-              //println(errString)
+              println(errString)
 
               (errString.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
           }
@@ -369,18 +382,18 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         print("Logging statistical information about the run ... ")
         val formulaVariables: Seq[String] = atomMap.keys.toSeq
         val averageClauseLength = (usedFormula map { _.disjuncts.length } sum).toDouble / usedFormula.length
-        val assertClauses = usedFormula count { c => c.disjuncts.length == 1 && c.disjuncts.head._2 }
-        val oneSided = usedFormula count { c => val x = c.disjuncts.head._2; c.disjuncts forall { _._2 == x } }
-        val horn = usedFormula count { c => c.disjuncts.count(_._2) <= 1 }
+        val assertClauses = usedFormula count { c => c.disjuncts.length == 1 && c.disjuncts.head > 0 }
+        //val oneSided = usedFormula count { c => val x = c.disjuncts.head._2; c.disjuncts forall { _._2 == x } }
+        val horn = usedFormula count { c => c.disjuncts.count(_ > 0) <= 1 }
         informationCapsule.set(Information.NUMBER_OF_VARIABLES, formulaVariables.size)
         informationCapsule.set(Information.NUMBER_OF_CLAUSES, usedFormula.length)
         informationCapsule.set(Information.AVERAGE_SIZE_OF_CLAUSES, "" + averageClauseLength)
         informationCapsule.set(Information.NUMBER_OF_ASSERT, assertClauses)
-        informationCapsule.set(Information.NUMBER_OF_ONE_SIDED, oneSided)
+        //informationCapsule.set(Information.NUMBER_OF_ONE_SIDED, oneSided)
         informationCapsule.set(Information.NUMBER_OF_HORN, horn)
 
         informationCapsule.set(Information.STATE_FORMULA, stateFormula.length)
-        informationCapsule.set(Information.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
+        //informationCapsule.set(Information.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
         informationCapsule.set(Information.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
         println("done")
 
@@ -421,7 +434,17 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //println("done " + (t5 - t4))
 
         // delete files
-        //("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+        System.getProperty("os.name").toLowerCase match {
+          case osname if osname startsWith "windows" =>
+            ("cmd.exe /q /c del " + fileDir + "__cnfString" + uniqFileIdentifier) !!
+
+            ("cmd.exe /q /c del " + fileDir + "__res" + uniqFileIdentifier) !!
+
+          case osname if osname startsWith "mac os x" => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+          case _                                      => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+
+        }
+
 
         // report on the result
         println("SAT-Solver says: " + solveState)
@@ -434,7 +457,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
           //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
-          //println(allTrueAtoms filter {_.startsWith("auto_")} mkString "\n")
+          //println((allTrueAtoms filter {_.startsWith("act_")}).toSeq.sorted mkString "\n")
           //println((allTrueAtoms filter {_.startsWith("auto_state")}).toSeq sortBy {case x => x.split('_').last.toInt}  mkString "\n")
 
           /*val db = allTrueAtoms filter { _ contains "direct_before" }
@@ -570,7 +593,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //println(planStepsMethodMap map { case (a, b) => a.schema.name + " -> " + b.name } mkString "\n")
 
         val parentInDecompositionMap: Map[PlanStep, (PlanStep, PlanStep)] = if (!extractSolutionWithHierarchy) Map() else
-          edges.map(_.swap) collect { case (child, father) if !child.contains("-") =>
+          edges.map(_.swap) collect { case (child, father) if !child.contains("-") && (actionStringToTask(child).schema.isAbstract || graph.edges(child).isEmpty) =>
             // find all children
             def getFirstFather(f: String): PlanStep = if (planStepsMethodMap.contains(actionStringToTask(f))) actionStringToTask(f) else getFirstFather(graph.reversedEdgesSet(f).head)
 
@@ -763,7 +786,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
-        //println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.schema.name } mkString "\n"))
+        println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")

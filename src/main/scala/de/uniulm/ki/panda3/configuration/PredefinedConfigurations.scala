@@ -377,6 +377,12 @@ object PredefinedConfigurations {
          "-statePOSatMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POStateEncoding)),
 
 
+
+          // PARALLEL ...
+         "-poclDirectsatT20" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise,
+                                                                         encodingToUse = POCLDirectEncoding, threads = 24)),
+
+
          // plan verification a la ICAPS'17
          "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, "")),
 /*

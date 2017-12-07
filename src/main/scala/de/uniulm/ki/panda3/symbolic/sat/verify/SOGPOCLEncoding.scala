@@ -14,7 +14,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-abstract class SOGPOCLEncoding extends SOGPartialNoPath {
+abstract class SOGPOCLEncoding extends SOGPartialNoPath with NumberOfActionsRestrictionViaAutomaton[SOG, NonExpandedSOG]{
 
   protected def preconditionOfPath(path: Seq[Int], precondition: Predicate): String = "prec^" + path.mkString(";") + "_" + precondition.name
 
@@ -30,7 +30,7 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath {
     Dot2PdfCompiler.writeDotToFile(stringA, "sogExt.pdf")*/
 
 
-    // init and goal must be contaiend in the final plan
+    // init and goal must be contained in the final plan
     val initAndGoalMustBePresent = Clause(pathAction(1, initVertex._1, initVertex._2.head)) :: Clause(pathAction(1, goalVertex._1, goalVertex._2.head)) :: Nil
 
     // for every present task, its preconditions must be supported
@@ -63,7 +63,7 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath {
       val supporterLiterals = potentialSupportingTasks map { _._1._1 } map { p => (supporter(p, path, prec), p) }
 
       val supportedPrecMustHaveSupporter = impliesRightOr(preconditionOfPath(path, prec) :: Nil, supporterLiterals.map(_._1).distinct)
-      val supportLeadsToProduction = supporterLiterals map {case (supportLiteral,path) => impliesSingle(supportLiteral, effectOfPath(path,prec))}
+      val supportLeadsToProduction = supporterLiterals map { case (supportLiteral, path) => impliesSingle(supportLiteral, effectOfPath(path, prec)) }
 
       (supportLeadsToProduction :+ supportedPrecMustHaveSupporter, potentialSupportingTasks map { x => (x._1._1, path, prec) })
     }
@@ -89,10 +89,13 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath {
     println("Order is transitive and respects SOG: " + orderMustBeTransitive.length + " clauses, time needed " + (endTime - startTime).toDouble./(1000))
 
     val noCausalThreat: Seq[Clause] = causalThreatsFormula(supporterLiterals)
+    val restrictNumberOfActions: Seq[Clause] = numberOfActionsFormula(sog.topologicalOrdering.get)
 
     initAndGoalMustBePresent ++ preconditionsMustBeSupported ++ supportedPreconditionsMustHaveSupporter ++
-      supportImpliesOrder ++ ifEffectThenPresent ++ orderMustBeTransitive ++ noCausalThreat
+      supportImpliesOrder ++ ifEffectThenPresent ++ orderMustBeTransitive ++ noCausalThreat ++ restrictNumberOfActions
   }
+
+
 
   def causalThreatsFormula(supporterLiterals: Seq[(Seq[Int], Seq[Int], Predicate)]): Seq[Clause]
 
