@@ -5,8 +5,7 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic,
-EfficientGroundedPlanningGraphImplementation}
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic, EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
@@ -21,7 +20,7 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.{AddPredicate, ExchangeTask, 
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
-import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.{BüchiAutomaton, LTLAnd, LTLFormula}
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.{AlternatingAutomaton, BüchiAutomaton, LTLAnd, LTLFormula}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
@@ -324,10 +323,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case x            => x :: Nil
               }
               val automata = separatedFormulae map { f => BüchiAutomaton(domainAndPlan._1, f) }
+              val aautomata = separatedFormulae map { f => AlternatingAutomaton(domainAndPlan._1, f) }
 
               separatedFormulae.zip(automata).zipWithIndex foreach { case ((f, a), i) =>
                 info("Using LTL Formula in NNF: " + f.longInfo + "\n")
                 Dot2PdfCompiler.writeDotToFile(a, "büchi" + i + ".pdf")
+              }
+
+              separatedFormulae.zip(aautomata).zipWithIndex foreach { case ((f, a), i) =>
+                info("Using LTL Formula in NNF: " + f.longInfo + "\n")
+                Dot2PdfCompiler.writeDotToFile(a, "aautomaton" + i + ".pdf")
               }
 
               //System exit 0

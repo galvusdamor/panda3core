@@ -23,6 +23,10 @@ sealed trait LTLFormula extends DefaultLongInfo {
 
   def allPredicates: Set[Predicate]
 
+  def allSubformulae : Set[LTLFormula]
+
+  def toPositiveBooleanFormula : PositiveBooleanFormula
+
   lazy val allStates          : Seq[Set[Predicate]]                   = de.uniulm.ki.util.allSubsets(allPredicates.toSeq) map { _.toSet }
   lazy val allStatesAndCounter: Seq[(Set[Predicate], Set[Predicate])] = allStates map { s => (s, allPredicates -- s) }
 }
@@ -81,6 +85,10 @@ case class TaskNameAtom(task: String, arguments: Seq[String]) extends LTLFormula
   lazy val negate: LTLFormula = LTLNot(this)
 
   lazy val allPredicates: Set[Predicate] = ???
+
+  lazy val allSubformulae : Set[LTLFormula] = ???
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = ???
 }
 
 case class PredicateNameAtom(predicate: String, arguments: Seq[String]) extends LTLFormula {
@@ -99,7 +107,7 @@ case class PredicateNameAtom(predicate: String, arguments: Seq[String]) extends 
 
   def valuesForVariable(domain: Domain, variable: String, variableContext: Map[String, String]): Seq[String] = if (!(arguments contains variable)) Nil
   else {
-    val matchingPredicates = domain.predicates filter { p => p.name.startsWith("+" + predicate + "[") || p.name.startsWith("-" + predicate + "[") }
+    val matchingPredicates = domain.predicates filter { p => p.name.startsWith(predicate + "[") || p.name.startsWith("-" + predicate + "[") }
     //println("Preds: " + matchingPredicates.map(_.name).mkString("\n"))
 
     matchingPredicates flatMap { t =>
@@ -127,6 +135,10 @@ case class PredicateNameAtom(predicate: String, arguments: Seq[String]) extends 
   lazy val negate: LTLFormula = LTLNot(this)
 
   lazy val allPredicates: Set[Predicate] = ???
+
+  lazy val allSubformulae : Set[LTLFormula] = ???
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = ???
 }
 
 
@@ -154,6 +166,10 @@ case class LTLForall(variable: String, sort: String, subFormula: LTLFormula) ext
   lazy val negate: LTLFormula = LTLExists(variable, sort, subFormula.negate)
 
   lazy val allPredicates: Set[Predicate] = ???
+
+  lazy val allSubformulae : Set[LTLFormula] = ???
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = ???
 }
 
 case class LTLExists(variable: String, sort: String, subFormula: LTLFormula) extends LTLFormula {
@@ -180,6 +196,10 @@ case class LTLExists(variable: String, sort: String, subFormula: LTLFormula) ext
   lazy val negate: LTLFormula = LTLForall(variable, sort, subFormula.negate)
 
   lazy val allPredicates: Set[Predicate] = ???
+
+  lazy val allSubformulae : Set[LTLFormula] = ???
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = ???
 }
 
 
@@ -208,6 +228,10 @@ case class TaskAtom(task: Task) extends LTLFormula {
   lazy val negate: LTLFormula = LTLNot(this)
 
   lazy val allPredicates: Set[Predicate] = Set()
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this)
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
 /**
@@ -229,6 +253,10 @@ case class PredicateAtom(predicate: Predicate) extends LTLFormula {
   lazy val negate: LTLFormula = LTLNot(this)
 
   lazy val allPredicates: Set[Predicate] = Set(predicate)
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this)
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
 
@@ -263,9 +291,13 @@ case class LTLNot(subFormula: LTLFormula) extends LTLFormula {
 
   lazy val negate: LTLFormula = subFormula
 
-  override def longInfo: String = "-" + subFormula.longInfo
+  override def longInfo: String = "!" + subFormula.longInfo
 
   lazy val allPredicates: Set[Predicate] = subFormula.allPredicates
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ subFormula.allSubformulae
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
 /**
@@ -299,6 +331,10 @@ case class LTLAnd(subFormulae: Seq[LTLFormula]) extends LTLFormula {
   override def longInfo: String = "(" + subFormulae.map(_.longInfo).mkString(" & ") + ")"
 
   lazy val allPredicates: Set[Predicate] = subFormulae flatMap { _.allPredicates } toSet
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ subFormulae.flatMap(_.allSubformulae)
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveAnd(subFormulae map {_.toPositiveBooleanFormula})
 }
 
 /**
@@ -333,6 +369,10 @@ case class LTLOr(subFormulae: Seq[LTLFormula]) extends LTLFormula {
   override def longInfo: String = "(" + subFormulae.map(_.longInfo).mkString(" v ") + ")"
 
   lazy val allPredicates: Set[Predicate] = subFormulae flatMap { _.allPredicates } toSet
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ subFormulae.flatMap(_.allSubformulae)
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveOr(subFormulae map {_.toPositiveBooleanFormula})
 }
 
 case class LTLImply(left: LTLFormula, right: LTLFormula) extends LTLFormula {
@@ -353,6 +393,10 @@ case class LTLImply(left: LTLFormula, right: LTLFormula) extends LTLFormula {
   override def longInfo: String = "(" + left.longInfo + " -> " + right.longInfo + ")"
 
   lazy val allPredicates: Set[Predicate] = ???
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ left.allSubformulae ++ right.allSubformulae
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = ???
 }
 
 
@@ -374,6 +418,10 @@ case class LTLEquiv(left: LTLFormula, right: LTLFormula) extends LTLFormula {
   override def longInfo: String = "(" + left.longInfo + " <-> " + right.longInfo + ")"
 
   lazy val allPredicates: Set[Predicate] = ???
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ left.allSubformulae ++ right.allSubformulae
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = ???
 }
 
 /**
@@ -395,6 +443,10 @@ case class LTLNext(subFormula: LTLFormula) extends LTLFormula {
   override def longInfo: String = "X " + subFormula.longInfo
 
   lazy val allPredicates: Set[Predicate] = subFormula.allPredicates
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ subFormula.allSubformulae
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
 /**
@@ -416,6 +468,10 @@ case class LTLWeakNext(subFormula: LTLFormula) extends LTLFormula {
   override def longInfo: String = "WX " + subFormula.longInfo
 
   lazy val allPredicates: Set[Predicate] = subFormula.allPredicates
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ subFormula.allSubformulae
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
 /**
@@ -438,6 +494,10 @@ case class LTLAlways(subFormula: LTLFormula) extends LTLFormula {
   override def longInfo: String = "[] " + subFormula.longInfo
 
   lazy val allPredicates: Set[Predicate] = subFormula.allPredicates
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ subFormula.allSubformulae
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
 /**
@@ -460,6 +520,10 @@ case class LTLEventually(subFormula: LTLFormula) extends LTLFormula {
   override def longInfo: String = "<> " + subFormula.longInfo
 
   lazy val allPredicates: Set[Predicate] = subFormula.allPredicates
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ subFormula.allSubformulae
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
 /**
@@ -486,6 +550,10 @@ case class LTLUntil(leftFormula: LTLFormula, rightFormula: LTLFormula) extends L
   override def longInfo: String = "(" + leftFormula.longInfo + " U " + rightFormula.longInfo + ")"
 
   lazy val allPredicates: Set[Predicate] = leftFormula.allPredicates ++ rightFormula.allPredicates
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ leftFormula.allSubformulae ++ rightFormula.allSubformulae
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
 /**
@@ -513,6 +581,10 @@ case class LTLRelease(leftFormula: LTLFormula, rightFormula: LTLFormula) extends
   override def longInfo: String = "(" + leftFormula.longInfo + " R " + rightFormula.longInfo + ")"
 
   lazy val allPredicates: Set[Predicate] = leftFormula.allPredicates ++ rightFormula.allPredicates
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ leftFormula.allSubformulae ++ rightFormula.allSubformulae
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
 /**
@@ -534,6 +606,10 @@ object LTLTrue extends LTLFormula {
   override def longInfo: String = "T"
 
   lazy val allPredicates: Set[Predicate] = Set()
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this)
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
 /**
@@ -555,4 +631,8 @@ object LTLFalse extends LTLFormula {
   override def longInfo: String = "F"
 
   lazy val allPredicates: Set[Predicate] = Set()
+
+  lazy val allSubformulae : Set[LTLFormula] = Set(this)
+
+  lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }

@@ -7,24 +7,14 @@ import de.uniulm.ki.util.{DirectedGraph, DirectedGraphWithAlgorithms, Dot2PdfCom
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class BüchiAutomaton(initialState: LTLFormula, transitions: Map[LTLFormula, Map[(Task, Boolean, Set[Predicate]), LTLFormula]]) extends DirectedGraphWithAlgorithms[LTLFormula] {
-  /** a list of all node of the graph */
-  val vertices: Seq[LTLFormula] = transitions.keys.toSeq
-
+case class BüchiAutomaton(initialState: LTLFormula, transitions: Map[LTLFormula, Map[(Task, Boolean, Set[Predicate]), LTLFormula]])
+  extends LTLAutomaton[LTLFormula,LTLFormula] {
   /** adjacency list of the graph */
   val edges: Map[LTLFormula, Seq[LTLFormula]] = transitions map { case (a, b) => a -> b.values.toSeq.distinct }
 
-  override def dotEdgeStyleRenderer(from: LTLFormula, to: LTLFormula): String = {
-    val trans = (transitions(from) filter { _._2 == to }).keys.toSeq
-
-    if (trans.size == 1) trans.head._1.name + " " + trans.head._2
-    else if (trans forall { _._2 }) trans.size + " true"
-    else if (trans forall { !_._2 }) trans.size + " false"
-    else "" + trans.size
-  }
+  def transitionTest(edgeTo : LTLFormula, to : LTLFormula) : Boolean = edgeTo == to
 }
 
-object TaskAfterLastOne extends ReducedTask("--after-last",isPrimitive = true,Nil,Nil,Nil,And(Nil),And(Nil))
 
 object BüchiAutomaton {
   def apply(domain: Domain, formula: LTLFormula): BüchiAutomaton = {
@@ -54,9 +44,6 @@ object BüchiAutomaton {
     val (states, transitions) = dfs(Set(formula), Set(formula), Map())
 
     val automaton = BüchiAutomaton(formula, transitions)
-
-    // print to PDF
-    Dot2PdfCompiler.writeDotToFile(automaton, "dea.pdf")
 
     automaton
   }
