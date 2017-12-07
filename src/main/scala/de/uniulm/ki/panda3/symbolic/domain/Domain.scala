@@ -63,15 +63,18 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
     //
     sasPlusRepresentation match {
-      case None                                                                   => None
-      case Some(rep@SASPlusRepresentation(sasPlusProblem, sasPlusIndexToTaskMap)) =>
+      case None                                                                                            => None
+      case Some(rep@SASPlusRepresentation(sasPlusProblem, sasPlusIndexToTaskMap, sasPlusIndexToPredicate)) =>
         sasPlusIndexToTaskMap.values foreach { task => assert(task.isPrimitive, task.name + "must be primitive"); assert(taskSet contains task, task.shortInfo + " not contained") }
         primitiveTasks foreach { task => assert(rep.taskToSASPlusIndex.keySet contains task) }
         sasPlusIndexToTaskMap.keys foreach { i => assert(sasPlusProblem.getGroundedOperatorSignatures.length > i); assert(i >= 0) }
+
+        sasPlusIndexToPredicate.values foreach { p => assert(predicateSet contains p,p.shortInfo + " not contained") }
+        //predicates foreach { p => assert(rep.predicateToSASPlusIndex.keySet contains p) }
     }
   }
 
-  lazy val predicateSet : Set[Predicate] = predicates.toSet
+  lazy val predicateSet: Set[Predicate] = predicates.toSet
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
   lazy val constants                : Seq[Constant]             = (sorts flatMap { _.elements }).distinct
@@ -255,8 +258,10 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
 case class GroundedDomainToDomainMapping(taskMapping: Map[Task, GroundTask])
 
-case class SASPlusRepresentation(sasPlusProblem: SasPlusProblem, sasPlusIndexToTask: Map[Int, Task]) extends DomainUpdatable {
+case class SASPlusRepresentation(sasPlusProblem: SasPlusProblem, sasPlusIndexToTask: Map[Int, Task], sasPlusIndexToPredicate: Map[Int, Predicate]) extends DomainUpdatable {
   lazy val taskToSASPlusIndex: Map[Task, Int] = sasPlusIndexToTask map { case (a, b) => b -> a }
+
+  lazy val predicateToSASPlusIndex: Map[Predicate, Int] = sasPlusIndexToPredicate map { case (a, b) => b -> a }
 
   override def update(domainUpdate: DomainUpdate): SASPlusRepresentation = this.copy(sasPlusIndexToTask = sasPlusIndexToTask map { case (i, t) => (i, t update domainUpdate) })
 }

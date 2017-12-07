@@ -1146,12 +1146,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           // as we have done the TDG grounding after the SAS+ process, there might be tasks in mapping that have already been pruned
           val saspRepresentation = SASPlusRepresentation(sasPlusGrounder.sasPlusProblem,
-                                                         sasPlusGrounder.sasPlusTaskIndexToNewGroundTask filter { case (i, t) => sasPlusDomain.taskSet contains t })
+                                                         sasPlusGrounder.sasPlusTaskIndexToNewGroundTask filter { case (i, t) => sasPlusDomain.taskSet contains t },
+                                                         sasPlusGrounder.sasPlusPredicates.zipWithIndex map { case (p, i) => i -> p } toMap)
           (sasPlusDomain.copy(sasPlusRepresentation = Some(saspRepresentation)), sasPlusPlan)
         } else {
           // generate simple SAS+ representation from strips
-          val (saspProblem, sasOperatorOrdering) = SasPlusProblem.generateFromSTRIPS(groundedDomainAndProblem._1, groundedDomainAndProblem._2)
-          val saspRepresentation = SASPlusRepresentation(saspProblem, sasOperatorOrdering.zipWithIndex map { case (t, i) => i -> t } toMap)
+          val (saspProblem, sasOperatorOrdering, sasPredicateOrdering) = SasPlusProblem.generateFromSTRIPS(groundedDomainAndProblem._1, groundedDomainAndProblem._2)
+          val saspRepresentation = SASPlusRepresentation(saspProblem,
+                                                         sasOperatorOrdering.zipWithIndex map { case (t, i) => i -> t } toMap,
+                                                         sasPredicateOrdering.zipWithIndex map { case (p, i) => i -> p } toMap
+                                                        )
           (groundedDomainAndProblem._1.copy(sasPlusRepresentation = Some(saspRepresentation)), groundedDomainAndProblem._2)
         }
       }
@@ -1854,7 +1858,7 @@ case class SATSearch(solverType: Solvertype,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
                      encodingToUse: POEncoding = POCLDeleterEncoding,
-                     threads : Int = 1
+                     threads: Int = 1
                     ) extends SearchConfiguration {
 
   protected lazy val getSingleRun: SingleSATRun = runConfiguration match {

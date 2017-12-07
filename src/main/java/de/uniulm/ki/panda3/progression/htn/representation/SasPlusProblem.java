@@ -3,13 +3,11 @@ package de.uniulm.ki.panda3.progression.htn.representation;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
-import de.uniulm.ki.panda3.symbolic.logic.And;
-import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
-import de.uniulm.ki.panda3.symbolic.logic.Literal;
-import de.uniulm.ki.panda3.symbolic.logic.Variable;
+import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.util.seqProviderList;
 import scala.Tuple2;
+import scala.Tuple3;
 import scala.collection.Seq;
 
 import java.io.*;
@@ -1095,7 +1093,7 @@ public class SasPlusProblem {
         return f.format(count / this.precLists.length);
     }
 
-    static public Tuple2<SasPlusProblem, ReducedTask[]> generateFromSTRIPS(Domain domain, Plan plan) {
+    static public Tuple3<SasPlusProblem, ReducedTask[], Predicate[]> generateFromSTRIPS(Domain domain, Plan plan) {
         HashSet<Literal> usedInPrec = new HashSet<>();
         HashSet<Literal> usedInAdd = new HashSet<>();
         HashSet<Literal> usedInDel = new HashSet<>();
@@ -1180,9 +1178,11 @@ public class SasPlusProblem {
         HashMap<Literal, Integer> indexMap = new HashMap<>();
         res.varNames = new String[res.numOfStateFeatures];
         res.factStrs = new String[res.numOfStateFeatures];
+        Predicate[] predicateList = new Predicate[usefulLits.size()];
         for (Literal l : usefulLits) {
             int i = li++;
             indexMap.put(l, i);
+            predicateList[i] = l.predicate();
             res.varNames[i] = l.predicate().shortInfo();
             res.factStrs[i] = l.predicate().shortInfo() + "=T";
         }
@@ -1286,7 +1286,7 @@ public class SasPlusProblem {
         res.calcExtendedDelLists();
         assert res.correctModel();
 
-        return new Tuple2<>(res, tasks);
+        return new Tuple3<>(res, tasks, predicateList);
     }
 
     public void writeToDisk(PrintStream bw, boolean writeActionNames) throws IOException {
