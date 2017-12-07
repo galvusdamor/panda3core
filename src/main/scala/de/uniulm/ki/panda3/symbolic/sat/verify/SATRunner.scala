@@ -21,7 +21,7 @@ import scala.io.Source
   */
 // scalastyle:off method.length cyclomatic.complexity
 case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
-                     büchiAutomata: Seq[BüchiAutomaton], referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
+                     büchiAutomata: Seq[LTLAutomaton[_,_]], referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
                      encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean,
                      randomSeed: Long, solverThreads : Int) {
@@ -201,7 +201,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       val planningFormula = (encoder.decompositionFormula ++ stateFormula).toArray
 
       val additionalConstraintsGenerators: Seq[AdditionalSATConstraint] =
-        büchiAutomata.zipWithIndex.map({ case (b, i) => LTLFormulaEncoding(b, "büchi_ " + i) }) ++
+        büchiAutomata.zipWithIndex.map({
+                                         case (b : BüchiAutomaton, i) => BüchiFormulaEncoding(b, "büchi_" + i)
+                                         case (a : AlternatingAutomaton, i) => AlternatingAutomatonFormulaEncoding(a, "aauto_" + i)
+                                       }) ++
           (planDistanceMetric map {
             case MissingOperators(maximumDifference)              => ActionSetDifference(referencePlan.get, maximumDifference)
             case MissingTaskInstances(maximumDifference)          => ActionMatchingDifference(referencePlan.get, maximumDifference)

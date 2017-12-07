@@ -13,27 +13,35 @@ case class AlternatingAutomaton(initialState: LTLFormula, transitions: Map[LTLFo
 
   def transitionTest(edgeTo: PositiveBooleanFormula, to: LTLFormula): Boolean = edgeTo.elementaryExpressions contains to
 
-  lazy val prune : AlternatingAutomaton = {
+  lazy val prune: AlternatingAutomaton = {
     val remainingStates = reachable(initialState) + initialState
 
-    AlternatingAutomaton(initialState,remainingStates map {r => r -> transitions(r)} toMap)
+    AlternatingAutomaton(initialState, remainingStates map { r => r -> transitions(r) } toMap)
   }
 }
 
 trait PositiveBooleanFormula {
   def elementaryExpressions: Set[LTLFormula]
+
+  def allSubformulae: Set[PositiveBooleanFormula]
 }
 
 case class PositiveElementary(ltlFormula: LTLFormula) extends PositiveBooleanFormula {
   lazy val elementaryExpressions: Set[LTLFormula] = Set(ltlFormula)
+
+  def allSubformulae: Set[PositiveBooleanFormula] = Set(this)
 }
 
 case class PositiveAnd(subformulae: Seq[PositiveBooleanFormula]) extends PositiveBooleanFormula {
   lazy val elementaryExpressions: Set[LTLFormula] = subformulae.flatMap(_.elementaryExpressions).toSet
+
+  def allSubformulae: Set[PositiveBooleanFormula] = Set(this) ++ subformulae.flatMap(_.allSubformulae)
 }
 
 case class PositiveOr(subformulae: Seq[PositiveBooleanFormula]) extends PositiveBooleanFormula {
   lazy val elementaryExpressions: Set[LTLFormula] = subformulae.flatMap(_.elementaryExpressions).toSet
+
+  def allSubformulae: Set[PositiveBooleanFormula] = Set(this) ++ subformulae.flatMap(_.allSubformulae)
 }
 
 object AlternatingAutomaton {

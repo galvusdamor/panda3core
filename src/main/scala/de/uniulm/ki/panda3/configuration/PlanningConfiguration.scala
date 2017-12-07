@@ -5,7 +5,8 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic, EfficientGroundedPlanningGraphImplementation}
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic,
+EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
@@ -20,7 +21,7 @@ import de.uniulm.ki.panda3.symbolic.domain.updates.{AddPredicate, ExchangeTask, 
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
-import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.{AlternatingAutomaton, BüchiAutomaton, LTLAnd, LTLFormula}
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints._
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
@@ -91,6 +92,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   /**
     * Runs the complete planner and returns a handle to the search and a waiting function for the result
     */
+  //scalastyle:off method.length
   def runSearchHandle(domain: Domain, problem: Plan, releaseSemaphoreEvery: Option[Int], timeCapsule: TimeCapsule):
   (Domain, SearchNode, Semaphore, AbortFunction, InformationCapsule, Unit => ResultMap) = {
     timeCapsule startOrLetRun TOTAL_TIME
@@ -314,7 +316,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           // if a formula is provided, translate it into a Büchi automaton
-          val automaton: Seq[BüchiAutomaton] = satSearch.ltlFormula match {
+          val automaton: Seq[LTLAutomaton[_, _]] = satSearch.ltlFormula match {
             case None          => Nil
             case Some(formula) =>
               val formulaInNNF = formula.nnf.parseAndGround(domainAndPlan._1, domainAndPlanFullyParsed._1, Map()).simplify
@@ -322,17 +324,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case LTLAnd(conj) => conj
                 case x            => x :: Nil
               }
-              val automata = separatedFormulae map { f => BüchiAutomaton(domainAndPlan._1, f) }
-              val aautomata = separatedFormulae map { f => AlternatingAutomaton(domainAndPlan._1, f) }
+              val automata: Seq[LTLAutomaton[_, _]] = separatedFormulae map { f =>
+                satSearch.formulaEncoding match {
+                  case BüchiEncoding                => BüchiAutomaton(domainAndPlan._1, f)
+                  case AlternatingAutomatonEncoding => AlternatingAutomaton(domainAndPlan._1, f)
+                }
+              }
 
               separatedFormulae.zip(automata).zipWithIndex foreach { case ((f, a), i) =>
                 info("Using LTL Formula in NNF: " + f.longInfo + "\n")
-                Dot2PdfCompiler.writeDotToFile(a, "büchi" + i + ".pdf")
-              }
-
-              separatedFormulae.zip(aautomata).zipWithIndex foreach { case ((f, a), i) =>
-                info("Using LTL Formula in NNF: " + f.longInfo + "\n")
-                Dot2PdfCompiler.writeDotToFile(a, "aautomaton" + i + ".pdf")
+                Dot2PdfCompiler.writeDotToFile(a, "ltl_automaton" + i + ".pdf")
               }
 
               //System exit 0
@@ -1886,15 +1887,22 @@ case class MissingTaskInstances(maximumDifference: Int) extends PlanDistanceMetr
 
 case class MinimumCommonSubplan(minimumSimilarity: Int, ignoreOrder: Boolean = false) extends PlanDistanceMetric
 
+sealed trait LTLEncodingMethod
+
+object BüchiEncoding extends LTLEncodingMethod
+
+object AlternatingAutomatonEncoding extends LTLEncodingMethod
+
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      ltlFormula: Option[LTLFormula] = None,
+                     formulaEncoding: LTLEncodingMethod = AlternatingAutomatonEncoding,
                      planToMinimiseDistanceTo: Option[Seq[String]] = None,
                      planDistanceMetric: Seq[PlanDistanceMetric] = Nil,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
                      encodingToUse: POEncoding = POCLDeleterEncoding,
-                     threads : Int = 1
+                     threads: Int = 1
                     ) extends SearchConfiguration {
 
   protected lazy val getSingleRun: SingleSATRun = runConfiguration match {
