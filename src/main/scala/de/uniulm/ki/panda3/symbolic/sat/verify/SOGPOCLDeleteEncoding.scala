@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.configuration.SATReductionMethod
-import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.util.TimeCapsule
@@ -25,10 +25,16 @@ case class SOGPOCLDeleteEncoding(timeCapsule: TimeCapsule, domain: Domain, initi
     }
     println("Paths may delete: " + willDelete.length + " clauses")
 
+    val supporterPairs = supporterLiterals map { case (a, b, _) => (a, b) } distinct
+    val nonOrderedMap: Map[(Seq[Int], Seq[Int]), Seq[(Seq[Int], Set[Task])]] = supporterPairs map { case (p1, p2) =>
+      val nonord = extendedSOG.vertices filterNot { case (p, _) => p == p1 || p == p2 || onlyPathSOG.reachable(p2).contains(p) || onlyPathSOG.reachable(p).contains(p1) }
+      (p1, p2) -> nonord
+    } toMap
+
     val startTime = System.currentTimeMillis()
     // no causal threats
     val potentialThreader: Seq[(Seq[Int], Seq[Int], Seq[Int], Predicate, String)] = supporterLiterals flatMap { case (p1, p2, prec) =>
-      val nonOrdered = extendedSOG.vertices filterNot { case (p, _) => p == p1 || p == p2 || onlyPathSOG.reachable(p2).contains(p) || onlyPathSOG.reachable(p).contains(p1) }
+      val nonOrdered = nonOrderedMap((p1, p2))
       val supporterLiteral = supporter(p1, p2, prec)
 
       nonOrdered collect { case (pt, ts) if ts exists { t => t.effectsAsPredicateBool exists { case (p, s) => !s && p == prec } } =>
