@@ -315,7 +315,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
                                  satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.encodingToUse,
-                                 postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree))
+                                 postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree),
+                                 randomSeed, satSearch.threads)
 
 
           // depending on whether we are doing a single or a full run, we have either to do a loop or just one run
@@ -1852,7 +1853,8 @@ case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
-                     encodingToUse: POEncoding = POCLDeleterEncoding
+                     encodingToUse: POEncoding = POCLDeleterEncoding,
+                     threads : Int = 1
                     ) extends SearchConfiguration {
 
   protected lazy val getSingleRun: SingleSATRun = runConfiguration match {

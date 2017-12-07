@@ -177,7 +177,7 @@ trait VerifyEncoding {
   def miniSATString(formulas: Array[Clause], writer: BufferedWriter): scala.Predef.Map[String, Int] = {
 
     // generate the atoms to int map
-    val atomIndices = new mutable.HashMap[String, Int]()
+    /*val atomIndices = new mutable.HashMap[String, Int]()
     var i = 0
     while (i < formulas.length) {
       val lits = formulas(i).disjuncts
@@ -189,24 +189,24 @@ trait VerifyEncoding {
         j += 1
       }
       i += 1
-    }
+    }*/
 
     // generate the DIMACS string
 
-    val header = "p cnf " + atomIndices.size + " " + formulas.length + "\n"
+    val header = "p cnf " + Clause.atomIndices.size + " " + formulas.length + "\n"
 
     //val stringBuffer = new StringBuffer()
     //stringBuffer append header
     writer write header
 
-    i = 0
+    var i = 0
     while (i < formulas.length) {
       val lits = formulas(i).disjuncts
       var j = 0
       while (j < lits.length) {
-        val atomInt = (atomIndices(lits(j)._1) + 1) * (if (lits(j)._2) 1 else -1)
+        //val atomInt = (atomIndices(lits(j)._1) + 1) * (if (lits(j)._2) 1 else -1)
         //stringBuffer append atomInt
-        writer write ("" + atomInt)
+        writer write ("" + lits(j))
         //stringBuffer append ' '
         writer write ' '
         j += 1
@@ -217,7 +217,7 @@ trait VerifyEncoding {
     }
 
     //stringBuffer.toString
-    atomIndices.toMap
+    Clause.atomIndices.toMap
   }
 }
 
@@ -322,9 +322,25 @@ object VerifyEncoding {
   }
 }
 
-case class Clause(disjuncts: Array[(String, Boolean)]) {}
+case class Clause(disjuncts: Array[Int]) {}
 
 object Clause {
+  val atomIndices = new mutable.HashMap[String, Int]()
+
+  def apply(disjuncts: Array[(String, Boolean)]): Clause = {
+    val compressed = new Array[Int](disjuncts.length)
+    var i = 0
+    while (i < disjuncts.length) {
+      val atomIndex = atomIndices.getOrElseUpdate(disjuncts(i)._1, atomIndices.size)
+      if (disjuncts(i)._2)
+        compressed(i) = atomIndex + 1
+      else
+        compressed(i) = -1 * atomIndex - 1
+      i += 1
+    }
+    Clause(compressed)
+  }
+
   def apply(disjuncts: Seq[(String, Boolean)]): Clause = Clause(disjuncts.toArray)
 
   def apply(atom: String): Clause = Clause((atom, true) :: Nil)

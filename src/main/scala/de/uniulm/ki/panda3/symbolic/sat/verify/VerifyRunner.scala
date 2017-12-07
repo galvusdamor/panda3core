@@ -148,11 +148,11 @@ case class VerifyRunner(domain: Domain, initialPlan: Plan, satsolver: Solvertype
       timeCapsule stop VerifyRunner.VERIFY_TOTAL
 
 
-      val formulaVariables: Seq[String] = (usedFormula flatMap { _.disjuncts map { _._1 } }).distinct
-      informationCapsule.set(VerifyRunner.NUMBER_OF_VARIABLES, formulaVariables.size)
+      //val formulaVariables: Seq[String] = (usedFormula flatMap { _.disjuncts map { _._1 } }).distinct
+      informationCapsule.set(VerifyRunner.NUMBER_OF_VARIABLES, atomMap.size)
       informationCapsule.set(VerifyRunner.NUMBER_OF_CLAUSES, usedFormula.length)
       informationCapsule.set(VerifyRunner.STATE_FORMULA, stateFormula.length)
-      informationCapsule.set(VerifyRunner.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
+      //informationCapsule.set(VerifyRunner.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
       informationCapsule.set(VerifyRunner.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
 
 

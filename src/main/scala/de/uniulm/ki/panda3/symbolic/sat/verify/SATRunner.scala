@@ -21,7 +21,8 @@ import scala.io.Source
 // scalastyle:off method.length cyclomatic.complexity
 case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
-                     encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean) {
+                     encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean,
+                     randomSeed: Long, solverThreads : Int) {
 
   private val fileDir = System.getProperty("os.name").toLowerCase() match {
     case osname if osname startsWith "windows"  => ""
@@ -285,20 +286,20 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           val solverCallString = satSolver match {
             case MINISAT =>
               println("Starting minisat")
-              solverPath.get + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
+              solverPath.get + " -rnd-seed=" + randomSeed + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
 
             case CRYPTOMINISAT =>
               println("Starting cryptominisat5")
-              solverPath.get + " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              solverPath.get + " -t " + solverThreads + " -r " + randomSeed + " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
 
             case RISS6 =>
               println("Starting riss6")
               // -config=Riss6:-no-enabled_cp3
-              solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
 
             case MapleCOMSPS =>
               println("Starting mapleCOMSPS")
-              solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
           }
 
           writeStringToFile(outerScriptString + solverCallString, scriptFileName)
@@ -337,7 +338,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
             case osname if osname startsWith "mac os x" => 0
             case _                                      =>
               val errString = removeCommentAtBeginning(stderr.toString())
-              //println(errString)
+              println(errString)
 
               (errString.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
           }
@@ -358,18 +359,18 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         print("Logging statistical information about the run ... ")
         val formulaVariables: Seq[String] = atomMap.keys.toSeq
         val averageClauseLength = (usedFormula map { _.disjuncts.length } sum).toDouble / usedFormula.length
-        val assertClauses = usedFormula count { c => c.disjuncts.length == 1 && c.disjuncts.head._2 }
-        val oneSided = usedFormula count { c => val x = c.disjuncts.head._2; c.disjuncts forall { _._2 == x } }
-        val horn = usedFormula count { c => c.disjuncts.count(_._2) <= 1 }
+        val assertClauses = usedFormula count { c => c.disjuncts.length == 1 && c.disjuncts.head > 0 }
+        //val oneSided = usedFormula count { c => val x = c.disjuncts.head._2; c.disjuncts forall { _._2 == x } }
+        val horn = usedFormula count { c => c.disjuncts.count(_ > 0) <= 1 }
         informationCapsule.set(Information.NUMBER_OF_VARIABLES, formulaVariables.size)
         informationCapsule.set(Information.NUMBER_OF_CLAUSES, usedFormula.length)
         informationCapsule.set(Information.AVERAGE_SIZE_OF_CLAUSES, "" + averageClauseLength)
         informationCapsule.set(Information.NUMBER_OF_ASSERT, assertClauses)
-        informationCapsule.set(Information.NUMBER_OF_ONE_SIDED, oneSided)
+        //informationCapsule.set(Information.NUMBER_OF_ONE_SIDED, oneSided)
         informationCapsule.set(Information.NUMBER_OF_HORN, horn)
 
         informationCapsule.set(Information.STATE_FORMULA, stateFormula.length)
-        informationCapsule.set(Information.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
+        //informationCapsule.set(Information.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
         informationCapsule.set(Information.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
         println("done")
 
@@ -569,7 +570,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //println(planStepsMethodMap map { case (a, b) => a.schema.name + " -> " + b.name } mkString "\n")
 
         val parentInDecompositionMap: Map[PlanStep, (PlanStep, PlanStep)] = if (!extractSolutionWithHierarchy) Map() else
-          edges.map(_.swap) collect { case (child, father) if !child.contains("-") && (actionStringToTask(child).schema.isAbstract || graph.edges(child).isEmpty)=>
+          edges.map(_.swap) collect { case (child, father) if !child.contains("-") && (actionStringToTask(child).schema.isAbstract || graph.edges(child).isEmpty) =>
             // find all children
             def getFirstFather(f: String): PlanStep = if (planStepsMethodMap.contains(actionStringToTask(f))) actionStringToTask(f) else getFirstFather(graph.reversedEdgesSet(f).head)
 
