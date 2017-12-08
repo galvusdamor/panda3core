@@ -1,48 +1,179 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 main
 ---- no text necessary
-Available Options:
+Available options for PANDA3:
 
 To run PANDA3, you have to specify at least a domain and a problem file.
 For most parameters, their order does not matter.
-Parameters can be freely interleaved with the specification of domain-, problem-, and output-file.
+Parameters can be freely interleaved with the specification of a domain, problem, and output file.
 \n
 PANDA3's general call syntax is as follows:
     java -jar panda3.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
-$ -help -heuristic
+$ -help -printGeneralInfo -timelimit -planSearch -search -heuristic -seed
+
+
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -help
-displays help
-Available Options:
+Explains how -help [OPTION or KEY] works.
+Available options for -help:
 
-Run with option to show help for that option
+Run "-help [OPTION or KEY]" to show help for the respective option or key.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-printGeneralInfo
+Prints the planner's configuration.
+Available options for -help:
+
+When using this command, the planner will give a detailed list of its configuration, which includes, among many others, the initial random seed, and the deployed search strategy.
 $
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--heuristic -h
-the heuristic to use during search
-Available Heuristics:
+-planSearch
+Uses the "traditional" PANDA3, decompositional-based.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "random" IS A KEY, NOT AN OPTION.
 
-Specify the heuristic to use during search. Most heuristics have additional arguments, which can be passed using the following syntax
+PANDA3 is more than just "one planning system". Apart from additional capabilities like repairing and explaining plans (not yet provided online), or validating plans, we also have three differently working planners (only two of which are provided online at the moment). While these planners share the same preprocessing, e.g., grounding, they are completely different in the way they solve problems.
+\n
+This planner configuration uses the "traditional" PANDA3, which performs search in the space of partial plans. We refer to its search procedure as hybrid planning, because it fuses hierarchical planning with partial order causal link (POCL) planning. The algorithm is a standard flaw-based POCL algorithm that can additionally cope with abstract tasks. It is explained in the following paper:
+\n
+Hybrid Planning Heuristics Based on Task Decomposition Graphs
+by Pascal Bercher and Shawn Keen and Susanne Biundo
+published in SoCS 2014 by AAAI Press.
+\n
+Please note that this plan space-based planning algorithm requires a search algorithm (like BFS or A*) and a flaw selection function.
+\n
+We further want to note that this planner is able of solving a broad variety of problem classes, including HTN problems, TIHTN problems (HTN problems with task insertion), hybrid problems with or without task insertion (these problems extend HTN/TIHTN problems via preconditions and effects of abstract tasks and by causal links in the domain model's partial plans), classical problems, and POCL problems (which are like classical problems, but with an initial primitive partial plan). Please note that the property whether task insertion is allowed cannot be passed on to the planner as an option, but it needs to be specified in the domain or problem file, since this is not an algorithmic choice, but a property of the problem (class) that is solved.
+$
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-search
+Choose the search strategy.
+Available search strategies:
+
+Using "--search [KEY]" allows to select the search strategy given plan-based search ("traditional PANDA3") was selected.
+$ bfs dfs greedy dijkstra uniform-cost astar a* depth-astar
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-bfs
+Breadth-first Search.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "bfs" IS A KEY, NOT AN OPTION.
+
+This is the standard breadth-first search strategy as described in the text books using a queue.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-dfs
+Depth-first Search.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "dfs" IS A KEY, NOT AN OPTION.
+
+This is the standard depth-first search strategy as described in the text books using a stack.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-greedy
+Greedy Search.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "greedy" IS A KEY, NOT AN OPTION.
+
+This is standard greedy search, i.e., you must also define a heuristic.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-dijkstra -uniform-cost
+Uniform cost search.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "dijkstra" IS A KEY, NOT AN OPTION.
+
+This is standard dijkstra algorithm, that is, standard uniform-cost search. Thus, action costs are ignored and assumed being equal to one instead.
+$
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-astar -a*
+Standard A*, f(n)=g(n)+h(n).
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "a*" IS A KEY, NOT AN OPTION.
+
+This is standard A*, i.e., search nodes n are selected according to their value f(n)=g(n)+h(n), where g(n) is the node's action cost and h(n) is its heuristic value. Please note that our planners currently do not support action costs, i.e., we assume cost 1 for each primitive action.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-depth-astar -depth-a* -astar-depth a*-depth
+A*, f(n)=d(n)+h(n) with d being plan depth
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "depth-astar" IS A KEY, NOT AN OPTION.
+
+This is A*, i.e., search nodes n are selected according to their value f(n)=d(n)+h(n), but d(n) is the depth in the search tree rather than the cost of the current search node as usual; h(n) is its heuristic value.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-heuristic -h
+Choose one of many heuristics.
+Available heuristics:
+
+Using "-heuristic [KEY]" allows to select one of many heuristics that is used for the plan selection function. Most heuristics have additional arguments, which can be passed on using the following syntax:
     -heuristic HEURISTIC_NAME(PARAM1=VALUE1,PARAM2=VALUE2)
 $ random #flaw
 
 
 
 
+
+
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 random
-random heuristic
-Available Options:
+Returns random integers.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "random" IS A KEY, NOT AN OPTION.
 
-The random heuristic, initialised with the default random seed.
+This plan selection heuristic returns a random integer. It is initialized with the default random seed.
 $
 
 
@@ -50,8 +181,35 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #flaw number-of-flaws
-number of flaws
-Available Options:
+Number of flaws.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#flaw" IS A KEY, NOT AN OPTION.
 
-The number of flaws in the plan
+This plan selection heuristic returns the number of flaws of the respective plan.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-timelimit
+Sets the time limit in seconds.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-timelimit" TAKES AN INTEGER, NO OPTIONS.
+
+Using "-timelimit [INT]" sets the time limit in seconds.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-seed
+Sets the initial random seed.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-seed" TAKES AN INTEGER, NO OPTIONS.
+
+Using "-seed [INT]" sets the initial random seed to the specified integer. Otherwise, the pre-defined value 42 is used.
+\n
+Random seeds are used to systematically evaluate the impact of randomness in our systems. When ever some choice is made arbitrary (for instance, if search nodes are still invariant after breaking ties according to the given tie-breaking strategy), then this choice further depends on the random seed so that different runs can be made producing potentially different outcomes -- while still having deterministic behavior given the same random seed.
 $

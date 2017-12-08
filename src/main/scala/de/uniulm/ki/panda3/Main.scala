@@ -236,7 +236,7 @@ object Main {
       println(shortTitle)
       if (args.length > 1) {
         val helpForKey = args(1)
-        println("Help for key " + helpForKey + "\n")
+        println("Help for option or key \"" + helpForKey + "\"\n")
         println(transformTo80Chars(getHelpTextFor(helpForKey)))
       } else {
         //println("Available Keys (specific help can be requested using -help KEY):")
