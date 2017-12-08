@@ -9,7 +9,7 @@ Parameters can be freely interleaved with the specification of a domain, problem
 \n
 PANDA3's general call syntax is as follows:
     java -jar panda3.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
-$ -help -printGeneralInfo -timelimit -planSearch -search -heuristic -seed
+$ -help -printGeneralInfo -timelimit -planSearch -search -heuristic -seed -parser
 
 
 
@@ -29,10 +29,91 @@ $
 
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-parser
+Select the parser for the input files.
+Available parsers:
+
+We support various different input formats for our planner. Default value is "auto", which should select the correct parser depending on the input file.
+$ xml old-pddl pddl hpddl hddl auto
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+xml
+Parser for our PANDA XML standard.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "xml" IS A KEY, NOT AN OPTION.
+
+We do not posses a description of our XML-based input specification. We also do not provide support, since we will abandon that format in favor of hddl, a new input language HDDL that we are currently developing.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+hddl
+Parser for our HDDL standard.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "hddl" IS A KEY, NOT AN OPTION.
+
+HDDL is a novel input language for hierarchical planning problems that we are currently developing. For questions regarding this standard, please contact Daniel Höller.
+$
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+hpddl
+Parser for our HPDDL standard.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "hpddl" IS A KEY, NOT AN OPTION.
+
+HPDDL is a is a predecessor of our new language HPDDL. We stopped its development.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pddl
+Parser for the PDDL standard.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "pddl" IS A KEY, NOT AN OPTION.
+
+This is the parser for the well-known PDDL standard.
+$
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+old-pddl
+Parser for PDDL without types.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "old-pddl" IS A KEY, NOT AN OPTION.
+
+The parser for old-pddl is a PDDL parser that can read the older PDDL standard in which there are no types.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+auto
+Automatic parser selection.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "auto" IS A KEY, NOT AN OPTION.
+
+This option chooses the parser automatically depending on the input file. If this works correctly, no other parser needs to be selected.
+$
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -printGeneralInfo
 Prints the planner's configuration.
-Available options for -help:
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "printGeneralInfo" IS A SWITCH, NOT AN OPTION.
 
 When using this command, the planner will give a detailed list of its configuration, which includes, among many others, the initial random seed, and the deployed search strategy.
 $
@@ -43,7 +124,7 @@ $
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -planSearch
 Uses the "traditional" PANDA3, decompositional-based.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "random" IS A KEY, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "planSearch" IS A SWITCH, NOT AN OPTION.
 
 PANDA3 is more than just "one planning system". Apart from additional capabilities like repairing and explaining plans (not yet provided online), or validating plans, we also have three differently working planners (only two of which are provided online at the moment). While these planners share the same preprocessing, e.g., grounding, they are completely different in the way they solve problems.
 \n
@@ -126,10 +207,13 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 astar a*
-Standard A*, f(n)=g(n)+h(n).
+A*, f(n)=w*g(n)+h(n), w weight, g cost, h heuristic
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "a*" IS A KEY, NOT AN OPTION.
 
-This is standard A*, i.e., search nodes n are selected according to their value f(n)=g(n)+h(n), where g(n) is the node's action cost and h(n) is its heuristic value. Please note that our planners currently do not support action costs, i.e., we assume cost 1 for each primitive action.
+This is weighted A*, i.e., search nodes n are selected according to their value f(n)=w*g(n)+h(n), where w is a weight, g(n) is the node's action cost and h(n) is its heuristic value. Please note that our planners currently do not support action costs, i.e., we assume cost 1 for each primitive action.
+\n
+If you just select this heuristic, standard A* search is performed. For weighted A*, add the weight in parentheses, e.g., astar(2).
+
 $
 
 
@@ -138,11 +222,14 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-depth-astar depth-a* astar-depth a*-depth
-A*, f(n)=d(n)+h(n) with d being plan depth
+depth-astar depth-a*
+A*, f(n)=d(n)+h(n), w weight, d depth, h heuristic
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "depth-astar" IS A KEY, NOT AN OPTION.
+% Auch astar-depth und a*-depth wäre möglich, aber
 
-This is A*, i.e., search nodes n are selected according to their value f(n)=d(n)+h(n), but d(n) is the depth in the search tree rather than the cost of the current search node as usual; h(n) is its heuristic value.
+This is weighted A*, i.e., search nodes n are selected according to their value f(n)=w*d(n)+h(n), but d(n) is the depth in the search tree rather than the cost of the current search node as usual; w is the weight and h(n) is its heuristic value.
+\n
+If you just select this heuristic, standard depth-A* search is performed. For weighted depth-A*, add the weight in parentheses, e.g., depth-astar(2).
 $
 
 
