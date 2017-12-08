@@ -31,6 +31,15 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         printMultiGraph(p, testGraph, "graph6.pdf");
 
 
+        LeafNode leafNode1 = new LeafNode(0);
+
+        LeafNode leafNode2 = new LeafNode(2);
+
+
+
+
+
+
         System.exit(0);
 
 
@@ -1042,6 +1051,97 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
                 }
             }
 
+        }
+
+        //System.out.println(farthestNodes);
+
+        return farthestNodes;
+
+    }
+
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> shrinkingStrategy2(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph){
+
+
+
+        HashMap<Integer,Integer> distancesFromClosestGoalNode = getDistancesFromGoal(p, graph);
+
+        HashMap<Integer,Integer> distancesFromStartNode = getDistancesFromStart(p, graph);
+
+
+        HashMap<Integer,Integer> summedDistances = new HashMap<>();
+
+        for (int id:graph.idMapping().keySet()){
+
+            int distanceFromStart = distancesFromStartNode.get(id);
+            int distanceFromGoal = distancesFromClosestGoalNode.get(id);
+            summedDistances.put(id,distanceFromStart+distanceFromGoal);
+        }
+
+        //System.out.println(summedDistances);
+
+        ArrayList<Integer> farthestNodesFromStartAndGoal = getNodesFarthestFromStartAndGoal(graph, summedDistances);
+
+        ArrayList<ArrayList<Integer>> nodesToShrink = new ArrayList<>();
+
+        nodesToShrink.add(farthestNodesFromStartAndGoal);
+
+        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> shrinkedGraph = shrinkingStep(p,graph, nodesToShrink);
+
+
+        return shrinkedGraph;
+
+    }
+
+    public static ArrayList<Integer> getNodesFarthestFromStartAndGoal2(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph, HashMap<Integer,Integer> summedDistances){
+
+        ArrayList<Integer> farthestNodes = new ArrayList<>();
+
+        int maximumDistance = Collections.max(summedDistances.values());
+
+        int counter = Collections.frequency(summedDistances.values(),maximumDistance);
+
+        //System.out.println("Maximum: " + maximumDistance + ", Frequency: " + counter);
+
+        while(counter<2){
+            /* ArrayList<Integer> summedDistancesWithoutHighest = new ArrayList<Integer>();
+            summedDistancesWithoutHighest.addAll(summedDistances.values());
+            System.out.println(summedDistancesWithoutHighest);
+            summedDistancesWithoutHighest.remove(maximumDistance);
+            System.out.println(summedDistancesWithoutHighest);*/
+
+
+            //System.out.println(summedDistances);
+            //System.out.println(summedDistancesWithoutHighest);
+
+            if (summedDistances.size()<1) break;
+
+
+            for (int id : graph.idMapping().keySet()) {
+                if (summedDistances.get(id) == maximumDistance) {
+                    //farthestNodes.add(id);
+                    summedDistances.remove(id);
+                    break;
+                }
+            }
+
+
+            //System.out.println(summedDistancesWithoutHighest);
+
+
+            maximumDistance = Collections.max(summedDistances.values());
+
+            counter = Collections.frequency(summedDistances.values(),maximumDistance);
+
+            //System.out.println("Second Maximum: " + secondMaximumDistance);
+        }
+
+
+        if (counter>1) {
+            for (int id : graph.idMapping().keySet()) {
+                if (summedDistances.get(id) == maximumDistance) {
+                    farthestNodes.add(id);
+                }
+            }
         }
 
         //System.out.println(farthestNodes);
