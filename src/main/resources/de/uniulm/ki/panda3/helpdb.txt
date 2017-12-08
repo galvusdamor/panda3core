@@ -244,7 +244,7 @@ Available heuristics:
 
 Using "-heuristic [KEY]" allows to select one of many heuristics that is used for the plan selection function. Most heuristics have additional arguments, which can be passed on using the following syntax:
     -heuristic HEURISTIC_NAME(PARAM1=VALUE1,PARAM2=VALUE2)
-$ random #flaw
+$ random #flaw #oc number-of-open-preconditions #ps number-of-plan-steps #abstract number-of-abstract-plan-steps umcp-h umcp grounding-mme-with-cycle-detection grounding-pr grounding-tdg-minimum-add grounding-tdg-mac add add_r add-r add_reusing add-reusing relax
 
 
 
@@ -272,10 +272,64 @@ Number of flaws.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#flaw" IS A KEY, NOT AN OPTION.
 
 This plan selection heuristic returns the number of flaws of the respective plan.
+\n
+Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all problem classes that can be solved by PANDA3.
 $
 
 
 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#oc number-of-open-preconditions
+Number of open preconditions.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#oc" IS A KEY, NOT AN OPTION.
+
+This plan selection heuristic returns the number of open preconditions.
+\n
+Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all problem classes that can be solved by PANDA3.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#ps number-of-plan-steps
+Number of plan steps.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#ps" IS A KEY, NOT AN OPTION.
+
+This plan selection heuristic returns the number of plan steps in a partial plan (excluding the artificial start and end steps).
+\n
+Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all problem classes that can be solved by PANDA3.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#abstract number-of-abstract-plan-steps
+Number of abstract plan steps.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#abstract" IS A KEY, NOT AN OPTION.
+
+This plan selection heuristic returns the number of abstract plan steps in a partial plan..
+\n
+Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all hierarchical problem classes that can be solved by PANDA3 (for the non-hierarchical ones, it returns 0, of course).
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+#abstract number-of-abstract-plan-steps
+Number of abstract plan steps.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#abstract" IS A KEY, NOT AN OPTION.
+
+This plan selection heuristic returns the number of abstract plan steps in a partial plan..
+\n
+Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all hierarchical problem classes that can be solved by PANDA3 (for the non-hierarchical ones, it returns 0, of course).
+$
 
 
 
