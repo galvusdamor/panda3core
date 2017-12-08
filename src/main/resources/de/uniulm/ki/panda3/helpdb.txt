@@ -77,7 +77,7 @@ $ bfs dfs greedy dijkstra uniform-cost astar a* depth-astar
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--bfs
+bfs
 Breadth-first Search.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "bfs" IS A KEY, NOT AN OPTION.
 
@@ -87,7 +87,7 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--dfs
+dfs
 Depth-first Search.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "dfs" IS A KEY, NOT AN OPTION.
 
@@ -99,7 +99,7 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--greedy
+greedy
 Greedy Search.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "greedy" IS A KEY, NOT AN OPTION.
 
@@ -111,7 +111,7 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--dijkstra -uniform-cost
+dijkstra uniform-cost
 Uniform cost search.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "dijkstra" IS A KEY, NOT AN OPTION.
 
@@ -125,7 +125,7 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--astar -a*
+astar a*
 Standard A*, f(n)=g(n)+h(n).
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "a*" IS A KEY, NOT AN OPTION.
 
@@ -138,7 +138,7 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--depth-astar -depth-a* -astar-depth a*-depth
+depth-astar depth-a* astar-depth a*-depth
 A*, f(n)=d(n)+h(n) with d being plan depth
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "depth-astar" IS A KEY, NOT AN OPTION.
 
