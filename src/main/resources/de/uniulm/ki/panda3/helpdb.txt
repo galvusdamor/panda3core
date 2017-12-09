@@ -260,8 +260,11 @@ random
 Returns random integers.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "random" IS A KEY, NOT AN OPTION.
 
-This plan selection heuristic returns a random integer. It is initialized with the default random seed.
+This plan selection heuristic for the plan space-based PANDA3 algorithm returns a random integer. It is initialized with the default random seed.
 $
+
+
+
 
 
 
@@ -271,7 +274,7 @@ $
 Number of flaws.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#flaw" IS A KEY, NOT AN OPTION.
 
-This plan selection heuristic returns the number of flaws of the respective plan.
+This plan selection heuristic for the plan space-based PANDA3 algorithm returns the number of flaws of the respective plan.
 \n
 Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all problem classes that can be solved by PANDA3.
 $
@@ -286,10 +289,13 @@ $
 Number of open preconditions.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#oc" IS A KEY, NOT AN OPTION.
 
-This plan selection heuristic returns the number of open preconditions.
+This plan selection heuristic for the plan space-based PANDA3 algorithm returns the number of open preconditions.
 \n
 Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all problem classes that can be solved by PANDA3.
 $
+
+
+
 
 
 
@@ -299,7 +305,7 @@ $
 Number of plan steps.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#ps" IS A KEY, NOT AN OPTION.
 
-This plan selection heuristic returns the number of plan steps in a partial plan (excluding the artificial start and end steps).
+This plan selection heuristic for the plan space-based PANDA3 algorithm returns the number of plan steps in a partial plan (excluding the artificial start and end steps).
 \n
 Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all problem classes that can be solved by PANDA3.
 $
@@ -313,23 +319,136 @@ $
 Number of abstract plan steps.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#abstract" IS A KEY, NOT AN OPTION.
 
-This plan selection heuristic returns the number of abstract plan steps in a partial plan..
+This plan selection heuristic for the plan space-based PANDA3 algorithm returns the number of abstract plan steps in a partial plan.
 \n
 Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all hierarchical problem classes that can be solved by PANDA3 (for the non-hierarchical ones, it returns 0, of course).
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+umcp-h
+Unklar, Gregor
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "umcp-h" IS A KEY, NOT AN OPTION.
+
+Unklar, Gregor.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+umcp
+Unklar, Gregor
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "umcp" IS A KEY, NOT AN OPTION.
+
+Unklar, Gregor.
+$
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+grounding-mme-with-cycle-detection
+Unklar, Gregor
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "grounding-mme-with-cycle-detection" IS A KEY, NOT AN OPTION.
+
+Unklar, Gregor.
+$
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+grounding-pr
+Unklar, Gregor
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "grounding-pr" IS A KEY, NOT AN OPTION.
+
+Unklar, Gregor.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+grounding-tdg-mac
+Unklar, Gregor
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "grounding-tdg-mac" IS A KEY, NOT AN OPTION.
+
+Unklar, Gregor.
 $
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#abstract number-of-abstract-plan-steps
-Number of abstract plan steps.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#abstract" IS A KEY, NOT AN OPTION.
+add
+This is the Add heuristic for POCL planning.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "add" IS A KEY, NOT AN OPTION.
 
-This plan selection heuristic returns the number of abstract plan steps in a partial plan..
+This plan selection heuristic for the plan space-based PANDA3 algorithm is the Add heuristic for POCL planning as desribed in the following paper:
 \n
-Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all hierarchical problem classes that can be solved by PANDA3 (for the non-hierarchical ones, it returns 0, of course).
+VHPOP: Versatile heuristic partial order planner
+by Hakan L. S. Younes and Reid G. Simmons
+published in the Journal of Artificial Intelligence Research (JAIR), 2003.
+\n
+In a nutshell, this heuristic takes all open preconditions of the current partial plan (i.e., those that are not protected by a causal link) and uses them as goal state the achievement of which is estimated relying on the Add heuristic for classical planning (however, the underlying planning graph is calculated only once, because the "current state" is always the initial state).
+\n
+Please note that this heuristic can not only be applied to non-hierarchical problems, but to all that can be solved by PANDA3. In case of hierarchical problems, the heuristic either ignores abstract tasks (in case they do not have preconditions, as is the case of HTN and TIHTN problems) or they are "regarded primitive", i.e. their preconditions are used as well in case they have some specified (as is the case for hybrid problems).
 $
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+add-r add-reusing add_r add_reusing
+This is the Add heuristic for POCL planning reusing actions.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "add-r" IS A KEY, NOT AN OPTION.
+
+This plan selection heuristic for the plan space-based PANDA3 algorithm is the Add heuristic for POCL planning reusing actions as desribed in the following paper:
+\n
+VHPOP: Versatile heuristic partial order planner
+by Hakan L. S. Younes and Reid G. Simmons
+published in the Journal of Artificial Intelligence Research (JAIR), 2003.
+\n
+In a nutshell, this heuristic takes *some* of the open preconditions of the current partial plan (i.e., a subset of those that are not protected by a causal link) and uses them as goal state the achievement of which is estimated relying on the Add heuristic for classical planning (however, the underlying planning graph is calculated only once, because the "current state" is always the initial state). Instead of taking *all* unprotected preconditions (as the Add heuristic for POCL planning does), the Add-r heuristic only takes those open preconditions for which there is no action in the current partial plan that can, occording to the ordering and variable constraints, potentially be used as a supporter.
+\n
+As it is the case for the Add heuristic for POCL planning, this heuristic can not only be applied to non-hierarchical problems, but to all that can be solved by PANDA3. In case of hierarchical problems, the heuristic either ignores abstract tasks (in case they do not have preconditions, as is the case of HTN and TIHTN problems) or they are "regarded primitive", i.e. their preconditions are used as well in case they have some specified (as is the case for hybrid problems).
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+relax
+This is the Relax heuristic for POCL planning.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "relax" IS A KEY, NOT AN OPTION.
+
+This plan selection heuristic for the plan space-based PANDA3 algorithm is the Relax heuristic as desribed in the following paper:
+\n
+Reviving Partial Order Planning
+by XuanLong Nguyen and Subbarao Kambhampati
+published in IJCAI 2001 by Morgan Kaufmann
+\n
+In a nutshell, this heuristic takes all open preconditions of the current partial plan (i.e., those that are not protected by a causal link) and uses them as goal state the achievement of which is estimated relying on the FF heuristic for classical planning (however, the underlying (serial) planning graph is calculated only once, because the "current state" is always the initial state). The cost of the extracted relaxed plan is used as heuristic. However, actions in that relaxed plan that do also occur in the input partial plan do not contribute towards the heuristic.
+\n
+As it is the case for the Add and Add-r heuristic for POCL planning, this heuristic can not only be applied to non-hierarchical problems, but to all that can be solved by PANDA3. In case of hierarchical problems, the heuristic either ignores abstract tasks (in case they do not have preconditions, as is the case of HTN and TIHTN problems) or they are "regarded primitive", i.e. their preconditions are used as well in case they have some specified (as is the case for hybrid problems).
+$
+
 
 
 
