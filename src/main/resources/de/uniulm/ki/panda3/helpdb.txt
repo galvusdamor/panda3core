@@ -9,7 +9,7 @@ Parameters can be freely interleaved with the specification of a domain, problem
 \n
 PANDA3's general call syntax is as follows:
     java -jar panda3.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
-$ -help -printGeneralInfo -timelimit -planSearch -search -heuristic -seed -parser
+$ -help -printGeneralInfo -noGeneralInfo -printAdditionalInfo -noAdditionalInfo -timelimit -planSearch -noSearch -search -heuristic -seed -parser
 
 
 
@@ -112,19 +112,52 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -printGeneralInfo
-Prints the planner's configuration.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "printGeneralInfo" IS A SWITCH, NOT AN OPTION.
+Shows additional information during planning.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-printGeneralInfo" IS A SWITCH, NOT AN OPTION.
 
-When using this command, the planner will give a detailed list of its configuration, which includes, among many others, the initial random seed, and the deployed search strategy.
+When using this command, the planner will show -- during planning -- what it is currently doing, such as constructing the planning graph, etc.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noGeneralInfo
+Suppress additional information during planning.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noGeneralInfo" IS A SWITCH, NOT AN OPTION.
+
+When using this command, the planner will suppress additional information that is otherwise shown during planning. This information explains what the planner is currently doing, such as, for example, constructing the planning graph.
 $
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-printAdditionalInfo
+Shows information about compilations steps.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-printAdditionalInfo" IS A SWITCH, NOT AN OPTION.
+
+Many of our heuristics base upon very basic language features, that is: a ground model in which primitive tasks have only positive preconditions. Also our decomposition methods to not have preconditions (as opposed to the SHOP2 model) or effects (yes, some hierarchical planning formalisms even allow effects of methods). We compile all these higher-level language features away. Activating this switch prints additional information about these compilations after each single compilation step.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noAdditionalInfo
+Suppresses information about compilations steps.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noAdditionalInfo" IS A SWITCH, NOT AN OPTION.
+
+Many of our heuristics base upon very basic language features, that is: a ground model in which primitive tasks have only positive preconditions. Also our decomposition methods to not have preconditions (as opposed to the SHOP2 model) or effects (yes, some hierarchical planning formalisms even allow effects of methods). We compile all these higher-level language features away. Activating this switch suppresses additional information about these compilations after each single compilation step.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -planSearch
 Uses the "traditional" PANDA3, decompositional-based.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "planSearch" IS A SWITCH, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-planSearch" IS A SWITCH, NOT AN OPTION.
 
 PANDA3 is more than just "one planning system". Apart from additional capabilities like repairing and explaining plans (not yet provided online), or validating plans, we also have three differently working planners (only two of which are provided online at the moment). While these planners share the same preprocessing, e.g., grounding, they are completely different in the way they solve problems.
 \n
@@ -138,6 +171,20 @@ Please note that this plan space-based planning algorithm requires a search algo
 \n
 We further want to note that this planner is able of solving a broad variety of problem classes, including HTN problems, TIHTN problems (HTN problems with task insertion), hybrid problems with or without task insertion (these problems extend HTN/TIHTN problems via preconditions and effects of abstract tasks and by causal links in the domain model's partial plans), classical problems, and POCL problems (which are like classical problems, but with an initial primitive partial plan). Please note that the property whether task insertion is allowed cannot be passed on to the planner as an option, but it needs to be specified in the domain or problem file, since this is not an algorithmic choice, but a property of the problem (class) that is solved.
 $
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noSearch
+Terminate after the preprocessing.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-printGeneralInfo" IS A SWITCH, NOT AN OPTION.
+
+This option is mainly for debugging purposes: choosing it will cause the planner to terminate as soon as it finished all preprocessing steps, i.e., right before it would initiate the search.
+$
+
 
 
 
