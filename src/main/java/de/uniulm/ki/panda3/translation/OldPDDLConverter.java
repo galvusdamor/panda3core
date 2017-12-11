@@ -14,7 +14,7 @@ public class OldPDDLConverter {
         FileWriter fw = new FileWriter(domainOut);
         BufferedWriter bw = new BufferedWriter(fw);
 
-        bw.write(txtFile);
+        bw.write(txtFile.toLowerCase());
         bw.close();
     }
 
@@ -22,7 +22,7 @@ public class OldPDDLConverter {
         FileWriter fw = new FileWriter(problemOut);
         BufferedWriter bw = new BufferedWriter(fw);
 
-        bw.write(txtFile);
+        bw.write(txtFile.toLowerCase());
         bw.close();
     }
 }

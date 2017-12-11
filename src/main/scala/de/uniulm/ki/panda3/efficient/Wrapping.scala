@@ -202,6 +202,17 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       case SHOPDecompositionMethod(_, _, _, _, _)      => noSupport(NONSIMPLEMETHOD)
     }).toArray
 
+    // SAS+
+    symbolicDomain.sasPlusRepresentation match {
+      case Some(sas@SASPlusRepresentation(problem, taskIndices, predicateIndices)) =>
+        domain.sasPlusProblem = problem
+        // some tasks (like init and goal) might not be part of the SAS+ representation
+        domain.taskIndexToSASPlus = domain.tasks.indices.toArray map { t => sas.taskToSASPlusIndex.getOrElse(domainTasks.back(t), -1) }
+        domain.predicateIndexToSASPlus = domain.predicates.indices.toArray map { t => sas.predicateToSASPlusIndex.getOrElse(domainPredicates.back(t), -1) }
+      case None                                                                    => // do nothing
+    }
+
+
     domain
   }
 

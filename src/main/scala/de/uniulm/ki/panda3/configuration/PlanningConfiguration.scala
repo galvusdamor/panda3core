@@ -565,8 +565,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
 
-  private def constructEfficientHeuristic(heuristicConfig: SearchHeuristic, wrapper: Wrapping, analysisMap: AnalysisMap, domainAndPlan: (Domain, Plan))
-  : EfficientHeuristic[_] = {
+  private def constructEfficientHeuristic(heuristicConfig: SearchHeuristic, wrapper: Wrapping, analysisMap: AnalysisMap, domainAndPlan: (Domain, Plan)) : EfficientHeuristic[_] = {
     // if we need the ADD heuristic as a building block create it
     val optionADD = heuristicConfig match {
       case LiftedTDGMinimumADD(_, _) | TDGMinimumADD(_) =>
@@ -658,6 +657,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           case Relax            =>
             RelaxHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray)
         }
+
+      case POCLTransformation(innerHeuristic) => POCLTransformationHeuristic(innerHeuristic, wrapper.efficientDomain,
+                                                                             wrapper.efficientDomain.tasks(wrapper.unwrap(wrapper.initialPlan).planStepTasks(0)))
     }
   }
 
@@ -1690,6 +1692,7 @@ object ADDReusing extends SearchHeuristic {override val longInfo: String = "add_
 
 object Relax extends SearchHeuristic {override val longInfo: String = "relax"}
 
+case class POCLTransformation(classicalHeuristic: SasHeuristics) extends SearchHeuristic {override val longInfo: String = "add"}
 
 // PANDAPRO heuristics
 case class RelaxedCompositionGraph(useTDReachability: Boolean, heuristicExtraction: gphRcFFMulticount.heuristicExtraction, producerSelectionStrategy: gphRcFFMulticount.producerSelection)
