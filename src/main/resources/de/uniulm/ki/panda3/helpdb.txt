@@ -198,7 +198,7 @@ Choose the search strategy.
 Available search strategies:
 
 Using "--search [KEY]" allows to select the search strategy given plan-based search ("traditional PANDA3") was selected.
-$ bfs dfs greedy dijkstra uniform-cost astar a* depth-astar
+$ bfs dfs greedy uniform-cost a* depth-a*
 
 
 
@@ -289,7 +289,7 @@ Choose a flaw selection strategy.
 Available flaw selection strategies:
 
 Using "-flaw [KEY]" allows to select a flaw selection strategy for the plan space-based search algorithm.
-$ lcfr umcp umcp-f random
+$ lcfr random
 
 
 
@@ -323,7 +323,7 @@ Available heuristics:
 
 Using "-heuristic [KEY]" allows to select one of many heuristics that is used for the plan selection function. Please note that most of the heuristics are developed for the plan space-based search algorithm, but some of them also (or exclusively) work for the progression-based planner. We will be clear about this in the respective heuristics. Most heuristics have additional arguments, which can be passed on using the following syntax:
     -heuristic HEURISTIC_NAME(PARAM1=VALUE1,PARAM2=VALUE2)
-$ random #flaw #oc number-of-open-preconditions #ps number-of-plan-steps #abstract number-of-abstract-plan-steps umcp-h umcp grounding-mme-with-cycle-detection grounding-pr grounding-tdg-minimum-add grounding-tdg-mac add add_r add-r add_reusing add-reusing relax
+$ random #flaw #oc number-of-open-preconditions #ps number-of-plan-steps #abstract number-of-abstract-plan-steps grounding-mme-with-cycle-detection grounding-pr grounding-tdg-mac add add_r add-r add_reusing add-reusing relax
 
 
 
@@ -401,31 +401,6 @@ This plan selection heuristic for the plan space-based PANDA3 algorithm returns 
 Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all hierarchical problem classes that can be solved by PANDA3 (for the non-hierarchical ones, it returns 0, of course).
 $
 
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-umcp-h
-Unklar, Gregor
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "umcp-h" IS A KEY, NOT AN OPTION.
-
-Unklar, Gregor.
-$
-
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-umcp
-Unklar, Gregor
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "umcp" IS A KEY, NOT AN OPTION.
-
-Unklar, Gregor.
-$
 
 
 
