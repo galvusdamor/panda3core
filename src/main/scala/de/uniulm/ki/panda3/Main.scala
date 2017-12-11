@@ -184,7 +184,7 @@ object Main {
     val entries: Seq[(String, (String, String, Seq[String], String, Seq[String]))] = parsed map { entry =>
       val keys: Seq[String] = entry.head split " "
       val short: String = entry(1)
-      val optionsHeader : String = entry(2)
+      val optionsHeader: String = entry(2)
       val long: String = entry.drop(3).dropRight(1).mkString("\n")
       val children: Seq[String] = entry.last.split(" ").drop(1)
 
@@ -194,7 +194,10 @@ object Main {
     val entryMap = Map(entries: _*)
 
     // consistency
-    entries foreach { case (_, (_, _, _, _ , children)) => children foreach { c => assert(entryMap contains c) } }
+    entries foreach { case (key, (_, _, _, _, children)) => children foreach { c =>
+      assert(entryMap contains c, "No explanation found for key \"" + c + "\" occurring in key \"" + key + "\"")
+    }
+    }
 
     entryMap
   }
