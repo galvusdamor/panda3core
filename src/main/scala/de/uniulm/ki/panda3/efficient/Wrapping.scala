@@ -343,16 +343,17 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       case (sortIndex, variableIndex) => newVariableFormEfficient(variableIndex, sortIndex)
     }
 
-    val taskCreationGraph = SimpleDirectedGraph(plan.planStepTasks.indices, plan.planStepTasks.indices map { i => (plan.planStepParentInDecompositionTree(i), i) } collect {
-      case (a, b) if a != -1 => (a, b)
-    })
+    val taskCreationGraph = SimpleDirectedGraph(plan.planStepTasks.indices,
+                                                if (plan.planStepParentInDecompositionTree != null)
+                                                  plan.planStepTasks.indices map { i => (plan.planStepParentInDecompositionTree(i), i) } collect { case (a, b) if a != -1 => (a, b) }
+                                                else Nil)
 
     // plan steps -> has to be done this way (for with a fold) as we have to ensure that a parent was always already been computed
     val planStepArray: Array[PlanStep] = new Array(plan.planStepTasks.length)
     taskCreationGraph.topologicalOrdering.get foreach { psIndex =>
       val arguments = plan.planStepParameters(psIndex) map { variables(_) }
-      val psDecomposedBy = plan.planStepDecomposedByMethod(psIndex)
-      val psParent = plan.planStepParentInDecompositionTree(psIndex)
+      //val psDecomposedBy = plan.planStepDecomposedByMethod(psIndex)
+      //val psParent = plan.planStepParentInDecompositionTree(psIndex)
 
       planStepArray(psIndex) = PlanStep(psIndex, domainTasks.back(plan.planStepTasks(psIndex)), arguments)
     }
@@ -401,14 +402,21 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val allowedFlaws = allwaysAllowedFlaws ++ (if (plan.problemConfiguration.decompositionAllowed) classOf[AbstractPlanStep] :: Nil else Nil)
 
     // decomposition history
-    val planStepDecomposedByMethod = (plan.planStepDecomposedByMethod.zipWithIndex collect { case (method, ps) if method != -1 => (planStepArray(ps), wrapDecompositionMethod(method)) })
-      .toMap
-    val parentsInDecompositionTree = ((plan.planStepParentInDecompositionTree zip plan.planStepIsInstanceOfSubPlanPlanStep).zipWithIndex collect {
-      case ((parent, subPlanPS), ps) if parent != -1 =>
-        assert(subPlanPS != -1)
-        val appliedDecompositionMethod = planStepDecomposedByMethod(planStepArray(parent))
-        (planStepArray(ps), (planStepArray(parent), appliedDecompositionMethod.subPlan.planStepsAndRemovedPlanStepsWithoutInitGoal(subPlanPS - 2)))
-    }).toMap
+    val planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod] =
+      if (plan.planStepDecomposedByMethod == null)
+        Map()
+      else (plan.planStepDecomposedByMethod.zipWithIndex collect { case (method, ps) if method != -1 => (planStepArray(ps), wrapDecompositionMethod(method)) }).toMap
+
+    val parentsInDecompositionTree : Map[PlanStep,(PlanStep,PlanStep)]=
+      if (plan.planStepParentInDecompositionTree == null)
+        Map()
+      else
+        ((plan.planStepParentInDecompositionTree zip plan.planStepIsInstanceOfSubPlanPlanStep).zipWithIndex collect {
+          case ((parent, subPlanPS), ps) if parent != -1 =>
+            assert(subPlanPS != -1)
+            val appliedDecompositionMethod = planStepDecomposedByMethod(planStepArray(parent))
+            (planStepArray(ps), (planStepArray(parent), appliedDecompositionMethod.subPlan.planStepsAndRemovedPlanStepsWithoutInitGoal(subPlanPS - 2)))
+        }).toMap
 
     // and return the actual plan
     val symbolicPlan = Plan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1), ModificationsByClass(allowedModifications: _*),
