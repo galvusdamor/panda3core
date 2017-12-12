@@ -24,7 +24,7 @@ lazy val assemblySettings = commonSettings ++ Seq(
                                                    scalaSource in Compile := file(panda3core.base.getAbsolutePath()) / "src" / "main" / "scala",
                                                    javaSource in Compile := file(panda3core.base.getAbsolutePath()) / "src" / "main" / "java",
                                                    resourceDirectory in Compile := file(panda3core.base.getAbsolutePath()) / "src" / "main" / "resources",
-                                                   scalacOptions ++= Seq("-Xelide-below", "5000"),
+                                                   scalacOptions ++= Seq("-Xelide-below", "5000", "-Xdisable-assertions"),
                                                    test in assembly := {}
                                                  )
 

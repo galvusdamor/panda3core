@@ -38,7 +38,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   // sanity check for the sorts
   @elidable(ASSERTION)
-  val assertion = {
+  def assertion() : Boolean = {
     assert(taskSet.size == tasks.size)
     //
     sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
@@ -72,7 +72,10 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
         sasPlusIndexToPredicate.values foreach { p => assert(predicateSet contains p,p.shortInfo + " not contained") }
         //predicates foreach { p => assert(rep.predicateToSASPlusIndex.keySet contains p) }
     }
+    true
   }
+
+  assert(assertion())
 
   lazy val predicateSet: Set[Predicate] = predicates.toSet
 

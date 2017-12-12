@@ -27,7 +27,7 @@ object EfficientInsertCausalLink {
 
   private def iterateThroughModificationsFromPlanStep(plan: EfficientPlan, resolvedFlaw: EfficientFlaw, consumer: Int, consumerIndex: Int, producer: Int, consumerLiteral:
   EfficientLiteral, consumerParameters: Array[Int], produceMGU: Boolean, whatToDo: (Int, Array[EfficientVariableConstraint]) => Unit): Unit = {
-    if (producer != consumer && plan.planStepDecomposedByMethod(producer) == -1 && !plan.ordering.gt(producer, consumer)) {
+    if (producer != consumer && plan.isPlanStepPresentInPlan(producer) && !plan.ordering.gt(producer, consumer)) {
       val producerTaskIndex = plan.planStepTasks(producer)
       val producerTask = plan.domain.tasks(producerTaskIndex)
 

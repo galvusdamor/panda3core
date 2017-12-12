@@ -8,6 +8,8 @@ import de.uniulm.ki.panda3.efficient.plan.flaw._
 import de.uniulm.ki.panda3.efficient.plan.modification.{EfficientInsertCausalLink, EfficientInsertPlanStepWithLink, EfficientModification}
 import de.uniulm.ki.panda3.efficient.plan.ordering.EfficientOrdering
 
+import scala.annotation.elidable
+import scala.annotation.elidable.ASSERTION
 import scala.collection.{BitSet, mutable}
 import scala.collection.mutable.ArrayBuffer
 
@@ -26,35 +28,44 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // TODO there is no place to save the mapping, which planstep one is in their HTN parent's applied method subplan
+// scalastyle:off null
 case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], planStepParameters: Array[Array[Int]], planStepDecomposedByMethod: Array[Int],
                          planStepParentInDecompositionTree: Array[Int], planStepIsInstanceOfSubPlanPlanStep: Array[Int], planStepSupportedPreconditions: Array[mutable.BitSet],
                          potentialSupportersOfPlanStepPreconditions: Array[Array[mutable.BitSet]], causalLinksPotentialThreater: Array[mutable.BitSet],
                          variableConstraints: EfficientCSP, ordering: EfficientOrdering, causalLinks: Array[EfficientCausalLink], problemConfiguration: ProblemConfiguration,
                          depth: Int = 0)(val depthPerPlanStep: Array[Int] = Array.fill(planStepTasks.length)(0), val depthPerCausalLink: Array[Int] = Array.fill(causalLinks.length)(0)) {
 
-  assert(planStepTasks.length == planStepParameters.length)
-  assert(planStepTasks.length == planStepDecomposedByMethod.length)
-  assert(planStepTasks.length == planStepParentInDecompositionTree.length)
-  assert(planStepTasks.length == planStepIsInstanceOfSubPlanPlanStep.length)
-  assert(planStepTasks.length == planStepSupportedPreconditions.length)
-  assert(planStepTasks.length == potentialSupportersOfPlanStepPreconditions.length)
-  planStepTasks.indices foreach {
-    ps =>
-      /*println("PS " + ps)
+  // sanity checks
+  @elidable(ASSERTION)
+  def assertion() : Boolean = {
+    assert(planStepTasks.length == planStepParameters.length)
+    if (planStepDecomposedByMethod != null) {
+      assert(planStepTasks.length == planStepDecomposedByMethod.length)
+      assert(planStepTasks.length == planStepParentInDecompositionTree.length)
+      assert(planStepTasks.length == planStepIsInstanceOfSubPlanPlanStep.length)
+    }
+    assert(planStepTasks.length == planStepSupportedPreconditions.length)
+    assert(planStepTasks.length == potentialSupportersOfPlanStepPreconditions.length)
+    planStepTasks.indices foreach {
+      ps =>
+        /*println("PS " + ps)
       println(planStepTasks(ps))
       println(domain.tasks.size)
       println(domain.tasks(planStepTasks(ps)))
       println(planStepParameters(ps))*/
-      assert(domain.tasks(planStepTasks(ps)).parameterSorts.length == planStepParameters(ps).length)
+        assert(domain.tasks(planStepTasks(ps)).parameterSorts.length == planStepParameters(ps).length)
 
-      planStepParameters(ps).indices foreach { arg =>
-        planStepParameters(ps)(arg) < firstFreeVariableID
-      }
+        planStepParameters(ps).indices foreach { arg =>
+          planStepParameters(ps)(arg) < firstFreeVariableID
+        }
+    }
+
+    assert(causalLinksPotentialThreater.length == causalLinks.length)
+    assert(causalLinks forall { case EfficientCausalLink(prod, cons, pInd, cInd) => taskOfPlanStep(prod).effect(pInd).predicate == taskOfPlanStep(cons).precondition(cInd).predicate })
+    true
   }
 
-  assert(causalLinksPotentialThreater.length == causalLinks.length)
-  assert(causalLinks forall { case EfficientCausalLink(prod, cons, pInd, cInd) => taskOfPlanStep(prod).effect(pInd).predicate == taskOfPlanStep(cons).precondition(cInd).predicate })
-
+  assert(assertion())
 
   //assert(possibleSupportersByDecompositionPerLiteral.length == 2 * domain.predicates.length)
 
@@ -65,7 +76,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     initSchema.precondition.indices map { i => groundedInit.substitutedPrecondition(i, domain) } collect { case EfficientGroundLiteral(pred, true, args) => (pred, args) } toArray
   }
 
-  def isPlanStepPresentInPlan(planStep: Int): Boolean = planStepDecomposedByMethod(planStep) == -1
+  def isPlanStepPresentInPlan(planStep: Int): Boolean = planStepDecomposedByMethod == null || planStepDecomposedByMethod(planStep) == -1
 
   val numberOfAllPlanSteps: Int                                                  = planStepTasks.length
   val (numberOfPlanSteps, numberOfPrimitivePlanSteps, numberOfAbstractPlanSteps) = {
@@ -170,7 +181,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
         val flawResolved = flaw.equalToSeveredFlaw(appliedModification.get.resolvedFlaw) &&
           (appliedModification.get.isInstanceOf[EfficientInsertCausalLink] || appliedModification.get.isInstanceOf[EfficientInsertPlanStepWithLink])
 
-        if (!flawResolved && planStepDecomposedByMethod(flaw.planStep) == -1)
+        if (!flawResolved && isPlanStepPresentInPlan(flaw.planStep))
           flawBuffer append flaw.updateToNewPlan(this, appliedModification.get.addedPlanSteps.length, appliedModification.get.decomposedPlanSteps)
         i += 1
       }
@@ -196,7 +207,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
       // check whether the link is still present
       assert(causalLink != null)
-      if (planStepDecomposedByMethod(causalLink.producer) == -1 && planStepDecomposedByMethod(causalLink.consumer) == -1) {
+      if (isPlanStepPresentInPlan(causalLink.producer) && isPlanStepPresentInPlan(causalLink.consumer)) {
 
         val producer = domain.tasks(planStepTasks(causalLink.producer))
         val consumer = domain.tasks(planStepTasks(causalLink.consumer))
@@ -213,7 +224,7 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
           val potentialThreater = threaterIterator.next()
 
           var isThreating = false
-          if (planStepDecomposedByMethod(potentialThreater) == -1) {
+          if (isPlanStepPresentInPlan(potentialThreater)) {
             var effectNumber = 0
             val planStep = domain.tasks(planStepTasks(potentialThreater))
 
@@ -349,19 +360,23 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     // only create the new arrays if a task was actually added
     if (!EfficientPlan.useIncrementalConstruction || modification.addedPlanSteps.length != 0) {
       newPlanStepTasks = new Array[Int](numberOfPlanStepsInNewPlan)
-      newPSDepths = new Array[Int](newPlanStepTasks.length)
       newPlanStepParameters = new Array[Array[Int]](numberOfPlanStepsInNewPlan)
-      newPlanStepParentInDecompositionTree = new Array[Int](numberOfPlanStepsInNewPlan)
-      newPlanStepIsInstanceOfSubPlanPlanStep = new Array[Int](numberOfPlanStepsInNewPlan)
+
+      if (planStepDecomposedByMethod != null) {
+        newPlanStepParentInDecompositionTree = new Array[Int](numberOfPlanStepsInNewPlan)
+        newPlanStepIsInstanceOfSubPlanPlanStep = new Array[Int](numberOfPlanStepsInNewPlan)
+        newPSDepths = new Array[Int](newPlanStepTasks.length)
+      }
 
       // 1. new plan steps and the init -> ps -> goal orderings
       var oldPS = 0
       while (oldPS < firstFreePlanStepID) {
         newPlanStepTasks(oldPS) = planStepTasks(oldPS)
         newPlanStepParameters(oldPS) = planStepParameters(oldPS)
-        newPlanStepDecomposedByMethod(oldPS) = planStepDecomposedByMethod(oldPS)
-        newPlanStepParentInDecompositionTree(oldPS) = planStepParentInDecompositionTree(oldPS)
-        newPlanStepIsInstanceOfSubPlanPlanStep(oldPS) = planStepIsInstanceOfSubPlanPlanStep(oldPS)
+        if (newPlanStepDecomposedByMethod != null) {
+          newPlanStepParentInDecompositionTree(oldPS) = planStepParentInDecompositionTree(oldPS)
+          newPlanStepIsInstanceOfSubPlanPlanStep(oldPS) = planStepIsInstanceOfSubPlanPlanStep(oldPS)
+        }
         oldPS += 1
       }
 
@@ -370,9 +385,12 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
         val newPSIndex = firstFreePlanStepID + newPS
         newPlanStepTasks(newPSIndex) = modification.addedPlanSteps(newPS)._1
         newPlanStepParameters(newPSIndex) = modification.addedPlanSteps(newPS)._2
-        newPlanStepParentInDecompositionTree(newPSIndex) = modification.addedPlanSteps(newPS)._4
-        newPlanStepIsInstanceOfSubPlanPlanStep(newPSIndex) = modification.addedPlanSteps(newPS)._5
         newPlanStepSupportedPreconditions(newPSIndex) = mutable.BitSet()
+
+        if (newPlanStepDecomposedByMethod != null) {
+          newPlanStepParentInDecompositionTree(newPSIndex) = modification.addedPlanSteps(newPS)._4
+          newPlanStepIsInstanceOfSubPlanPlanStep(newPSIndex) = modification.addedPlanSteps(newPS)._5
+        }
 
         // get the task schema
         val numberOfPreconditions = domain.tasks(newPlanStepTasks(newPSIndex)).precondition.length
@@ -438,16 +456,21 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
       }
 
 
-      // 6. depth information
-      var i = 0
-      while (i < newPlanStepTasks.length) {
-        if (i < planStepTasks.length) newPSDepths(i) = depthPerPlanStep(i)
-        else newPSDepths(i) = depth + 1
-        i += 1
+
+      if (newPlanStepDecomposedByMethod != null) {
+        // 6. depth information
+        var i = 0
+        while (i < newPlanStepTasks.length) {
+          if (i < planStepTasks.length) newPSDepths(i) = depthPerPlanStep(i)
+          else newPSDepths(i) = depth + 1
+          i += 1
+        }
       }
     }
 
-    if (!EfficientPlan.useIncrementalConstruction || modification.decomposedPlanStepsByMethod.length != 0 || modification.addedPlanSteps.length != 0) {
+    if ((!EfficientPlan.useIncrementalConstruction || modification.decomposedPlanStepsByMethod.length != 0 || modification.addedPlanSteps.length != 0)
+      && newPlanStepDecomposedByMethod != null) {
+
       newPlanStepDecomposedByMethod = new Array[Int](numberOfPlanStepsInNewPlan)
 
       var oldPS = 0
@@ -473,39 +496,42 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
 
     }
 
+    var newCausalLinks = causalLinks
 
-    // 2. new causal links
-    val newCausalLinks = new Array[EfficientCausalLink](causalLinks.length + modification.addedCausalLinks.length)
-    causalLinkIndex = 0
-    while (causalLinkIndex < newCausalLinks.length) {
-      if (causalLinkIndex < causalLinks.length)
-        newCausalLinks(causalLinkIndex) = causalLinks(causalLinkIndex)
-      else {
-        // this is a new causal link
-        newCausalLinks(causalLinkIndex) = modification.addedCausalLinks(causalLinkIndex - causalLinks.length)
-        // closes an open precondition
-        newPlanStepSupportedPreconditions(newCausalLinks(causalLinkIndex).consumer) add newCausalLinks(causalLinkIndex).conditionIndexOfConsumer
+    if (modification.addedCausalLinks.nonEmpty) {
+      // 2. new causal links
+      newCausalLinks = new Array[EfficientCausalLink](causalLinks.length + modification.addedCausalLinks.length)
+      causalLinkIndex = 0
+      while (causalLinkIndex < newCausalLinks.length) {
+        if (causalLinkIndex < causalLinks.length)
+          newCausalLinks(causalLinkIndex) = causalLinks(causalLinkIndex)
+        else {
+          // this is a new causal link
+          newCausalLinks(causalLinkIndex) = modification.addedCausalLinks(causalLinkIndex - causalLinks.length)
+          // closes an open precondition
+          newPlanStepSupportedPreconditions(newCausalLinks(causalLinkIndex).consumer) add newCausalLinks(causalLinkIndex).conditionIndexOfConsumer
 
-        val producer = domain.tasks(newPlanStepTasks(newCausalLinks(causalLinkIndex).producer))
-        val producerLiteral = producer.effect(newCausalLinks(causalLinkIndex).conditionIndexOfProducer)
-        val linkpredicate = producerLiteral.predicate
-        val linkIsPositive = producerLiteral.isPositive
+          val producer = domain.tasks(newPlanStepTasks(newCausalLinks(causalLinkIndex).producer))
+          val producerLiteral = producer.effect(newCausalLinks(causalLinkIndex).conditionIndexOfProducer)
+          val linkpredicate = producerLiteral.predicate
+          val linkIsPositive = producerLiteral.isPositive
 
-        // iterate over all actions and check whether they might threat us
-        var planStep = 2
-        while (planStep < numberOfPlanStepsInNewPlan) {
-          if (planStep >= numberOfAllPlanSteps || isPlanStepPresentInPlan(planStep)) {
-            val possibleEffects = domain.taskToEffectPredicates(newPlanStepTasks(planStep))
-            // positive link is threated by negative effect
-            val opposedEffect = if (linkIsPositive) possibleEffects._2 else possibleEffects._1
+          // iterate over all actions and check whether they might threat us
+          var planStep = 2
+          while (planStep < numberOfPlanStepsInNewPlan) {
+            if (planStep >= numberOfAllPlanSteps || isPlanStepPresentInPlan(planStep)) {
+              val possibleEffects = domain.taskToEffectPredicates(newPlanStepTasks(planStep))
+              // positive link is threated by negative effect
+              val opposedEffect = if (linkIsPositive) possibleEffects._2 else possibleEffects._1
 
-            if (opposedEffect contains linkpredicate)
-              newCausalLinksPotentialThreater(causalLinkIndex).add(planStep)
+              if (opposedEffect contains linkpredicate)
+                newCausalLinksPotentialThreater(causalLinkIndex).add(planStep)
+            }
+            planStep += 1
           }
-          planStep += 1
         }
+        causalLinkIndex += 1
       }
-      causalLinkIndex += 1
     }
 
     // 3. variable constraints
@@ -523,12 +549,14 @@ case class EfficientPlan(domain: EfficientDomain, planStepTasks: Array[Int], pla
     }
 
 
-    val newCLDepths = new Array[Int](newCausalLinks.length)
-    var i = 0
-    while (i < newCausalLinks.length) {
-      if (i < causalLinks.length) newCLDepths(i) = depthPerCausalLink(i)
-      else newCLDepths(i) = depth + 1
-      i += 1
+    val newCLDepths = if (depthPerCausalLink == null) null else new Array[Int](newCausalLinks.length)
+    if (depthPerCausalLink != null) {
+      var i = 0
+      while (i < newCausalLinks.length) {
+        if (i < causalLinks.length) newCLDepths(i) = depthPerCausalLink(i)
+        else newCLDepths(i) = depth + 1
+        i += 1
+      }
     }
 
 

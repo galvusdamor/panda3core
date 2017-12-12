@@ -171,9 +171,17 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       case _                                                                      => noSupport(UNSUPPORTEDPROBLEMTYPE)
     }
 
+    // don't generate HTN arrays if POCL planning, they just consume memory
+    val isPOCLPlanning = symbolicDomain.abstractTasks.isEmpty
 
-    EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, planStepDecomposedBy.toArray, planStepParentInDecompositionTree.toArray, planStepIsInstanceOfSubPlanPlanStep
-      .toArray, supportedPreconditions.toArray, potentialPreconditionSupporter.toArray, potentialThreater.toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)()
+    if (!isPOCLPlanning) {
+      EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, planStepDecomposedBy.toArray, planStepParentInDecompositionTree.toArray, planStepIsInstanceOfSubPlanPlanStep
+        .toArray, supportedPreconditions.toArray, potentialPreconditionSupporter.toArray, potentialThreater.toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)()
+    } else {
+      EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, null, null, null,
+                    supportedPreconditions.toArray, potentialPreconditionSupporter.toArray, potentialThreater.toArray, efficientCSP, ordering, causalLinks.toArray,
+                    problemConfiguration)(null, null)
+    }
   }
 
   private def newVariableFormEfficient(variableIndex: Int, sortIndex: Int): Variable = Variable(variableIndex, "variable_" + variableIndex, domainSorts.back(sortIndex))

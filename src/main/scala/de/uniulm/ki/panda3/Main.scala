@@ -142,8 +142,6 @@ object Main {
                  }
 
   def main(args: Array[String]) {
-
-
     //PlanningConfiguration(true,true,null,null,SATSearch(None,null,0).modifyOnOptionString("-planlength")(Some("2")),null)
 
     println("This is PANDA3\nBelieve us: It is great!")
