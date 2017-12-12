@@ -6,7 +6,7 @@ import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.parser.Parser
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.translation.{OldPDDLConverter, formatConverterRonToOurs}
+import de.uniulm.ki.panda3.translation.TypeConverter
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -22,8 +22,10 @@ object OldPDDLParser extends Parser {
     val translatedDomain = File.createTempFile("domain", ".pddl")
     val translatedProblem = File.createTempFile("problem", ".pddl")
 
-    OldPDDLConverter.processDomain(translatedDomain.getAbsolutePath, domainString)
-    OldPDDLConverter.processProblem(translatedProblem.getAbsolutePath, problemString)
+    //OldPDDLConverter.processDomain(translatedDomain.getAbsolutePath, domainString)
+    //OldPDDLConverter.processProblem(translatedProblem.getAbsolutePath, problemString)
+
+    TypeConverter.`type`(domainString, problemString, translatedDomain.getAbsolutePath, translatedProblem.getAbsolutePath)
 
     val dom = scala.io.Source.fromFile(translatedDomain.getAbsolutePath).mkString
     val prob = scala.io.Source.fromFile(translatedProblem.getAbsolutePath).mkString

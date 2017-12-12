@@ -15,27 +15,28 @@ import java.util.*;
  */
 public class TypeConverter {
 
-    public static void main(String[] args) throws Exception {
 
-        String inFile = "/home/mick/Projects/panda3/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC1/gripper/domain/domain.pddl";
-        //String inFile = "/home/mick/Projects/panda3/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Depots/domain/Depots.pddl";
-        String outFile = "/home/mick/Projects/panda3/domain.pddl";
-        String pInfile = "/home/mick/Projects/panda3/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC1/gripper/problems/prob08.pddl";
-        //String pInfile = "/home/mick/Projects/panda3/src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC3/Depots/problems/pfile3";
-        String pOutFile = "/home/mick/Projects/panda3/problem.pddl";
-        type(inFile, pInfile, outFile, pOutFile);
-    }
-
-    public static void type(String domainInFile, String problemInFile, String domainOutputFile, String problemOutputFile) throws Exception {
-        String domain = readFile(domainInFile);
-        String problem = readFile(problemInFile);
+    public static void type(String domain, String problem, String domainOutputFile, String problemOutputFile) throws Exception {
+        domain = domain.toLowerCase();
+        problem = problem.toLowerCase();
         if (!domain.contains("(:types ")) {
+            System.out.print(" typing domain ...");
             processDomain(domain, domainOutputFile);
+            System.out.print(" typing problem ...");
             processProblem(problem, problemOutputFile);
+            System.out.print(" done ...");
         } else {
             System.out.println("Copying files....");
-            Files.copy(Paths.get(domainInFile), Paths.get(domainOutputFile));
-            Files.copy(Paths.get(problemInFile), Paths.get(problemOutputFile));
+            FileWriter fw = new FileWriter(domainOutputFile);
+            BufferedWriter bw = new BufferedWriter(fw);
+            bw.write(domain.toLowerCase());
+            bw.close();
+
+
+            fw = new FileWriter(problemOutputFile);
+            bw = new BufferedWriter(fw);
+            bw.write(problem.toLowerCase());
+            bw.close();
         }
     }
 
@@ -79,7 +80,7 @@ public class TypeConverter {
             if (def.trim().startsWith("define")) {
                 bw.write(def + "\n");
                 bw.write("\t(:requirements :typing)\n");
-                bw.write("\t(:types object - object)\n");
+                bw.write("\t(:types object)\n");
             } else if (def.trim().startsWith("(:predicates")) {
                 bw.write("\t" + addType(def) + "\n");
             } else if (def.trim().startsWith("(:action")) {
@@ -146,18 +147,5 @@ public class TypeConverter {
             }
         }
         return plan;
-    }
-
-    @SuppressWarnings("Duplicates")
-    private static String readFile(String filename) throws Exception {
-        FileReader fr = new FileReader(filename);
-        BufferedReader br = new BufferedReader(fr);
-        StringBuilder sb = new StringBuilder();
-        while (br.ready()) {
-            sb.append(br.readLine() + "\n");
-        }
-        br.close();
-        fr.close();
-        return sb.toString();
     }
 }
