@@ -41,19 +41,22 @@ object Main {
                               config: PlanningConfiguration = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                                                     randomSeed = 42, timeLimit = None,
                                                                                     ParsingConfiguration(),
-                                                                                    PreprocessingConfiguration(compileNegativePreconditions = false,
+                                                                                    PreprocessingConfiguration(compileNegativePreconditions = true,
                                                                                                                compileUnitMethods = false,
                                                                                                                compileInitialPlan = false,
                                                                                                                convertToSASP = false,
                                                                                                                compileOrderInMethods = None,
-                                                                                                               splitIndependentParameters = false,
+                                                                                                               splitIndependentParameters = true,
                                                                                                                compileUselessAbstractTasks = false,
-                                                                                                               liftedReachability = false,
-                                                                                                               groundedReachability = None,
-                                                                                                               groundedTaskDecompositionGraph = None,
-                                                                                                               iterateReachabilityAnalysis = false,
-                                                                                                               groundDomain = false),
-                                                                                    NoSearch, PostprocessingConfiguration(Set()))) extends PrettyPrintable {
+                                                                                                               liftedReachability = true,
+                                                                                                               groundedReachability = Some(PlanningGraph),
+                                                                                                               groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                                                                               iterateReachabilityAnalysis = true,
+                                                                                                               groundDomain = true),
+                                                                                    PlanningConfiguration.defaultPlanSearchConfiguration,
+                                                                                    PostprocessingConfiguration(Set(SearchStatus, SearchResult,
+                                                                                                                    ProcessingTimings,
+                                                                                                                    SearchStatistics)))) extends PrettyPrintable {
 
     def processCommandLineArguments(args: Seq[String]): RunConfiguration = {
       // determine which arguments belong together

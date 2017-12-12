@@ -213,7 +213,7 @@ object FrontFlawFirst extends EfficientFlawSubsetSelector {
 
   private def getContainedTaskIndices(flaw: EfficientFlaw): Int = flaw match {
     case EfficientAbstractPlanStep(plan, ps)             => ps
-    case EfficientCausalThreat(plan, cl, threater, _, _) => -1
+    case EfficientCausalThreat(plan, cl, threater, _, _) => Math.min(Math.min(cl.producer, cl.consumer), threater)
     case EfficientOpenPrecondition(plan, ps, _)          => ps
     case EfficientUnboundVariable(_, _)                  => -1
   }

@@ -138,7 +138,7 @@ $
 Shows information about compilations steps.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-printAdditionalInfo" IS A SWITCH, NOT AN OPTION.
 
-Many of our heuristics base upon very basic language features, that is: a ground model in which primitive tasks have only positive preconditions. Also our decomposition methods to not have preconditions (as opposed to the SHOP2 model) or effects (yes, some hierarchical planning formalisms even allow effects of methods). We compile all these higher-level language features away. Activating this switch prints additional information about these compilations after each single compilation step.
+Many of our heuristics base upon very basic language features, that is: a ground model in which primitive tasks have only positive preconditions. Also our decomposition methods do not have preconditions (as opposed to the SHOP2 model) or effects (yes, some hierarchical planning formalisms even allow effects of methods). We compile all these higher-level language features away. Activating this switch prints additional information about these compilations after each single compilation step.
 $
 
 
@@ -149,7 +149,7 @@ $
 Suppresses information about compilations steps.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noAdditionalInfo" IS A SWITCH, NOT AN OPTION.
 
-Many of our heuristics base upon very basic language features, that is: a ground model in which primitive tasks have only positive preconditions. Also our decomposition methods to not have preconditions (as opposed to the SHOP2 model) or effects (yes, some hierarchical planning formalisms even allow effects of methods). We compile all these higher-level language features away. Activating this switch suppresses additional information about these compilations after each single compilation step.
+Many of our heuristics base upon very basic language features, that is: a ground model in which primitive tasks have only positive preconditions. Also our decomposition methods do not have preconditions (as opposed to the SHOP2 model) or effects (yes, some hierarchical planning formalisms even allow effects of methods). We compile all these higher-level language features away. Activating this switch suppresses additional information about these compilations after each single compilation step.
 $
 
 
