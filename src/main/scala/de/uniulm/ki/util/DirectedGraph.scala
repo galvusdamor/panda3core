@@ -2,6 +2,7 @@ package de.uniulm.ki.util
 
 import java.util
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.CascadingTables
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 
 import scala.collection.mutable
@@ -559,13 +560,15 @@ case class EdgeLabelledGraphSingle[T, L](arrayVertices: Array[T], labelledEdges:
   })
 }
 
-case class EdgeLabelledGraph[T, L, M, S, F, U, N, V](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M, startNodeID: S, usedFactIndexes: F, usedVariables: U, notYetUsedVariables: N, allVariables: V) extends DirectedGraphWithAlgorithms[T] {
+case class EdgeLabelledGraph[T, L, M, S, F, U, N, V, C](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M, startNodeID: S, usedFactIndexes: F, usedVariables: U, notYetUsedVariables: N, allVariables: V, cascadingTables: C) extends DirectedGraphWithAlgorithms[T] {
 
   //def startNode = startNodeID
 
   override def edges: Map[T, Seq[T]] = labelledEdges groupBy { _._1 } map { case (a, b) => a -> b.map(_._3).toSeq }
 
   override def vertices: Seq[T] = arrayVertices.toSeq
+
+  def stateToNodeIDMapping = cascadingTables
 
   /*var distancesFromStart: java.util.HashMap[Integer, Integer] = _;
 

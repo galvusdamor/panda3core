@@ -28,7 +28,7 @@ public final class SingleGraphMethods {
 
         //Tuple2<Integer[],Tuple3[]> graphData = getSingleNodesAndEdgesForVarIndex(p,varIndex);
 
-        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph = getSingleGraphForVarIndex(p,varIndex);
+        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph = getSingleGraphForVarIndex(p,varIndex);
 
         //EdgeLabelledGraphSingle<String,String> stringGraph = convertSingleGraphToStringGraph(p, graph);
 
@@ -38,7 +38,7 @@ public final class SingleGraphMethods {
     }
 
 
-    public static EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> getSingleGraphForVarIndex(SasPlusProblem p, int varIndex){
+    public static EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> getSingleGraphForVarIndex(SasPlusProblem p, int varIndex){
 
         int firstIndex = p.firstIndex[varIndex];
         int lastIndex = p.lastIndex[varIndex];
@@ -56,7 +56,7 @@ public final class SingleGraphMethods {
 
         HashMap<Integer, NodeValue> idMapping = new HashMap<>();
 
-        HashMap<Integer, Integer> tempReverseIDMapping = new HashMap<>();
+        HashMap<Integer, Integer> cascadingTable = new HashMap<>();
 
         int[] goals = p.gList;
 
@@ -78,7 +78,7 @@ public final class SingleGraphMethods {
             }
 
             NodeValue nodeValue = new ElementaryNode(factID, p, isGoalNode);
-            tempReverseIDMapping.put(factID, i);
+            cascadingTable.put(factID, i);
 
             nodeIDs[i] = i;
 
@@ -88,7 +88,7 @@ public final class SingleGraphMethods {
 
         }
 
-        Tuple3<Integer,Integer,Integer>[] multiEdges = Utils.convertEdgeArrayListToTuple3(convertSingleEdgesToMultiEdges(tempReverseIDMapping, edges));
+        Tuple3<Integer,Integer,Integer>[] multiEdges = Utils.convertEdgeArrayListToTuple3(convertSingleEdgesToMultiEdges(cascadingTable, edges));
 
         int startID = findStartNodeIDinSingleVarGraph(p, idMapping, containedIndexes);
 
@@ -107,8 +107,12 @@ public final class SingleGraphMethods {
         HashSet<Integer> notYetUsedVariables = new HashSet<>(allVariables);
         notYetUsedVariables.remove(varIndex);
 
+        CascadingTables cascadingTables = new CascadingTables();
 
-        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>> graph = new EdgeLabelledGraph<>(nodeIDs, multiEdges, idMapping, startID, usedFactIndexes, usedVariables, notYetUsedVariables, allVariables);
+        cascadingTables.addNewVariableTable(varIndex,cascadingTable);
+
+
+        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph = new EdgeLabelledGraph<>(nodeIDs, multiEdges, idMapping, startID, usedFactIndexes, usedVariables, notYetUsedVariables, allVariables, cascadingTables);
 
         return graph;
     }
