@@ -1,3 +1,10 @@
+% short documentation:
+% behind $ list the possible input values; be careful to mention
+% only one representative per set of equivalent keys. E.g., if a* and astar are
+% equivalent, only list one of them behind $ -- the synonyms are only defined
+% for the actual definition of the respective key.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 main
 ---- no text necessary
@@ -9,7 +16,7 @@ Parameters can be freely interleaved with the specification of a domain, problem
 \n
 PANDA3's general call syntax is as follows:
     java -jar panda3.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
-$ -help -printGeneralInfo -noGeneralInfo -printAdditionalInfo -noAdditionalInfo -timelimit -planSearch -noSearch -search -heuristic -seed -parser
+$ -help -noGeneralInfo -noDomainInfo -timelimit -planSearch -flaw -noSearch -search -heuristic -seed -parser -programPath -continueOnSolution
 
 
 
@@ -58,16 +65,29 @@ hddl
 Parser for our HDDL standard.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "hddl" IS A KEY, NOT AN OPTION.
 
-HDDL is a novel input language for hierarchical planning problems that we are currently developing. For questions regarding this standard, please contact Daniel Höller.
+HDDL is a novel input language for hierarchical planning problems that we are currently developing. It extends PDDL 2.1, language level 1 (at least most of its features), by language features for HTN and hybrid planning.
+
+For questions regarding this standard, please contact Daniel Höller.
 $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 hpddl
-Parser for our HPDDL standard.
+Parser for the HPDDL standard.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "hpddl" IS A KEY, NOT AN OPTION.
 
-HPDDL is a is a predecessor of our new language HPDDL. We stopped its development.
+HPDDL stands for hierarchical PDDL. It is a description for HTN planning problems, developed by Dr. Ron Alford. It is used, for instance, by the planner (that compiles HTN problems into a sequence of PDDL problems) that is described in the following paper:
+
+@InProceedings{Alford16BoundToPlan,
+  Title                    = {Bound to Plan: Exploiting Classical Heuristics via Automatic Translations of Tail-Recursive HTN Problems},
+  Author                   = {Alford, Ron and Behnke, Gregor and H{\"o}ller, Daniel and Bercher, Pascal and Biundo, Susanne and Aha, David},
+  Booktitle                = {Proceedings of the 26th International Conference on Automated Planning and Scheduling ({ICAPS} 2016)},
+  Year                     = {2016},
+  Pages                    = {20--28},
+  Publisher                = {{AAAI} Press}
+}
+
+Note, however, that this description language is not part of the paper. The planner that is uses is, however, openly available on http://github.com/ronwalf/HTN-Translation
 $
 
 
@@ -110,16 +130,6 @@ $
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--printGeneralInfo
-Shows additional information during planning.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-printGeneralInfo" IS A SWITCH, NOT AN OPTION.
-
-When using this command, the planner will show -- during planning -- what it is currently doing, such as constructing the planning graph, etc.
-$
-
-
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -127,30 +137,39 @@ $
 Suppress additional information during planning.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noGeneralInfo" IS A SWITCH, NOT AN OPTION.
 
-When using this command, the planner will suppress additional information that is otherwise shown during planning. This information explains what the planner is currently doing, such as, for example, constructing the planning graph.
+By default, the planner will show -- during planning -- what they are currently doing, such as constructing the planning graph, etc.
+
+When using this command, the planner will suppress this information during planning.
 $
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--printAdditionalInfo
-Shows information about compilations steps.
+-continueOnSolution
+Don't stop planning after a solution has been found.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-continueOnSolution" IS A SWITCH, NOT AN OPTION.
+
+By default, the standard PANDA3 planner will stop after some solution has been generated. Using this option will cause the planner to continue search and finding additional solutions until the time or space limit is exceeded.
+
+This feature has never been tested sufficiently and is very likely buggy. That is, please do not use it for scientific comparisons.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noDomainInfo
+Suppressed information about the domain.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-printAdditionalInfo" IS A SWITCH, NOT AN OPTION.
 
-Many of our heuristics base upon very basic language features, that is: a ground model in which primitive tasks have only positive preconditions. Also our decomposition methods do not have preconditions (as opposed to the SHOP2 model) or effects (yes, some hierarchical planning formalisms even allow effects of methods). We compile all these higher-level language features away. Activating this switch prints additional information about these compilations after each single compilation step.
+By default, the planner gives statistical information about the domain, for example the number of tasks, primitive tasks, abstract tasks, decomposition methods, predicates, sorts, and constants. Using this option supresses this information.
+
+Please note that this information is shown several times: Many of our heuristics base upon very basic language features, that is: a ground model in which primitive tasks have only positive preconditions. Also our decomposition methods do not have preconditions (as opposed to the SHOP2 model) or effects (yes, some hierarchical planning formalisms even allow effects of methods). We compile all these higher-level language features away and after each compilation step the domain information is printed (if not supressed).
 $
 
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--noAdditionalInfo
-Suppresses information about compilations steps.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noAdditionalInfo" IS A SWITCH, NOT AN OPTION.
-
-Many of our heuristics base upon very basic language features, that is: a ground model in which primitive tasks have only positive preconditions. Also our decomposition methods do not have preconditions (as opposed to the SHOP2 model) or effects (yes, some hierarchical planning formalisms even allow effects of methods). We compile all these higher-level language features away. Activating this switch suppresses additional information about these compilations after each single compilation step.
-$
 
 
 
@@ -180,7 +199,7 @@ $
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -noSearch
 Terminate after the preprocessing.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-printGeneralInfo" IS A SWITCH, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noSearch" IS A SWITCH, NOT AN OPTION.
 
 This option is mainly for debugging purposes: choosing it will cause the planner to terminate as soon as it finished all preprocessing steps, i.e., right before it would initiate the search.
 $
@@ -288,8 +307,8 @@ $
 Choose a flaw selection strategy.
 Available flaw selection strategies:
 
-Using "-flaw [KEY]" allows to select a flaw selection strategy for the plan space-based search algorithm.
-$ lcfr random
+Using "-flaw [KEYS]" allows to select a flaw selection strategy for the plan space-based search algorithm. Please note that you can select a sequence of flaw selection strategies for tie-breaking. To give a sequence, use a comma-separated list of flaw selection functions without white spaces.
+$ lcfr random-flaw
 
 
 
@@ -312,6 +331,13 @@ $
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+random-flaw
+Selects a random flaw.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "random-flaw" IS A KEY, NOT AN OPTION.
+
+This flaw selection function for the plan space-based PANDA3 algorithm selects a random flaw. It is initialized with the default random seed.
+$
 
 
 
@@ -323,7 +349,7 @@ Available heuristics:
 
 Using "-heuristic [KEY]" allows to select one of many heuristics that is used for the plan selection function. Please note that most of the heuristics are developed for the plan space-based search algorithm, but some of them also (or exclusively) work for the progression-based planner. We will be clear about this in the respective heuristics. Most heuristics have additional arguments, which can be passed on using the following syntax:
     -heuristic HEURISTIC_NAME(PARAM1=VALUE1,PARAM2=VALUE2)
-$ random #flaw #oc number-of-open-preconditions #ps number-of-plan-steps #abstract number-of-abstract-plan-steps grounding-mme-with-cycle-detection grounding-pr grounding-tdg-mac add add_r add-r add_reusing add-reusing relax
+$ random-heuristic #flaw #oc #ps #abstract add add-r relax tdg-m tdg-m-r tdg-m-lifted tdg-c tdg-c-r tdg-c-lifted
 
 
 
@@ -335,11 +361,217 @@ $ random #flaw #oc number-of-open-preconditions #ps number-of-plan-steps #abstra
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-random
+random-heuristic
 Returns random integers.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "random" IS A KEY, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "random-heuristic" IS A KEY, NOT AN OPTION.
 
 This plan selection heuristic for the plan space-based PANDA3 algorithm returns a random integer. It is initialized with the default random seed.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-m-lifted
+TDG-m for lifted planning.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-m-lifted" IS A KEY, NOT AN OPTION.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the lifted variant of the TDG-m heuristic (i.e., it gives admissible estimates of the number of modifications requiried to turn a current plan into a solution).
+
+This variant does not perform recomputation and it is suited for lifted planning, where the plan steps in search nodes may still contain variables. For this, given a plan step, it first builds all groundings for this step and retrieves all corresponding heuristic values from the TDG, of which it retrieves the minimum.
+
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+
+The heuristic is described in the following paper:
+
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+
+Please note that the empirical evaluation in the paper did not evaluate this lifted variant.
+
+Also if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-c-lifted
+TDG-c for lifted planning.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-c-lifted" IS A KEY, NOT AN OPTION.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the lifted variant of the TDG-c heuristic (i.e., it gives admissible estimates of the action costs* of the missing primitive actions to be inserted into a current plan in order to turn it into a solution).
+
+*Please note that at the moment, our planner does not yet have the capability to cope with action costs. For this reason, this heuristic assumes unit costs, i.e., it currently estimates the number of actions that have to be inserted.
+
+This variant does not perform recomputation and it is suited for lifted planning, where the plan steps in search nodes may still contain variables. For this, given a plan step, it first builds all groundings for this step and retrieves all corresponding heuristic values from the task decomposition graph (TDG), of which it retrieves the minimum.
+
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+
+The heuristic is described in the following paper:
+
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+
+Please note that the empirical evaluation in the paper did not evaluate this lifted variant.
+
+Also if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-m tdg-m-ground
+TDG-m for ground planning.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-m" IS A KEY, NOT AN OPTION.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the standard variant of the TDG-m heuristic (i.e., it gives admissible estimates of the number of modifications requiried to turn a current plan into a solution).
+
+This standard variant does *not* perform any recomputation of the underlying task decompostion graph (TDG) and it is suited for ground planning, where all plan steps in all search nodes are always ground.
+
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+
+The heuristic is described in the following paper:
+
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+
+This is one of the heuristics that we evaluated in the paper.
+
+However, if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-m-r tdg-m-ground-recompute
+TDG-m for ground planning.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-m-r" IS A KEY, NOT AN OPTION.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the recomputation variant of the TDG-c heuristic (i.e., it gives admissible estimates of the number of modifications requiried to turn a current plan into a solution), but it recomputes the underlying TDG after certain plan modifications.
+
+This variant is suited for ground planning, where all plan steps in all search nodes are always ground. In addition, it recomputes the underlying task decomposition graph (TDG) after a plan modification has been performed that could change this TDG, e.g. after each task decomposition (in case there have been more than one method available for it), for details, we refer to the paper (seel below).
+
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+
+The heuristic is described in the following paper:
+
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+
+This is one of the heuristics that we evaluated in the paper.
+
+However, if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-c tdg-c-ground
+TDG-c for ground planning.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-c" IS A KEY, NOT AN OPTION.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the standard variant of the TDG-c heuristic (i.e., it gives admissible estimates of the action costs* of the missing primitive actions to be inserted into a current plan in order to turn it into a solution).
+
+*Please note that at the moment, our planner does not yet have the capability to cope with action costs. For this reason, this heuristic assumes unit costs, i.e., it currently estimates the number of actions that have to be inserted.
+
+This standard variant does *not* perform any recomputation of the underlying task decompostion graph (TDG) and it is suited for ground planning, where all plan steps in all search nodes are always ground.
+
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+
+The heuristic is described in the following paper:
+
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+
+This is one of the heuristics that we evaluated in the paper.
+
+However, if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-c-r tdg-c-ground-recompute
+TDG-c for ground planning.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-c-r" IS A KEY, NOT AN OPTION.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the recomputation variant of the TDG-c heuristic (i.e., it gives admissible estimates of the action costs* of the missing primitive actions to be inserted into a current plan in order to turn it into a solution), but it recomputes the underlying TDG after certain plan modifications.
+
+*Please note that at the moment, our planner does not yet have the capability to cope with action costs. For this reason, this heuristic assumes unit costs, i.e., it currently estimates the number of actions that have to be inserted.
+
+This variant is suited for ground planning, where all plan steps in all search nodes are always ground. In addition, it recomputes the underlying task decomposition graph (TDG) after a plan modification has been performed that could change this TDG, e.g. after each task decomposition (in case there have been more than one method available for it), for details, we refer to the paper (seel below).
+
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+
+The heuristic is described in the following paper:
+
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+
+This is one of the heuristics that we evaluated in the paper.
+
+However, if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
 $
 
 
@@ -407,41 +639,6 @@ $
 
 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-grounding-mme-with-cycle-detection
-Unklar, Gregor
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "grounding-mme-with-cycle-detection" IS A KEY, NOT AN OPTION.
-
-Unklar, Gregor. Hat mögliche Parameter never, reachability und causal-link; erwähnen!
-$
-
-
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-grounding-pr
-Unklar, Gregor
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "grounding-pr" IS A KEY, NOT AN OPTION.
-
-Unklar, Gregor.
-$
-
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-grounding-tdg-mac
-Unklar, Gregor
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "grounding-tdg-mac" IS A KEY, NOT AN OPTION.
-
-Unklar, Gregor.
-$
 
 
 
@@ -526,4 +723,17 @@ THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-seed" TAKES AN INTEGER, NO OPTIONS.
 Using "-seed [INT]" sets the initial random seed to the specified integer. Otherwise, the pre-defined value 42 is used.
 \n
 Random seeds are used to systematically evaluate the impact of randomness in our systems. When ever some choice is made arbitrary (for instance, if search nodes are still invariant after breaking ties according to the given tie-breaking strategy), then this choice further depends on the random seed so that different runs can be made producing potentially different outcomes -- while still having deterministic behavior given the same random seed.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-programPath
+For configuration of the SAT solvers.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-programPath" TAKES A STRING, NO OPTIONS.
+
+Some of our programs, e.g. PANDA-totSAT (not yet delivered) or our plan verifyer (not yet delivered) base upon a SAT solver. Using this options allows to specify the solver that is used as well as the position where it can be found on the local machine. This is the syntax:
+
+-programPath [SOLVER=PATH], where PATH is the solver file (inlcuding its absolute path) and SOLVER is the description of this solver, which is one of the following: minisat, cryptominisat, riss6, and mapleCOMSPS.
 $
