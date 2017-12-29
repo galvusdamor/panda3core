@@ -16,7 +16,7 @@ PANDA3's general call syntax is as follows:
     java -jar panda3.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
 \n
 If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
-$ -help -noGeneralInfo -noDomainInfo -dontPrintSearchInfo -timelimit -planSearch -flaw -noSearch -search -heuristic -seed -parser -continueOnSolution -noDomainCleanup -groundedReachability -noGroundedReachability -groundedTaskDecompositionGraph -programPath -satSolver -planToVerify -stripHybrid -liftedPlanning -systemConfig
+$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -groundedReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -programPath -satSolver -planToVerify -stripHybrid -liftedPlanning -systemConfig
 
 
 
@@ -144,9 +144,9 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--dontPrintSearchInfo
+-noSearchInfo
 Suppress additional information during planning.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-dontPrintSearchInfo" IS A SWITCH, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noSearchInfo" IS A SWITCH, NOT AN OPTION.
 
 By default, the planners will show -- during planning -- their current search process. This information includes, for example, the number of created nodes per second, the number of expanded search nodes, and the number of nodes in the queue.
 
@@ -187,13 +187,32 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--planSearch
-Uses the "traditional" PANDA, decompositional-based.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-planSearch" IS A SWITCH, NOT AN OPTION.
+-planningProcedure
+Choose the planning procedure.
+Available planning procedures:
 
 PANDA is more than just "one planning system". Apart from additional capabilities like repairing and explaining plans (not yet provided online), or validating plans, we also have two differently working planners (only one of them is provided online at the moment). While these planners share the same preprocessing, e.g., grounding, they are completely different in the way they solve problems.
 \n
-This planner configuration uses the "traditional" PANDA, but in its newest version, PANDA3, which performs search in the space of partial plans. We refer to its search procedure as hybrid planning, because it fuses hierarchical planning with partial order causal link (POCL) planning. The algorithm is a standard flaw-based POCL algorithm that can additionally cope with abstract tasks. It is explained in the following paper:
+At the moment, we only support the "traditional" PANDA, but in its newest version, PANDA3, which performs search in the space of partial plans. We refer to its search procedure as hybrid planning, because it fuses hierarchical planning with partial order causal link (POCL) planning. The algorithm is a standard flaw-based POCL algorithm that can additionally cope with abstract tasks. It is explained in the following paper:
+\n
+Hybrid Planning Heuristics Based on Task Decomposition Graphs
+by Pascal Bercher and Shawn Keen and Susanne Biundo
+published in SoCS 2014 by AAAI Press.
+\n
+Please note that this plan space-based planning algorithm requires a search algorithm (like BFS or A*) and a flaw selection function.
+\n
+We further want to note that this planner is able of solving a broad variety of problem classes, including HTN problems, TIHTN problems (HTN problems with task insertion), hybrid problems with or without task insertion (these problems extend HTN/TIHTN problems via preconditions and effects of abstract tasks and by causal links in the domain model's partial plans), classical problems, and POCL problems (which are like classical problems, but with an initial primitive partial plan). Please note that the property whether task insertion is allowed cannot be passed on to the planner as an option, but it needs to be specified in the domain or problem file, since this is not an algorithmic choice, but a property of the problem (class) that is solved.
+$ PANDA3
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+PANDA3
+The "traditional" plan space-based planner.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "PANDA3" IS A KEY, NOT AN OPTION.
+
+PANDA3 performs search in the space of partial plans. We refer to its search procedure as hybrid planning, because it fuses hierarchical planning with partial order causal link (POCL) planning. The algorithm is a standard flaw-based POCL algorithm that can additionally cope with abstract tasks. It is explained in the following paper:
 \n
 Hybrid Planning Heuristics Based on Task Decomposition Graphs
 by Pascal Bercher and Shawn Keen and Susanne Biundo
@@ -210,9 +229,9 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--noSearch
+-noProblemSolving
 Terminate after the preprocessing.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noSearch" IS A SWITCH, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noProblemSolving" IS A SWITCH, NOT AN OPTION.
 
 This option is mainly for debugging purposes: choosing it will cause the planner to terminate as soon as it finished all preprocessing steps, i.e., right before it would initiate the search.
 $
@@ -225,11 +244,11 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--search
-Choose the search strategy.
+-searchAlgorithm
+Choose the search algorithm.
 Available search strategies:
 
-Using "--search [KEY]" allows to select the search strategy given plan-based search ("traditional PANDA3") was selected.
+Using "-searchAlgorithm [KEY]" allows to select the search algorithm given plan-based search ("traditional PANDA3") was selected.
 $ bfs dfs greedy uniform-cost a* depth-a*
 
 
@@ -323,8 +342,7 @@ Available flaw selection strategies:
 Using "-flaw [KEYS]" allows to select a flaw selection strategy for the plan space-based search algorithm. Please note that you can select a sequence of flaw selection strategies for tie-breaking.
 
 To give a sequence, use a comma-separated list of flaw selection functions without white spaces. Specifying sequences of flaw selection functions makes sense to be more discriminative about the flaw to be actually selected, because the first flaw selection strategy might not restrict the set of candidate flaws to a single one, so adding a second (third, etc.) selection function reduces the available flaws in this set.
-$ lcfr front-flaw newest-flaw causal-threat oc abstract-task one-mod random-flaw
-
+$ lcfr front-flaw newest-flaw causal-threat random-flaw
 
 
 
@@ -388,44 +406,44 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-oc
-Selects an open (pre)condition causal threat flaw.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "oc" IS A KEY, NOT AN OPTION.
-
-This flaw selection function for the plan space-based PANDA3 algorithm selects an open (pre)condition flaw. Though this flaw selection function is extremely simple and probably the most canonical one for partial order causal link (POCL) planning; if you feel to cite a paper for it, you might use ("Heuristic 1") the following:
-\n
-@InProceedings{Nguyen01RevivingPOP,
-  Title                    = {Reviving Partial Order Planning},
-  Author                   = {XuanLong Nguyen and Subbarao Kambhampati},
-  Booktitle                = {Proceedings of the 17th International Joint Conference on Artificial Intelligence ({IJCAI} 2001)},
-  Year                     = {2001},
-  Pages                    = {459--466},
-  Publisher                = {Morgan Kaufmann},
-  Abstract                 = {This paper challenges the prevailing pessimism about the scalability of partial order planning (POP) algorithms by presenting several novel heuristic control techniques that make them competitive with the state of the art plan synthesis algorithms. Our key insight is that the techniques responsible for the efficiency of the currently successful planners–viz., distance based heuristics, reachability analysis and disjunctive constraint handling–can also be adapted to dramatically improve the efficiency of the POP algorithm. We implement our ideas in a variant of UCPOP called REPOP1. Our empirical results show that in addition to dominating UCPOP, REPOP also convincingly outperforms Graphplan in several “parallel” domains. The plans generated by REPOP also tend to be better than those generated by Graphplan and state search planners in terms of execution flexibility.}
-}
-$
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-abstract-task
-Selects an abstract task flaw.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "abstract-task" IS A KEY, NOT AN OPTION.
-
-This flaw selection function for the plan space-based PANDA3 algorithm selects an abstract task flaw.
-$
+%oc
+%Selects an open (pre)condition causal threat flaw.
+%THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "oc" IS A KEY, NOT AN OPTION.
+%
+%This flaw selection function for the plan space-based PANDA3 algorithm selects an open (pre)condition flaw. Though this flaw selection function is extremely simple and probably the most canonical one for partial order causal link (POCL) planning; if you feel to cite a paper for it, you might use ("Heuristic 1") the following:
+%\n
+%@InProceedings{Nguyen01RevivingPOP,
+%  Title                    = {Reviving Partial Order Planning},
+%  Author                   = {XuanLong Nguyen and Subbarao Kambhampati},
+%  Booktitle                = {Proceedings of the 17th International Joint Conference on Artificial Intelligence ({IJCAI} 2001)},
+%  Year                     = {2001},
+%  Pages                    = {459--466},
+%  Publisher                = {Morgan Kaufmann},
+%  Abstract                 = {This paper challenges the prevailing pessimism about the scalability of partial order planning (POP) algorithms by presenting several novel heuristic control techniques that make them competitive with the state of the art plan synthesis algorithms. Our key insight is that the techniques responsible for the efficiency of the currently successful planners–viz., distance based heuristics, reachability analysis and disjunctive constraint handling–can also be adapted to dramatically improve the efficiency of the POP algorithm. We implement our ideas in a variant of UCPOP called REPOP1. Our empirical results show that in addition to dominating UCPOP, REPOP also convincingly outperforms Graphplan in several “parallel” domains. The plans generated by REPOP also tend to be better than those generated by Graphplan and state search planners in terms of execution flexibility.}
+%}
+%$
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-one-mod
-Selects a flaw for which there is exactly one modification.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "one-mod" IS A KEY, NOT AN OPTION.
+%abstract-task
+%Selects an abstract task flaw.
+%THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "abstract-task" IS A KEY, NOT AN OPTION.
+%
+%This flaw selection function for the plan space-based PANDA3 algorithm selects an abstract task flaw.
+%$
 
-This flaw selection function for the plan space-based PANDA3 algorithm selects a flaw for which there exists exactly one modification. This strategy is thereby subsumed by LCFR; it is intended to be used in combination with other strategies for tie-breaking.
-$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%one-mod
+%Selects a flaw for which there is exactly one modification.
+%THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "one-mod" IS A KEY, NOT AN OPTION.
+%
+%This flaw selection function for the plan space-based PANDA3 algorithm selects a flaw for which there exists exactly one modification. This strategy is thereby subsumed by LCFR; it is intended to be used in combination with other strategies for tie-breaking.
+%$
 
 
 
@@ -574,7 +592,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tdg-m-r tdg-m-ground-recompute
-TDG-m for ground planning.
+TDG-m for ground planning with TDG recomputation.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-m-r" IS A KEY, NOT AN OPTION.
 
 This is a heuristic for the plan space-based PANDA3 algorithm. It is the recomputation variant of the TDG-c heuristic (i.e., it gives admissible estimates of the number of modifications requiried to turn a current plan into a solution), but it recomputes the underlying TDG after certain plan modifications.
@@ -643,7 +661,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 tdg-c-r tdg-c-ground-recompute
-TDG-c for ground planning.
+TDG-c for ground planning with TDG recomputation.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-c-r" IS A KEY, NOT AN OPTION.
 
 This is a heuristic for the plan space-based PANDA3 algorithm. It is the recomputation variant of the TDG-c heuristic (i.e., it gives admissible estimates of the action costs* of the missing primitive actions to be inserted into a current plan in order to turn it into a solution), but it recomputes the underlying TDG after certain plan modifications.
@@ -762,7 +780,7 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-add-r add-reusing add_r add_reusing
+add-r add-reusing
 This is the Add heuristic for POCL planning reusing actions.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "add-r" IS A KEY, NOT AN OPTION.
 
@@ -803,11 +821,21 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--timelimit
+-timeLimit
 Sets the time limit in seconds.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-timelimit" TAKES AN INTEGER, NO OPTIONS.
 
-Using "-timelimit [INT]" sets the time limit in seconds.
+Using "-timeLimit [INT]" sets the time limit in seconds.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-nodeLimit
+Sets the not limit in number of nodes.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-timelimit" TAKES AN INTEGER, NO OPTIONS.
+
+Using "-nodeLimit [INT]" sets the node limit, after which the search ends.
 $
 
 
@@ -867,19 +895,21 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--noGroundedReachability
+-noPrimitiveReachability
 Do not perform smart grounding.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noGroundedReachability" IS A SWITCH, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noPrimitiveReachability" IS A SWITCH, NOT AN OPTION.
 
-If this option is chosen, then the ground model is obtained by naively building all groundings -- without performing any reachability analysis.
+If you plan in a *ground* fashion (this is done by default) and this option is chosen, then the ground model is obtained by naively building all groundings -- without performing any reachability analysis (this is highly unrecommended, do not do this).
+
+If you plan in a *lifted* fashion (you had to explicitly choose so), then choosing this option prevents the grounding process altogether. (However, the cleanup option might still delete some of the unreachable actions if activated.)
 $
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--groundedTaskDecompositionGraph
+-hierarchicalReachability
 Use the task decomposition graph for grounding.
-Available options for -groundedTaskDecompositionGraph:
+Available options for -hierarchicalReachability:
 
 When ever a hierarchical problem is solved, we rely on the grounded task decomposition graph (TDG) in order to ground the model. The *result* of this process is always the same ground TDG, the tasks and methods of which are used as the basis for ground planning and heuristics.
 \n
@@ -900,7 +930,7 @@ The resulting TDG is described in the following paper:
 The process of *how* this ground TDG is built, however, has a strong influence on its performance in terms of runtime and maximal memory usage. We offer various ways how to construct it. See the respective help pages (using -help) for a description of the respective keys.
 
 Note that using the TDG for grounding is activated by default, *even* if lifted planning is chosen. In the latter case, the resulting ground TDG is used to eliminate certain lifted tasks and methods (a lifted task/method can be eliminated from the model if there is no reachable grounding). By default, we use the option "twoWay", as it is -- empirically -- the best-performing one on average.
-$
+$ topDown twoWay naive
 
 
 
@@ -958,9 +988,10 @@ $
 Do not perform TDG-based grounding.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noHierarchicalReachability" IS A SWITCH, NOT AN OPTION.
 
-@GREGOR no idea, what happens if this option is chosen. Wenn es konsistent zu nogroundedReachachability ist, dann sollten hier einfach ALLE Instanziierungen bebildet werden.
-$
+If you plan in a *ground* fashion (this is done by default) and this option is chosen, then the ground model is obtained by naively building all groundings -- without performing any reachability analysis (this is highly unrecommended, do not do this).
 
+If you plan in a *lifted* fashion (you had to explicitly choose so), then choosing this option prevents the TDG grounding process altogether. (However, the cleanup option might still delete some of the unreachable actions if activated.)
+$
 
 
 
