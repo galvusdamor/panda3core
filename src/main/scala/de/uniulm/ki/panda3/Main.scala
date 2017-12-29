@@ -74,8 +74,10 @@ object Main {
                 case NecessaryParameter                                 => (None, grouped :+ Right(command, nextArgument))
               } else (Some(nextArgument), grouped :+ Left(command))
 
-          case ((None, grouped), nextArgument) if !nextArgument.startsWith("-") => (None, grouped :+ Left(nextArgument))
-          case ((None, grouped), nextArgument) if nextArgument.startsWith("-")  => (Some(nextArgument), grouped)
+          case ((None, grouped), nextArgument) if !nextArgument.startsWith("-") =>
+            (None, grouped :+ Left(nextArgument))
+          case ((None, grouped), nextArgument) if nextArgument.startsWith("-")  =>
+            (Some(nextArgument), grouped)
         }) match {
         case (None, l)          => l
         case (Some(command), l) =>
@@ -111,8 +113,9 @@ object Main {
                   conf.copy(config = conf.config.modifyOnOptionString(key)._2(value))
                 else {
                   println("Option \"" + key + "\" unavailable in current circumstance")
-                  println(conf.config.modifyOnOptionString.keySet)
-                  println(conf.longInfo)
+                  println("Currently only the following options are available:")
+
+                  println(conf.config.modifyOnOptionString.keySet.toSeq.filter(helpDB.contains).sorted map { x => "\t" + x } mkString "\n")
                   System exit 1
                   conf
                 }
@@ -203,6 +206,12 @@ object Main {
     entries foreach { case (key, (_, _, _, _, children)) => children foreach { c =>
       assert(entryMap contains c, "No explanation found for key \"" + c + "\" occurring in key \"" + key + "\"")
     }
+    }
+
+    entries foreach {
+      case ("main", _)                => // it's ok
+      case (key, (_, _, alter, _, _)) =>
+      //assert(alter :+ key exists { k => entries exists(_._2._5 contains k)}, "Key \"" + key + "\" does not occur as part of the explanation tree.")
     }
 
     entryMap

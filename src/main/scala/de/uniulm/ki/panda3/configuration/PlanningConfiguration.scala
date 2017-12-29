@@ -422,15 +422,26 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         })
       case SATPlanVerification(solverType, planToVerity) =>
         assert(domainAndPlan._1.isGround)
-        val taskSequenceToVerify: Seq[Task] = planToVerity.split(";") map { t => domainAndPlan._1.tasks.find(_.name == t).get }
+        val planStepStrings: Seq[String] = planToVerity.split(";")
+        // check whether the given plan steps are contained in the grounding
+        val notContainedPSs = planStepStrings filterNot { t => domainAndPlan._1.tasks.exists(_.name == t) }
 
-        (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val runner = VerifyRunner(domainAndPlan._1, domainAndPlan._2, solverType)
+        if (notContainedPSs.nonEmpty) {
+          println("Plan to verify contains actions " + notContainedPSs.mkString(", ") + " which are not delete-relaxed reachable.")
+          (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+            informationCapsule.set(Information.PLAN_VERIFIED, "false")
+            runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
+          })
+        } else {
 
-          val (isSolution, runCompleted) = runner.runWithTimeLimit(remainingTime, taskSequenceToVerify, 0, includeGoal = true, None, timeCapsule, informationCapsule)
+          val taskSequenceToVerify: Seq[Task] = planStepStrings map { t => domainAndPlan._1.tasks.find(_.name == t).get }
 
-          informationCapsule.set(Information.PLAN_VERIFIED, isSolution.toString)
+          (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+            val runner = VerifyRunner(domainAndPlan._1, domainAndPlan._2, solverType)
 
+            val (isSolution, runCompleted) = runner.runWithTimeLimit(remainingTime, taskSequenceToVerify, 0, includeGoal = true, None, timeCapsule, informationCapsule)
+
+            informationCapsule.set(Information.PLAN_VERIFIED, isSolution.toString)
           runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
         })
       case FAPESearch                                    =>
@@ -1294,15 +1305,22 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   protected def localModificationsByKey: Seq[(String, (ParameterMode, (Option[String]) => PlanningConfiguration.this.type))] =
     Seq(
+
+
          "-printGeneralInfo" -> (NoParameter, { l: Option[String] => this.copy(printGeneralInformation = true).asInstanceOf[this.type] }),
          "-noGeneralInfo" -> (NoParameter, { l: Option[String] => this.copy(printGeneralInformation = false).asInstanceOf[this.type] }),
-         "-printAdditionalInfo" -> (NoParameter, { l: Option[String] => this.copy(printAdditionalData = true).asInstanceOf[this.type] }),
-         "-noAdditionalInfo" -> (NoParameter, { l: Option[String] => this.copy(printAdditionalData = false).asInstanceOf[this.type] }),
+         "-printDomainInfo" -> (NoParameter, { l: Option[String] => this.copy(printAdditionalData = true).asInstanceOf[this.type] }),
+         "-noDomainInfo" -> (NoParameter, { l: Option[String] => this.copy(printAdditionalData = false).asInstanceOf[this.type] }),
 
-         "-noSearch" -> (NoParameter, { l: Option[String] => this.copy(searchConfiguration = NoSearch).asInstanceOf[this.type] }),
-         "-planSearch" -> (NoParameter, { l: Option[String] => this.copy(searchConfiguration = defaultPlanSearchConfiguration).asInstanceOf[this.type] }),
-         "-progression" -> (NoParameter, { l: Option[String] => this.copy(searchConfiguration = defaultProgressionConfiguration).asInstanceOf[this.type] }),
-         "-SAT" -> (NoParameter, { l: Option[String] => this.copy(searchConfiguration = defaultSATConfiguration).asInstanceOf[this.type] }),
+         "-noProblemSolving" -> (NoParameter, { l: Option[String] => this.copy(searchConfiguration = NoSearch).asInstanceOf[this.type] }),
+         "-planningProcedure" -> (NoParameter, { l: Option[String] =>
+           l.get.toLowerCase match {
+             case "panda3" => this.copy(searchConfiguration = defaultPlanSearchConfiguration).asInstanceOf[this.type]
+               // TODO: give parameters
+             //case "progression" => this.copy(searchConfiguration = default).asInstanceOf[this.type]
+             //case "sat" => this.copy(searchConfiguration = defaultPlanSearchConfiguration).asInstanceOf[this.type]
+           }
+         }),
 
          "-seed" -> (NecessaryParameter, { l: Option[String] => this.copy(randomSeed = l.get.toInt).asInstanceOf[this.type] }),
          "-timelimit" -> (NecessaryParameter, { l: Option[String] => this.copy(timeLimit = Some(l.get.toInt)).asInstanceOf[this.type] }),
@@ -1548,9 +1566,9 @@ case class PreprocessingConfiguration(
          }),
          "-planningGraph" -> (NoParameter, { p: Option[String] => this.copy(groundedReachability = Some(PlanningGraph)).asInstanceOf[this.type] }),
          "-planningGraphWithMutexes" -> (NoParameter, { p: Option[String] => this.copy(groundedReachability = Some(PlanningGraphWithMutexes)).asInstanceOf[this.type] }),
-         "-noGroundedReachability" -> (NoParameter, { p: Option[String] => this.copy(groundedReachability = None).asInstanceOf[this.type] }),
+         "-noPrimitiveReachability" -> (NoParameter, { p: Option[String] => this.copy(groundedReachability = None).asInstanceOf[this.type] }),
 
-         "-groundedTaskDecompositionGraph" -> (NecessaryParameter, { p: Option[String] =>
+         "-hierarchicalReachability" -> (NecessaryParameter, { p: Option[String] =>
            assert(p.isDefined)
            val mode = p.get match {
              case "topDown" => TopDownTDG
@@ -1670,17 +1688,18 @@ object SearchHeuristic {
       case "tdg-c-lifted"                       => TDGMinimumAction()
       // tdg heurisitcs which ground once
       case "mme-with-cycle-detection" => LiftedTDGMinimumModificationWithCycleDetection(mode = RecomputationMode.parse(hParameterMap.getOrElse("recompute", "never")))
-      case "tdg-m-ground" | "tdg-m" |
-           "tdg-m-ignore-parameters"  => LiftedTDGPreconditionRelaxation(mode = RecomputationMode.parse(hParameterMap.getOrElse("recompute", "never")))
       case "tdg-minimum-add"          => LiftedTDGMinimumADD(mode = RecomputationMode.parse(hParameterMap.getOrElse("recompute", "never")))
-      case "tdg-c" | "tdg-c-ground" |
-           "tdg-c-ignore-parameters"  => LiftedTDGMinimumAction(mode = RecomputationMode.parse(hParameterMap.getOrElse("recompute", "never")))
+      // IJCAI 2016 heuristics
+      case "tdg-m" | "tdg-m-ground" | "tdg-m-ignore-parameters" => LiftedTDGPreconditionRelaxation(mode = NeverRecompute)
+      case "tdg-c" | "tdg-c-ground" | "tdg-c-ignore-parameters" => LiftedTDGMinimumAction(mode = NeverRecompute)
+      case "tdg-m-r" | "tdg-m-ground-recompute"                 => LiftedTDGPreconditionRelaxation(mode = ReachabilityRecompute)
+      case "tdg-c-r" | "tdg-c-ground-recompute"                 => LiftedTDGMinimumAction(mode = ReachabilityRecompute)
       // this heuristic only exists for evaluation purposes
       case "tdg-mac-compare" | "mac-compare" => LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = false)
       case "tdg-pr-compare" | "pr-compare"   => LiftedTDGMinimumActionCompareToWithoutRecompute(usePR = true)
       // POCL heuristics
       case "add"                                             => ADD
-      case "add_r" | "add-r" | "add_reusing" | "add-reusing" => ADDReusing
+      case "add-r" | "add-reusing" => ADDReusing
       case "relax"                                           => Relax
 
       // pandaPRO
@@ -1817,12 +1836,12 @@ object SearchFlawSelector {
   def parse(text: String): SearchFlawSelector = {
     val selectorSequence = ArgumentListParser.parse(text, { case (hName, hParameterMap) =>
       hName.toLowerCase match {
-        case "lcfr"                => LCFR
-        case "umcp" | "umcp-f"     => UMCPFlaw
-        case "random-flaw"         => RandomFlaw
-        case "front-flaw"          => FrontFlaw
-        case "newest-flaw"         => NewestFlaw
-        case "causal-threat-first" => CausalThreat
+        case "lcfr"                                  => LCFR
+        case "umcp" | "umcp-f"                       => UMCPFlaw
+        case "random-flaw"                           => RandomFlaw
+        case "front-flaw"                            => FrontFlaw
+        case "newest-flaw"                           => NewestFlaw
+        case "causal-threat" | "causal-threat-first" => CausalThreat
       }
     })
 
@@ -1872,6 +1891,8 @@ case class PlanBasedSearch(
 
   override protected def localModifications: Seq[(String, (ParameterMode, (Option[String]) => PlanBasedSearch.this.type))] =
     Seq(
+         "-nodeLimit" -> (NecessaryParameter, { p: Option[String] => this.copy(nodeLimit = Some(p.get.toInt)).asInstanceOf[this.type] }),
+
          "-efficientSearch" -> (NoParameter, { p: Option[String] => this.copy(efficientSearch = true).asInstanceOf[this.type] }),
          "-symbolicSearch" -> (NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(efficientSearch = false).asInstanceOf[this.type] }),
 
@@ -1879,9 +1900,9 @@ case class PlanBasedSearch(
          "-stopAtSoltuion" -> (NoParameter, { p: Option[String] => assert(p.isEmpty); this.copy(continueOnSolution = false).asInstanceOf[this.type] }),
 
          "-printSearchInfo" -> (NoParameter, { p: Option[String] => this.copy(printSearchInfo = true).asInstanceOf[this.type] }),
-         "-dontPrintSearchInfo" -> (NoParameter, { p: Option[String] => this.copy(printSearchInfo = false).asInstanceOf[this.type] }),
+         "-noSearchInfo" -> (NoParameter, { p: Option[String] => this.copy(printSearchInfo = false).asInstanceOf[this.type] }),
 
-         "-search" -> (NecessaryParameter, { algo: Option[String] => this.copy(searchAlgorithm = SearchAlgorithmType.parse(algo.get)).asInstanceOf[this.type] }),
+         "-searchAlgorithm" -> (NecessaryParameter, { algo: Option[String] => this.copy(searchAlgorithm = SearchAlgorithmType.parse(algo.get)).asInstanceOf[this.type] }),
 
          "-heuristic" -> (NecessaryParameter, { h: Option[String] => this.copy(heuristic = SearchHeuristic.parse(h.get)).asInstanceOf[this.type] }),
          "-h" -> (NecessaryParameter, { h: Option[String] => this.copy(heuristic = SearchHeuristic.parse(h.get)).asInstanceOf[this.type] }),
