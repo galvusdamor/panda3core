@@ -8,17 +8,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 main
 ---- no text necessary
-Available options for PANDA3:
+Available options for PANDA:
 
-To run PANDA3, you have to specify at least a domain and a problem file.
-For most parameters, their order does not matter.
-Parameters can be freely interleaved with the specification of a domain, problem, and output file.
+To run PANDA, you have to specify at least a domain and a problem file. For most parameters, their order does not matter. Parameters can be freely interleaved with the specification of a domain, problem, and output file.
 \n
 PANDA3's general call syntax is as follows:
     java -jar panda3.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
+\n
+If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
 $ -help -noGeneralInfo -noDomainInfo -dontPrintSearchInfo -timelimit -planSearch -flaw -noSearch -search -heuristic -seed -parser -continueOnSolution -noDomainCleanup -groundedReachability -noGroundedReachability -groundedTaskDecompositionGraph -programPath -satSolver -planToVerify -stripHybrid -liftedPlanning -systemConfig
-
-
 
 
 
@@ -998,11 +996,11 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-cryptominisat5
-Choose the SAT solver cryptominisat5.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "cryptominisat5" IS A KEY, NOT AN OPTION.
+cryptominisat
+Choose the SAT solver cryptominisat.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "cryptominisat" IS A KEY, NOT AN OPTION.
 
-Choose cryptominisat5 as SAT solver. Together with riss6 and mapleCOMSPS, it was one of the top performers at the SAT-Race 2016.
+Choose cryptominisat as SAT solver. Together with riss6 and mapleCOMSPS, it was one of the top performers at the SAT-Race 2016.
 \n
 \n
 Don't forget to specify the program path using "-programPath".
@@ -1032,7 +1030,7 @@ riss6
 Choose the SAT solver riss6.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "riss6" IS A KEY, NOT AN OPTION.
 
-Choose riss6 as SAT solver. Together with cryptominisat5 and mapleCOMSPS, it was one of the top performers at the SAT-Race 2016.
+Choose riss6 as SAT solver. Together with cryptominisat and mapleCOMSPS, it was one of the top performers at the SAT-Race 2016.
 \n
 Don't forget to specify the program path using "-programPath".
 $
@@ -1045,7 +1043,7 @@ mapleCOMSPS
 Choose the SAT solver mapleCOMSPS.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "mapleCOMSPS" IS A KEY, NOT AN OPTION.
 
-Choose mapleCOMSPS as SAT solver. Together with riss6 and cryptominisat5, it was one of the top performers at the SAT-Race 2016.
+Choose mapleCOMSPS as SAT solver. Together with riss6 and cryptominisat, it was one of the top performers at the SAT-Race 2016.
 \n
 Don't forget to specify the program path using "-programPath".
 $
@@ -1121,7 +1119,8 @@ Availabe pre-defined system configurations:
 Choose this option to run the system in a standard configuration which we authors deemed to be generally useful (e.g., because it is very efficient on average, because it simulates a system from the literature, or because it reproduces results from a specific paper).
 \n
 Please be aware that choosing *additional* options might contradict the options chosen here; options are *performed* in the order they are set, so specifying "-systemConfig CONF1 -optionX Y" will perfrom "optionX = Y" even the system configuration CONF1 will explicitly state the opposite. This is especially important when you want to reproduce results from scientific papers; then, you should not choose any further options.
-$ umcpBF umcpDF umcpH
+$ umcpBF umcpDF umcpH IJCAI-2017-BFS IJCAI-2017-DFS IJCAI-2017-uniform-cost IJCAI-2017-astar-TDG-c IJCAI-2017-astar-TDG-c-rec IJCAI-2017-astar-TDG-m IJCAI-2017-astar-TDG-m-rec IJCAI-2017-gastar-TDG-c IJCAI-2017-gastar-TDG-c-rec IJCAI-2017-gastar-TDG-m IJCAI-2017-gastar-TDG-m-rec IJCAI-2017-astar-add IJCAI-2017-astar-add-r IJCAI-2017-astar-relax IJCAI-2017-astar-oc IJCAI-2017-gastar-add IJCAI-2017-gastar-add-r IJCAI-2017-gastar-relax IJCAI-2017-gastar-oc verify
+
 
 
 
