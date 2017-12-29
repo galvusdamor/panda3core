@@ -208,6 +208,13 @@ object Main {
     }
     }
 
+    // all options must be existant
+    val internalKeys: Set[String] = RunConfiguration().config.modifyOnOptionString.keySet
+    entries filter { _._1.startsWith("-") } foreach {
+      case ("-help", _) => true
+      case (k, _)       => assert(internalKeys.contains(k), "PANDA's code does not know of key \"" + k + "\"")
+    }
+
     entries foreach {
       case ("main", _)                => // it's ok
       case (key, (_, _, alter, _, _)) =>
@@ -218,22 +225,41 @@ object Main {
   }
 
 
-  def getHelpTextFor(item: String): String = {
+  def getHelpTextFor(item: String): String = if (!helpDB.contains(item)) "No entry found for \"" + item + "\"" else {
     val (_, longText, _, optionsText, children) = helpDB(item)
 
     if (children.isEmpty) longText else {
-      val childrenTexts = children map { c =>
-        val alternates = helpDB(c)._3
-        val optionText = if (alternates.isEmpty) c else c + "|" + alternates.mkString("|")
-        optionText -> helpDB(c)._1
-      }
-      val maxChildLength = childrenTexts map { _._1.length } max
+      def generateChildrenLines(childrenToDisplay: Seq[String]): String = {
 
-      val childrenLines = childrenTexts map { case (i, t) =>
-        "\t" + i + (Range(i.length, maxChildLength + 4) map { _ => " " }).mkString("") + t
+        val childrenTexts = childrenToDisplay map { c =>
+          val alternates = helpDB(c)._3
+          val optionText = if (alternates.isEmpty) c else c + "|" + alternates.mkString("|")
+          optionText -> helpDB(c)._1
+        }
+        val maxChildLength = childrenTexts map { _._1.length } max
+        val childrenLines = childrenTexts map { case (i, t) => "\t" + i + (Range(i.length, maxChildLength + 4) map { _ => " " }).mkString("") + t }
+
+        childrenLines.mkString("\n")
       }
 
-      longText + "\n\n\n" + optionsText + "\n" + childrenLines.mkString("\n")
+      // if we are displaying main, we have to group our children.
+      longText + "\n\n\n" + (if (item == "main") {
+        //val confPSS = RunConfiguration().copy(config = RunConfiguration().config.copy(searchConfiguration = ))
+        //val confVerify = RunConfiguration().copy(config = RunConfiguration().config.copy(searchConfiguration = ))
+        val confList = (PlanningConfiguration.defaultPlanSearchConfiguration, "PANDA3") :: (PlanningConfiguration.defaultVerifyConfiguration, "PANDA verifier") :: Nil
+        val (allConfs, separateConfs) = children partition { k =>
+          confList.forall(_._1.modifyOnOptionString.contains(k)) || confList.forall(!_._1.modifyOnOptionString.contains(k))
+        }
+        val headerText = "Available options for "
+
+
+        headerText + "all PANDA components:\n" + generateChildrenLines(allConfs) + "\n" +
+          (confList map { case (conf, text) =>
+            val childrenToShow = separateConfs filter conf.modifyOnOptionString.contains
+            if (childrenToShow.isEmpty) "" else "\n" + headerText + text + ":\n" + generateChildrenLines(childrenToShow)
+          }).filter(_ != "").mkString("\n")
+
+      } else optionsText + "\n" + generateChildrenLines(children))
     }
   }
 

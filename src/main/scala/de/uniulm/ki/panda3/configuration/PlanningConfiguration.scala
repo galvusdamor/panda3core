@@ -1396,7 +1396,7 @@ object PlanningConfiguration {
   val defaultPlanSearchConfiguration = PlanBasedSearch(None, DFSType, Nil, Nil, LCFR)
   private val defaultProgressionConfiguration = ProgressionSearch(BFSType, None, PriorityQueueSearch.abstractTaskSelection.random)
   private val defaultSATConfiguration         = SATSearch(MINISAT, SingleSATRun())
-  private val defaultVerifyConfiguration      = SATPlanVerification(MINISAT, "")
+  val defaultVerifyConfiguration = SATPlanVerification(MINISAT, "")
 }
 
 /**
