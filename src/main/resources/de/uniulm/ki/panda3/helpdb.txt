@@ -386,6 +386,16 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+front-Mann
+Testeintrag
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "front-flaw" IS A KEY, NOT AN OPTION.
+
+lallala
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 front-flaw
 Restrict to flaws that are closest to the initial state.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "front-flaw" IS A KEY, NOT AN OPTION.
