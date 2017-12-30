@@ -12,18 +12,18 @@ Available options for PANDA:
 
 To run PANDA, you have to specify at least a domain and a problem file. For most parameters, their order does not matter. Parameters can be freely interleaved with the specification of a domain, problem, and output file.
 \n
-PANDA3's general call syntax is as follows:
-    java -jar panda3.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
+PANDA's general call syntax is as follows:
+    java -jar panda.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
 \n
 If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
-$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -groundedReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -programPath -satSolver -planToVerify -stripHybrid -liftedPlanning -systemConfig
+$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -groundedReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -liftedPlanning -systemConfig
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -help
-Explains how -help works.
+Lists the available keys for a given option and explains what a given option or key does.
 Available options for -help:
 
 Run "-help [OPTION or KEY]" to show help for the respective option or key.
@@ -354,9 +354,9 @@ $
 Choose a flaw selection strategy.
 Available flaw selection strategies:
 
-Using "-flaw [KEYS]" allows to select a flaw selection strategy for the plan space-based search algorithm. Please note that you can select a sequence of flaw selection strategies for tie-breaking.
+Using "-flaw [KEYS]" allows to select a flaw selection strategy for the plan space-based search algorithm PANDA3.
 \n
-To give a sequence, use a comma-separated list of flaw selection functions without white spaces. Specifying sequences of flaw selection functions makes sense to be more discriminative about the flaw to be actually selected, because the first flaw selection strategy might not restrict the set of candidate flaws to a single one, so adding a second (third, etc.) selection function reduces the available flaws in this set.
+Please note that you can select a sequence of flaw selection strategies for tie-breaking. To give such a sequence, use a comma-separated list of flaw selection functions without whitespaces. Specifying sequences of flaw selection functions makes sense to be more discriminative about the flaw to be actually selected, because the first flaw selection function might not restrict the set of candidate flaws to a single one, so adding a second (third, etc.) selection function reduces the available flaws in this set.
 $ lcfr front-flaw newest-flaw causal-threat random-flaw
 
 
@@ -364,7 +364,7 @@ $ lcfr front-flaw newest-flaw causal-threat random-flaw
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lcfr
-Least-Cost Flaw-Repair.
+Least-Cost Flaw-Repair (restrict to flaws with a minimal modification branching factor).
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "lcfr" IS A KEY, NOT AN OPTION.
 
 The flaw selection strategy lcfr, Least-Cost Flaw-Repair, for the plan space-based PANDA3 algorithm is both extremely simple and efficient: it always selects a flaw for which there are the least number of "repairs", i.e., plan modifications. That way, the branching factor of the explored search space is locally minimized, which shows empirically good results on average.
@@ -387,7 +387,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 front-flaw
-Selects a flaw that is close to init.
+Restrict to flaws that are closest to the initial state.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "front-flaw" IS A KEY, NOT AN OPTION.
 
 This flaw selection function for the plan space-based PANDA3 algorithm selects a flaw that is closest to the initial state (i.e., to the artificial action encoding that state). That is, only flaws are selected that do not possess a predecessor in a plan. For causal threat flaws, its "earliest" plan component determines its distance to init, i.e., the causal link's producer or the threatening plan step (which ever is closer to init).
@@ -398,7 +398,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 newest-flaw
-Selects a flaw that is introduced most recently.
+Restrict to flaws that were introduced most recently.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "newest-flaw" IS A KEY, NOT AN OPTION.
 
 This flaw selection function for the plan space-based PANDA3 algorithm selects a flaw that was introduced most recently.
@@ -410,7 +410,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 causal-threat
-Selects a causal threat flaw.
+Restrict to causal threat flaws.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "causal-threat" IS A KEY, NOT AN OPTION.
 
 This flaw selection function for the plan space-based PANDA3 algorithm selects a causal threat flaw.
@@ -422,7 +422,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %oc
-%Selects an open (pre)condition causal threat flaw.
+%Restrict to open (pre)condition flaws.
 %THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "oc" IS A KEY, NOT AN OPTION.
 %
 %This flaw selection function for the plan space-based PANDA3 algorithm selects an open (pre)condition flaw. Though this flaw selection function is extremely simple and probably the most canonical one for partial order causal link (POCL) planning; if you feel to cite a paper for it, you might use ("Heuristic 1") the following:
@@ -443,7 +443,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %abstract-task
-%Selects an abstract task flaw.
+%Restrict to abstract task flaws.
 %THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "abstract-task" IS A KEY, NOT AN OPTION.
 %
 %This flaw selection function for the plan space-based PANDA3 algorithm selects an abstract task flaw.
@@ -454,7 +454,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %one-mod
-%Selects a flaw for which there is exactly one modification.
+%Restrict to flaws for which there is exactly one modification.
 %THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "one-mod" IS A KEY, NOT AN OPTION.
 %
 %This flaw selection function for the plan space-based PANDA3 algorithm selects a flaw for which there exists exactly one modification. This strategy is thereby subsumed by LCFR; it is intended to be used in combination with other strategies for tie-breaking.
@@ -465,10 +465,10 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 random-flaw
-Selects a random flaw.
+*Selects* a random flaw.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "random-flaw" IS A KEY, NOT AN OPTION.
 
-This flaw selection function for the plan space-based PANDA3 algorithm selects a random flaw. It is initialized with the default random seed.
+This flaw selection function for the plan space-based PANDA3 algorithm selects a random flaw. It is initialized with the default random seed. Note that this flaw selection function is, in contrast to all others an actual *selection* function, i.e. it selects a specific flaw; no more tie-breaking is possible afterwards. This is done so that that the impact of randomness can be systematically evaluated.
 $
 
 
@@ -855,8 +855,8 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -timeLimit
-Sets the time limit in seconds.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-timelimit" TAKES AN INTEGER, NO OPTIONS.
+Terminate after a specified number of seconds.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-timeLimit" TAKES AN INTEGER, NO OPTIONS.
 
 Sets the time limit in seconds.
 $
@@ -865,8 +865,8 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -nodeLimit
-Sets the not limit in number of nodes.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-timelimit" TAKES AN INTEGER, NO OPTIONS.
+Terminate after a specified limit of search nodes.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-nodeLimit" TAKES AN INTEGER, NO OPTIONS.
 
 Sets the node limit in terms of number of nodes, after which the search ends.
 $
@@ -951,7 +951,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -noPrimitiveReachability
-Do not perform smart grounding.
+Do not rely on the planning graph for grounding the primitive tasks.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noPrimitiveReachability" IS A SWITCH, NOT AN OPTION.
 
 If you plan in a *ground* fashion (this is done by default) and this option is chosen, then the ground model is obtained by naively building all groundings -- without performing any reachability analysis (this is highly unrecommended, do not do this).
@@ -1040,7 +1040,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -noHierarchicalReachability
-Do not perform TDG-based grounding.
+Do not rely on the task decomposition graph for grounding the primitive and abstract tasks.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noHierarchicalReachability" IS A SWITCH, NOT AN OPTION.
 
 If you plan in a *ground* fashion (this is done by default) and this option is chosen, then the ground model is obtained by naively building all groundings -- without performing any reachability analysis (this is highly unrecommended, do not do this).
@@ -1054,7 +1054,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -satSolver
-Choose the SAT solver used for verification or HTN planning as SAT.
+Choose the SAT solver used for plan verification or for HTN planning as SAT (not yet delivered).
 Supported SAT solvers:
 
 Both the verification tool ("Is the given plan a solution to the problem?" -- see option "-planToVerify") as well as HTN planning as SAT, PANDA-totSAT  (currently not yet delivered), base upon an external SAT solver. The respective solver is chosen here.
@@ -1188,7 +1188,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -liftedPlanning
-Perform lifted planning, i.e. do not ground the model.
+Perform lifted (instead of ground) planning.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-liftedPlanning" IS A SWITCH, NOT AN OPTION.
 
 By default, the plan space-based planner PANDA3 relies on a ground model. However, the underlying planning procedure also supports lifted planning, which follows the least commitment principle to a larger extent. This changes the available plan modification options, of course, because flaws and modifications then need to cope with (unbound) variables. Note that certain heuristics might not be available anymore, since they might rely on a ground model. Please carefully choose the available options (especially for preprocessing and heuristics) for PANDA3 when choosing this option.
