@@ -2039,7 +2039,7 @@ case class SATPlanVerification(solverType: Solvertype, planToVerify: String) ext
              case "minisat"       => MINISAT
              case "cryptominisat" => CRYPTOMINISAT
              case "riss6"         => RISS6
-             case "mapleCOMSPS"   => MapleCOMSPS
+             case "maplecomsps"   => MapleCOMSPS
            }
            this.copy(solverType = solver).asInstanceOf[this.type]
          }),
