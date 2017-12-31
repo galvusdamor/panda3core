@@ -112,10 +112,10 @@ object Main {
                 if (conf.config.modifyOnOptionString.contains(key))
                   conf.copy(config = conf.config.modifyOnOptionString(key)._2(value))
                 else {
-                  println("Option \"" + key + "\" unavailable in current circumstance")
-                  println("Currently only the following options are available:")
-
+                  println("Unknown option \"" + key + "\"; maybe a typeO? The following options are allowed:")
                   println(conf.config.modifyOnOptionString.keySet.toSeq.filter(helpDB.contains).sorted map { x => "\t" + x } mkString "\n")
+                  println()
+                  println(transformTo80Chars(getHelpTextFor("main")))
                   System exit 1
                   conf
                 }
@@ -218,7 +218,7 @@ object Main {
     entries foreach {
       case ("main", _)                => // it's ok
       case (key, (_, _, alter, _, _)) =>
-      //assert(alter :+ key exists { k => entries exists(_._2._5 contains k)}, "Key \"" + key + "\" does not occur as part of the explanation tree.")
+      assert(alter :+ key exists { k => entries exists(_._2._5 contains k)}, "Key \"" + key + "\" does not occur as part of the explanation tree.")
     }
 
     entryMap
