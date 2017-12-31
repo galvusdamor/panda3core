@@ -16,7 +16,7 @@ PANDA's general call syntax is as follows:
     java -jar panda.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
 \n
 If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
-$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -groundedReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -liftedPlanning -systemConfig
+$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -liftedPlanning -systemConfig
 
 
 
@@ -523,7 +523,7 @@ This is a heuristic for the plan space-based PANDA3 algorithm. It is the lifted 
 \n
 This variant does not perform recomputation and it is suited for lifted planning, where the plan steps in search nodes may still contain variables. For this, given a plan step, it first builds all groundings for this step and retrieves all corresponding heuristic values from the TDG, of which it retrieves the minimum.
 \n
-Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
 \n
 The heuristic is described in the following paper:
 \n
@@ -559,7 +559,7 @@ This is a heuristic for the plan space-based PANDA3 algorithm. It is the lifted 
 \n
 This variant does not perform recomputation and it is suited for lifted planning, where the plan steps in search nodes may still contain variables. For this, given a plan step, it first builds all groundings for this step and retrieves all corresponding heuristic values from the task decomposition graph (TDG), of which it retrieves the minimum.
 \n
-Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
 \n
 The heuristic is described in the following paper:
 \n
@@ -592,7 +592,7 @@ This is a heuristic for the plan space-based PANDA3 algorithm. It is the standar
 \n
 This standard variant does *not* perform any recomputation of the underlying task decompostion graph (TDG) and it is suited for ground planning, where all plan steps in all search nodes are always ground.
 \n
-Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
 \n
 The heuristic is described in the following paper:
 \n
@@ -624,7 +624,7 @@ This is a heuristic for the plan space-based PANDA3 algorithm. It is the recompu
 \n
 This variant is suited for ground planning, where all plan steps in all search nodes are always ground. In addition, it recomputes the underlying task decomposition graph (TDG) after a plan modification has been performed that could change this TDG, e.g. after each task decomposition (in case there have been more than one method available for it), for details, we refer to the paper (seel below).
 \n
-Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
 \n
 The heuristic is described in the following paper:
 \n
@@ -659,7 +659,7 @@ This is a heuristic for the plan space-based PANDA3 algorithm. It is the standar
 \n
 This standard variant does *not* perform any recomputation of the underlying task decompostion graph (TDG) and it is suited for ground planning, where all plan steps in all search nodes are always ground.
 \n
-Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
 \n
 The heuristic is described in the following paper:
 \n
@@ -695,7 +695,7 @@ This is a heuristic for the plan space-based PANDA3 algorithm. It is the recompu
 \n
 This variant is suited for ground planning, where all plan steps in all search nodes are always ground. In addition, it recomputes the underlying task decomposition graph (TDG) after a plan modification has been performed that could change this TDG, e.g. after each task decomposition (in case there have been more than one method available for it), for details, we refer to the paper (seel below).
 \n
-Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-groundedReachability"), then this improved PG is used for the heuristic.
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
 \n
 The heuristic is described in the following paper:
 \n
@@ -900,12 +900,12 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -programPath
-For configuration of the SAT solvers.
+For configuration of external programs.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-programPath" TAKES A STRING, NO KEYS.
 
-Some of our programs, e.g. PANDA-totSAT (not yet delivered) or our plan verifyer (not yet delivered) base upon a SAT solver. Using this options allows to specify the solver that is used as well as the position where it can be found on the local machine. This is the syntax:
+Some of our programs, e.g. PANDA-totSAT (not yet delivered) or our plan verifyer base upon a SAT solver. Others (like PANDA3) depend on other external programs as well (not yet delivered). Using this option allows to specify the respective external program that is used as well as the position where it can be found on the local machine. This is the syntax:
 \n
--programPath [SOLVER=PATH], where PATH is the solver file (inlcuding its absolute path) and SOLVER is the description of this solver, which is one of the following: minisat, cryptominisat, riss6, and mapleCOMSPS.
+For specifying the SAT solver paths, use "-programPath SOLVER=PATH", where PATH is the external program file (inlcuding its absolute path) and SOLVER is the description of this solver, which is one of the following: minisat, cryptominisat, riss6, and mapleCOMSPS.
 $
 
 
@@ -947,13 +947,13 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--groundedReachability
+-primitiveReachability
 Use the planning graph for grounding.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-groundedReachability" TAKES A STRING, NO KEYS.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-primitiveReachability" TAKES A STRING, NO KEYS.
 
 By default, all planners rely on a ground model. To obtain the ground mode, we rely on a reachability analysis based on the planning graph (PG), which can be built either with or without the mutexes. By default, the reachability relying on the PG without mutexes is performed.
 \n
-The reachability analysis needs to take one of two parameters: -groundedReachability(pg) or -groundedReachability(pgm), where the first (without mutexes) is activated by default, and the second relies on the PG with mutex.
+The reachability analysis needs to take one of two parameters: -primitiveReachability(pg) or -primitiveReachability(pgm), where the first (without mutexes) is activated by default, and the second relies on the PG with mutex.
 $
 
 
@@ -1757,7 +1757,7 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-verify
+ICAPS-2017-verify
 System configuration from ICAPS 2017, depth first search.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "verify" IS A KEY, NOT AN OPTION.
 
