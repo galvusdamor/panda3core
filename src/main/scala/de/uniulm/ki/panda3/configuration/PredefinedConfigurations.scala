@@ -158,36 +158,36 @@ object PredefinedConfigurations {
   val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
     Map(
          //"panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)),
-         "IJCAI-2017-uniform-cost" ->(htnParsing, groundingPreprocess, planSearchDijkstra),
-         "IJCAI-2017-DFS" ->(htnParsing, groundingPreprocess, planSearchDFS),
-         "IJCAI-2017-BFS" ->(htnParsing, groundingPreprocess, planSearchBFS),
+         "IJCAI-2017-AdmissibleHeuristics(uniform)" ->(htnParsing, groundingPreprocess, planSearchDijkstra),
+         "IJCAI-2017-AdmissibleHeuristics(DFS)" ->(htnParsing, groundingPreprocess, planSearchDFS),
+         "IJCAI-2017-AdmissibleHeuristics(BFS)" ->(htnParsing, groundingPreprocess, planSearchBFS),
 
-         "umcpBF" ->(htnParsing, groundingPreprocess, umcpBF),
-         "umcpDF" ->(htnParsing, groundingPreprocess, umcpDF),
-         "umcpH" ->(htnParsing, groundingPreprocess, umcpH),
+         "umcp(BF)" ->(htnParsing, groundingPreprocess, umcpBF),
+         "umcp(DF)" ->(htnParsing, groundingPreprocess, umcpDF),
+         "umcp(h)" ->(htnParsing, groundingPreprocess, umcpH),
 
 
          // A*
-         "IJCAI-2017-astar-add" ->(htnParsing, groundingPreprocess, AStarADD),
-         "IJCAI-2017-astar-add-r" ->(htnParsing, groundingPreprocess, AStarADDReusing),
-         "IJCAI-2017-astar-relax" ->(htnParsing, groundingPreprocess, AStarRelax),
-         "IJCAI-2017-astar-oc" ->(htnParsing, groundingPreprocess, AStarAOpenPreconditions),
+         "IJCAI-2017-AdmissibleHeuristics(astar,add)" ->(htnParsing, groundingPreprocess, AStarADD),
+         "IJCAI-2017-AdmissibleHeuristics(astar,add-r)" ->(htnParsing, groundingPreprocess, AStarADDReusing),
+         "IJCAI-2017-AdmissibleHeuristics(astar,relax)" ->(htnParsing, groundingPreprocess, AStarRelax),
+         "IJCAI-2017-AdmissibleHeuristics(astar,oc)" ->(htnParsing, groundingPreprocess, AStarAOpenPreconditions),
 
-         "IJCAI-2017-astar-TDG-c" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR),
-         "IJCAI-2017-astar-TDG-c-rec" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
-         "IJCAI-2017-astar-TDG-m" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR),
-         "IJCAI-2017-astar-TDG-m-rec" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-c)" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-c-rec)" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-m)" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-m-rec)" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
 
          // GA*
-         "IJCAI-2017-gastar-add" ->(htnParsing, groundingPreprocess, planSearchAStarADD),
-         "IJCAI-2017-gastar-add-r" ->(htnParsing, groundingPreprocess, planSearchAStarADDReusing),
-         "IJCAI-2017-gastar-relax" ->(htnParsing, groundingPreprocess, planSearchAStarRelax),
-         "IJCAI-2017-gastar-oc" ->(htnParsing, groundingPreprocess, planSearchAStarAOpenPreconditions),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,add)" ->(htnParsing, groundingPreprocess, planSearchAStarADD),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,add-r)" ->(htnParsing, groundingPreprocess, planSearchAStarADDReusing),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,relax)" ->(htnParsing, groundingPreprocess, planSearchAStarRelax),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,oc)" ->(htnParsing, groundingPreprocess, planSearchAStarAOpenPreconditions),
 
-         "IJCAI-2017-gastar-TDG-c" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPR),
-         "IJCAI-2017-gastar-TDG-c-rec" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPRReachability),
-         "IJCAI-2017-gastar-TDG-m" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPR),
-         "IJCAI-2017-gastar-TDG-m-rec" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPRReachability),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-c)" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPR),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-c-rec)" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPRReachability),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-m)" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPR),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-m-rec)" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPRReachability),
 
          //  compare
 

@@ -1555,7 +1555,7 @@ case class PreprocessingConfiguration(
          "-dontallowSAS+FromStrips" -> (NoParameter, { p: Option[String] => this.copy(allowSASPFromStrips = false).asInstanceOf[this.type] }),
 
 
-         "-groundedReachability" -> (NecessaryParameter, { p: Option[String] =>
+         "-primitiveReachability" -> (NecessaryParameter, { p: Option[String] =>
            assert(p.isDefined)
            val mode = p.get match {
              case "planningGraph" | "pg"             => PlanningGraph

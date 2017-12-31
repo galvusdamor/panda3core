@@ -16,7 +16,7 @@ PANDA's general call syntax is as follows:
     java -jar panda.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
 \n
 If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
-$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -liftedPlanning -systemConfig
+$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegativePreconditions -liftedPlanning -systemConfig
 
 
 
@@ -383,15 +383,6 @@ It was introduced in the following paper:
 $
 
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-front-Mann
-Testeintrag
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "front-flaw" IS A KEY, NOT AN OPTION.
-
-lallala
-$
 
 
 
@@ -917,9 +908,9 @@ Deactivates domain simplifications.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noDomainCleanup" IS A SWITCH, NOT AN OPTION.
 
 By default, all planners perform some domain simplifications. The following optimizations/simplifications are performed:
-
+\n
 (1) predicates that do not occur in preconditions are eliminated
-
+\n
 (2) unreachable primitive and abstract tasks are eliminated as follows:
 - A mutex-free variable-relaxed planning graph (pg) is constructed
 - all primitive actions not contained in this pg are removed from the model
@@ -1186,10 +1177,10 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -dontCompileNegativePreconditions
-Convert hybrid domains into HTN domains.
+Do not compile away negative preconditions.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-dontCompileNegativePreconditions" IS A SWITCH, NOT AN OPTION.
 
-By default, negative preconditions are compiled away in the usual way. However, the plan space-based planner PANDA3 can also cope with negative preconditions natively. Choosing this option will *not* compile them away.
+By default, negative preconditions are compiled away in the usual way. However, the plan space-based planner PANDA3 as well as PANDA-totSAT (not yet delivered) can also cope with negative preconditions natively. Choosing this option will *not* compile them away.
 \n
 Please note that this feature has not been tested for a long time, so it can be regarded experimenatal. In particular, the planning graph (on which many heuristics and grounding procedures for hierarchical planning rely) has not been tested without compilation of negative preconditions.
 $
@@ -1214,16 +1205,14 @@ Availabe pre-defined system configurations:
 Choose this option to run the system in a standard configuration which we authors deemed to be generally useful (e.g., because it is very efficient on average, because it simulates a system from the literature, or because it reproduces results from a specific paper).
 \n
 Please be aware that choosing *additional* options might contradict the options chosen here; options are *performed* in the order they are set, so specifying "-systemConfig CONF1 -optionX Y" will perfrom "optionX = Y" even the system configuration CONF1 will explicitly state the opposite. This is especially important when you want to reproduce results from scientific papers; then, you should not choose any further options.
-$ umcpBF umcpDF umcpH IJCAI-2017-BFS IJCAI-2017-DFS IJCAI-2017-uniform-cost IJCAI-2017-astar-TDG-c IJCAI-2017-astar-TDG-c-rec IJCAI-2017-astar-TDG-m IJCAI-2017-astar-TDG-m-rec IJCAI-2017-gastar-TDG-c IJCAI-2017-gastar-TDG-c-rec IJCAI-2017-gastar-TDG-m IJCAI-2017-gastar-TDG-m-rec IJCAI-2017-astar-add IJCAI-2017-astar-add-r IJCAI-2017-astar-relax IJCAI-2017-astar-oc IJCAI-2017-gastar-add IJCAI-2017-gastar-add-r IJCAI-2017-gastar-relax IJCAI-2017-gastar-oc verify
-
-
+$ umcp IJCAI-2017-AdmissibleHeuristics ICAPS-2017-verify
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-umcpBF
-Simulate the system UMCP, breadth-first search-based.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "umcpBF" IS A KEY, NOT AN OPTION.
+umcp
+Simulate the system UMCP within PANDA3.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "umcp" IS A KEY, NOT AN OPTION.
 
 The plan space-based planning system UMCP by Erol et al. can be simulated within the PANDA3 planner. UMCP is basically a standard plan space-based HTN planning system that uses different search strategies for selecting a most promising plan from a search fringe. In contrast to PANDA3, UMCP "fixates" a primitive plan as soon as one is found and then either turns it into a solution (if possible) or discards it in case this is impossible. Only after this has been done, a different plan is taken from the fringe. Note that our simulation of this relies on the standard POCL planning techniques, i.e., also proving that a primitive plan can be turned into a solution is done relying on this technique (i.e, this is not done with just one single search node, but via search as well).
 \n
@@ -1249,86 +1238,23 @@ In the dissertation of Erol, he has proposed various plan selection functions fo
   Abstract                 = {Planning is a central activity in many areas including robotics, manufacturing, space mission sequencing, and logistics. as the size and complexity of planning problems grow, there is great economic pressure to automate this process in order to reduce the cost of planning effort, and to improve the quality of produced plans. AI planning research has focused on general-purpose planning systems which can process the specifications of an application domain and generate solutions to planning problems in that domain. Unfortunately, there is a big gap between theoretical and application oriented work in AI planning. The theoretical work has been mostly based on state-based planning, which has limited practical applications. The application- oriented work has been based on hierarchical task network (HTN) planning, which lacks a theoretical foundation. As a result, in spite of many years of research, building planning applications remains a formidable task. The goal of this dissertation is to facilitate building reliable and effective planning applications. The methodology includes design of a mathematical framework for HTN planning, analysis of this framework, development of provably correct algorithms based on this analysis, and the implementation of these algorithms for further evaluation and exploration. The representation, analyses, and algorithms described in this thesis will make it easier to apply HTN planning techniques effectively and correctly to planning applications. The precise and mathematical nature of the descriptions will also help teaching about HTN planning, will clarify misconceptions in the literature, and will stimulate further research.}
 }
 \n
-These selection strategies are: breadth-first search, depth-first search, and best-first (in the form of number of abstract tasks; the fewer the better). This strategy here performs breadth-first search.
-$
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-umcpDF
-Simulate the system UMCP, depth-first search-based.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "umcpDF" IS A KEY, NOT AN OPTION.
-
-The plan space-based planning system UMCP by Erol et al. can be simulated within the PANDA3 planner. UMCP is basically a standard plan space-based HTN planning system that uses different search strategies for selecting a most promising plan from a search fringe. In contrast to PANDA3, UMCP "fixates" a primitive plan as soon as one is found and then either turns it into a solution (if possible) or discards it in case this is impossible. Only after this has been done, a different plan is taken from the fringe. Note that our simulation of this relies on the standard POCL planning techniques, i.e., also proving that a primitive plan can be turned into a solution is done relying on this technique (i.e, this is not done with just one single search node, but via search as well).
+These selection strategies are: breadth-first search, depth-first search, and best-first. The latter variant is also referred to as "heuristic version" and it selects a plan with the fewest number of abstract tasks.
 \n
-The basic planning algorithm is given in the following paper:
-\n
-@InProceedings{Erol94UMCP,
-  Title                    = {{UMCP}: A Sound and Complete Procedure for Hierarchical Task-Network Planning},
-  Author                   = {Kutluhan Erol and James Hendler and Dana S. Nau},
-  Booktitle                = {Proceedings of the 2nd International Conference on Artificial Intelligence Planning Systems ({AIPS} 1994)},
-  Year                     = {1994},
-  Pages                    = {249--254},
-  Publisher                = {{AAAI} Press},
-  Abstract                 = {One big obstacle to understanding the nature of hierarchical task network (HTN) planning has been the lack of a clear theoretical framework. In particular, no one has yet presented a clear and concise HTN algorithm that is sound and complete. In this paper, we present a formal syntax and semantics for HTN planning. Based on this syntax and semantics, we are able to define an algorithm for HTN planning and prove it sound and complete.}
-}
-\n
-In the dissertation of Erol, he has proposed various plan selection functions for picking the most promising plan out of the search fringe (page 69/70 in this PhD thesis).
-\n
-@PhdThesis{Erol96HTNPlanning,
-  Title                    = {Hierarchical Task Network Planning: Formalization, Analysis, and Implementation},
-  Author                   = {Kutluhan Erol},
-  School                   = {University of Maryland},
-  Year                     = {1996},
-  Abstract                 = {Planning is a central activity in many areas including robotics, manufacturing, space mission sequencing, and logistics. as the size and complexity of planning problems grow, there is great economic pressure to automate this process in order to reduce the cost of planning effort, and to improve the quality of produced plans. AI planning research has focused on general-purpose planning systems which can process the specifications of an application domain and generate solutions to planning problems in that domain. Unfortunately, there is a big gap between theoretical and application oriented work in AI planning. The theoretical work has been mostly based on state-based planning, which has limited practical applications. The application- oriented work has been based on hierarchical task network (HTN) planning, which lacks a theoretical foundation. As a result, in spite of many years of research, building planning applications remains a formidable task. The goal of this dissertation is to facilitate building reliable and effective planning applications. The methodology includes design of a mathematical framework for HTN planning, analysis of this framework, development of provably correct algorithms based on this analysis, and the implementation of these algorithms for further evaluation and exploration. The representation, analyses, and algorithms described in this thesis will make it easier to apply HTN planning techniques effectively and correctly to planning applications. The precise and mathematical nature of the descriptions will also help teaching about HTN planning, will clarify misconceptions in the literature, and will stimulate further research.}
-}
-\n
-These selection strategies are: breadth-first search, depth-first search, and best-first (in the form of number of abstract tasks; the fewer the better). This strategy here performs depth-first search.
-$
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-umcpH
-Simulate the system UMCP, heuristic search-based.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "umcpH" IS A KEY, NOT AN OPTION.
-
-The plan space-based planning system UMCP by Erol et al. can be simulated within the PANDA3 planner. UMCP is basically a standard plan space-based HTN planning system that uses different search strategies for selecting a most promising plan from a search fringe. In contrast to PANDA3, UMCP "fixates" a primitive plan as soon as one is found and then either turns it into a solution (if possible) or discards it in case this is impossible. Only after this has been done, a different plan is taken from the fringe. Note that our simulation of this relies on the standard POCL planning techniques, i.e., also proving that a primitive plan can be turned into a solution is done relying on this technique (i.e, this is not done with just one single search node, but via search as well).
-\n
-The basic planning algorithm is given in the following paper:
-\n
-@InProceedings{Erol94UMCP,
-  Title                    = {{UMCP}: A Sound and Complete Procedure for Hierarchical Task-Network Planning},
-  Author                   = {Kutluhan Erol and James Hendler and Dana S. Nau},
-  Booktitle                = {Proceedings of the 2nd International Conference on Artificial Intelligence Planning Systems ({AIPS} 1994)},
-  Year                     = {1994},
-  Pages                    = {249--254},
-  Publisher                = {{AAAI} Press},
-  Abstract                 = {One big obstacle to understanding the nature of hierarchical task network (HTN) planning has been the lack of a clear theoretical framework. In particular, no one has yet presented a clear and concise HTN algorithm that is sound and complete. In this paper, we present a formal syntax and semantics for HTN planning. Based on this syntax and semantics, we are able to define an algorithm for HTN planning and prove it sound and complete.}
-}
-\n
-In the dissertation of Erol, he has proposed various plan selection functions for picking the most promising plan out of the search fringe (page 69/70 in this PhD thesis).
-\n
-@PhdThesis{Erol96HTNPlanning,
-  Title                    = {Hierarchical Task Network Planning: Formalization, Analysis, and Implementation},
-  Author                   = {Kutluhan Erol},
-  School                   = {University of Maryland},
-  Year                     = {1996},
-  Abstract                 = {Planning is a central activity in many areas including robotics, manufacturing, space mission sequencing, and logistics. as the size and complexity of planning problems grow, there is great economic pressure to automate this process in order to reduce the cost of planning effort, and to improve the quality of produced plans. AI planning research has focused on general-purpose planning systems which can process the specifications of an application domain and generate solutions to planning problems in that domain. Unfortunately, there is a big gap between theoretical and application oriented work in AI planning. The theoretical work has been mostly based on state-based planning, which has limited practical applications. The application- oriented work has been based on hierarchical task network (HTN) planning, which lacks a theoretical foundation. As a result, in spite of many years of research, building planning applications remains a formidable task. The goal of this dissertation is to facilitate building reliable and effective planning applications. The methodology includes design of a mathematical framework for HTN planning, analysis of this framework, development of provably correct algorithms based on this analysis, and the implementation of these algorithms for further evaluation and exploration. The representation, analyses, and algorithms described in this thesis will make it easier to apply HTN planning techniques effectively and correctly to planning applications. The precise and mathematical nature of the descriptions will also help teaching about HTN planning, will clarify misconceptions in the literature, and will stimulate further research.}
-}
-\n
-These selection strategies are: breadth-first search, depth-first search, and best-first (in the form of number of abstract tasks; the fewer the better). This strategy here performs the latter, i.e., the best-first search version that selects a plan with the fewest number of abstract tasks.
+You need to select one of these three variants by passing the respective parameter (BF, DF, or h) on to the configuration. For this, put the respective parameter in parentheses behind the "umcp".
 $
 
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-astar-TDG-c
-System configuration from IJCAI 2017, A* with TDG-c.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
 
-System configuration from the IJCAI 2017 paper (see below) using A* search with the TDG-c heuristic (see the paper and the description of the heuristic key "tdg-c" for further details)..
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+IJCAI-2017-AdmissibleHeuristics
+Select a configuration from that paper.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017-AdmissibleHeuristics" IS A KEY, NOT AN OPTION.
+
+Using this key allows you to select from the various system configurations that we have used in the empirical evaluation of the following paper:
 \n
 @InProceedings{Bercher17AdmissibleHTNHeuristic,
   Title                    = {An Admissible HTN Planning Heuristic},
@@ -1341,418 +1267,33 @@ System configuration from the IJCAI 2017 paper (see below) using A* search with 
   Doi                      = {10.24963/ijcai.2017/68},
   File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
 }
-$
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-astar-TDG-c-rec
-System configuration from IJCAI 2017, A* with TDG-c with recomputation.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using A* search with the TDG-c heuristic that performs recomputation (see the paper and the description of the heuristic key "tdg-c-r" for further details).
 \n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-astar-TDG-m
-System configuration from IJCAI 2017, A* with TDG-m.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using A* search with the TDG-m heuristic (see the paper and the description of the heuristic key "tdg-m" for further details).
+You will have to pass on the respective parameters (see below) to the configuration name by putting them in a comma-separated list in parenthesis; for example: "-IJCAI-2017-AdmissibleHeuristics(astar,TDG-c)".
 \n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-astar-TDG-m-rec
-System configuration from IJCAI 2017, A* with TDG-m with recomputation.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using A* search with the TDG-m heuristic that performs recomputation (see the paper and the description of the heuristic key "tdg-m-r" for further details).
+As first parameter, you will have to specify one of the following search algorithms:
 \n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-gastar-TDG-c
-System configuration from IJCAI 2017, greedy A* with TDG-c.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using greedy A* search (weight = 2) with the TDG-c heuristic (see the paper and the description of the heuristic key "tdg-c" for further details).
+- BFS (breadth-first search)
+- DFS (depth-first search)
+- uniform (uniform cost search)
+- astar (A* search, requires a heuristic)
+- gastar (greedy A* search with weight 2 on heuristics, requires a heuristic)
 \n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-gastar-TDG-c-rec
-System configuration from IJCAI 2017, greedy A* with TDG-c with recomputation.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using greedy A* search (weight = 2) with the TDG-c heuristic that performs recomputation (see the paper and the description of the heuristic key "tdg-c-r" for further details).
+In case of A* and greedy A*, one of the following heuristics must be chosen as second parameter:
 \n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-gastar-TDG-m
-System configuration from IJCAI 2017, greedy A* with TDG-m.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using greedy A* search (weight = 2) with the TDG-m heuristic (see the paper and the description of the heuristic key "tdg-m" for further details).
+- add (the additive heuristic for POCL planning, see heuristic "add")
+- add-r (the additive heuristic for POCL planning reusing actions,
+         see heuristic "add-r")
+- relax (the relax heuristic for POCL planning, see heuristic "relax")
+- oc (the open (pre-)conditions heuristic, see heuristic "oc")
+- TDG-m (the paper's TDG heuristic estimating the number of modifications)
+- TDG-m-rec (as TDG-m, but performing the TDG recomputation)
+- TDG-c (the paper's cost-sensitive TDG heuristic)
+- TDG-c-rec (as TDG-c, but performing the TDG recomputation)
 \n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
+For a more detailed explanation of the latter four heuristics, see the help descriptions of the respective heuristics of the paper.
 $
 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-gastar-TDG-m-rec
-System configuration from IJCAI 2017, greedy A* with TDG-m with recomputation.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using greedy A* search (weight = 2) with the TDG-m heuristic that performs recomputation (see the paper and the description of the heuristic key "tdg-m-r" for further details).
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-astar-add
-System configuration from IJCAI 2017, A* with Add heuristic.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using A* search with the Add heuristic for POCL planning (see the description of the heuristic key "add" for further details).
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-astar-add-r
-System configuration from IJCAI 2017, A* with Add-r heuristic.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using A* search with the Add-r heuristic for POCL planning (see the description of the heuristic key "add-r" for further details).
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-astar-relax
-System configuration from IJCAI 2017, A* with Relax heuristic.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using A* search with the Relax heuristic for POCL planning (see the description of the heuristic key "relax" for further details).
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-astar-oc
-System configuration from IJCAI 2017, A* with OC heuristic.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using A* search with the OC heuristic for POCL planning (see the description of the heuristic key "oc" for further details).
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-gastar-add
-System configuration from IJCAI 2017, greedy A* with Add heuristic.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using greedy A* search (weight = 2) with the Add heuristic for POCL planning (see the description of the heuristic key "add" for further details).
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-gastar-add-r
-System configuration from IJCAI 2017, greedy A* with Add-r heuristic.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using greedy A* search (weight = 2) with the Add-r heuristic for POCL planning (see the description of the heuristic key "add-r" for further details).
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-gastar-relax
-System configuration from IJCAI 2017, greedy A* with Relax heuristic.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using greedy A* search (weight = 2) with the Relax heuristic for POCL planning (see the description of the heuristic key "relax" for further details).
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-gastar-oc
-System configuration from IJCAI 2017, greedy A* with OC heuristic.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using greedy A* search (weight = 2) with the OC heuristic for POCL planning (see the description of the heuristic key "oc" for further details).
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-uniform-cost
-System configuration from IJCAI 2017, uniform cost search.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using uniform cost search.
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-BFS
-System configuration from IJCAI 2017, breadth first search.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using breadth first search.
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-IJCAI-2017-DFS
-System configuration from IJCAI 2017, depth first search.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017..." IS A KEY, NOT AN OPTION.
-
-System configuration from the IJCAI 2017 paper (see below) using depth first search.
-\n
-@InProceedings{Bercher17AdmissibleHTNHeuristic,
-  Title                    = {An Admissible HTN Planning Heuristic},
-  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
-  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
-  Year                     = {2017},
-  Pages                    = {480--488},
-  Publisher                = {AAAI Press},
-  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
-  Doi                      = {10.24963/ijcai.2017/68},
-  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
-}
-$
 
 
 
