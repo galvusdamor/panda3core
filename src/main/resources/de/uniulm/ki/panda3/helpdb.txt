@@ -16,7 +16,7 @@ PANDA's general call syntax is as follows:
     java -jar panda.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
 \n
 If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
-$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegativePreconditions -liftedPlanning -systemConfig
+$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegativePreconditions -liftedPlanning -systemConfig -prune
 
 
 
@@ -356,7 +356,7 @@ Available flaw selection strategies:
 
 Using "-flaw [KEYS]" allows to select a flaw selection strategy for the plan space-based search algorithm PANDA3.
 \n
-Please note that you can select a sequence of flaw selection strategies for tie-breaking. To give such a sequence, use a comma-separated list of flaw selection functions without whitespaces. Specifying sequences of flaw selection functions makes sense to be more discriminative about the flaw to be actually selected, because the first flaw selection function might not restrict the set of candidate flaws to a single one, so adding a second (third, etc.) selection function reduces the available flaws in this set.
+Please note that you can select a sequence of flaw selection strategies for tie-breaking. To give such a sequence, use a semicolon-separated list of flaw selection functions without whitespaces. Specifying sequences of flaw selection functions makes sense to be more discriminative about the flaw to be actually selected, because the first flaw selection function might not restrict the set of candidate flaws to a single one, so adding a second (third, etc.) selection function reduces the available flaws in this set reducing the impact of randomness.
 $ lcfr front-flaw newest-flaw causal-threat random-flaw
 
 
@@ -480,7 +480,9 @@ $
 Choose one of many heuristics.
 Available heuristics:
 
-Using "-heuristic [KEY]" allows to select one of many heuristics that is used for the plan selection function. Please note that most of the heuristics are developed for the plan space-based search algorithm, but some of them also (or exclusively) work for the progression-based planner. We will be clear about this in the respective heuristics. Most heuristics have additional arguments, which can be passed on using the following syntax:
+Using "-heuristic [KEYS]" allows to select heuristics that are used for the plan selection function and for tie-breaking. You can specify a sequence of heuristics by putting a semicolon in between them. Only the first heuristic is used by the actual search algorithm (such as A*) and the remaining ones are used to break ties (the smaller the better).
+\n
+Most heuristics have additional arguments, which can be passed on using the following syntax:
     -heuristic HEURISTIC_NAME(PARAM1=VALUE1,PARAM2=VALUE2)
 $ random-heuristic #flaw #oc #ps #abstract add add-r relax tdg-m tdg-m-r tdg-m-lifted tdg-c tdg-c-r tdg-c-lifted
 
@@ -942,9 +944,14 @@ $
 Use the planning graph for grounding.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-primitiveReachability" TAKES A STRING, NO KEYS.
 
-By default, all planners rely on a ground model. To obtain the ground mode, we rely on a reachability analysis based on the planning graph (PG), which can be built either with or without the mutexes. By default, the reachability relying on the PG without mutexes is performed.
+By default, all planners rely on a ground model. To obtain the ground mode, we rely on a reachability analysis based on the planning graph (PG), which can be build either with or without the mutexes. By default, the reachability relying on the PG without mutexes is performed.
 \n
-The reachability analysis needs to take one of two parameters: -primitiveReachability(pg) or -primitiveReachability(pgm), where the first (without mutexes) is activated by default, and the second relies on the PG with mutex.
+Please note that this planning graph is not only used for creating the ground model. Even if you do *not* plan if a ground way (i.e., lifted, which you can do by using "-liftedPlanning"), then creating this planning graph might still produce a smaller *lifted* model (i.e., lifted actions get removed if there isn't a reachable grounding). Furthermore, some heuristics use the planning graph that is created here (this is noted in the respective heuristic).
+\n
+The reachability analysis needs to take one of two parameters:
+- pg (describes the mutex-free planning graph) and
+- pgm (describes the planning graph using mutexes).
+Pass on the option by putting it in parentheses behind the option. By default, the primitiveReachability is *activated* and it *does* use mutexes.
 $
 
 
@@ -967,7 +974,7 @@ $
 Use the task decomposition graph for grounding.
 Available options for -hierarchicalReachability:
 
-When ever a hierarchical problem is solved, we rely on the grounded task decomposition graph (TDG) in order to ground the model. The *result* of this process is always the same ground TDG. The results of this (i.e., the ground hierarchical model) is used both for ground planning and for lifted planning, i.e., for heuristics, which are also based upon a ground TDG.
+When ever a hierarchical problem is solved, we rely on the grounded task decomposition graph (TDG) in order to ground the model. The *result* of this process is always the same ground TDG. The different ways of creating this have different runtime properties and space requirements, however. The resulting TFG is used both for ground planning (as it describes a ground model), but also for lifted planning (similar to the planning graph, the ground model can also be used to reduce the lifted model), as well as for some heuristics, which are also based upon a ground TDG.
 \n
 The resulting TDG is described in the following paper:
 \n
@@ -983,10 +990,12 @@ The resulting TDG is described in the following paper:
   File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
 }
 \n
-The process of *how* this ground TDG is built, however, has a strong influence on its performance in terms of runtime and maximal memory usage. We offer various ways how to construct it. See the respective help pages (using -help) for a description of the respective keys.
+As noted, the process of *how* this ground TDG is built has a strong influence on its performance in terms of runtime and maximal memory usage. We offer various ways how to construct it. See the respective help pages (using -help) for a description of the respective keys.
+\n
+Please also note that the TDG *always* relies on a planning graph (PG) in order to restrict the TDG to a subgraph that only contains actions that are reachable -- which is identified relying on the PG. More specifically, the planningPG that is used as a basis for the TDG is the very same one resulting from the option (-primitiveReachablity) -- so choosing to create this PG with or without mutexes has an influence on this hierarchical reachability as well. Furthermore, the TDG-based heuristics directly rely on this resulting TDG.
 \n
 Note that using the TDG for grounding is activated by default, *even* if lifted planning is chosen. In the latter case, the resulting ground TDG is used to eliminate certain lifted tasks and methods (a lifted task/method can be eliminated from the model if there is no reachable grounding). By default, we use the option "twoWay", as it is -- empirically -- the best-performing one on average.
-$ topDown twoWay naive
+$ topDown bottomUp twoWay naive
 
 
 
@@ -1026,6 +1035,15 @@ $
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+bottomUp
+Builds the ground task decomposition graph in a bottom-up fashion.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "bottomUp" IS A KEY, NOT AN OPTION.
+
+This key for the -hierarchicalReachability option builds the Task Decomposition Graph (TDG) in a bottom-up way, i.e., starting with the actions reachable (identified using the planning graph) and inferring which ground abstract tasks become reachable as well.
+$
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1049,6 +1067,47 @@ If you plan in a *ground* fashion (this is done by default) and this option is c
 If you plan in a *lifted* fashion (you had to explicitly choose so), then choosing this option prevents the TDG grounding process altogether. (However, the cleanup option might still delete some of the unreachable actions if activated.)
 $
 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-prune
+Remove certain plans from the search fringe.
+List of available pruning criteria:
+
+You can give certain criteria under which plans can be discarded upon creation (i.e., before they get inserted into the search fringe). Some pruning criteria are independent of each other, so they can be specified at the same time. Different options can be concatenated by putting a semicolon in between. (Use -help -prune to see the list of available pruning criteria.)
+$ recompute-htn planLength
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+recompute-htn
+Prune a plan based on hierarchical reachability.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "recompute-htn" IS A KEY, NOT AN OPTION.
+
+This pruning criterion discards a plan if and only if the recomputation-based TDG-based heuristics published at IJCAI 2017 (see -TDG-m-rec for a short description) would return a heuristic value of infinity.
+\n
+In a nutshell, given a current search node (with at least one abstract task) the pruning technique builds a new task decomposion graph (TDG) for that very search node (which includes creating a planning graph relying on the primitive tasks contained in that TDG) and checks whether every abstract task in the given plan can be decomposed into a primitive plan in which all actions are contained in the PG. If so, nothing is done; if not, it is discarded. As is the case with the TDG-c and TDG-m heuristics, the TDG resulting from the -hierarchicalReachability is used as the basis.
+\n
+Please note that in its current stage, this pruning technique is not as efficient as it could be. More precisely, the TDG is built for *every* search node, which is far more calculation effort than actually necessary. In the before-mentioned IJCAI paper, we have shown that in many cases rebuilding the TDG is not beneficial and the heuristic values could be calculated incrementally; in these cases, a searche node can also not be pruned, so performing the TDG calculation is pointless. These case distinctions have not been implemented in this pruning technique, however.
+$
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+planLength
+Prune a plan based on its length.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "planLength" IS A KEY, NOT AN OPTION.
+
+You need to pass on an integer n as parameter to this key. Any plan with strictly more tasks (primitive or abstract) than this number will be discarded. You do this by putting the respective plan length n in parentheses.
+\n
+Please be aware that in case of hierarchical planning with "empty" decomposition methods (i.e., methods that allow the decomposition into an empty task network) there might be unintended or wrong behavior. The reason is that in these cases, the current plan size is not an admissible estimate of the final plan size. Incorporating the admissible TDG-c heuristic (see heuristic "TDG-c" for more information) would eliminate this undesired behavior and even be more effective, because plans can be pruned earlier. This has not been implemented at the moment, however.
+$
 
 
 
@@ -1192,7 +1251,9 @@ $
 Perform lifted (instead of ground) planning.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-liftedPlanning" IS A SWITCH, NOT AN OPTION.
 
-By default, the plan space-based planner PANDA3 relies on a ground model. However, the underlying planning procedure also supports lifted planning, which follows the least commitment principle to a larger extent. This changes the available plan modification options, of course, because flaws and modifications then need to cope with (unbound) variables. Note that certain heuristics might not be available anymore, since they might rely on a ground model. Please carefully choose the available options (especially for preprocessing and heuristics) for PANDA3 when choosing this option.
+By default, the plan space-based planner PANDA3 relies on a ground model. However, the underlying planning procedure also supports lifted planning, which follows the least commitment principle to a larger extent (it omits early commitment by binding variables only if required). This changes the available plan modification options, of course, because flaws and modifications then need to cope with (unbound) variables. Note that certain heuristics might not be available anymore, since they might rely on a ground model.
+
+Please carefully choose the available options (especially for preprocessing and heuristics) for PANDA3 when choosing this option. For instance, the option -primitiveReachablity (which grounds the model based on a planning graph) is chosen by default, *even* when lifted planning is chosen. This still makes sense, because also the lifted model might be reduced bases on a ground reachability analysis. However, you might still want to prevent grounding altogether when you choose to plan in a lifted fashion; in this case, you should deactivate the grounded reachability analysis.
 $
 
 
@@ -1214,9 +1275,11 @@ umcp
 Simulate the system UMCP within PANDA3.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "umcp" IS A KEY, NOT AN OPTION.
 
-The plan space-based planning system UMCP by Erol et al. can be simulated within the PANDA3 planner. UMCP is basically a standard plan space-based HTN planning system that uses different search strategies for selecting a most promising plan from a search fringe. In contrast to PANDA3, UMCP "fixates" a primitive plan as soon as one is found and then either turns it into a solution (if possible) or discards it in case this is impossible. Only after this has been done, a different plan is taken from the fringe. Note that our simulation of this relies on the standard POCL planning techniques, i.e., also proving that a primitive plan can be turned into a solution is done relying on this technique (i.e, this is not done with just one single search node, but via search as well).
+The plan space-based planning system UMCP by Erol et al. can be simulated within the PANDA3 planner. UMCP is basically a standard plan space-based HTN planning system that uses different search strategies for selecting a most promising plan from a search fringe. In contrast to PANDA3, UMCP "fixates" a primitive plan as soon as one is found and then either turns it into a solution (if possible) or discards it in case this is impossible. Only after this has been done, a different plan is taken from the fringe. Note that our simulation of this relies on the standard POCL planning techniques, i.e., also proving that a primitive plan can be turned into a solution is done relying on this technique (i.e, this is not done with just one single search node, but via search as well). We do this via a depth-first search (i.e., as soon as a primitive plan is found, PANDA3 switches to depth-first *for this plan* before another plan is considered according to the primary UMCP search strategy).
 \n
-The basic planning algorithm is given in the following paper:
+In accordance to the UMCP search algorithm (which is not a POCL procedure, though), we always pick an abstract task flaw. Ties are broken using the LCFR flaw selector (this is not reporated in the UMCP paper, but it gives good results on average).
+\n
+The basic planning algorithm is given in Fig. 4 in the following paper:
 \n
 @InProceedings{Erol94UMCP,
   Title                    = {{UMCP}: A Sound and Complete Procedure for Hierarchical Task-Network Planning},

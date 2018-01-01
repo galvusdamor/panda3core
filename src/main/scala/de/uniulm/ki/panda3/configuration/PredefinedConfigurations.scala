@@ -162,6 +162,10 @@ object PredefinedConfigurations {
          "IJCAI-2017-AdmissibleHeuristics(DFS)" ->(htnParsing, groundingPreprocess, planSearchDFS),
          "IJCAI-2017-AdmissibleHeuristics(BFS)" ->(htnParsing, groundingPreprocess, planSearchBFS),
 
+      "IJCAI-2017-AdmissibleHeuristics(umcp-BF)" ->(htnParsing, groundingPreprocess, umcpBF),
+      "IJCAI-2017-AdmissibleHeuristics(umcp-DF)" ->(htnParsing, groundingPreprocess, umcpDF),
+      "IJCAI-2017-AdmissibleHeuristics(umcp-H)" ->(htnParsing, groundingPreprocess, umcpH),
+
          "umcp(BF)" ->(htnParsing, groundingPreprocess, umcpBF),
          "umcp(DF)" ->(htnParsing, groundingPreprocess, umcpDF),
          "umcp(h)" ->(htnParsing, groundingPreprocess, umcpH),
@@ -197,7 +201,7 @@ object PredefinedConfigurations {
          "IJCAI-2017-gastar-TDG-c-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare),
 
 
-         // plan verification a la ICAPS'17
+         // plan verification á la ICAPS'17
          "ICAPS-2017-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, ""))
 
        )
