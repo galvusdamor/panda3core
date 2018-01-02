@@ -52,13 +52,13 @@ object PredefinedConfigurations {
                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                iterateReachabilityAnalysis = false, groundDomain = true)
 
-  val liftedPreprocess            = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                               compileOrderInMethods = None,
-                                                               compileInitialPlan = false, splitIndependentParameters = true,
-                                                               compileUselessAbstractTasks = false,
-                                                               liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
-                                                               groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                               iterateReachabilityAnalysis = false, groundDomain = false)
+  val liftedPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                    compileOrderInMethods = None,
+                                                    compileInitialPlan = false, splitIndependentParameters = true,
+                                                    compileUselessAbstractTasks = false,
+                                                    liftedReachability = true, groundedReachability = Some(PlanningGraphWithMutexes),
+                                                    groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                    iterateReachabilityAnalysis = false, groundDomain = false)
 
   val oneshortOrderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                        compileInitialPlan = true,
@@ -146,9 +146,10 @@ object PredefinedConfigurations {
   val planSearchAStarOpenPreconditions  = PlanBasedSearch(None, AStarDepthType(2), NumberOfOpenPreconditions :: Nil, Nil, LCFR)
   val planSearchAStarAOpenPreconditions = PlanBasedSearch(None, AStarActionsType(2), NumberOfOpenPreconditions :: Nil, Nil, LCFR)
 
-  val umcpBF = PlanBasedSearch(None, BFSType, Nil, Nil, UMCPFlaw)
-  val umcpDF = PlanBasedSearch(None, DFSType, Nil, Nil, UMCPFlaw)
-  val umcpH  = PlanBasedSearch(None, GreedyType, UMCPHeuristic :: Nil, Nil, UMCPFlaw)
+  val umcpBFBuggyIJCAI = PlanBasedSearch(None, BFSType, Nil, Nil, UMCPFlaw)
+  val umcpBF           = PlanBasedSearch(None, GreedyType, UMCPBFSHeuristic :: Nil, Nil, UMCPFlaw)
+  val umcpDF           = PlanBasedSearch(None, DFSType, Nil, Nil, UMCPFlaw)
+  val umcpH            = PlanBasedSearch(None, GreedyType, UMCPHeuristic :: Nil, Nil, UMCPFlaw)
 
   val planSearchAStarADD        = PlanBasedSearch(None, AStarActionsType(2), ADD :: Nil, Nil, LCFR)
   val planSearchAStarADDReusing = PlanBasedSearch(None, AStarActionsType(2), ADDReusing :: Nil, Nil, LCFR)
@@ -158,51 +159,57 @@ object PredefinedConfigurations {
   val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
     Map(
          //"panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)),
-         "IJCAI-2017-AdmissibleHeuristics(uniform)" ->(htnParsing, groundingPreprocess, planSearchDijkstra),
-         "IJCAI-2017-AdmissibleHeuristics(DFS)" ->(htnParsing, groundingPreprocess, planSearchDFS),
-         "IJCAI-2017-AdmissibleHeuristics(BFS)" ->(htnParsing, groundingPreprocess, planSearchBFS),
+         "IJCAI-2017-AdmissibleHeuristics(uniform)" -> (htnParsing, groundingPreprocess, planSearchDijkstra),
+         "IJCAI-2017-AdmissibleHeuristics(DFS)" -> (htnParsing, groundingPreprocess, planSearchDFS),
+         "IJCAI-2017-AdmissibleHeuristics(BFS)" -> (htnParsing, groundingPreprocess, planSearchBFS),
 
-      "IJCAI-2017-AdmissibleHeuristics(umcp-BF)" ->(htnParsing, groundingPreprocess, umcpBF),
-      "IJCAI-2017-AdmissibleHeuristics(umcp-DF)" ->(htnParsing, groundingPreprocess, umcpDF),
-      "IJCAI-2017-AdmissibleHeuristics(umcp-H)" ->(htnParsing, groundingPreprocess, umcpH),
+         "IJCAI-2017-AdmissibleHeuristics(umcp-BF)" -> (htnParsing, groundingPreprocess, umcpBFBuggyIJCAI),
+         "IJCAI-2017-AdmissibleHeuristics(umcp-DF)" -> (htnParsing, groundingPreprocess, umcpDF),
+         "IJCAI-2017-AdmissibleHeuristics(umcp-H)" -> (htnParsing, groundingPreprocess, umcpH),
 
+<<<<<<< HEAD
          "UMCP(BF)" ->(htnParsing, groundingPreprocess, umcpBF),
          "UMCP(DF)" ->(htnParsing, groundingPreprocess, umcpDF),
          "UMCP(h)" ->(htnParsing, groundingPreprocess, umcpH),
+=======
+         "umcp(BF)" -> (htnParsing, groundingPreprocess, umcpBF),
+         "umcp(DF)" -> (htnParsing, groundingPreprocess, umcpDF),
+         "umcp(h)" -> (htnParsing, groundingPreprocess, umcpH),
+>>>>>>> 26b7e10b1f432feba6bd033c089e4564053492ac
 
 
          // A*
-         "IJCAI-2017-AdmissibleHeuristics(astar,add)" ->(htnParsing, groundingPreprocess, AStarADD),
-         "IJCAI-2017-AdmissibleHeuristics(astar,add-r)" ->(htnParsing, groundingPreprocess, AStarADDReusing),
-         "IJCAI-2017-AdmissibleHeuristics(astar,relax)" ->(htnParsing, groundingPreprocess, AStarRelax),
-         "IJCAI-2017-AdmissibleHeuristics(astar,oc)" ->(htnParsing, groundingPreprocess, AStarAOpenPreconditions),
+         "IJCAI-2017-AdmissibleHeuristics(astar,add)" -> (htnParsing, groundingPreprocess, AStarADD),
+         "IJCAI-2017-AdmissibleHeuristics(astar,add-r)" -> (htnParsing, groundingPreprocess, AStarADDReusing),
+         "IJCAI-2017-AdmissibleHeuristics(astar,relax)" -> (htnParsing, groundingPreprocess, AStarRelax),
+         "IJCAI-2017-AdmissibleHeuristics(astar,oc)" -> (htnParsing, groundingPreprocess, AStarAOpenPreconditions),
 
-         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-c)" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPR),
-         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-c-rec)" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
-         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-m)" ->(htnParsing, groundingPreprocess, AStarActionLiftedPR),
-         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-m-rec)" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-c)" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPR),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-c-rec)" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-m)" -> (htnParsing, groundingPreprocess, AStarActionLiftedPR),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-m-rec)" -> (htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
 
          // GA*
-         "IJCAI-2017-AdmissibleHeuristics(gastar,add)" ->(htnParsing, groundingPreprocess, planSearchAStarADD),
-         "IJCAI-2017-AdmissibleHeuristics(gastar,add-r)" ->(htnParsing, groundingPreprocess, planSearchAStarADDReusing),
-         "IJCAI-2017-AdmissibleHeuristics(gastar,relax)" ->(htnParsing, groundingPreprocess, planSearchAStarRelax),
-         "IJCAI-2017-AdmissibleHeuristics(gastar,oc)" ->(htnParsing, groundingPreprocess, planSearchAStarAOpenPreconditions),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,add)" -> (htnParsing, groundingPreprocess, planSearchAStarADD),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,add-r)" -> (htnParsing, groundingPreprocess, planSearchAStarADDReusing),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,relax)" -> (htnParsing, groundingPreprocess, planSearchAStarRelax),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,oc)" -> (htnParsing, groundingPreprocess, planSearchAStarAOpenPreconditions),
 
-         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-c)" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPR),
-         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-c-rec)" ->(htnParsing, groundingPreprocess, planSearchAStarActionLiftedPRReachability),
-         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-m)" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPR),
-         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-m-rec)" ->(htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPRReachability),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-c)" -> (htnParsing, groundingPreprocess, planSearchAStarActionLiftedPR),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-c-rec)" -> (htnParsing, groundingPreprocess, planSearchAStarActionLiftedPRReachability),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-m)" -> (htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPR),
+         "IJCAI-2017-AdmissibleHeuristics(gastar,TDG-m-rec)" -> (htnParsing, groundingPreprocess, planSearchAStarAPRLiftedPRReachability),
 
          //  compare
 
-         "IJCAI-2017-astar-TDG-m-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarAPRLiftedPRCompare),
-         "IJCAI-2017-astar-TDG-c-Recompute-Compare" ->(htnParsing, groundingPreprocess, AStarActionLiftedPRCompare),
-         "IJCAI-2017-gastar-TDG-m-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarAPRLiftedPRCompare),
-         "IJCAI-2017-gastar-TDG-c-Recompute-Compare" ->(htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare),
+         "IJCAI-2017-astar-TDG-m-Recompute-Compare" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPRCompare),
+         "IJCAI-2017-astar-TDG-c-Recompute-Compare" -> (htnParsing, groundingPreprocess, AStarActionLiftedPRCompare),
+         "IJCAI-2017-gastar-TDG-m-Recompute-Compare" -> (htnParsing, groundingPreprocess, greedyAStarAPRLiftedPRCompare),
+         "IJCAI-2017-gastar-TDG-c-Recompute-Compare" -> (htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare),
 
 
          // plan verification á la ICAPS'17
-         "ICAPS-2017-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, ""))
+         "ICAPS-2017-verify" -> (htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, ""))
 
        )
 

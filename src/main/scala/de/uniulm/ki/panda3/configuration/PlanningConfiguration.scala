@@ -634,6 +634,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case NumberOfPlanSteps         => EfficientNumberOfPlanSteps
       case NumberOfAbstractPlanSteps => EfficientNumberOfAbstractPlanSteps
       case UMCPHeuristic             => EfficientUMCPHeuristic
+      case UMCPBFSHeuristic          => EfficientUMCPBFHeuristic
       case WeightedFlaws             => ???
       // HTN heuristics
       case TDGMinimumModificationWithCycleDetection(_) =>
@@ -1358,7 +1359,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                          preprocessingConfiguration = pre,
                          searchConfiguration = search).asInstanceOf[this.type]
              }
-             else this
+             else {
+               assert(false, "Unknown system configuration \"" + key + "\"")
+               this // unreachable
+             }
 
              newConf
          }))
@@ -1396,7 +1400,7 @@ object PlanningConfiguration {
   val defaultPlanSearchConfiguration = PlanBasedSearch(None, DFSType, Nil, Nil, LCFR)
   private val defaultProgressionConfiguration = ProgressionSearch(BFSType, None, PriorityQueueSearch.abstractTaskSelection.random)
   private val defaultSATConfiguration         = SATSearch(MINISAT, SingleSATRun())
-  val defaultVerifyConfiguration = SATPlanVerification(MINISAT, "")
+  val defaultVerifyConfiguration     = SATPlanVerification(MINISAT, "")
 }
 
 /**
@@ -1743,6 +1747,8 @@ object NumberOfAbstractPlanSteps extends SearchHeuristic {override val longInfo:
 object WeightedFlaws extends SearchHeuristic {override val longInfo: String = "???"}
 
 object UMCPHeuristic extends SearchHeuristic {override val longInfo: String = "UMCP-H"}
+
+object UMCPBFSHeuristic extends SearchHeuristic {override val longInfo: String = "UMCP-BFS-Heuristic"}
 
 // TDG heuristics
 sealed trait TDGBasedHeuristic extends SearchHeuristicWithInner
