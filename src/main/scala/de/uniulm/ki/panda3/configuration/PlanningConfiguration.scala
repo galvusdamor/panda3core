@@ -1515,8 +1515,8 @@ case class PreprocessingConfiguration(
 
   override protected def localModifications: Seq[(String, (ParameterMode, (Option[String]) => PreprocessingConfiguration.this.type))] =
     Seq(
-         "-compileNegativePreconditions" -> (NoParameter, { p: Option[String] => this.copy(compileNegativePreconditions = true).asInstanceOf[this.type] }),
-         "-dontCompileNegativePreconditions" -> (NoParameter, { p: Option[String] => this.copy(compileNegativePreconditions = false).asInstanceOf[this.type] }),
+         "-compileNegPreconditions" -> (NoParameter, { p: Option[String] => this.copy(compileNegativePreconditions = true).asInstanceOf[this.type] }),
+         "-dontCompileNegPreconditions" -> (NoParameter, { p: Option[String] => this.copy(compileNegativePreconditions = false).asInstanceOf[this.type] }),
 
          "-compileUnitMethods" -> (NoParameter, { p: Option[String] => this.copy(compileUnitMethods = true).asInstanceOf[this.type] }),
          "-dontCompileUnitMethods" -> (NoParameter, { p: Option[String] => this.copy(compileUnitMethods = false).asInstanceOf[this.type] }),

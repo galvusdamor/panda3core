@@ -16,7 +16,7 @@ PANDA's general call syntax is as follows:
     java -jar panda.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
 \n
 If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
-$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegativePreconditions -liftedPlanning -systemConfig -prune
+$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegPreconditions -liftedPlanning -systemConfig -prune
 
 
 
@@ -1004,7 +1004,7 @@ topDown
 Builds the ground task decomposition graph in a top-down way.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "topDown" IS A KEY, NOT AN OPTION.
 
-This key for the -hierarchicalReachability option builds the Task Decomposition Graph (TDG) in a top-down fashion. That is, it starts with the initial plan and successively expands abstract tasks in a DEPTH FIRST/BREADTH FDIRST?? manner, similar to the inductive definition of Task Decomposition graphs as defined in the following paper:
+This key for the -hierarchicalReachability option builds the Task Decomposition Graph (TDG) in a top-down fashion. That is, it starts with the initial plan and successively expands abstract tasks, similar to the inductive definition of TDGs as defined in the following paper:
 \n
 @InProceedings{Bercher17AdmissibleHTNHeuristic,
   Title                    = {An Admissible HTN Planning Heuristic},
@@ -1041,6 +1041,8 @@ Builds the ground task decomposition graph in a bottom-up fashion.
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "bottomUp" IS A KEY, NOT AN OPTION.
 
 This key for the -hierarchicalReachability option builds the Task Decomposition Graph (TDG) in a bottom-up way, i.e., starting with the actions reachable (identified using the planning graph) and inferring which ground abstract tasks become reachable as well.
+\n
+(This way of building the TDG is currently not yet integrated; or it is buggy at the moment.)
 $
 
 
@@ -1235,9 +1237,9 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--dontCompileNegativePreconditions
+-dontCompileNegPreconditions
 Do not compile away negative preconditions.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-dontCompileNegativePreconditions" IS A SWITCH, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-dontCompileNegPreconditions" IS A SWITCH, NOT AN OPTION.
 
 By default, negative preconditions are compiled away in the usual way. However, the plan space-based planner PANDA3 as well as PANDA-totSAT (not yet delivered) can also cope with negative preconditions natively. Choosing this option will *not* compile them away.
 \n
@@ -1271,9 +1273,9 @@ $ umcp IJCAI-2017-AdmissibleHeuristics ICAPS-2017-verify
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-umcp
+UMCP
 Simulate the system UMCP within PANDA3.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "umcp" IS A KEY, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "UMCP" IS A KEY, NOT AN OPTION.
 
 The plan space-based planning system UMCP by Erol et al. can be simulated within the PANDA3 planner. UMCP is basically a standard plan space-based HTN planning system that uses different search strategies for selecting a most promising plan from a search fringe. In contrast to PANDA3, UMCP "fixates" a primitive plan as soon as one is found and then either turns it into a solution (if possible) or discards it in case this is impossible. Only after this has been done, a different plan is taken from the fringe. Note that our simulation of this relies on the standard POCL planning techniques, i.e., also proving that a primitive plan can be turned into a solution is done relying on this technique (i.e, this is not done with just one single search node, but via search as well). We do this via a depth-first search (i.e., as soon as a primitive plan is found, PANDA3 switches to depth-first *for this plan* before another plan is considered according to the primary UMCP search strategy).
 \n

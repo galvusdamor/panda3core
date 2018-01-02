@@ -166,9 +166,9 @@ object PredefinedConfigurations {
       "IJCAI-2017-AdmissibleHeuristics(umcp-DF)" ->(htnParsing, groundingPreprocess, umcpDF),
       "IJCAI-2017-AdmissibleHeuristics(umcp-H)" ->(htnParsing, groundingPreprocess, umcpH),
 
-         "umcp(BF)" ->(htnParsing, groundingPreprocess, umcpBF),
-         "umcp(DF)" ->(htnParsing, groundingPreprocess, umcpDF),
-         "umcp(h)" ->(htnParsing, groundingPreprocess, umcpH),
+         "UMCP(BF)" ->(htnParsing, groundingPreprocess, umcpBF),
+         "UMCP(DF)" ->(htnParsing, groundingPreprocess, umcpDF),
+         "UMCP(h)" ->(htnParsing, groundingPreprocess, umcpH),
 
 
          // A*
