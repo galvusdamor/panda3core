@@ -31,7 +31,7 @@ lazy val assemblySettings = commonSettings ++ Seq(
 lazy val main = (project in (file("assembly") / "main")).settings(assemblySettings: _*).
   settings(
             target := file("assembly") / "main",
-            assemblyJarName in assembly := "panda3main.jar",
+            assemblyJarName in assembly := "PANDA.jar",
             mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
           )
 
