@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
 import java.io.InputStream
+import java.lang.management.{ManagementFactory, MemoryPoolMXBean, MemoryType}
 import java.util.UUID
 import java.util.concurrent.Semaphore
 
@@ -42,7 +43,7 @@ import de.uniulm.ki.panda3.symbolic.writer.shop2.SHOP2Writer
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util._
 
-import scala.collection.{JavaConversions, Seq}
+import scala.collection.{JavaConversions, JavaConverters, Seq}
 import scala.util.Random
 
 
@@ -565,7 +566,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
 
-  private def constructEfficientHeuristic(heuristicConfig: SearchHeuristic, wrapper: Wrapping, analysisMap: AnalysisMap, domainAndPlan: (Domain, Plan)) : EfficientHeuristic[_] = {
+  private def constructEfficientHeuristic(heuristicConfig: SearchHeuristic, wrapper: Wrapping, analysisMap: AnalysisMap, domainAndPlan: (Domain, Plan)): EfficientHeuristic[_] = {
     // if we need the ADD heuristic as a building block create it
     val optionADD = heuristicConfig match {
       case LiftedTDGMinimumADD(_, _) | TDGMinimumADD(_) =>
@@ -694,7 +695,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           // start process of translating the solution back to something readable (i.e. lifted)
           result.headOption
         case AllFoundPlans                                    => result
-        case SearchStatistics                                 => informationCapsule
+        case SearchStatistics                                 =>
+          // write memory info
+          val pools: Seq[MemoryPoolMXBean] = JavaConverters.asScalaBuffer(ManagementFactory.getMemoryPoolMXBeans)
+          val heapMemory = pools collect { case memoryPoolMXBean if memoryPoolMXBean.getType == MemoryType.HEAP => memoryPoolMXBean.getPeakUsage.getUsed } sum
+
+          informationCapsule.set(Information.PEAKMEMORY, heapMemory.toString)
+
+          informationCapsule
         case SearchSpace                                      => rootNode
         case SolutionInternalString                           => if (result.nonEmpty) Some(result.head.shortInfo) else None
         case SolutionDotString                                => if (result.nonEmpty) Some(result.head.dotString) else None
@@ -813,9 +821,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       else EverythingIsReachable(domain, problem.groundedInitialState.toSet)
 
     val tdg = tdgType match {
-      case NaiveTDG   => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
-      case TopDownTDG => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
-      case TwoWayTDG  => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case NaiveTDG    => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case TopDownTDG  => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case BottomUpTDG => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = true)
+      case TwoWayTDG   => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = false)
     }
 
     analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg)
@@ -1374,6 +1383,8 @@ sealed trait TDGGeneration extends Configuration
 object NaiveTDG extends TDGGeneration {override def toString: String = "Naive TDG"}
 
 object TopDownTDG extends TDGGeneration {override def toString: String = "Top Down TDG"}
+
+object BottomUpTDG extends TDGGeneration {override def toString: String = "Bottom Up TDG"}
 
 object TwoWayTDG extends TDGGeneration {override def toString: String = "Two Way TDG"}
 

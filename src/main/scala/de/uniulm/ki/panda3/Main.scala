@@ -188,8 +188,9 @@ object Main {
       println("Panda says: " + results(SearchStatus))
 
 
-    if (results.map.contains(SearchStatistics))
+    if (results.map.contains(SearchStatistics)) {
       println(results(SearchStatistics).shortInfo)
+    }
     if (results.map.contains(ProcessingTimings)) {
       println("----------------- TIMINGS -----------------")
       println(results(ProcessingTimings).shortInfo)

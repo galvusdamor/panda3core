@@ -463,8 +463,20 @@ object PredefinedConfigurations {
          "-shop2OriginalLifted" -> (htnParsing, liftedPreprocess, SHOP2Search),
 
          "-fape" -> (htnParsing, groundingPreprocess, FAPESearch),
-         "-fapeLifted" -> (htnParsing, liftedPreprocess, FAPESearch)
+         "-fapeLifted" -> (htnParsing, liftedPreprocess, FAPESearch),
 
-       )
+
+         "-prep-nosplit-naive" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = false, groundedTaskDecompositionGraph = Some(NaiveTDG)), NoSearch),
+         "-prep-nosplit-bottomup" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = false, groundedTaskDecompositionGraph = Some(BottomUpTDG)), NoSearch),
+         "-prep-nosplit-topdown" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = false, groundedTaskDecompositionGraph = Some(TopDownTDG)), NoSearch),
+         "-prep-nosplit-twoway" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = false, groundedTaskDecompositionGraph = Some(TwoWayTDG)), NoSearch),
+
+         "-prep-split-naive" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(NaiveTDG)), NoSearch),
+         "-prep-split-bottomup" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(BottomUpTDG)), NoSearch),
+         "-prep-split-topdown" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TopDownTDG)), NoSearch),
+         "-prep-split-twoway" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TwoWayTDG)), NoSearch)
+
+
+         )
 
 }

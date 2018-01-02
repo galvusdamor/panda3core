@@ -13,7 +13,8 @@ import scala.collection.mutable
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis, prunePrimitive: Boolean)
+case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis, prunePrimitive: Boolean,
+                                     omitTopDownStep: Boolean)
   extends TaskDecompositionGraph {
 
 
@@ -159,8 +160,8 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
             // fill map
             simpleMethod.subPlan.variableConstraints.variables foreach {
               v =>
-                val cspPossibleValues : Seq[Constant] = simpleMethod.subPlan.variableConstraints.reducedDomainOf(v)
-                val reducedPossibleValues : Seq[Constant] = if (currentGroundTask.argumentMap contains v) cspPossibleValues intersect currentGroundTask.argumentMap(v) else cspPossibleValues
+                val cspPossibleValues: Seq[Constant] = simpleMethod.subPlan.variableConstraints.reducedDomainOf(v)
+                val reducedPossibleValues: Seq[Constant] = if (currentGroundTask.argumentMap contains v) cspPossibleValues intersect currentGroundTask.argumentMap(v) else cspPossibleValues
 
                 setParameter(v) = reducedPossibleValues.toSet
             }
@@ -183,7 +184,7 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
         } collect { case Some(x) => x }
 
       // add the new methods to the map
-      val flattenedPossibleMethods = possibleMethods map { _._2 }
+      val flattenedPossibleMethods: Seq[CartesianGroundMethod] = possibleMethods map { _._2 }
       cartMethodsMap(currentGroundTask) = cartMethodsMap(currentGroundTask) ++ flattenedPossibleMethods
       flattenedPossibleMethods foreach {
         cartMethod =>
@@ -201,7 +202,27 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
 
     // start the cartesian process from the artificial grounding top task
     val cartesianTop = CartesianGroundTask(groundedTopTask.task.asInstanceOf[ReducedTask], groundedTopTask.arguments map { x => Set(x) })
-    dfs(cartesianTop)
+
+    if (!omitTopDownStep) {
+      dfs(cartesianTop)
+    } else {
+      // don't use top-down analysis, just fill the carthesian maps naively
+      cartTasksMap(cartesianTop.task) = Set(cartesianTop)
+      cartMethodsMap(cartesianTop) = Set(CartesianGroundMethod(topMethod, topMethod.subPlan.variableConstraints.variables map { v => v -> v.sort.elements.toSet } toMap))
+
+      domain.tasks foreach { case t => cartTasksMap(t) = Set(CartesianGroundTask(t, t.parameters map { _.sort.elements.toSet })) }
+      domain.decompositionMethods foreach { case m =>
+        val cartTask = cartTasksMap(m.abstractTask).head
+        val cartMethod = CartesianGroundMethod(m, m.subPlan.variableConstraints.variables map { v => v -> v.sort.elements.toSet } toMap)
+        cartMethodsMap(cartTask) = cartMethodsMap(cartTask) + cartMethod
+
+        m.subPlan.planStepsWithoutInitGoal foreach { st =>
+          val subTask = cartTasksMap(st.schema).head
+          cartTaskInMethodsMap(subTask) = cartTaskInMethodsMap(subTask) + cartMethod
+
+        }
+      }
+    }
 
 
     // 2. build the groundings in a bottom up fashion
