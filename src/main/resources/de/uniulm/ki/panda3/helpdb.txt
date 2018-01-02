@@ -16,7 +16,7 @@ PANDA's general call syntax is as follows:
     java -jar panda.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
 \n
 If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
-$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flaw -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegPreconditions -liftedPlanning -systemConfig -prune
+$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flawSelection -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegPreconditions -liftedPlanning -systemConfig -prune
 
 
 
@@ -350,11 +350,11 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--flaw -f
+-flawSelection -f
 Choose a flaw selection strategy.
 Available flaw selection strategies:
 
-Using "-flaw [KEYS]" allows to select a flaw selection strategy for the plan space-based search algorithm PANDA3.
+Using "-flawSelection [KEYS]" allows to select a flaw selection strategy for the plan space-based search algorithm PANDA3.
 \n
 Please note that you can select a sequence of flaw selection strategies for tie-breaking. To give such a sequence, use a semicolon-separated list of flaw selection functions without whitespaces. Specifying sequences of flaw selection functions makes sense to be more discriminative about the flaw to be actually selected, because the first flaw selection function might not restrict the set of candidate flaws to a single one, so adding a second (third, etc.) selection function reduces the available flaws in this set reducing the impact of randomness.
 $ lcfr front-flaw newest-flaw causal-threat random-flaw

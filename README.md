@@ -2,7 +2,7 @@
 
 PANDA3 is a domain-independent planning system. It is capable of handling both classical and hierarchical planning problems.
 
-## Licence
+## License
 
 Copyright (C) 2014-2017 Gregor Behnke (gregor.behnke@uni-ulm.de)  
 Copyright (C) 2014 Thomas Geier  

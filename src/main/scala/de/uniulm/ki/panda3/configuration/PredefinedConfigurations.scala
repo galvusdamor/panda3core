@@ -165,6 +165,9 @@ object PredefinedConfigurations {
 
          //  compare
 
+         // this is some quiet technical stuff for quiet advanced analyzations regarding recomputation
+         // (there are special tables for for that in the paper).
+
          "IJCAI-2017-astar-TDG-m-Recompute-Compare" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPRCompare),
          "IJCAI-2017-astar-TDG-c-Recompute-Compare" -> (htnParsing, groundingPreprocess, AStarActionLiftedPRCompare),
          "IJCAI-2017-gastar-TDG-m-Recompute-Compare" -> (htnParsing, groundingPreprocess, greedyAStarAPRLiftedPRCompare),
