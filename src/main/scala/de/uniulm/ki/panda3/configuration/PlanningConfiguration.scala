@@ -1487,9 +1487,9 @@ sealed trait GroundedReachabilityMode extends Configuration
 
 object NaiveGroundedReachability extends GroundedReachabilityMode {override def longInfo: String = "Naive Reachability"}
 
-object PlanningGraph extends GroundedReachabilityMode {override def longInfo: String = "Planning Graph"}
+object PlanningGraph extends GroundedReachabilityMode {override def longInfo: String = "Planning Graph (mutex-free)"}
 
-object PlanningGraphWithMutexes extends GroundedReachabilityMode {override def longInfo: String = "Planning Graph with Mutexes"}
+object PlanningGraphWithMutexes extends GroundedReachabilityMode {override def longInfo: String = "Planning Graph (with mutexes)"}
 
 object IntegerPlanningGraph extends GroundedReachabilityMode {override def longInfo: String = "Integer Planning Graph"}
 
@@ -1608,8 +1608,8 @@ case class PreprocessingConfiguration(
                   ("Remove unnecessary predicates", removeUnnecessaryPredicates) ::
                   ("Convert to SAS+", convertToSASP) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
-                  ("Split independent parameters", splitIndependentParameters) ::
-                  ("Lifted Reachability Analysis", liftedReachability) ::
+                  ("Split indipendent parameters", splitIndependentParameters) ::
+                  ("Domain Cleanup", liftedReachability) ::
                   ("Grounded Reachability Analysis", if (groundedReachability.isEmpty) "false" else groundedReachability.get.longInfo) ::
                   ("Grounded Task Decomposition Graph", if (groundedTaskDecompositionGraph.isEmpty) "false" else groundedTaskDecompositionGraph.get) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
@@ -1885,10 +1885,10 @@ case class PlanBasedSearch(
   /** returns a detailed information about the object */
   override def longInfo: String = "Plan-based Search Configuration\n-------------------------------\n" +
     alignConfig(("Node limit", nodeLimit.getOrElse("none")) ::
-                  ("Search Algorithm", searchAlgorithm) ::
-                  ("Heuristic", heuristic.map(_.longInfo).mkString(" -> ")) ::
+                  ("Search Algorithm", searchAlgorithm.longInfo) ::
+                  ("Heuristic", if (heuristic.isEmpty) "none" else heuristic.map(_.longInfo).mkString(" -> ")) ::
                   ("Flaw selector", flawSelector.longInfo) ::
-                  ("Pruning", pruningTechniques.map(_.longInfo).mkString(", ")) ::
+                  ("Pruning", if (pruningTechniques.isEmpty) "off" else pruningTechniques.map(_.longInfo).mkString(", ")) ::
                   ("Efficient search", efficientSearch) ::
                   ("Continue on solution", continueOnSolution) ::
                   ("Print search info", printSearchInfo) ::
@@ -1913,7 +1913,7 @@ case class PlanBasedSearch(
          "-heuristic" -> (NecessaryParameter, { h: Option[String] => this.copy(heuristic = SearchHeuristic.parse(h.get)).asInstanceOf[this.type] }),
          "-h" -> (NecessaryParameter, { h: Option[String] => this.copy(heuristic = SearchHeuristic.parse(h.get)).asInstanceOf[this.type] }),
 
-         "-flaw" -> (NecessaryParameter, { f: Option[String] => this.copy(flawSelector = SearchFlawSelector.parse(f.get)).asInstanceOf[this.type] }),
+         "-flawSelection" -> (NecessaryParameter, { f: Option[String] => this.copy(flawSelector = SearchFlawSelector.parse(f.get)).asInstanceOf[this.type] }),
          "-f" -> (NecessaryParameter, { f: Option[String] => this.copy(flawSelector = SearchFlawSelector.parse(f.get)).asInstanceOf[this.type] }),
 
          "-prune" -> (NecessaryParameter, { p: Option[String] => this.copy(pruningTechniques = PruningTechnique.parse(p.get)).asInstanceOf[this.type] })
