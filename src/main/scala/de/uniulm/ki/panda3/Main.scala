@@ -112,8 +112,10 @@ object Main {
                 if (conf.config.modifyOnOptionString.contains(key))
                   conf.copy(config = conf.config.modifyOnOptionString(key)._2(value))
                 else {
-                  println("Unknown option \"" + key + "\"; maybe a typeO? The following options are allowed:")
-                  println(conf.config.modifyOnOptionString.keySet.toSeq.filter(helpDB.contains).sorted map { x => "\t" + x } mkString "\n")
+                  val text = "Unknown option \"" + key + "\"; maybe a typeO? In case it is not, please consult the following help:"
+                  println(text)
+                  println(text.indices map { _ => "="} mkString "")
+                  //println(conf.config.modifyOnOptionString.keySet.toSeq.filter(helpDB.contains).sorted map { x => "\t" + x } mkString "\n")
                   println()
                   println(transformTo80Chars(getHelpTextFor("main")))
                   System exit 1
