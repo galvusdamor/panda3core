@@ -256,7 +256,7 @@ object Main {
           optionText -> helpDB(c)._1
         }
         val maxChildLength = childrenTexts map { _._1.length } max
-        val childrenLines = childrenTexts map { case (i, t) => "\t" + i + (Range(i.length, maxChildLength + 4) map { _ => " " }).mkString("") + t }
+        val childrenLines = childrenTexts map { case (i, t) => " " + i + (Range(i.length, maxChildLength + 2) map { _ => " " }).mkString("") + t }
 
         childrenLines.mkString("\n")
       }
