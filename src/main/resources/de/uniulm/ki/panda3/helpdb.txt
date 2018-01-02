@@ -1268,7 +1268,7 @@ Availabe pre-defined system configurations:
 Choose this option to run the system in a standard configuration which we authors deemed to be generally useful (e.g., because it is very efficient on average, because it simulates a system from the literature, or because it reproduces results from a specific paper).
 \n
 Please be aware that choosing *additional* options might contradict the options chosen here; options are *performed* in the order they are set, so specifying "-systemConfig CONF1 -optionX Y" will perfrom "optionX = Y" even the system configuration CONF1 will explicitly state the opposite. This is especially important when you want to reproduce results from scientific papers; then, you should not choose any further options.
-$ umcp IJCAI-2017-AdmissibleHeuristics ICAPS-2017-verify
+$ UMCP IJCAI-2017-AdmissibleHeuristics ICAPS-2017-verify
 
 
 
