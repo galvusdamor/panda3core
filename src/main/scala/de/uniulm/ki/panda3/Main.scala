@@ -162,17 +162,36 @@ object Main {
     val lineSplitted = text.replace("\t", "    ") split "\n"
 
     val redistributedLines = lineSplitted flatMap { line =>
+      var indentMode = false
+      var multiLine = false
       val initialIndent = line.takeWhile(c => c == ' ')
+      val indentLength = line.trim.lastIndexOf("  ") + initialIndent.length + 2
+      val indent = new String(Array.fill[Char](indentLength)(' '))
       val noIndent: Seq[String] = line.drop(initialIndent.length).split(" ")
+      if (helpDB.keys exists {k => noIndent.head.startsWith(k)}) {
+        indentMode = true
+      }
       val (lines, lastLine) = noIndent.drop(1).foldLeft[(Seq[String], String)]((Nil, initialIndent + noIndent.head))(
         {
           case ((list, buf), c) =>
             val newBuf = buf + " " + c
-            if (newBuf.length > lineWidth) (list :+ buf, initialIndent + c) else (list, newBuf)
+            if (newBuf.length > lineWidth) {
+              if(indentMode) {
+                multiLine = true
+                (list :+ buf, indent + c)
+              } else {
+                (list :+ buf, initialIndent + c)
+              }
+            } else {
+              (list, newBuf)
+            }
         }
-                                                                                                                    )
-
-      lines :+ lastLine
+      )
+      if(multiLine && !lastLine.startsWith(indent)) {
+          lines :+ indent ++ lastLine
+      } else {
+        lines :+ lastLine
+      }
     }
 
     redistributedLines mkString "\n"
