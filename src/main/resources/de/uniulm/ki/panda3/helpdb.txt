@@ -265,16 +265,16 @@ Choose the search algorithm.
 Available search strategies:
 
 Using "-searchAlgorithm [KEY]" allows to select the search algorithm given plan-based search ("traditional PANDA3") was selected.
-$ bfs dfs greedy uniform-cost a* depth-a*
+$ BFS DFS greedy uniform-cost a* depth-a*
 
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-bfs
+BFS
 Breadth-first Search.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "bfs" IS A KEY, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "BFS" IS A KEY, NOT AN OPTION.
 
 This is the standard breadth-first search strategy as described in the text books using a queue.
 $
@@ -282,9 +282,9 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-dfs
+DFS
 Depth-first Search.
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "dfs" IS A KEY, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "DFS" IS A KEY, NOT AN OPTION.
 
 This is the standard depth-first search strategy as described in the text books using a stack.
 $
@@ -357,17 +357,17 @@ Available flaw selection strategies:
 Using "-flawSelection [KEYS]" allows to select a flaw selection strategy for the plan space-based search algorithm PANDA3.
 \n
 Please note that you can select a sequence of flaw selection strategies for tie-breaking. To give such a sequence, use a semicolon-separated list of flaw selection functions without whitespaces. Specifying sequences of flaw selection functions makes sense to be more discriminative about the flaw to be actually selected, because the first flaw selection function might not restrict the set of candidate flaws to a single one, so adding a second (third, etc.) selection function reduces the available flaws in this set reducing the impact of randomness.
-$ lcfr front-flaw newest-flaw causal-threat random-flaw
+$ LCFR front-flaw newest-flaw causal-threat random-flaw
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-lcfr
+LCFR
 Least-Cost Flaw-Repair (restrict to flaws with a minimal modification branching factor).
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "lcfr" IS A KEY, NOT AN OPTION.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "LCFR" IS A KEY, NOT AN OPTION.
 
-The flaw selection strategy lcfr, Least-Cost Flaw-Repair, for the plan space-based PANDA3 algorithm is both extremely simple and efficient: it always selects a flaw for which there are the least number of "repairs", i.e., plan modifications. That way, the branching factor of the explored search space is locally minimized, which shows empirically good results on average.
+The flaw selection strategy LCFR, Least-Cost Flaw-Repair, for the plan space-based PANDA3 algorithm is both extremely simple and efficient: it always selects a flaw for which there are the least number of "repairs", i.e., plan modifications. That way, the branching factor of the explored search space is locally minimized, which shows empirically good results on average.
 \n
 It was introduced in the following paper:
 \n
@@ -477,20 +477,14 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -heuristic -h
-Choose one of many heuristics.
+Choose heuristics for the search strategy and for tie-breaking.
 Available heuristics:
 
-Using "-heuristic [KEYS]" allows to select heuristics that are used for the plan selection function and for tie-breaking. You can specify a sequence of heuristics by putting a semicolon in between them. Only the first heuristic is used by the actual search algorithm (such as A*) and the remaining ones are used to break ties (the smaller the better).
+Using "-heuristic [KEYS]" allows to select heuristics that are used for the plan selection function and for tie-breaking. You can specify a sequence of heuristics by putting a semicolon in between them. If you specify a sequence of k heuristics, then the search algorithm equation, such as "f(n) = g(n) + h(n)" in case of A* is used k times, where h(n) is always the k-th heuristic. Later entries are used for tie-breaking only.
 \n
 Most heuristics have additional arguments, which can be passed on using the following syntax:
     -heuristic HEURISTIC_NAME(PARAM1=VALUE1,PARAM2=VALUE2)
 $ random-heuristic #flaw #oc #ps #abstract add add-r relax tdg-m tdg-m-r tdg-m-lifted tdg-c tdg-c-r tdg-c-lifted
-
-
-
-
-
-
 
 
 
@@ -931,7 +925,7 @@ This second step is a simplification of the domain pruning technique introduced 
   Doi                      = {10.3233/978-1-60750-606-5-229}
 }
 \n
-However, the technique introduced by Elkawkagy et al. relies on a ground model, which is way more concise, but it also required grounding the model, whereas our extremely fast preprocessing only takes the action and predicate names into account. Please note that we furthermore do *not* perform a reachabilty analysis of the tasks that are reachable from the initial task network. This test is only done in the actual TDG construction (see key -hierarchicalReachability).
+However, the technique introduced by Elkawkagy et al. relies on a ground model, which is way more concise, but it also required grounding the model, whereas our extremely fast preprocessing only takes the action and predicate names into account. Please note that we furthermore do *not* perform a reachabilty analysis of the tasks that are reachable from the initial task network. This test is only done in the actual TDG construction (see option "-hierarchicalReachability").
 \n
 Using this option deactivates theses simplifications.
 $
@@ -946,7 +940,7 @@ THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-primitiveReachability" TAKES A STRIN
 
 By default, all planners rely on a ground model. To obtain the ground mode, we rely on a reachability analysis based on the planning graph (PG), which can be build either with or without the mutexes. By default, the reachability relying on the PG without mutexes is performed.
 \n
-Please note that this planning graph is not only used for creating the ground model. Even if you do *not* plan if a ground way (i.e., lifted, which you can do by using "-liftedPlanning"), then creating this planning graph might still produce a smaller *lifted* model (i.e., lifted actions get removed if there isn't a reachable grounding). Furthermore, some heuristics use the planning graph that is created here (this is noted in the respective heuristic).
+Please note that this planning graph is not only used for creating the ground model. Even if you do *not* plan if a ground way (i.e., lifted, which you can do by using "-liftedPlanning"), then creating this planning graph might still produce a smaller *lifted* model (i.e., lifted actions get removed if there isn't a reachable grounding). Furthermore, some heuristics use the planning graph that is created here (this is noted in the respective heuristic). So, even if you plan in a lifted way this grounding process is still activated, so deactivate it if desired in this case.
 \n
 The reachability analysis needs to take one of two parameters:
 - pg (describes the mutex-free planning graph) and
@@ -1272,6 +1266,7 @@ $ UMCP IJCAI-2017-AdmissibleHeuristics ICAPS-2017-verify
 
 
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 UMCP
 Simulate the system UMCP within PANDA3.
@@ -1303,9 +1298,9 @@ In the dissertation of Erol, he has proposed various plan selection functions fo
   Abstract                 = {Planning is a central activity in many areas including robotics, manufacturing, space mission sequencing, and logistics. as the size and complexity of planning problems grow, there is great economic pressure to automate this process in order to reduce the cost of planning effort, and to improve the quality of produced plans. AI planning research has focused on general-purpose planning systems which can process the specifications of an application domain and generate solutions to planning problems in that domain. Unfortunately, there is a big gap between theoretical and application oriented work in AI planning. The theoretical work has been mostly based on state-based planning, which has limited practical applications. The application- oriented work has been based on hierarchical task network (HTN) planning, which lacks a theoretical foundation. As a result, in spite of many years of research, building planning applications remains a formidable task. The goal of this dissertation is to facilitate building reliable and effective planning applications. The methodology includes design of a mathematical framework for HTN planning, analysis of this framework, development of provably correct algorithms based on this analysis, and the implementation of these algorithms for further evaluation and exploration. The representation, analyses, and algorithms described in this thesis will make it easier to apply HTN planning techniques effectively and correctly to planning applications. The precise and mathematical nature of the descriptions will also help teaching about HTN planning, will clarify misconceptions in the literature, and will stimulate further research.}
 }
 \n
-These selection strategies are: breadth-first search, depth-first search, and best-first. The latter variant is also referred to as "heuristic version" and it selects a plan with the fewest number of abstract tasks.
+These selection strategies are: breadth-first search, depth-first search, and best-first. The latter variant is also referred to as "heuristic version" and it selects a plan with the fewest number of abstract tasks. You need to select one of these three variants by passing the respective parameter (BF, DF, or h) on to the configuration. For this, put the respective parameter in parentheses behind the "UMCP".
 \n
-You need to select one of these three variants by passing the respective parameter (BF, DF, or h) on to the configuration. For this, put the respective parameter in parentheses behind the "umcp".
+Because UMCP was originally designed for standard HTN problems, choosing this configuration also implies the option "-stripHybrid", which removes all hybrid language features (see -help of that option for details). However, the UMCP strategy can also be used for solving hybrid problems as well. For this, you have to overwrite that option by using "-dontStripHybrid" *after* you have specified the UMCP strategy.
 $
 
 
@@ -1356,6 +1351,41 @@ In case of A* and greedy A*, one of the following heuristics must be chosen as s
 - TDG-c-rec (as TDG-c, but performing the TDG recomputation)
 \n
 For a more detailed explanation of the latter four heuristics, see the help descriptions of the respective heuristics of the paper.
+\n
+In addtion, we have evaluated the simulation of variants of the HTN planning system UMCP. These are:
+- UMCP-BF
+- UMCP-DF
+- UMCP-H
+\n
+Please note that these three variants can also be called as "normal system configurations" that can be chosen directly, not just as a configuration of the IJCAI-2017 setting (call "-help UMCP" to get further information about these configurations). Note, however, that we have noticed an implementation error in the IJCAI version of UMCP-BF. Here, that configuration always performs standard breadth-first search with the flaw-selector sequence "abstract-task,LCFR". That is, that strategy does not, as it should, turn a primitive plan into a solution (or prove that this is impossible) before it considers another plan. We have fixed this error in the standard UMCP-BF configuration (choose it with "-systemConfig UMCP(BF)"), whereas this IJCAI configuration of UMCP-BF is the flawed one we have used in the empirical evaluation of the paper.
+\n
+All system configurations share the same general options (for preprocessing, etc.) and only differ in the used search strategy (plan selection and heuristic). For documentation purposes, we here give the list of chosen options for our configurations:
+\n
+- compile negative preconditions = true
+  (see description of "-dontCompileNegPreconditions" for details)
+- compile unit methods = false
+  (we can, in principle, compile away abstract tasks with just one method)
+- compile initial plan = true
+  (introduce a new initial plan containing just a single, new, abstract
+   task that decomposes into the original initial plan)
+- compile away the order in methods = false
+  (we can, in principle, replace methods with a partially ordered plan
+   into a set of totally ordered plan; in general not solution-preserving)
+- split independent parameters = true
+  (this is solution-preserving preprocessing compilation that splits
+   certain abstract tasks into several thereby reducing the set of
+   possible groundings; it is always done by default.)
+- domain cleanup = true
+  (see description of "-noDomainCleanup" for details)
+- primitive reachability = mutex-free planning graph
+  (see description of "-primitiveReachability" for details)
+- hierarchical reachability = two-way TDG
+  (see description of "-hierarchicalReachability" for details)
+- iterate hierarchical reachability analysis = true
+  (we can, in principle, suppress the iteration of the planning graph
+   construction and the top-down reachability analysis)
+- ground planning = true
+  (see description of "-liftedPlanning" for details)
 $
 
 

@@ -1,7 +1,7 @@
 PANDA - Planning and Acting in a Network Decomposition Architecture
 Believe us: It's great, it's fantastic! 
 
-PANDA Copyright (C) 2014-2017 Gregor Behnke, Pascal Bercher, Thomas Geier, Kadir Dede, Daniel Höller, Kristof Mickeleit, Matthias Englert
+PANDA Copyright (C) 2014-2018 Gregor Behnke, Pascal Bercher, Thomas Geier, Kadir Dede, Daniel Höller, Kristof Mickeleit, Matthias Englert
 This program comes with ABSOLUTELY NO WARRANTY
 This is free software, and you are welcome to redistribute it under certain conditions; run PANDA with -license for details.
 
