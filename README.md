@@ -20,11 +20,11 @@ Call PANDA.jar with -help to get detailed information and instructions.
 ## License
 
 Copyright (C) 2014-2018 Gregor Behnke (gregor.behnke@uni-ulm.de)  
+Copyright (C) 2014-2018 Daniel Höller (daniel.hoeller@uni-ulm.de)  
 Copyright (C) 2014-2018 Pascal Bercher (pascal.bercher@uni-ulm.de)
 Copyright (C) 2014 Thomas Geier  
 Copyright (C) 2015 Kadir Dede  
-Copyright (C) 2014-2018 Daniel Höller (daniel.hoeller@uni-ulm.de)  
-Copyright (C) 2016 Kristof Mickeleit  
+Copyright (C) 2016-2018 Kristof Mickeleit  
 Copyright (C) 2016 Matthias Englert  
 
 
