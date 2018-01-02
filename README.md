@@ -27,5 +27,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## Building panda
 To obtain an executable jar of PANDA, you need an installation of the simple build tool (version 0.13.9 or higher).
-If you have, please run sbt main/assembly in the command line.
+If you have, please run
+  sbt main/assembly
+in a command line.
 The second-last line of the commands output will tell you where sbt has put the jar file.
