@@ -1,8 +1,8 @@
-#PANDA3 Core
+# PANDA3 Core
 
 PANDA3 is a domain-independent planning system. It is capable of handling both classical and hierarchical planning problems.
 
-##Licence
+## Licence
 
 Copyright (C) 2014-2017 Gregor Behnke (gregor.behnke@uni-ulm.de)  
 Copyright (C) 2014 Thomas Geier  
@@ -26,6 +26,6 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## Building panda
-To obtain an executable jar of PANDA, you need an installtion of the simple build tool (version 0.13.9 or higher).
+To obtain an executable jar of PANDA, you need an installation of the simple build tool (version 0.13.9 or higher).
 If you have, please run sbt main/assembly in the command line.
 The second-last line of the commands output will tell you where sbt has put the jar file.
