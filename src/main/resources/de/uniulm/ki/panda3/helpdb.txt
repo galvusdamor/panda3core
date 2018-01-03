@@ -1364,7 +1364,8 @@ All system configurations share the same general options (for preprocessing, etc
 - compile negative preconditions = true
   (see description of "-dontCompileNegPreconditions" for details)
 - compile unit methods = false
-  (we can, in principle, compile away abstract tasks with just one method)
+  (we can, in principle, compile away abstract tasks with just one method;
+   this can result into an exponential domain blow-up, however)
 - compile initial plan = true
   (introduce a new initial plan containing just a single, new, abstract
    task that decomposes into the original initial plan)
@@ -1375,6 +1376,8 @@ All system configurations share the same general options (for preprocessing, etc
   (this is solution-preserving preprocessing compilation that splits
    certain abstract tasks into several thereby reducing the set of
    possible groundings; it is always done by default.)
+- compile useless abstract tasks = true
+  (replace abstract tasks with just one method by it decompostion)
 - domain cleanup = true
   (see description of "-noDomainCleanup" for details)
 - primitive reachability = mutex-free planning graph
