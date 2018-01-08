@@ -21,7 +21,8 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
   private case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Variable, Set[Constant]]) {
     lazy val subTasks  : Seq[CartesianGroundTask]           = subTaskMap.values.toSeq
     lazy val subTaskMap: Map[PlanStep, CartesianGroundTask] = method.subPlan.planStepsWithoutInitGoal map { case ps@PlanStep(_, schema: ReducedTask, arguments) =>
-      ps -> CartesianGroundTask(schema, arguments map parameter)
+      ps -> CartesianGroundTask(schema,
+                                if (!omitTopDownStep) arguments map parameter else  ps.schema.parameters map { _.sort.elements.toSet })
     } toMap
 
     lazy val subCartesianToPlanSteps: Map[CartesianGroundTask, Seq[PlanStep]] = subTaskMap.toSeq groupBy { _._2 } map { case (cart, seq) => cart -> seq.map(_._1) }
@@ -208,12 +209,19 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
     } else {
       // don't use top-down analysis, just fill the carthesian maps naively
       cartTasksMap(cartesianTop.task) = Set(cartesianTop)
-      cartMethodsMap(cartesianTop) = Set(CartesianGroundMethod(topMethod, topMethod.subPlan.variableConstraints.variables map { v => v -> v.sort.elements.toSet } toMap))
+      //cartMethodsMap(cartesianTop) = Set(CartesianGroundMethod(topMethod, topMethod.subPlan.variableConstraints.variables map { v => v -> v.sort.elements.toSet } toMap))
 
       domain.tasks foreach { case t => cartTasksMap(t) = Set(CartesianGroundTask(t, t.parameters map { _.sort.elements.toSet })) }
-      domain.decompositionMethods foreach { case m =>
+      //(domain.decompositionMethods) foreach { case m =>
+      (domain.decompositionMethods :+ topMethod) foreach { case m =>
         val cartTask = cartTasksMap(m.abstractTask).head
-        val cartMethod = CartesianGroundMethod(m, m.subPlan.variableConstraints.variables map { v => v -> v.sort.elements.toSet } toMap)
+        val cartMethod = CartesianGroundMethod(m, m.subPlan.variableConstraints.variables map { v =>
+          m.subPlan.variableConstraints.constraints find { case Equal(`v`,c : Constant) => true; case _ => false } match {
+            case Some(Equal(_,c : Constant)) => v -> Set(c)
+            case None => v -> m.subPlan.variableConstraints.reducedDomainOf (v).toSet.filterNot (c => m.subPlan.variableConstraints.constraints.contains (NotEqual (v, c) ) )
+          }
+          /*v.sort.elements.toSet*/
+        } toMap)
         cartMethodsMap(cartTask) = cartMethodsMap(cartTask) + cartMethod
 
         m.subPlan.planStepsWithoutInitGoal foreach { st =>
