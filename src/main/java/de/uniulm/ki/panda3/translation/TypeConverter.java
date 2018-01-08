@@ -129,6 +129,11 @@ public class TypeConverter {
     private static List<String> parsePlan(String planString) throws Exception {
         List<String> plan = new ArrayList<>();
         planString = planString.trim();
+        while (planString.charAt(0) != '(')
+            planString = planString.substring(1); // drop chars before first brace
+        while (planString.charAt(planString.length()-1) != ')')
+            planString = planString.substring(0, planString.length() - 1); // drop chars after last brace
+
         planString = planString.substring(1, planString.length() - 1);
 
         int klammerbilanz = 0;
