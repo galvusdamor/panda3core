@@ -85,6 +85,8 @@ public class TypeConverter {
                 bw.write("\t" + addType(def) + "\n");
             } else if (def.trim().startsWith("(:action")) {
                 bw.write(transformAction(def));
+            } else if (def.trim().startsWith("(:requirements")) {
+                // TODO: just ignore for now. Most planners disregard this ...
             } else {
                 System.out.println("Error, definition type not found: " + def);
             }
