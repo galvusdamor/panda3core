@@ -15,12 +15,25 @@ object PredefinedConfigurations {
 
   val hybridParsing = ParsingConfiguration(eliminateEquality = false, stripHybrid = false)
   val htnParsing    = ParsingConfiguration(eliminateEquality = false, stripHybrid = true)
+  val pddlParsing   = ParsingConfiguration(parserType = OldPDDLType, eliminateEquality = false, stripHybrid = false)
 
   val parsingConfigs = Map(
                             "-hybrid" -> hybridParsing,
                             "-htn" -> htnParsing
                           )
 
+
+  val pddlGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                           compileInitialPlan = false,
+                                                           removeUnnecessaryPredicates = true,
+                                                           convertToSASP = false, allowSASPFromStrips = false,
+                                                           compileOrderInMethods = None,
+                                                           ensureMethodsHaveLastTask = false,
+                                                           splitIndependentParameters = false,
+                                                           compileUselessAbstractTasks = false,
+                                                           liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                           groundedTaskDecompositionGraph = None,
+                                                           iterateReachabilityAnalysis = true, groundDomain = true, stopDirectlyAfterGrounding = false)
 
   val groundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                        compileInitialPlan = true,
@@ -35,16 +48,16 @@ object PredefinedConfigurations {
                                                        iterateReachabilityAnalysis = true, groundDomain = true, stopDirectlyAfterGrounding = false)
 
   val lightGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                       compileInitialPlan = true,
-                                                       removeUnnecessaryPredicates = false,
-                                                       convertToSASP = false, allowSASPFromStrips = false,
-                                                       compileOrderInMethods = None,
-                                                       ensureMethodsHaveLastTask = false,
-                                                       splitIndependentParameters = true,
-                                                       compileUselessAbstractTasks = false,
-                                                       liftedReachability = true, groundedReachability = Some(PlanningGraph),
-                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                       iterateReachabilityAnalysis = false, groundDomain = true, stopDirectlyAfterGrounding = true)
+                                                            compileInitialPlan = true,
+                                                            removeUnnecessaryPredicates = false,
+                                                            convertToSASP = false, allowSASPFromStrips = false,
+                                                            compileOrderInMethods = None,
+                                                            ensureMethodsHaveLastTask = false,
+                                                            splitIndependentParameters = true,
+                                                            compileUselessAbstractTasks = false,
+                                                            liftedReachability = true, groundedReachability = Some(PlanningGraph),
+                                                            groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                            iterateReachabilityAnalysis = false, groundDomain = true, stopDirectlyAfterGrounding = true)
 
   val sasPlusPreprocess = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
                                                      compileOrderInMethods = None,
@@ -81,7 +94,7 @@ object PredefinedConfigurations {
                                                                iterateReachabilityAnalysis = false, groundDomain = true, stopDirectlyAfterGrounding = false)
   val liftedPreprocess            = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = None,
-                                                               compileInitialPlan = false, ensureMethodsHaveLastTask = false,splitIndependentParameters = true,
+                                                               compileInitialPlan = false, ensureMethodsHaveLastTask = false, splitIndependentParameters = true,
                                                                compileUselessAbstractTasks = false,
                                                                removeUnnecessaryPredicates = false,
                                                                liftedReachability = true, convertToSASP = false, allowSASPFromStrips = false,
@@ -247,6 +260,15 @@ object PredefinedConfigurations {
 
   val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
     Map(
+         "-pocl-add" -> (pddlParsing, pddlGroundingPreprocess, PlanBasedSearch(None, AStarActionsType(2), ADD :: Nil, Nil, LCFR)),
+         "-pocl-add-r" -> (pddlParsing, pddlGroundingPreprocess, PlanBasedSearch(None, AStarActionsType(2), ADDReusing :: Nil, Nil, LCFR)),
+         "-pocl-relax" -> (pddlParsing, pddlGroundingPreprocess, PlanBasedSearch(None, AStarActionsType(2), Relax :: Nil, Nil, LCFR)),
+         "-pocl-code-add" -> (pddlParsing, pddlGroundingPreprocess, PlanBasedSearch(None, AStarActionsType(2), POCLTransformation(SasHeuristics.hAdd) :: Nil, Nil, LCFR)),
+         "-pocl-code-hmax" -> (pddlParsing, pddlGroundingPreprocess, PlanBasedSearch(None, AStarActionsType(2), POCLTransformation(SasHeuristics.hMax) :: Nil, Nil, LCFR)),
+         "-pocl-code-ff" -> (pddlParsing, pddlGroundingPreprocess, PlanBasedSearch(None, AStarActionsType(2), POCLTransformation(SasHeuristics.hFF) :: Nil, Nil, LCFR)),
+         "-pocl-code-lm-cut" -> (pddlParsing, pddlGroundingPreprocess, PlanBasedSearch(None, AStarActionsType(2), POCLTransformation(SasHeuristics.hLmCut) :: Nil, Nil, LCFR)),
+
+
          // Old Panda
          "-astar-panda-MAC" -> (htnParsing, groundingPreprocess, AStarActionLiftedPR(1)),
          "-astar-panda-MAC-PR" -> (htnParsing, groundingPreprocess, AStarActionLiftedPRReachability(1)),
@@ -314,9 +336,9 @@ object PredefinedConfigurations {
          "-GreedyAStar-PR-Recompute-Compare" -> (htnParsing, groundingPreprocess, greedyAStarActionLiftedPRCompare),
 
          // PRO
-         "-GreedyAStarPro-hhRC-lm-cut" ->(htnParsing, sasPlusPreprocess, ProgressionSearch(AStarActionsType(2),
-                                                                                           Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hLmCut)), PriorityQueueSearch
-                                                                                             .abstractTaskSelection.random)),
+         "-GreedyAStarPro-hhRC-lm-cut" -> (htnParsing, sasPlusPreprocess, ProgressionSearch(AStarActionsType(2),
+                                                                                            Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hLmCut)), PriorityQueueSearch
+                                                                                              .abstractTaskSelection.random)),
 
 
          // configurations to test totSAT
@@ -378,18 +400,18 @@ object PredefinedConfigurations {
 
 
 
-          // PARALLEL ...
+         // PARALLEL ...
          "-poclDirectsatT20" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise,
-                                                                         encodingToUse = POCLDirectEncoding, threads = 24)),
+                                                                            encodingToUse = POCLDirectEncoding, threads = 24)),
 
 
          // plan verification a la ICAPS'17
-         "-verify" ->(htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, "")),
-/*
-         "-astar-pro-DCG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hCG)),
-         "-g3astar-pro-DCG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hCG)),
-         "-greedy-pro-DCG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hCG)),
-*/
+         "-verify" -> (htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, "")),
+         /*
+                  "-astar-pro-DCG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hCG)),
+                  "-g3astar-pro-DCG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(3), SasHeuristics.hCG)),
+                  "-greedy-pro-DCG" ->(htnParsing, sasPlusPreprocess, pandaProConfig(GreedyType, SasHeuristics.hCG)),
+         */
 
          ///// PANDA Pro
          "-astar-pro-CG" -> (htnParsing, sasPlusPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hCG)),
@@ -441,8 +463,20 @@ object PredefinedConfigurations {
          "-shop2OriginalLifted" -> (htnParsing, liftedPreprocess, SHOP2Search),
 
          "-fape" -> (htnParsing, groundingPreprocess, FAPESearch),
-         "-fapeLifted" -> (htnParsing, liftedPreprocess, FAPESearch)
+         "-fapeLifted" -> (htnParsing, liftedPreprocess, FAPESearch),
 
-       )
+
+         "-prep-nosplit-naive" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = false, groundedTaskDecompositionGraph = Some(NaiveTDG)), NoSearch),
+         "-prep-nosplit-bottomup" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = false, groundedTaskDecompositionGraph = Some(BottomUpTDG)), NoSearch),
+         "-prep-nosplit-topdown" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = false, groundedTaskDecompositionGraph = Some(TopDownTDG)), NoSearch),
+         "-prep-nosplit-twoway" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = false, groundedTaskDecompositionGraph = Some(TwoWayTDG)), NoSearch),
+
+         "-prep-split-naive" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(NaiveTDG)), NoSearch),
+         "-prep-split-bottomup" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(BottomUpTDG)), NoSearch),
+         "-prep-split-topdown" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TopDownTDG)), NoSearch),
+         "-prep-split-twoway" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TwoWayTDG)), NoSearch)
+
+
+         )
 
 }

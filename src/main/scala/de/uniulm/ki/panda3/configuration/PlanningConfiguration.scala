@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.configuration
 
 import java.io.InputStream
+import java.lang.management.{ManagementFactory, MemoryPoolMXBean, MemoryType}
 import java.util.UUID
 import java.util.concurrent.Semaphore
 
@@ -43,7 +44,7 @@ import de.uniulm.ki.panda3.symbolic.writer.shop2.SHOP2Writer
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util._
 
-import scala.collection.{JavaConversions, Seq}
+import scala.collection.{JavaConversions, JavaConverters, Seq}
 import scala.util.Random
 
 
@@ -359,7 +360,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               // TODO this is only good for total order ...
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
-              var currentK = 0
+              var currentK = if (domainAndPlan._1.isClassical) 1 else 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
               var usedTime: Long = remainingTime / Math.max(1, 10 / (currentK + 1))
               var expansion: Boolean = true
@@ -368,12 +369,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
 
-                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, -1, 0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) currentK else -1,
+                                                                                       0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
                 println("ERROR " + satError)
                 error |= satError
                 solution = satResult
                 expansion = expansionPossible
-                currentK += 1
+                if (domainAndPlan._1.isClassical) currentK *= 2
+                else currentK += 1
                 remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
                 usedTime = remainingTime / Math.max(1, 10 / (currentK + 1))
               }
@@ -596,8 +599,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
 
-  private def constructEfficientHeuristic(heuristicConfig: SearchHeuristic, wrapper: Wrapping, analysisMap: AnalysisMap, domainAndPlan: (Domain, Plan))
-  : EfficientHeuristic[_] = {
+  private def constructEfficientHeuristic(heuristicConfig: SearchHeuristic, wrapper: Wrapping, analysisMap: AnalysisMap, domainAndPlan: (Domain, Plan)): EfficientHeuristic[_] = {
     // if we need the ADD heuristic as a building block create it
     val optionADD = heuristicConfig match {
       case LiftedTDGMinimumADD(_, _) | TDGMinimumADD(_) =>
@@ -689,6 +691,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           case Relax            =>
             RelaxHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray)
         }
+
+      case POCLTransformation(innerHeuristic) => POCLTransformationHeuristic(innerHeuristic, wrapper.efficientDomain,
+                                                                             wrapper.efficientDomain.tasks(wrapper.unwrap(wrapper.initialPlan).planStepTasks(0)))
     }
   }
 
@@ -723,7 +728,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           // start process of translating the solution back to something readable (i.e. lifted)
           result.headOption
         case AllFoundPlans                                    => result
-        case SearchStatistics                                 => informationCapsule
+        case SearchStatistics                                 =>
+          // write memory info
+          val pools: Seq[MemoryPoolMXBean] = JavaConverters.asScalaBuffer(ManagementFactory.getMemoryPoolMXBeans)
+          val heapMemory = pools collect { case memoryPoolMXBean if memoryPoolMXBean.getType == MemoryType.HEAP => memoryPoolMXBean.getPeakUsage.getUsed } sum
+
+          informationCapsule.set(Information.PEAKMEMORY, heapMemory.toString)
+
+          informationCapsule
         case SearchSpace                                      => rootNode
         case SolutionInternalString                           => if (result.nonEmpty) Some(result.head.shortInfo) else None
         case SolutionDotString                                => if (result.nonEmpty) Some(result.head.dotString) else None
@@ -842,9 +854,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       else EverythingIsReachable(domain, problem.groundedInitialState.toSet)
 
     val tdg = tdgType match {
-      case NaiveTDG   => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
-      case TopDownTDG => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
-      case TwoWayTDG  => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case NaiveTDG    => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case TopDownTDG  => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case BottomUpTDG => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = true)
+      case TwoWayTDG   => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = false)
     }
 
     analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg)
@@ -1177,12 +1190,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           // as we have done the TDG grounding after the SAS+ process, there might be tasks in mapping that have already been pruned
           val saspRepresentation = SASPlusRepresentation(sasPlusGrounder.sasPlusProblem,
-                                                         sasPlusGrounder.sasPlusTaskIndexToNewGroundTask filter { case (i, t) => sasPlusDomain.taskSet contains t })
+                                                         sasPlusGrounder.sasPlusTaskIndexToNewGroundTask filter { case (i, t) => sasPlusDomain.taskSet contains t },
+                                                         sasPlusGrounder.sasPlusPredicates.zipWithIndex map { case (p, i) => i -> p } toMap)
           (sasPlusDomain.copy(sasPlusRepresentation = Some(saspRepresentation)), sasPlusPlan)
         } else {
           // generate simple SAS+ representation from strips
-          val (saspProblem, sasOperatorOrdering) = SasPlusProblem.generateFromSTRIPS(groundedDomainAndProblem._1, groundedDomainAndProblem._2)
-          val saspRepresentation = SASPlusRepresentation(saspProblem, sasOperatorOrdering.zipWithIndex map { case (t, i) => i -> t } toMap)
+          val (saspProblem, sasOperatorOrdering, sasPredicateOrdering) = SasPlusProblem.generateFromSTRIPS(groundedDomainAndProblem._1, groundedDomainAndProblem._2)
+          val saspRepresentation = SASPlusRepresentation(saspProblem,
+                                                         sasOperatorOrdering.zipWithIndex map { case (t, i) => i -> t } toMap,
+                                                         sasPredicateOrdering.zipWithIndex map { case (p, i) => i -> p } toMap
+                                                        )
           (groundedDomainAndProblem._1.copy(sasPlusRepresentation = Some(saspRepresentation)), groundedDomainAndProblem._2)
         }
       }
@@ -1208,7 +1225,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         else ((unitMethodsCompiled, AnalysisMap(Map())), null)
 
       timeCapsule start COMPILE_UNIT_METHODS
-      val methodsWithIdenticalTasks = if (searchConfiguration.isInstanceOf[SATSearch] && postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree)) {
+      val methodsWithIdenticalTasks = if (
+        searchConfiguration.isInstanceOf[SATSearch] && postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree) && !groundedDomainAndPlan._1.isClassical) {
         info("Compiling methods with identical tasks ... ")
         val compiled = MakeTasksInMethodsUnique.transform(groundedDomainAndPlan._1, groundedDomainAndPlan._2, ())
         info("done.\n")
@@ -1399,6 +1417,8 @@ sealed trait TDGGeneration extends Configuration
 object NaiveTDG extends TDGGeneration {override def toString: String = "Naive TDG"}
 
 object TopDownTDG extends TDGGeneration {override def toString: String = "Top Down TDG"}
+
+object BottomUpTDG extends TDGGeneration {override def toString: String = "Bottom Up TDG"}
 
 object TwoWayTDG extends TDGGeneration {override def toString: String = "Two Way TDG"}
 
@@ -1717,6 +1737,7 @@ object ADDReusing extends SearchHeuristic {override val longInfo: String = "add_
 
 object Relax extends SearchHeuristic {override val longInfo: String = "relax"}
 
+case class POCLTransformation(classicalHeuristic: SasHeuristics) extends SearchHeuristic {override val longInfo: String = "add"}
 
 // PANDAPRO heuristics
 case class RelaxedCompositionGraph(useTDReachability: Boolean, heuristicExtraction: gphRcFFMulticount.heuristicExtraction, producerSelectionStrategy: gphRcFFMulticount.producerSelection)

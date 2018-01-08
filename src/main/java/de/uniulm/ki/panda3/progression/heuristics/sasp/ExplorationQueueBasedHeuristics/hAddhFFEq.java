@@ -31,7 +31,7 @@ public class hAddhFFEq extends SasHeuristic {
     private int[] hValProp;
     private int[] reachedBy;
 
-    public hAddhFFEq(SasPlusProblem p, SasHeuristics heuristic) {
+    public hAddhFFEq(SasPlusProblem p, SasHeuristic.SasHeuristics heuristic) {
         this.heuristic = heuristic;
         this.helpfulOps = new BitSet();
         this.p = p;

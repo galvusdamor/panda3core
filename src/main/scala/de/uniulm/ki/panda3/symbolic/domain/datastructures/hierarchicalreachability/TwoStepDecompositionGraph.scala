@@ -13,14 +13,16 @@ import scala.collection.mutable
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis, prunePrimitive: Boolean)
+case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis, prunePrimitive: Boolean,
+                                     omitTopDownStep: Boolean)
   extends TaskDecompositionGraph {
 
 
   private case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Variable, Set[Constant]]) {
     lazy val subTasks  : Seq[CartesianGroundTask]           = subTaskMap.values.toSeq
     lazy val subTaskMap: Map[PlanStep, CartesianGroundTask] = method.subPlan.planStepsWithoutInitGoal map { case ps@PlanStep(_, schema: ReducedTask, arguments) =>
-      ps -> CartesianGroundTask(schema, arguments map parameter)
+      ps -> CartesianGroundTask(schema,
+                                if (!omitTopDownStep) arguments map parameter else  ps.schema.parameters map { _.sort.elements.toSet })
     } toMap
 
     lazy val subCartesianToPlanSteps: Map[CartesianGroundTask, Seq[PlanStep]] = subTaskMap.toSeq groupBy { _._2 } map { case (cart, seq) => cart -> seq.map(_._1) }
@@ -159,8 +161,8 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
             // fill map
             simpleMethod.subPlan.variableConstraints.variables foreach {
               v =>
-                val cspPossibleValues : Seq[Constant] = simpleMethod.subPlan.variableConstraints.reducedDomainOf(v)
-                val reducedPossibleValues : Seq[Constant] = if (currentGroundTask.argumentMap contains v) cspPossibleValues intersect currentGroundTask.argumentMap(v) else cspPossibleValues
+                val cspPossibleValues: Seq[Constant] = simpleMethod.subPlan.variableConstraints.reducedDomainOf(v)
+                val reducedPossibleValues: Seq[Constant] = if (currentGroundTask.argumentMap contains v) cspPossibleValues intersect currentGroundTask.argumentMap(v) else cspPossibleValues
 
                 setParameter(v) = reducedPossibleValues.toSet
             }
@@ -183,7 +185,7 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
         } collect { case Some(x) => x }
 
       // add the new methods to the map
-      val flattenedPossibleMethods = possibleMethods map { _._2 }
+      val flattenedPossibleMethods: Seq[CartesianGroundMethod] = possibleMethods map { _._2 }
       cartMethodsMap(currentGroundTask) = cartMethodsMap(currentGroundTask) ++ flattenedPossibleMethods
       flattenedPossibleMethods foreach {
         cartMethod =>
@@ -201,7 +203,34 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
 
     // start the cartesian process from the artificial grounding top task
     val cartesianTop = CartesianGroundTask(groundedTopTask.task.asInstanceOf[ReducedTask], groundedTopTask.arguments map { x => Set(x) })
-    dfs(cartesianTop)
+
+    if (!omitTopDownStep) {
+      dfs(cartesianTop)
+    } else {
+      // don't use top-down analysis, just fill the carthesian maps naively
+      cartTasksMap(cartesianTop.task) = Set(cartesianTop)
+      //cartMethodsMap(cartesianTop) = Set(CartesianGroundMethod(topMethod, topMethod.subPlan.variableConstraints.variables map { v => v -> v.sort.elements.toSet } toMap))
+
+      domain.tasks foreach { case t => cartTasksMap(t) = Set(CartesianGroundTask(t, t.parameters map { _.sort.elements.toSet })) }
+      //(domain.decompositionMethods) foreach { case m =>
+      (domain.decompositionMethods :+ topMethod) foreach { case m =>
+        val cartTask = cartTasksMap(m.abstractTask).head
+        val cartMethod = CartesianGroundMethod(m, m.subPlan.variableConstraints.variables map { v =>
+          m.subPlan.variableConstraints.constraints find { case Equal(`v`,c : Constant) => true; case _ => false } match {
+            case Some(Equal(_,c : Constant)) => v -> Set(c)
+            case None => v -> m.subPlan.variableConstraints.reducedDomainOf (v).toSet.filterNot (c => m.subPlan.variableConstraints.constraints.contains (NotEqual (v, c) ) )
+          }
+          /*v.sort.elements.toSet*/
+        } toMap)
+        cartMethodsMap(cartTask) = cartMethodsMap(cartTask) + cartMethod
+
+        m.subPlan.planStepsWithoutInitGoal foreach { st =>
+          val subTask = cartTasksMap(st.schema).head
+          cartTaskInMethodsMap(subTask) = cartTaskInMethodsMap(subTask) + cartMethod
+
+        }
+      }
+    }
 
 
     // 2. build the groundings in a bottom up fashion

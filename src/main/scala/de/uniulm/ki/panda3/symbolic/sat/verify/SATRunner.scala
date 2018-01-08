@@ -1,11 +1,11 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import java.io.{File, FileWriter, BufferedWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.configuration.Timings._
-import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, ReducedTask, Domain, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -24,7 +24,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                      büchiAutomata: Seq[LTLAutomaton[_,_]], referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
                      encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean,
-                     randomSeed: Long, solverThreads : Int) {
+                     randomSeed: Long, solverThreads: Int) {
 
   private val fileDir = System.getProperty("os.name").toLowerCase() match {
     case osname if osname startsWith "windows"  => ""
@@ -164,7 +164,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
       // start verification
       val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
-        if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
+        if (domain.isClassical) {
+          encodingToUse match {
+            case KautzSelmanEncoding => KautzSelman(timeCapsule, domain, initialPlan, planLength)
+          }
+        }
+        else if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
           TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
@@ -497,7 +502,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
   private def extractSolutionAndDecompositionGraph(encoder: VerifyEncoding, atomMap: Map[String, Int], literals: Set[Int], formulaVariables: Seq[String], allTrueAtoms: Set[String]):
   (Seq[String], Seq[(String, String)], Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)]) =
     encoder match {
-      case g: GeneralEncoding =>
+      case g: GeneralEncoding           =>
         // iterate through layers
         val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer =>
           Range(0, g.numberOfActionsPerLayer) map { pos =>
@@ -530,7 +535,26 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         }
 
         (nodes, edges, ???, ???, ???)
+      case ks: KautzSelman              =>
+        val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
+        //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
+        val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
+        val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => exitIfNot(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
+        val primitiveSolution: Seq[PlanStep] = actionSequence map { case solAction =>
+          val pos = solAction.split("_").last.split(",").head.toInt
+          val actionIDX = solAction.split(",").last.toInt
+          val task = domain.tasks(actionIDX)
+          PlanStep(pos, task, Nil)
+        }
 
+
+        print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
+        println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))
+
+        checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
+        println(" done.")
+
+        (Nil,Nil,primitiveSolution,Map(),Map())
       case pbe: PathBasedEncoding[_, _] =>
         val nodes = formulaVariables filter { _.startsWith("action!") } filter allTrueAtoms.contains
 
@@ -901,3 +925,5 @@ object POCLDirectEncoding extends POEncoding
 object POCLDeleterEncoding extends POEncoding
 
 object POStateEncoding extends POEncoding
+
+object KautzSelmanEncoding extends POEncoding

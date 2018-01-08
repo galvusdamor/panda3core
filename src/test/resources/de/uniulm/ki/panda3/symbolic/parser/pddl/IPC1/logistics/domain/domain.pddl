@@ -10,7 +10,6 @@
 		(in ?obj1 ?obj2)
 		(in-city ?obj ?city))
  
-  ; (:types )		; default object
 
 (:action LOAD-TRUCK
   :parameters

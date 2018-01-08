@@ -44,18 +44,14 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
     // gather all reachable primitives
     val usefulPrimitives: Set[Task] = (propagated.decompositionMethods flatMap { _.subPlan.planStepsWithoutInitAndGoalTasksSet filter { _.isPrimitive } } toSet) ++
       plan.planStepsWithoutInitAndGoalTasksSet.filter(_.isPrimitive)
-    val withoutPrimitives = if (plan.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) propagated
-    else propagated.copy(tasks = propagated.abstractTasks ++ usefulPrimitives)
 
-    // TODO this is wrong for TI HTN
-    val reachablePrimitiveTasks = (propagated.decompositionMethods flatMap {_.subPlan.planStepsWithoutInitGoal.map(_.schema).filter(_.isPrimitive)} toSet) ++
-      plan.planStepsWithoutInitAndGoalTasksSet.filter(_.isPrimitive)
-    val unreachablePrimitives = propagated.primitiveTasks filterNot reachablePrimitiveTasks.contains
+    val unreachablePrimitives = if (plan.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) Nil
+    else propagated.primitiveTasks filterNot usefulPrimitives.contains
 
-    val primitivesRemoved = PruneTasks.transform(propagated,plan,unreachablePrimitives.toSet)._1
+    val primitivesRemoved = PruneTasks.transform(propagated, plan, unreachablePrimitives.toSet)._1
 
     // all abstract tasks should have at least one method
-    assert(primitivesRemoved.abstractTasks forall { at => primitivesRemoved.methodsForAbstractTasks(at).nonEmpty || plan.planStepTasksSet.contains(at)})
+    assert(primitivesRemoved.abstractTasks forall { at => primitivesRemoved.methodsForAbstractTasks(at).nonEmpty || plan.planStepTasksSet.contains(at) })
 
     (primitivesRemoved, plan)
   }
