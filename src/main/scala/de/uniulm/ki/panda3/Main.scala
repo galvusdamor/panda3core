@@ -200,7 +200,7 @@ object Main {
   }
 
   val helpDB: Map[String, (String, String, Seq[String], String, Seq[String])] = {
-    val dbLines: Seq[String] = Source.fromInputStream(getClass.getResourceAsStream("helpdb.txt")).getLines().toSeq
+    val dbLines: Seq[String] = Source.fromInputStream(getClass.getResourceAsStream("helpdb.txt"),"UTF-8").getLines().toSeq
 
     val parsed: Seq[Seq[String]] = dbLines.foldLeft[(Seq[Seq[String]], Seq[String])]((Nil, Nil))(
       {
