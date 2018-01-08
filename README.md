@@ -49,6 +49,8 @@ simple build tool (version 0.13.9 or higher). If you have, please run
 
     sbt main/assembly
 
-in a command line.
+in a command line. Please note that, currently (date: January, 8th, 2018),
+sbt produces a runtime error when building PANDA in combination with JRE 9.
+We thus recommend to use version 8.
 
 The second-last line of the commands output will tell you where sbt has put the jar file.
