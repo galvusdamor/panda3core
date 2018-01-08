@@ -329,7 +329,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               // TODO this is only good for total order ...
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
-              var currentK = 0
+              var currentK = if (domainAndPlan._1.isClassical) 1 else 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
               var usedTime: Long = remainingTime / Math.max(1, 10 / (currentK + 1))
               var expansion: Boolean = true
@@ -338,12 +338,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
 
-                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, -1, 0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) currentK else -1,
+                                                                                       0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
                 println("ERROR " + satError)
                 error |= satError
                 solution = satResult
                 expansion = expansionPossible
-                currentK += 1
+                if (domainAndPlan._1.isClassical) currentK *= 2
+                else currentK += 1
                 remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
                 usedTime = remainingTime / Math.max(1, 10 / (currentK + 1))
               }
@@ -1192,7 +1194,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         else ((unitMethodsCompiled, AnalysisMap(Map())), null)
 
       timeCapsule start COMPILE_UNIT_METHODS
-      val methodsWithIdenticalTasks = if (searchConfiguration.isInstanceOf[SATSearch] && postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree)) {
+      val methodsWithIdenticalTasks = if (
+        searchConfiguration.isInstanceOf[SATSearch] && postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree) && !groundedDomainAndPlan._1.isClassical) {
         info("Compiling methods with identical tasks ... ")
         val compiled = MakeTasksInMethodsUnique.transform(groundedDomainAndPlan._1, groundedDomainAndPlan._2, ())
         info("done.\n")

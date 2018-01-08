@@ -38,7 +38,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   // sanity check for the sorts
   @elidable(ASSERTION)
-  def assertion() : Boolean = {
+  def assertion(): Boolean = {
     assert(taskSet.size == tasks.size)
     //
     sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
@@ -69,8 +69,8 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
         primitiveTasks foreach { task => assert(rep.taskToSASPlusIndex.keySet contains task) }
         sasPlusIndexToTaskMap.keys foreach { i => assert(sasPlusProblem.getGroundedOperatorSignatures.length > i); assert(i >= 0) }
 
-        sasPlusIndexToPredicate.values foreach { p => assert(predicateSet contains p,p.shortInfo + " not contained") }
-        //predicates foreach { p => assert(rep.predicateToSASPlusIndex.keySet contains p) }
+        sasPlusIndexToPredicate.values foreach { p => assert(predicateSet contains p, p.shortInfo + " not contained") }
+      //predicates foreach { p => assert(rep.predicateToSASPlusIndex.keySet contains p) }
     }
     true
   }
@@ -121,6 +121,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val minimumMethodSize: Int = if (decompositionMethods.nonEmpty) decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min else -1
   lazy val maximumMethodSize: Int = if (decompositionMethods.nonEmpty) decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max else -1
 
+  lazy val isClassical             : Boolean = decompositionMethods.isEmpty
   lazy val isGround                : Boolean = predicates forall { _.argumentSorts.isEmpty }
   lazy val isTotallyOrdered        : Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
   lazy val isHybrid                : Boolean =

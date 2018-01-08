@@ -595,20 +595,21 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
 
     // get all the constraints implied by the hierarchy
-    val constraintsImpliedByHierarchy: Seq[OrderingConstraint] = primitiveOrdering flatMap { ps1 =>
-      primitiveOrdering flatMap { ps2 =>
-        if (ps1 != ps2 && ps1 != goal && ps2 != goal) {
-          val (parent, (child1, child2)) = getCommonParent(ps1, ps2)
-          val methodOfParent = planStepDecomposedByMethod(parent)
+    val constraintsImpliedByHierarchy: Seq[OrderingConstraint] = if (planStepDecomposedByMethod.isEmpty) Nil else
+      primitiveOrdering flatMap { ps1 =>
+        primitiveOrdering flatMap { ps2 =>
+          if (ps1 != ps2 && ps1 != goal && ps2 != goal) {
+            val (parent, (child1, child2)) = getCommonParent(ps1, ps2)
+            val methodOfParent = planStepDecomposedByMethod(parent)
 
-          if (methodOfParent.subPlan.orderingConstraints.lt(child1, child2)) {
-            assert(primitiveOrdering.indexOf(ps1) < primitiveOrdering.indexOf(ps2), ps1.schema.name + " not before " + ps2.schema.name)
-            //println("ORDER " + ps1.schema.name + " < " + ps2.schema.name + " parent " + parent.schema.name)
-            OrderingConstraint(ps1, ps2) :: Nil
+            if (methodOfParent.subPlan.orderingConstraints.lt(child1, child2)) {
+              assert(primitiveOrdering.indexOf(ps1) < primitiveOrdering.indexOf(ps2), ps1.schema.name + " not before " + ps2.schema.name)
+              //println("ORDER " + ps1.schema.name + " < " + ps2.schema.name + " parent " + parent.schema.name)
+              OrderingConstraint(ps1, ps2) :: Nil
+            } else Nil
           } else Nil
-        } else Nil
+        }
       }
-    }
 
     // now re-infer the causal links
     val inferredCausalLinks: Seq[CausalLink] = primitiveOrdering.zipWithIndex flatMap { case (consumer, iConsumer) =>
