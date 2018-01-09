@@ -121,6 +121,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
     timerSemaphore.release()
 
     JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t => t.stop() }
+    timeCapsule.switchTimerToCurrentThreadOrIgnore(Timings.VERIFY_TOTAL)
+    timeCapsule stopOrIgnore Timings.VERIFY_TOTAL
 
 
     if (runner.result.isEmpty) {
@@ -219,6 +221,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       val additionalConstraintsFormula = additionalConstraintsGenerators flatMap { constraint =>
         encoder match {
           case x: EncodingWithLinearPlan => constraint(x)
+          case ks: KautzSelman => constraint(ks)
           case _                         => assert(false); Nil
         }
       }

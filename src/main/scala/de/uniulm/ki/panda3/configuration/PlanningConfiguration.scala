@@ -360,25 +360,24 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               // TODO this is only good for total order ...
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
-              var currentK = if (domainAndPlan._1.isClassical) 1 else 0
+              var currentK = 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-              var usedTime: Long = remainingTime / Math.max(1, 10 / (currentK + 1))
+              var usedTime: Long = (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
               var expansion: Boolean = true
               while (solution.isEmpty && !error && expansion && usedTime > 0) {
                 println("\nRunning SAT search with K = " + currentK)
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
 
-                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) currentK else -1,
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) Math.pow(2,currentK).toInt else -1,
                                                                                        0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
                 println("ERROR " + satError)
                 error |= satError
                 solution = satResult
                 expansion = expansionPossible
-                if (domainAndPlan._1.isClassical) currentK *= 2
-                else currentK += 1
+                currentK += 1
                 remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-                usedTime = remainingTime / Math.max(1, 10 / (currentK + 1))
+                usedTime = (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
               }
 
               (solution, false)
