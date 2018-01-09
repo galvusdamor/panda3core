@@ -1142,7 +1142,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       info("Grounding ... ")
       timeCapsule start GROUNDING
-      val result: (Domain, Plan) = {
+
+      val groundingResult: (Domain, Plan) = {
         val groundedDomainAndProblem = Grounding.transform(domainAndPlan, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
 
         if (preprocessingConfiguration.convertToSASP && (!domainAndPlan._1.containEitherType || !preprocessingConfiguration.allowSASPFromStrips)) {
@@ -1172,6 +1173,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                         )
           (groundedDomainAndProblem._1.copy(sasPlusRepresentation = Some(saspRepresentation)), groundedDomainAndProblem._2)
         }
+      }
+
+     // if we are doing a plan verification curtail the model here, i.e. remove all unreachable primitive tasks
+
+      val result = searchConfiguration match {
+        case SATPlanVerification(_,plan) =>
+          val planActions = plan.split(";")
+          val primitivesNotOccurringInPlan = groundingResult._1.primitiveTasks filterNot {t => groundingResult._2.planStepTasksSet.contains(t) || planActions.contains(t.name)}
+          PruneHierarchy.transform(groundingResult,primitivesNotOccurringInPlan.toSet)
+        case _ => groundingResult
       }
 
 
