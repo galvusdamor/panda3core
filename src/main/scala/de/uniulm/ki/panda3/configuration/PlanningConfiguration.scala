@@ -1106,9 +1106,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
-    assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {
-      tdgResult._1._1.tasks contains _.schema
-    })
+    assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {      tdgResult._1._1.tasks contains _.schema    })
 
     val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
       if (!runForGrounder || !preprocessingConfiguration.groundDomain) (if (preprocessingConfiguration.compileUselessAbstractTasks)
@@ -1239,7 +1237,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           PruneHierarchy.transform(groundingResult, primitivesNotOccurringInPlan.toSet)
         case _                            => groundingResult
       }
-
 
       timeCapsule stop GROUNDING
       info("done.\n")
