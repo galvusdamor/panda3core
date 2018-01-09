@@ -43,7 +43,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     //
     sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
     decompositionMethods foreach { dm =>
-      assert(taskSet contains dm.abstractTask)
+      assert(taskSet contains dm.abstractTask, "abstract task " + dm.abstractTask + "not contained")
       assert(dm.subPlan.planStepsAndRemovedPlanSteps.length == dm.subPlan.planSteps.length)
       dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task =>
         if (!(taskSet contains task)) {
