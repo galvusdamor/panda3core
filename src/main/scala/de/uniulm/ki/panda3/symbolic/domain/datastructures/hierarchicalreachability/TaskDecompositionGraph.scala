@@ -68,7 +68,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
 
 
   lazy val taskDecompositionGraph: (AndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod], Seq[GroundTask], Seq[GroundedDecompositionMethod]) =
-    if (abstractTaskGroundings.isEmpty) {
+    if (!(abstractTaskGroundings contains topTask)) {
       val emptyInit = GroundTask(initAndGoalNOOP, Nil)
       val abstractWithOutDecomposition = ReducedTask("__fail_abstract", isPrimitive = false, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil))
       val abstractGT = GroundTask(abstractWithOutDecomposition, Nil)

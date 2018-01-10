@@ -304,7 +304,6 @@ object PredefinedConfigurations {
          "-shop2-strips" -> (htnParsing, groundingPreprocess, shop2),
          "-shop2Improved-strips" -> (htnParsing, groundingPreprocess, shop2Improved),
 
-
          // A*
 
          "-AStarADD" -> (htnParsing, groundingPreprocess, AStarADD),
@@ -478,5 +477,4 @@ object PredefinedConfigurations {
 
 
          )
-
 }

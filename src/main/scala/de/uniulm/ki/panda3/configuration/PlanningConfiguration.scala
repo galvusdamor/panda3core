@@ -1040,7 +1040,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
     val tdgResult = if (preprocessingConfiguration.groundedTaskDecompositionGraph.isDefined) {
-      val actualConfig = if (groundedResult._1._1.isGround) NaiveTDG else preprocessingConfiguration.groundedTaskDecompositionGraph.get
+      val actualConfig = preprocessingConfiguration.groundedTaskDecompositionGraph.get
       info(actualConfig.toString + " ... ")
       // get the reachability analysis, if there is none, just use the trivial one
       val newAnalysisMap = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, actualConfig)
@@ -1178,11 +1178,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
      // if we are doing a plan verification curtail the model here, i.e. remove all unreachable primitive tasks
 
       val result = searchConfiguration match {
-        case SATPlanVerification(_,plan) =>
+        case SATPlanVerification(_, plan) =>
           val planActions = plan.split(";")
-          val primitivesNotOccurringInPlan = groundingResult._1.primitiveTasks filterNot {t => groundingResult._2.planStepTasksSet.contains(t) || planActions.contains(t.name)}
-          PruneHierarchy.transform(groundingResult,primitivesNotOccurringInPlan.toSet)
-        case _ => groundingResult
+          val primitivesNotOccurringInPlan = groundingResult._1.primitiveTasks filterNot { t => groundingResult._2.planStepTasksSet.contains(t) || planActions.contains(t.name) }
+          PruneHierarchy.transform(groundingResult, primitivesNotOccurringInPlan.toSet)
+        case _                            => groundingResult
       }
 
 
@@ -1281,6 +1281,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
        )
+
 
   protected def predefinedConfigurations: Seq[(String, (ParameterMode, (Option[String]) => PlanningConfiguration.this.type))] =
     (PredefinedConfigurations.parsingConfigs.toSeq map { case (k, p) =>
