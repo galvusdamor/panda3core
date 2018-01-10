@@ -176,7 +176,6 @@ object PredefinedConfigurations {
 
          // plan verification á la ICAPS'17
          "ICAPS-2017-verify" -> (htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, ""))
-
        )
 
 }

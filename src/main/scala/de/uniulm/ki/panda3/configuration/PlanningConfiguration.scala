@@ -1106,7 +1106,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     } else groundedResult
     timeCapsule stop GROUNDED_TDG_ANALYSIS
 
-    assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall {      tdgResult._1._1.tasks contains _.schema    })
+    assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { tdgResult._1._1.tasks contains _.schema })
 
     val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
       if (!runForGrounder || !preprocessingConfiguration.groundDomain) (if (preprocessingConfiguration.compileUselessAbstractTasks)
@@ -1357,7 +1357,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                          searchConfiguration = search).asInstanceOf[this.type]
              }
              else {
-               assert(false, "Unknown system configuration \"" + key + "\". Most likely, you have either a typeO in here, or you forgot to specify a non-optional parameter. Use \"-help\" followed by the option/key for details.")
+               println("Unknown system configuration \"" + key + "\". Most likely, you have either a typeO in here, or you forgot to specify a non-optional parameter."
+                         + " Use \"-help\" followed by the option/key for details.")
+               System exit 0
                this // unreachable
              }
 
