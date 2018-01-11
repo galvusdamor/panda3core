@@ -72,7 +72,8 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
       val emptyInit = GroundTask(initAndGoalNOOP, Nil)
       val abstractWithOutDecomposition = ReducedTask("__fail_abstract", isPrimitive = false, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil))
       val abstractGT = GroundTask(abstractWithOutDecomposition, Nil)
-      val abstractPlanTemp = Plan(abstractWithOutDecomposition :: Nil, initAndGoalNOOP, initAndGoalNOOP)
+      val abstractPlanTemp = Plan(PlanStep(3,abstractWithOutDecomposition,Nil) :: Nil, initAndGoalNOOP, initAndGoalNOOP,
+                                  Map[PlanStep, DecompositionMethod](), Map[PlanStep, (PlanStep, PlanStep)]())
       val abstractPlan = abstractPlanTemp.copy(parameterVariableConstraints = abstractPlanTemp.variableConstraints.addVariables(topTask.parameters))
       val topToAbstract = SimpleDecompositionMethod(topTask, abstractPlan, "useless method")
       val topGroundMethod = GroundedDecompositionMethod(topToAbstract,groundedTopTask.task.parameters.zip(groundedTopTask.arguments).toMap)

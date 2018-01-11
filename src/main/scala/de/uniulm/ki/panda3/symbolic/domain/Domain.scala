@@ -267,5 +267,9 @@ case class SASPlusRepresentation(sasPlusProblem: SasPlusProblem, sasPlusIndexToT
 
   lazy val predicateToSASPlusIndex: Map[Predicate, Int] = sasPlusIndexToPredicate map { case (a, b) => b -> a }
 
-  override def update(domainUpdate: DomainUpdate): SASPlusRepresentation = this.copy(sasPlusIndexToTask = sasPlusIndexToTask map { case (i, t) => (i, t update domainUpdate) })
+  override def update(domainUpdate: DomainUpdate): SASPlusRepresentation = domainUpdate match {
+    case RemovePredicate(predicatesToRemove) =>
+      SASPlusRepresentation(sasPlusProblem, sasPlusIndexToTask map { case (i, t) => i -> t.update(domainUpdate) }, sasPlusIndexToPredicate filterNot { predicatesToRemove contains _._2 })
+    case _                                   => this.copy(sasPlusIndexToTask = sasPlusIndexToTask map { case (i, t) => (i, t update domainUpdate) })
+  }
 }
