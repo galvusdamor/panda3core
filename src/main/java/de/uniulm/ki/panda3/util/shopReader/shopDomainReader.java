@@ -274,7 +274,7 @@ public class shopDomainReader {
                             NoModifications$.MODULE$,
                             NoFlaws$.MODULE$,
                             hddlPanda3Visitor.planStepsDecomposedBy,
-                            hddlPanda3Visitor.planStepsDecompositionParents);
+                            hddlPanda3Visitor.planStepsDecompositionParents,true);
 
                     SHOPDecompositionMethod method = new SHOPDecompositionMethod(abs, subPlan, precFormula, emptyAnd, m.getName() + "-" + mCase);
                     tMethods.add(method);
@@ -308,7 +308,7 @@ public class shopDomainReader {
             Plan p = new Plan(tTni.result(), emptyCausalLink, to, tniCSP, tniInit, tniGoal, NoModifications$.MODULE$,
                     NoFlaws$.MODULE$,
                     hddlPanda3Visitor.planStepsDecomposedBy,
-                    hddlPanda3Visitor.planStepsDecompositionParents);
+                    hddlPanda3Visitor.planStepsDecompositionParents,true);
 
             return new Tuple2<>(d, p);
         } catch (Exception e) {

@@ -31,7 +31,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
   ///// methods to make the formula generation configurable
 
-  protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, taskOrdering: Seq[Task]): Seq[Clause]
+  protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions: Map[Int,Int]): Seq[Clause]
 
   protected def initialPayload(possibleTasks: Set[Task], path: Seq[Int]): Payload
 
@@ -43,6 +43,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
   // returns all clauses needed for the decomposition and all paths to the last layer
   private def generateDecompositionFormula(tree: PathDecompositionTree[Payload]): Seq[Clause] = {
+    assert(tree.isNormalised)
     val possibleTasks = tree.possibleTasks.toSeq
     val layer = tree.layer
     val path = tree.path
@@ -53,20 +54,30 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     // write myself
     val possibleTasksClauses: Seq[Clause] = atMostOneOf(possibleTasksToActions)
 
-    if (tree.children.isEmpty) {
-      //val notAnyNonPossibleTask = domain.tasks filterNot possibleTasks map { action(layer, path, _) } map { a => Clause((a, false) :: Nil) }
-      //(possibleTasksClauses ++ notAnyNonPossibleTask, Set((path, possibleTasks)))
-      //println("Terminal path with " + possibleTasks.size + " tasks")
-      possibleTasksClauses
-    } else {
-      val possibleAbstracts = possibleTasks.zipWithIndex filter { _._1.isAbstract }
-      val possiblePrimitives = tree.possiblePrimitives
+    val possiblePrimitives = tree.possiblePrimitives
+    val possibleAbstracts = possibleTasks.zipWithIndex filter { _._1.isAbstract }
+    val possibleMethods: Array[(DecompositionMethod, Int)] = tree.possibleMethods
 
-      // compute per position all possible child tasks
-      /*val possibleTasksPerChildPosition = new Array[mutable.Set[Task]](domain.maximumMethodSize)
-      Range(0, domain.maximumMethodSize) foreach { possibleTasksPerChildPosition(_) = new mutable.HashSet[Task]() }
-      possiblePrimitives foreach { case (primitive, _) => possibleTasksPerChildPosition(0) += primitive }*/
-      val possibleMethods: Array[(DecompositionMethod, Int)] = tree.possibleMethods
+    ///////////////////////////////
+    // decomposition
+    ///////////////////////////////
+    // 1. part: select method if necessary
+    val decomposeAbstract: Seq[Clause] = possibleAbstracts flatMap { case (abstractTask, abstractIndex) =>
+      // select a method
+      val atPossibleMethods = possibleMethods filter { _._1.abstractTask == abstractTask } map { case (m, idx) => (m, method(layer, path, idx)) }
+
+      // one method must be applied
+      val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, atPossibleMethods map { _._2 })
+      val applicationForcesAbstractTask = atPossibleMethods map { _._2 } map { m => impliesSingle(m, possibleTasksToActions(abstractIndex)) }
+      val atMostOneCanBeApplied = atMostOneOf(atPossibleMethods map { _._2 })
+
+      applicationForcesAbstractTask ++ atMostOneCanBeApplied :+ oneMustBeApplied
+    }
+
+    if (tree.children.isEmpty) {
+      // we also end up here if all methods applicable to abstract tasks are epsilon methods
+      possibleTasksClauses ++ decomposeAbstract
+    } else {
 
 
       val methodToPositions = tree.methodToPositions
@@ -105,20 +116,6 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       ///////////////////////////////
       // decomposition
       ///////////////////////////////
-      // 1. part: select method if necessary
-      val decomposeAbstract: Seq[Clause] = possibleAbstracts flatMap { case (abstractTask, abstractIndex) =>
-        // select a method
-        val atPossibleMethods = possibleMethods filter { _._1.abstractTask == abstractTask } map { case (m, idx) => (m, method(layer, path, idx)) }
-
-        // one method must be applied
-        val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, atPossibleMethods map { _._2 })
-        val atMostOneCanBeApplied = atMostOneOf(atPossibleMethods map { _._2 })
-
-        atMostOneCanBeApplied :+ oneMustBeApplied
-      }
-
-
-
       // 2. part: determine children according to selected method
       val methodChildren: Seq[Clause] = methodToPositions.indices flatMap { case methodIndexOnApplicableMethods =>
         val decompositionMethod = possibleMethods(methodIndexOnApplicableMethods)._1
@@ -138,16 +135,24 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
         val methodToken = method(layer, path, methodIndex)
 
+        // prepare method representation for additionalClauses
+        val methodChildrenPositions: Map[Int, Int] = decompositionMethod.subPlan.planStepsWithoutInitGoal map { case ps =>
+          val psBefore = decompositionMethod.subPlan.planStepsWithoutInitGoal.filter(_.schema == ps.schema)
+          val psIndexOnSameType = psBefore.indexOf(ps)
+          val psIndex = methodTasks.zipWithIndex.filter(_._1 == ps.schema)(psIndexOnSameType)._2
+          ps.id -> methodToPositions(methodIndexOnApplicableMethods)(psIndex)
+        } toMap
 
         impliesRightAnd(methodToken :: Nil, childAtoms) ++ impliesAllNot(methodToken, unusedActions) ++
-          additionalClausesForMethod(layer, path, decompositionMethod, methodToken, null) // TODO: This was originally taskOrdering)
+          additionalClausesForMethod(layer, path, decompositionMethod, methodToken, methodChildrenPositions) // TODO: This was originally taskOrdering)
       }
 
       // if there is nothing select at the current position we are not allowed to create new tasks
       val noneApplied: Seq[Clause] = {
         val allChildren = Range(0, numberOfChildren) flatMap { index => tree.children(index).possibleTasks map { task => possibleChildTasks(index)(task) } }
+        val allMethods = possibleMethods map { case (_, methodIndex) => method(layer, path, methodIndex) }
 
-        notImpliesAllNot(possibleTasksToActions, allChildren)
+        notImpliesAllNot(possibleTasksToActions, allChildren ++ allMethods)
       }
 
       possibleTasksClauses ++ keepPrimitives ++ decomposeAbstract ++ noneApplied ++ methodChildren ++ recursiveFormula
@@ -171,9 +176,10 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       val possibleMethods: Array[(DecompositionMethod, Int)] = possibleAbstracts flatMap { case abstractTask => domain.methodsWithIndexForAbstractTasks(abstractTask) } toArray
 
 
-      val (methodToPositions, primitivePositions, positionsToPossibleTasks, intermediatePayload) =
-        computeTaskSequenceArrangement(possibleMethods map { _._1 }, possiblePrimitives)
-      val numberOfChildren = positionsToPossibleTasks.length
+      val (methodToPositions, primitivePositions, positionsToPossibleTasks, intermediatePayload) = computeTaskSequenceArrangement(possibleMethods map { _._1 }, possiblePrimitives)
+      possibleMethods.zipWithIndex foreach { case ((m, _), index) =>
+        methodToPositions(index) zip m.subPlan.planStepSchemaArray foreach { case (p, t) => assert(positionsToPossibleTasks(p) contains t) }
+      }
 
       assert(possibleMethods.length == methodToPositions.length)
 

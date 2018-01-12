@@ -13,7 +13,8 @@ import java.util.Random;
  */
 public class DeleteObservations {
     public static void main(String[] args) throws Exception {
-        String inDir = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/07-partial-observable/";
+        //String inDir = "/media/dh/Volume/repositories/private-documents/evaluation-domains/monroe/monroe-100-corpus/07-partial-observable/";
+        String inDir = "/media/dh/Volume/repositories/private-documents/evaluation-domains/kitchen-corpus/07-part-obs/";
         int probability = 20;
         File dir = new File(inDir);
         for (File f : dir.listFiles()) {
@@ -24,6 +25,13 @@ public class DeleteObservations {
     }
 
     public static void processFile(String inFile, String outFile, int probability) throws IOException {
+        boolean containsVerifyInstance = false;
+        int offset;
+        if (containsVerifyInstance)
+            offset = 1;
+        else
+            offset = 0;
+
         BufferedReader br = new BufferedReader(new FileReader(inFile));
         List<String> lines = new ArrayList<>();
         while (br.ready())
@@ -42,7 +50,7 @@ public class DeleteObservations {
         }
 
         List<String> modified = new ArrayList<>();
-        for (int i = 0; i < lines.size() - 1; i++) {
+        for (int i = 0; i < lines.size() - offset; i++) {
             String line = lines.get(i);
             if (line.startsWith("echo")) {
                 modified.add(line + "\n");

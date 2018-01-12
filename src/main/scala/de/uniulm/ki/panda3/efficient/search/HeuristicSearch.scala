@@ -182,7 +182,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
                 }
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
-                assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps)
+                assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps, "old plan " + plan.numberOfPlanSteps + " new plan " + newPlan.numberOfPlanSteps)
 
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
                 val searchNode: EfficientSearchNode[Payload] = if (buildTree) new EfficientSearchNode[Payload](nodeNumber, newPlan, myNode, h, distanceValue)

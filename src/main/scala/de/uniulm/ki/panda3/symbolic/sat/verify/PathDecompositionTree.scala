@@ -22,8 +22,18 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
                                           isNormalised: Boolean = false) extends DefaultLongInfo {
   @elidable(ASSERTION)
   val assertion = {
+    if (children.isEmpty) assert(possibleMethods.forall(_._1.subPlan.planStepsWithoutInitGoal.isEmpty))
     children.zipWithIndex foreach { case (child, i) => assert(child.path == path :+ i) }
     assert(possibleMethods.length == methodToPositions.length)
+    possibleMethods zip methodToPositions foreach {
+      case (m, p) =>
+        val psArray = m._1.subPlan.planStepSchemaArray
+
+        assert(psArray.size == p.length)
+        psArray zip p foreach { case (ps, pp) => assert(children(pp).possibleTasks.contains(ps) ||
+                                                          (!isNormalised && children(pp).children.isEmpty && children(pp).possibleAbstracts.isEmpty))
+        }
+    }
 
     if (isNormalised) {
       possibleMethods.zip(methodToPositions) foreach {
@@ -38,12 +48,18 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     }
 
     possibleAbstracts foreach { at => assert(possibleMethods.exists(_._1.abstractTask == at)) }
+
+    if (isNormalised)
+      assert(deepNormalised)
   }
+
+  def deepNormalised : Boolean = isNormalised && children.forall(_.deepNormalised)
 
   lazy val layer: Int        = path.length
   lazy val possibleAbstracts = possibleTasks filter { _.isAbstract } toSeq
 
-  val primitivePaths: Array[(Seq[Int], Set[Task])] = if (children.length == 0 && possibleTasks.nonEmpty) Array((path, possibleTasks)) else children flatMap { _.primitivePaths }
+  val primitivePaths: Array[(Seq[Int], Set[Task])] =
+    if (children.length == 0 && possibleTasks.nonEmpty && possibleTasks.exists(_.isPrimitive)) Array((path, possibleTasks)) else children flatMap { _.primitivePaths }
 
   lazy val expansionPossible: Boolean = localExpansionPossible || (children exists { _.expansionPossible })
 
@@ -150,13 +166,18 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
   }
 
   def restrictPathDecompositionTree(toRemoveFromLeafPaths: Seq[Set[Task]]): PathDecompositionTree[Payload] =
-    if (children.isEmpty) {
+    if (toRemoveFromLeafPaths.isEmpty && possibleTasks.forall(_.isAbstract) && children.isEmpty) this.copy(isNormalised = true, children = children map {_.normalise})
+    else if (children.isEmpty) {
       // I am a leaf, so just execute the removal
       // TODO: do something with payloads ... this will become necessary once we will perform this operation also with SOGs
 
       if (possibleTasks.nonEmpty) {
-        assert(toRemoveFromLeafPaths.length == 1)
-        PathDecompositionTree(path, possibleTasks -- toRemoveFromLeafPaths.head, Array(), Array(), Array(), Array(), payload, Array(),
+        assert(toRemoveFromLeafPaths.length == 1, "toRemoveFromLeafPaths.length == " + toRemoveFromLeafPaths.length)
+        // we may have empty methods remaining ...
+        val remainingTasks = possibleTasks -- toRemoveFromLeafPaths.head
+        val remainingMethods = possibleMethods filter { case (m, _) => remainingTasks.contains(m.abstractTask) && m.subPlan.planStepsWithoutInitGoal.isEmpty }
+
+        PathDecompositionTree(path, remainingTasks, Array(), remainingMethods, remainingMethods map { _ => Array[Int]() }, Array(), payload, Array(),
                               localExpansionPossible = localExpansionPossible, isNormalised = true)
       } else {
         assert(toRemoveFromLeafPaths.isEmpty)
@@ -171,7 +192,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
             val (thisChildPrimitive, remainingChildPrimitives) = remainingPrimitivePaths.splitAt(child.primitivePaths.length)
 
 
-            (remainingChildPrimitives, result :+(child, thisChildPrimitive))
+            (remainingChildPrimitives, result :+ (child, thisChildPrimitive))
         })
 
       // we have to partition the primitive paths to all children ...
@@ -222,7 +243,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
       // now we have propagated everything
       val propagatedChildren = childrenPossibleTasks.zip(reducedChildren) map { case (actuallyRemainingTasks, child) =>
-        if (child.possibleTasks.size == actuallyRemainingTasks.size) child else child.restrictTo(actuallyRemainingTasks.toSet)
+        if (child.possibleTasks.size == actuallyRemainingTasks.size) child.normalise else child.restrictTo(actuallyRemainingTasks.toSet)
       }
 
       val stillPossibleTasks = stillPossibleAbstractTasks ++ remainingPrimitives
@@ -234,6 +255,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
   def restrictTo(restrictToTasks: Set[Task]): PathDecompositionTree[Payload] = if (restrictToTasks.size == possibleTasks.size) this
   else {
+    assert(restrictToTasks subsetOf possibleTasks)
     // propagate the restriction to children
     val remainingMethods = possibleMethods.zip(methodToPositions) filter { restrictToTasks contains _._1._1.abstractTask }
     val remainingPrimitives = possiblePrimitives.zip(primitivePositions) filter { restrictToTasks contains _._1 }
@@ -253,7 +275,11 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
     // add tasks from methods
     methods foreach { case (method, childrenPositions) =>
-      method._1.subPlan.planStepSchemaArray zip childrenPositions foreach { case (task, child) => childrenPossibleTasks(child) add task }
+      method._1.subPlan.planStepSchemaArray zip childrenPositions foreach { case (task, child) =>
+        assert(children(child).possibleTasks.contains(task) || (!isNormalised && children(child).children.isEmpty && children(child).possibleAbstracts.isEmpty))
+        if (children(child).possibleTasks contains task) // if not, this is an abstract task at the end of the hierarchy .. or something strange with empty methods ..
+          childrenPossibleTasks(child) add task
+      }
     }
     // add inherited primitives
     primitives foreach { case (primitive, index) => childrenPossibleTasks(index) add primitive }

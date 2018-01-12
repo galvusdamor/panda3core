@@ -1,38 +1,26 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.util.TimeCapsule
+import de.uniulm.ki.util.{DirectedGraph, DirectedGraphDotOptions, Dot2PdfCompiler, TimeCapsule}
 
-import scala.collection.Seq
+import scala.collection.{Seq, mutable}
 
-/**
-  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
-  */
-case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
-                                 domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGEncoding{
-  //lazy val taskSequenceLength: Int = primitivePaths.length
-  lazy val taskSequenceLength: Int = taskSequenceLengthQQ
+
+trait SOGClassicalEncoding extends SOGEncoding {
+
+  lazy val taskSequenceLength: Int = primitivePaths.length
+  //lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position
-
-  protected def pathPosForbidden(path: Seq[Int], position: Int): String = "forbidden_" + path.mkString(";") + "-" + position
 
   protected def pathActive(p1: Seq[Int]) = "active!" + "_" + p1.mkString(";")
 
   override lazy val noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
 
-  override lazy val stateTransitionFormula: Seq[Clause] = {
-    val sog = rootPayload.ordering.transitiveReduction
-
-    println(sog.isAcyclic)
-
-    /*val string = sog.dotString(options = DirectedGraphDotOptions(),
-                               //nodeRenderer = {case (path, tasks) => tasks map { _.name } mkString ","})
-                               nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + path})
-    Dot2PdfCompiler.writeDotToFile(string, "sog.pdf")*/
-
-    println("TREE P:" + primitivePaths.length + " S: " + taskSequenceLength)
+  protected lazy val connectionFormula: Seq[Clause] = {
+    // force computation of SOG
+    sog
 
     //////
     // select mapping
@@ -63,7 +51,7 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
     }
     println("C " + onlySelectableIfChosen.length)
 
-    // positions may only contain primitive tasks is mapped to a path
+    // positions may only contain primitive tasks if mapped to a path
     val onlyPrimitiveIfChosen = Range(0, taskSequenceLength) flatMap { case position =>
       val actionAtoms = domain.primitiveTasks map { action(K - 1, position, _) }
       val atMostOne = atMostOneOf(actionAtoms)
@@ -85,6 +73,23 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
 
     val connection = atMostOneConstraints ++ selected ++ onlySelectableIfChosen ++ onlyPrimitiveIfChosen ++ sameAction
 
+    connection.toSeq
+  }
+}
+
+/**
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
+case class SOGClassicalForbiddenEncoding(timeCapsule: TimeCapsule,
+                                         domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
+                                         useImplicationForbiddenness: Boolean) extends SOGClassicalEncoding {
+
+  protected def pathPosForbidden(path: Seq[Int], position: Int): String = "forbidden_" + path.mkString(";") + "-" + position
+
+  override lazy val stateTransitionFormula: Seq[Clause] = {
+    // force computation of SOG
+    sog
+
     /////////////////
     // forbid certain connections if disallowed by the SOG
     /////////////////
@@ -102,17 +107,15 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
     else primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
       val successors = if (useImplicationForbiddenness) sog.reachable.find(_._1._1 == path).get._2.toSeq else sog.edges.find(_._1._1 == path).get._2
 
-      // start from 1 as we have to access the predecessor position
-      Range(1, taskSequenceLength) flatMap { pos =>
+      Range(0, taskSequenceLength) flatMap { pos =>
         impliesRightAnd(pathPosForbidden(path, pos) :: Nil, successors map { case (succP, _) => pathPosForbidden(succP, pos) })
       }
     }
     println("G " + forbiddennessImplications.length)
 
 
-
-
     val forbiddennessGetsInherited: Seq[Clause] = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
+      // start from 1 as we have to access the predecessor position
       Range(1, taskSequenceLength) map { pos => impliesSingle(pathPosForbidden(path, pos), pathPosForbidden(path, pos - 1)) }
     }
     println("H " + forbiddennessGetsInherited.length)
@@ -130,7 +133,47 @@ case class SOGClassicalEncoding(timeCapsule: TimeCapsule,
     // this generates the actual state transition formula
     val primitiveSequence = stateTransitionFormulaOfLength(taskSequenceLength)
 
-    primitiveSequence ++ connection ++ forbiddenness
+    primitiveSequence ++ connectionFormula ++ forbiddenness
+  }
+
+}
+
+
+case class SOGClassicalN4Encoding(timeCapsule: TimeCapsule,
+                                  domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGClassicalEncoding {
+
+  override lazy val stateTransitionFormula: Seq[Clause] = {
+    // force computation of SOG
+    sog
+
+    /////////////////
+    // forbid certain connections if disallowed by the SOG
+    /////////////////
+    val forbiddenness: Array[Clause] = {
+      val builder = new mutable.ArrayBuffer[Clause]()
+
+      primitivePaths foreach { case (pathBefore, _) =>
+        val successors = sog.reachable.find(_._1._1 == pathBefore).get._2.toSeq
+
+        successors foreach { case (pathAfter, _) =>
+          // all positions
+          Range(0, taskSequenceLength) foreach { case position1 =>
+            Range(position1 + 1, taskSequenceLength) foreach { case position2 =>
+              builder append Clause((pathToPos(pathBefore, position2), false) :: (pathToPos(pathAfter, position1), false) :: Nil)
+            }
+          }
+        }
+      }
+      builder.toArray
+    }
+
+
+    //System exit 0
+
+    // this generates the actual state transition formula
+    val primitiveSequence = stateTransitionFormulaOfLength(taskSequenceLength)
+
+    primitiveSequence ++ connectionFormula ++ forbiddenness
   }
 
 }

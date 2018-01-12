@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition;
 
 import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.IActionReachability;
 import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.TDGLandmarkFactory;
+import de.uniulm.ki.panda3.progression.TDGReachabilityAnalysis.TaskReachabilityGraph;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
@@ -63,7 +64,8 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
 
         this.numAnM = createMethodLookupTable(methods);
         this.numTasks = ProgressionNetwork.indexToTask.length;
-        tdRechability = new TDGLandmarkFactory(methods, initialTasks, this.numTasks, this.numOfOperators);
+        //tdRechability = new TDGLandmarkFactory(methods, initialTasks, this.numTasks, this.numOfOperators);
+        tdRechability = new TaskReachabilityGraph(methods, initialTasks, numTasks, this.numOfOperators);
 
         // set indices
         this.firstTdrIndex = this.numOfStateFeatures;
@@ -153,7 +155,11 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
         for (int i = 0; i < indexToMutexGroup.length; i++)
             tIndexToMutexGroup[i] = indexToMutexGroup[i];
 
-        int group = indexToMutexGroup[indexToMutexGroup.length - 1] + 1;
+        int group;
+        if(indexToMutexGroup.length >0)
+        group = indexToMutexGroup[indexToMutexGroup.length - 1] + 1;
+        else
+        group = 0;
         for (int i = indexToMutexGroup.length; i < tIndexToMutexGroup.length; i++)
             tIndexToMutexGroup[i] = group++;
         indexToMutexGroup = tIndexToMutexGroup;
@@ -178,8 +184,9 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
             tFactStrs[i] = "bur-" + ProgressionNetwork.indexToTask[i - firstTaskCompIndex].shortInfo();
         }
         factStrs = tFactStrs;
+        varNames = tFactStrs;
         //System.out.println(this.toString());
-        assert (this.correctModel());
+        //assert (this.correctModel());
     }
 
     @Override

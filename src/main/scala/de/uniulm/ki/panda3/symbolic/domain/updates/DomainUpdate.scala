@@ -54,15 +54,18 @@ case class ReduceTasks() extends DomainUpdate
 
 case class ExchangeVariable(oldVariable: Variable, newVariable: Variable) extends DomainUpdate
 
+case class ExchangeVariables(exchangeMap: Map[Variable, Variable]) extends DomainUpdate
+
 case class ExchangeLiteralsByPredicate(replacement: Map[Predicate, (Predicate, Predicate)], invertedTreatment: Boolean) extends DomainUpdate
 
 case class RemoveEffects(unnecessaryEffects: Set[(Predicate, Boolean)], invertedTreatment: Boolean) extends DomainUpdate
 
-case class RemovePredicate(unnecessaryPredicates : Set[Predicate]) extends DomainUpdate
+case class RemovePredicate(unnecessaryPredicates: Set[Predicate]) extends DomainUpdate
 
 case class PropagateEquality(protectedVariables: Set[Variable]) extends DomainUpdate
 
-object DeleteCausalLinks extends DomainUpdate
+case class SetExpandVariableConstraintsInPlans(dontExpand: Boolean) extends DomainUpdate
 
+object DeleteCausalLinks extends DomainUpdate
 
 object NoUpdate extends DomainUpdate

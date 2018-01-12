@@ -171,9 +171,17 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       case _                                                                      => noSupport(UNSUPPORTEDPROBLEMTYPE)
     }
 
+    // don't generate HTN arrays if POCL planning, they just consume memory
+    val isPOCLPlanning = symbolicDomain.abstractTasks.isEmpty
 
-    EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, planStepDecomposedBy.toArray, planStepParentInDecompositionTree.toArray, planStepIsInstanceOfSubPlanPlanStep
-      .toArray, supportedPreconditions.toArray, potentialPreconditionSupporter.toArray, potentialThreater.toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)()
+    if (!isPOCLPlanning) {
+      EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, planStepDecomposedBy.toArray, planStepParentInDecompositionTree.toArray, planStepIsInstanceOfSubPlanPlanStep
+        .toArray, supportedPreconditions.toArray, potentialPreconditionSupporter.toArray, potentialThreater.toArray, efficientCSP, ordering, causalLinks.toArray, problemConfiguration)()
+    } else {
+      EfficientPlan(domain, planStepTasks.toArray, planStepParameters.toArray, null, null, null,
+                    supportedPreconditions.toArray, potentialPreconditionSupporter.toArray, potentialThreater.toArray, efficientCSP, ordering, causalLinks.toArray,
+                    problemConfiguration)(null, null)
+    }
   }
 
   private def newVariableFormEfficient(variableIndex: Int, sortIndex: Int): Variable = Variable(variableIndex, "variable_" + variableIndex, domainSorts.back(sortIndex))
@@ -201,6 +209,17 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       case SimpleDecompositionMethod(task, subplan, _) => EfficientDecompositionMethod(domainTasks(task), computeEfficientPlan(subplan, domain, task.parameters))
       case SHOPDecompositionMethod(_, _, _, _, _)      => noSupport(NONSIMPLEMETHOD)
     }).toArray
+
+    // SAS+
+    symbolicDomain.sasPlusRepresentation match {
+      case Some(sas@SASPlusRepresentation(problem, taskIndices, predicateIndices)) =>
+        domain.sasPlusProblem = problem
+        // some tasks (like init and goal) might not be part of the SAS+ representation
+        domain.taskIndexToSASPlus = domain.tasks.indices.toArray map { t => sas.taskToSASPlusIndex.getOrElse(domainTasks.back(t), -1) }
+        domain.predicateIndexToSASPlus = domain.predicates.indices.toArray map { t => sas.predicateToSASPlusIndex.getOrElse(domainPredicates.back(t), -1) }
+      case None                                                                    => // do nothing
+    }
+
 
     domain
   }
@@ -324,16 +343,17 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       case (sortIndex, variableIndex) => newVariableFormEfficient(variableIndex, sortIndex)
     }
 
-    val taskCreationGraph = SimpleDirectedGraph(plan.planStepTasks.indices, plan.planStepTasks.indices map { i => (plan.planStepParentInDecompositionTree(i), i) } collect {
-      case (a, b) if a != -1 => (a, b)
-    })
+    val taskCreationGraph = SimpleDirectedGraph(plan.planStepTasks.indices,
+                                                if (plan.planStepParentInDecompositionTree != null)
+                                                  plan.planStepTasks.indices map { i => (plan.planStepParentInDecompositionTree(i), i) } collect { case (a, b) if a != -1 => (a, b) }
+                                                else Nil)
 
     // plan steps -> has to be done this way (for with a fold) as we have to ensure that a parent was always already been computed
     val planStepArray: Array[PlanStep] = new Array(plan.planStepTasks.length)
     taskCreationGraph.topologicalOrdering.get foreach { psIndex =>
       val arguments = plan.planStepParameters(psIndex) map { variables(_) }
-      val psDecomposedBy = plan.planStepDecomposedByMethod(psIndex)
-      val psParent = plan.planStepParentInDecompositionTree(psIndex)
+      //val psDecomposedBy = plan.planStepDecomposedByMethod(psIndex)
+      //val psParent = plan.planStepParentInDecompositionTree(psIndex)
 
       planStepArray(psIndex) = PlanStep(psIndex, domainTasks.back(plan.planStepTasks(psIndex)), arguments)
     }
@@ -382,13 +402,21 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val allowedFlaws = allwaysAllowedFlaws ++ (if (plan.problemConfiguration.decompositionAllowed) classOf[AbstractPlanStep] :: Nil else Nil)
 
     // decomposition history
-    val planStepDecomposedByMethod = (plan.planStepDecomposedByMethod.zipWithIndex collect { case (method, ps) if method != -1 => (planStepArray(ps), wrapDecompositionMethod(method)) })
-      .toMap
-    val parentsInDecompositionTree = ((plan.planStepParentInDecompositionTree zip plan.planStepIsInstanceOfSubPlanPlanStep).zipWithIndex collect {
-      case ((parent, subPlanPS), ps) if parent != -1 =>
-        assert(subPlanPS != -1)
-        (planStepArray(ps), (planStepArray(parent), planStepArray(subPlanPS)))
-    }).toMap
+    val planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod] =
+      if (plan.planStepDecomposedByMethod == null)
+        Map()
+      else (plan.planStepDecomposedByMethod.zipWithIndex collect { case (method, ps) if method != -1 => (planStepArray(ps), wrapDecompositionMethod(method)) }).toMap
+
+    val parentsInDecompositionTree : Map[PlanStep,(PlanStep,PlanStep)]=
+      if (plan.planStepParentInDecompositionTree == null)
+        Map()
+      else
+        ((plan.planStepParentInDecompositionTree zip plan.planStepIsInstanceOfSubPlanPlanStep).zipWithIndex collect {
+          case ((parent, subPlanPS), ps) if parent != -1 =>
+            assert(subPlanPS != -1)
+            val appliedDecompositionMethod = planStepDecomposedByMethod(planStepArray(parent))
+            (planStepArray(ps), (planStepArray(parent), appliedDecompositionMethod.subPlan.planStepsAndRemovedPlanStepsWithoutInitGoal(subPlanPS - 2)))
+        }).toMap
 
     // and return the actual plan
     val symbolicPlan = Plan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1), ModificationsByClass(allowedModifications: _*),
@@ -421,7 +449,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
         assert(plan.flaws.size == efficientSearchNode.plan.flaws.length)
 
         plan
-      }, parent, if (efficientSearchNode.heuristic.length > 0)efficientSearchNode.heuristic(0) else 0)
+      }, parent, if (efficientSearchNode.heuristic.length > 0) efficientSearchNode.heuristic(0) else 0)
 
       def computeContentIfNotDirty(unit: Unit): Unit = {
         searchNode.dirty = false

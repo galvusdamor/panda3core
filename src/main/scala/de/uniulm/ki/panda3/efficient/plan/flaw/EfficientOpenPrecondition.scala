@@ -12,6 +12,8 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class EfficientOpenPrecondition(plan: EfficientPlan, planStep: Int, preconditionIndex: Int) extends EfficientFlaw {
 
+  lazy val openPredicate : Int = plan.domain.tasks(plan.planStepTasks(planStep)).precondition(preconditionIndex).predicate
+
   private var precomputedResolver: Option[Array[EfficientModification]] = None
 
 

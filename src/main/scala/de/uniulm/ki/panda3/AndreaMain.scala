@@ -19,10 +19,10 @@ import de.uniulm.ki.util._
 
 
 /**
- *
- *
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+  *
+  *
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
 //scalastyle:off
 object MainAndrea {
 
@@ -31,8 +31,8 @@ object MainAndrea {
     val outputPDF = "dot.pdf"
 
     // TRANSPORT
-    val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\',File.separatorChar)
-    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\',File.separatorChar)
+    val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
+    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
@@ -40,31 +40,33 @@ object MainAndrea {
     System.out.println("#0 \"domain\"=\"" + domFile.substring(domFile.lastIndexOf("/") + 1) + "\";\"problem\"=\"" + probFile.substring(probFile.lastIndexOf("/") + 1) + "\"")
 
     val postprocessing = PostprocessingConfiguration(Set(ProcessingTimings,
-      SearchStatistics,
-      SearchStatus,
-      //SearchResult,
-      PreprocessedDomainAndPlan))
+                                                         SearchStatistics,
+                                                         SearchStatus,
+                                                         //SearchResult,
+                                                         PreprocessedDomainAndPlan))
 
     // planning config is given via stdin
     val searchConfig: PlanningConfiguration =
       PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true, randomSeed = 44, timeLimit = Some(1000),
-        parsingConfiguration = ParsingConfiguration(parserType = AutoDetectParserType, eliminateEquality = false, stripHybrid = true),
-        PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-          compileInitialPlan = true,
-          convertToSASP = true,
-          allowSASPFromStrips = false,
-          compileOrderInMethods = None,
-          splitIndependentParameters = true,
-          compileUselessAbstractTasks = true,
-          liftedReachability = true,
-          groundedReachability = None,
-          groundedTaskDecompositionGraph = Some(TwoWayTDG),
-          iterateReachabilityAnalysis = true, groundDomain = true),
-        //PredefinedConfigurations.sasPlusConfig(AStarActionsType(2), SasHeuristics.hMS),
-        PredefinedConfigurations.pandaProConfig(AStarActionsType(2), SasHeuristics.hMS),
-        postprocessing,
-        Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
-        //Map(FastDownward -> "../../fd"))
+                            parsingConfiguration = ParsingConfiguration(parserType = AutoDetectParserType, eliminateEquality = false, stripHybrid = true),
+                            PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                       compileInitialPlan = true,
+                                                       convertToSASP = true,
+                                                       allowSASPFromStrips = false,
+                                                       compileOrderInMethods = None,
+                                                       ensureMethodsHaveLastTask = false,
+                                                       removeUnnecessaryPredicates = true,
+                                                       splitIndependentParameters = true,
+                                                       compileUselessAbstractTasks = true,
+                                                       liftedReachability = true,
+                                                       groundedReachability = None,
+                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                       iterateReachabilityAnalysis = true, groundDomain = true, stopDirectlyAfterGrounding = false),
+                            //PredefinedConfigurations.sasPlusConfig(AStarActionsType(2), SasHeuristics.hMS),
+                            PredefinedConfigurations.pandaProConfig(AStarActionsType(2), SasHeuristics.hMS),
+                            postprocessing,
+                            Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
+    //Map(FastDownward -> "../../fd"))
 
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)

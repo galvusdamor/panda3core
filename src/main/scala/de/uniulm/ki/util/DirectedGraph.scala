@@ -30,6 +30,9 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   /** Replace all edges by non-edges and vice versa */
   def complementGraph: DirectedGraph[T]
 
+  /** invert the directions of all edges */
+  def inverseGraph: DirectedGraph[T]
+
   /** list of all edges as a list of pairs */
   def edgeList: Seq[(T, T)]
 
@@ -53,6 +56,10 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   def sinks: Seq[T]
 
   def getVerticesInDistance(v: T, distance: Int): Set[T]
+
+  def getVerticesPerDistances(v: T): Map[Int, Set[T]]
+
+  def getVerticesWithDistance(v: T): Seq[(T, Int)] = getVerticesPerDistances(v) flatMap { case (i, vs) => vs map { v => (v, i) } } toSeq
 
   /** computes for each node, which other nodes can be reached from it using the edges of the graph */
   def reachable: Map[T, Set[T]]
@@ -119,7 +126,52 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   protected def dotVertexStyleRenderer(v: T): String = ""
 
   def map[U](f: T => U): DirectedGraph[U] = SimpleDirectedGraph(vertices map f, edgeList map { case (a, b) => (f(a), f(b)) })
+
+  lazy val decomposition: Option[GraphDecomposition[T]] = if (vertices.size == 1) Some(ElementaryDecomposition(vertices.head)) else {
+    // find partitioning
+    val partitionA: Option[(Set[T], Set[T], Boolean)] = vertices.toSet.subsets() collect {
+      case setA if setA.nonEmpty && setA.size != vertices.size =>
+        val setB = (vertices filterNot setA.contains).toSet
+
+        val isParallel = setA forall { a => setB forall { b => !reachable(a).contains(b) && !reachable(b).contains(a) } }
+        val isSequential = setA forall { a => setB forall { b => reachable(a).contains(b) && !reachable(b).contains(a) } }
+
+        (setA,setB,isParallel, isSequential)
+    } collectFirst {
+        case (setA, setB, true, false) => (setA, setB, true)
+        case (setA, setB, false, true) => (setA, setB, false)
+    }
+
+    partitionA match {
+      case None                   => None
+      case Some((setA, setB, compTime)) =>
+        val subGraph1 = SimpleDirectedGraph(setA.toSeq, edgeList filter { case (a, b) => setA.contains(a) && setA.contains(b) })
+        val subGraph2 = SimpleDirectedGraph(setB.toSeq, edgeList filter { case (a, b) => setB.contains(a) && setB.contains(b) })
+
+        val decomp1 = subGraph1.decomposition
+        val decomp2 = subGraph2.decomposition
+
+        (decomp1,decomp2) match {
+          case (Some(a),Some(b)) =>
+            Some(if (compTime) ParallelDecomposition(a :: b :: Nil) else SequentialDecomposition(a :: b :: Nil))
+          case _ => None
+        }
+    }
+  }
 }
+
+
+/**
+  *
+  */
+sealed trait GraphDecomposition[T]
+
+case class ElementaryDecomposition[T](element: T) extends GraphDecomposition[T]
+
+case class ParallelDecomposition[T](parallelElements: Seq[GraphDecomposition[T]]) extends GraphDecomposition[T]
+
+case class SequentialDecomposition[T](sequentialElements: Seq[GraphDecomposition[T]]) extends GraphDecomposition[T]
+
 
 case class DirectedGraphDotOptions(labelNodesWithNumbers: Boolean = false)
 
@@ -139,6 +191,10 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
   final lazy val edgeList: Seq[(T, T)] = edges.toSeq flatMap { case (node1, neighbours) => neighbours map { (node1, _) } }
 
   final lazy val complementGraph: DirectedGraph[T] = SimpleDirectedGraph(vertices, edges map { case (v, ns) => v -> (vertices filterNot ns.contains) })
+
+  /** invert the directions of all edges */
+  override lazy val inverseGraph: DirectedGraph[T] = SimpleDirectedGraph(vertices, edgeList map { case (a, b) => (b, a) })
+
 
   /** in- and out- degrees of all nodes */
   lazy val degrees: Map[T, (Int, Int)] = {
@@ -227,6 +283,16 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
       inDistance
     }
   }
+
+  // TODO: I just was not in the mood to implement dijkstra's, so this only works for trees
+  def getVerticesPerDistances(v: T): Map[Int, Set[T]] = {
+    val recMap: Map[Int, Set[T]] = edges(v) flatMap { vv => getVerticesPerDistances(vv) map { case (i, x) => (i + 1, x) } } groupBy { _._1 } map { case (i, xs) =>
+      i -> (xs flatMap { _._2 }).toSet
+    }
+
+    recMap + ((0, Set(v)))
+  }
+
 
   /** computes for each node, which other nodes can be reached from it using the edges of the graph */
   // TODO: this computation might be inefficient
@@ -476,6 +542,9 @@ case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, S
 
   override lazy val complementGraph: DirectedGraphWithInternalMapping[T] = DirectedGraphWithInternalMapping(vertices, edges map { case (v, ns) => v -> (vertices filterNot ns.contains) })
 
+  /** invert the directions of all edges */
+  override lazy val inverseGraph: DirectedGraph[T] = DirectedGraphWithInternalMapping(vertices, edgeList map { case (a, b) => (b, a) })
+
   /**
     * This is not a fast implementation^^
     */
@@ -497,6 +566,8 @@ case class DirectedGraphWithInternalMapping[T](vertices: Seq[T], edges: Map[T, S
 
   override def getVerticesInDistance(v: T, distance: Int): Set[T] = internalGraph.getVerticesInDistance(verticesToInt(v), distance) map verticesToInt.back
 
+  override def getVerticesPerDistances(v: T): Map[Int, Set[T]] = internalGraph.getVerticesPerDistances(verticesToInt(v)) map { case (i, xs) => i -> xs.map(verticesToInt.back) }
+
   /** list of all edges as a list of pairs */
   override lazy val edgeList: Seq[(T, T)] = internalGraph.edgeList map { case (a, b) => (verticesToInt.back(a), verticesToInt.back(b)) }
 
@@ -516,6 +587,8 @@ object DirectedGraphWithInternalMapping {
 }
 
 case class SimpleDirectedGraph[T](vertices: Seq[T], edges: Map[T, Seq[T]]) extends DirectedGraphWithAlgorithms[T] {
+  //edges foreach { case (a, bs) => assert(vertices contains a); bs foreach { case b => assert(vertices contains b) } }
+
   override def equals(o: scala.Any): Boolean = o match {
     case g: SimpleDirectedGraph[T] => vertices.toSet == g.vertices.toSet && edgeList.toSet == g.edgeList.toSet
     case _                         => false

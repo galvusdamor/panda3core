@@ -1,11 +1,13 @@
 package de.uniulm.ki.panda3.configuration
 
 import java.io.InputStream
+import java.lang.management.{ManagementFactory, MemoryPoolMXBean, MemoryType}
 import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraphFromSymbolic
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic,
+EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
@@ -21,10 +23,9 @@ import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.sat.verify.{SATRunner, VerifyRunner}
-import de.uniulm.ki.panda3.symbolic.sat.verify.SATRunner
+import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
-import de.uniulm.ki.panda3.symbolic.compiler.pruning.{PruneDecompositionMethods, PruneEffects, PruneHierarchy}
+import de.uniulm.ki.panda3.symbolic.compiler.pruning._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, SASPlusGrounding}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
@@ -34,13 +35,15 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.hpddl.HPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, OrderingConstraint}
+import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
+import de.uniulm.ki.panda3.symbolic.writer.anml.ANMLWriter
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
+import de.uniulm.ki.panda3.symbolic.writer.shop2.SHOP2Writer
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util._
 
-import scala.collection.JavaConversions
+import scala.collection.{JavaConversions, JavaConverters, Seq}
 import scala.util.Random
 
 
@@ -112,12 +115,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       informationCapsule.set(Information.REGULAR, if (domainStructureAnalysis.isRegular) "true" else "false")
       informationCapsule.set(Information.TAIL_RECURSIVE, if (domainStructureAnalysis.isTailRecursive) "true" else "false")
       informationCapsule.set(Information.TOTALLY_ORDERED, if (domainStructureAnalysis.isTotallyOrdered) "true" else "false")
+      informationCapsule.set(Information.LAST_TASK_IN_METHODS, if (domainStructureAnalysis.hasLastTaskInAllMethods) "true" else "false")
 
       extra("Domain is acyclic: " + domainStructureAnalysis.isAcyclic + "\n")
       extra("Domain is mostly acyclic: " + domainStructureAnalysis.isMostlyAcyclic + "\n")
       extra("Domain is regular: " + domainStructureAnalysis.isRegular + "\n")
       extra("Domain is tail recursive: " + domainStructureAnalysis.isTailRecursive + "\n")
       extra("Domain is totally ordered: " + domainStructureAnalysis.isTotallyOrdered + "\n")
+      extra("Domain has last task in all methods: " + domainStructureAnalysis.hasLastTaskInAllMethods + "\n")
     }
 
     //informationCapsule.set(Information.MINIMUM_DECOMPOSITION_HEIGHT, domainAndPlan._1.minimumDecompositionHeightToPrimitiveForPlan(domainAndPlan._2))
@@ -310,8 +315,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
-                                 satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.forceClassicalEncoding)
-
+                                 satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.encodingToUse,
+                                 postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree),
+                                 randomSeed, satSearch.threads)
 
           // depending on whether we are doing a single or a full run, we have either to do a loop or just one run
           val (solution, error) = satSearch.runConfiguration match {
@@ -320,9 +326,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case FullSATRun()                               =>
               // start with K = 0 and loop
               // TODO this is only good for total order ...
-              var solution: Option[Seq[Task]] = None
+              var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
-              var currentK = 0
+              var currentK = if (domainAndPlan._1.isClassical) 1 else 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
               var usedTime: Long = remainingTime / Math.max(1, 10 / (currentK + 1))
               var expansion: Boolean = true
@@ -331,12 +337,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
 
-                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, -1, 0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) currentK else -1,
+                                                                                       0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
                 println("ERROR " + satError)
                 error |= satError
                 solution = satResult
                 expansion = expansionPossible
-                currentK += 1
+                if (domainAndPlan._1.isClassical) currentK *= 2
+                else currentK += 1
                 remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
                 usedTime = remainingTime / Math.max(1, 10 / (currentK + 1))
               }
@@ -347,7 +355,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case OptimalSATRun(overrideK) =>
               // start with K = 0 and loop
               // TODO this is only good for total order ...
-              var solution: Option[Seq[Task]] = None
+              var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
               var currentLength = 1
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
@@ -377,8 +385,20 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           timeCapsule stop TOTAL_TIME
           val potentialPlan = solution match {
-            case Some(taskSequence) => Plan(taskSequence, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema) :: Nil
-            case None               => Nil
+            case Some((planSteps, appliedDecompositions, parentsInDecompositionTree)) =>
+              val allPlanSteps = planSteps ++ parentsInDecompositionTree.flatMap({ case (a, (b, _)) =>
+                if ((appliedDecompositions contains a) && appliedDecompositions(a).subPlan.planStepsWithoutInitGoal.isEmpty)
+                  a :: b :: Nil
+                else b :: Nil
+                                                                                 })
+
+              val initialPlan = Plan(planSteps, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema, appliedDecompositions, parentsInDecompositionTree)
+              if (postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree))
+                initialPlan.maximalDeordering :: Nil
+              else
+                initialPlan :: Nil
+
+            case None => Nil
           }
           runPostProcessing(timeCapsule, informationCapsule, null, potentialPlan, domainAndPlan, unprocessedDomain, analysisMap)
         })
@@ -395,7 +415,150 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
         })
-      case NoSearch                                      => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+      case FAPESearch                                    =>
+
+        val notTranslatable = domainAndPlan._1.taskSchemaTransitionGraph.stronglyConnectedComponents exists { _.size > 1 }
+        if (notTranslatable) {
+          println("TSTG contains non-self recursion ... can't translate into anything FAPE would understand ... ")
+          // return nothing meaningful
+          (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+            timeCapsule stop TOTAL_TIME
+            runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
+          })
+        } else {
+          val writer = ANMLWriter
+
+          val domainString = writer.writeDomain(domainAndPlan._1)
+          val problemString = writer.writeProblem(domainAndPlan._1, domainAndPlan._2)
+
+          // check for unsolvability in principle
+
+          val uuid = UUID.randomUUID().toString
+          writeStringToFile(domainString, "foo" + uuid + ".dom.anml")
+          writeStringToFile(problemString, "foo" + uuid + ".0.pb.anml")
+
+
+          val result = {
+            import sys.process._
+            // run FAPE
+            var output: String = ""
+
+            timeCapsule start SEARCH_FAPE
+
+            //("java -Xmx10G -Xms10G -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo.0.pb.anml") #| "grep iter, --after 1" ! new ProcessLogger {
+            ("java -Xmx4G -Xms4G -XX:+UseSerialGC -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo" + uuid + ".0.pb.anml") ! new ProcessLogger {
+              //("java -Xmx1G -Xms1G -jar " + externalProgramPaths(FAPE) + "/fape-planning-assembly-1.0.jar -t 600 foo" + uuid + ".0.pb.anml") ! new ProcessLogger {
+              override def err(s: => String): Unit = output = output + s + "\n"
+
+              override def out(s: => String): Unit = output = output + s + "\n"
+
+              override def buffer[T](f: => T): T = f
+            }
+
+            ("rm foo" + uuid + ".dom.anml") !
+
+            ("rm foo" + uuid + ".0.pb.anml") !
+
+            timeCapsule stop SEARCH_FAPE
+
+            output
+          }
+          val timeout = "TIMEOUT"
+          val unsol = "INFEASIBLE"
+
+          println(result)
+
+          //System exit 0
+
+          if (result.contains(timeout) || result.contains(unsol) || !result.contains("=== Actions ===")) {
+            // return nothing meaningful
+            (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+              timeCapsule stop TOTAL_TIME
+              runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
+            })
+          } else {
+            // return something signifying a solution
+            (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+              timeCapsule stop TOTAL_TIME
+              runPostProcessing(timeCapsule, informationCapsule, null, null :: Nil, domainAndPlan, unprocessedDomain, analysisMap)
+            })
+
+          }
+        }
+
+
+      case SHOP2Search =>
+        val writer = SHOP2Writer
+
+        val domainString = writer.writeDomain(domainAndPlan._1)
+        val problemString = writer.writeProblem(domainAndPlan._1, domainAndPlan._2)
+
+        // check for unsolvability in principle
+
+        val uuid = UUID.randomUUID().toString
+        writeStringToFile(domainString, "fooD" + uuid)
+        writeStringToFile(problemString, "fooP" + uuid)
+        //System exit 0
+        writeStringToFile("#!/bin/bash\n\n" +
+                            "mkdir .shop" + uuid + "\n" +
+                            "cd .shop" + uuid + "\n" +
+                            "java -jar " + externalProgramPaths(SHOP2) + " ../fooD" + uuid + "\n" +
+                            "java -jar " + externalProgramPaths(SHOP2) + " -r ../fooP" + uuid + "\n" +
+                            "javac -cp " + externalProgramPaths(SHOP2) + " *java\n" +
+                            "rm *java\n" +
+                            "echo starting SHOP\n" +
+                            "java -Xmx4G -Xms4G -Xss4G -XX:+UseSerialGC -cp " + externalProgramPaths(SHOP2) + ":. problem\n" +
+                            //"java -Xmx1G -Xms1G -Xss1G -XX:+UseSerialGC -cp " + externalProgramPaths(SHOP2) + ":. problem\n" +
+                            "rm *class", "run" + uuid + ".sh"
+                         )
+
+        val result = {
+          import sys.process._
+          // run SHOP2
+          var output: String = ""
+
+          timeCapsule start SEARCH_SHOP
+
+          ("timeout " + remainingTime / 1000 + "s bash run" + uuid + ".sh") ! new ProcessLogger {
+            override def err(s: => String): Unit = output = output + s + "\n"
+
+            override def out(s: => String): Unit = output = output + s + "\n"
+
+            override def buffer[T](f: => T): T = f
+          }
+
+          ("rm fooD" + uuid) !
+
+          ("rm fooP" + uuid) !
+
+          ("rm run" + uuid + ".sh") !
+
+          ("rm -rf .shop" + uuid) !
+
+          timeCapsule stop SEARCH_SHOP
+
+          output
+        }
+        val timeout = "TIMEOUT"
+        val unsol = "INFEASIBLE"
+
+        println(result)
+
+        if (!(result contains "1 plan(s) were found:")) {
+          // return nothing meaningful
+          (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+            timeCapsule stop TOTAL_TIME
+            runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
+          })
+        } else {
+          // return something signifying a solution
+          (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+            timeCapsule stop TOTAL_TIME
+            runPostProcessing(timeCapsule, informationCapsule, null, null :: Nil, domainAndPlan, unprocessedDomain, analysisMap)
+          })
+
+        }
+      case NoSearch    => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
         timeCapsule stop TOTAL_TIME
         runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
       })
@@ -404,8 +567,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
 
-  private def constructEfficientHeuristic(heuristicConfig: SearchHeuristic, wrapper: Wrapping, analysisMap: AnalysisMap, domainAndPlan: (Domain, Plan))
-  : EfficientHeuristic[_] = {
+  private def constructEfficientHeuristic(heuristicConfig: SearchHeuristic, wrapper: Wrapping, analysisMap: AnalysisMap, domainAndPlan: (Domain, Plan)): EfficientHeuristic[_] = {
     // if we need the ADD heuristic as a building block create it
     val optionADD = heuristicConfig match {
       case LiftedTDGMinimumADD(_, _) | TDGMinimumADD(_) =>
@@ -497,17 +659,21 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           case Relax            =>
             RelaxHeuristic(efficientPlanningGraph, wrapper.efficientDomain, initialState.toArray)
         }
+
+      case POCLTransformation(innerHeuristic) => POCLTransformationHeuristic(innerHeuristic, wrapper.efficientDomain,
+                                                                             wrapper.efficientDomain.tasks(wrapper.unwrap(wrapper.initialPlan).planStepTasks(0)))
     }
   }
 
   def runPostProcessing(timeCapsule: TimeCapsule, informationCapsule: InformationCapsule, rootNode: SearchNode, result: Seq[Plan], domainAndPlan: (Domain, Plan),
                         unprocessedDomainAndPlan: (Domain, Plan),
                         analysisMap: AnalysisMap): ResultMap =
+
     ResultMap(postprocessingConfiguration.resultsToProduce map { resultType =>
       (resultType, resultType match {
         case ProcessingTimings => timeCapsule
 
-        case SearchStatus                   =>
+        case SearchStatus                                     =>
           val determinedSearchSate =
             if (informationCapsule.dataMap().contains(Information.ERROR)) SearchState.INSEARCH
             else if (result.nonEmpty) SearchState.SOLUTION
@@ -526,20 +692,27 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           informationCapsule.set(Information.SOLVED_STATE, determinedSearchSate.toString)
 
           determinedSearchSate
-        case InternalSearchResult           => result.headOption
-        case SearchResult                   =>
+        case InternalSearchResult                             => result.headOption
+        case SearchResult | SearchResultWithDecompositionTree =>
           // start process of translating the solution back to something readable (i.e. lifted)
           result.headOption
-        case AllFoundPlans                  => result
-        case SearchStatistics               => informationCapsule
-        case SearchSpace                    => rootNode
-        case SolutionInternalString         => if (result.nonEmpty) Some(result.head.shortInfo) else None
-        case SolutionDotString              => if (result.nonEmpty) Some(result.head.dotString) else None
-        case FinalTaskDecompositionGraph    => analysisMap(SymbolicGroundedTaskDecompositionGraph)
-        case FinalGroundedReachability      => analysisMap(SymbolicGroundedReachability)
-        case PreprocessedDomainAndPlan      => domainAndPlan
-        case UnprocessedDomainAndPlan       => unprocessedDomainAndPlan
-        case AllFoundSolutionPathsWithHStar =>
+        case AllFoundPlans                                    => result
+        case SearchStatistics                                 =>
+          // write memory info
+          val pools: Seq[MemoryPoolMXBean] = JavaConverters.asScalaBuffer(ManagementFactory.getMemoryPoolMXBeans)
+          val heapMemory = pools collect { case memoryPoolMXBean if memoryPoolMXBean.getType == MemoryType.HEAP => memoryPoolMXBean.getPeakUsage.getUsed } sum
+
+          informationCapsule.set(Information.PEAKMEMORY, heapMemory.toString)
+
+          informationCapsule
+        case SearchSpace                                      => rootNode
+        case SolutionInternalString                           => if (result.nonEmpty) Some(result.head.shortInfo) else None
+        case SolutionDotString                                => if (result.nonEmpty) Some(result.head.dotString) else None
+        case FinalTaskDecompositionGraph                      => analysisMap(SymbolicGroundedTaskDecompositionGraph)
+        case FinalGroundedReachability                        => analysisMap(SymbolicGroundedReachability)
+        case PreprocessedDomainAndPlan                        => domainAndPlan
+        case UnprocessedDomainAndPlan                         => unprocessedDomainAndPlan
+        case AllFoundSolutionPathsWithHStar                   =>
           // we have to find all solutions paths, so first compute the solution state of each node to only traverse the paths to the actual solutions
           rootNode.recomputeSearchState()
 
@@ -650,9 +823,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       else EverythingIsReachable(domain, problem.groundedInitialState.toSet)
 
     val tdg = tdgType match {
-      case NaiveTDG   => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
-      case TopDownTDG => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
-      case TwoWayTDG  => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case NaiveTDG    => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case TopDownTDG  => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
+      case BottomUpTDG => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = true)
+      case TwoWayTDG   => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = false)
     }
 
     analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg)
@@ -672,19 +846,30 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
 
+
+    val predicatesRemoved = if (domain.isGround && preprocessingConfiguration.removeUnnecessaryPredicates) {
+      info("Removing unnecessary predicates ... ")
+      val compiled = PrunePredicates.transform(domain, problem, ())
+      info("done.\n")
+      extra(compiled._1.statisticsString + "\n")
+      compiled
+    } else (domain, problem)
+
+    assert(predicatesRemoved._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { predicatesRemoved._1.tasks contains _.schema })
+
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
     val liftedResult = if (preprocessingConfiguration.liftedReachability) {
       info("Lifted reachability analysis ... ")
-      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(domain, problem, emptyAnalysis)
+      val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(predicatesRemoved._1, predicatesRemoved._2, emptyAnalysis)
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
-      val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
+      val hierarchyPruned = PruneHierarchy.transform(predicatesRemoved._1, predicatesRemoved._2, disallowedTasks.toSet)
       val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
-    } else ((domain, problem), emptyAnalysis)
+    } else (predicatesRemoved, emptyAnalysis)
     timeCapsule stop LIFTED_REACHABILITY_ANALYSIS
 
     assert(liftedResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { liftedResult._1._1.tasks contains _.schema })
@@ -720,11 +905,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val uuid = UUID.randomUUID().toString
 
       System.getProperty("os.name") match {
-        case osname if osname.toLowerCase startsWith "windows" => ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
-
-        case _ => ("mkdir .fd" + uuid) !!
+        case osname if osname.toLowerCase startsWith "windows" =>
+          ("cmd.exe /c mkdir .fd" + uuid) !! // create directory
+        case _                                                 => // OSes made by people who can think straight
+          ("mkdir .fd" + uuid) !! // create directory
       }
-
 
       val separator = System.getProperty("os.name") match {
         case osname if osname.toLowerCase startsWith "windows" => "\\"
@@ -741,6 +926,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         assert(externalProgramPaths contains FastDownward, "no path to fast downward is specified")
         val fdPath = externalProgramPaths(FastDownward)
 
+
         val path = if (fdPath.startsWith(separator) || fdPath.contains(":")) fdPath else ".." + separator + fdPath
 
         //System exit 0
@@ -752,7 +938,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                 "python " + path + "\\src\\translate\\translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".bat")
             ("cmd.exe /c  runFD" + uuid + ".bat") !!
 
-          case _ => // OSes made by people who can think straigt
+          case _ => // OSes made by people who can think straight
             writeStringToFile("#!/bin/bash\n" +
                                 "cd .fd" + uuid + "\n" +
                                 "python " + path + "/src/translate/translate.py __sasdomain.pddl __sasproblem.pddl", "runFD" + uuid + ".sh")
@@ -760,7 +946,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             ("bash runFD" + uuid + ".sh") !!
           // semantic empty line
         }
-
 
         // semantic empty line
         val sasreader = new SasPlusProblem(".fd" + uuid + separator + "output.sas")
@@ -806,6 +991,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         case Some(NaiveGroundedReachability) => ("Naive grounded reachability analysis", NaiveGroundedReachability)
         case Some(PlanningGraph)             => ("Grounded planning graph", PlanningGraph)
         case Some(PlanningGraphWithMutexes)  => ("Grounded planning graph with mutexes", PlanningGraphWithMutexes)
+        case Some(IntegerPlanningGraph)      => ("Planning graph with integer representation", IntegerPlanningGraph)
         case None                            => ("SAS+ fall-back: Grounded planning graph", PlanningGraph)
       }
       info(infoText + " ... ")
@@ -819,7 +1005,23 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               case PlanningGraph            => false
               case PlanningGraphWithMutexes => true
             }
-            runGroundedPlanningGraph(sasPlusResult._1._1, sasPlusResult._1._2, useMutexes, sasPlusResult._2)
+            val x = runGroundedPlanningGraph(sasPlusResult._1._1, sasPlusResult._1._2, useMutexes, sasPlusResult._2)
+            /*if (firstAnalysis) {
+              println("Writing File")
+              writeStringToFile(x(SymbolicGroundedReachability).reachableGroundPrimitiveActions.map(_.shortInfo).mkString("\n"), "allPrimAct.txt")
+              println("File written")
+            }*/
+            x
+          case IntegerPlanningGraph                     =>
+            val wrapper = Wrapping(sasPlusResult._1)
+            val pgConfig = EFGPGConfiguration(serial = false, computeMutexes = false, new Array(0), new Array(0))
+            val initialState = wrapper.unwrap(wrapper.initialPlan).groundInitialState
+            println("StartPG")
+            val pg = EfficientGroundedPlanningGraphImplementation(wrapper.efficientDomain, initialState, pgConfig)
+            println("Done")
+            println(pg.factSpikeIDs mkString "\n")
+            System exit 0
+            null
         }
 
       val reachable = newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.toSet
@@ -838,7 +1040,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
     val tdgResult = if (preprocessingConfiguration.groundedTaskDecompositionGraph.isDefined) {
-      val actualConfig = if (groundedResult._1._1.isGround) NaiveTDG else preprocessingConfiguration.groundedTaskDecompositionGraph.get
+      val actualConfig = preprocessingConfiguration.groundedTaskDecompositionGraph.get
       info(actualConfig.toString + " ... ")
       // get the reachability analysis, if there is none, just use the trivial one
       val newAnalysisMap = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, actualConfig)
@@ -856,12 +1058,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     assert(tdgResult._1._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { tdgResult._1._1.tasks contains _.schema })
 
     val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
-      if (!runForGrounder) (if (preprocessingConfiguration.compileUselessAbstractTasks)
+      if (!runForGrounder || !preprocessingConfiguration.groundDomain) (if (preprocessingConfiguration.compileUselessAbstractTasks)
         CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand useless abstract tasks", USELESS_ABSTRACT_TASKS) :: Nil
       else Nil) ::
+        (CompilerConfiguration(PruneUselessAbstractTasks, (), "abstract tasks without methods", USELESS_ABSTRACT_TASKS) :: Nil) ::
         // this one has to be the last
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
+        else Nil) ::
+        (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
+          CompilerConfiguration(CompileGoalIntoAction, (), "goal", TOP_TASK) :: CompilerConfiguration(ForceGroundedInitTop, (), "force top", TOP_TASK) :: Nil
         else Nil) ::
         Nil flatten
       else Nil
@@ -878,7 +1084,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         compiled
       })
 
-    if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length) ((compiledResult, tdgResult._2), timeCapsule)
+    if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length ||
+      (compiledResult._1.abstractTasks.nonEmpty && compiledResult._1.decompositionMethods.isEmpty)) ((compiledResult, tdgResult._2), timeCapsule)
     else runReachabilityAnalyses(compiledResult._1, compiledResult._2, runForGrounder, timeCapsule)
   }
 
@@ -903,6 +1110,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         else Nil) ::
         (if (preprocessingConfiguration.splitIndependentParameters)
           CompilerConfiguration(SplitIndependentParameters, (), "split parameters", SPLIT_PARAMETERS) :: Nil
+        else Nil) ::
+        (if (preprocessingConfiguration.ensureMethodsHaveLastTask)
+          CompilerConfiguration(EnsureEveryMethodHasLastTask, (), "ensure last task", LAST_TASK) :: Nil
         else Nil) ::
         Nil flatten
 
@@ -932,7 +1142,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       info("Grounding ... ")
       timeCapsule start GROUNDING
-      val result: (Domain, Plan) = {
+
+      val groundingResult: (Domain, Plan) = {
         val groundedDomainAndProblem = Grounding.transform(domainAndPlan, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
 
         if (preprocessingConfiguration.convertToSASP && (!domainAndPlan._1.containEitherType || !preprocessingConfiguration.allowSASPFromStrips)) {
@@ -950,14 +1161,28 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           // as we have done the TDG grounding after the SAS+ process, there might be tasks in mapping that have already been pruned
           val saspRepresentation = SASPlusRepresentation(sasPlusGrounder.sasPlusProblem,
-                                                         sasPlusGrounder.sasPlusTaskIndexToNewGroundTask filter { case (i, t) => sasPlusDomain.taskSet contains t })
+                                                         sasPlusGrounder.sasPlusTaskIndexToNewGroundTask filter { case (i, t) => sasPlusDomain.taskSet contains t },
+                                                         sasPlusGrounder.sasPlusPredicates.zipWithIndex map { case (p, i) => i -> p } toMap)
           (sasPlusDomain.copy(sasPlusRepresentation = Some(saspRepresentation)), sasPlusPlan)
         } else {
           // generate simple SAS+ representation from strips
-          val (saspProblem, sasOperatorOrdering) = SasPlusProblem.generateFromSTRIPS(groundedDomainAndProblem._1, groundedDomainAndProblem._2)
-          val saspRepresentation = SASPlusRepresentation(saspProblem, sasOperatorOrdering.zipWithIndex map { case (t, i) => i -> t } toMap)
+          val (saspProblem, sasOperatorOrdering, sasPredicateOrdering) = SasPlusProblem.generateFromSTRIPS(groundedDomainAndProblem._1, groundedDomainAndProblem._2)
+          val saspRepresentation = SASPlusRepresentation(saspProblem,
+                                                         sasOperatorOrdering.zipWithIndex map { case (t, i) => i -> t } toMap,
+                                                         sasPredicateOrdering.zipWithIndex map { case (p, i) => i -> p } toMap
+                                                        )
           (groundedDomainAndProblem._1.copy(sasPlusRepresentation = Some(saspRepresentation)), groundedDomainAndProblem._2)
         }
+      }
+
+     // if we are doing a plan verification curtail the model here, i.e. remove all unreachable primitive tasks
+
+      val result = searchConfiguration match {
+        case SATPlanVerification(_, plan) =>
+          val planActions = plan.split(";")
+          val primitivesNotOccurringInPlan = groundingResult._1.primitiveTasks filterNot { t => groundingResult._2.planStepTasksSet.contains(t) || planActions.contains(t.name) }
+          PruneHierarchy.transform(groundingResult, primitivesNotOccurringInPlan.toSet)
+        case _                            => groundingResult
       }
 
 
@@ -976,11 +1201,31 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       } else (result._1, result._2)
       timeCapsule stop COMPILE_UNIT_METHODS
 
+      val ((groundedDomainAndPlan, groundedAnalysisMap), _) =
+        if (!preprocessingConfiguration.stopDirectlyAfterGrounding) runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, runForGrounder = false, timeCapsule)
+        else ((unitMethodsCompiled, AnalysisMap(Map())), null)
 
-      val ((groundedDomainAndPlan, groundedAnalysisMap), _) = runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, runForGrounder = false, timeCapsule)
+      timeCapsule start COMPILE_UNIT_METHODS
+      val methodsWithIdenticalTasks = if (
+        searchConfiguration.isInstanceOf[SATSearch] && postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree) && !groundedDomainAndPlan._1.isClassical) {
+        info("Compiling methods with identical tasks ... ")
+        val compiled = MakeTasksInMethodsUnique.transform(groundedDomainAndPlan._1, groundedDomainAndPlan._2, ())
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        compiled
+      } else groundedDomainAndPlan
+      timeCapsule stop COMPILE_UNIT_METHODS
+
+      val predicatedPruned = if (preprocessingConfiguration.removeUnnecessaryPredicates) {
+        info("Removing unnecessary predicates ... ")
+        val compiled = PrunePredicates.transform(methodsWithIdenticalTasks._1, methodsWithIdenticalTasks._2, ())
+        info("done.\n")
+        extra(compiled._1.statisticsString + "\n")
+        compiled
+      } else methodsWithIdenticalTasks
 
       timeCapsule stop PREPROCESSING
-      ((groundedDomainAndPlan, groundedAnalysisMap), timeCapsule)
+      ((predicatedPruned, groundedAnalysisMap), timeCapsule)
     } else {
       timeCapsule stop PREPROCESSING
       ((domainAndPlan, analysisMap), timeCapsule)
@@ -1027,10 +1272,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
              case "fd" | "fast-downward" | "fastdownward" => FastDownward
              case "riss6"                                 => RISS6
              case "mapleCOMSPS"                           => MapleCOMSPS
+             case "FAPE"                                  => FAPE
+             case "SHOP2"                                 => SHOP2
+             case "minisat"                               => MINISAT
+             case "cryptominisat"                         => CRYPTOMINISAT
            }
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
        )
+
 
   protected def predefinedConfigurations: Seq[(String, (ParameterMode, (Option[String]) => PlanningConfiguration.this.type))] =
     (PredefinedConfigurations.parsingConfigs.toSeq map { case (k, p) =>
@@ -1053,7 +1303,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         defaultProgressionConfiguration ::
         defaultSATConfiguration ::
         defaultVerifyConfiguration ::
-        NoSearch :: Nil
+        NoSearch ::
+        FAPESearch ::
+        SHOP2Search :: Nil
     case x        => x :: Nil
   }) ++ (parsingConfiguration :: preprocessingConfiguration :: postprocessingConfiguration :: Nil)
 
@@ -1147,6 +1399,8 @@ object NaiveTDG extends TDGGeneration {override def toString: String = "Naive TD
 
 object TopDownTDG extends TDGGeneration {override def toString: String = "Top Down TDG"}
 
+object BottomUpTDG extends TDGGeneration {override def toString: String = "Bottom Up TDG"}
+
 object TwoWayTDG extends TDGGeneration {override def toString: String = "Two Way TDG"}
 
 sealed trait GroundedReachabilityMode extends Configuration
@@ -1157,11 +1411,15 @@ object PlanningGraph extends GroundedReachabilityMode {override def longInfo: St
 
 object PlanningGraphWithMutexes extends GroundedReachabilityMode {override def longInfo: String = "Planning Graph with Mutexes"}
 
+object IntegerPlanningGraph extends GroundedReachabilityMode {override def longInfo: String = "Integer Planning Graph"}
+
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
                                        compileUnitMethods: Boolean,
                                        compileOrderInMethods: Option[TotallyOrderingOption],
                                        compileInitialPlan: Boolean,
+                                       ensureMethodsHaveLastTask: Boolean,
+                                       removeUnnecessaryPredicates: Boolean,
                                        convertToSASP: Boolean,
                                        allowSASPFromStrips: Boolean,
                                        splitIndependentParameters: Boolean,
@@ -1170,7 +1428,8 @@ case class PreprocessingConfiguration(
                                        groundedReachability: Option[GroundedReachabilityMode],
                                        groundedTaskDecompositionGraph: Option[TDGGeneration],
                                        iterateReachabilityAnalysis: Boolean,
-                                       groundDomain: Boolean
+                                       groundDomain: Boolean,
+                                       stopDirectlyAfterGrounding: Boolean
                                      ) extends Configuration {
   assert(!convertToSASP || groundedReachability.isEmpty, "You can't use both SAS+ and a grouded PG")
 
@@ -1202,6 +1461,11 @@ case class PreprocessingConfiguration(
 
          "-splitIndependentParameters" -> (NoParameter, { p: Option[String] => this.copy(splitIndependentParameters = true).asInstanceOf[this.type] }),
          "-dontSplitIndependentParameters" -> (NoParameter, { p: Option[String] => this.copy(splitIndependentParameters = false).asInstanceOf[this.type] }),
+
+         "-removeUnnecessaryPredicates" -> (NoParameter, { p: Option[String] => this.copy(removeUnnecessaryPredicates = true).asInstanceOf[this.type] }),
+         "-dontRemoveUnnecessaryPredicates" -> (NoParameter, { p: Option[String] => this.copy(removeUnnecessaryPredicates = false).asInstanceOf[this.type] }),
+         "-ensureLastTaskInMethods" -> (NoParameter, { p: Option[String] => this.copy(ensureMethodsHaveLastTask = true).asInstanceOf[this.type] }),
+         "-dontEnsureLastTaskInMethods" -> (NoParameter, { p: Option[String] => this.copy(ensureMethodsHaveLastTask = false).asInstanceOf[this.type] }),
 
          "-liftedReachability" -> (NoParameter, { p: Option[String] => this.copy(liftedReachability = true).asInstanceOf[this.type] }),
          "-noLiftedReachability" -> (NoParameter, { p: Option[String] => this.copy(liftedReachability = false).asInstanceOf[this.type] }),
@@ -1244,7 +1508,13 @@ case class PreprocessingConfiguration(
          "-dontIterateReachabilityAnalysis" -> (NoParameter, { p: Option[String] => this.copy(iterateReachabilityAnalysis = false).asInstanceOf[this.type] }),
 
          "-groundDomain" -> (NoParameter, { p: Option[String] => this.copy(groundDomain = true).asInstanceOf[this.type] }),
-         "-liftedDomain" -> (NoParameter, { p: Option[String] => this.copy(groundDomain = false).asInstanceOf[this.type] })
+         "-liftedDomain" -> (NoParameter, { p: Option[String] => this.copy(groundDomain = false).asInstanceOf[this.type] }),
+
+         "-stopAfterGrounding" -> (NoParameter, { p: Option[String] => this.copy(stopDirectlyAfterGrounding = true).asInstanceOf[this.type] }),
+         "-dontStopAfterGrounding" -> (NoParameter, { p: Option[String] => this.copy(stopDirectlyAfterGrounding = false).asInstanceOf[this.type] }),
+
+         "-compileUselessAbstracts" -> (NoParameter, { p: Option[String] => this.copy(compileUselessAbstractTasks = true).asInstanceOf[this.type] }),
+         "-dontCompileUselessAbstracts" -> (NoParameter, { p: Option[String] => this.copy(compileUselessAbstractTasks = false).asInstanceOf[this.type] })
        )
 
   override def longInfo: String = "Preprocessing Configuration\n---------------------------\n" +
@@ -1252,14 +1522,17 @@ case class PreprocessingConfiguration(
                   ("Compile unit methods", compileUnitMethods) ::
                   ("Compile order in methods", if (compileOrderInMethods.isEmpty) "false" else compileOrderInMethods.get) ::
                   ("Compile initial plan", compileInitialPlan) ::
+                  ("Ensure Methods Have Last Task", ensureMethodsHaveLastTask) ::
+                  ("Remove unnecessary predicates", removeUnnecessaryPredicates) ::
                   ("Convert to SAS+", convertToSASP) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
-                  ("Split indipendent parameters", splitIndependentParameters) ::
+                  ("Split independent parameters", splitIndependentParameters) ::
                   ("Lifted Reachability Analysis", liftedReachability) ::
                   ("Grounded Reachability Analysis", if (groundedReachability.isEmpty) "false" else groundedReachability.get.longInfo) ::
                   ("Grounded Task Decomposition Graph", if (groundedTaskDecompositionGraph.isEmpty) "false" else groundedTaskDecompositionGraph.get) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
                   ("Ground domain", groundDomain) ::
+                  ("Stop directly after grounding", stopDirectlyAfterGrounding) ::
                   Nil)
 
 }
@@ -1276,6 +1549,7 @@ object SearchAlgorithmType {
     case "greedy"                                                => GreedyType
     case "dijkstra" | "uniform-cost"                             => DijkstraType
     case "astar" | "a*"                                          => AStarActionsType(weight = 1)
+    case x if x.startsWith("externalsearch")                     => ExternalSearchEngine(x.replace(')', '(').split("\\(")(1))
     case "depth-astar" | "depth-a*" | "astar-depth" | "a*-depth" => AStarDepthType(weight = 1)
     case x if x.startsWith("astar") || x.startsWith("a*")        => AStarActionsType(weight = x.replace(')', '(').split("\\(")(1).toDouble)
     case x if x.startsWith("depth-astar") || x.startsWith("depth-a*") ||
@@ -1299,6 +1573,7 @@ object GreedyType extends SearchAlgorithmType {override def longInfo: String = "
 
 object DijkstraType extends SearchAlgorithmType {override def longInfo: String = "Dijkstra"}
 
+case class ExternalSearchEngine(uuid: String) extends SearchAlgorithmType {override def longInfo: String = "Write model for external search engine"}
 
 object ArgumentListParser {
   def parse[T](text: String, extractor: (String, Map[String, String]) => T): Seq[T] = text.replace(" ", ";").split(";") map { singleH =>
@@ -1441,6 +1716,7 @@ object ADDReusing extends SearchHeuristic {override val longInfo: String = "add_
 
 object Relax extends SearchHeuristic {override val longInfo: String = "relax"}
 
+case class POCLTransformation(classicalHeuristic: SasHeuristics) extends SearchHeuristic {override val longInfo: String = "add"}
 
 // PANDAPRO heuristics
 case class RelaxedCompositionGraph(useTDReachability: Boolean, heuristicExtraction: gphRcFFMulticount.heuristicExtraction, producerSelectionStrategy: gphRcFFMulticount.producerSelection)
@@ -1611,7 +1887,8 @@ case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
-                     forceClassicalEncoding: Boolean = false
+                     encodingToUse: POEncoding = POCLDeleterEncoding,
+                     threads: Int = 1
                     ) extends SearchConfiguration {
 
   protected lazy val getSingleRun: SingleSATRun = runConfiguration match {
@@ -1692,6 +1969,18 @@ case class SATPlanVerification(solverType: Solvertype, planToVerify: String) ext
     alignConfig(("solver", solverType.longInfo) :: ("plan", planToVerify) :: Nil)
 }
 
+
+object FAPESearch extends SearchConfiguration {
+  /** returns a detailed information about the object */
+  override def longInfo: String = "Use FAPE for the search"
+}
+
+object SHOP2Search extends SearchConfiguration {
+  /** returns a detailed information about the object */
+  override def longInfo: String = "Use JSHOP2 for the search"
+
+}
+
 object NoSearch extends SearchConfiguration {
   /** returns a detailed information about the object */
   override def longInfo: String = "No Search"
@@ -1709,6 +1998,7 @@ case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) extend
          "-timings" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + ProcessingTimings).asInstanceOf[this.type] }),
          "-outputStatus" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchStatus).asInstanceOf[this.type] }),
          "-outputPlan" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchResult).asInstanceOf[this.type] }),
+         "-outputPlanWithHierarchy" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchResultWithDecompositionTree).asInstanceOf[this.type] }),
          "-outputInternalPlan" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + InternalSearchResult).asInstanceOf[this.type] }),
          "-outputAllPlans" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + AllFoundPlans).asInstanceOf[this.type] }),
          "-outputAllPlansWithH*" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + AllFoundSolutionPathsWithHStar).asInstanceOf[this.type] }),
@@ -1770,6 +2060,10 @@ trait Configuration extends DefaultLongInfo {
 sealed trait ExternalProgram
 
 object FastDownward extends ExternalProgram
+
+object FAPE extends ExternalProgram
+
+object SHOP2 extends ExternalProgram
 
 sealed trait Solvertype extends DefaultLongInfo with ExternalProgram
 

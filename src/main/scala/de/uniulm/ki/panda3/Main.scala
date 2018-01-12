@@ -26,6 +26,8 @@ object Main {
                                                                                     PreprocessingConfiguration(compileNegativePreconditions = false,
                                                                                                                compileUnitMethods = false,
                                                                                                                compileInitialPlan = false,
+                                                                                                               removeUnnecessaryPredicates = false,
+                                                                                                               ensureMethodsHaveLastTask = false,
                                                                                                                convertToSASP = false,
                                                                                                                allowSASPFromStrips = false,
                                                                                                                compileOrderInMethods = None,
@@ -35,7 +37,8 @@ object Main {
                                                                                                                groundedReachability = None,
                                                                                                                groundedTaskDecompositionGraph = None,
                                                                                                                iterateReachabilityAnalysis = false,
-                                                                                                               groundDomain = false),
+                                                                                                               groundDomain = false,
+                                                                                                               stopDirectlyAfterGrounding = false),
                                                                                     NoSearch, PostprocessingConfiguration(Set()))) extends PrettyPrintable {
 
     def processCommandLineArguments(args: Seq[String]): RunConfiguration = {
@@ -139,8 +142,6 @@ object Main {
                  }
 
   def main(args: Array[String]) {
-
-
     //PlanningConfiguration(true,true,null,null,SATSearch(None,null,0).modifyOnOptionString("-planlength")(Some("2")),null)
 
     println("This is PANDA3\nBelieve us: It is great!")
@@ -187,8 +188,9 @@ object Main {
       println("Panda says: " + results(SearchStatus))
 
 
-    if (results.map.contains(SearchStatistics))
+    if (results.map.contains(SearchStatistics)) {
       println(results(SearchStatistics).shortInfo)
+    }
     if (results.map.contains(ProcessingTimings)) {
       println("----------------- TIMINGS -----------------")
       println(results(ProcessingTimings).shortInfo)

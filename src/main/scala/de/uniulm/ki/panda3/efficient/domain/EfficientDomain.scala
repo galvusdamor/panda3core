@@ -2,8 +2,10 @@ package de.uniulm.ki.panda3.efficient.domain
 
 import de.uniulm.ki.panda3.efficient.domain.datastructures.EfficientTaskSchemaTransitionGraph
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
+import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem
+import de.uniulm.ki.panda3.symbolic.domain.SASPlusRepresentation
 
-import scala.collection.{mutable, BitSet}
+import scala.collection.{BitSet, mutable}
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -22,7 +24,11 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
                            var sortsOfConstant: Array[Array[Int]] = Array(),
                            var predicates: Array[Array[Int]] = Array(),
                            var tasks: Array[EfficientTask] = Array(),
-                           var decompositionMethods: Array[EfficientDecompositionMethod] = Array()) {
+                           var decompositionMethods: Array[EfficientDecompositionMethod] = Array(),
+                           var sasPlusProblem: SasPlusProblem = null,
+                           var taskIndexToSASPlus: Array[Int] = Array(),
+                           var predicateIndexToSASPlus: Array[Int] = Array()
+                          ) {
 
 
   var constantsOfSort: Array[Array[Int]] = Array()
@@ -56,7 +62,7 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
 
       def toArray(list: Seq[((EfficientTask, Int), (EfficientLiteral, Int))]): Array[(Int, Int)] = list map { case ((_, i), (_, j)) => (i, j) } toArray
 
-      a ->(toArray(parted._1), toArray(parted._2))
+      a -> (toArray(parted._1), toArray(parted._2))
     } toMap
 
     predicates.indices map { predicate => entryMap.getOrElse(predicate, (Array[(Int, Int)](), Array[(Int, Int)]())) } toArray
@@ -190,7 +196,7 @@ case class EfficientDomain(var subSortsForSort: Array[Array[Int]] = Array(),
 
   lazy val negativePreconditionPredicatesArrays: Array[Array[Boolean]] = tasks map { t => predicateListToBoolArray(t.negativePreconditionPredicates) }
 
-  lazy val positiveEffectPredicatesArrays : Array[Array[Boolean]] = tasks map { t => predicateListToBoolArray(t.positiveEffectPredicates) }
+  lazy val positiveEffectPredicatesArrays: Array[Array[Boolean]] = tasks map { t => predicateListToBoolArray(t.positiveEffectPredicates) }
 
-  lazy val negativeEffectPredicatesArrays : Array[Array[Boolean]] = tasks map { t => predicateListToBoolArray(t.negativeEffectPredicates) }
+  lazy val negativeEffectPredicatesArrays: Array[Array[Boolean]] = tasks map { t => predicateListToBoolArray(t.negativeEffectPredicates) }
 }

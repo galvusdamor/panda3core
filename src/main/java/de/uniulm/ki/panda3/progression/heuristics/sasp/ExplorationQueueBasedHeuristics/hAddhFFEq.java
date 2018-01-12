@@ -31,13 +31,13 @@ public class hAddhFFEq extends SasHeuristic {
     private int[] hValProp;
     private int[] reachedBy;
 
-    public hAddhFFEq(SasPlusProblem p, SasHeuristics heuristic) {
+    public hAddhFFEq(SasPlusProblem p, SasHeuristic.SasHeuristics heuristic) {
         this.heuristic = heuristic;
         this.helpfulOps = new BitSet();
         this.p = p;
         List<Integer> tempPrecLess = new ArrayList<>();
         for (int i = 0; i < p.numOfOperators; i++) {
-            if (p.addLists[i].length == 0)
+            if (p.precLists[i].length == 0)
                 tempPrecLess.add(i);
         }
         precLessOps = new int[tempPrecLess.size()];
@@ -45,7 +45,7 @@ public class hAddhFFEq extends SasHeuristic {
             precLessOps[i] = tempPrecLess.get(i);
         this.hValPropInit = new int[p.numOfStateFeatures];
         for (int i = 0; i < hValPropInit.length; i++)
-            hValPropInit[i] = cUnreachable;
+            hValPropInit[i] = cUnreachable;//todo: precless actions
     }
 
     @Override
@@ -67,7 +67,7 @@ public class hAddhFFEq extends SasHeuristic {
             hValProp[f] = 0;
         }
         // actions without preconditions
-        for (int a = 0; a < precLessOps.length; a++) {
+        for (int a : precLessOps) {
             for (int f : p.addLists[a]) {
                 hValProp[f] = p.costs[a];
                 queue.add(hValProp[f], f);

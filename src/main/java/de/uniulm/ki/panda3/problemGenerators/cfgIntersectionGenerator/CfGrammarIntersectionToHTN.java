@@ -199,7 +199,7 @@ public class CfGrammarIntersectionToHTN {
 
         TaskOrdering taskOrderings = new TaskOrdering(ordSeq.result(), planSteps.result());
         Plan p = new Plan(planSteps.result(), new seqProviderList<CausalLink>().result(), taskOrderings, csp, psInit, psGoal,
-                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false);
 
         return new Tuple2<>(d, p);
     }
@@ -244,7 +244,7 @@ public class CfGrammarIntersectionToHTN {
             ordSeq.add(new OrderingConstraint(psInit, psGoal));
 
             TaskOrdering ordering = new TaskOrdering(ordSeq.result(), subtasks.result());
-            Plan subplan = new Plan(subtasks.result(), new Vector<CausalLink>(0, 0, 0), ordering, csp, psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+            Plan subplan = new Plan(subtasks.result(), new Vector<CausalLink>(0, 0, 0), ordering, csp, psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false);
             DecompositionMethod dm = new SimpleDecompositionMethod(absT, subplan, name);
             decompositionMethods.add(dm);
         }

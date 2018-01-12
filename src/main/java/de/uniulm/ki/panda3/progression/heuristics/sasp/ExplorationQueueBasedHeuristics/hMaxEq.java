@@ -38,7 +38,7 @@ public class hMaxEq extends SasHeuristic {
         // get actions without preconditions
         List<Integer> tempPrecLess = new ArrayList<>();
         for (int i = 0; i < p.numOfOperators; i++) {
-            if (p.addLists[i].length == 0)
+            if (p.precLists[i].length == 0)
                 tempPrecLess.add(i);
         }
         precLessOps = new int[tempPrecLess.size()];
@@ -48,6 +48,7 @@ public class hMaxEq extends SasHeuristic {
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
+        g.andNot(s0);
         if (g.cardinality() == 0)
             return 0;
         this.unsatPrecs = p.numPrecs.clone();
