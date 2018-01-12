@@ -167,8 +167,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
             case KautzSelmanEncoding => KautzSelman(timeCapsule, domain, initialPlan, planLength)
           }
         }
-        else if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
-          TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
+        //else if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
+        //  TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
           encodingToUse match {
