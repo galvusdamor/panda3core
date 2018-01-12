@@ -116,7 +116,7 @@ public class SasPlusProblem {
     public int[] numPrecs; // gives the number of preconditions for each action
 
     public int[] s0List;
-    private BitSet s0Bitset = null;
+    public BitSet s0Bitset = null;
     public int[] gList;
 
     public String[] factStrs;
