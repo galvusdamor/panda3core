@@ -118,6 +118,14 @@ public class RelaxedCompositionSAS extends RelaxedCompositionEncoding {
             }
             tAddLists[iA][iE] = reached[iA];
 
+
+            tDelLists[iA] = new int[this.delLists[iA].length + 1];
+            int iD;
+            for (iD = 0; iD < this.delLists[iA].length; iD++) {
+                tDelLists[iA][iD] = this.delLists[iA][iD];
+            }
+            tDelLists[iA][iD] = unreached[iA];
+
             tOpNames[iA] = opNames[iA];
             tCosts[iA] = costs[iA];
         }
@@ -140,6 +148,8 @@ public class RelaxedCompositionSAS extends RelaxedCompositionEncoding {
             int compTaskIndex = ProgressionNetwork.taskToIndex.get(m.m.abstractTask());
             tAddLists[iM] = new int[1];
             tAddLists[iM][0] = reached[compTaskIndex];
+            tDelLists[iM] = new int[1];
+            tDelLists[iM][0] = unreached[compTaskIndex];
 
             tOpNames[iM] = m.m.name() + "@" + m.m.abstractTask().shortInfo();
             tCosts[iM] = this.methodCosts;
@@ -151,10 +161,10 @@ public class RelaxedCompositionSAS extends RelaxedCompositionEncoding {
         this.costs = tCosts;
 
         // extend delete lists with empty arrays (new ops have no del effects)
-        for (int i = 0; i < this.delLists.length; i++)
+        /*for (int i = 0; i < this.delLists.length; i++)
             tDelLists[i] = this.delLists[i];
         for (int i = this.delLists.length; i < tDelLists.length; i++)
-            tDelLists[i] = new int[0];
+            tDelLists[i] = new int[0];*/
         this.delLists = tDelLists;
 
         this.numOfStateFeatures = numExtenedStateFeatures;
