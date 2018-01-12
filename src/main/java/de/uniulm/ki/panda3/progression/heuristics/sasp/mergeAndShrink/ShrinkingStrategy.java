@@ -100,7 +100,7 @@ abstract class ShrinkingStrategy {
 
     public Tuple3<Integer, Integer, Integer>[] shrinkEdges(Tuple3<Integer, Integer, Integer>[] oldEdges, HashMap<Integer, Integer> tempReverseIDMapping){
 
-        ArrayList<Tuple3<Integer, Integer, Integer>> shrinkedEdges = new ArrayList();
+        Set<Tuple3<Integer, Integer, Integer>> shrinkedEdges = new HashSet();
 
         for (Tuple3<Integer, Integer, Integer> edge : oldEdges){
 
@@ -109,11 +109,14 @@ abstract class ShrinkingStrategy {
         }
 
 
-        return Utils.convertEdgeArrayListToTuple3(shrinkedEdges);
+        ArrayList<Tuple3<Integer, Integer, Integer>> finalLists = new ArrayList<>();
+        finalLists.addAll(shrinkedEdges);
+        return Utils.convertEdgeArrayListToTuple3(finalLists);
     }
 
 
-    public HashMap<Integer,Integer> getDistancesFromGoal(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public static HashMap<Integer,Integer> getDistancesFromGoal(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>,
+            Set<Integer>, Set<Integer>, CascadingTables> graph){
 
         HashMap<Integer, Integer> distancesToGoalMap = new HashMap<>();
 
@@ -126,6 +129,9 @@ abstract class ShrinkingStrategy {
 
 
         Set<Integer> goalNodes = getGoalNodes(graph);
+
+        for (int i: graph.idMapping().keySet())
+            distancesToGoalMap.put(i,Integer.MAX_VALUE);
 
 
         for (int i: goalNodes){
@@ -181,7 +187,7 @@ abstract class ShrinkingStrategy {
 
 
 
-    public HashMap<Integer, Integer> reverseBreadthSearchToFindDistances(SasPlusProblem p, ArrayList<Integer> nextNodes,
+    public static HashMap<Integer, Integer> reverseBreadthSearchToFindDistances(SasPlusProblem p, ArrayList<Integer> nextNodes,
                                                                          HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> incomingEdgesMap, HashMap<Integer, Integer> distancesFromGoal){
 
         ArrayList<Integer> newNextNodes = new ArrayList<>(nextNodes);
@@ -224,8 +230,8 @@ abstract class ShrinkingStrategy {
 
         //System.out.println("Maximum: " + maximumDistance + ", Frequency: " + counter);
 
-        if (counter>1) {
-            for (int id : graph.idMapping().keySet()) {
+        if (true || counter>1) {
+            for (int id : summedDistances.keySet()) {
                 if (summedDistances.get(id) == maximumDistance) {
                     farthestNodes.add(id);
                 }
@@ -247,7 +253,7 @@ abstract class ShrinkingStrategy {
             //System.out.println(summedDistancesWithoutHighest);
 
 
-            for (int id : graph.idMapping().keySet()) {
+            for (int id : summedDistances.keySet()) {
                 if (summedDistances.get(id) == maximumDistance) {
                     farthestNodes.add(id);
                     summedDistancesWithoutHighest.remove(id);
@@ -263,7 +269,7 @@ abstract class ShrinkingStrategy {
 
             //System.out.println("Second Maximum: " + secondMaximumDistance);
 
-            for (int id : graph.idMapping().keySet()) {
+            for (int id : summedDistances.keySet()) {
                 if (summedDistances.get(id) == secondMaximumDistance) {
                     farthestNodes.add(id);
                 }
@@ -355,6 +361,9 @@ abstract class ShrinkingStrategy {
 
         HashMap<Integer, Integer> distancesFromStartMap = new HashMap<>();
 
+        for (int i: graph.idMapping().keySet())
+            distancesFromStartMap.put(i,Integer.MAX_VALUE);
+
         distancesFromStartMap.put(graph.startNodeID(), 0);
 
         Tuple2<ArrayList<Integer>,HashMap<Integer, Integer>> result = breadthSearchToFindDistances(p, nextNodes, nodesToKeep, outgoingEdgesMap, distancesFromStartMap);
@@ -444,6 +453,12 @@ class ShrinkingStrategy1 extends ShrinkingStrategy{
 
         for (int id:graph.idMapping().keySet()){
 
+            //System.out.println("ID: " + id);
+            //System.out.println(distancesFromClosestGoalNode);
+            //System.out.println(distancesFromStartNode);
+            //System.out.println(distancesFromClosestGoalNode.containsKey(id));
+            //System.out.println(distancesFromStartNode.containsKey(id));
+
             int distanceFromStart = distancesFromStartNode.get(id);
             int distanceFromGoal = distancesFromClosestGoalNode.get(id);
             summedDistances.put(id,distanceFromStart+distanceFromGoal);
@@ -451,11 +466,62 @@ class ShrinkingStrategy1 extends ShrinkingStrategy{
 
         //System.out.println(summedDistances);
 
-        ArrayList<Integer> farthestNodesFromStartAndGoal = getNodesFarthestFromStartAndGoal(graph, summedDistances);
+        HashMap<Integer,Integer> originalSummedDistances = new HashMap<>();
+        originalSummedDistances.putAll(summedDistances);
+
+
+        ArrayList<Integer> currentMaxDistanceNodes;
+        while (true) {
+            if (summedDistances.isEmpty()){
+                int first = -1;
+                int second = -1;
+
+                while (true) {
+                    if (originalSummedDistances.isEmpty()){
+                        currentMaxDistanceNodes = new ArrayList<>();
+                        currentMaxDistanceNodes.add(first);
+                        currentMaxDistanceNodes.add(second);
+                        break;
+                    }
+                    ArrayList<Integer> farthestNodesFromStartAndGoal = getNodesFarthestFromStartAndGoal(graph, originalSummedDistances);
+                    if (farthestNodesFromStartAndGoal.size() == 1){
+                        int maxNode = farthestNodesFromStartAndGoal.get(0);
+                        if (first == -1) first = maxNode;
+                        else if (second == -1) second = maxNode;
+                        originalSummedDistances.remove(maxNode);
+                    } else {
+                        currentMaxDistanceNodes = farthestNodesFromStartAndGoal;
+                        break;
+                    }
+                }
+                break;
+            }
+
+            ArrayList<Integer> farthestNodesFromStartAndGoal = getNodesFarthestFromStartAndGoal(graph, summedDistances);
+
+            int maxDistanceToInit = 0;
+            currentMaxDistanceNodes = new ArrayList<Integer>();
+            for (int i : farthestNodesFromStartAndGoal) {
+                int distToStart = distancesFromStartNode.get(i);
+                if (distToStart > maxDistanceToInit) {
+                    maxDistanceToInit = distToStart;
+                    currentMaxDistanceNodes.clear();
+                }
+
+                if (distToStart == maxDistanceToInit)
+                    currentMaxDistanceNodes.add(i);
+            }
+
+            if (currentMaxDistanceNodes.size() == 1){
+                int maxNode = currentMaxDistanceNodes.get(0);
+                summedDistances.remove(maxNode);
+                distancesFromStartNode.remove(maxNode);
+            } else break;
+        }
+
 
         ArrayList<ArrayList<Integer>> nodesToShrink = new ArrayList<>();
-
-        nodesToShrink.add(farthestNodesFromStartAndGoal);
+        nodesToShrink.add(currentMaxDistanceNodes);
 
         EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> shrinkedGraph = shrinkingStep(p,graph, nodesToShrink);
 

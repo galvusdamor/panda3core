@@ -105,7 +105,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
     val dotStringBuilder = new StringBuilder()
 
     dotStringBuilder append "digraph someDirectedGraph{\n"
-    edgeList foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + " " + "[label=" + edgeRenderer(a, b) + "];\n" }
+    edgeList.distinct foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + " " + "[label=" + edgeRenderer(a, b) + "];\n" }
     dotStringBuilder append "\n"
     vertices.zipWithIndex foreach { case (obj, index) =>
       val string = (if (options.labelNodesWithNumbers) index.toString else obj match {case pp: PrettyPrintable => pp.shortInfo; case x => nodeRenderer(x)}).replace('\"', '\'')
@@ -560,7 +560,8 @@ case class EdgeLabelledGraphSingle[T, L](arrayVertices: Array[T], labelledEdges:
   })
 }
 
-case class EdgeLabelledGraph[T, L, M, S, F, U, N, V, C](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M, startNodeID: S, usedFactIndexes: F, usedVariables: U, notYetUsedVariables: N, allVariables: V, cascadingTables: C) extends DirectedGraphWithAlgorithms[T] {
+case class EdgeLabelledGraph[T, L, M, S, F, U, N, V, C](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M, startNodeID: S, usedFactIndexes: F, usedVariables: U,
+                                                        notYetUsedVariables: N, allVariables: V, cascadingTables: C) extends DirectedGraphWithAlgorithms[T] {
 
   //def startNode = startNodeID
 
@@ -578,12 +579,20 @@ case class EdgeLabelledGraph[T, L, M, S, F, U, N, V, C](arrayVertices: Array[T],
     return distancesFromStart;
   }*/
 
-  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString },
-                                                                               { case (a, b) => labelledEdges.find({ case (x, _, y) => a == x && b == y }).get._2 match {
-                                                                                 case p: PrettyPrintable => p.longInfo
-                                                                                 case x                  => x.toString
-                                                                               }
-                                                                               })
+  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString }, { case (a, b) =>
+    val matchtchingEdges = labelledEdges.filter({ case (x, _, y) => a == x && b == y }).map(_._2)
+
+    if (matchtchingEdges.size == 1) matchtchingEdges.head match {
+      case p: PrettyPrintable => p.longInfo
+      case x                  => x.toString
+    }
+    else "\"multi edge\""
+
+    "\"" + (matchtchingEdges map {
+      case p: PrettyPrintable => p.longInfo
+      case x                  => x.toString
+    } mkString "\n").replace("\"","") + "\""
+  })
 }
 
 case class SimpleGraphNode(id: String, name: String) extends PrettyPrintable {

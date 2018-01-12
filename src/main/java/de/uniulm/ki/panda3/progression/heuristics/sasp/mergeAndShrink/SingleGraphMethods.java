@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.*;
+import scala.collection.JavaConversions;
 
 import javax.rmi.CORBA.Util;
 
@@ -126,6 +127,7 @@ public final class SingleGraphMethods {
         ArrayList<Integer> s0Dismissed = Utils.dismissNotContainedIndexes(s0, containedIndexes);
 
         if (s0Dismissed.size()>1) System.out.println("The start state of this variable is not valid");
+        if (s0Dismissed.size()<1) System.out.println("The start state of this variable is not existant");
 
         for (int id : idMapping.keySet()){
 

@@ -9,6 +9,8 @@ import scala.Tuple3;
 
 import java.util.*;
 
+import static de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.SingleGraphMethods.getSingleEdgesForAllContainedIndexes;
+
 /**
  * Created by biederma on 11.01.2018.
  */
@@ -69,6 +71,9 @@ abstract class MergingStrategy {
         EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph2 = SingleGraphMethods.getSingleGraphForVarIndex(p, varIndex);
 
 
+        //Utils.printMultiGraph(p, graph2, "elementary.pdf");
+        //Utils.printMultiGraph(p, graph1, "current.pdf");
+
         int sizeOfGraph1 = graph1.idMapping().keySet().size();
         int sizeOfGraph2 = graph2.idMapping().keySet().size();
 
@@ -102,6 +107,8 @@ abstract class MergingStrategy {
 
 
         }
+        //Utils.printMultiGraph(p, graph2, "elementary-shrinked.pdf");
+        //Utils.printMultiGraph(p, graph1, "current-shrinked.pdf");
 
 
         EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> newGraph = mergingStep(p, graph1, graph2);
@@ -406,7 +413,7 @@ abstract class MergingStrategy {
         }
 
         //add new merge table to cascadingTables1
-        int[][] mergeCascadingTable = new int[graph1.idMapping().size()][graph1.idMapping().size()];
+        int[][] mergeCascadingTable = new int[graph1.idMapping().size()][graph2.idMapping().size()];
         for (int i=0; i<graph1.idMapping().size(); i++){
 
             for (int j=0; j<graph2.idMapping().size(); j++){
@@ -457,6 +464,31 @@ abstract class MergingStrategy {
 
 class MergingStrategy1 extends MergingStrategy{
 
+    private boolean hasGoalDefined(SasPlusProblem p, int varIndex) {
+        int firstIndex = p.firstIndex[varIndex];
+        int lastIndex = p.lastIndex[varIndex];
+
+        ArrayList<Integer> containedIndexes = new ArrayList<>();
+
+        for (int i=firstIndex; i<=lastIndex; i++){
+            containedIndexes.add(i);
+        }
+
+        ArrayList<Tuple3<Integer,Integer,Integer>> edges = getSingleEdgesForAllContainedIndexes(p,containedIndexes);
+
+
+        Integer[] nodeIDs = new Integer[containedIndexes.size()];
+
+        HashMap<Integer, NodeValue> idMapping = new HashMap<>();
+
+        HashMap<Integer, Integer> cascadingTable = new HashMap<>();
+
+        int[] goals = p.gList;
+
+        ArrayList<Integer> dismissedGoals = Utils.dismissNotContainedIndexes(goals, containedIndexes);
+
+        return dismissedGoals.size() > 0;
+    }
 
     public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> merge(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph, int shrinkingBound, long seed){
 
@@ -465,17 +497,28 @@ class MergingStrategy1 extends MergingStrategy{
 
         ArrayList<Integer> variablesToMerge = new ArrayList<>(notYetUsedVariables);
 
+        ArrayList<Integer> allGoalVars = new ArrayList<>();
+        for (int var : variablesToMerge) if (hasGoalDefined(p,var)) allGoalVars.add(var);
+
+        if (allGoalVars.size() > 0) {
+            variablesToMerge = allGoalVars;
+            //System.out.println("Goal var left");
+        } else {
+            //System.out.println("No Goal var left");
+        }
+
+
         EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> newGraph;
 
         if (!(graph==null)) {
 
             //System.out.println("Not yet used Variables: " + notYetUsedVariables);
 
-            int randomVarIndex = Utils.randomIntGenerator(notYetUsedVariables.size(), seed);
+            int randomVarIndex = Utils.randomIntGenerator(variablesToMerge.size(), seed);
 
             int randomVar = variablesToMerge.get(randomVarIndex);
 
-            System.out.println("Merge with Variable: " + randomVar);
+            //System.out.println("Merge with Variable: " + randomVar);
 
 
             newGraph = mergeWithVar(p, graph, randomVar, shrinkingBound, new ShrinkingStrategy1());
@@ -483,11 +526,11 @@ class MergingStrategy1 extends MergingStrategy{
 
         }else{
 
-            int randomVarIndex = Utils.randomIntGenerator(notYetUsedVariables.size(), seed);
+            int randomVarIndex = Utils.randomIntGenerator(variablesToMerge.size(), seed);
 
             int randomVar = variablesToMerge.get(randomVarIndex);
 
-            System.out.println("Start with Variable: " + randomVar);
+            //System.out.println("Start with Variable: " + randomVar);
 
             newGraph = SingleGraphMethods.getSingleGraphForVarIndex(p, randomVar);
 

@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3
 
 import java.io.{File, FileInputStream}
 
+import de.uniulm.ki.panda3.configuration.PredefinedConfigurations.pandaProConfig
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
 
@@ -41,7 +42,7 @@ object MainAndrea {
     val postprocessing = PostprocessingConfiguration(Set(ProcessingTimings,
       SearchStatistics,
       SearchStatus,
-      SearchResult,
+      //SearchResult,
       PreprocessedDomainAndPlan))
 
     // planning config is given via stdin
@@ -59,7 +60,8 @@ object MainAndrea {
           groundedReachability = None,
           groundedTaskDecompositionGraph = Some(TwoWayTDG),
           iterateReachabilityAnalysis = true, groundDomain = true),
-        PredefinedConfigurations.sasPlusConfig(AStarActionsType(2), SasHeuristics.hMS),
+        //PredefinedConfigurations.sasPlusConfig(AStarActionsType(2), SasHeuristics.hMS),
+        PredefinedConfigurations.pandaProConfig(AStarActionsType(2), SasHeuristics.hMS),
         postprocessing,
         Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
         //Map(FastDownward -> "../../fd"))
