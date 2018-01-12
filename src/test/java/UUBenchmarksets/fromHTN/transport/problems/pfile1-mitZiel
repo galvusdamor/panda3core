@@ -9,7 +9,7 @@
  (:htn
   :tasks (and
    (deliver package-0 city-loc-0)
-   (deliver package-1 city-loc-2)
+   ;(deliver package-1 city-loc-2)
    )
   :ordering ( )
   :constraints ( ))
@@ -26,7 +26,7 @@
  )
  (:goal (and
     (at package-0 city-loc-0)
-    (at package-1 city-loc-2)
+    ;(at package-1 city-loc-2)
     )
  )
 )

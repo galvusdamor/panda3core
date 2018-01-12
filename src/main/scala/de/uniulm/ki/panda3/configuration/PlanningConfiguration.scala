@@ -1731,6 +1731,8 @@ case class PureSASPlusEncoding(classicalHeuristic: SasHeuristics)
   extends SearchHeuristic {override val longInfo: String = "id(" + classicalHeuristic.toString + ")"}
 
 
+object HierarchicalMergeAndShrink extends SearchHeuristic {override val longInfo: String = "hMS"}
+
 sealed trait PruningTechnique extends DefaultLongInfo
 
 object PruningTechnique {

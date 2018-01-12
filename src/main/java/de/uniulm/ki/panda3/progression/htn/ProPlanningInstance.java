@@ -8,7 +8,7 @@ import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.Relaxed
 import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.RelaxedCompositionSTRIPS;
 import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRcFFMulticount;
 import de.uniulm.ki.panda3.progression.heuristics.htn.RelaxedComposition.gphRelaxedComposition;
-import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic;
+import de.uniulm.ki.panda3.progression.heuristics.htn.mergeAndShrink.HierarchicalMergeAndShrink;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.search.*;
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch;
@@ -135,7 +135,9 @@ public class ProPlanningInstance {
             initialNode.heuristic = new PureSASHeuristic(ProgressionNetwork.flatProblem, h.classicalHeuristic(), methods, initialTasks);
         } else if (heuristic instanceof GreedyProgression$)
             initialNode.heuristic = new ProGreedyProgression();
-        else {
+        else if (heuristic instanceof  HierarchicalMergeAndShrink$) {
+            initialNode.heuristic = new HierarchicalMergeAndShrink(ProgressionNetwork.flatProblem, methods, initialTasks, d.sasPlusRepresentation().get().taskToSASPlusIndex());
+        } else {
             throw new IllegalArgumentException("Heuristic " + heuristic + " is not supported");
         }
 
