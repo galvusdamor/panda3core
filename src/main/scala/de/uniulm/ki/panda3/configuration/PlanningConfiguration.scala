@@ -1607,7 +1607,7 @@ case class PreprocessingConfiguration(
                   ("Remove unnecessary predicates", removeUnnecessaryPredicates) ::
                   ("Convert to SAS+", convertToSASP) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
-                  ("Split indipendent parameters", splitIndependentParameters) ::
+                  ("Split independent parameters", splitIndependentParameters) ::
                   ("Domain Cleanup", liftedReachability) ::
                   ("Grounded Reachability Analysis", if (groundedReachability.isEmpty) "false" else groundedReachability.get.longInfo) ::
                   ("Grounded Task Decomposition Graph", if (groundedTaskDecompositionGraph.isEmpty) "false" else groundedTaskDecompositionGraph.get) ::
