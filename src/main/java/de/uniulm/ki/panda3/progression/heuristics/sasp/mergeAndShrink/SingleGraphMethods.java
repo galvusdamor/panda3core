@@ -29,17 +29,17 @@ public final class SingleGraphMethods {
 
         //Tuple2<Integer[],Tuple3[]> graphData = getSingleNodesAndEdgesForVarIndex(p,varIndex);
 
-        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph = getSingleGraphForVarIndex(p,varIndex);
+        ClassicalMSGraph graph = getSingleGraphForVarIndex(p,varIndex);
 
         //EdgeLabelledGraphSingle<String,String> stringGraph = convertSingleGraphToStringGraph(p, graph);
 
-        Dot2PdfCompiler.writeDotToFile(graph,outputfile);
+        Dot2PdfCompiler.writeDotToFile(graph.graph,outputfile);
 
 
     }
 
 
-    public static EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> getSingleGraphForVarIndex(SasPlusProblem p, int varIndex){
+    public static ClassicalMSGraph getSingleGraphForVarIndex(SasPlusProblem p, int varIndex){
 
         int firstIndex = p.firstIndex[varIndex];
         int lastIndex = p.lastIndex[varIndex];
@@ -93,7 +93,7 @@ public final class SingleGraphMethods {
 
         int startID = findStartNodeIDinSingleVarGraph(p, idMapping, containedIndexes);
 
-        Set<Integer> usedFactIndexes = new HashSet<>(containedIndexes);
+        HashSet<Integer> usedFactIndexes = new HashSet<>(containedIndexes);
 
         HashSet<Integer> usedVariables = new HashSet<>();
 
@@ -113,9 +113,38 @@ public final class SingleGraphMethods {
         cascadingTables.addNewVariableTable(varIndex,cascadingTable);
 
 
-        EdgeLabelledGraph<Integer,Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph = new EdgeLabelledGraph<>(nodeIDs, multiEdges, idMapping, startID, usedFactIndexes, usedVariables, notYetUsedVariables, allVariables, cascadingTables);
+        HashSet<Integer> goalVariables = getGoalVariables(p);
+
+
+
+        ClassicalMSGraph graph = new ClassicalMSGraph(nodeIDs, multiEdges, idMapping, startID, usedFactIndexes, usedVariables, notYetUsedVariables, goalVariables, allVariables, cascadingTables);
 
         return graph;
+    }
+
+
+    public static HashSet<Integer> getGoalVariables(SasPlusProblem p){
+
+        int[] goals = p.gList;
+
+        HashSet<Integer> goalVariables = new HashSet<>();
+
+        HashMap<Integer,Integer> mapping = new HashMap<>();
+
+        for (int i=0; i<p.numOfVars; i++){
+            int firstIndex = p.firstIndex[i];
+            int lastIndex = p.lastIndex[i];
+            for (int j=firstIndex; j<lastIndex; j++){
+                mapping.put(j,i);
+            }
+        }
+
+
+        for (int goal:goals){
+            goalVariables.add(mapping.get(goal));
+        }
+
+        return goalVariables;
     }
 
 

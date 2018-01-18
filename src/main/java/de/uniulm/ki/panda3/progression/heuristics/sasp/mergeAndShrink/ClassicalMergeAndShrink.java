@@ -45,7 +45,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         System.out.println(p.correctModel());
 
 
-             EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> testGraph =
+             ClassicalMSGraph testGraph =
                 mergeAndShrinkProcess(p, 5000);
 
         //Utils.printMultiGraph(p, testGraph, "graph6.pdf");
@@ -73,10 +73,10 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         */
 
         HashMap<Integer,Integer> distancesFromClosestGoalNode = ShrinkingStrategy.getDistancesFromGoal(p, testGraph);
-        //System.out.println(testGraph.startNodeID());
-        System.out.println(distancesFromClosestGoalNode.get(testGraph.startNodeID()));
+        //System.out.println(testGraph.startNodeID);
+        System.out.println(distancesFromClosestGoalNode.get(testGraph.startNodeID));
 
-        NodeValue val = testGraph.idMapping().get(testGraph.startNodeID());
+        NodeValue val = testGraph.idMapping.get(testGraph.startNodeID);
         //System.out.println(val.longInfo());
 
 
@@ -90,12 +90,12 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 
 
-        return distancesFromClosestGoalNode.get(testGraph.startNodeID());
+        return distancesFromClosestGoalNode.get(testGraph.startNodeID);
     }
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> getMultiGraphUntilVarID(SasPlusProblem p, int lastVarID) {
+    public ClassicalMSGraph getMultiGraphUntilVarID(SasPlusProblem p, int lastVarID) {
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph1 = SingleGraphMethods.getSingleGraphForVarIndex(p,0);
+        ClassicalMSGraph graph1 = SingleGraphMethods.getSingleGraphForVarIndex(p,0);
 
         //EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>> graph2;
 
@@ -122,19 +122,19 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> mergeAndShrinkProcess(SasPlusProblem p, int shrinkingBound){
+    public ClassicalMSGraph mergeAndShrinkProcess(SasPlusProblem p, int shrinkingBound){
 
 
         MergingStrategy mergingStrategy = new MergingStrategy1();
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph = mergingStrategy.merge(p, null, shrinkingBound, 0);
+        ClassicalMSGraph graph = mergingStrategy.merge(p, null, shrinkingBound, 0);
 
         int counter = 0;
 
-        while (graph.notYetUsedVariables().size()!=0){
+        while (graph.notYetUsedVariables.size()!=0){
 
 
-            /*while (graph.idMapping().keySet().size()>shrinkingBound){
+            /*while (graph.idMapping.keySet().size()>shrinkingBound){
                 graph = shrinkingStrategy1(p, graph);
             }*/
 
@@ -146,17 +146,17 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
             String name = "testGraph" + counter + ".pdf";
 
             //Utils.printMultiGraph(p, graph, name);
-            NodeValue superNode = graph.idMapping().get(1);
-            //System.out.println("START is " + graph.startNodeID());
+            NodeValue superNode = graph.idMapping.get(1);
+            //System.out.println("START is " + graph.startNodeID);
             HashMap<Integer,Integer> distancesFromClosestGoalNode = ShrinkingStrategy.getDistancesFromGoal(p, graph);
-            //System.out.println(distancesFromClosestGoalNode.get(graph.startNodeID()));
+            //System.out.println(distancesFromClosestGoalNode.get(graph.startNodeID));
             //System.out.println();
             //System.out.println();
             //System.out.println();
         }
         //Utils.printMultiGraph(p, graph, "lastgraph.pdf");
 
-        /*while (graph.idMapping().keySet().size()>shrinkingBound){
+        /*while (graph.idMapping.keySet().size()>shrinkingBound){
             graph = shrinkingStrategy1(p, graph);
         }*/
 

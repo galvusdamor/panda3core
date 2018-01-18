@@ -18,24 +18,24 @@ abstract class MergingStrategy {
 
 
 
-    abstract EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> merge(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph, int shrinkingBound, long seed);
+    abstract ClassicalMSGraph merge(SasPlusProblem p, ClassicalMSGraph graph, int shrinkingBound, long seed);
 
 
 
-    public static HashSet<Integer> getNotYetUsedVariables(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public static HashSet<Integer> getNotYetUsedVariables(SasPlusProblem p, ClassicalMSGraph graph){
 
         HashSet<Integer> notYetUsedVariables;
 
         if (!(graph==null)) {
 
-            //System.out.println("All Variables: " + graph.allVariables());
-            notYetUsedVariables = new HashSet<>(graph.allVariables());
+            //System.out.println("All Variables: " + graph.allVariables);
+            notYetUsedVariables = new HashSet<>(graph.allVariables);
 
-            Set<Integer> usedVariables = graph.usedVariables();
+            Set<Integer> usedVariables = graph.usedVariables;
 
             //System.out.println("Used Variables: " + usedVariables);
 
-            notYetUsedVariables.removeAll(graph.usedVariables());
+            notYetUsedVariables.removeAll(graph.usedVariables);
 
             //System.out.println("Not yet Used Variables: " + notYetUsedVariables);
 
@@ -59,7 +59,7 @@ abstract class MergingStrategy {
     }
 
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> mergeWithVar(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph1, int varIndex, int shrinkingBound, ShrinkingStrategy shrinkingStrategy){
+    public ClassicalMSGraph mergeWithVar(SasPlusProblem p, ClassicalMSGraph graph1, int varIndex, int shrinkingBound, ShrinkingStrategy shrinkingStrategy){
 
         if (varIndex >= p.numOfVars){
 
@@ -68,14 +68,14 @@ abstract class MergingStrategy {
         }
 
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph2 = SingleGraphMethods.getSingleGraphForVarIndex(p, varIndex);
+        ClassicalMSGraph graph2 = SingleGraphMethods.getSingleGraphForVarIndex(p, varIndex);
 
 
         //Utils.printMultiGraph(p, graph2, "elementary.pdf");
         //Utils.printMultiGraph(p, graph1, "current.pdf");
 
-        int sizeOfGraph1 = graph1.idMapping().keySet().size();
-        int sizeOfGraph2 = graph2.idMapping().keySet().size();
+        int sizeOfGraph1 = graph1.idMapping.keySet().size();
+        int sizeOfGraph2 = graph2.idMapping.keySet().size();
 
         //System.out.println("Shrinking Bound: " + shrinkingBound);
 
@@ -100,8 +100,8 @@ abstract class MergingStrategy {
                 graph1 = shrinkingStrategy.shrink(p, graph1);
             }
 
-            sizeOfGraph1 = graph1.idMapping().keySet().size();
-            sizeOfGraph2 = graph2.idMapping().keySet().size();
+            sizeOfGraph1 = graph1.idMapping.keySet().size();
+            sizeOfGraph2 = graph2.idMapping.keySet().size();
 
             sizeOfNewGraph = sizeOfGraph1*sizeOfGraph2;
 
@@ -111,7 +111,7 @@ abstract class MergingStrategy {
         //Utils.printMultiGraph(p, graph1, "current-shrinked.pdf");
 
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> newGraph = mergingStep(p, graph1, graph2);
+        ClassicalMSGraph newGraph = mergingStep(p, graph1, graph2);
 
         newGraph = dismissNotReachableNodes(newGraph);
 
@@ -120,19 +120,19 @@ abstract class MergingStrategy {
 
     }
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> dismissNotReachableNodes(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public ClassicalMSGraph dismissNotReachableNodes(ClassicalMSGraph graph){
 
         HashMap<Integer, Integer> cascadingTable = new HashMap<>();
 
-        int startNodeID = graph.startNodeID();
+        int startNodeID = graph.startNodeID;
 
-        ArrayList<Integer> allNodeIDs = new ArrayList<>(graph.idMapping().keySet());
+        ArrayList<Integer> allNodeIDs = new ArrayList<>(graph.idMapping.keySet());
 
         ArrayList<Integer> nodesToKeep = new ArrayList<>();
 
         ArrayList<Integer> nextNodes = new ArrayList<>();
 
-        Tuple3<Integer,Integer,Integer>[] edges = graph.labelledEdges();
+        Tuple3<Integer,Integer,Integer>[] edges = graph.labelledEdges;
 
         nextNodes.add(startNodeID);
 
@@ -151,7 +151,7 @@ abstract class MergingStrategy {
         for (int i=0; i<nodesToKeep.size(); i++){
             int id = nodesToKeep.get(i);
             cascadingTable.put(id, i);
-            dismissedIDMapping.put(i,graph.idMapping().get(id));
+            dismissedIDMapping.put(i,graph.idMapping.get(id));
         }
         for (int i: nodesToDismiss){
             cascadingTable.put(i, -1);
@@ -160,21 +160,24 @@ abstract class MergingStrategy {
         Tuple3<Integer,Integer,Integer>[] dismissedEdges = dismissEdgesOfNotReachableNodes(edges, nodesToDismiss, cascadingTable);
 
 
-        HashSet<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes());
+        HashSet<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes);
 
-        HashSet<Integer> usedVariables = new HashSet<>(graph.usedVariables());
+        HashSet<Integer> usedVariables = new HashSet<>(graph.usedVariables);
 
-        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph.notYetUsedVariables());
+        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph.notYetUsedVariables);
 
 
-        CascadingTables cascadingTables = graph.cascadingTables();
+        CascadingTables cascadingTables = graph.cascadingTables;
 
         int indexOfTableBeforeShrinking = cascadingTables.cascadingTables.size()-1;
 
         cascadingTables.addNewShrinkTable(indexOfTableBeforeShrinking,cascadingTable);
 
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> newGraph = new EdgeLabelledGraph<>(Utils.convertNodeIDArrayListToArray(dismissedIDMapping), dismissedEdges, dismissedIDMapping, cascadingTable.get(graph.startNodeID()), usedFactIndexes, usedVariables, notYetUsedVariables, graph.allVariables(), cascadingTables);
+
+
+        ClassicalMSGraph newGraph =
+                new ClassicalMSGraph(Utils.convertNodeIDArrayListToArray(dismissedIDMapping), dismissedEdges, dismissedIDMapping, cascadingTable.get(graph.startNodeID), usedFactIndexes, usedVariables, notYetUsedVariables, graph.goalVariables, graph.allVariables, cascadingTables);
 
 
 
@@ -229,16 +232,16 @@ abstract class MergingStrategy {
 
     }
 
-    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToOutgoingEdgesMap(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToOutgoingEdgesMap(ClassicalMSGraph graph){
 
         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
 
-        for (int i: graph.idMapping().keySet()){
+        for (int i: graph.idMapping.keySet()){
             ArrayList<Tuple3<Integer, Integer, Integer>> edges = new ArrayList<>();
             outgoingEdgesMap.put(i,edges);
         }
 
-        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges()){
+        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges){
 
             outgoingEdgesMap.get(edge._1()).add(edge);
 
@@ -248,16 +251,16 @@ abstract class MergingStrategy {
 
     }
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> mergingStep(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph1, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph2) {
+    public ClassicalMSGraph mergingStep(SasPlusProblem p, ClassicalMSGraph graph1, ClassicalMSGraph graph2) {
 
-        Integer[] graph1Nodes = (Integer[]) graph1.arrayVertices();
+        Integer[] graph1Nodes = (Integer[]) graph1.arrayVertices;
 
-        Tuple3<Integer, Integer, Integer>[] graph1Edges = graph1.labelledEdges();
+        Tuple3<Integer, Integer, Integer>[] graph1Edges = graph1.labelledEdges;
 
 
-        Tuple3<Integer, Integer, Integer>[] graph2Edges = graph2.labelledEdges();
+        Tuple3<Integer, Integer, Integer>[] graph2Edges = graph2.labelledEdges;
 
-        Integer[] graph2Nodes = (Integer[]) graph2.arrayVertices();
+        Integer[] graph2Nodes = (Integer[]) graph2.arrayVertices;
 
 
         ArrayList<Tuple3<Integer, Integer, Integer>> newMultiEdges = new ArrayList<>();
@@ -331,11 +334,11 @@ abstract class MergingStrategy {
 
             int oldGraph2ID = oldIDs._2();
 
-            //ArrayList<Integer> assignedFacts = new ArrayList<>(graph1.idMapping().get(oldGraph1ID));
+            //ArrayList<Integer> assignedFacts = new ArrayList<>(graph1.idMapping.get(oldGraph1ID));
 
             //if (!assignedFacts.contains(oldGraph2ID)) assignedFacts.add(oldGraph2ID);
 
-            NodeValue newNodeValue = new MergeNode(graph1.idMapping().get(oldGraph1ID), graph2.idMapping().get(oldGraph2ID), p);
+            NodeValue newNodeValue = new MergeNode(graph1.idMapping.get(oldGraph1ID), graph2.idMapping.get(oldGraph2ID), p);
 
             newIdMapping.put(i, newNodeValue);
 
@@ -345,25 +348,25 @@ abstract class MergingStrategy {
 
         Integer[] nodeIDS = Utils.convertNodeIDArrayListToArray(newIdMapping);
 
-        Tuple2<Integer, Integer> oldStartIDs = new Tuple2<>(graph1.startNodeID(), graph2.startNodeID());
+        Tuple2<Integer, Integer> oldStartIDs = new Tuple2<>(graph1.startNodeID, graph2.startNodeID);
 
         int newStartID = tempReverseIdMapping.get(oldStartIDs);
 
-        Set<Integer> usedFactIndexes = new HashSet<>(graph1.usedFactIndexes());
+        HashSet<Integer> usedFactIndexes = new HashSet<>(graph1.usedFactIndexes);
 
-        usedFactIndexes.addAll(graph2.usedFactIndexes());
+        usedFactIndexes.addAll(graph2.usedFactIndexes);
 
 
-        HashSet<Integer> usedVariables = new HashSet<>(graph1.usedVariables());
+        HashSet<Integer> usedVariables = new HashSet<>(graph1.usedVariables);
 
-        usedVariables.addAll(graph2.usedVariables());
+        usedVariables.addAll(graph2.usedVariables);
 
-        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph1.allVariables());
+        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph1.allVariables);
 
         notYetUsedVariables.removeAll(usedVariables);
 
-        CascadingTables cascadingTables1 = graph1.cascadingTables();
-        CascadingTables cascadingTables2 = graph2.cascadingTables();
+        CascadingTables cascadingTables1 = graph1.cascadingTables;
+        CascadingTables cascadingTables2 = graph2.cascadingTables;
 
         int correctionTerm = cascadingTables1.cascadingTables.size();
 
@@ -413,10 +416,10 @@ abstract class MergingStrategy {
         }
 
         //add new merge table to cascadingTables1
-        int[][] mergeCascadingTable = new int[graph1.idMapping().size()][graph2.idMapping().size()];
-        for (int i=0; i<graph1.idMapping().size(); i++){
+        int[][] mergeCascadingTable = new int[graph1.idMapping.size()][graph2.idMapping.size()];
+        for (int i=0; i<graph1.idMapping.size(); i++){
 
-            for (int j=0; j<graph2.idMapping().size(); j++){
+            for (int j=0; j<graph2.idMapping.size(); j++){
 
                 Tuple2<Integer, Integer> combination = new Tuple2<>(i,j);
                 int result = tempReverseIdMapping.get(combination);
@@ -427,7 +430,8 @@ abstract class MergingStrategy {
 
         cascadingTables1.addNewMergeTable(mergeIndex1, mergeIndex2, mergeCascadingTable);
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> newGraph = new EdgeLabelledGraph<>(nodeIDS, newEdgeTuple, newIdMapping, newStartID, usedFactIndexes, usedVariables, notYetUsedVariables, graph1.allVariables(), cascadingTables1);
+        ClassicalMSGraph newGraph =
+                new ClassicalMSGraph(nodeIDS, newEdgeTuple, newIdMapping, newStartID, usedFactIndexes, usedVariables, notYetUsedVariables, graph1.goalVariables, graph1.allVariables, cascadingTables1);
 
 
         return newGraph;
@@ -435,7 +439,7 @@ abstract class MergingStrategy {
     }
 
 
-    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getOpIDToEdgesMap(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getOpIDToEdgesMap(SasPlusProblem p, ClassicalMSGraph graph){
 
         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> opIDToOutgoingEdgesMap = new HashMap<>();
 
@@ -444,7 +448,7 @@ abstract class MergingStrategy {
             opIDToOutgoingEdgesMap.put(i,edges);
         }
 
-        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges()){
+        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges){
 
             opIDToOutgoingEdgesMap.get(edge._2()).add(edge);
 
@@ -464,33 +468,8 @@ abstract class MergingStrategy {
 
 class MergingStrategy1 extends MergingStrategy{
 
-    private boolean hasGoalDefined(SasPlusProblem p, int varIndex) {
-        int firstIndex = p.firstIndex[varIndex];
-        int lastIndex = p.lastIndex[varIndex];
 
-        ArrayList<Integer> containedIndexes = new ArrayList<>();
-
-        for (int i=firstIndex; i<=lastIndex; i++){
-            containedIndexes.add(i);
-        }
-
-        ArrayList<Tuple3<Integer,Integer,Integer>> edges = getSingleEdgesForAllContainedIndexes(p,containedIndexes);
-
-
-        Integer[] nodeIDs = new Integer[containedIndexes.size()];
-
-        HashMap<Integer, NodeValue> idMapping = new HashMap<>();
-
-        HashMap<Integer, Integer> cascadingTable = new HashMap<>();
-
-        int[] goals = p.gList;
-
-        ArrayList<Integer> dismissedGoals = Utils.dismissNotContainedIndexes(goals, containedIndexes);
-
-        return dismissedGoals.size() > 0;
-    }
-
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> merge(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph, int shrinkingBound, long seed){
+    public ClassicalMSGraph merge(SasPlusProblem p, ClassicalMSGraph graph, int shrinkingBound, long seed){
 
 
         Set<Integer> notYetUsedVariables = getNotYetUsedVariables(p, graph);
@@ -498,7 +477,16 @@ class MergingStrategy1 extends MergingStrategy{
         ArrayList<Integer> variablesToMerge = new ArrayList<>(notYetUsedVariables);
 
         ArrayList<Integer> allGoalVars = new ArrayList<>();
-        for (int var : variablesToMerge) if (hasGoalDefined(p,var)) allGoalVars.add(var);
+
+        HashSet<Integer> goalVariables = new HashSet<>();
+
+        if (graph==null){
+            goalVariables = SingleGraphMethods.getGoalVariables(p);
+        }else{
+            goalVariables = graph.goalVariables;
+        }
+
+        for (int var : variablesToMerge) if (goalVariables.contains(var)) allGoalVars.add(var);
 
         if (allGoalVars.size() > 0) {
             variablesToMerge = allGoalVars;
@@ -508,7 +496,7 @@ class MergingStrategy1 extends MergingStrategy{
         }
 
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> newGraph;
+        ClassicalMSGraph newGraph;
 
         if (!(graph==null)) {
 

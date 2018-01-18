@@ -130,7 +130,7 @@ public final class Utils {
     }
 
 
-    public static void printMultiGraph(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> multiGraph, String outputfile) {
+    public static void printMultiGraph(SasPlusProblem p, ClassicalMSGraph multiGraph, String outputfile) {
 
 
         EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> stringMultiGraph = convertMultiGraphToStringGraph(p, multiGraph);
@@ -139,23 +139,23 @@ public final class Utils {
 
     }
 
-    public static EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> convertMultiGraphToStringGraph(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph) {
+    public static EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> convertMultiGraphToStringGraph(SasPlusProblem p, ClassicalMSGraph graph) {
 
 
-        HashMap<Integer, NodeValue> idMapping = graph.idMapping();
+        HashMap<Integer, NodeValue> idMapping = graph.idMapping;
 
         String[] newNodes = convertNodesToStrings(p, idMapping);
-        Tuple3[] newEdges = convertEdgesToStrings(p, graph.labelledEdges(), idMapping);
+        Tuple3[] newEdges = convertEdgesToStrings(p, graph.labelledEdges, idMapping);
 
-        Set<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes());
+        Set<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes);
 
-        Set<Integer> usedVariables = new HashSet<>(graph.usedVariables());
+        Set<Integer> usedVariables = new HashSet<>(graph.usedVariables);
 
-        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph.notYetUsedVariables());
+        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph.notYetUsedVariables);
 
 
 
-        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> newGraph = new EdgeLabelledGraph<>(newNodes, newEdges, idMapping, graph.startNodeID(), usedFactIndexes, usedVariables, notYetUsedVariables, graph.allVariables(), graph.cascadingTables());
+        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> newGraph = new EdgeLabelledGraph<>(newNodes, newEdges, idMapping, graph.startNodeID, usedFactIndexes, usedVariables, notYetUsedVariables, graph.allVariables, graph.cascadingTables);
 
 
         return newGraph;

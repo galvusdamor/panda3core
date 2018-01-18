@@ -17,13 +17,13 @@ import java.util.*;
 abstract class ShrinkingStrategy {
 
 
-    abstract EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> shrink(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph);
+    abstract ClassicalMSGraph shrink(SasPlusProblem p, ClassicalMSGraph graph);
 
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> shrinkingStep(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph, ArrayList<ArrayList<Integer>> aggregatedIDs) {
+    public ClassicalMSGraph shrinkingStep(SasPlusProblem p, ClassicalMSGraph graph, ArrayList<ArrayList<Integer>> aggregatedIDs) {
 
 
-        CascadingTables cascadingTables = graph.cascadingTables();
+        CascadingTables cascadingTables = graph.cascadingTables;
         int oldIndex = cascadingTables.cascadingTables.size() -1;
 
         HashMap<Integer, NodeValue> newIDMapping = new HashMap<>();
@@ -38,19 +38,19 @@ abstract class ShrinkingStrategy {
 
         HashMap<Integer, Integer> tempReverseIDMapping  = new HashMap<>();
 
-        Tuple3<Integer, Integer, Integer>[] oldEdges = graph.labelledEdges();
+        Tuple3<Integer, Integer, Integer>[] oldEdges = graph.labelledEdges;
 
 
 
         int index =0;
 
-        Integer[] nodes = (Integer[]) graph.arrayVertices();
+        Integer[] nodes = (Integer[]) graph.arrayVertices;
 
         for (int id: nodes){
 
             if (!indexesToReplace.contains(id)){
 
-                newIDMapping.put(index, graph.idMapping().get(id));
+                newIDMapping.put(index, graph.idMapping.get(id));
                 tempReverseIDMapping.put(id, index);
                 index++;
 
@@ -60,14 +60,14 @@ abstract class ShrinkingStrategy {
 
         for (ArrayList<Integer> toAggregate : aggregatedIDs){
 
-            NodeValue newNodeValue = graph.idMapping().get(toAggregate.get(0));
+            NodeValue newNodeValue = graph.idMapping.get(toAggregate.get(0));
 
             tempReverseIDMapping.put(toAggregate.get(0), index);
 
 
             for (int j=1; j<toAggregate.size(); j++) {
 
-                newNodeValue = new ShrinkNode(newNodeValue, graph.idMapping().get(toAggregate.get(j)), p);
+                newNodeValue = new ShrinkNode(newNodeValue, graph.idMapping.get(toAggregate.get(j)), p);
                 tempReverseIDMapping.put(toAggregate.get(j), index);
 
             }
@@ -79,21 +79,21 @@ abstract class ShrinkingStrategy {
 
         Tuple3<Integer, Integer, Integer>[] newEdges = shrinkEdges(oldEdges, tempReverseIDMapping);
 
-        int newStartID = tempReverseIDMapping.get(graph.startNodeID());
+        int newStartID = tempReverseIDMapping.get(graph.startNodeID);
 
 
 
-        Set<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes());
+        HashSet<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes);
 
-        Set<Integer> usedVariables = new HashSet<>(graph.usedVariables());
+        HashSet<Integer> usedVariables = new HashSet<>(graph.usedVariables);
 
-        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph.notYetUsedVariables());
+        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph.notYetUsedVariables);
 
 
         cascadingTables.addNewShrinkTable(oldIndex, tempReverseIDMapping);
 
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> newGraph = new EdgeLabelledGraph<>(Utils.convertNodeIDArrayListToArray(newIDMapping), newEdges, newIDMapping, newStartID, usedFactIndexes, usedVariables, notYetUsedVariables, graph.allVariables(), cascadingTables);
+        ClassicalMSGraph newGraph = new ClassicalMSGraph(Utils.convertNodeIDArrayListToArray(newIDMapping), newEdges, newIDMapping, newStartID, usedFactIndexes, usedVariables, notYetUsedVariables, graph.goalVariables, graph.allVariables, cascadingTables);
 
         return newGraph;
     }
@@ -115,8 +115,7 @@ abstract class ShrinkingStrategy {
     }
 
 
-    public static HashMap<Integer,Integer> getDistancesFromGoal(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>,
-            Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public static HashMap<Integer,Integer> getDistancesFromGoal(SasPlusProblem p, ClassicalMSGraph graph){
 
         HashMap<Integer, Integer> distancesToGoalMap = new HashMap<>();
 
@@ -130,7 +129,7 @@ abstract class ShrinkingStrategy {
 
         Set<Integer> goalNodes = getGoalNodes(graph);
 
-        for (int i: graph.idMapping().keySet())
+        for (int i: graph.idMapping.keySet())
             distancesToGoalMap.put(i,Integer.MAX_VALUE);
 
 
@@ -149,16 +148,16 @@ abstract class ShrinkingStrategy {
     }
 
 
-    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToIncomingEdgesMap(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToIncomingEdgesMap(ClassicalMSGraph graph){
 
         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
 
-        for (int i: graph.idMapping().keySet()){
+        for (int i: graph.idMapping.keySet()){
             ArrayList<Tuple3<Integer, Integer, Integer>> edges = new ArrayList<>();
             outgoingEdgesMap.put(i,edges);
         }
 
-        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges()){
+        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges){
 
             outgoingEdgesMap.get(edge._3()).add(edge);
 
@@ -168,13 +167,13 @@ abstract class ShrinkingStrategy {
 
     }
 
-    public static Set<Integer> getGoalNodes(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public static Set<Integer> getGoalNodes(ClassicalMSGraph graph){
 
         HashSet<Integer> goalNodes = new HashSet<>();
 
-        for (int id : graph.idMapping().keySet()){
+        for (int id : graph.idMapping.keySet()){
 
-            NodeValue nodeValue = graph.idMapping().get(id);
+            NodeValue nodeValue = graph.idMapping.get(id);
             if (nodeValue.isGoalNode()) goalNodes.add(id);
 
         }
@@ -220,7 +219,7 @@ abstract class ShrinkingStrategy {
     }
 
 
-    public static ArrayList<Integer> getNodesFarthestFromStartAndGoal(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph, HashMap<Integer,Integer> summedDistances){
+    public static ArrayList<Integer> getNodesFarthestFromStartAndGoal(ClassicalMSGraph graph, HashMap<Integer,Integer> summedDistances){
 
         ArrayList<Integer> farthestNodes = new ArrayList<>();
 
@@ -287,7 +286,7 @@ abstract class ShrinkingStrategy {
 
 
 
-    public static ArrayList<Integer> getNodesFarthestFromStartAndGoal2(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph, HashMap<Integer,Integer> summedDistances){
+    public static ArrayList<Integer> getNodesFarthestFromStartAndGoal2(ClassicalMSGraph graph, HashMap<Integer,Integer> summedDistances){
 
         ArrayList<Integer> farthestNodes = new ArrayList<>();
 
@@ -311,7 +310,7 @@ abstract class ShrinkingStrategy {
             if (summedDistances.size()<1) break;
 
 
-            for (int id : graph.idMapping().keySet()) {
+            for (int id : graph.idMapping.keySet()) {
                 if (summedDistances.get(id) == maximumDistance) {
                     //farthestNodes.add(id);
                     summedDistances.remove(id);
@@ -332,7 +331,7 @@ abstract class ShrinkingStrategy {
 
 
         if (counter>1) {
-            for (int id : graph.idMapping().keySet()) {
+            for (int id : graph.idMapping.keySet()) {
                 if (summedDistances.get(id) == maximumDistance) {
                     farthestNodes.add(id);
                 }
@@ -345,9 +344,9 @@ abstract class ShrinkingStrategy {
 
     }
 
-    public static HashMap<Integer, Integer> getDistancesFromStart(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public static HashMap<Integer, Integer> getDistancesFromStart(SasPlusProblem p, ClassicalMSGraph graph){
 
-        int startNodeID = graph.startNodeID();
+        int startNodeID = graph.startNodeID;
 
         ArrayList<Integer> nodesToKeep = new ArrayList<>();
 
@@ -361,10 +360,10 @@ abstract class ShrinkingStrategy {
 
         HashMap<Integer, Integer> distancesFromStartMap = new HashMap<>();
 
-        for (int i: graph.idMapping().keySet())
+        for (int i: graph.idMapping.keySet())
             distancesFromStartMap.put(i,Integer.MAX_VALUE);
 
-        distancesFromStartMap.put(graph.startNodeID(), 0);
+        distancesFromStartMap.put(graph.startNodeID, 0);
 
         Tuple2<ArrayList<Integer>,HashMap<Integer, Integer>> result = breadthSearchToFindDistances(p, nextNodes, nodesToKeep, outgoingEdgesMap, distancesFromStartMap);
 
@@ -373,16 +372,16 @@ abstract class ShrinkingStrategy {
         return distancesFromStartMap;
     }
 
-    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToOutgoingEdgesMap(EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToOutgoingEdgesMap(ClassicalMSGraph graph){
 
         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
 
-        for (int i: graph.idMapping().keySet()){
+        for (int i: graph.idMapping.keySet()){
             ArrayList<Tuple3<Integer, Integer, Integer>> edges = new ArrayList<>();
             outgoingEdgesMap.put(i,edges);
         }
 
-        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges()){
+        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges){
 
             outgoingEdgesMap.get(edge._1()).add(edge);
 
@@ -440,7 +439,7 @@ class ShrinkingStrategy1 extends ShrinkingStrategy{
 
 
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> shrink(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph){
+    public ClassicalMSGraph shrink(SasPlusProblem p, ClassicalMSGraph graph){
 
 
 
@@ -451,7 +450,7 @@ class ShrinkingStrategy1 extends ShrinkingStrategy{
 
         HashMap<Integer,Integer> summedDistances = new HashMap<>();
 
-        for (int id:graph.idMapping().keySet()){
+        for (int id:graph.idMapping.keySet()){
 
             //System.out.println("ID: " + id);
             //System.out.println(distancesFromClosestGoalNode);
@@ -523,7 +522,7 @@ class ShrinkingStrategy1 extends ShrinkingStrategy{
         ArrayList<ArrayList<Integer>> nodesToShrink = new ArrayList<>();
         nodesToShrink.add(currentMaxDistanceNodes);
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> shrinkedGraph = shrinkingStep(p,graph, nodesToShrink);
+        ClassicalMSGraph shrinkedGraph = shrinkingStep(p,graph, nodesToShrink);
 
 
         return shrinkedGraph;
@@ -543,7 +542,7 @@ class ShrinkingStrategy1 extends ShrinkingStrategy{
 class ShrinkingStrategy2 extends ShrinkingStrategy {
 
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> shrink(SasPlusProblem p, EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> graph) {
+    public ClassicalMSGraph shrink(SasPlusProblem p, ClassicalMSGraph graph) {
 
 
         HashMap<Integer,Integer> distancesFromClosestGoalNode = getDistancesFromGoal(p, graph);
@@ -553,7 +552,7 @@ class ShrinkingStrategy2 extends ShrinkingStrategy {
 
         HashMap<Integer,Integer> summedDistances = new HashMap<>();
 
-        for (int id:graph.idMapping().keySet()){
+        for (int id:graph.idMapping.keySet()){
 
             int distanceFromStart = distancesFromStartNode.get(id);
             int distanceFromGoal = distancesFromClosestGoalNode.get(id);
@@ -568,7 +567,7 @@ class ShrinkingStrategy2 extends ShrinkingStrategy {
 
         nodesToShrink.add(farthestNodesFromStartAndGoal);
 
-        EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, Set<Integer>, Set<Integer>, Set<Integer>, Set<Integer>, CascadingTables> shrinkedGraph = shrinkingStep(p,graph, nodesToShrink);
+        ClassicalMSGraph shrinkedGraph = shrinkingStep(p,graph, nodesToShrink);
 
 
         return shrinkedGraph;
