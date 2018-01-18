@@ -13,8 +13,8 @@ import de.uniulm.ki.util.{AndOrGraph, SimpleAndOrGraph}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis, prunePrimitive: Boolean) extends
-  TaskDecompositionGraph {
+case class NaiveGroundedTaskDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis, prunePrimitive: Boolean,
+                                               messageFunction : String => Unit) extends  TaskDecompositionGraph {
 
   // compute groundings of abstract tasks naively
   lazy val abstractTaskGroundings: Map[Task, Set[GroundTask]] = {

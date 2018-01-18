@@ -13,7 +13,8 @@ import scala.collection.mutable
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TopDownTaskDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis, prunePrimitive: Boolean) extends
+case class TopDownTaskDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis, prunePrimitive: Boolean,
+                                         messageFunction : String => Unit) extends
   TaskDecompositionGraph {
 
   // apparently I can't annotate a type here (Map[Task, Set[GroundTask]], Map[GroundTask, Seq[GroundedDecompositionMethod]])

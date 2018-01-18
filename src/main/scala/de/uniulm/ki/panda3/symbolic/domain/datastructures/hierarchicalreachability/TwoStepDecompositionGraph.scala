@@ -11,7 +11,7 @@ import scala.collection.mutable
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis, prunePrimitive: Boolean,
-                                     omitTopDownStep: Boolean)
+                                     omitTopDownStep: Boolean, messageFunction : String => Unit)
   extends TaskDecompositionGraph with WithHierarchyTyping{
 
   lazy val (abstractTaskGroundings, groundedDecompositionMethods) = {

@@ -151,7 +151,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         // TDG based heuristics need the TDG
         if (search.heuristic.exists { case x: TDGBasedHeuristic => true; case _ => false }) if (!(analysisMap contains SymbolicGroundedTaskDecompositionGraph)) {
           timeCapsule start GROUNDED_TDG_ANALYSIS
-          analysisMap = runGroundedTaskDecompositionGraph(domainAndPlan._1, domainAndPlan._2, analysisMap, preprocessingConfiguration.groundedTaskDecompositionGraph.get)
+          val _tempResult = runGroundedTaskDecompositionGraph(domainAndPlan._1, domainAndPlan._2, analysisMap, preprocessingConfiguration.groundedTaskDecompositionGraph.get)
+          analysisMap = _tempResult._1
           timeCapsule stop GROUNDED_TDG_ANALYSIS
         }
         timeCapsule stop HEURISTICS_PREPARATION
@@ -851,19 +852,23 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }
 
-  private def runGroundedTaskDecompositionGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap, tdgType: TDGGeneration): AnalysisMap = {
+  private def runGroundedTaskDecompositionGraph(domain: Domain, problem: Plan, analysisMap: AnalysisMap, tdgType: TDGGeneration): (AnalysisMap, Option[String]) = {
     val groundedReachabilityAnalysis =
       if (analysisMap contains SymbolicGroundedReachability) analysisMap(SymbolicGroundedReachability)
       else EverythingIsReachable(domain, problem.groundedInitialState.toSet)
 
+    var message = ""
+
+    def messageFunction(mess: String): Unit = message = mess
+
     val tdg = tdgType match {
-      case NaiveTDG    => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
-      case TopDownTDG  => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true)
-      case BottomUpTDG => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = true)
-      case TwoWayTDG   => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = false)
+      case NaiveTDG    => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, messageFunction)
+      case TopDownTDG  => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, messageFunction)
+      case BottomUpTDG => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = true, messageFunction)
+      case TwoWayTDG   => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = false, messageFunction)
     }
 
-    analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg)
+    (analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg), if (message != "") Some(message) else None)
   }
 
   private def createEfficientTDGFromSymbolic(wrapping: Wrapping, analysisMap: AnalysisMap): AnalysisMap = {
@@ -1094,13 +1099,17 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val actualConfig = preprocessingConfiguration.groundedTaskDecompositionGraph.get
       info(actualConfig.toString + " ... ")
       // get the reachability analysis, if there is none, just use the trivial one
-      val newAnalysisMap = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, actualConfig)
+      val (newAnalysisMap, message) = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, actualConfig)
       val methodsPruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
       val removedTasks = groundedResult._1._1.tasks.toSet diff newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedActions.toSet
       val tasksPruned = PruneHierarchy.transform(methodsPruned._1, methodsPruned._2, removedTasks)
 
       //val pruned = PruneDecompositionMethods.transform(groundedResult._1._1, groundedResult._1._2, newAnalysisMap(SymbolicGroundedTaskDecompositionGraph).reachableLiftedMethods)
       info("done.\n")
+      message match {
+        case Some(m) => info(m + "\n")
+        case None    =>
+      }
       extra(tasksPruned._1.statisticsString + "\n")
       (tasksPruned, newAnalysisMap)
     } else groundedResult

@@ -33,9 +33,11 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
 
   val isInitialPlanGround = initialPlan.variableConstraints.variables forall { v => initialPlan.variableConstraints.getRepresentative(v).isInstanceOf[Constant] }
 
+  def messageFunction : String => Unit
 
   lazy val taskDecompositionGraph: (AndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod], Seq[GroundTask], Seq[GroundedDecompositionMethod]) =
     if (!(abstractTaskGroundings contains topTask)) {
+      messageFunction("Initial Plan cannot be decomposed into a primitive plan ... generating trivially unsolvable problem")
       val emptyInit = GroundTask(initAndGoalNOOP, Nil)
       val abstractWithOutDecomposition = ReducedTask("__fail_abstract", isPrimitive = false, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil))
       val abstractGT = GroundTask(abstractWithOutDecomposition, Nil)
@@ -113,6 +115,8 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
       val prunedTDG = firstAndOrGraph pruneToEntities reachableWithoutTop._2
 
       //Dot2PdfCompiler.writeDotToFile(prunedTDG,"tdg.pdf")
+
+      if (!nonEmptyTDG) messageFunction("TDG contains no tasks after pruning ... problem is trivially unsolvable")
 
       (prunedTDG, if (isInitialPlanGround && nonEmptyTDG) Nil else topGrounded :: GroundTask(initAndGoalNOOP, Nil) :: Nil, if (isInitialPlanGround || !nonEmptyTDG) Nil else topMethods.toSeq)
     }
