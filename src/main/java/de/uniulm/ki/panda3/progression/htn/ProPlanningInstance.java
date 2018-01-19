@@ -136,7 +136,7 @@ public class ProPlanningInstance {
         } else if (heuristic instanceof GreedyProgression$)
             initialNode.heuristic = new ProGreedyProgression();
         else if (heuristic instanceof  HierarchicalMergeAndShrink$) {
-            initialNode.heuristic = new HierarchicalMergeAndShrink(ProgressionNetwork.flatProblem, methods, initialTasks, d.sasPlusRepresentation().get().taskToSASPlusIndex());
+            initialNode.heuristic = new HierarchicalMergeAndShrink(ProgressionNetwork.flatProblem, methods, initialTasks, d);
         } else {
             throw new IllegalArgumentException("Heuristic " + heuristic + " is not supported");
         }

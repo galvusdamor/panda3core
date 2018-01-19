@@ -6,8 +6,7 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic,
-EfficientGroundedPlanningGraphImplementation}
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic, EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
@@ -18,6 +17,7 @@ import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem
+import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork
 import de.uniulm.ki.panda3.symbolic.domain.updates.{AddPredicate, ExchangeTask, RemovePredicate}
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
@@ -291,7 +291,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           })
         }
       case progression: ProgressionSearch =>
-
         val progressionInstance = new ProPlanningInstance()
         val groundMethods = domainAndPlan._1.methodsForAbstractTasks map { case (at, ms) =>
           at -> JavaConversions.setAsJavaSet(ms collect { case s: SimpleDecompositionMethod => s } toSet)
@@ -307,6 +306,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                        progression.searchAlgorithm,
                                                        randomSeed,
                                                        timeLimit.getOrElse(Int.MaxValue).toLong * 1000)
+
+
+
+
+          //var i = 0
+
+          //println(d.taskSchemaTransitionGraph.condensation.dotString(DirectedGraphDotOptions(false),{t => t.size + ""}))
+
+          System exit 0
+
 
           timeCapsule stop TOTAL_TIME
           runPostProcessing(timeCapsule, informationCapsule, null, if (solutionFound) null :: Nil else Nil, domainAndPlan, unprocessedDomain, analysisMap)
@@ -1175,7 +1184,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         }
       }
 
-     // if we are doing a plan verification curtail the model here, i.e. remove all unreachable primitive tasks
+      // if we are doing a plan verification curtail the model here, i.e. remove all unreachable primitive tasks
 
       val result = searchConfiguration match {
         case SATPlanVerification(_, plan) =>
