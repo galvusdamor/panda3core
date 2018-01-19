@@ -58,7 +58,7 @@ object MainAndrea {
                                                        ensureMethodsHaveLastTask = false,
                                                        removeUnnecessaryPredicates = true,
                                                        splitIndependentParameters = true,
-                                                       compileUselessAbstractTasks = true,
+                                                       compileUselessAbstractTasks = false,
                                                        liftedReachability = true,
                                                        groundedReachability = None,
                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
