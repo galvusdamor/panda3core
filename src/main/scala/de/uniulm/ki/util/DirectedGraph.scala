@@ -106,9 +106,9 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   override lazy val dotString: String = dotString(DirectedGraphDotOptions())
 
   /** The DOT representation of the object with options */
-  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString }, { case _ => "" })
+  override def dotString(options: DirectedGraphDotOptions): String = dotString(options, { case x => x.toString }, { case _ => "\"\"" })
 
-  def dotString(options: DirectedGraphDotOptions, nodeRenderer: T => String, edgeRenderer: (T, T) => String = {case _ => ""}): String = {
+  def dotString(options: DirectedGraphDotOptions, nodeRenderer: T => String, edgeRenderer: (T, T) => String = {case _ => "\"\""}): String = {
     val dotStringBuilder = new StringBuilder()
 
     dotStringBuilder append "digraph someDirectedGraph{\n"
