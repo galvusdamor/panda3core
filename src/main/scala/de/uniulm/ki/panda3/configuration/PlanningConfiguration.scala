@@ -1149,6 +1149,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
         else Nil) ::
+        (if (true) // TODO replace
+          CompilerConfiguration(TwoTaskPerMethod, (), "force two tasks per method", TOP_TASK) :: Nil
+        else Nil) ::
         (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
           CompilerConfiguration(CompileGoalIntoAction, (), "goal", TOP_TASK) :: CompilerConfiguration(ForceGroundedInitTop, (), "force top", TOP_TASK) :: Nil
         else Nil) ::

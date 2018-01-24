@@ -255,7 +255,8 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                      "number of tasks" -> tasks.size,
                                                      "number of abstract tasks" -> abstractTasks.size,
                                                      "number of primitive tasks" -> primitiveTasks.size,
-                                                     "number of decomposition methods" -> decompositionMethods.size
+                                                     "number of decomposition methods" -> decompositionMethods.size,
+                                                     "number of tasks in largest method" -> maximumMethodSize
                                                    )
   lazy val statisticsString: String           = statistics.mkString("\n")
 }

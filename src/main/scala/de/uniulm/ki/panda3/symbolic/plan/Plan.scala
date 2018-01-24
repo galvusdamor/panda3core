@@ -757,6 +757,31 @@ object Plan {
     Plan(planStepSequence ++ removedPlanSteps, Nil, totalOrdering.addPlanSteps(removedPlanSteps), CSP(Set(), Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws,
          planStepDecomposedByMethod, planStepParentInDecompositionTree)
   }
+
+
+  def sequentialPlan(taskSequence: Seq[Task]): Plan = {
+    assert(taskSequence forall { _.parameters.isEmpty })
+
+    val noopTask = ReducedTask("noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+
+    val planStepSequence = ((noopTask :: noopTask :: Nil) ++ taskSequence).zipWithIndex map { case (t, i) => PlanStep(i, t, Nil) }
+    val orderedPSSequence = ((planStepSequence.head :: Nil) ++ planStepSequence.drop(2)) :+ planStepSequence(1)
+    val totalOrdering = TaskOrdering.totalOrdering(orderedPSSequence)
+
+    Plan(planStepSequence, Nil, totalOrdering, CSP(Set(), Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws, Map(), Map())
+  }
+
+  def parallelPlan(taskSequence: Seq[Task]): Plan = {
+    assert(taskSequence forall { _.parameters.isEmpty })
+
+    val noopTask = ReducedTask("noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+
+    val planStepSequence = ((noopTask :: noopTask :: Nil) ++ taskSequence).zipWithIndex map { case (t, i) => PlanStep(i, t, Nil) }
+    val totalOrdering = TaskOrdering(OrderingConstraint.allBetween(planStepSequence.head, planStepSequence(1), planStepSequence.drop(2): _*), planStepSequence)
+
+    Plan(planStepSequence, Nil, totalOrdering, CSP(Set(), Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws, Map(), Map())
+  }
+
 }
 
 case class PlanDotOptions(showParameters: Boolean = true, showOrdering: Boolean = true, omitImpliedOrderings: Boolean = true, showCausalLinks: Boolean = true,
