@@ -28,6 +28,7 @@ object Main {
                                                                                                                compileInitialPlan = false,
                                                                                                                removeUnnecessaryPredicates = false,
                                                                                                                ensureMethodsHaveLastTask = false,
+                                                                                                               ensureMethodsHaveAtMostTwoTasks = false,
                                                                                                                convertToSASP = false,
                                                                                                                allowSASPFromStrips = false,
                                                                                                                compileOrderInMethods = None,
