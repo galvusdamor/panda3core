@@ -77,7 +77,35 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
     val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top_" + DecompositionMethodTransformer.instanceCounter)
     DecompositionMethodTransformer.instanceCounter += 1
 
-    val (extendedMethods, newTasks) = transformMethods(domain.decompositionMethods, topMethod, info, domain)
+    val (extendedMethods, newTasksProposed) = transformMethods(domain.decompositionMethods, topMethod, info, domain)
+
+    val newTasks = newTasksProposed filterNot domain.taskSet.contains
+
+    val addedPrimitiveTasks = newTasks filter { _.isPrimitive }
+    assert(addedPrimitiveTasks forall { _.precondition.isEmpty })
+    assert(addedPrimitiveTasks forall { _.effect.isEmpty })
+
+    val newSasPlus = domain.sasPlusRepresentation match {
+      case None                                                               => None
+      case Some(SASPlusRepresentation(problem, indexToTask, predicateToTask)) =>
+
+        val newMapEntries = addedPrimitiveTasks map { case prim =>
+          problem.numOfOperators += 1
+          problem.opNames = problem.opNames :+ prim.name
+          problem.precLists = problem.precLists :+ new Array[Int](0)
+          problem.addLists = problem.addLists :+ new Array[Int](0)
+          problem.delLists = problem.delLists :+ new Array[Int](0)
+          problem.expandedDelLists = problem.expandedDelLists :+ new Array[Int](0)
+          problem.numPrecs = problem.numPrecs :+ 0
+          problem.costs = problem.costs :+ 0
+
+
+          (problem.numOfOperators - 1, prim)
+        }
+
+        Some(SASPlusRepresentation(problem, indexToTask ++ newMapEntries, predicateToTask))
+
+    }
 
     val numberOfTopMethods = extendedMethods count { _.abstractTask == topTask }
     if (numberOfTopMethods == 0) {
@@ -87,7 +115,7 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
       // regenerate the initial plan, as it may have changed
       val remainingTopMethod = (extendedMethods find { _.abstractTask == topTask }).get.subPlan
       val newPlan = remainingTopMethod.replaceInitAndGoal(plan.init, plan.goal, Nil)
-      (domain.copy(decompositionMethods = extendedMethods filterNot { _.abstractTask == topTask }, tasks = domain.tasks ++ newTasks), newPlan)
+      (domain.copy(decompositionMethods = extendedMethods filterNot { _.abstractTask == topTask }, tasks = domain.tasks ++ newTasks, sasPlusRepresentation = newSasPlus), newPlan)
     } else {
       // generate a new
       val topPS = PlanStep(2, topTask, Nil)
@@ -97,7 +125,7 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
       val initialPlan = Plan(planSteps, Nil, ordering, plan.variableConstraints update RemoveVariables(unnecessaryVariables), plan.init, plan.goal,
                              plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map())
 
-      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks :+ topTask), initialPlan)
+      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks :+ topTask, sasPlusRepresentation = newSasPlus), initialPlan)
     }
   }
 }
