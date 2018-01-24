@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink;
 
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
+import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ClassicalNodeValue;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.MergeNode;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.NodeValue;
 import de.uniulm.ki.util.EdgeLabelledGraph;
@@ -338,9 +339,22 @@ abstract class MergingStrategy {
 
             //if (!assignedFacts.contains(oldGraph2ID)) assignedFacts.add(oldGraph2ID);
 
-            NodeValue newNodeValue = new MergeNode(graph1.idMapping.get(oldGraph1ID), graph2.idMapping.get(oldGraph2ID), p);
+            NodeValue newNodeValue1 = graph1.idMapping.get(oldGraph1ID);
+            NodeValue newNodeValue2 = graph2.idMapping.get(oldGraph2ID);
 
-            newIdMapping.put(i, newNodeValue);
+            if ((newNodeValue1 instanceof ClassicalNodeValue) && (newNodeValue2 instanceof ClassicalNodeValue))  {
+                ClassicalNodeValue newNodeValue12 = (ClassicalNodeValue) newNodeValue1;
+                ClassicalNodeValue newNodeValue22 = (ClassicalNodeValue) newNodeValue2;
+                NodeValue newNodeValue = new MergeNode(newNodeValue12, newNodeValue22, p);
+                newIdMapping.put(i, newNodeValue);
+            }else{
+                System.out.println("Wrong type!!");
+                System.exit(1);
+            }
+
+
+
+
 
         }
 

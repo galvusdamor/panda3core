@@ -1,7 +1,6 @@
 package de.uniulm.ki.panda3.progression.heuristics.htn.mergeAndShrink;
 
 import de.uniulm.ki.panda3.progression.heuristics.htn.GroundedProgressionHeuristic;
-import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.CascadingTables;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.ClassicalMSGraph;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.ClassicalMergeAndShrink;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.Utils;
@@ -9,23 +8,16 @@ import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
-import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.NodeValue;
-import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.StratificationPlotter;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.StratificationPlotter$;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.util.DirectedGraph;
-import de.uniulm.ki.util.Dot2PdfCompiler;
 import de.uniulm.ki.util.Dot2PdfCompiler$;
-import de.uniulm.ki.util.EdgeLabelledGraph;
 import scala.collection.JavaConverters;
-import scala.collection.Map;
-import scala.concurrent.JavaConversions;
-import scala.runtime.AbstractFunction1;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -48,10 +40,17 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         ClassicalMergeAndShrink classicalMergeAndShrink = new ClassicalMergeAndShrink(flatProblem);
         ClassicalMSGraph testGraph = classicalMergeAndShrink.mergeAndShrinkProcess(flatProblem, 5000);
 
-        Utils.printMultiGraph(flatProblem, testGraph, "htnGraph.pdf");
+        Utils.printMultiGraph(flatProblem, testGraph, "ClassicalMSGraph.pdf");
 
 
         Task[] allTasks = ProgressionNetwork.indexToTask;
+
+        for (int i=0; i<allTasks.length;i++) {
+
+            Task t = allTasks[i];
+
+            System.out.println("\tTask: " + i + ": " + t.shortInfo());
+        }
 
 
         //var i = 0
@@ -62,23 +61,35 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         for (Object l : layer) {
             Set<Task> tasksInLayer = (Set<Task>) JavaConverters.setAsJavaSet((scala.collection.immutable.Set) l);
-            System.out.println("Layer: " + tasksInLayer);
+            //System.out.println("Layer: " + tasksInLayer);
 
             for (Task t : tasksInLayer) {
                 int taskIndex = ProgressionNetwork.taskToIndex.get(t);
-                System.out.println("\tTask: " + t + " Index: " + taskIndex);
+                //System.out.println("\tTask: " + taskIndex + ": " + t.shortInfo());
+                //System.out.println("\tTask: " + t + " Index: " + taskIndex);
                 List<ProMethod> methodsForTask = ProgressionNetwork.methods.get(t);
                 if (t.isAbstract()) {
                     for (ProMethod pm : methodsForTask) {
-                        System.out.println("\t\tMethod: " + pm.m.name());
+                        //System.out.println("\t\tMethod: " + pm.m.name());
                         DirectedGraph<PlanStep> methodGraph = pm.m.subPlan().orderingConstraints().fullGraph();
-                        System.out.println("\t\t" + methodGraph.);
+                         //System.out.println("\t\t" + methodGraph);
                     }
                 }
             }
         }
 
         StratificationPlotter$.MODULE$.plotStratification(domain);
+
+        HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
+
+        presentGraphs = Merging.mergeWithTaskIndex(flatProblem, 0, presentGraphs);
+
+        presentGraphs = Merging.mergeWithTaskIndex(flatProblem, 1, presentGraphs);
+
+        presentGraphs = Merging.mergeWithTaskIndex(flatProblem, 2, presentGraphs);
+
+        Utils.printAllHtnGraphs(flatProblem, presentGraphs);
+
 
         System.exit(0);
 

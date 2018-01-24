@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink;
 
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
+import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ClassicalNodeValue;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.NodeValue;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ShrinkNode;
 import de.uniulm.ki.util.EdgeLabelledGraph;
@@ -67,8 +68,17 @@ abstract class ShrinkingStrategy {
 
             for (int j=1; j<toAggregate.size(); j++) {
 
-                newNodeValue = new ShrinkNode(newNodeValue, graph.idMapping.get(toAggregate.get(j)), p);
-                tempReverseIDMapping.put(toAggregate.get(j), index);
+                NodeValue newNodeValue2 = graph.idMapping.get(toAggregate.get(j));
+
+                if ((newNodeValue instanceof ClassicalNodeValue) && (newNodeValue2 instanceof ClassicalNodeValue))  {
+                    ClassicalNodeValue newNodeValue12 = (ClassicalNodeValue) newNodeValue;
+                    ClassicalNodeValue newNodeValue22 = (ClassicalNodeValue) newNodeValue2;
+                    newNodeValue = new ShrinkNode(newNodeValue12, newNodeValue22, p);
+                    tempReverseIDMapping.put(toAggregate.get(j), index);
+                }else{
+                    System.out.println("Wrong type!!");
+                    System.exit(1);
+                }
 
             }
 

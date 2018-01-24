@@ -12,11 +12,10 @@ trait NodeValue extends DefaultLongInfo {
 
   def sasPlusProblem: SasPlusProblem
 
-  def isContained(state: util.BitSet): Boolean
 
   def containsShrink() : Boolean
 
-  def containsFactIndexes: Set[Int]
+
 
   def isGoalNode: java.lang.Boolean
 
@@ -24,7 +23,17 @@ trait NodeValue extends DefaultLongInfo {
 
 }
 
-case class ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem, goalNode: java.lang.Boolean) extends NodeValue {
+trait ClassicalNodeValue extends NodeValue{
+
+  def isContained(state: util.BitSet): Boolean
+
+  def containsFactIndexes: Set[Int]
+
+
+
+}
+
+case class ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem, goalNode: java.lang.Boolean) extends ClassicalNodeValue {
 
   override lazy val isGoalNode: java.lang.Boolean = goalNode
 
@@ -42,7 +51,7 @@ case class ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem, goalNode: 
 
 }
 
-case class MergeNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPlusProblem) extends NodeValue {
+case class MergeNode(left: ClassicalNodeValue, right: ClassicalNodeValue, sasPlusProblem: SasPlusProblem) extends ClassicalNodeValue {
 
   override lazy val isGoalNode : java.lang.Boolean = left.isGoalNode && right.isGoalNode
 
@@ -80,7 +89,7 @@ case class MergeNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPlusP
   override lazy val size : Long = left.size + right.size
 }
 
-case class ShrinkNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPlusProblem) extends NodeValue {
+case class ShrinkNode(left: ClassicalNodeValue, right: ClassicalNodeValue, sasPlusProblem: SasPlusProblem) extends ClassicalNodeValue {
 
   override lazy val isGoalNode : java.lang.Boolean = left.isGoalNode || right.isGoalNode
   override def isContained(state: util.BitSet): Boolean = left.isContained(state) || right.isContained(state)
