@@ -1653,7 +1653,7 @@ object SearchHeuristic {
 
         HierarchicalHeuristicRelaxedComposition(h)
 
-      case "hhsp"                                              =>
+      case "hhsp" =>
         val h = hParameterMap.get("h") match {
           case Some("ff")         => SasHeuristics.hFF
           case Some("add")        => SasHeuristics.hAdd
