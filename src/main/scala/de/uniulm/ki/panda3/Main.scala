@@ -44,6 +44,7 @@ object Main {
                                                                                     PreprocessingConfiguration(compileNegativePreconditions = true,
                                                                                                                compileUnitMethods = false,
                                                                                                                compileInitialPlan = false,
+                                                                                                               ensureMethodsHaveAtMostTwoTasks = false,
                                                                                                                convertToSASP = false,
                                                                                                                allowSASPFromStrips = false,
                                                                                                                removeUnnecessaryPredicates = true,

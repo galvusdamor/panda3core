@@ -1149,8 +1149,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
         else Nil) ::
-        (if (true) // TODO replace
+        (if (preprocessingConfiguration.ensureMethodsHaveAtMostTwoTasks)
           CompilerConfiguration(TwoTaskPerMethod, (), "force two tasks per method", TOP_TASK) :: Nil
+        else Nil) ::
+        (if (preprocessingConfiguration.ensureMethodsHaveLastTask)
+          CompilerConfiguration(EnsureEveryMethodHasLastTask, (), "ensure last task", LAST_TASK) :: Nil
         else Nil) ::
         (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
           CompilerConfiguration(CompileGoalIntoAction, (), "goal", TOP_TASK) :: CompilerConfiguration(ForceGroundedInitTop, (), "force top", TOP_TASK) :: Nil
@@ -1196,9 +1199,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         else Nil) ::
         (if (preprocessingConfiguration.splitIndependentParameters)
           CompilerConfiguration(SplitIndependentParameters, (), "split parameters", SPLIT_PARAMETERS) :: Nil
-        else Nil) ::
-        (if (preprocessingConfiguration.ensureMethodsHaveLastTask)
-          CompilerConfiguration(EnsureEveryMethodHasLastTask, (), "ensure last task", LAST_TASK) :: Nil
         else Nil) ::
         Nil flatten
 
@@ -1413,6 +1413,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         FAPESearch ::
         SHOP2Search :: Nil
 
+
     (allDefaultConfigurations filterNot {      _.isInstanceOf[searchConfiguration.type] } ) ++
       (parsingConfiguration :: preprocessingConfiguration :: searchConfiguration :: postprocessingConfiguration :: Nil)
     }
@@ -1535,6 +1536,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                          compileUnitMethods: Boolean,
                                          compileOrderInMethods: Option[TotallyOrderingOption],
                                          compileInitialPlan: Boolean,
+                                         ensureMethodsHaveAtMostTwoTasks : Boolean,
                                          ensureMethodsHaveLastTask: Boolean,
                                          removeUnnecessaryPredicates: Boolean,
                                          convertToSASP: Boolean,
