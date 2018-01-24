@@ -168,9 +168,17 @@ sealed trait GraphDecomposition[T]
 
 case class ElementaryDecomposition[T](element: T) extends GraphDecomposition[T]
 
-case class ParallelDecomposition[T](parallelElements: Seq[GraphDecomposition[T]]) extends GraphDecomposition[T]
+trait NonElementaryDecomposition[T] extends GraphDecomposition[T]{
+  def subelements : Seq[GraphDecomposition[T]]
+}
 
-case class SequentialDecomposition[T](sequentialElements: Seq[GraphDecomposition[T]]) extends GraphDecomposition[T]
+case class ParallelDecomposition[T](parallelElements: Seq[GraphDecomposition[T]]) extends NonElementaryDecomposition[T]{
+  val subelements: Seq[GraphDecomposition[T]] = parallelElements
+}
+
+case class SequentialDecomposition[T](sequentialElements: Seq[GraphDecomposition[T]]) extends NonElementaryDecomposition[T]{
+  val subelements: Seq[GraphDecomposition[T]] = sequentialElements
+}
 
 
 case class DirectedGraphDotOptions(labelNodesWithNumbers: Boolean = false)

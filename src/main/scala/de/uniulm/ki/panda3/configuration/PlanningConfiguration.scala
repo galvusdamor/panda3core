@@ -1075,6 +1075,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
         else Nil) ::
+        (if (true) // TODO replace
+          CompilerConfiguration(TwoTaskPerMethod, (), "force two tasks per method", TOP_TASK) :: Nil
+        else Nil) ::
         (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
           CompilerConfiguration(CompileGoalIntoAction, (), "goal", TOP_TASK) :: CompilerConfiguration(ForceGroundedInitTop, (), "force top", TOP_TASK) :: Nil
         else Nil) ::
@@ -1649,6 +1652,19 @@ object SearchHeuristic {
         }
 
         HierarchicalHeuristicRelaxedComposition(h)
+
+      case "hhsp"                                              =>
+        val h = hParameterMap.get("h") match {
+          case Some("ff")         => SasHeuristics.hFF
+          case Some("add")        => SasHeuristics.hAdd
+          case Some("max")        => SasHeuristics.hMax
+          case Some("lm-cut")     => SasHeuristics.hLmCut
+          case Some("inc-lm-cut") => SasHeuristics.hIncLmCut
+          case None               => assert(false); null
+        }
+
+        HierarchicalHeuristicSimulatedProgression(h, hParameterMap.get("progBound").get.toInt)
+
     }
   })
 }
@@ -1739,6 +1755,8 @@ case class HierarchicalHeuristicRelaxedComposition(classicalHeuristic: SasHeuris
 case class PureSASPlusEncoding(classicalHeuristic: SasHeuristics)
   extends SearchHeuristic {override val longInfo: String = "id(" + classicalHeuristic.toString + ")"}
 
+case class HierarchicalHeuristicSimulatedProgression(classicalHeuristic: SasHeuristics, progressionBound: Int)
+  extends SearchHeuristic {override val longInfo: String = "hhSP(" + classicalHeuristic.toString + ")"}
 
 object HierarchicalMergeAndShrink extends SearchHeuristic {override val longInfo: String = "hMS"}
 
