@@ -1075,13 +1075,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
         else Nil) ::
-        (if (preprocessingConfiguration.ensureMethodsHaveAtMostTwoTasks)
-          CompilerConfiguration(TwoTaskPerMethod, (), "force two tasks per method", TOP_TASK) :: Nil
-        else Nil) ::
-        (if (preprocessingConfiguration.ensureMethodsHaveLastTask)
-          CompilerConfiguration(EnsureEveryMethodHasLastTask, (), "ensure last task", LAST_TASK) :: Nil
-        else Nil) ::
-        (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
+       (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
           CompilerConfiguration(CompileGoalIntoAction, (), "goal", TOP_TASK) :: CompilerConfiguration(ForceGroundedInitTop, (), "force top", TOP_TASK) :: Nil
         else Nil) ::
         Nil flatten
@@ -1236,8 +1230,29 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         compiled
       } else methodsWithIdenticalTasks
 
+      val lastCompilersToBeApplied = (if (preprocessingConfiguration.ensureMethodsHaveAtMostTwoTasks)
+        CompilerConfiguration(TwoTaskPerMethod, (), "force two tasks per method", TOP_TASK) :: Nil
+      else Nil) ::
+        (if (preprocessingConfiguration.ensureMethodsHaveLastTask)
+          CompilerConfiguration(EnsureEveryMethodHasLastTask, (), "ensure last task", LAST_TASK) :: Nil
+        else Nil) ::
+        Nil flatten
+
+      // don't run compilation if we are still ground
+      val compiledResult = lastCompilersToBeApplied.foldLeft(predicatedPruned)(
+        { case ((dom, prob), cc@CompilerConfiguration(compiler, option, message, timingString)) =>
+          timeCapsule start timingString
+          info("Compiling " + message + " ... ")
+          val compiled = cc.run(dom, prob)
+          info("done.\n")
+          extra(compiled._1.statisticsString + "\n")
+          timeCapsule stop timingString
+          compiled
+        })
+
+
       timeCapsule stop PREPROCESSING
-      ((predicatedPruned, groundedAnalysisMap), timeCapsule)
+      ((compiledResult, groundedAnalysisMap), timeCapsule)
     } else {
       timeCapsule stop PREPROCESSING
       ((domainAndPlan, analysisMap), timeCapsule)

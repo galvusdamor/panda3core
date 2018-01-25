@@ -55,7 +55,7 @@ object PredefinedConfigurations {
                                                            convertToSASP = false, allowSASPFromStrips = false,
                                                            compileOrderInMethods = None,
                                                            ensureMethodsHaveLastTask = true,
-                                                           ensureMethodsHaveAtMostTwoTasks = true,
+                                                           ensureMethodsHaveAtMostTwoTasks = false,
                                                            splitIndependentParameters = true,
                                                            compileUselessAbstractTasks = false,
                                                            liftedReachability = true, groundedReachability = Some(PlanningGraph),
