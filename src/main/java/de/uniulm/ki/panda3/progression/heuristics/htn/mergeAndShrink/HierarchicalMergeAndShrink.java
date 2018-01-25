@@ -16,9 +16,9 @@ import de.uniulm.ki.util.DirectedGraph;
 import de.uniulm.ki.util.Dot2PdfCompiler$;
 import scala.collection.JavaConverters;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -80,18 +80,60 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         StratificationPlotter$.MODULE$.plotStratification(domain);
 
-        HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
+        /*HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
 
-        presentGraphs = Merging.mergeWithTaskIndex(flatProblem, 0, presentGraphs);
+        presentGraphs = Merging.getHtnMsGraphForTaskIndex(flatProblem, methods, 0, presentGraphs);
 
-        presentGraphs = Merging.mergeWithTaskIndex(flatProblem, 1, presentGraphs);
+        presentGraphs = Merging.getHtnMsGraphForTaskIndex(flatProblem, methods, 1, presentGraphs);
 
-        presentGraphs = Merging.mergeWithTaskIndex(flatProblem, 2, presentGraphs);
+        presentGraphs = Merging.getHtnMsGraphForTaskIndex(flatProblem, methods, 2, presentGraphs);
+
+        presentGraphs = Merging.getHtnMsGraphForTaskIndex(flatProblem, methods, 3, presentGraphs);
+
+        presentGraphs = Merging.getHtnMsGraphForTaskIndex(flatProblem, methods, 6, presentGraphs);
+
+        presentGraphs = Merging.getHtnMsGraphForTaskIndex(flatProblem, methods, 11, presentGraphs);
+
+        presentGraphs = Merging.getHtnMsGraphForTaskIndex(flatProblem, methods, 10, presentGraphs);*/
+
+        HashMap<Integer,HtnMsGraph> presentGraphs = getAllGraphs(flatProblem, methods, domain);
 
         Utils.printAllHtnGraphs(flatProblem, presentGraphs);
 
 
         System.exit(0);
+
+    }
+
+
+    public HashMap<Integer,HtnMsGraph> getAllGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain){
+
+        HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
+
+        Map<Task, Integer> taskToIndexMapping = ProgressionNetwork.taskToIndex;
+
+        DirectedGraph<?> layerGraph = domain.taskSchemaTransitionGraph().condensation();
+
+        List<?> layer = JavaConverters.seqAsJavaList(layerGraph.topologicalOrdering().get().reverse());
+
+        for (Object l : layer) {
+            Set<Task> tasksInLayer = (Set<Task>) JavaConverters.setAsJavaSet((scala.collection.immutable.Set) l);
+            //System.out.println("Layer: " + tasksInLayer);
+
+            for (Task t : tasksInLayer) {
+
+                int taskIndex = taskToIndexMapping.get(t);
+
+                System.out.println("Handle Task " + taskIndex);
+
+                presentGraphs = Merging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs);
+
+                System.out.println("Tasks in present Tasks: " + presentGraphs.keySet());
+
+            }
+        }
+
+        return presentGraphs;
 
     }
 

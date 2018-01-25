@@ -173,12 +173,6 @@ public final class Utils {
         String[] newNodes = convertNodesToStrings(p, idMapping);
         Tuple3[] newEdges = convertEdgesToStrings(p, graph.labelledEdges, idMapping);
 
-        Set<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes);
-
-        Set<Integer> usedVariables = new HashSet<>(graph.usedVariables);
-
-        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph.notYetUsedVariables);
-
 
 
         EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, CascadingTables> newGraph = new EdgeLabelledGraph<>(newNodes, newEdges, idMapping, graph.startNodeID, graph.cascadingTables);
@@ -286,7 +280,12 @@ public final class Utils {
                 //                      "\"" + oldEdge._1() + ": "  + p.factStrs[oldEdge._1()] + "\"";
                 String endEdge = Utils.getMultiIDString(p, oldEdge._3(), idMapping);
                 //              "\"" + oldEdge._3() + ": "  + p.factStrs[oldEdge._3()] + "\"";
-                String labelEdge = allTasks[oldEdge._2()].shortInfo();
+                String labelEdge;
+                if (oldEdge._2()==-1){
+                    labelEdge = "";
+                }else {
+                    labelEdge = allTasks[oldEdge._2()].shortInfo();
+                }
                 //String labelEdge = SingleGraphMethods.getOpString(p, oldEdge._2());
                 //"\"" + oldEdge._2() + ": " + p.opNames[oldEdge._2()] +  "\"";
 

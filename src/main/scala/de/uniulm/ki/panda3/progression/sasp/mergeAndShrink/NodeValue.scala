@@ -17,9 +17,10 @@ trait NodeValue extends DefaultLongInfo {
 
 
 
-  def isGoalNode: java.lang.Boolean
+  val isGoalNode: java.lang.Boolean
 
   def size : Long
+
 
 }
 

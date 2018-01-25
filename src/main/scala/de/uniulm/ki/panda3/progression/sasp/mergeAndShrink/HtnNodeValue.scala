@@ -17,6 +17,7 @@ case class HtnElementaryNode(sasPlusProblem: SasPlusProblem, goalNode: java.lang
 
   override lazy val size : Long = 1
 
+
 }
 
 
