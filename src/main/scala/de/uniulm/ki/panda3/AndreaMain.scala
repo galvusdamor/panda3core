@@ -32,8 +32,12 @@ object MainAndrea {
     val outputPDF = "dot.pdf"
 
     // TRANSPORT
-    val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
-    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
+    //val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
+    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
+
+    // ROVER
+    val domFile = "rover-domain.hddl"
+    val probFile = "pfile1.hddl"
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)
@@ -56,6 +60,7 @@ object MainAndrea {
                                                        allowSASPFromStrips = false,
                                                        compileOrderInMethods = None,
                                                        ensureMethodsHaveLastTask = false,
+                                                       ensureMethodsHaveAtMostTwoTasks = true,
                                                        removeUnnecessaryPredicates = true,
                                                        splitIndependentParameters = true,
                                                        compileUselessAbstractTasks = false,
@@ -67,8 +72,8 @@ object MainAndrea {
                             //PredefinedConfigurations.pandaProConfig(AStarActionsType(2), SasHeuristics.hMS),
                             ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink), PriorityQueueSearch.abstractTaskSelection.random),
                             postprocessing,
-                            Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
-    //Map(FastDownward -> "../../fd"))
+                            //Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
+                            Map(FastDownward -> "../../fd"))
 
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)
@@ -79,6 +84,7 @@ object MainAndrea {
 
     println("Panda says: " + results(SearchStatus))
     println(results(SearchStatistics).shortInfo)
+
     println("----------------- TIMINGS -----------------")
     println(results(ProcessingTimings).shortInfo)
 
