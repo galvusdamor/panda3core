@@ -38,7 +38,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
 
         ClassicalMergeAndShrink classicalMergeAndShrink = new ClassicalMergeAndShrink(flatProblem);
-        ClassicalMSGraph testGraph = classicalMergeAndShrink.mergeAndShrinkProcess(flatProblem, 5000);
+        ClassicalMSGraph testGraph = classicalMergeAndShrink.mergeAndShrinkProcess(flatProblem, 50);
 
         Utils.printMultiGraph(flatProblem, testGraph, "ClassicalMSGraph.pdf");
 

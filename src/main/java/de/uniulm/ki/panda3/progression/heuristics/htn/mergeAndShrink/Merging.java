@@ -118,7 +118,7 @@ public class Merging {
                 temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph,graphOfSubtask, temporaryGraph.startNodeID)._2;
             }
 
-        }else{
+        }else if (proMethod.subtasks.length==2){
 
             //ordered subtasks
 
@@ -134,79 +134,79 @@ public class Merging {
                 }
             }*/
 
-
-            int[] orderedSubTasks = new int[proMethod.orderings.size()+1];
-
-            orderedSubTasks[0] = proMethod.orderings.get(0)[0];
-            orderedSubTasks[1] = proMethod.orderings.get(0)[1];
-
-            for (int i=1; i<proMethod.orderings.size(); i++){
-                int j = i+1;
-                orderedSubTasks[j] = proMethod.orderings.get(i)[1];
-            }
+            if(proMethod.orderings.size()>0) {
 
 
-            HashSet<Integer> nodesToAppend = new HashSet<>();
-            nodesToAppend.add(temporaryGraph.startNodeID);
+                int[] orderedSubTasks = new int[proMethod.orderings.size() + 1];
 
+                orderedSubTasks[0] = proMethod.orderings.get(0)[0];
+                orderedSubTasks[1] = proMethod.orderings.get(0)[1];
 
-
-            for (int i=0; i<orderedSubTasks.length; i++) {
-
-
-
-
-                int subtaskIndex = orderedSubTasks[i];
-
-                Task subTask = proMethod.subtasks[subtaskIndex];
-
-                int subTaskID = ProgressionNetwork.taskToIndex.get(subTask);
-
-
-                if (subTaskID==actualTaskIndex){
-
-
-                    for (int nodeIDToAppend : nodesToAppend){
-                        Tuple3<Integer,Integer,Integer> edge = new Tuple3<>(nodeIDToAppend, -1  ,temporaryGraph.startNodeID);
-                        temporaryGraph.edges.add(edge);
-                    }
-
-                }else {
-
-                    HtnMsGraph graphOfSubtask = presentGraphs.get(subTaskID);
-
-
-
-                    HashSet<Integer> newNodesToAppend = new HashSet<>();
-
-                    for (int nodeIDToAppend : nodesToAppend) {
-
-                        NodeValue nodeValue = temporaryGraph.idMapping.get(nodeIDToAppend);
-
-                        if (nodeValue instanceof HtnElementaryNode) {
-                            NodeValue newNodeValue = new HtnElementaryNode(p, false);
-                            temporaryGraph.idMapping.put(nodeIDToAppend, newNodeValue);
-                        }
-
-                        Tuple2<HashSet<Integer>, TemporaryHtnMsGraph> resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graphOfSubtask, nodeIDToAppend);
-
-                        temporaryGraph = resultsOfAppending._2;
-                        newNodesToAppend.addAll(resultsOfAppending._1);
-
-
-
-                    }
-
-                    nodesToAppend = newNodesToAppend;
-                    
-
+                for (int i = 1; i < proMethod.orderings.size(); i++) {
+                    int j = i + 1;
+                    orderedSubTasks[j] = proMethod.orderings.get(i)[1];
                 }
 
 
+                HashSet<Integer> nodesToAppend = new HashSet<>();
+                nodesToAppend.add(temporaryGraph.startNodeID);
+
+
+                for (int i = 0; i < orderedSubTasks.length; i++) {
+
+
+                    int subtaskIndex = orderedSubTasks[i];
+
+                    Task subTask = proMethod.subtasks[subtaskIndex];
+
+                    int subTaskID = ProgressionNetwork.taskToIndex.get(subTask);
+
+
+                    if (subTaskID == actualTaskIndex) {
+
+
+                        for (int nodeIDToAppend : nodesToAppend) {
+                            Tuple3<Integer, Integer, Integer> edge = new Tuple3<>(nodeIDToAppend, -1, temporaryGraph.startNodeID);
+                            temporaryGraph.edges.add(edge);
+                        }
+
+                    } else {
+
+                        HtnMsGraph graphOfSubtask = presentGraphs.get(subTaskID);
+
+
+                        HashSet<Integer> newNodesToAppend = new HashSet<>();
+
+                        for (int nodeIDToAppend : nodesToAppend) {
+
+                            NodeValue nodeValue = temporaryGraph.idMapping.get(nodeIDToAppend);
+
+                            if (nodeValue instanceof HtnElementaryNode) {
+                                NodeValue newNodeValue = new HtnElementaryNode(p, false);
+                                temporaryGraph.idMapping.put(nodeIDToAppend, newNodeValue);
+                            }
+
+                            Tuple2<HashSet<Integer>, TemporaryHtnMsGraph> resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graphOfSubtask, nodeIDToAppend);
+
+                            temporaryGraph = resultsOfAppending._2;
+                            newNodesToAppend.addAll(resultsOfAppending._1);
+
+
+                        }
+
+                        nodesToAppend = newNodesToAppend;
+
+
+                    }
+
+
+                }
             }
 
             //not ordered subtasks
 
+        } else {
+            throw new IllegalArgumentException("can only handle methods with 1 or two tasks");
         }
 
         return temporaryGraph;
