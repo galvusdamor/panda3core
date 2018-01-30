@@ -5,9 +5,9 @@ import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.Utils;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
-import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.HtnElementaryNode;
-import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.NodeValue;
+import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.*;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
+import scala.Array;
 import scala.Tuple2;
 import scala.Tuple3;
 
@@ -201,9 +201,27 @@ public class Merging {
 
 
                 }
+            }else{
+
+                //not ordered subtasks
+
+                System.out.println();
+
+                Task subtask1 = proMethod.subtasks[0];
+                Task subtask2 = proMethod.subtasks[1];
+
+                int subtask1Index = taskToIndexMapping.get(subtask1);
+                int subtask2Index = taskToIndexMapping.get(subtask2);
+
+                HtnMsGraph graphOfSubtask1 = presentGraphs.get(subtask1Index);
+                HtnMsGraph graphOfSubtask2 = presentGraphs.get(subtask2Index);
+
+
+                TemporaryHtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p);
+
+
             }
 
-            //not ordered subtasks
 
         } else {
             throw new IllegalArgumentException("can only handle methods with 1 or two tasks");
@@ -212,6 +230,120 @@ public class Merging {
         return temporaryGraph;
 
     }
+
+    public static TemporaryHtnMsGraph mergeGraphs(HtnMsGraph graph1, HtnMsGraph graph2, SasPlusProblem p){
+
+
+        Integer[] graph1Nodes = (Integer[]) graph1.arrayVertices;
+
+        Integer[] graph2Nodes = (Integer[]) graph2.arrayVertices;
+
+
+
+
+        HashMap<Integer, Tuple2<Integer, Integer>> tempIdMapping = new HashMap<>();
+        HashMap<Tuple2<Integer, Integer>, Integer> tempReverseIdMapping = new HashMap<>();
+
+        List<Integer> graph1NodeIDs = Arrays.asList(graph1Nodes);
+
+        List<Integer> graph2NodeIDs = Arrays.asList(graph2Nodes);
+
+        Integer[][] combinations = graph1NodeIDs.stream().flatMap(ai -> graph2NodeIDs.stream().map(bi -> new Integer[]{ai, bi})).toArray(Integer[][]::new);
+
+        Integer[] newNodeIDs = new Integer[combinations.length];
+
+        HashMap<Integer, NodeValue> idMapping = new HashMap<>();
+
+        for (int i = 0; i < combinations.length; i++) {
+
+            int oldGraph1ID = combinations[i][0];
+            int oldGraph2ID = combinations[i][1];
+
+            Tuple2<Integer, Integer> combi = new Tuple2<>(oldGraph1ID, oldGraph2ID);
+
+            tempIdMapping.put(i, combi);
+            tempReverseIdMapping.put(combi, i);
+
+            newNodeIDs[i] = i;
+
+            NodeValue newNodeValue1 = graph1.idMapping.get(oldGraph1ID);
+            NodeValue newNodeValue2 = graph2.idMapping.get(oldGraph2ID);
+
+            if ((newNodeValue1 instanceof HtnNodeValue) && (newNodeValue2 instanceof HtnNodeValue))  {
+                HtnNodeValue newNodeValue12 = (HtnNodeValue) newNodeValue1;
+                HtnNodeValue newNodeValue22 = (HtnNodeValue) newNodeValue2;
+                NodeValue newNodeValue = new HtnMergeNode(newNodeValue12, newNodeValue22, p);
+                idMapping.put(i, newNodeValue);
+            }else{
+                System.out.println("Wrong type!!");
+                System.exit(1);
+            }
+
+
+        }
+
+
+        Tuple3<Integer, Integer, Integer>[] graph1Edges = graph1.labelledEdges;
+        Tuple3<Integer, Integer, Integer>[] graph2Edges = graph2.labelledEdges;
+
+        LinkedList<Tuple3<Integer, Integer, Integer>> newMultiEdges = new LinkedList<>();
+
+        for (Tuple3<Integer, Integer, Integer> edgeOfGraph1 : graph1Edges) {
+
+                int graph1StartNodeID = edgeOfGraph1._1();
+                int graph1EndNodeID = edgeOfGraph1._3();
+
+                for (int idOfGraph2Node : graph2NodeIDs) {
+
+                    Tuple2<Integer, Integer> startNodeCombi = new Tuple2<>(graph1StartNodeID, idOfGraph2Node);
+                    int newStartNodeID = tempReverseIdMapping.get(startNodeCombi);
+
+                    Tuple2<Integer, Integer> endNodeCombi = new Tuple2<>(graph1EndNodeID, idOfGraph2Node);
+                    int newEndNodeID = tempReverseIdMapping.get(endNodeCombi);
+
+                    int taskIDofEdge = edgeOfGraph1._2();
+
+                    Tuple3<Integer, Integer, Integer> newEdge = new Tuple3<>(newStartNodeID, taskIDofEdge, newEndNodeID);
+                    newMultiEdges.add(newEdge);
+                }
+
+        }
+
+        for (Tuple3<Integer, Integer, Integer> edgeOfGraph2 : graph2Edges) {
+
+            int graph2StartNodeID = edgeOfGraph2._1();
+            int graph2EndNodeID = edgeOfGraph2._3();
+
+            for (int idOfGraph1Node : graph1NodeIDs) {
+
+                Tuple2<Integer, Integer> startNodeCombi = new Tuple2<>(idOfGraph1Node, graph2StartNodeID);
+                int newStartNodeID = tempReverseIdMapping.get(startNodeCombi);
+
+                Tuple2<Integer, Integer> endNodeCombi = new Tuple2<>(idOfGraph1Node, graph2EndNodeID);
+                int newEndNodeID = tempReverseIdMapping.get(endNodeCombi);
+
+                int taskIDofEdge = edgeOfGraph2._2();
+
+                Tuple3<Integer, Integer, Integer> newEdge = new Tuple3<>(newStartNodeID, taskIDofEdge, newEndNodeID);
+                newMultiEdges.add(newEdge);
+            }
+
+
+
+        }
+
+
+        Tuple2<Integer, Integer> oldStartIDs = new Tuple2<>(graph1.startNodeID, graph2.startNodeID);
+
+        int newStartID = tempReverseIdMapping.get(oldStartIDs);
+
+        TemporaryHtnMsGraph newGraph = new TemporaryHtnMsGraph(newMultiEdges, idMapping, newStartID);
+
+        return newGraph;
+    }
+
+
+
 
     public static HashSet<Integer> getGoalNodes(HtnMsGraph temporaryHtnMsGraph){
 

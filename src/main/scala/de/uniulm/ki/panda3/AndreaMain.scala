@@ -72,8 +72,8 @@ object MainAndrea {
                             //PredefinedConfigurations.pandaProConfig(AStarActionsType(2), SasHeuristics.hMS),
                             ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink), PriorityQueueSearch.abstractTaskSelection.random),
                             postprocessing,
-                            //Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
-                            Map(FastDownward -> "../../fd"))
+                            Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
+                            //Map(FastDownward -> "../../fd"))
 
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)

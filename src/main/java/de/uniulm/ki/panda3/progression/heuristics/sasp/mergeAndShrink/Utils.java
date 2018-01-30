@@ -159,7 +159,11 @@ public final class Utils {
 
             String outputfile = "htnGraph" + i +  ".pdf";
 
-            Utils.printHtnGraph(p, graphs.get(i), outputfile);
+            if (graphs.get(i).idMapping.keySet().size()<50) {
+
+                System.out.println("Print Graph " + i);
+                Utils.printHtnGraph(p, graphs.get(i), outputfile);
+            }
 
         }
 
@@ -284,7 +288,7 @@ public final class Utils {
                 if (oldEdge._2()==-1){
                     labelEdge = "";
                 }else {
-                    labelEdge = allTasks[oldEdge._2()].shortInfo();
+                    labelEdge = oldEdge._2() + ": " + allTasks[oldEdge._2()].shortInfo();
                 }
                 //String labelEdge = SingleGraphMethods.getOpString(p, oldEdge._2());
                 //"\"" + oldEdge._2() + ": " + p.opNames[oldEdge._2()] +  "\"";
