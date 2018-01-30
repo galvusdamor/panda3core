@@ -99,10 +99,19 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         presentGraphs = Merging.getHtnMsGraphForTaskIndex(flatProblem, methods, 10, presentGraphs);*/
 
 
+
+
         testGraphs(flatProblem, methods, domain);
 
 
 
+
+        System.exit(0);
+
+        HashMap<Integer,HtnMsGraph> presentGraphs = getAllGraphs(flatProblem, methods, domain);
+
+
+        Utils.printAllHtnGraphs(flatProblem, presentGraphs);
 
         System.exit(0);
 
@@ -197,9 +206,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         Utils.printAllHtnGraphs(p, presentGraphs);
 
-        TemporaryHtnMsGraph newGraph = Merging.mergeGraphs(presentGraphs.get(109), presentGraphs.get(105), p);
-
-        HtnMsGraph testHtnGraph = newGraph.convertToHtnMsGraph();
+        HtnMsGraph testHtnGraph = Merging.mergeGraphs(presentGraphs.get(109), presentGraphs.get(105), p);
 
         Utils.printHtnGraph(p, testHtnGraph, "testHtnGraph.pdf");
 

@@ -217,7 +217,9 @@ public class Merging {
                 HtnMsGraph graphOfSubtask2 = presentGraphs.get(subtask2Index);
 
 
-                TemporaryHtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p);
+                HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p);
+
+                temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph, newGraph, temporaryGraph.startNodeID)._2;
 
 
             }
@@ -231,7 +233,7 @@ public class Merging {
 
     }
 
-    public static TemporaryHtnMsGraph mergeGraphs(HtnMsGraph graph1, HtnMsGraph graph2, SasPlusProblem p){
+    public static HtnMsGraph mergeGraphs(HtnMsGraph graph1, HtnMsGraph graph2, SasPlusProblem p){
 
 
         Integer[] graph1Nodes = (Integer[]) graph1.arrayVertices;
@@ -339,7 +341,9 @@ public class Merging {
 
         TemporaryHtnMsGraph newGraph = new TemporaryHtnMsGraph(newMultiEdges, idMapping, newStartID);
 
-        return newGraph;
+        HtnMsGraph mergedGraph = newGraph.convertToHtnMsGraph();
+
+        return mergedGraph;
     }
 
 
