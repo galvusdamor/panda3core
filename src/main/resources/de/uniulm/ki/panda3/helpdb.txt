@@ -321,10 +321,10 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 astar a*
-A*, f(n)=w*g(n)+h(n), w weight, g cost, h heuristic
+A*, f(n)=g(n)+w*h(n), w weight, g cost, h heuristic
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "a*" IS A KEY, NOT AN OPTION.
 
-This is weighted A*, i.e., search nodes n are selected according to their value f(n)=w*g(n)+h(n), where w is a weight, g(n) is the node's action cost and h(n) is its heuristic value. Please note that our planners currently do not support action costs, i.e., we assume cost 1 for each primitive action.
+This is weighted A*, i.e., search nodes n are selected according to their value f(n)=g(n)+w*h(n), where w is a weight, g(n) is the node's action cost and h(n) is its heuristic value. Please note that our planners currently do not support action costs, i.e., we assume cost 1 for each primitive action.
 \n
 If you just select this heuristic, standard A* search is performed. For weighted A*, add the weight in parentheses, e.g., astar(2).
 $
@@ -336,11 +336,11 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 depth-astar depth-a*
-A*, f(n)=d(n)+h(n), w weight, d depth, h heuristic
+A*, f(n)=d(n)+w*h(n), w weight, d depth, h heuristic
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "depth-astar" IS A KEY, NOT AN OPTION.
 % Auch astar-depth und a*-depth wäre möglich, aber
 
-This is weighted A*, i.e., search nodes n are selected according to their value f(n)=w*d(n)+h(n), but d(n) is the depth in the search tree rather than the cost of the current search node as usual; w is the weight and h(n) is its heuristic value.
+This is weighted A*, i.e., search nodes n are selected according to their value f(n)=d(n)+w*h(n), but d(n) is the depth in the search tree rather than the cost of the current search node as usual; w is the weight and h(n) is its heuristic value.
 \n
 If you just select this heuristic, standard depth-A* search is performed. For weighted depth-A*, add the weight in parentheses, e.g., depth-astar(2).
 $
@@ -954,7 +954,7 @@ Please note that this planning graph is not only used for creating the ground mo
 The reachability analysis needs to take one of two parameters:
 - pg (describes the mutex-free planning graph) and
 - pgm (describes the planning graph using mutexes).
-Pass on the option by putting it in parentheses behind the option. By default, the primitiveReachability is *activated* and it *does* use mutexes.
+Pass on the option by putting it in parentheses behind the option. By default, the primitiveReachability is *activated* and it does *not* use mutexes.
 $
 
 
