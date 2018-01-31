@@ -13,7 +13,7 @@ import java.util.LinkedList;
 public class HtnMsGraph {
 
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, CascadingTables> graph;
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer> graph;
 
     public HashMap<Integer, NodeValue> idMapping;
 
@@ -23,16 +23,14 @@ public class HtnMsGraph {
     public Tuple3<Integer, Integer, Integer>[] labelledEdges;
 
 
-    public HtnMsGraph(Integer[] nodeIDS, Tuple3<Integer, Integer, Integer>[] edges, HashMap<Integer, NodeValue> IDMapping, int startNodeID
-                      , CascadingTables cascadingTables
-    ){
+    public HtnMsGraph(Integer[] nodeIDS, Tuple3<Integer, Integer, Integer>[] edges, HashMap<Integer, NodeValue> IDMapping, int startNodeID){
 
 
 
         this.cascadingTables = cascadingTables;
 
 
-        graph = new EdgeLabelledGraph<>(nodeIDS, edges, IDMapping, startNodeID, cascadingTables);
+        graph = new EdgeLabelledGraph<>(nodeIDS, edges, IDMapping, startNodeID);
 
         this.startNodeID = startNodeID;
         this.idMapping = IDMapping;
@@ -83,7 +81,7 @@ class TemporaryHtnMsGraph{
 
         CascadingTables cascadingTables = new CascadingTables();
 
-        HtnMsGraph htnMsGraph = new HtnMsGraph(nodeIDs, edgeArray, idMapping, startNodeID, cascadingTables);
+        HtnMsGraph htnMsGraph = new HtnMsGraph(nodeIDs, edgeArray, idMapping, startNodeID);
 
         return htnMsGraph;
     }

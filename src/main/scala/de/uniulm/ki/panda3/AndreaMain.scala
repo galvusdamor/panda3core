@@ -32,12 +32,12 @@ object MainAndrea {
     val outputPDF = "dot.pdf"
 
     // TRANSPORT
-    //val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
-    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
+    val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
+    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
 
     // ROVER
-    val domFile = "rover-domain.hddl"
-    val probFile = "pfile1.hddl"
+    //val domFile = "rover-domain.hddl"
+    //val probFile = "pfile1.hddl"
 
     val domInputStream = new FileInputStream(domFile)
     val probInputStream = new FileInputStream(probFile)

@@ -137,7 +137,7 @@ public final class Utils {
     public static void printMultiGraph(SasPlusProblem p, ClassicalMSGraph multiGraph, String outputfile) {
 
 
-        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, CascadingTables> stringMultiGraph = convertMultiGraphToStringGraph(p, multiGraph);
+        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer> stringMultiGraph = convertMultiGraphToStringGraph(p, multiGraph);
 
         Dot2PdfCompiler.writeDotToFile(stringMultiGraph, outputfile);
 
@@ -146,7 +146,7 @@ public final class Utils {
     public static void printHtnGraph(SasPlusProblem p, HtnMsGraph htnMsGraph, String outputfile) {
 
 
-        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, CascadingTables> stringMultiGraph = convertHtnGraphToStringGraph(p, htnMsGraph);
+        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer> stringMultiGraph = convertHtnGraphToStringGraph(p, htnMsGraph);
 
         Dot2PdfCompiler.writeDotToFile(stringMultiGraph, outputfile);
 
@@ -169,7 +169,7 @@ public final class Utils {
 
     }
 
-    public static EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, CascadingTables> convertMultiGraphToStringGraph(SasPlusProblem p, ClassicalMSGraph graph) {
+    public static EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer> convertMultiGraphToStringGraph(SasPlusProblem p, ClassicalMSGraph graph) {
 
 
         HashMap<Integer, NodeValue> idMapping = graph.idMapping;
@@ -179,13 +179,13 @@ public final class Utils {
 
 
 
-        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, CascadingTables> newGraph = new EdgeLabelledGraph<>(newNodes, newEdges, idMapping, graph.startNodeID, graph.cascadingTables);
+        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer> newGraph = new EdgeLabelledGraph<>(newNodes, newEdges, idMapping, graph.startNodeID);
 
 
         return newGraph;
     }
 
-    public static EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, CascadingTables> convertHtnGraphToStringGraph(SasPlusProblem p, HtnMsGraph graph) {
+    public static EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer> convertHtnGraphToStringGraph(SasPlusProblem p, HtnMsGraph graph) {
 
 
         HashMap<Integer, NodeValue> idMapping = graph.idMapping;
@@ -194,7 +194,7 @@ public final class Utils {
         Tuple3[] newEdges = convertHTNEdgesToStrings(p, graph.labelledEdges, idMapping);
 
 
-        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer, CascadingTables> newGraph = new EdgeLabelledGraph<>(newNodes, newEdges, idMapping, graph.startNodeID, graph.cascadingTables);
+        EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer> newGraph = new EdgeLabelledGraph<>(newNodes, newEdges, idMapping, graph.startNodeID);
 
 
         return newGraph;

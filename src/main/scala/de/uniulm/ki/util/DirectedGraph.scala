@@ -641,7 +641,7 @@ case class EdgeLabelledGraphSingle[T, L](arrayVertices: Array[T], labelledEdges:
   })
 }
 
-case class EdgeLabelledGraph[T, L, M, S, C](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M, startNodeID: S,  cascadingTables: C) extends DirectedGraphWithAlgorithms[T] {
+case class EdgeLabelledGraph[T, L, M, S](arrayVertices: Array[T], labelledEdges: Array[(T, L, T)], idMapping: M, startNodeID: S) extends DirectedGraphWithAlgorithms[T] {
 
   //def startNode = startNodeID
 
@@ -649,7 +649,6 @@ case class EdgeLabelledGraph[T, L, M, S, C](arrayVertices: Array[T], labelledEdg
 
   override def vertices: Seq[T] = arrayVertices.toSeq
 
-  def stateToNodeIDMapping = cascadingTables
 
   /*var distancesFromStart: java.util.HashMap[Integer, Integer] = _;
 

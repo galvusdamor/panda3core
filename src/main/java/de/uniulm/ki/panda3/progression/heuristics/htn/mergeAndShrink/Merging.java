@@ -95,9 +95,7 @@ public class Merging {
 
 
 
-        CascadingTables cascadingTables = new CascadingTables();
-
-        HtnMsGraph graph = new HtnMsGraph(nodeIDs, edgeTuple, idMapping, 0, cascadingTables);
+        HtnMsGraph graph = new HtnMsGraph(nodeIDs, edgeTuple, idMapping, 0);
 
         return graph;
 
@@ -164,11 +162,36 @@ public class Merging {
 
                     if (subTaskID == actualTaskIndex) {
 
+                        HashSet<Tuple3<Integer,Integer,Integer>> edgesToRemove = new HashSet<>();
 
-                        for (int nodeIDToAppend : nodesToAppend) {
+
+                        ArrayList<Tuple3<Integer, Integer, Integer>> tempEdges = new ArrayList<>(temporaryGraph.edges);
+
+
+                        for (int j=0; j<tempEdges.size(); j++){
+                            Tuple3<Integer, Integer, Integer> edge = tempEdges.get(j);
+                            if (nodesToAppend.contains(edge._3())){
+                                Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(edge._1(), edge._2(), temporaryGraph.startNodeID);
+
+                                edgesToRemove.add(edge);
+                                //temporaryGraph.edges.remove(edge);
+                                temporaryGraph.edges.add(newEdge);
+                            }
+                        }
+
+                        temporaryGraph.edges.removeAll(edgesToRemove);
+
+                        for (int idToRemove:nodesToAppend){
+                            temporaryGraph.idMapping.remove(idToRemove);
+                        }
+
+
+
+
+/*                        for (int nodeIDToAppend : nodesToAppend) {
                             Tuple3<Integer, Integer, Integer> edge = new Tuple3<>(nodeIDToAppend, -1, temporaryGraph.startNodeID);
                             temporaryGraph.edges.add(edge);
-                        }
+                        }*/
 
                     } else {
 

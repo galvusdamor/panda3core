@@ -129,7 +129,7 @@ abstract class ShrinkingStrategy {
 
         HashMap<Integer, Integer> distancesToGoalMap = new HashMap<>();
 
-        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> incomingEdgesMap = getIDToIncomingEdgesMap(graph);
+        HashMap<Integer, LinkedList<Tuple3<Integer, Integer, Integer>>> incomingEdgesMap = getIDToIncomingEdgesMap(graph);
 
 
         ArrayList<Integer> nextNodes = new ArrayList<>();
@@ -149,6 +149,7 @@ abstract class ShrinkingStrategy {
         }
 
 
+
         distancesToGoalMap = reverseBreadthSearchToFindDistances(p, nextNodes, incomingEdgesMap, distancesToGoalMap);
 
 
@@ -158,12 +159,12 @@ abstract class ShrinkingStrategy {
     }
 
 
-    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToIncomingEdgesMap(ClassicalMSGraph graph){
+    public static HashMap<Integer, LinkedList<Tuple3<Integer, Integer, Integer>>> getIDToIncomingEdgesMap(ClassicalMSGraph graph){
 
-        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
+        HashMap<Integer, LinkedList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
 
         for (int i: graph.idMapping.keySet()){
-            ArrayList<Tuple3<Integer, Integer, Integer>> edges = new ArrayList<>();
+            LinkedList<Tuple3<Integer, Integer, Integer>> edges = new LinkedList<>();
             outgoingEdgesMap.put(i,edges);
         }
 
@@ -197,7 +198,7 @@ abstract class ShrinkingStrategy {
 
 
     public static HashMap<Integer, Integer> reverseBreadthSearchToFindDistances(SasPlusProblem p, ArrayList<Integer> nextNodes,
-                                                                         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> incomingEdgesMap, HashMap<Integer, Integer> distancesFromGoal){
+                                                                         HashMap<Integer, LinkedList<Tuple3<Integer, Integer, Integer>>> incomingEdgesMap, HashMap<Integer, Integer> distancesFromGoal){
 
         ArrayList<Integer> newNextNodes = new ArrayList<>(nextNodes);
 
@@ -207,7 +208,7 @@ abstract class ShrinkingStrategy {
 
             int distanceOfNextNodeFromGoalNode = distancesFromGoal.get(nextNode);
 
-            ArrayList<Tuple3<Integer, Integer, Integer>> incomingEdges = incomingEdgesMap.get(nextNode);
+            LinkedList<Tuple3<Integer, Integer, Integer>> incomingEdges = incomingEdgesMap.get(nextNode);
             newNextNodes.remove(0);
             for (Tuple3<Integer, Integer, Integer> incomingEdge : incomingEdges){
                 int startID = incomingEdge._1();

@@ -11,7 +11,7 @@ import java.util.Set;
 public class ClassicalMSGraph {
 
 
-    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer, CascadingTables> graph;
+    public EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>, Integer> graph;
 
     public HashMap<Integer, NodeValue> idMapping;
 
@@ -32,7 +32,7 @@ public class ClassicalMSGraph {
 
 
 
-         graph = new EdgeLabelledGraph<>(nodeIDS, edges, IDMapping, startNodeID, cascadingTables);
+         graph = new EdgeLabelledGraph<>(nodeIDS, edges, IDMapping, startNodeID);
 
          this.startNodeID = startNodeID;
          this.usedFactIndexes = usedFactIndexes;
