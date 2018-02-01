@@ -106,15 +106,16 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         //Testing.testGraphs(flatProblem, methods, domain);
 
+        //HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
+        int obergrenze = 165;
+        HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getxGraphs(flatProblem, methods, domain, obergrenze);
+
+        //HtnMsGraph graph81 = presentGraphs.get(81);
+        //HtnMsGraph graph83 = presentGraphs.get(83);
 
 
-        Testing.testGraphMinimization(flatProblem,methods,domain);
-
-        System.exit(0);
-
-
-        HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
-
+        //System.out.println("Size of Graph 81: " + graph81.idMapping.size());
+        //System.out.println("Size of Graph 83: " + graph83.idMapping.size());
 
         Utils.printAllHtnGraphs(flatProblem, presentGraphs);
 
@@ -122,11 +123,23 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
 
 
+        Testing.testGraphMinimization(flatProblem,methods,domain);
+
+        System.exit(0);
+
+
+
+
+
+
+
+
+
         //HashMap<Integer,HtnMsGraph> presentGraphs = getAllGraphs(flatProblem, methods, domain);
-        int obergrenze = 30;
 
 
-        //presentGraphs = getxGraphs(flatProblem, methods, domain, obergrenze);
+
+        //
 
 
 

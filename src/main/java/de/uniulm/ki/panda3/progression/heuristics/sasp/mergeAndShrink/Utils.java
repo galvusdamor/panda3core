@@ -275,7 +275,24 @@ public final class Utils {
         for (Tuple3<Integer, Integer, Integer> oldEdge : oldEdges) {
 
 
-            if (oldEdge._1() != oldEdge._3()) {
+            String startEdge = Utils.getMultiIDString(p, oldEdge._1(), idMapping);
+            //                      "\"" + oldEdge._1() + ": "  + p.factStrs[oldEdge._1()] + "\"";
+            String endEdge = Utils.getMultiIDString(p, oldEdge._3(), idMapping);
+            //              "\"" + oldEdge._3() + ": "  + p.factStrs[oldEdge._3()] + "\"";
+            String labelEdge;
+            if (oldEdge._2()==-1){
+                labelEdge = "";
+            }else {
+                labelEdge = oldEdge._2() + ": " + allTasks[oldEdge._2()].shortInfo();
+            }
+            //String labelEdge = SingleGraphMethods.getOpString(p, oldEdge._2());
+            //"\"" + oldEdge._2() + ": " + p.opNames[oldEdge._2()] +  "\"";
+
+            Tuple3<String, String, String> newEdge = new Tuple3<>(startEdge, labelEdge, endEdge);
+            newEdges.add(newEdge);
+
+
+            /*if (oldEdge._1() != oldEdge._3()) {
 
 
                 //no self-loop
@@ -311,7 +328,7 @@ public final class Utils {
                     selfLoops.put(varIndex, selfLoop);
                 }
 
-            }
+            }*/
         }
 
         for (int nodeID : selfLoops.keySet()) {

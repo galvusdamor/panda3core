@@ -127,7 +127,7 @@ public class Testing {
 
                 System.out.println(index + ": Handle Task " + taskIndex);
 
-                System.out.println("isPrimitive " + t.isPrimitive());
+                //System.out.println("isPrimitive " + t.isPrimitive());
 
                 presentGraphs = Merging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs);
 

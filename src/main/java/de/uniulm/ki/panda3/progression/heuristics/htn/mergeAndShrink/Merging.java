@@ -30,6 +30,8 @@ public class Merging {
 
             graph = getHtnMsGraphForPrimitiveTask(p, taskIndex);
 
+            graph = GraphMinimization.minimizeGraph(p, graph);
+
             presentGraphs.put(taskIndex, graph);
 
         }else{
@@ -59,6 +61,7 @@ public class Merging {
 
 
             HtnMsGraph newGraph = temporaryGraph.convertToHtnMsGraph();
+            newGraph = GraphMinimization.minimizeGraph(p, newGraph);
             presentGraphs.put(taskIndex, newGraph);
 
         }
@@ -295,9 +298,18 @@ public class Merging {
             NodeValue newNodeValue2 = graph2.idMapping.get(oldGraph2ID);
 
             if ((newNodeValue1 instanceof HtnNodeValue) && (newNodeValue2 instanceof HtnNodeValue))  {
-                HtnNodeValue newNodeValue12 = (HtnNodeValue) newNodeValue1;
+
+
+                //Falls doch mit Infos über Merge-Nodes:
+
+                /*HtnNodeValue newNodeValue12 = (HtnNodeValue) newNodeValue1;
                 HtnNodeValue newNodeValue22 = (HtnNodeValue) newNodeValue2;
-                NodeValue newNodeValue = new HtnMergeNode(newNodeValue12, newNodeValue22, p);
+                NodeValue newNodeValue = new HtnMergeNode(newNodeValue12, newNodeValue22, p);*/
+
+                Boolean isGoalNode = newNodeValue1.isGoalNode() && newNodeValue2.isGoalNode();
+                NodeValue newNodeValue = new HtnElementaryNode(p,isGoalNode);
+
+
                 idMapping.put(i, newNodeValue);
             }else{
                 System.out.println("Wrong type!!");

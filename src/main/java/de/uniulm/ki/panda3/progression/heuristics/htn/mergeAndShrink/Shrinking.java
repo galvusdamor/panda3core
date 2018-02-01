@@ -2,6 +2,7 @@ package de.uniulm.ki.panda3.progression.heuristics.htn.mergeAndShrink;
 
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.Utils;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
+import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.HtnElementaryNode;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.HtnNodeValue;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.HtnShrinkNode;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.NodeValue;
@@ -61,9 +62,34 @@ public class Shrinking {
 
             NodeValue newNodeValue = graph.idMapping.get(toAggregate.get(0));
 
+
             tempReverseIDMapping.put(toAggregate.get(0), index);
 
+            //(1) ab hier mit unterem Code ersetzen, falls doch Shrink Node nötig
 
+            Boolean isGoalNode = newNodeValue.isGoalNode();
+
+            for (int j = 1; j < toAggregate.size(); j++) {
+
+                NodeValue newNodeValue2 = graph.idMapping.get(toAggregate.get(j));
+
+                if ((newNodeValue instanceof HtnNodeValue) && (newNodeValue2 instanceof HtnNodeValue)) {
+                    /*HtnNodeValue newNodeValue12 = (HtnNodeValue) newNodeValue;
+                    HtnNodeValue newNodeValue22 = (HtnNodeValue) newNodeValue2;
+                    newNodeValue = new HtnShrinkNode(newNodeValue12, newNodeValue22, p);*/
+                    tempReverseIDMapping.put(toAggregate.get(j), index);
+                    if (newNodeValue2.isGoalNode()) isGoalNode = true;
+
+                } else {
+                    System.out.println("Wrong type!!");
+                    System.exit(1);
+                }
+
+            }
+
+            newNodeValue = new HtnElementaryNode(p, isGoalNode);
+
+            /* falls doch mit shrink node Teil darüber ab (1) damit ersetzen:
             for (int j = 1; j < toAggregate.size(); j++) {
 
                 NodeValue newNodeValue2 = graph.idMapping.get(toAggregate.get(j));
@@ -73,12 +99,15 @@ public class Shrinking {
                     HtnNodeValue newNodeValue22 = (HtnNodeValue) newNodeValue2;
                     newNodeValue = new HtnShrinkNode(newNodeValue12, newNodeValue22, p);
                     tempReverseIDMapping.put(toAggregate.get(j), index);
+
                 } else {
                     System.out.println("Wrong type!!");
                     System.exit(1);
                 }
 
             }
+
+            newNodeValue = new HtnElementaryNode(p, isGoalNode);*/
 
             newIDMapping.put(index, newNodeValue);
             index++;
