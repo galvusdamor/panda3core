@@ -109,7 +109,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
           ReducedTask.intern(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
                              parameterConstraints map { _.update(domainUpdate) }, pre.asInstanceOf[And[Literal]],
                              eff.asInstanceOf[And[Literal]])
-        case _                                                                                              =>
+        case _                                                                                                =>
           GeneralTask(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
                       parameterConstraints map { _.update(domainUpdate) }, newPrecondition, newEffect)
       }
@@ -145,6 +145,12 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
 
   val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)]
   val effectsAsPredicateBool      : Seq[(Predicate, Boolean)]
+  lazy val addEffectsAsPredicate         = effectsAsPredicateBool collect { case (p, true) => p }
+  lazy val addEffectsAsPredicateSet      = addEffectsAsPredicate toSet
+  lazy val delEffectsAsPredicate         = effectsAsPredicateBool collect { case (p, false) => p }
+  lazy val delEffectsAsPredicateSet      = delEffectsAsPredicate toSet
+  lazy val posPreconditionAsPredicate    = preconditionsAsPredicateBool collect { case (p, true) => p }
+  lazy val posPreconditionAsPredicateSet = posPreconditionAsPredicate.toSet
 
   def areParametersAllowed(parameterConstants: Seq[Constant]): Boolean = parameterConstraints forall {
     case Equal(var1, var2: Variable)     => parameterConstants(parameters indexOf var1) == parameterConstants(parameters indexOf var2)

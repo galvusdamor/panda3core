@@ -165,6 +165,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         if (domain.isClassical) {
           encodingToUse match {
             case KautzSelmanEncoding => KautzSelman(timeCapsule, domain, initialPlan, planLength)
+            case ExistsStepEncoding => ExistsStep(timeCapsule, domain, initialPlan, planLength)
           }
         }
         //else if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
@@ -511,7 +512,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         (nodes, edges, ???, ???, ???)
       case ks: KautzSelman              =>
         val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
-        //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
+        println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
         val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
         val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => exitIfNot(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
         val primitiveSolution: Seq[PlanStep] = actionSequence map { case solAction =>
@@ -527,6 +528,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")
+        System exit 0
 
         (Nil,Nil,primitiveSolution,Map(),Map())
       case pbe: PathBasedEncoding[_, _] =>
@@ -901,3 +903,5 @@ object POCLDeleterEncoding extends POEncoding
 object POStateEncoding extends POEncoding
 
 object KautzSelmanEncoding extends POEncoding
+
+object ExistsStepEncoding extends POEncoding
