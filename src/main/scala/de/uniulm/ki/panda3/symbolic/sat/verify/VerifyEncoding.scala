@@ -327,7 +327,9 @@ object VerifyEncoding {
   }
 }
 
-case class Clause(disjuncts: Array[Int]) {}
+case class Clause(disjuncts: Array[Int]) {
+  override def toString: String = "Clause(" + disjuncts.mkString(",") + ")"
+}
 
 object Clause {
   val atomIndices = new mutable.HashMap[String, Int]()

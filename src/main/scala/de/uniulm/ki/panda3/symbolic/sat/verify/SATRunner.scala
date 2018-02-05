@@ -165,7 +165,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         if (domain.isClassical) {
           encodingToUse match {
             case KautzSelmanEncoding => KautzSelman(timeCapsule, domain, initialPlan, planLength)
-            case ExistsStepEncoding => ExistsStep(timeCapsule, domain, initialPlan, planLength)
+            case ExistsStepEncoding  => ExistsStep(timeCapsule, domain, initialPlan, planLength)
           }
         }
         //else if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
@@ -477,7 +477,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
   private def extractSolutionAndDecompositionGraph(encoder: VerifyEncoding, atomMap: Map[String, Int], literals: Set[Int], formulaVariables: Seq[String], allTrueAtoms: Set[String]):
   (Seq[String], Seq[(String, String)], Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)]) =
     encoder match {
-      case g: GeneralEncoding           =>
+      case g: GeneralEncoding =>
         // iterate through layers
         val nodes = Range(-1, encoder.numberOfLayers) flatMap { layer =>
           Range(0, g.numberOfActionsPerLayer) map { pos =>
@@ -510,7 +510,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         }
 
         (nodes, edges, ???, ???, ???)
-      case ks: KautzSelman              =>
+      case ks: KautzSelman    =>
         val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
         println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
         val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
@@ -528,9 +528,45 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")
-        System exit 0
 
-        (Nil,Nil,primitiveSolution,Map(),Map())
+        (Nil, Nil, primitiveSolution, Map(), Map())
+
+      case es: ExistsStep               =>
+        val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
+        //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
+        val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
+
+        println(actionsPerPosition map { case (p, acts) => "Position " + p + "\n" + (acts map { "\t" + _ } mkString ("\n")) } mkString "\n")
+
+        // try to get a linearisation of each position
+        var c = -1
+        val primitiveSolution: Seq[PlanStep] = actionsPerPosition.toSeq.sortBy(_._1) flatMap { case (p, acts) =>
+          val executedActions: Set[Task] = acts map { solAction =>
+            val pos = solAction.split("_").last.split(",").head.toInt
+            val actionIDX = solAction.split(",").last.toInt
+            domain.tasks(actionIDX)
+          }
+
+          val actionOrdering: Seq[Task] = executedActions.toSeq.sortWith(
+            {
+              case (t1, t2) => es.disablingGraphTotalOrder.indexOf(t1) < es.disablingGraphTotalOrder.indexOf(t2)
+            })
+
+          val x: Seq[PlanStep] = actionOrdering map { case a => c += 1; PlanStep(c, a, Nil) }
+
+          println("Time " + p)
+          println(actionOrdering map { "\t" + _.name } mkString ("\n"))
+
+          x
+        }
+
+        print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
+        println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))
+
+        checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
+        println(" done.")
+
+        (Nil, Nil, primitiveSolution, Map(), Map())
       case pbe: PathBasedEncoding[_, _] =>
         val nodes = formulaVariables filter { _.startsWith("action!") } filter allTrueAtoms.contains
 

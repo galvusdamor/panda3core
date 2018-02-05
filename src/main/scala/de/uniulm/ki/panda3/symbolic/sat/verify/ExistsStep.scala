@@ -32,29 +32,35 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
 
   println("Computing invariante [Rintanen]")
 
-  lazy val invariants: Set[((Predicate, Boolean), (Predicate, Boolean))] = {
-    val pMap: Map[Predicate, Int] = domain.predicates.zipWithIndex map { case (p, i) => (p, i + 1) } toMap
-    val mapP: Map[Int, Predicate] = pMap map { _.swap }
 
-    case class IntTask(task: Task) {
-      val pre: util.BitSet = task.posPreconditionAsPredicate.map(pMap).foldLeft(new util.BitSet())({ case (b, i) => b.set(i); b })
-      val add: util.BitSet = task.addEffectsAsPredicate.map(pMap).foldLeft(new util.BitSet())({ case (b, i) => b.set(i); b })
-      val del: util.BitSet = task.delEffectsAsPredicate.map(pMap).foldLeft(new util.BitSet())({ case (b, i) => b.set(i); b })
+  val pMap: Map[Predicate, Int] = domain.predicates.zipWithIndex map { case (p, i) => (p, i + 1) } toMap
+  val mapP: Map[Int, Predicate] = pMap map { _.swap }
 
-      val changed: util.BitSet = {
-        val r = new util.BitSet()
-        r.or(add)
-        r.or(del)
-        r
-      }
+  case class IntTask(task: Task) {
+    val preList: Array[Int] = task.posPreconditionAsPredicate.map(pMap).toArray
+    val addList: Array[Int] = task.addEffectsAsPredicate.map(pMap).toArray
+    val delList: Array[Int] = task.delEffectsAsPredicate.map(pMap).toArray
 
-      val deletesPosP: Array[Boolean] = domain.predicates.indices map { i => del get (i + 1) } toArray
-      val deletesNegP: Array[Boolean] = domain.predicates.indices map { i => add get (i + 1) } toArray
+    val pre: util.BitSet = preList.foldLeft(new util.BitSet())({ case (b, i) => b.set(i); b })
+    val add: util.BitSet = addList.foldLeft(new util.BitSet())({ case (b, i) => b.set(i); b })
+    val del: util.BitSet = delList.foldLeft(new util.BitSet())({ case (b, i) => b.set(i); b })
+
+    val changed: util.BitSet = {
+      val r = new util.BitSet()
+      r.or(add)
+      r.or(del)
+      r
     }
 
-    val tasks: Seq[IntTask] = domain.primitiveTasks map { IntTask }
+    val deletesPosP: Array[Boolean] = domain.predicates.indices map { i => del get (i + 1) } toArray
+    val deletesNegP: Array[Boolean] = domain.predicates.indices map { i => add get (i + 1) } toArray
 
+    val invertedEffects: Array[Int] = (addList map { p1 => -p1 }) ++ delList
+  }
 
+  val intTasks: Array[IntTask] = domain.primitiveTasks map { IntTask } toArray
+
+  lazy val invariants: Set[(Int, Int)] = {
     val v0: Seq[(Int, Int)] =
       domain.predicates flatMap { p1 =>
         val l1 = (p1, initialPlan.init.schema.addEffectsAsPredicateSet contains p1)
@@ -163,7 +169,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     //println(domain.predicates.sorted mkString "\n")
 
     def reduce(invar: Array[(Int, Int)]): Array[(Int, Int)] = {
-      val r = filter(invar, tasks)
+      val r = filter(invar, intTasks)
       //println(t.name)
       //if (v.size == 1) println(v.head._1._1.name + " " + v.head._1._2 + " v " + v.head._2._1.name + " " + v.head._2._2)
       //if (i % 100 == 0) {
@@ -173,14 +179,29 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     }
 
     val time001 = System.currentTimeMillis()
-    val res = reduce(v0.toArray).toSet[(Int, Int)] map {
-      case (a, b) =>
-        ((mapP(Math.abs(a)), a > 0), (mapP(Math.abs(b)), b > 0))
-    }
+    val res = reduce(v0.toArray).toSet[(Int, Int)]
     val time002 = System.currentTimeMillis()
     println("Invariant time: " + (time002 - time001) / 1000.0)
     res
   }
+
+  private val groupedInvariantsOffset               = domain.predicates.length + 2
+  private val groupedInvariants: Array[util.BitSet] = {
+    val group = invariants.groupBy(_._1)
+    // 0 is useless
+    Range(0, 2 * domain.predicates.length + 5) map { case p =>
+      val bs = new util.BitSet()
+      group.getOrElse(p - groupedInvariantsOffset, Nil) foreach { case (_, i) => bs set (i + groupedInvariantsOffset) }
+      bs
+    } toArray
+  }
+
+  def checkInvariant(a: Int, b: Int): Boolean =
+    if (Math.abs(a) < Math.abs(b)) groupedInvariants(a + groupedInvariantsOffset).get(b + groupedInvariantsOffset)
+    else if (Math.abs(a) > Math.abs(b)) groupedInvariants(b + groupedInvariantsOffset).get(a + groupedInvariantsOffset)
+    else false
+
+  val symbolicInvariants: Set[((Predicate, Boolean), (Predicate, Boolean))] = invariants map { case (a, b) => ((mapP(Math.abs(a)), a > 0), (mapP(Math.abs(b)), b > 0)) }
 
   println("Number of invariants: " + invariants.size)
   //println(invariants map { case (a, b) => (if (!a._2) "-" else "") + a._1.name + " v " + (if (!b._2) "-" else "") + b._1.name } mkString ("\n"))
@@ -194,33 +215,49 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
   val time1                               = System.currentTimeMillis()
   val disablingGraph: DirectedGraph[Task] = {
 
-    def applicable(task1: Task, task2: Task): Boolean = {
-      val precCan = task1.posPreconditionAsPredicate flatMap { p1 => task2.posPreconditionAsPredicate map { p2 => ((p1, false), (p2, false)) } }
-      val effCan1 = (task1.addEffectsAsPredicate map { p1 => (p1, false) }) ++ (task1.delEffectsAsPredicate map { p1 => (p1, true) })
-      val effCan2 = (task2.addEffectsAsPredicate map { p1 => (p1, false) }) ++ (task2.delEffectsAsPredicate map { p1 => (p1, true) })
-      val effCan = effCan1 flatMap { c1 => effCan2 map { c2 => (c1, c2) } }
-
-      (precCan ++ effCan) forall {
-        case ((ap, ab), (bp, bb)) if ap < bp => !invariants.contains((ap, ab), (bp, bb))
-        case ((ap, ab), (bp, bb)) if ap > bp => !invariants.contains((bp, bb), (ap, ab))
-        case _                               => true // identical ... ignore
+    def applicable(task1: IntTask, task2: IntTask): Boolean = {
+      var counter = false
+      // incompatibe preconditions via invariants
+      var i = 0
+      while (!counter && i < task1.preList.length) {
+        var j = 0
+        while (!counter && j < task2.preList.length) {
+          counter |= checkInvariant(-task1.preList(i), -task2.preList(j))
+          j += 1
+        }
+        i += 1
       }
+      // incompatible effects via invariants
+      i = 0
+      while (!counter && i < task1.invertedEffects.length) {
+        var j = 0
+        while (!counter && j < task2.invertedEffects.length) {
+          counter |= checkInvariant(task1.invertedEffects(i), task2.invertedEffects(j))
+          j += 1
+        }
+        i += 1
+      }
+      // are applicable if we have not found a counter example
+      !counter
     }
 
     def affects(task1: Task, task2: Task): Boolean = task1.delEffectsAsPredicate exists task2.posPreconditionAsPredicateSet.contains
 
     // compute affection
-    val predicateToDeleting: Map[Predicate, Seq[Task]] =
-      domain.primitiveTasks flatMap { t => t.delEffectsAsPredicate map { e => (t, e) } } groupBy (_._2) map { case (p, as) => p -> as.map(_._1) }
+    val predicateToDeleting: Map[Predicate, Array[IntTask]] =
+      intTasks flatMap { t => t.task.delEffectsAsPredicate map { e => (t, e) } } groupBy (_._2) map { case (p, as) => p -> as.map(_._1) }
 
-    val predicateToNeeding: Map[Predicate, Seq[Task]] =
-      domain.primitiveTasks flatMap { t => t.posPreconditionAsPredicate map { e => (t, e) } } groupBy (_._2) map { case (p, as) => p -> as.map(_._1) }
+    val predicateToNeeding: Map[Predicate, Array[IntTask]] =
+      intTasks flatMap { t => t.task.posPreconditionAsPredicate map { e => (t, e) } } groupBy (_._2) map { case (p, as) => p -> as.map(_._1) }
 
-    val edgesWithDuplicats: Seq[(Task, Task)] = predicateToDeleting.toSeq flatMap { case (p, as) => predicateToNeeding.getOrElse(p, Nil) flatMap { n => as map { d => (d, n) } } }
-    val edges: Seq[(Task, Task)] = (edgesWithDuplicats groupBy { _._1 } toSeq) flatMap { case (t1, t2) => (t2 map { _._2 } distinct) collect { case t if t != t1 => (t1, t) } }
-    // 7585838
+    val edgesWithDuplicats: Seq[(IntTask, IntTask)] =
+      predicateToDeleting.toSeq flatMap { case (p, as) => predicateToNeeding.getOrElse(p, new Array(0)) flatMap { n => as map { d => (d, n) } } }
+    val edges: Seq[(IntTask, IntTask)] = (edgesWithDuplicats groupBy { _._1 } toSeq) flatMap { case (t1, t2) => (t2 map { _._2 } distinct) collect { case t if t != t1 => (t1, t) } }
+    val time12 = System.currentTimeMillis()
+    println("Candidates (" + edges.length + ") generated: " + (time12 - time1))
+
     SimpleDirectedGraph(domain.primitiveTasks,
-                        edges filter { case (a, b) => applicable(a, b) }
+                        edges collect { case (a, b) if applicable(a, b) => (a.task, b.task) }
                         //edges
                         //domain.primitiveTasks.flatMap { a => domain.primitiveTasks collect { case b if a != b && applicable(a, b) && affects(a, b) => (a, b) } }
                        )
@@ -229,21 +266,70 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
   val time2 = System.currentTimeMillis()
   println("EDGELIST " + disablingGraph.edgeList.length + " of " + disablingGraph.vertices.size * (disablingGraph.vertices.size - 1) + " in " + (time2 - time1) / 1000.0)
   //println(disablingGraph.edgeList map { case (a, b) => a.name + " " + b.name } mkString ("\n"))
-  val scc   = disablingGraph.stronglyConnectedComponents
-  val time3 = System.currentTimeMillis()
-  println(((scc map { _.size } groupBy { x => x }).toSeq.sortBy(_._1) map { case (k, s) => s.size + "x" + k } mkString (", ")) + " in " + (time3 - time2) / 1000.0)
+  val allSCCS = disablingGraph.stronglyConnectedComponents
+  val time3   = System.currentTimeMillis()
+  println(((allSCCS map { _.size } groupBy { x => x }).toSeq.sortBy(_._1) map { case (k, s) => s.size + "x" + k } mkString (", ")) + " in " + (time3 - time2) / 1000.0)
+
+  val disablingGraphSCCOrdering: Seq[Seq[Task]] = disablingGraph.stronglyConnectedComponents map { _.toSeq }
+  val disablingGraphTotalOrder : Array[Task]    = disablingGraphSCCOrdering.flatten.toArray
 
   //Dot2PdfCompiler.writeDotToFile(disablingGraph, "disablingGraph.pdf")
 
-  System exit 0
+  //println("Non trivial SCCs")
+  //println(scc.filter(_.size > 1) map {s => s.map(_.name).mkString(", ")} mkString("\n"))
+
+  //System exit 0
+
+  def chain(position: Int, j: Int, lit: Predicate): String = "chain_" + position + "^" + j + ";" + predicateIndex(lit)
+
+  override lazy val stateTransitionFormula: Seq[Clause] = {
+    val t0001 = System.currentTimeMillis()
+    // we need one chain per predicate
+    val parallelismFormula = domain.predicates flatMap { case m =>
+      val E = disablingGraphTotalOrder.zipWithIndex filter { _._1.delEffectsAsPredicateSet contains m }
+      val R = disablingGraphTotalOrder.zipWithIndex filter { _._1.posPreconditionAsPredicateSet contains m }
+
+      Range(0, taskSequenceLength) flatMap { case position =>
+        // generate chain restriction for every SCC
+        val f1: Seq[Clause] = E.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (oi, i)) =>
+          // search forward for next R
+          var newR = rpos
+          while (newR < R.length && R(newR)._2 <= i) newR += 1
+
+          if (newR < R.length)
+            (clausesSoFar :+ impliesSingle(action(K - 1, position, oi), chain(position, R(newR)._2, m)), newR)
+          else
+            (clausesSoFar, newR)
+                                                                       })._1
+
+        val f2 = R.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (ai, i)) =>
+          // search forward for next R
+          var newR = rpos
+          while (newR < R.length && R(newR)._2 <= i) newR += 1
+
+          if (newR < R.length)
+            (clausesSoFar :+ impliesSingle(chain(position, i, m), chain(position, R(newR)._2, m)), newR)
+          else
+            (clausesSoFar, newR)
+                                                          })._1
+
+        val f3 = R map { case (ai, i) => impliesNot(chain(position, i, m), action(K - 1, position, ai)) }
+        f1 ++ f2 ++ f3
+      }
+    }
+
+    val t0002 = System.currentTimeMillis()
+    println("ExistsStep Formula: " + (t0002 - t0001) + "ms")
 
 
-  override lazy val stateTransitionFormula: Seq[Clause] =
-    stateTransitionFormulaOfLength(taskSequenceLength) ++
-      Range(0, taskSequenceLength).flatMap(position => {
-        //atMostOneOf(domain.primitiveTasks map { action(K - 1, position, _) })
-        Nil
-      })
+    val invariantFormula = Range(0, taskSequenceLength + 1) flatMap { case position =>
+      symbolicInvariants map { case ((ap, ab), (bp, bb)) => Clause((statePredicate(K - 1, position, ap), ab) :: (statePredicate(K - 1, position, bp), bb) :: Nil) }
+    }
+
+    val transitionFormula = stateTransitionFormulaOfLength(taskSequenceLength)
+
+    transitionFormula ++ parallelismFormula ++ invariantFormula
+  }
 
   override lazy val goalState: Seq[Clause] =
     goalStateOfLength(taskSequenceLength)
