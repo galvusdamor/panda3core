@@ -9,13 +9,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
-public final class GraphMinimization {
+public final class GraphMinimation {
 
 
     public static HtnMsGraph minimizeGraph(SasPlusProblem p, HtnMsGraph graph){
 
 
-        System.out.println("start minimization.");
+        //System.out.println("start minimation.");
 
         graph = shrinkSameIncomingOrOutgoingEdges(p, graph);
 

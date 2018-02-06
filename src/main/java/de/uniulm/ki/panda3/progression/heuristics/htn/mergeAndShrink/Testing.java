@@ -7,8 +7,6 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.util.DirectedGraph;
-import scala.Tuple2;
-import scala.Tuple3;
 import scala.collection.JavaConverters;
 
 import java.util.*;
@@ -17,14 +15,14 @@ public class Testing {
 
 
 
-    public static void testGraphMinimization(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain){
+    public static void testGraphMinimization(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
 
 
-        HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(p, methods, domain);
+        HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(p, methods, domain, shrinkingBound, shrinkingStrategy);
 
         HtnMsGraph testGraph = presentGraphs.get(16);
 
-        HtnMsGraph testMinimizedGraph = GraphMinimization.minimizeGraph(p, testGraph);
+        HtnMsGraph testMinimizedGraph = GraphMinimation.minimizeGraph(p, testGraph);
 
         Utils.printHtnGraph(p, testMinimizedGraph, "MinimizedGraph.pdf");
 
@@ -34,7 +32,7 @@ public class Testing {
 
 
 
-    public static HashMap<Integer,HtnMsGraph> getAllGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain){
+    public static HashMap<Integer,HtnMsGraph> getAllGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
 
         HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
 
@@ -54,7 +52,7 @@ public class Testing {
 
                 System.out.println("Handle Task " + taskIndex);
 
-                presentGraphs = Merging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs);
+                presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs, shrinkingBound, shrinkingStrategy);
 
                 //System.out.println("Tasks in present Tasks: " + presentGraphs.keySet());
 
@@ -67,7 +65,7 @@ public class Testing {
 
 
 
-    public static void testGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain){
+    public static void testGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
 
 
         HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
@@ -84,14 +82,14 @@ public class Testing {
 
         for (int testTaskIndex : testIndexes) {
 
-            presentGraphs = Merging.getHtnMsGraphForTaskIndex(p, methods, testTaskIndex, presentGraphs);
+            presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, testTaskIndex, presentGraphs, shrinkingBound, shrinkingStrategy);
 
         }
 
 
         Utils.printAllHtnGraphs(p, presentGraphs);
 
-        HtnMsGraph testHtnGraph = Merging.mergeGraphs(presentGraphs.get(109), presentGraphs.get(105), p);
+        HtnMsGraph testHtnGraph = HtnMerging.mergeGraphs(presentGraphs.get(109), presentGraphs.get(105), p, shrinkingBound, shrinkingStrategy);
 
         Utils.printHtnGraph(p, testHtnGraph, "testHtnGraph.pdf");
 
@@ -102,7 +100,7 @@ public class Testing {
 
 
 
-    public static HashMap<Integer,HtnMsGraph> getxGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int x){
+    public static HashMap<Integer,HtnMsGraph> getxGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int x,  int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
 
         HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
 
@@ -129,7 +127,7 @@ public class Testing {
 
                 //System.out.println("isPrimitive " + t.isPrimitive());
 
-                presentGraphs = Merging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs);
+                presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs, shrinkingBound, shrinkingStrategy);
 
                 //System.out.println("Tasks in present Tasks: " + presentGraphs.keySet());
 

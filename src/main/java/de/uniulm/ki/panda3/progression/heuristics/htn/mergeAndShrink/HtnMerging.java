@@ -1,23 +1,21 @@
 package de.uniulm.ki.panda3.progression.heuristics.htn.mergeAndShrink;
 
-import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.CascadingTables;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.Utils;
 import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.*;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
-import scala.Array;
 import scala.Tuple2;
 import scala.Tuple3;
 
 import java.util.*;
 
-public class Merging {
+public class HtnMerging {
 
 
 
-    public static HashMap<Integer,HtnMsGraph> getHtnMsGraphForTaskIndex(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, int taskIndex, HashMap<Integer,HtnMsGraph> presentGraphs){
+    public static HashMap<Integer,HtnMsGraph> getHtnMsGraphForTaskIndex(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, int taskIndex, HashMap<Integer,HtnMsGraph> presentGraphs,  int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
 
 
         Task t = ProgressionNetwork.indexToTask[taskIndex];
@@ -30,7 +28,7 @@ public class Merging {
 
             graph = getHtnMsGraphForPrimitiveTask(p, taskIndex);
 
-            graph = GraphMinimization.minimizeGraph(p, graph);
+            graph = GraphMinimation.minimizeGraph(p, graph);
 
             presentGraphs.put(taskIndex, graph);
 
@@ -51,17 +49,19 @@ public class Merging {
 
             List<ProMethod> proMethods = methods.get(t);
 
+            temporaryGraph = handleProMethods(p, presentGraphs, proMethods, temporaryGraph, taskIndex, shrinkingBound, shrinkingStrategy);
 
-            for (ProMethod proMethod : proMethods){
 
-                temporaryGraph = handleProMethod(p, presentGraphs,temporaryGraph, proMethod, taskIndex);
-            }
+            /*for (ProMethod proMethod : proMethods){
+
+                temporaryGraph = handleProMethod(p, presentGraphs,temporaryGraph, proMethod, taskIndex, shrinkingBound, shrinkingStrategy);
+            }*/
 
 
 
 
             HtnMsGraph newGraph = temporaryGraph.convertToHtnMsGraph();
-            newGraph = GraphMinimization.minimizeGraph(p, newGraph);
+            newGraph = GraphMinimation.minimizeGraph(p, newGraph);
             presentGraphs.put(taskIndex, newGraph);
 
         }
@@ -69,6 +69,188 @@ public class Merging {
 
 
         return presentGraphs;
+    }
+
+    public static TemporaryHtnMsGraph handleProMethods(SasPlusProblem p, HashMap<Integer,HtnMsGraph> presentGraphs, List<ProMethod> proMethods, TemporaryHtnMsGraph temporaryGraph, int taskIndex, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
+
+
+
+
+        HashMap<Integer, TaskDecomposition> proMethodToTaskDecompositionMap = new HashMap<>();
+        HashMap<Integer, Integer> proMethodIndexToAdditionalSizeMap = new HashMap<>();
+
+        for (int i=0; i<proMethods.size(); i++){
+
+            ProMethod proMethod = proMethods.get(i);
+
+            if (proMethod.subtasks.length==1){
+
+                Task subtask = proMethod.subtasks[0];
+                int subtaskIndex = ProgressionNetwork.taskToIndex.get(subtask);
+
+                if (subtaskIndex==taskIndex){
+
+                    int additionalSize = 0;
+                    DirectRecursiveDecomposition decomposition = new DirectRecursiveDecomposition();
+                    proMethodToTaskDecompositionMap.put(i,decomposition);
+                    proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
+
+                }else {
+
+                    int additionalSize = 1;
+                    PrimitiveDecomposition decomposition = new PrimitiveDecomposition(additionalSize, subtaskIndex);
+                    proMethodToTaskDecompositionMap.put(i, decomposition);
+                    proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
+                }
+
+            }else if (proMethod.subtasks.length==2) {
+
+                if (proMethod.orderings.size() > 0) {
+
+                    //ordered Subtasks
+                    int indexOfFirstSubtask = proMethod.orderings.get(0)[0];
+                    int indexOfSecondSubtask = proMethod.orderings.get(0)[1];
+                    Task subtask1 = proMethod.subtasks[indexOfFirstSubtask];
+                    Task subtask2 = proMethod.subtasks[indexOfSecondSubtask];
+                    int subtask1Index = ProgressionNetwork.taskToIndex.get(subtask1);
+                    int subtask2Index = ProgressionNetwork.taskToIndex.get(subtask2);
+                    HtnMsGraph graph1 = presentGraphs.get(subtask1Index);
+                    if (subtask2Index==taskIndex){
+
+                        int additionalSize = graph1.arrayVertices.length-2;
+                        OrderedRecursiveDecomposition decomposition = new OrderedRecursiveDecomposition(additionalSize, graph1);
+                        proMethodToTaskDecompositionMap.put(i,decomposition);
+                        proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
+
+                    }else {
+                        HtnMsGraph graph2 = presentGraphs.get(subtask2Index);
+                        int additionalSize = calculateSizeOfOrderedSubGraphs(graph1, graph2)-1;
+
+                        OrderedDecomposition decomposition = new OrderedDecomposition(additionalSize, graph1, graph2);
+                        proMethodToTaskDecompositionMap.put(i,decomposition);
+                        proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
+                    }
+
+                }else {
+
+                    //unorderedSubtasks
+
+                    Task subtask1 = proMethod.subtasks[0];
+                    Task subtask2 = proMethod.subtasks[1];
+                    int subtask1Index = ProgressionNetwork.taskToIndex.get(subtask1);
+                    int subtask2Index = ProgressionNetwork.taskToIndex.get(subtask2);
+                    HtnMsGraph graph1 = presentGraphs.get(subtask1Index);
+                    HtnMsGraph graph2 = presentGraphs.get(subtask2Index);
+
+                    int additionalSize = calculateSizeOfOrderedSubGraphs(graph1, graph2)-1;
+                    UnorderedDecomposition decomposition = new UnorderedDecomposition(additionalSize, graph1, graph2);
+                    proMethodToTaskDecompositionMap.put(i,decomposition);
+                    proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
+
+                }
+            } else {
+            throw new IllegalArgumentException("can only handle methods with 1 or two tasks");
+            }
+
+
+
+
+        }
+
+        int sizeOfNewGraph=1;
+
+        for (TaskDecomposition taskDecomposition : proMethodToTaskDecompositionMap.values()){
+            sizeOfNewGraph+=taskDecomposition.additionalSizeAfterExecution;
+        }
+
+        if(sizeOfNewGraph<=shrinkingBound) {
+
+            //no need to shrink
+
+            for (ProMethod proMethod : proMethods) {
+
+                temporaryGraph = handleProMethod(p, presentGraphs, temporaryGraph, proMethod, taskIndex, shrinkingBound, shrinkingStrategy);
+
+            }
+        }else {
+            //need to shrink
+
+            Boolean ableToShrink = true;
+
+            while ((sizeOfNewGraph>shrinkingBound) && (ableToShrink == true)) {
+                //find biggest DecompositionTask
+                int maximumAdditionalSize = Collections.max(proMethodIndexToAdditionalSizeMap.values());
+
+                for (int proMethodIndex : proMethodIndexToAdditionalSizeMap.keySet()) {
+
+                    if (proMethodIndex == maximumAdditionalSize) {
+                        //shrink
+
+                        TaskDecomposition oldTaskDecomposition = proMethodToTaskDecompositionMap.get(proMethodIndex);
+                        try {
+                            TaskDecomposition newTaskDecomposition = shrinkGraphsOfTaskDecomposition(oldTaskDecomposition);
+                            proMethodToTaskDecompositionMap.put(proMethodIndex, newTaskDecomposition);
+                            sizeOfNewGraph -= oldTaskDecomposition.additionalSizeAfterExecution;
+                            sizeOfNewGraph += newTaskDecomposition.additionalSizeAfterExecution;
+                            proMethodIndexToAdditionalSizeMap.put(proMethodIndex, newTaskDecomposition.additionalSizeAfterExecution);
+                        }catch (IllegalArgumentException e){
+                            ableToShrink=false;
+                        }
+
+
+                    }
+
+
+                }
+
+
+
+            }
+        }
+
+        return temporaryGraph;
+
+    }
+
+    public static TaskDecomposition shrinkGraphsOfTaskDecomposition(TaskDecomposition taskDecomposition){
+
+
+        if (taskDecomposition instanceof PrimitiveDecomposition){
+
+            throw new IllegalArgumentException("cannot shrink any more!");
+
+        }
+        if (taskDecomposition instanceof OrderedDecomposition){
+
+        }
+        if (taskDecomposition instanceof DirectRecursiveDecomposition){
+
+        }
+        if (taskDecomposition instanceof OrderedRecursiveDecomposition){
+
+        }
+        if (taskDecomposition instanceof UnorderedDecomposition){
+
+        }
+
+
+        return taskDecomposition;
+    }
+
+    public static int calculateSizeOfOrderedSubGraphs(HtnMsGraph graph1, HtnMsGraph graph2){
+
+        int size = graph1.arrayVertices.length + graph2.arrayVertices.length - 1;
+
+
+        return size;
+    }
+
+    public static int calculateSizeOfUnOrderedSubGraphs(HtnMsGraph graph1, HtnMsGraph graph2){
+
+        int size = graph1.arrayVertices.length * graph2.arrayVertices.length;
+
+
+        return size;
     }
 
     public static HtnMsGraph getHtnMsGraphForPrimitiveTask(SasPlusProblem p, int taskIndex){
@@ -105,7 +287,7 @@ public class Merging {
     }
 
 
-    public static TemporaryHtnMsGraph handleProMethod(SasPlusProblem p, HashMap<Integer,HtnMsGraph> presentGraphs, TemporaryHtnMsGraph temporaryGraph, ProMethod proMethod, int actualTaskIndex){
+    public static TemporaryHtnMsGraph handleProMethod(SasPlusProblem p, HashMap<Integer,HtnMsGraph> presentGraphs, TemporaryHtnMsGraph temporaryGraph, ProMethod proMethod, int actualTaskIndex,  int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
 
         Map<Task, Integer> taskToIndexMapping = ProgressionNetwork.taskToIndex;
 
@@ -243,7 +425,7 @@ public class Merging {
                 HtnMsGraph graphOfSubtask2 = presentGraphs.get(subtask2Index);
 
 
-                HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p);
+                HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p, shrinkingBound, shrinkingStrategy);
 
                 temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph, newGraph, temporaryGraph.startNodeID)._2;
 
@@ -259,7 +441,41 @@ public class Merging {
 
     }
 
-    public static HtnMsGraph mergeGraphs(HtnMsGraph graph1, HtnMsGraph graph2, SasPlusProblem p){
+    public static HtnMsGraph mergeGraphs(HtnMsGraph graph1, HtnMsGraph graph2, SasPlusProblem p, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
+
+        int sizeOfGraph1 = graph1.idMapping.keySet().size();
+        int sizeOfGraph2 = graph2.idMapping.keySet().size();
+
+        //System.out.println("Shrinking Bound: " + shrinkingBound);
+
+        int sizeOfNewGraph = sizeOfGraph1*sizeOfGraph2;
+
+        while (sizeOfNewGraph>shrinkingBound){
+
+
+
+
+            //System.out.println("Size of new Graph: " + sizeOfNewGraph);
+
+            //System.out.println("Size of Graph 1: " + sizeOfGraph1);
+            //System.out.println("Size of Graph 2: " + sizeOfGraph2);
+
+
+
+
+            if (sizeOfGraph2>sizeOfGraph1){
+                graph2 = shrinkingStrategy.shrink(p, graph2);
+            }else {
+                graph1 = shrinkingStrategy.shrink(p, graph1);
+            }
+
+            sizeOfGraph1 = graph1.idMapping.keySet().size();
+            sizeOfGraph2 = graph2.idMapping.keySet().size();
+
+            sizeOfNewGraph = sizeOfGraph1*sizeOfGraph2;
+
+
+        }
 
 
         Integer[] graph1Nodes = (Integer[]) graph1.arrayVertices;
@@ -456,6 +672,76 @@ public class Merging {
 
     }
 
+
+
+}
+
+
+abstract class TaskDecomposition {
+
+    int additionalSizeAfterExecution;
+
+}
+
+class PrimitiveDecomposition extends TaskDecomposition {
+
+    public int subtaskIndex;
+
+    public PrimitiveDecomposition(int sizeAfterExecution, int subtaskIndex){
+
+        this.additionalSizeAfterExecution = sizeAfterExecution;
+        this.subtaskIndex = subtaskIndex;
+    }
+
+}
+
+class OrderedDecomposition extends TaskDecomposition {
+
+    public HtnMsGraph graph1;
+    public HtnMsGraph graph2;
+
+    public OrderedDecomposition(int sizeAfterExecution, HtnMsGraph graph1, HtnMsGraph graph2){
+
+        this.additionalSizeAfterExecution = sizeAfterExecution;
+        this.graph1 = graph1;
+        this.graph2 = graph2;
+    }
+
+}
+
+class OrderedRecursiveDecomposition extends TaskDecomposition {
+
+    public HtnMsGraph graph1;
+
+    public OrderedRecursiveDecomposition(int sizeAfterExecution, HtnMsGraph graph1){
+
+        this.additionalSizeAfterExecution = sizeAfterExecution;
+        this.graph1 = graph1;
+    }
+
+}
+
+class DirectRecursiveDecomposition extends TaskDecomposition {
+
+
+    public DirectRecursiveDecomposition(){
+
+        this.additionalSizeAfterExecution = 0;
+    }
+
+}
+
+class UnorderedDecomposition extends TaskDecomposition {
+
+    public HtnMsGraph graph1;
+    public HtnMsGraph graph2;
+
+    public UnorderedDecomposition(int sizeAfterExecution, HtnMsGraph graph1, HtnMsGraph graph2){
+
+        this.additionalSizeAfterExecution = sizeAfterExecution;
+        this.graph1 = graph1;
+        this.graph2 = graph2;
+    }
 
 
 }

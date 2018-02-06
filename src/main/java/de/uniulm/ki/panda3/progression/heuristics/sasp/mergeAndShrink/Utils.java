@@ -159,11 +159,14 @@ public final class Utils {
 
             String outputfile = "htnGraph" + i +  ".pdf";
 
-            if (graphs.get(i).idMapping.keySet().size()<50) {
+            System.out.println("Print Graph " + i);
+            Utils.printHtnGraph(p, graphs.get(i), outputfile);
+
+            /*if (graphs.get(i).idMapping.keySet().size()<50) {
 
                 System.out.println("Print Graph " + i);
                 Utils.printHtnGraph(p, graphs.get(i), outputfile);
-            }
+            }*/
 
         }
 

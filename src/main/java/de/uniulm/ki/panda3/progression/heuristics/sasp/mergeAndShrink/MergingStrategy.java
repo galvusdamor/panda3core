@@ -256,10 +256,6 @@ abstract class MergingStrategy {
 
         Integer[] graph1Nodes = (Integer[]) graph1.arrayVertices;
 
-        Tuple3<Integer, Integer, Integer>[] graph1Edges = graph1.labelledEdges;
-
-
-        Tuple3<Integer, Integer, Integer>[] graph2Edges = graph2.labelledEdges;
 
         Integer[] graph2Nodes = (Integer[]) graph2.arrayVertices;
 
