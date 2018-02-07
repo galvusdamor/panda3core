@@ -43,7 +43,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     //
     sorts foreach { s => s.subSorts foreach { ss => assert(sorts contains ss) } }
     decompositionMethods foreach { dm =>
-      assert(taskSet contains dm.abstractTask)
+      assert(taskSet contains dm.abstractTask, "abstract task " + dm.abstractTask + "not contained")
       assert(dm.subPlan.planStepsAndRemovedPlanSteps.length == dm.subPlan.planSteps.length)
       dm.subPlan.planStepsWithoutInitGoal map { _.schema } foreach { task =>
         if (!(taskSet contains task)) {
@@ -121,7 +121,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val minimumMethodSize: Int = if (decompositionMethods.nonEmpty) decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min else -1
   lazy val maximumMethodSize: Int = if (decompositionMethods.nonEmpty) decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max else -1
 
-  lazy val isClassical             : Boolean = decompositionMethods.isEmpty
+  lazy val isClassical             : Boolean = decompositionMethods.isEmpty && abstractTasks.isEmpty
   lazy val isGround                : Boolean = predicates forall { _.argumentSorts.isEmpty }
   lazy val isTotallyOrdered        : Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
   lazy val isHybrid                : Boolean =
@@ -267,5 +267,9 @@ case class SASPlusRepresentation(sasPlusProblem: SasPlusProblem, sasPlusIndexToT
 
   lazy val predicateToSASPlusIndex: Map[Predicate, Int] = sasPlusIndexToPredicate map { case (a, b) => b -> a }
 
-  override def update(domainUpdate: DomainUpdate): SASPlusRepresentation = this.copy(sasPlusIndexToTask = sasPlusIndexToTask map { case (i, t) => (i, t update domainUpdate) })
+  override def update(domainUpdate: DomainUpdate): SASPlusRepresentation = domainUpdate match {
+    case RemovePredicate(predicatesToRemove) =>
+      SASPlusRepresentation(sasPlusProblem, sasPlusIndexToTask map { case (i, t) => i -> t.update(domainUpdate) }, sasPlusIndexToPredicate filterNot { predicatesToRemove contains _._2 })
+    case _                                   => this.copy(sasPlusIndexToTask = sasPlusIndexToTask map { case (i, t) => (i, t update domainUpdate) })
+  }
 }

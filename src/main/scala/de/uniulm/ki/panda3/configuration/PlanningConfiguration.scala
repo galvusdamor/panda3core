@@ -726,6 +726,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         case SearchResult | SearchResultWithDecompositionTree =>
           // start process of translating the solution back to something readable (i.e. lifted)
           result.headOption
+        case SearchResultInVerificationFormat => result.headOption.map({p =>
+          p.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive } map { ps => ps.schema.name } mkString ";"
+                                                                       }).getOrElse("")
         case AllFoundPlans                                    => result
         case SearchStatistics                                 =>
           // write memory info
@@ -1070,7 +1073,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     // naive task decomposition graph
     timeCapsule start GROUNDED_TDG_ANALYSIS
     val tdgResult = if (preprocessingConfiguration.groundedTaskDecompositionGraph.isDefined) {
-      val actualConfig = if (groundedResult._1._1.isGround) NaiveTDG else preprocessingConfiguration.groundedTaskDecompositionGraph.get
+      val actualConfig = preprocessingConfiguration.groundedTaskDecompositionGraph.get
       info(actualConfig.toString + " ... ")
       // get the reachability analysis, if there is none, just use the trivial one
       val newAnalysisMap = runGroundedTaskDecompositionGraph(groundedResult._1._1, groundedResult._1._2, groundedResult._2, actualConfig)
@@ -1114,7 +1117,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         compiled
       })
 
-    if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length) ((compiledResult, tdgResult._2), timeCapsule)
+    if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length ||
+      (compiledResult._1.abstractTasks.nonEmpty && compiledResult._1.decompositionMethods.isEmpty)) ((compiledResult, tdgResult._2), timeCapsule)
     else runReachabilityAnalyses(compiledResult._1, compiledResult._2, runForGrounder, timeCapsule)
   }
 
@@ -1171,7 +1175,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       info("Grounding ... ")
       timeCapsule start GROUNDING
-      val result: (Domain, Plan) = {
+
+      val groundingResult: (Domain, Plan) = {
         val groundedDomainAndProblem = Grounding.transform(domainAndPlan, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
 
         if (preprocessingConfiguration.convertToSASP && (!domainAndPlan._1.containEitherType || !preprocessingConfiguration.allowSASPFromStrips)) {
@@ -1201,6 +1206,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                         )
           (groundedDomainAndProblem._1.copy(sasPlusRepresentation = Some(saspRepresentation)), groundedDomainAndProblem._2)
         }
+      }
+
+     // if we are doing a plan verification curtail the model here, i.e. remove all unreachable primitive tasks
+
+      val result = searchConfiguration match {
+        case SATPlanVerification(_, plan) =>
+          val planActions = plan.split(";")
+          val primitivesNotOccurringInPlan = groundingResult._1.primitiveTasks filterNot { t => groundingResult._2.planStepTasksSet.contains(t) || planActions.contains(t.name) }
+          PruneHierarchy.transform(groundingResult, primitivesNotOccurringInPlan.toSet)
+        case _                            => groundingResult
       }
 
 
@@ -1299,6 +1314,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
        )
+
 
   protected def predefinedConfigurations: Seq[(String, (ParameterMode, (Option[String]) => PlanningConfiguration.this.type))] =
     (PredefinedConfigurations.parsingConfigs.toSeq map { case (k, p) =>
@@ -2032,6 +2048,7 @@ case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) extend
          "-outputStatus" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchStatus).asInstanceOf[this.type] }),
          "-outputPlan" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchResult).asInstanceOf[this.type] }),
          "-outputPlanWithHierarchy" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchResultWithDecompositionTree).asInstanceOf[this.type] }),
+         "-outputPlanForVerification" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchResultInVerificationFormat).asInstanceOf[this.type] }),
          "-outputInternalPlan" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + InternalSearchResult).asInstanceOf[this.type] }),
          "-outputAllPlans" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + AllFoundPlans).asInstanceOf[this.type] }),
          "-outputAllPlansWithH*" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + AllFoundSolutionPathsWithHStar).asInstanceOf[this.type] }),

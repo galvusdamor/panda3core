@@ -254,7 +254,7 @@ object VerifyEncoding {
 
     def printMap(map: Map[Task, Map[Int, Int]]): Unit = {
       println("\nMAP")
-      println(map map { case (t, m) => t.name + " -> " + m.toString } mkString "\n")
+      println(map.toSeq.sortBy(_._1.name) map { case (t, m) => t.name + " map: " + m.toSeq.sorted.map(x => x._1 + "->" + x._2).mkString(" ") } mkString "\n")
     }
 
     def recomputePlan(plan: Plan, map: Map[Task, Map[Int, Int]]): Map[Int, Int] = {
@@ -291,6 +291,7 @@ object VerifyEncoding {
     // run through the topological sorting of the condensation
     val expandedMap = condensationTopSort.foldLeft(Map[Task, Map[Int, Int]]())(
       { case (map, scc) =>
+        //println("deal with " + scc.map(_.name).mkString(" "))
         var initalised = scc.foldLeft(map)({ case (m, t) => m + (t -> (if (t.isPrimitive) Map(1 -> 1) else Map())) })
 
         var changed = true
@@ -308,6 +309,10 @@ object VerifyEncoding {
 
     val initialPlanMap = recomputePlan(initialPlan, expandedMap)
 
+    //printMap(expandedMap)
+
+    //println(initialPlan.planStepsWithoutInitGoal map {_.schema.name} mkString "\n")
+
     if (initialPlanMap.isEmpty) 0 else initialPlanMap.values.max
   }
 
@@ -316,21 +321,23 @@ object VerifyEncoding {
     val TSTGPath = computeTSTGK(domain, plan, taskSequenceLength)
     val minimumMethodSize = computeMethodSize(domain, plan, taskSequenceLength)
     val tdg = computeTDG(domain, plan, taskSequenceLength, Math.max, 0)
-    val tdgmin = computeTDG(domain, plan, taskSequenceLength, Math.min, Integer.MAX_VALUE)
+    //val tdgmin = computeTDG(domain, plan, taskSequenceLength, Math.min, Integer.MAX_VALUE)
 
     println("LEN " + taskSequenceLength)
     println("ICAPS: " + icapsPaperLimit)
     println("TSTG: " + TSTGPath)
     println("Method: " + minimumMethodSize)
     println("DP max: " + tdg)
-    println("DP min: " + tdgmin)
+    //println("DP min: " + tdgmin)
     //System exit 0
 
     Math.min(icapsPaperLimit, Math.min(TSTGPath, Math.min(minimumMethodSize, tdg)))
   }
 }
 
-case class Clause(disjuncts: Array[Int]) {}
+case class Clause(disjuncts: Array[Int]) {
+  override def toString: String = "Clause(" + disjuncts.mkString(",") + ")"
+}
 
 object Clause {
   val atomIndices = new mutable.HashMap[String, Int]()

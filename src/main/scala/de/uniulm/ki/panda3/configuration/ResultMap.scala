@@ -35,6 +35,12 @@ object SearchResult extends ResultType {
   override def longInfo: String = "search result"
 }
 
+object SearchResultInVerificationFormat extends ResultType {
+  type ResultType = Option[String]
+
+  override def longInfo: String = "search result in verification format"
+}
+
 object SearchResultWithDecompositionTree extends ResultType {
   type ResultType = Option[Plan]
 
