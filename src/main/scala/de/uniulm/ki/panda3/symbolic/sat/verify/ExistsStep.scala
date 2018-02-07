@@ -270,10 +270,11 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
   val time3   = System.currentTimeMillis()
   println(((allSCCS map { _.size } groupBy { x => x }).toSeq.sortBy(_._1) map { case (k, s) => s.size + "x" + k } mkString (", ")) + " in " + (time3 - time2) / 1000.0)
 
-  val disablingGraphSCCOrdering: Seq[Seq[Task]] = disablingGraph.stronglyConnectedComponents map { _.toSeq }
+  val disablingGraphSCCOrdering: Seq[Seq[Task]] = disablingGraph.condensation.topologicalOrdering.get.reverse map { _.toSeq }
   val disablingGraphTotalOrder : Array[Task]    = disablingGraphSCCOrdering.flatten.toArray
 
   //Dot2PdfCompiler.writeDotToFile(disablingGraph, "disablingGraph.pdf")
+  //println("Disabling Graph Order:\n" + disablingGraphTotalOrder.map(_.name).mkString("\n"))
 
   //println("Non trivial SCCs")
   //println(scc.filter(_.size > 1) map {s => s.map(_.name).mkString(", ")} mkString("\n"))
