@@ -114,11 +114,12 @@ abstract class HtnShrinkingStrategy {
         public static HashMap<Integer, Integer> reverseBreadthSearchToFindDistances(SasPlusProblem p, ArrayList<Integer> nextNodes,
                                                                                     HashMap<Integer, LinkedList<Tuple3<Integer, Integer, Integer>>> incomingEdgesMap, HashMap<Integer, Integer> distancesFromGoal){
 
-            ArrayList<Integer> newNextNodes = new ArrayList<>(nextNodes);
+            ArrayList<Integer> newNextNodes = new ArrayList<>();
+            newNextNodes.addAll(nextNodes);
 
-            if (nextNodes.size()>0) {
+            if (newNextNodes.size()>0) {
 
-                int nextNode = nextNodes.get(0);
+                int nextNode = newNextNodes.get(0);
 
                 int distanceOfNextNodeFromGoalNode = distancesFromGoal.get(nextNode);
 

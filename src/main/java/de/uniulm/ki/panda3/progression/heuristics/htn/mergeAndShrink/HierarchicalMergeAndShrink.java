@@ -108,7 +108,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         //HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
         int obergrenze = 165;
-        int shrinkingBound = 200;
+        int shrinkingBound = 50;
         HtnShrinkingStrategy shrinkingStrategy = new HtnShrinkingStrategy1();
         HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, shrinkingStrategy);
 
@@ -119,7 +119,8 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         //System.out.println("Size of Graph 81: " + graph81.idMapping.size());
         //System.out.println("Size of Graph 83: " + graph83.idMapping.size());
 
-        Utils.printAllHtnGraphs(flatProblem, presentGraphs);
+
+        Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Rover");
 
         System.exit(0);
 

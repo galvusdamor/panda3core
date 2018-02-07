@@ -85,23 +85,33 @@ public class HtnMerging {
 
             if (proMethod.subtasks.length==1){
 
+
                 Task subtask = proMethod.subtasks[0];
                 int subtaskIndex = ProgressionNetwork.taskToIndex.get(subtask);
 
-                if (subtaskIndex==taskIndex){
 
-                    int additionalSize = 0;
-                    DirectRecursiveDecomposition decomposition = new DirectRecursiveDecomposition();
-                    proMethodToTaskDecompositionMap.put(i,decomposition);
-                    proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
 
-                }else {
-
-                    int additionalSize = 1;
-                    PrimitiveDecomposition decomposition = new PrimitiveDecomposition(additionalSize, subtaskIndex);
+                    HtnMsGraph subgraph = presentGraphs.get(subtaskIndex);
+                    int additionalSize = subgraph.arrayVertices.length-1;
+                    TaskDecomposition decomposition = new SingleDecomposition(additionalSize, subgraph);
                     proMethodToTaskDecompositionMap.put(i, decomposition);
                     proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
-                }
+
+                    /*if subtask is primitive, it was already handled before
+                    if (subtask.isPrimitive()) {
+
+                        int additionalSize = 1;
+                        PrimitiveDecomposition decomposition = new PrimitiveDecomposition(additionalSize, subtaskIndex);
+                        proMethodToTaskDecompositionMap.put(i, decomposition);
+                        proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
+                    }else {
+                        HtnMsGraph subgraph = presentGraphs.get(subtaskIndex);
+                        int additionalSize = subgraph.arrayVertices.length-1;
+                        TaskDecomposition decomposition = new SingleAbstractDecomposition(additionalSize, subgraph);
+                        proMethodToTaskDecompositionMap.put(i, decomposition);
+                        proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
+                    }*/
+
 
             }else if (proMethod.subtasks.length==2) {
 
@@ -166,14 +176,23 @@ public class HtnMerging {
         if(sizeOfNewGraph<=shrinkingBound) {
 
             //no need to shrink
+            for (int proMethodIndex:proMethodIndexToAdditionalSizeMap.keySet()){
 
-            for (ProMethod proMethod : proMethods) {
+                TaskDecomposition taskDecomposition = proMethodToTaskDecompositionMap.get(proMethodIndex);
+                temporaryGraph = handleTaskDecomposition(p, taskDecomposition, temporaryGraph);
 
-                temporaryGraph = handleProMethod(p, presentGraphs, temporaryGraph, proMethod, taskIndex, shrinkingBound, shrinkingStrategy);
 
             }
+
+
+            /*for (ProMethod proMethod : proMethods) {
+
+                temporaryGraph = handleProMethod(p, presentGraphs, temporaryGraph, proMethod, taskIndex, shrinkingBound, shrinkingStrategy);
+            }*/
+
         }else {
             //need to shrink
+            //System.out.println("Need to shrink.");
 
             Boolean ableToShrink = true;
 
@@ -183,18 +202,20 @@ public class HtnMerging {
 
                 for (int proMethodIndex : proMethodIndexToAdditionalSizeMap.keySet()) {
 
-                    if (proMethodIndex == maximumAdditionalSize) {
+                    if (proMethodIndexToAdditionalSizeMap.get(proMethodIndex) == maximumAdditionalSize) {
                         //shrink
 
+                        //System.out.println("Shrinking.");
                         TaskDecomposition oldTaskDecomposition = proMethodToTaskDecompositionMap.get(proMethodIndex);
                         try {
-                            TaskDecomposition newTaskDecomposition = shrinkGraphsOfTaskDecomposition(oldTaskDecomposition);
+                            TaskDecomposition newTaskDecomposition = shrinkGraphsOfTaskDecomposition(p, oldTaskDecomposition, shrinkingBound, shrinkingStrategy);
                             proMethodToTaskDecompositionMap.put(proMethodIndex, newTaskDecomposition);
                             sizeOfNewGraph -= oldTaskDecomposition.additionalSizeAfterExecution;
                             sizeOfNewGraph += newTaskDecomposition.additionalSizeAfterExecution;
                             proMethodIndexToAdditionalSizeMap.put(proMethodIndex, newTaskDecomposition.additionalSizeAfterExecution);
                         }catch (IllegalArgumentException e){
                             ableToShrink=false;
+                            break;
                         }
 
 
@@ -204,15 +225,127 @@ public class HtnMerging {
                 }
 
 
+                //System.out.println("New Size after Shrinking: " + sizeOfNewGraph);
+
 
             }
+
+
+            //handle TaskDecompositions
+            for (int proMethodIndex:proMethodIndexToAdditionalSizeMap.keySet()){
+
+                TaskDecomposition taskDecomposition = proMethodToTaskDecompositionMap.get(proMethodIndex);
+                temporaryGraph = handleTaskDecomposition(p, taskDecomposition, temporaryGraph);
+
+
+            }
+
+
+
         }
 
         return temporaryGraph;
 
     }
 
-    public static TaskDecomposition shrinkGraphsOfTaskDecomposition(TaskDecomposition taskDecomposition){
+    public static TemporaryHtnMsGraph handleTaskDecomposition(SasPlusProblem p, TaskDecomposition taskDecomposition, TemporaryHtnMsGraph temporaryGraph){
+
+
+        if (taskDecomposition instanceof SingleDecomposition){
+
+            HtnMsGraph subgraph = ((SingleDecomposition) taskDecomposition).graph1;
+
+            temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph,subgraph, temporaryGraph.startNodeID)._2;
+
+        }
+        if (taskDecomposition instanceof OrderedDecomposition) {
+
+            HtnMsGraph graph1 = ((OrderedDecomposition) taskDecomposition).graph1;
+            HtnMsGraph graph2 = ((OrderedDecomposition) taskDecomposition).graph2;
+
+
+            HashSet<Integer> nodesToAppend = new HashSet<>();
+
+            Tuple2<HashSet<Integer>, TemporaryHtnMsGraph> resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph1, temporaryGraph.startNodeID);
+
+            temporaryGraph = resultsOfAppending._2;
+            nodesToAppend.addAll(resultsOfAppending._1);
+
+
+            for (int nodeIDToAppend : nodesToAppend) {
+
+                NodeValue nodeValue = temporaryGraph.idMapping.get(nodeIDToAppend);
+
+                if (nodeValue instanceof HtnElementaryNode) {
+                    NodeValue newNodeValue = new HtnElementaryNode(p, false);
+                    temporaryGraph.idMapping.put(nodeIDToAppend, newNodeValue);
+                }
+
+                resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph2, nodeIDToAppend);
+
+                temporaryGraph = resultsOfAppending._2;
+                nodesToAppend.addAll(resultsOfAppending._1);
+
+            }
+
+
+        }
+        if (taskDecomposition instanceof OrderedRecursiveDecomposition){
+
+            HtnMsGraph graph1 = ((OrderedRecursiveDecomposition) taskDecomposition).graph1;
+
+            HashSet<Integer> nodesToAppend = new HashSet<>();
+
+            Tuple2<HashSet<Integer>, TemporaryHtnMsGraph> resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph1, temporaryGraph.startNodeID);
+
+            temporaryGraph = resultsOfAppending._2;
+            nodesToAppend.addAll(resultsOfAppending._1);
+
+            HashSet<Tuple3<Integer,Integer,Integer>> edgesToRemove = new HashSet<>();
+            ArrayList<Tuple3<Integer, Integer, Integer>> tempEdges = new ArrayList<>(temporaryGraph.edges);
+
+
+            for (int j=0; j<tempEdges.size(); j++){
+                Tuple3<Integer, Integer, Integer> edge = tempEdges.get(j);
+                if (nodesToAppend.contains(edge._3())){
+                    Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(edge._1(), edge._2(), temporaryGraph.startNodeID);
+
+                    edgesToRemove.add(edge);
+                    //temporaryGraph.edges.remove(edge);
+                    temporaryGraph.edges.add(newEdge);
+                }
+            }
+
+            temporaryGraph.edges.removeAll(edgesToRemove);
+
+            for (int idToRemove:nodesToAppend){
+                temporaryGraph.idMapping.remove(idToRemove);
+            }
+
+        }
+        if (taskDecomposition instanceof UnorderedDecomposition){
+
+
+            UnorderedDecomposition unorderedDecomposition = (UnorderedDecomposition) taskDecomposition;
+            HtnMsGraph graphOfSubtask1 = unorderedDecomposition.graph1;
+            HtnMsGraph graphOfSubtask2 = unorderedDecomposition.graph2;
+
+
+            HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p);
+
+            temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph, newGraph, temporaryGraph.startNodeID)._2;
+
+
+        }
+
+
+        return temporaryGraph;
+
+
+
+    }
+
+    public static TaskDecomposition shrinkGraphsOfTaskDecomposition(SasPlusProblem p, TaskDecomposition taskDecomposition, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
 
 
         if (taskDecomposition instanceof PrimitiveDecomposition){
@@ -220,21 +353,146 @@ public class HtnMerging {
             throw new IllegalArgumentException("cannot shrink any more!");
 
         }
-        if (taskDecomposition instanceof OrderedDecomposition){
+        if (taskDecomposition instanceof SingleDecomposition){
+
+            //System.out.println("SingleDecomp");
+
+            HtnMsGraph graph1 = ((SingleDecomposition) taskDecomposition).graph1;
+
+
+            int sizeOfGraph1 = graph1.idMapping.keySet().size();
+
+            //System.out.println("Shrinking Bound: " + shrinkingBound);
+
+            int additionalSizeOfNewGraph = sizeOfGraph1-1;
+
+
+
+                graph1 = shrinkingStrategy.shrink(p, graph1);
+
+
+                sizeOfGraph1 = graph1.idMapping.keySet().size();
+
+                additionalSizeOfNewGraph = sizeOfGraph1-1;
+
+
+
+            TaskDecomposition newTaskDecomposition = new SingleDecomposition(additionalSizeOfNewGraph, graph1);
+            return newTaskDecomposition;
 
         }
-        if (taskDecomposition instanceof DirectRecursiveDecomposition){
+        if (taskDecomposition instanceof OrderedDecomposition){
+
+            //System.out.println("OrderedDecomp");
+
+            HtnMsGraph graph1 = ((OrderedDecomposition) taskDecomposition).graph1;
+            HtnMsGraph graph2 = ((OrderedDecomposition) taskDecomposition).graph2;
+
+
+            int sizeOfGraph1 = graph1.idMapping.keySet().size();
+            int sizeOfGraph2 = graph2.idMapping.keySet().size();
+
+            //System.out.println("Shrinking Bound: " + shrinkingBound);
+
+            int additionalSizeOfNewGraph = sizeOfGraph1+sizeOfGraph2-2;
+
+
+
+                if (sizeOfGraph2>sizeOfGraph1){
+                    //System.out.println("Old size of graph 2:" + graph2.idMapping.keySet().size());
+                    graph2 = shrinkingStrategy.shrink(p, graph2);
+                    //System.out.println("New size of graph 2:" + graph2.idMapping.keySet().size());
+                }else {
+                    //System.out.println("Old size of graph 1:" + graph1.idMapping.keySet().size());
+                    graph1 = shrinkingStrategy.shrink(p, graph1);
+                    //System.out.println("New size of graph 1:" + graph1.idMapping.keySet().size());
+                }
+
+                sizeOfGraph1 = graph1.idMapping.keySet().size();
+                sizeOfGraph2 = graph2.idMapping.keySet().size();
+
+                additionalSizeOfNewGraph = sizeOfGraph1+sizeOfGraph2-2;
+
+
+
+            TaskDecomposition newTaskDecomposition = new OrderedDecomposition(additionalSizeOfNewGraph, graph1, graph2);
+            return newTaskDecomposition;
 
         }
         if (taskDecomposition instanceof OrderedRecursiveDecomposition){
 
+            //System.out.println("OrderedRecursiveDecomp");
+            HtnMsGraph graph1 = ((OrderedRecursiveDecomposition) taskDecomposition).graph1;
+
+
+            int sizeOfGraph1 = graph1.idMapping.keySet().size();
+
+            //System.out.println("Shrinking Bound: " + shrinkingBound);
+
+            int additionalSizeOfNewGraph = sizeOfGraph1-1;
+
+
+
+                graph1 = shrinkingStrategy.shrink(p, graph1);
+
+
+                sizeOfGraph1 = graph1.idMapping.keySet().size();
+
+                additionalSizeOfNewGraph = sizeOfGraph1-1;
+
+
+
+            TaskDecomposition newTaskDecomposition = new OrderedRecursiveDecomposition(additionalSizeOfNewGraph, graph1);
+            return newTaskDecomposition;
+
         }
         if (taskDecomposition instanceof UnorderedDecomposition){
 
+            //System.out.println("UnorderedDecomp");
+            HtnMsGraph graph1 = ((UnorderedDecomposition) taskDecomposition).graph1;
+            HtnMsGraph graph2 = ((UnorderedDecomposition) taskDecomposition).graph2;
+
+
+            int sizeOfGraph1 = graph1.idMapping.keySet().size();
+            int sizeOfGraph2 = graph2.idMapping.keySet().size();
+
+            //System.out.println("Shrinking Bound: " + shrinkingBound);
+
+            int additionalSizeOfNewGraph = (sizeOfGraph1*sizeOfGraph2)-1;
+
+
+
+
+
+
+                //System.out.println("Size of new Graph: " + sizeOfNewGraph);
+
+                //System.out.println("Size of Graph 1: " + sizeOfGraph1);
+                //System.out.println("Size of Graph 2: " + sizeOfGraph2);
+
+
+
+
+                if (sizeOfGraph2>sizeOfGraph1){
+                    graph2 = shrinkingStrategy.shrink(p, graph2);
+                }else {
+                    graph1 = shrinkingStrategy.shrink(p, graph1);
+                }
+
+                sizeOfGraph1 = graph1.idMapping.keySet().size();
+                sizeOfGraph2 = graph2.idMapping.keySet().size();
+
+                additionalSizeOfNewGraph = (sizeOfGraph1*sizeOfGraph2)-1;
+
+
+
+            TaskDecomposition newTaskDecomposition = new UnorderedDecomposition(additionalSizeOfNewGraph, graph1, graph2);
+            return newTaskDecomposition;
+
         }
 
 
-        return taskDecomposition;
+        return null;
     }
 
     public static int calculateSizeOfOrderedSubGraphs(HtnMsGraph graph1, HtnMsGraph graph2){
@@ -413,7 +671,7 @@ public class HtnMerging {
 
                 //not ordered subtasks
 
-                System.out.println();
+                //System.out.println();
 
                 Task subtask1 = proMethod.subtasks[0];
                 Task subtask2 = proMethod.subtasks[1];
@@ -425,7 +683,8 @@ public class HtnMerging {
                 HtnMsGraph graphOfSubtask2 = presentGraphs.get(subtask2Index);
 
 
-                HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p, shrinkingBound, shrinkingStrategy);
+                //HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p, shrinkingBound, shrinkingStrategy);
+                HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p);
 
                 temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph, newGraph, temporaryGraph.startNodeID)._2;
 
@@ -441,9 +700,9 @@ public class HtnMerging {
 
     }
 
-    public static HtnMsGraph mergeGraphs(HtnMsGraph graph1, HtnMsGraph graph2, SasPlusProblem p, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
+    public static HtnMsGraph mergeGraphs(HtnMsGraph graph1, HtnMsGraph graph2, SasPlusProblem p){
 
-        int sizeOfGraph1 = graph1.idMapping.keySet().size();
+        /*int sizeOfGraph1 = graph1.idMapping.keySet().size();
         int sizeOfGraph2 = graph2.idMapping.keySet().size();
 
         //System.out.println("Shrinking Bound: " + shrinkingBound);
@@ -475,7 +734,7 @@ public class HtnMerging {
             sizeOfNewGraph = sizeOfGraph1*sizeOfGraph2;
 
 
-        }
+        }*/
 
 
         Integer[] graph1Nodes = (Integer[]) graph1.arrayVertices;
@@ -721,15 +980,18 @@ class OrderedRecursiveDecomposition extends TaskDecomposition {
 
 }
 
-class DirectRecursiveDecomposition extends TaskDecomposition {
+class SingleDecomposition extends TaskDecomposition {
 
+    public HtnMsGraph graph1;
 
-    public DirectRecursiveDecomposition(){
+    public SingleDecomposition(int sizeAfterExecution, HtnMsGraph graph1){
 
-        this.additionalSizeAfterExecution = 0;
+        this.additionalSizeAfterExecution = sizeAfterExecution;
+        this.graph1 = graph1;
     }
 
 }
+
 
 class UnorderedDecomposition extends TaskDecomposition {
 

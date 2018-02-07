@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ElementaryNode;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.HtnNodeValue;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.NodeValue;
+import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.util.Dot2PdfCompiler;
 import de.uniulm.ki.util.EdgeLabelledGraph;
@@ -152,12 +153,13 @@ public final class Utils {
 
     }
 
-    public static void printAllHtnGraphs(SasPlusProblem p, HashMap<Integer, HtnMsGraph> graphs){
+    public static void printAllHtnGraphs(SasPlusProblem p, HashMap<Integer, HtnMsGraph> graphs, String domainname){
+
 
 
         for (int i: graphs.keySet()){
 
-            String outputfile = "htnGraph" + i +  ".pdf";
+            String outputfile = domainname +"/htnGraph" + i +  ".pdf";
 
             System.out.println("Print Graph " + i);
             Utils.printHtnGraph(p, graphs.get(i), outputfile);

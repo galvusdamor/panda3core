@@ -38,6 +38,8 @@ public class Testing {
 
         Map<Task, Integer> taskToIndexMapping = ProgressionNetwork.taskToIndex;
 
+        int index =0;
+
         DirectedGraph<?> layerGraph = domain.taskSchemaTransitionGraph().condensation();
 
         List<?> layer = JavaConverters.seqAsJavaList(layerGraph.topologicalOrdering().get().reverse());
@@ -48,9 +50,11 @@ public class Testing {
 
             for (Task t : tasksInLayer) {
 
+                index++;
+
                 int taskIndex = taskToIndexMapping.get(t);
 
-                System.out.println("Handle Task " + taskIndex);
+                System.out.println(index + ": Handle Task " + taskIndex);
 
                 presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs, shrinkingBound, shrinkingStrategy);
 
@@ -87,9 +91,9 @@ public class Testing {
         }
 
 
-        Utils.printAllHtnGraphs(p, presentGraphs);
+        Utils.printAllHtnGraphs(p, presentGraphs, "Misc");
 
-        HtnMsGraph testHtnGraph = HtnMerging.mergeGraphs(presentGraphs.get(109), presentGraphs.get(105), p, shrinkingBound, shrinkingStrategy);
+        HtnMsGraph testHtnGraph = HtnMerging.mergeGraphs(presentGraphs.get(109), presentGraphs.get(105), p);
 
         Utils.printHtnGraph(p, testHtnGraph, "testHtnGraph.pdf");
 
