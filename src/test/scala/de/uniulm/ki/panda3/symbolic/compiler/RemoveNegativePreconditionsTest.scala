@@ -36,7 +36,7 @@ class RemoveNegativePreconditionsTest extends FlatSpec with HasExampleProblem3 {
     // we assume that the domain is grounded
 
     // cwa
-    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, true)
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, (true,Set[String]()))
     val plainFormula = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
     val (domain, initialPlan) = RemoveNegativePreconditions.transform(plainFormula, ())
 

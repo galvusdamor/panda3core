@@ -10,7 +10,7 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait LinearPrimitivePlanEncoding extends VerifyEncoding {
+trait LinearPrimitivePlanEncoding extends VerifyEncoding with EncodingWithLinearPlan{
 
   val action: ((Int, Int, Task)) => String = memoise[(Int, Int, Task), String]({ case (l, p, t) => "action^" + l + "_" + p + "," + taskIndex(t) })
 
@@ -76,4 +76,10 @@ trait LinearPrimitivePlanEncoding extends VerifyEncoding {
   def goalStateOfLength(length: Int): Seq[Clause] =
     initialPlan.goal.substitutedPreconditions map { case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, length, pred), isPos))    }
 
+
+  override def linearPlan: scala.Seq[Map[Task, String]] = Range(0, taskSequenceLength) map { case i => domain.primitiveTasks map { t => t -> { action(K - 1, i, t) } } toMap }
+
+
+  override def linearStateFeatures: scala.Seq[Map[Predicate, String]] =
+    Range(0, taskSequenceLength + 1) map { case i => domain.predicates map { p => p -> { statePredicate(K - 1, i, p) } } toMap }
 }

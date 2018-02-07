@@ -13,26 +13,21 @@ case class AlternatingAutomatonFormulaEncoding(automaton: AlternatingAutomaton, 
 
   protected def stateRestriction(formula: PositiveBooleanFormula, position: Int) = id + "_auto_state_restriction_" + stateRestrictionsToIndex(formula) + "_" + position
 
-
   def apply(linearEncoding: EncodingWithLinearPlan): Seq[Clause] = {
+    println(automaton.vertices map {_.longInfo} mkString "\n")
+
     val transitionRules: Seq[Clause] = linearEncoding.linearPlan.zipWithIndex flatMap { case (taskMap, position) =>
       automaton.vertices flatMap { s =>
-        val relevantStateFeatures = s.allPredicates
-        //println("S " + allStates.length)
 
         s.allStatesAndCounter flatMap { case (primitiveState, negativeState) =>
           val stateTrue = primitiveState map { p => linearEncoding.linearStateFeatures(position)(p) } toSeq
           val stateFalse = negativeState map { p => linearEncoding.linearStateFeatures(position)(p) } toSeq
 
           taskMap map { case (task, atom) =>
-
-
-            // TODO
             val nextStateNotLast = automaton.transitions(s)((task, false, primitiveState))
             val notLast = linearEncoding.impliesLeftTrueAndFalseImpliesTrue((state(s, position) :: atom :: Nil) ++ stateTrue,
                                                                             stateFalse,
                                                                             stateRestriction(nextStateNotLast, position + 1))
-
 
             notLast
           }
@@ -49,8 +44,6 @@ case class AlternatingAutomatonFormulaEncoding(automaton: AlternatingAutomaton, 
 
         allStates flatMap { primitiveState =>
           val (stateTrue, stateFalse) = relevantStateFeatures map { l => (linearEncoding.linearStateFeatures(position)(l), primitiveState contains l) } partition { _._2 }
-
-
           // last Action, last state is handled differently ...
           val nextStateLast = automaton.transitions(s)((TaskAfterLastOne, true, primitiveState))
           val last = linearEncoding.impliesLeftTrueAndFalseImpliesTrue((state(s, position) :: Nil) ++ stateTrue.toSeq.map(_._1),

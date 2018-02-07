@@ -14,13 +14,14 @@ import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object ClosedWorldAssumption extends DomainTransformer[Boolean] {
+object ClosedWorldAssumption extends DomainTransformer[(Boolean, Set[String])] {
 
-  def transform(inDomain: Domain, inPlan: Plan): (Domain, Plan) = transform(inDomain, inPlan, dontNegateUnnecessarily = true)
+  def transform(inDomain: Domain, inPlan: Plan): (Domain, Plan) = transform(inDomain, inPlan, (true, Set()))
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
-  override def transform(domain: Domain, plan: Plan, dontNegateUnnecessarily: Boolean): (Domain, Plan) = {
-    val oldInit : PlanStep = plan.init
+  override def transform(domain: Domain, plan: Plan, config: (Boolean, Set[String])): (Domain, Plan) = {
+    val (dontNegateUnnecessarily, predicateToKeep) = config
+    val oldInit: PlanStep = plan.init
 
     // determine whether there are all variables for constants we possibly need
     val existingVariablesForConstants: Map[Constant, Variable] = (oldInit.arguments collect { case v if plan.variableConstraints.getRepresentative(v).isConstant =>
@@ -42,7 +43,9 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
     val occurringNegativePredicates = ((domain.tasks ++ domain.hiddenTasks) flatMap { _.precondition.containedPredicatesWithSign }) ++ (domain.decompositionMethods collect {
       case SHOPDecompositionMethod(_, _, precondition, _, _) => precondition.containedPredicatesWithSign
     } flatten)
-    val nonOccurringNegativePredicates = domain.predicates map { p => (p, false) } filterNot occurringNegativePredicates.contains map { _._1 }
+    val nonOccurringNegativePredicates = domain.predicates map { p => (p, false) } filterNot occurringNegativePredicates.contains map { _._1 } filterNot {
+      p => predicateToKeep.exists(_.drop(1) == p.name)
+    }
 
     // create the new initial plan step
     // build a set of all literals
@@ -64,8 +67,8 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
     val newEffects = notPresentLiterals map { _.negate }
 
     val oldInitSchema = oldInit.schema match {
-      case rt : ReducedTask => rt
-      case _ => noSupport(FORUMLASNOTSUPPORTED)
+      case rt: ReducedTask => rt
+      case _               => noSupport(FORUMLASNOTSUPPORTED)
     }
 
     val newInitSchema: ReducedTask = ReducedTask(oldInit.schema.name, isPrimitive = true, oldInit.schema.parameters ++ newVariables,

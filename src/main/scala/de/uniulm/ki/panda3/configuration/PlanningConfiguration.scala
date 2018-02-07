@@ -369,7 +369,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
 
-                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) Math.pow(2,currentK).toInt else -1,
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) Math.pow(2, currentK).toInt else -1,
                                                                                        0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
                 println("ERROR " + satError)
                 error |= satError
@@ -726,9 +726,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         case SearchResult | SearchResultWithDecompositionTree =>
           // start process of translating the solution back to something readable (i.e. lifted)
           result.headOption
-        case SearchResultInVerificationFormat => result.headOption.map({p =>
+        case SearchResultInVerificationFormat                 => result.headOption.map({ p =>
           p.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive } map { ps => ps.schema.name } mkString ";"
-                                                                       }).getOrElse("")
+                                                                                       }).getOrElse("")
         case AllFoundPlans                                    => result
         case SearchStatistics                                 =>
           // write memory info
@@ -814,7 +814,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule start PARSER_CWA
-    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(flattened, true) else flattened
+    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(flattened, (true,protectedPredicates)) else flattened
     timeCapsule stop PARSER_CWA
 
     timeCapsule start PARSER_ELIMINATE_EQUALITY
@@ -882,7 +882,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     val predicatesRemoved = if (domain.isGround && preprocessingConfiguration.removeUnnecessaryPredicates) {
       info("Removing unnecessary predicates ... ")
-      val compiled = PrunePredicates.transform(domain, problem, ())
+      val compiled = PrunePredicates.transform(domain, problem, protectedPredicates)
       info("done.\n")
       extra(compiled._1.statisticsString + "\n")
       compiled
@@ -898,7 +898,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
       val hierarchyPruned = PruneHierarchy.transform(predicatesRemoved._1, predicatesRemoved._2, disallowedTasks.toSet)
-      val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
+      val pruned = PruneEffects.transform(hierarchyPruned, (domain.primitiveTasks.toSet, protectedPredicates))
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
@@ -1003,7 +1003,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
       val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
-      val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
+      val pruned = PruneEffects.transform(hierarchyPruned, (domain.primitiveTasks.toSet, protectedPredicates))
 
       info("done (" + (System.currentTimeMillis() - sasStart) + " ms).\n")
       info("Number of Grounded Actions " + sasPlusParser.reachableGroundPrimitiveActions.length + "\n")
@@ -1208,7 +1208,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         }
       }
 
-     // if we are doing a plan verification curtail the model here, i.e. remove all unreachable primitive tasks
+      // if we are doing a plan verification curtail the model here, i.e. remove all unreachable primitive tasks
 
       val result = searchConfiguration match {
         case SATPlanVerification(_, plan) =>
@@ -1252,7 +1252,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       val predicatedPruned = if (preprocessingConfiguration.removeUnnecessaryPredicates) {
         info("Removing unnecessary predicates ... ")
-        val compiled = PrunePredicates.transform(methodsWithIdenticalTasks._1, methodsWithIdenticalTasks._2, ())
+        val compiled = PrunePredicates.transform(methodsWithIdenticalTasks._1, methodsWithIdenticalTasks._2, protectedPredicates)
         info("done.\n")
         extra(compiled._1.statisticsString + "\n")
         compiled
@@ -1348,6 +1348,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     case _: PreprocessingConfiguration  => {case p: PreprocessingConfiguration => this.copy(preprocessingConfiguration = p).asInstanceOf[this.type]}
     case _: SearchConfiguration         => {case p: SearchConfiguration => this.copy(searchConfiguration = p).asInstanceOf[this.type]}
     case _: PostprocessingConfiguration => {case p: PostprocessingConfiguration => this.copy(postprocessingConfiguration = p).asInstanceOf[this.type]}
+  }
+
+  private val protectedPredicates: Set[String] = searchConfiguration match {
+    case SATSearch(_, _, Some(f), _, _, _, _, _, _, _) => f.nnf.allPredicatesNames
+    case _                                             => Set()
   }
 }
 

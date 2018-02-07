@@ -33,11 +33,4 @@ case class KautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pl
   override lazy val goalState: Seq[Clause] = goalStateOfLength(taskSequenceLength)
 
   println("Kautz-Selman, plan length: " + taskSequenceLength)
-
-  override def linearPlan: scala.Seq[Map[Task, String]] = Range(0, taskSequenceLength) map { case i => domain.primitiveTasks map { t => t -> { action(K - 1, i, t) } } toMap }
-
-
-  override def linearStateFeatures: scala.Seq[Map[Predicate, String]] =
-    Range(0, taskSequenceLength + 1) map { case i => domain.predicates map { p => p -> { statePredicate(K - 1, i, p) } } toMap }
-
 }

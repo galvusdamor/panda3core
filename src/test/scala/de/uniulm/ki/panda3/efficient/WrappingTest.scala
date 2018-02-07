@@ -30,7 +30,7 @@ class WrappingTest extends FlatSpec with HasExampleProblem4 {
     val domAndInitialPlan: (Domain, Plan) = XMLParser.parseProblem(new FileInputStream("src/test/resources/de/uniulm/ki/panda3/symbolic/parser/xml/OrganizeMeeting_VerySmall.xml"), domAlone)
 
     val expandedSorts = ExpandSortHierarchy(domAndInitialPlan, ())
-    val cwaApplied = ClosedWorldAssumption(expandedSorts, true)
+    val cwaApplied = ClosedWorldAssumption(expandedSorts, (true,Set[String]()))
     val reducedFormula = ToPlainFormulaRepresentation(cwaApplied, ())
 
     reducedFormula

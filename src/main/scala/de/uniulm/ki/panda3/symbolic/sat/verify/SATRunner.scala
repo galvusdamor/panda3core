@@ -21,7 +21,7 @@ import scala.io.Source
   */
 // scalastyle:off method.length cyclomatic.complexity
 case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
-                     büchiAutomata: Seq[LTLAutomaton[_,_]], referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
+                     büchiAutomata: Seq[LTLAutomaton[_, _]], referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
                      encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean,
                      randomSeed: Long, solverThreads: Int) {
@@ -210,8 +210,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
       val additionalConstraintsGenerators: Seq[AdditionalSATConstraint] =
         büchiAutomata.zipWithIndex.map({
-                                         case (b : BüchiAutomaton, i) => BüchiFormulaEncoding(b, "büchi_" + i)
-                                         case (a : AlternatingAutomaton, i) => AlternatingAutomatonFormulaEncoding(a, "aauto_" + i)
+                                         case (b: BüchiAutomaton, i)       => BüchiFormulaEncoding(b, "büchi_" + i)
+                                         case (a: AlternatingAutomaton, i) => AlternatingAutomatonFormulaEncoding(a, "aauto_" + i)
                                        }) ++
           (planDistanceMetric map {
             case MissingOperators(maximumDifference)              => ActionSetDifference(referencePlan.get, maximumDifference)
@@ -221,9 +221,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
       val additionalConstraintsFormula = additionalConstraintsGenerators flatMap { constraint =>
         encoder match {
-          case x: EncodingWithLinearPlan => constraint(x)
-          case ks: KautzSelman => constraint(ks)
-          case _                         => assert(false); Nil
+          case x: EncodingWithLinearPlan       => constraint(x)
+          case lp: LinearPrimitivePlanEncoding => constraint(lp)
+          case _                               => assert(false); Nil
         }
       }
 
@@ -562,10 +562,15 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
       case es: ExistsStep               =>
         val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
+        val statePredicates = allTrueAtoms filter { _.startsWith("predicate^") }
         //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
         val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
+        val predicatesPerPosition = statePredicates groupBy { _.split("_")(1).split(",")(0).toInt }
 
-        println(actionsPerPosition map { case (p, acts) => "Position " + p + "\n" + (acts map { "\t" + _ } mkString ("\n")) } mkString "\n")
+        //println(actionsPerPosition map { case (p, acts) => "Position " + p + "\n" + (acts map { "\t" + _ } mkString ("\n")) } mkString "\n")
+        //println(predicatesPerPosition map { case (p, preds) => "Position " + p + "\n" + (preds map { "\t" + _ } mkString ("\n")) } mkString "\n")
+
+        def stateAtTime(i: Int): String = predicatesPerPosition.getOrElse(i, Nil) map { pred => "\t" + domain.predicates(pred.split(",").last.toInt).name } mkString "\n"
 
         // try to get a linearisation of each position
         var c = -1
@@ -584,10 +589,14 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           val x: Seq[PlanStep] = actionOrdering map { case a => c += 1; PlanStep(c, a, Nil) }
 
           println("Time " + p)
+          println(stateAtTime(p))
           println(actionOrdering map { "\t" + _.name } mkString ("\n"))
 
           x
         }
+
+        println("Time " + (actionsPerPosition.keys.max + 1))
+        println(stateAtTime(actionsPerPosition.keys.max + 1))
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
         println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))
