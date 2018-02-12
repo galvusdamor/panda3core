@@ -290,7 +290,7 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
     equalsConstEliminated match {
       case NotEqual(v1, v2) =>
         (getRepresentativeUnsafe(v1), getRepresentativeUnsafe(v2)) match {
-          case (rv1: Variable, rv2: Variable)       => for (p <- (rv1, rv2) ::(rv2, rv1) :: Nil) p match {case (x, y) => unequal(x) += y;}
+          case (rv1: Variable, rv2: Variable)       => for (p <- (rv1, rv2) :: (rv2, rv1) :: Nil) p match {case (x, y) => unequal(x) += y;}
           case (rv: Variable, const: Constant)      => remainingDomain(rv).remove(const)
           case (const: Constant, rv: Variable)      => remainingDomain(rv).remove(const)
           case (const1: Constant, const2: Constant) => if (const1 == const2) isPotentiallySolvable = false // we found a definite flaw, that can't be resolved any more
@@ -344,6 +344,16 @@ case class CSP(variables: Set[Variable], constraints: Seq[VariableConstraint]) e
   def getUnequalVariables(variable: Variable): Seq[Variable] = getRepresentative(variable) match {
     case Constant(_)         => Nil
     case v@Variable(_, _, _) => unequal(v).toSeq
+  }
+
+  def isLocallyConsistent(assignment: Map[Variable, Constant]): Boolean = constraints forall {
+    case Equal(var1, var2: Variable) if assignment.contains(var1) && assignment.contains(var2)    => assignment(var1) == assignment(var2)
+    case Equal(vari, const: Constant) if assignment.contains(vari)                                => assignment(vari) == const
+    case NotEqual(var1, var2: Variable) if assignment.contains(var1) && assignment.contains(var2) => assignment(var1) != assignment(var2)
+    case NotEqual(vari, const: Constant) if assignment.contains(vari)                             => assignment(vari) != const
+    case OfSort(vari, sort) if assignment.contains(vari)                                          => sort.elements contains assignment(vari)
+    case NotOfSort(vari, sort) if assignment.contains(vari)                                       => !(sort.elements contains assignment(vari))
+    case _                                                                                        => true // if we don't know the variables
   }
 }
 

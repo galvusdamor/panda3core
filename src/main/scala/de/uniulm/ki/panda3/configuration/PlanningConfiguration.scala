@@ -26,7 +26,7 @@ import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning._
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, SASPlusGrounding}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, HierarchyTyping, SASPlusGrounding}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
 import de.uniulm.ki.panda3.symbolic.domain._
@@ -810,12 +810,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }
 
-  private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap): AnalysisMap = {
-    val groundedInitialState = problem.groundedInitialState filter {
-      _.isPositive
-    }
-    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet,
-                                                                                                    GroundedPlanningGraphConfiguration(computeMutexes = useMutexes))
+  private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap, typing: HierarchyTyping): AnalysisMap = {
+    val groundedInitialState = problem.groundedInitialState filter { _.isPositive }
+    val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = Some(typing))
+    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, config)
     // add analysis to map
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }
@@ -999,6 +997,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       }
       info(infoText + " ... ")
 
+      // run typing
+      val typing = HierarchyTyping(sasPlusResult._1._1, sasPlusResult._1._2)
+      typing.initialise()
+
       // run the actual analysis
       val newAnalysisMap =
         actualType match {
@@ -1008,7 +1010,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               case PlanningGraph            => false
               case PlanningGraphWithMutexes => true
             }
-            val x = runGroundedPlanningGraph(sasPlusResult._1._1, sasPlusResult._1._2, useMutexes, sasPlusResult._2)
+            val x = runGroundedPlanningGraph(sasPlusResult._1._1, sasPlusResult._1._2, useMutexes, sasPlusResult._2, typing)
             /*if (firstAnalysis) {
               println("Writing File")
               writeStringToFile(x(SymbolicGroundedReachability).reachableGroundPrimitiveActions.map(_.shortInfo).mkString("\n"), "allPrimAct.txt")

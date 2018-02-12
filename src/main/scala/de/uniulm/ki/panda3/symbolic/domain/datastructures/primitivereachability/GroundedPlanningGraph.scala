@@ -1,9 +1,9 @@
 package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.LayeredGroundedPrimitiveReachabilityAnalysis
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{HierarchyTyping, LayeredGroundedPrimitiveReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.DebuggingMode.DebuggingMode
-import de.uniulm.ki.panda3.symbolic.domain.{Task, Domain, ReducedTask}
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.panda3.symbolic._
@@ -24,6 +24,7 @@ case class GroundedPlanningGraphConfiguration(computeMutexes: Boolean = true,
                                               isSerial: Boolean = false,
                                               forbiddenLiftedTasks: Set[Task] = Set.empty[Task],
                                               forbiddenGroundedTasks: Set[GroundTask] = Set.empty[GroundTask],
+                                              hierarchyTyping: Option[HierarchyTyping] = None,
                                               buckets: Boolean = false,
                                               debuggingMode: DebuggingMode = DebuggingMode.Disabled) {
 }
@@ -387,13 +388,15 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
      * The old mutexes can be just added because interference mutexes never disappear.
      */
     val interferenceMutexes = ((newActionsPairs ++ oldNewActionPairs) filter { case (action1, action2) =>
-      (action1.substitutedDelEffects exists { substitutedEffect => (action2.substitutedAddEffects ++ action2.substitutedPreconditions) exists {
-        _.=!=(substitutedEffect)
-      }
-      }) ||
-        (action2.substitutedDelEffects exists { substitutedEffect => (action1.substitutedAddEffects ++ action1.substitutedPreconditions) exists {
+      (action1.substitutedDelEffects exists { substitutedEffect =>
+        (action2.substitutedAddEffects ++ action2.substitutedPreconditions) exists {
           _.=!=(substitutedEffect)
         }
+      }) ||
+        (action2.substitutedDelEffects exists { substitutedEffect =>
+          (action1.substitutedAddEffects ++ action1.substitutedPreconditions) exists {
+            _.=!=(substitutedEffect)
+          }
         })
     }) ++ oldInterferenceMutexes
     /*
@@ -610,16 +613,16 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
           // Check if any variables are unassigned.
           if (task.parameters.size == updatedAssignmentMap.keys.size) {
             val arguments: Seq[Constant] = task.parameters map { variable => updatedAssignmentMap(variable) }
-            if (disallowedActions exists (action => action.task == task && action.arguments == arguments)) Set.empty else Set(GroundTask(task, arguments))
+            if ((disallowedActions exists (action => action.task == task && action.arguments == arguments)) ||
+              (configuration.hierarchyTyping.isDefined && !configuration.hierarchyTyping.get.checkGrounding(GroundTask(task, arguments)))) Set.empty else Set(GroundTask(task, arguments))
           } else {
             // If there are unassigned variables we need to find them.
             val unassignedVariables: Seq[Variable] = task.parameters filterNot { variable => updatedAssignmentMap.keySet contains variable }
 
             // Find all possible variable substitution to be able to instantiate all possible actions later.
             val possibleSubstitutionCombinations: Seq[Seq[(Variable, Constant)]] =
-              unassignedVariables.foldLeft[Seq[Seq[(Variable, Constant)]]](Nil :: Nil)({ case (args, variable) => variable.sort.elements flatMap { c => args map {
-                _ :+(variable, c)
-              }
+              unassignedVariables.foldLeft[Seq[Seq[(Variable, Constant)]]](Nil :: Nil)({ case (args, variable) => variable.sort.elements flatMap { c =>
+                args map { _ :+ (variable, c) }
               }
                                                                                        })
 
@@ -627,7 +630,10 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
             val allArgumentCombinations: Seq[Seq[Constant]] = possibleSubstitutionCombinations map { combination =>
               task.parameters map { variable => updatedAssignmentMap.getOrElse(variable, combination.find { case (v, c) => v == variable }.get._2) }
             }
-            (allArgumentCombinations collect { case arguments if task areParametersAllowed arguments => GroundTask(task, arguments) }).toSet
+            (allArgumentCombinations collect { case arguments if task.areParametersAllowed(arguments) &&
+              !(disallowedActions exists (action => action.task == task && action.arguments == arguments)) &&
+              (configuration.hierarchyTyping.isEmpty || configuration.hierarchyTyping.get.checkGrounding(GroundTask(task, arguments))) => GroundTask(task, arguments)
+            }).toSet
           }
         } else {
 
@@ -638,8 +644,9 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
             }
 
             preconditionCandidates flatMap {
-              nextPrecondition => instantiateActions(task, Seq((nextPrecondition, nextLiteral)), disallowedActions,
-                                                     remainingUnfulfilledPreconditions, predicateMap, mutexes, updatedAssignmentMap, updatedUsedPropositions)
+              nextPrecondition =>
+                instantiateActions(task, Seq((nextPrecondition, nextLiteral)), disallowedActions,
+                                   remainingUnfulfilledPreconditions, predicateMap, mutexes, updatedAssignmentMap, updatedUsedPropositions)
             }
           } else {
             instantiateActions(task, remainingLiteralPairs, disallowedActions, remainingUnfulfilledPreconditions, predicateMap, mutexes, updatedAssignmentMap, updatedUsedPropositions)
@@ -685,8 +692,12 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     // Find all legit constant combinations to instantiate every possible action.
     val parameterCombinaitions = task.parameters.foldLeft[Seq[Seq[Constant]]](Nil :: Nil)({ case (args, variable) =>
       (variable.sort.elements flatMap { c => args map { _ :+ c } }) filter { vl => task.arePartialParametersAllowed(vl) }
-                                                                                         })
-    parameterCombinaitions filter { args => task.areParametersAllowed(args) } map { arguments => GroundTask(task, arguments) } toSet
+                                                                                          })
+    parameterCombinaitions filter { args =>
+      task.areParametersAllowed(args) &&
+        !(configuration.forbiddenGroundedTasks exists (action => action.task == task && action.arguments == args)) &&
+        (configuration.hierarchyTyping.isEmpty || configuration.hierarchyTyping.get.checkGrounding(GroundTask(task, args)))
+    } map { arguments => GroundTask(task, arguments) } toSet
   }
 
   /**
