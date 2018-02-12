@@ -30,10 +30,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
   lazy val isAbstract: Boolean = !isPrimitive
   lazy val taskCSP   : CSP     = CSP(parameters.toSet, parameterConstraints)
 
-  def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = {
-    val sub = PartialSubstitution(parameters, newParameter)
-    Literal(literal.predicate, literal.isPositive, literal.parameterVariables map sub)
-  }
+  def substitute(literal: Literal, sub: PartialSubstitution[Variable]): Literal = Literal(literal.predicate, literal.isPositive, literal.parameterVariables map sub)
 
   override def compare(that: Task): Int = this.name compare that.name
 
@@ -193,6 +190,7 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
   }*/
   assert(artificialParametersRepresentingConstants forall parameters.contains)
   assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })
+  assert(parameters.distinct.size == parameters.size)
 
   if (parameters.isEmpty) {
     // if ground, don't have something both in the add and del effects!

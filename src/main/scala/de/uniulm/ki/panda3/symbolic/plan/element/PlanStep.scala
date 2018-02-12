@@ -39,6 +39,8 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends Dom
   // TODO: test whether it is a subsort relation instead
   //assert((arguments zip schema.parameters) forall {case (a,b) => a.sort == b.sort})
 
+  private lazy val parameterSubstitution = PartialSubstitution(schema.parameters, arguments)
+
   /** returns a version of the preconditions */
   lazy val substitutedPreconditions: Seq[Literal] = schema match {
     case reduced: ReducedTask => reduced.precondition.conjuncts map substitute
@@ -62,7 +64,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends Dom
 
   def indexOfEffect(l: Literal, csp: CSP): Int = indexOf(l, substitutedEffects, csp)
 
-  private def substitute(literal: Literal): Literal = schema.substitute(literal, arguments)
+  private def substitute(literal: Literal): Literal = schema.substitute(literal, parameterSubstitution)
 
   override def update(domainUpdate: DomainUpdate): PlanStep = domainUpdate match {
     case ExchangePlanSteps(exchangeMap)   => if (exchangeMap contains this) exchangeMap(this) else this
