@@ -811,7 +811,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
   private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap, typing: HierarchyTyping): AnalysisMap = {
-    val groundedInitialState = problem.groundedInitialState filter { _.isPositive }
+    val groundedInitialState = problem.groundedInitialStateOnlyPositive filter { _.isPositive }
     val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = Some(typing))
     val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, config)
     // add analysis to map
@@ -1034,6 +1034,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val pruned = PruneHierarchy.transform(sasPlusResult._1._1, sasPlusResult._1._2, disallowedTasks.toSet)
       info("done.\n")
       info("Number of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
+      info("Number of Grounded Literals " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.length + "\n")
 
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)

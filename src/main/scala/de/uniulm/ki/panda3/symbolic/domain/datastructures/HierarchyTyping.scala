@@ -223,8 +223,11 @@ trait WithHierarchyTyping extends WithTopMethod {
   println("done")
 
 */
+  def checkPartialAssignment(task: Task, assignment: Map[Variable, Constant]): Boolean = cartTasksMap(task) exists { ct => ct.isCompatible(assignment) }
+
+
   def checkGrounding(groundAction: GroundTask): Boolean = {
-    (cartTasksMap(groundAction.task) exists { ct => ct.isCompatible(groundAction) }) && true
+    cartTasksMap(groundAction.task) exists { ct => ct.isCompatible(groundAction) }
     /*(groundAction.arguments.zip(groundAction.task.parameters) forall { case (c1, v1) =>
       groundAction.arguments.zip(groundAction.task.parameters) forall { case (c2, v2) =>
         v1.id >= v2.id || allowedParameterCombinations(groundAction.task).contains(PossibleArgumentPair(v1, c1, v2, c2))
@@ -354,4 +357,10 @@ case class CartesianGroundTask(task: Task, parameter: Seq[Set[Constant]]) extend
   override def longInfo: String = mediumInfo
 
   def isCompatible(groundTask: GroundTask): Boolean = this.parameter zip groundTask.arguments forall { case (allowed, param) => allowed contains param }
+
+  def isCompatible(partialAssignment: Map[Variable, Constant]): Boolean =
+    partialAssignment forall { case (v, c) =>
+      val vInd = task.parameters.indexOf(v)
+      parameter(vInd) contains c
+    }
 }

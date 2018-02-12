@@ -604,8 +604,9 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
         case NotOfSort(vari, sort)           => if (updatedAssignmentMap contains vari) !(sort.elements contains updatedAssignmentMap(vari)) else true
       }
 
+      // check typing constraints
 
-      if (taskConstraintsOK) {
+      if (taskConstraintsOK && (configuration.hierarchyTyping.isEmpty || configuration.hierarchyTyping.get.checkPartialAssignment(task, updatedAssignmentMap))) {
 
         // If there is no more precondition to fulfill instantiation can begin.
         if (remainingUnfulfilledPreconditions.isEmpty) {
@@ -613,17 +614,18 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
           // Check if any variables are unassigned.
           if (task.parameters.size == updatedAssignmentMap.keys.size) {
             val arguments: Seq[Constant] = task.parameters map { variable => updatedAssignmentMap(variable) }
-            if ((disallowedActions exists (action => action.task == task && action.arguments == arguments)) ||
-              (configuration.hierarchyTyping.isDefined && !configuration.hierarchyTyping.get.checkGrounding(GroundTask(task, arguments)))) Set.empty else Set(GroundTask(task, arguments))
+            if (disallowedActions exists (action => action.task == task && action.arguments == arguments)) Set.empty else Set(GroundTask(task,
+                                                                                                                                         arguments))
           } else {
             // If there are unassigned variables we need to find them.
             val unassignedVariables: Seq[Variable] = task.parameters filterNot { variable => updatedAssignmentMap.keySet contains variable }
 
             // Find all possible variable substitution to be able to instantiate all possible actions later.
             val possibleSubstitutionCombinations: Seq[Seq[(Variable, Constant)]] =
-              unassignedVariables.foldLeft[Seq[Seq[(Variable, Constant)]]](Nil :: Nil)({ case (args, variable) => variable.sort.elements flatMap { c =>
-                args map { _ :+ (variable, c) }
-              }
+              unassignedVariables.foldLeft[Seq[Seq[(Variable, Constant)]]](Nil :: Nil)({ case (args, variable) =>
+                val newAssignemtns = variable.sort.elements flatMap { c => args map { _ :+ (variable, c) } }
+                newAssignemtns filter { ass => configuration.hierarchyTyping.isEmpty || configuration.hierarchyTyping.get.checkPartialAssignment(task, updatedAssignmentMap ++ ass) }
+
                                                                                        })
 
             // Compute all argument combinations and initiate a new action for each of them.
@@ -631,8 +633,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
               task.parameters map { variable => updatedAssignmentMap.getOrElse(variable, combination.find { case (v, c) => v == variable }.get._2) }
             }
             (allArgumentCombinations collect { case arguments if task.areParametersAllowed(arguments) &&
-              !(disallowedActions exists (action => action.task == task && action.arguments == arguments)) &&
-              (configuration.hierarchyTyping.isEmpty || configuration.hierarchyTyping.get.checkGrounding(GroundTask(task, arguments))) => GroundTask(task, arguments)
+              !(disallowedActions exists (action => action.task == task && action.arguments == arguments)) => GroundTask(task, arguments)
             }).toSet
           }
         } else {
