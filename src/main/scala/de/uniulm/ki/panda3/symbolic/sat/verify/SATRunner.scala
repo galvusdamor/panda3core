@@ -348,8 +348,6 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
               case osname if osname startsWith "mac os x" => ("rm " + scriptFileName) !
               case _                                      => ("rm " + scriptFileName) !
             }
-
-
             // get time measurement
             val totalTime = System.getProperty("os.name").toLowerCase match {
               case osname if osname startsWith "windows"  => 0
