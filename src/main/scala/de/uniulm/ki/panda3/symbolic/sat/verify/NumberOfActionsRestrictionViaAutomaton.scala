@@ -113,9 +113,7 @@ trait NumberOfActionsRestrictionViaAutomaton[P, I] extends PathBasedEncoding[P, 
       }
     }
 
-    val noMoreThan = Range(taskSequenceLength + 1, paths.length + 1) map { l => Clause((numberOfActionsBetween(0, paths.length - 1, l), false)) }
-
-    actionAtClauses ++ countingBase ++ upwardsPropagation ++ noMoreThan
+    actionAtClauses ++ countingBase ++ upwardsPropagation
   }
 
   def numberOfActionsFormula3(vertexOrder: Seq[(Seq[Int], Set[Task])]): Seq[Clause] = if (taskSequenceLength == -1) Nil else {
@@ -158,6 +156,8 @@ trait NumberOfActionsRestrictionViaAutomaton[P, I] extends PathBasedEncoding[P, 
 
   private def hasCost(task: Task): Boolean = !task.name.contains("SHOP") && !task.name.contains("SelectConGroupCfg")
 
+  override def planLengthDependentFormula(actualPlanLength: Int): Seq[Clause] = if (actualPlanLength == -1) Nil else
+    Range(actualPlanLength + 1, primitivePaths.length + 1) map { l => Clause((numberOfActionsBetween(0, primitivePaths.length - 1, l), false)) }
 }
 
 sealed trait RestrictionMethod

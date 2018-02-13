@@ -23,7 +23,7 @@ import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
+import de.uniulm.ki.panda3.symbolic.sat.verify._
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, HierarchyTyping, SASPlusGrounding}
@@ -326,7 +326,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               runner.runWithTimeLimit(remainingTime, remainingTime, maximumPlanLength, 0, defineK = overrideK, checkSolution = satSearch.checkResult) match {case (a, b, c) => (a, b)}
             case FullSATRun()                               =>
               // start with K = 0 and loop
-              // TODO this is only good for total order ...
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
               var currentK = if (domainAndPlan._1.isClassical) 1 else 0
@@ -352,10 +351,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
               (solution, false)
 
+            case OptimalSATRun(overrideK) if satSearch.encodingToUse == POCLDirectEncoding || satSearch.encodingToUse == POCLDeleterEncoding =>
+              // TODO: 1 is just a placeholder for "generate the base formula"
+              runner.runWithTimeLimit(remainingTime, remainingTime, 1, 0, defineK = overrideK, checkSolution = satSearch.checkResult, runOptimiser = true) match {case (a, b, c) => (a, b)}
 
             case OptimalSATRun(overrideK) =>
               // start with K = 0 and loop
-              // TODO this is only good for total order ...
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
               var currentLength = 1
@@ -1939,12 +1940,12 @@ case class SATSearch(solverType: Solvertype,
   override def longInfo: String = "SAT-Planning Configuration\n--------------------------\n" +
     alignConfig((("solver", solverType.longInfo) :: Nil) ++
                   (runConfiguration match {
-                    case single: SingleSATRun =>
+                    case single: SingleSATRun   =>
                       ("maximum plan length", single.maximumPlanLength) ::
                         ("override K", single.overrideK.getOrElse("false")) :: Nil
-                    case fullRun: FullSATRun  =>
+                    case fullRun: FullSATRun    =>
                       ("full planner run", "true") :: Nil
-                    case optimal : OptimalSATRun =>
+                    case optimal: OptimalSATRun =>
                       ("optimal planner run", "true") ::
                         ("override K", optimal.overrideK.getOrElse("false")) :: Nil
                   }

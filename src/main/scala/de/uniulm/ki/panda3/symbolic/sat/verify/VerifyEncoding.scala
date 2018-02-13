@@ -175,6 +175,7 @@ trait VerifyEncoding {
 
   def goalState: Seq[Clause]
 
+  def planLengthDependentFormula(actualPlanLength : Int) : Seq[Clause] = Nil
 
   def miniSATString(formulas: Array[Clause], writer: BufferedWriter): scala.Predef.Map[String, Int] = {
 
