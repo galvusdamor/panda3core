@@ -1944,6 +1944,9 @@ case class SATSearch(solverType: Solvertype,
                         ("override K", single.overrideK.getOrElse("false")) :: Nil
                     case fullRun: FullSATRun  =>
                       ("full planner run", "true") :: Nil
+                    case optimal : OptimalSATRun =>
+                      ("optimal planner run", "true") ::
+                        ("override K", optimal.overrideK.getOrElse("false")) :: Nil
                   }
                     ) ++ (
       ("reduction method", reductionMethod.longInfo) ::
