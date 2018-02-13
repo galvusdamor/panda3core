@@ -65,8 +65,13 @@ trait NumberOfActionsRestrictionViaAutomaton[P, I] extends PathBasedEncoding[P, 
 
   def numberOfActionsFormula2(vertexOrder: Seq[(Seq[Int], Set[Task])]): Seq[Clause] = if (taskSequenceLength == -1) Nil else {
     val actionAtClauses = vertexOrder flatMap { case (path, ts) =>
-      val ifPresent = ts map { t => impliesSingle(pathAction(path.length, path, t), actionAt(path)) }
-      val ifNotPresent = notImpliesAllNot(actionAt(path) :: Nil, ts.toSeq map { pathAction(path.length, path, _) })
+      val ifPresent = ts map { t =>
+        if (hasCost(t))
+          impliesSingle(pathAction(path.length, path, t), actionAt(path))
+        else
+          impliesNot(pathAction(path.length, path, t), actionAt(path))
+      }
+      val ifNotPresent = notImpliesAllNot(actionAt(path) :: Nil, ts.toSeq filter hasCost map { pathAction(path.length, path, _) })
       ifPresent ++ ifNotPresent
     }
 
@@ -151,6 +156,8 @@ trait NumberOfActionsRestrictionViaAutomaton[P, I] extends PathBasedEncoding[P, 
     }
   }
 
+  private def hasCost(task: Task): Boolean = !task.name.contains("SHOP") && !task.name.contains("SelectConGroupCfg")
+
 }
 
 sealed trait RestrictionMethod
@@ -158,4 +165,3 @@ sealed trait RestrictionMethod
 object SlotOverTimeRestriction extends RestrictionMethod
 
 object SlotGloballyRestriction extends RestrictionMethod
-
