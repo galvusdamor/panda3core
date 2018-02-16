@@ -8,6 +8,17 @@
 		(e)
 )
 
+;; solution
+;; a b
+;; Y
+;; a b d
+;; X
+;; b c d
+;; Z
+;; b c d e
+
+;; test G (d & a -> G - Z)   // should not have a solution
+
 
 (:action X
   :parameters()
