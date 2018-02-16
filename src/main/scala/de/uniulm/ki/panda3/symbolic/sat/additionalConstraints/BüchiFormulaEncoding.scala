@@ -1,13 +1,13 @@
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
-import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, LinearPrimitivePlanEncoding}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class BüchiFormulaEncoding(automaton: BüchiAutomaton, id: String) extends LTLFormulaEncoding[LTLFormula, LTLFormula] {
 
-  def apply(linearEncoding: EncodingWithLinearPlan): Seq[Clause] = {
+  def apply(linearEncoding: LinearPrimitivePlanEncoding): Seq[Clause] = {
     val automatonClauses: Seq[Clause] = linearEncoding.linearPlan.zipWithIndex flatMap { case (taskMap, position) =>
       // at most one of the states of the automaton is true
       val atMostOneState: Seq[Clause] = linearEncoding.atMostOneOf(automaton.vertices map { s => state(s, position) })

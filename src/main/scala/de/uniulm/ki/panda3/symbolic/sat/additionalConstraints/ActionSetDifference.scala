@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
 import de.uniulm.ki.panda3.symbolic.domain.Task
-import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, LinearPrimitivePlanEncoding}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -14,7 +14,7 @@ case class ActionSetDifference(referencePlan: Seq[Task], maximumDifference: Int)
   def taskOfReferenceContained(referencePosition: Int): String = "badness_referenceContained_" + referencePosition
 
 
-  override def apply(linearEncoding: EncodingWithLinearPlan): Seq[Clause] = {
+  override def apply(linearEncoding: LinearPrimitivePlanEncoding): Seq[Clause] = {
 
     // at the most we can have this many differences between the two plans
     val maxBadness = linearEncoding.linearPlan.length + referencePlan.length

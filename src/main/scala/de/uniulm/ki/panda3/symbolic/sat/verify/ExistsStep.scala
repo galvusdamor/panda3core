@@ -293,42 +293,48 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
 
   //System exit 0
 
-  def chain(position: Int, j: Int, lit: Predicate): String = "chain_" + position + "^" + j + ";" + predicateIndex(lit)
+  def chain(position: Int, j: Int, chainID: String): String = "chain_" + position + "^" + j + ";" + chainID
+
+
+  def generateChainFor(E: Array[(Task, Int)], R: Array[(Task, Int)], chainID: String): Seq[Clause] =
+    Range(0, taskSequenceLength) flatMap { case position =>
+      // generate chain restriction for every SCC
+      val f1: Seq[Clause] = E.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (oi, i)) =>
+        // search forward for next R
+        var newR = rpos
+        while (newR < R.length && R(newR)._2 <= i) newR += 1
+
+        if (newR < R.length)
+          (clausesSoFar :+ impliesSingle(action(K - 1, position, oi), chain(position, R(newR)._2, chainID)), newR)
+        else
+          (clausesSoFar, newR)
+                                                                     })._1
+
+      val f2 = R.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (ai, i)) =>
+        // search forward for next R
+        var newR = rpos
+        while (newR < R.length && R(newR)._2 <= i) newR += 1
+
+        if (newR < R.length)
+          (clausesSoFar :+ impliesSingle(chain(position, i, chainID), chain(position, R(newR)._2, chainID)), newR)
+        else
+          (clausesSoFar, newR)
+                                                        })._1
+
+      val f3 = R map { case (ai, i) => impliesNot(chain(position, i, chainID), action(K - 1, position, ai)) }
+      f1 ++ f2 ++ f3
+    }
+
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
     val t0001 = System.currentTimeMillis()
     // we need one chain per predicate
     val parallelismFormula = domain.predicates flatMap { case m =>
-      val E = disablingGraphTotalOrder.zipWithIndex filter { _._1.delEffectsAsPredicateSet contains m }
-      val R = disablingGraphTotalOrder.zipWithIndex filter { _._1.posPreconditionAsPredicateSet contains m }
+      val E: Array[(Task, Int)] = disablingGraphTotalOrder.zipWithIndex filter { _._1.delEffectsAsPredicateSet contains m }
+      val R: Array[(Task, Int)] = disablingGraphTotalOrder.zipWithIndex filter { _._1.posPreconditionAsPredicateSet contains m }
+      val chainID: String = "p_" + predicateIndex(m)
 
-      Range(0, taskSequenceLength) flatMap { case position =>
-        // generate chain restriction for every SCC
-        val f1: Seq[Clause] = E.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (oi, i)) =>
-          // search forward for next R
-          var newR = rpos
-          while (newR < R.length && R(newR)._2 <= i) newR += 1
-
-          if (newR < R.length)
-            (clausesSoFar :+ impliesSingle(action(K - 1, position, oi), chain(position, R(newR)._2, m)), newR)
-          else
-            (clausesSoFar, newR)
-                                                                       })._1
-
-        val f2 = R.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (ai, i)) =>
-          // search forward for next R
-          var newR = rpos
-          while (newR < R.length && R(newR)._2 <= i) newR += 1
-
-          if (newR < R.length)
-            (clausesSoFar :+ impliesSingle(chain(position, i, m), chain(position, R(newR)._2, m)), newR)
-          else
-            (clausesSoFar, newR)
-                                                          })._1
-
-        val f3 = R map { case (ai, i) => impliesNot(chain(position, i, m), action(K - 1, position, ai)) }
-        f1 ++ f2 ++ f3
-      }
+      generateChainFor(E, R, chainID)
     }
 
     val t0002 = System.currentTimeMillis()

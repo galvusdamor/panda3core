@@ -14,7 +14,7 @@ trait LinearPrimitivePlanEncoding extends VerifyEncoding with EncodingWithLinear
 
   val action: ((Int, Int, Task)) => String = memoise[(Int, Int, Task), String]({ case (l, p, t) => "action^" + l + "_" + p + "," + taskIndex(t) })
 
-  protected final val statePredicate: ((Int, Int, Predicate)) => String =
+  final val statePredicate: ((Int, Int, Predicate)) => String =
     memoise[(Int, Int, Predicate), String]({ case (l, pos, pred) => "predicate^" + l + "_" + pos + "," + predicateIndex(pred) })
 
 

@@ -605,6 +605,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         println("Time " + (actionsPerPosition.keys.max + 1))
         println(stateAtTime(actionsPerPosition.keys.max + 1))
 
+        println(allTrueAtoms filter {_.startsWith("matt")} mkString "\n")
+
+        println(domain.tasks.find(_.name == "Y[]").get.longInfo)
+
+        System exit 0
+
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
         println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))
 

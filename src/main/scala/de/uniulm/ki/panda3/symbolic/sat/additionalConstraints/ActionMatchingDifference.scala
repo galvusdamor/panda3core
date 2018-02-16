@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
 import de.uniulm.ki.panda3.symbolic.domain.Task
-import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, LinearPrimitivePlanEncoding}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -15,7 +15,7 @@ case class ActionMatchingDifference(referencePlan: Seq[Task], maximumDifference:
 
   override val ignoreOrder: Boolean = true
 
-  override def apply(linearEncoding: EncodingWithLinearPlan): Seq[Clause] = {
+  override def apply(linearEncoding: LinearPrimitivePlanEncoding): Seq[Clause] = {
 
     // generate clauses representing the matching
     val matchingClauses: Seq[Clause] = generateMatchingClauses(linearEncoding, matchPathAndReference)

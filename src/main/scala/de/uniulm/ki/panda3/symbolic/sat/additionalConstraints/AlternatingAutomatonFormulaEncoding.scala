@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
-import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, ExistsStep}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, ExistsStep, LinearPrimitivePlanEncoding}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -13,7 +13,7 @@ case class AlternatingAutomatonFormulaEncoding(automaton: AlternatingAutomaton, 
 
   protected def stateRestriction(formula: PositiveBooleanFormula, position: Int) = id + "_auto_state_restriction_" + stateRestrictionsToIndex(formula) + "_" + position
 
-  def apply(linearEncoding: EncodingWithLinearPlan): Seq[Clause] = {
+  def apply(linearEncoding: LinearPrimitivePlanEncoding): Seq[Clause] = {
     println(automaton.vertices map {_.longInfo} mkString "\n")
 
     val transitionRules: Seq[Clause] = linearEncoding.linearPlan.zipWithIndex flatMap { case (taskMap, position) =>

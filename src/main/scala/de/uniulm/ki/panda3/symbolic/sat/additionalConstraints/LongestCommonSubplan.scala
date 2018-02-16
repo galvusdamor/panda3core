@@ -1,7 +1,7 @@
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
 import de.uniulm.ki.panda3.symbolic.domain.Task
-import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, LinearPrimitivePlanEncoding}
 
 /**
   * forces the minimum common subplan of the solution and the reference plan to be at least of length K
@@ -15,7 +15,7 @@ case class LongestCommonSubplan(referencePlan: Seq[Task], minimumLength: Int, ig
 
   def matchingSizeAt(pathPosition: Int, size: Int): String = "matchingSize_" + pathPosition + "_" + size
 
-  override def apply(linearEncoding: EncodingWithLinearPlan): Seq[Clause] = {
+  override def apply(linearEncoding: LinearPrimitivePlanEncoding): Seq[Clause] = {
 
     // generate clauses representing the matching
     val matchingClauses = generateMatchingClauses(linearEncoding, matchPathAndReference)
