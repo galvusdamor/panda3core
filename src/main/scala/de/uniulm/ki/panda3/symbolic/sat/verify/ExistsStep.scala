@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.AlternatingAutomatonFormulaEncoding
 import de.uniulm.ki.util.{DirectedGraph, Dot2PdfCompiler, SimpleDirectedGraph, TimeCapsule}
 
 import scala.collection.Seq
@@ -13,7 +14,8 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int) extends LinearPrimitivePlanEncoding {
+case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int,
+                      ltlEncodings: Seq[AdditionalEdgesInDisablingGraph]) extends LinearPrimitivePlanEncoding {
   override lazy val offsetToK = 0
 
   override lazy val overrideK = None
@@ -56,6 +58,12 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     val deletesNegP: Array[Boolean] = domain.predicates.indices map { i => add get (i + 1) } toArray
 
     val invertedEffects: Array[Int] = (addList map { p1 => -p1 }) ++ delList
+
+    def hasMoreEffectsRelativeToPredicates(other: IntTask, preds: Set[Predicate]): Boolean = preds exists { p =>
+      val pi: Int = pMap(p)
+
+      (add.get(pi) && !other.add.get(pi)) || (del.get(pi) && !other.del.get(pi))
+    }
   }
 
   val intTasks: Array[IntTask] = domain.primitiveTasks map { IntTask } toArray
@@ -244,15 +252,19 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     def affects(task1: Task, task2: Task): Boolean = task1.delEffectsAsPredicate exists task2.posPreconditionAsPredicateSet.contains
 
     // compute affection
-    val predicateToDeleting: Map[Predicate, Array[IntTask]] =
+    val predicateToAdding: Map[Predicate, Array[this.IntTask]] =
       intTasks flatMap { t => t.task.delEffectsAsPredicate map { e => (t, e) } } groupBy (_._2) map { case (p, as) => p -> as.map(_._1) }
 
-    val predicateToNeeding: Map[Predicate, Array[IntTask]] =
+    val predicateToDeleting: Map[Predicate, Array[this.IntTask]] =
+      intTasks flatMap { t => t.task.delEffectsAsPredicate map { e => (t, e) } } groupBy (_._2) map { case (p, as) => p -> as.map(_._1) }
+
+    val predicateToNeeding: Map[Predicate, Array[this.IntTask]] =
       intTasks flatMap { t => t.task.posPreconditionAsPredicate map { e => (t, e) } } groupBy (_._2) map { case (p, as) => p -> as.map(_._1) }
 
     val edgesWithDuplicats: Seq[(IntTask, IntTask)] =
       predicateToDeleting.toSeq flatMap { case (p, as) => predicateToNeeding.getOrElse(p, new Array(0)) flatMap { n => as map { d => (d, n) } } }
-    val edges: Seq[(IntTask, IntTask)] = (edgesWithDuplicats groupBy { _._1 } toSeq) flatMap { case (t1, t2) => (t2 map { _._2 } distinct) collect { case t if t != t1 => (t1, t) } }
+    val alwaysEdges: Seq[(IntTask, IntTask)] = (edgesWithDuplicats groupBy { _._1 } toSeq) flatMap { case (t1, t2) => (t2 map { _._2 } distinct) collect { case t if t != t1 => (t1, t) } }
+    val edges = alwaysEdges ++ ltlEncodings.flatMap(_.additionalEdges(this)(predicateToAdding, predicateToDeleting, predicateToNeeding))
     val time12 = System.currentTimeMillis()
     println("Candidates (" + edges.length + ") generated: " + (time12 - time1))
 
@@ -336,4 +348,11 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     goalStateOfLength(taskSequenceLength)
 
   println("Exists-Step, plan length: " + taskSequenceLength)
+}
+
+
+trait AdditionalEdgesInDisablingGraph {
+  def additionalEdges(encoding: ExistsStep)(
+    predicateToAdding: Map[Predicate, Array[encoding.IntTask]], predicateToDeleting: Map[Predicate, Array[encoding.IntTask]],
+    predicateToNeeding: Map[Predicate, Array[encoding.IntTask]]): Seq[(encoding.IntTask, encoding.IntTask)]
 }

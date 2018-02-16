@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
-import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, ExistsStep}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)

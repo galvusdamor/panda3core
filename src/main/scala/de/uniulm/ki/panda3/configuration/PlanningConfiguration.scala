@@ -316,15 +316,19 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          // if a formula is provided, translate it into a Büchi automaton
-          val automaton: Seq[LTLAutomaton[_, _]] = satSearch.ltlFormula match {
+          val separatedFormulae = satSearch.ltlFormula match {
             case None          => Nil
             case Some(formula) =>
               val formulaInNNF = formula.nnf.parseAndGround(domainAndPlan._1, domainAndPlanFullyParsed._1, Map()).simplify
-              val separatedFormulae = formulaInNNF match {
+              formulaInNNF match {
                 case LTLAnd(conj) => conj
                 case x            => x :: Nil
               }
+          }
+
+          // if a formula is provided, translate it into a Büchi automaton
+          val automaton: Seq[LTLAutomaton[_, _]] = satSearch.formulaEncoding match {
+            case AlternatingAutomatonEncoding | BüchiEncoding =>
               val automata: Seq[LTLAutomaton[_, _]] = separatedFormulae map { f =>
                 satSearch.formulaEncoding match {
                   case BüchiEncoding                => BüchiAutomaton(domainAndPlan._1, f)
@@ -339,13 +343,20 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
               //System exit 0
               automata
+            case _                                            => Nil
+          }
+
+          val directLTLEncoding: Seq[(LTLFormula, LTLEncodingMethod)] = satSearch.formulaEncoding match {
+            case AlternatingAutomatonEncoding | BüchiEncoding => Nil
+            case x                                            => separatedFormulae map {(_,x)}
           }
 
 
           val referencePlan: Option[Seq[Task]] = satSearch.planToMinimiseDistanceTo map { _ map { taskName: String => domainAndPlan._1.tasks.find(_.name == taskName).get } }
 
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
-                                 automaton, referencePlan, satSearch.planDistanceMetric,
+                                 automaton, directLTLEncoding,
+                                 referencePlan, satSearch.planDistanceMetric,
                                  satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.encodingToUse,
                                  postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree),
                                  randomSeed, satSearch.threads)
@@ -814,7 +825,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule start PARSER_CWA
-    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(flattened, (true,protectedPredicates)) else flattened
+    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(flattened, (true, protectedPredicates)) else flattened
     timeCapsule stop PARSER_CWA
 
     timeCapsule start PARSER_ELIMINATE_EQUALITY
@@ -1934,10 +1945,12 @@ object BüchiEncoding extends LTLEncodingMethod
 
 object AlternatingAutomatonEncoding extends LTLEncodingMethod
 
+object MattmüllerEncoding extends LTLEncodingMethod
+
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      ltlFormula: Option[LTLFormula] = None,
-                     formulaEncoding: LTLEncodingMethod = AlternatingAutomatonEncoding,
+                     formulaEncoding: LTLEncodingMethod = MattmüllerEncoding,
                      planToMinimiseDistanceTo: Option[Seq[String]] = None,
                      planDistanceMetric: Seq[PlanDistanceMetric] = Nil,
                      checkResult: Boolean = false,
