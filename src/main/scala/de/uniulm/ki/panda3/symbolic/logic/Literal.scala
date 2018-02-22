@@ -12,7 +12,7 @@ import de.uniulm.ki.util.{Internable, HashMemo}
   */
 case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables: Seq[Variable]) extends Formula with PrettyPrintable with HashMemo {
   assert(predicate.argumentSorts.length == parameterVariables.length)
-  assert(!(parameterVariables contains null))
+  assert(!(parameterVariables contains null), "Predicate " + predicate.name + " has been instantiated with null.")
 
   /** negated version of the literal */
   lazy val negate: Literal = copy(isPositive = !isPositive)

@@ -17,7 +17,10 @@ import scala.collection.mutable
   */
 case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends DomainUpdatable with PrettyPrintable {
 
-  arguments foreach { v => assert(v != null) }
+  arguments foreach { v =>
+    assert(v != null, "Plan step " + id + " task " + schema.name + " instantiated with null argument.\n" +
+      "Arguments are " + arguments.map({ case null => "null" ; case x => x.name }).mkString(", " + ""))
+  }
   assert(arguments.length == schema.parameters.length)
 
 
@@ -67,13 +70,13 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends Dom
   private def substitute(literal: Literal): Literal = schema.substitute(literal, parameterSubstitution)
 
   override def update(domainUpdate: DomainUpdate): PlanStep = domainUpdate match {
-    case ExchangePlanSteps(exchangeMap)   => if (exchangeMap contains this) exchangeMap(this) else this
-    case ExchangeTask(exchangeMap)        => if (exchangeMap contains schema) {
+    case ExchangePlanSteps(exchangeMap) => if (exchangeMap contains this) exchangeMap(this) else this
+    case ExchangeTask(exchangeMap)      => if (exchangeMap contains schema) {
       val additionalParameters = exchangeMap(schema).parameters.drop(arguments.length) map { v => v.copy(name = v.name + "_ps" + id) }
       PlanStep.intern((id, exchangeMap(schema), arguments ++ additionalParameters))
     } else this
-    case ExchangeVariable(_, _) => PlanStep.intern((id, schema, arguments map { _.update(domainUpdate) }))
-    case ExchangeVariables(_) => PlanStep.intern((id, schema, arguments map { _.update(domainUpdate) }))
+    case ExchangeVariable(_, _)         => PlanStep.intern((id, schema, arguments map { _.update(domainUpdate) }))
+    case ExchangeVariables(_)           => PlanStep.intern((id, schema, arguments map { _.update(domainUpdate) }))
     // propagate irrelevant update to reduce task
     case _ => PlanStep.intern((id, schema.update(domainUpdate), arguments map { _.update(domainUpdate) }))
   }
