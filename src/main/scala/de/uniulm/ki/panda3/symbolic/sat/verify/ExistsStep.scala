@@ -32,7 +32,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
 
   override val noAbstractsFormula = Nil
 
-  println("Computing invariante [Rintanen]")
+  println("Computing invariants [Rintanen]")
 
 
   val pMap: Map[Predicate, Int] = domain.predicates.zipWithIndex map { case (p, i) => (p, i + 1) } toMap
