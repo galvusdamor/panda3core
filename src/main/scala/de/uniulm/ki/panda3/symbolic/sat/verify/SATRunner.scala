@@ -221,10 +221,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       //System.in.read()
 
       val stateFormula = encoder.stateTransitionFormula ++ encoder.initialState ++ (if (includeGoal) encoder.goalState else Nil) ++ encoder.noAbstractsFormula
-
-
       val planningFormula = (encoder.decompositionFormula ++ stateFormula).toArray
-
 
       val additionalConstraintsFormula = additionalConstraintsGenerators flatMap { constraint =>
         encoder match {
@@ -596,20 +593,20 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           val x: Seq[PlanStep] = actionOrdering map { case a => c += 1; PlanStep(c, a, Nil) }
 
           println("Time " + p)
-          println(stateAtTime(p))
+          //println(stateAtTime(p))
           println(actionOrdering map { "\t" + _.name } mkString ("\n"))
 
           x
         }
 
-        println("Time " + (actionsPerPosition.keys.max + 1))
-        println(stateAtTime(actionsPerPosition.keys.max + 1))
+        //println("Time " + (actionsPerPosition.keys.max + 1))
+        //println(stateAtTime(actionsPerPosition.keys.max + 1))
 
         println(allTrueAtoms filter {_.startsWith("matt")} mkString "\n")
 
-        println(domain.tasks.find(_.name == "Y[]").get.longInfo)
+        //println(domain.tasks.find(_.name == "Y[]").get.longInfo)
 
-        System exit 0
+        //System exit 0
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
         println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))

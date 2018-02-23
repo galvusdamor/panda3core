@@ -296,8 +296,9 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
   def chain(position: Int, j: Int, chainID: String): String = "chain_" + position + "^" + j + ";" + chainID
 
 
-  def generateChainFor(E: Array[(Task, Int)], R: Array[(Task, Int)], chainID: String): Seq[Clause] =
-    Range(0, taskSequenceLength) flatMap { case position =>
+  def generateChainFor(E: Array[(Task, Int)], R: Array[(Task, Int)], chainID: String): Seq[Clause] = {
+    val x = Range(0, taskSequenceLength) flatMap { case position =>
+      val time0 = System.currentTimeMillis()
       // generate chain restriction for every SCC
       val f1: Seq[Clause] = E.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (oi, i)) =>
         // search forward for next R
@@ -309,6 +310,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
         else
           (clausesSoFar, newR)
                                                                      })._1
+      val time1 = System.currentTimeMillis()
 
       val f2 = R.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (ai, i)) =>
         // search forward for next R
@@ -320,10 +322,17 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
         else
           (clausesSoFar, newR)
                                                         })._1
+      val time2 = System.currentTimeMillis()
 
       val f3 = R map { case (ai, i) => impliesNot(chain(position, i, chainID), action(K - 1, position, ai)) }
+      val time3 = System.currentTimeMillis()
+      println("Chain f's " + (time1 - time0) + "ms " + (time2 - time1) + "ms " + (time3 - time2) + "ms " + E.length)
+
       f1 ++ f2 ++ f3
     }
+
+    x
+  }
 
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
@@ -337,15 +346,16 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
       generateChainFor(E, R, chainID)
     }
 
-    val t0002 = System.currentTimeMillis()
-    println("ExistsStep Formula: " + (t0002 - t0001) + "ms")
-
-
     val invariantFormula = Range(0, taskSequenceLength + 1) flatMap { case position =>
       symbolicInvariants map { case ((ap, ab), (bp, bb)) => Clause((statePredicate(K - 1, position, ap), ab) :: (statePredicate(K - 1, position, bp), bb) :: Nil) }
     }
 
+    val t0002 = System.currentTimeMillis()
+    println("ExistsStep Formula: " + (t0002 - t0001) + "ms")
+
     val transitionFormula = stateTransitionFormulaOfLength(taskSequenceLength)
+    val t0003 = System.currentTimeMillis()
+    println("State Transition Formula: " + (t0003 - t0002 ) + "ms")
 
     transitionFormula ++ parallelismFormula ++ invariantFormula
   }
