@@ -100,7 +100,7 @@ case class GeneralEncoding(timeCapsule: TimeCapsule,
       }
     }
 
-    (children flatMap atMostOneOf) ++ atMostOneOf(fathers) :+ impliesRightOr(actionUsed(layer, position) :: Nil, fathers)
+    children.flatMap(atMostOneOf(_)) ++ atMostOneOf(fathers) :+ impliesRightOr(actionUsed(layer, position) :: Nil, fathers)
   }
 
 

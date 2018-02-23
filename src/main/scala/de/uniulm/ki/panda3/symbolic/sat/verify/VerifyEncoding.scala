@@ -69,15 +69,21 @@ trait VerifyEncoding {
 
   protected var atMostCounter = 0
 
-  def atMostOneOf(atoms: Seq[String]): Seq[Clause] = {
+  // at most one of, but only if qualifier is true
+  def atMostOneOf(atoms: Seq[String], qualifier: Option[String] = None): Seq[Clause] = {
     val buffer = new ArrayBuffer[Clause]()
     val numberOfBits: Int = Math.ceil(Math.log(atoms.length) / Math.log(2)).toInt
     val bits = Range(0, numberOfBits) map { b => ("atMost_" + atMostCounter + "_" + b, b) }
 
+    val qualifierList : Seq[(String,Boolean)] = qualifier match {
+      case None => Nil
+      case Some(q) => (q,false) :: Nil
+    }
+
     atoms.zipWithIndex foreach { case (atom, index) =>
       bits foreach { case (bitString, b) =>
-        if ((index & (1 << b)) == 0) buffer append Clause((atom, false) :: (bitString, false) :: Nil)
-        else buffer append Clause((atom, false) :: (bitString, true) :: Nil)
+        if ((index & (1 << b)) == 0) buffer append Clause(((atom, false) :: (bitString, false) :: Nil) ++ qualifierList)
+        else buffer append Clause(((atom, false) :: (bitString, true) :: Nil) ++ qualifierList)
       }
     }
 
