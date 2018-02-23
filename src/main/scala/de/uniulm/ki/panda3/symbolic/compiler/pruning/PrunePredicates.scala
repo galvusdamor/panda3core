@@ -13,16 +13,12 @@ object PrunePredicates extends DomainTransformer[Set[String]] {
   override def transform(domain: Domain, plan: Plan, predicatesToKeep: Set[String]): (Domain, Plan) = {
     val unnecessaryPredicates = domain.predicates filter { p =>
       // it might be true and cannot be made false
-      if ((plan.groundInitialStateOnlyPositivesSetOnlyPredicates contains p) && !(domain.tasks exists { _.effectsAsPredicateBool.contains((p, false)) })) {
+      if ((plan.groundInitialStateOnlyPositivesSetOnlyPredicates contains p) && domain.producersOfPosNeg(p)._2.isEmpty)
         true
-      } else if (!(plan.groundInitialStateOnlyPositivesSetOnlyPredicates contains p) &&
-        !(domain.tasks exists { _.effectsAsPredicateBool.contains((p, true)) }) &&
-        !(domain.tasks exists { _.preconditionsAsPredicateBool.contains((p, true)) })
-      ) {
+      else if (!(plan.groundInitialStateOnlyPositivesSetOnlyPredicates contains p) && domain.consumersOf(p).isEmpty && domain.producersOfPosNeg(p)._1.isEmpty)
         true
-      } else {
+      else
         false
-      }
     } filterNot { p => predicatesToKeep contains p.name.split("\\[").head }
 
     (domain update RemovePredicate(unnecessaryPredicates.toSet), plan update RemovePredicate(unnecessaryPredicates.toSet))
