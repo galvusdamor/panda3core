@@ -348,7 +348,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           val directLTLEncoding: Seq[(LTLFormula, LTLEncodingMethod)] = satSearch.formulaEncoding match {
             case AlternatingAutomatonEncoding | BüchiEncoding => Nil
-            case x                                            => separatedFormulae map {(_,x)}
+            case x                                            => separatedFormulae map { (_, x) }
           }
 
 
@@ -1946,6 +1946,10 @@ object BüchiEncoding extends LTLEncodingMethod
 object AlternatingAutomatonEncoding extends LTLEncodingMethod
 
 object MattmüllerEncoding extends LTLEncodingMethod
+
+object MattmüllerImprovedEncoding extends LTLEncodingMethod
+
+object OnParallelEncoding extends LTLEncodingMethod
 
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,

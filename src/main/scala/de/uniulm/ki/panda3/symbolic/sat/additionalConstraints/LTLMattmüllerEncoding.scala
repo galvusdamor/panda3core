@@ -9,7 +9,7 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedChaines: Boolean = false) extends AdditionalSATConstraint with AdditionalEdgesInDisablingGraph {
+case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedChains: Boolean) extends AdditionalSATConstraint with AdditionalEdgesInDisablingGraph {
 
   val formulaIDMap: Map[LTLFormula, Int] = lTLFormula.allSubformulae.zipWithIndex toMap
   val idFormulaMap: Map[Int, LTLFormula] = formulaIDMap map { _.swap }
@@ -118,7 +118,7 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedCh
             val chainID: String = "ltl_" + e.predicateIndex(m)
             val time001 = System.currentTimeMillis()
             //println("Chain PREP Time: " + (time001 - time000) + "ms")
-            val x = if (!improvedChaines) e.generateChainFor(E, R, chainID) else {
+            val x = if (!improvedChains) e.generateChainFor(E, R, chainID) else {
               // improved chain generation: we can disable a chain if we don't have to check a property that is related to that predicate at the moment
               // Thesis: it is only relevant, it we have to check an atomic proposition (wide speculation, but should be true)
               Range(0, linearEncoding.taskSequenceLength) flatMap { time => e.generateChainForAtTime(E, R, chainID, time, Some(formulaHoldsAtTime(PredicateAtom(m), time + 1))) }

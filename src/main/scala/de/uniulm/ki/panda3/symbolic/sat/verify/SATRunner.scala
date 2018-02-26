@@ -168,9 +168,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                                          case (b: BüchiAutomaton, i)       => BüchiFormulaEncoding(b, "büchi_" + i)
                                          case (a: AlternatingAutomaton, i) => AlternatingAutomatonFormulaEncoding(a, "aauto_" + i)
                                        }) ++
-          (ltlFormulaAndEncoding.zipWithIndex.map({
-                                                    case ((f, MattmüllerEncoding), i) => LTLMattmüllerEncoding(f, "matt_" + i)
-                                                  })) ++
+          ltlFormulaAndEncoding.zipWithIndex.map({
+                                                   case ((f, MattmüllerEncoding), i)         => LTLMattmüllerEncoding(f, "matt_" + i, improvedChaines = false)
+                                                   case ((f, MattmüllerImprovedEncoding), i) => LTLMattmüllerEncoding(f, "matt_" + i, improvedChaines = true)
+                                                   case ((f, OnParallelEncoding), i)         => LTLOnParallelEncoding(f, "matt_" + i)
+                                                 }) ++
           (planDistanceMetric map {
             case MissingOperators(maximumDifference)              => ActionSetDifference(referencePlan.get, maximumDifference)
             case MissingTaskInstances(maximumDifference)          => ActionMatchingDifference(referencePlan.get, maximumDifference)
@@ -602,7 +604,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //println("Time " + (actionsPerPosition.keys.max + 1))
         //println(stateAtTime(actionsPerPosition.keys.max + 1))
 
-        println(allTrueAtoms filter {_.startsWith("matt")} mkString "\n")
+        println(allTrueAtoms.toSeq filter {_.startsWith("matt")} sortBy {_.split("@")(1).toInt} mkString "\n")
 
         //println(domain.tasks.find(_.name == "Y[]").get.longInfo)
 
