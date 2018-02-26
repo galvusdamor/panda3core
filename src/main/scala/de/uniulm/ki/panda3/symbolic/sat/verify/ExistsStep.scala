@@ -220,8 +220,9 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
 
 
   println("Computing disabling graph")
-  val time1                               = System.currentTimeMillis()
-  val disablingGraph: DirectedGraph[Task] = {
+  val time1                                                                                   = System.currentTimeMillis()
+  // the non-extended disabling graph will contain only those edges implies by the problem itself, not by additional constraints (like LTL)
+  val (disablingGraph, nonExtendedDisablingGraph): (DirectedGraph[Task], DirectedGraph[Task]) = {
 
     def applicable(task1: IntTask, task2: IntTask): Boolean = {
       var counter = false
@@ -264,15 +265,17 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     val edgesWithDuplicats: Seq[(IntTask, IntTask)] =
       predicateToDeleting.toSeq flatMap { case (p, as) => predicateToNeeding.getOrElse(p, new Array(0)) flatMap { n => as map { d => (d, n) } } }
     val alwaysEdges: Seq[(IntTask, IntTask)] = (edgesWithDuplicats groupBy { _._1 } toSeq) flatMap { case (t1, t2) => (t2 map { _._2 } distinct) collect { case t if t != t1 => (t1, t) } }
-    val edges = alwaysEdges ++ ltlEncodings.flatMap(_.additionalEdges(this)(predicateToAdding, predicateToDeleting, predicateToNeeding))
+    val additionalEdges = ltlEncodings.flatMap(_.additionalEdges(this)(predicateToAdding, predicateToDeleting, predicateToNeeding))
     val time12 = System.currentTimeMillis()
-    println("Candidates (" + edges.length + ") generated: " + (time12 - time1))
+    println("Candidates (" + alwaysEdges.length + " & " + additionalEdges.length + ") generated: " + (time12 - time1))
 
-    SimpleDirectedGraph(domain.primitiveTasks,
-                        (edges collect { case (a, b) if applicable(a, b) => (a.task, b.task) }).distinct
-                        //edges
-                        //domain.primitiveTasks.flatMap { a => domain.primitiveTasks collect { case b if a != b && applicable(a, b) && affects(a, b) => (a, b) } }
-                       )
+    val alwaysApplicableEdges = alwaysEdges collect { case (a, b) if applicable(a, b) => (a.task, b.task) }
+    val additionalApplicableEdges = additionalEdges collect { case (a, b) if applicable(a, b) => (a.task, b.task) }
+
+    val fullDG = SimpleDirectedGraph(domain.primitiveTasks, (alwaysApplicableEdges ++ additionalApplicableEdges).distinct)
+    val nonExtendedDG = SimpleDirectedGraph(domain.primitiveTasks, alwaysApplicableEdges.distinct)
+
+    (fullDG, nonExtendedDG)
   }
 
   val time2 = System.currentTimeMillis()
@@ -280,9 +283,13 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
   //println(disablingGraph.edgeList map { case (a, b) => a.name + " " + b.name } mkString ("\n"))
   val allSCCS = disablingGraph.stronglyConnectedComponents
   val time3   = System.currentTimeMillis()
-  println(((allSCCS map { _.size } groupBy { x => x }).toSeq.sortBy(_._1) map { case (k, s) => s.size + "x" + k } mkString (", ")) + " in " + (time3 - time2) / 1000.0)
+  println(((allSCCS map { _.size } groupBy { x => x }).toSeq.sortBy(_._1) map { case (k, s) => s.size + "x" + k } mkString ", ") + " in " + (time3 - time2) / 1000.0)
 
-  val disablingGraphSCCOrdering: Seq[Seq[Task]] = disablingGraph.condensation.topologicalOrdering.get.reverse map { _.toSeq.reverse }
+  val disablingGraphSCCOrdering: Seq[Seq[Task]] = disablingGraph.condensation.topologicalOrdering.get.reverse map { scc =>
+    // try to find a hint to the order in the non-extended disabling graph
+    val reducedGraph = SimpleDirectedGraph(scc.toSeq, nonExtendedDisablingGraph.edgesSet collect {case (from,to) if scc contains from => from -> (scc intersect to).toSeq})
+    reducedGraph.condensation.topologicalOrdering.get.reverse flatMap { _.toSeq}
+  }
   val disablingGraphTotalOrder : Array[Task]    = disablingGraphSCCOrdering.flatten.toArray
 
   Dot2PdfCompiler.writeDotToFile(disablingGraph, "disablingGraph.pdf")
@@ -307,7 +314,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
       if (newR < R.length) {
         val newClause = qualifierOption match {
           case None            => impliesSingle(action(K - 1, position, oi), chain(position, R(newR)._2, chainID))
-          case Some(qualifier) => Clause((action(K - 1, position, oi), false) :: (chain(position, R(newR)._2, chainID), true) :: (qualifier, true) :: Nil)
+          case Some(qualifier) => Clause((action(K - 1, position, oi), false) :: (chain(position, R(newR)._2, chainID), true) :: (qualifier, false) :: Nil)
         }
         (clausesSoFar :+ newClause, newR)
       } else
@@ -323,7 +330,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
       if (newR < R.length) {
         val newClause = qualifierOption match {
           case None            => impliesSingle(chain(position, i, chainID), chain(position, R(newR)._2, chainID))
-          case Some(qualifier) => Clause((chain(position, i, chainID), false) :: (chain(position, R(newR)._2, chainID), true) :: (qualifier, true) :: Nil)
+          case Some(qualifier) => Clause((chain(position, i, chainID), false) :: (chain(position, R(newR)._2, chainID), true) :: (qualifier, false) :: Nil)
         }
         (clausesSoFar :+ newClause, newR)
       } else
@@ -334,7 +341,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     val f3: Seq[Clause] = R map { case (ai, i) =>
       qualifierOption match {
         case None            => impliesNot(chain(position, i, chainID), action(K - 1, position, ai))
-        case Some(qualifier) => Clause((chain(position, i, chainID), false) :: (action(K - 1, position, ai), false) :: (qualifier, true) :: Nil)
+        case Some(qualifier) => Clause((chain(position, i, chainID), false) :: (action(K - 1, position, ai), false) :: (qualifier, false) :: Nil)
       }
     }
     val time3 = System.currentTimeMillis()
