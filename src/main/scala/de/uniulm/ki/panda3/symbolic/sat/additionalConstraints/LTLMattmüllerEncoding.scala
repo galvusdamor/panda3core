@@ -9,7 +9,7 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String) extends AdditionalSATConstraint with AdditionalEdgesInDisablingGraph {
+case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedChaines: Boolean = false) extends AdditionalSATConstraint with AdditionalEdgesInDisablingGraph {
 
   val formulaIDMap: Map[LTLFormula, Int] = lTLFormula.allSubformulae.zipWithIndex toMap
   val idFormulaMap: Map[Int, LTLFormula] = formulaIDMap map { _.swap }
@@ -98,7 +98,7 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String) extends Ad
             )
         }
         val time01 = System.currentTimeMillis()
-        println("Hold Time: " + (time01 - time00) + "ms")
+        //println("Hold Time: " + (time01 - time00) + "ms")
 
         // restrict to sequential encoding for testing purposes
         /*val amo = Range(0, linearEncoding.taskSequenceLength).flatMap(position =>
@@ -117,18 +117,22 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String) extends Ad
             val R: Array[(Task, Int)] = e.disablingGraphTotalOrder.zipWithIndex filter { case (a, _) => a.delEffectsAsPredicateSet.contains(m) || a.addEffectsAsPredicateSet.contains(m) }
             val chainID: String = "ltl_" + e.predicateIndex(m)
             val time001 = System.currentTimeMillis()
-            println("Chain PREP Time: " + (time001 - time000) + "ms")
-            val x = e.generateChainFor(E, R, chainID)
+            //println("Chain PREP Time: " + (time001 - time000) + "ms")
+            val x = if (!improvedChaines) e.generateChainFor(E, R, chainID) else {
+              // improved chain generation: we can disable a chain if we don't have to check a property that is related to that predicate at the moment
+              // Thesis: it is only relevant, it we have to check an atomic proposition (wide speculation, but should be true)
+              Range(0, linearEncoding.taskSequenceLength) flatMap { time => e.generateChainForAtTime(E, R, chainID, time, Some(formulaHoldsAtTime(PredicateAtom(m), time + 1))) }
+            }
             val time002 = System.currentTimeMillis()
-            println("Chain Time: " + (time002 - time001) + "ms")
+            //println("Chain Time: " + (time002 - time001) + "ms")
             x
           }
         }
         val time02 = System.currentTimeMillis()
-        println("Chain Time: " + (time02 - time01) + "ms")
+        //println("Chain Time: " + (time02 - time01) + "ms")
 
 
-        println("TOTAL " + " " + formulaTruth.length + " " + holeFormulaHolds.length + " " + chainClauses.length)
+        //println("TOTAL " + " " + formulaTruth.length + " " + holeFormulaHolds.length + " " + chainClauses.length)
         formulaTruth ++ holeFormulaHolds ++ chainClauses //++ amo
       case _             => assert(false, "Mattmüller-Encoding is only compatible with existsstep"); Nil
     }
@@ -148,7 +152,8 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String) extends Ad
     val affectedActions: Array[encoding.IntTask] = relevantPredicates flatMap { p => predicateToAdding.getOrElse(p, Array()) ++ predicateToDeleting.getOrElse(p, Array()) } toArray
 
     val edgesFromStatePredicates = affectedActions flatMap { a1 =>
-      affectedActions collect { case a2 if a1 != a2 && a1.hasMoreEffectsRelativeToPredicates(a2, relevantPredicates) => (a1, a2)
+      affectedActions collect {
+        case a2 if a1 != a2 && a1.hasMoreEffectsRelativeToPredicates(a2, relevantPredicates) => (a1, a2)
       }
     }
 

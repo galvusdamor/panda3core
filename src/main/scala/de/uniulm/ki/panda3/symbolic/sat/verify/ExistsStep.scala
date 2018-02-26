@@ -253,7 +253,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
 
     // compute affection
     val predicateToAdding: Map[Predicate, Array[this.IntTask]] =
-      intTasks flatMap { t => t.task.delEffectsAsPredicate map { e => (t, e) } } groupBy (_._2) map { case (p, as) => p -> as.map(_._1) }
+      intTasks flatMap { t => t.task.addEffectsAsPredicate map { e => (t, e) } } groupBy (_._2) map { case (p, as) => p -> as.map(_._1) }
 
     val predicateToDeleting: Map[Predicate, Array[this.IntTask]] =
       intTasks flatMap { t => t.task.delEffectsAsPredicate map { e => (t, e) } } groupBy (_._2) map { case (p, as) => p -> as.map(_._1) }
@@ -269,7 +269,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     println("Candidates (" + edges.length + ") generated: " + (time12 - time1))
 
     SimpleDirectedGraph(domain.primitiveTasks,
-                        edges collect { case (a, b) if applicable(a, b) => (a.task, b.task) }
+                        (edges collect { case (a, b) if applicable(a, b) => (a.task, b.task) }).distinct
                         //edges
                         //domain.primitiveTasks.flatMap { a => domain.primitiveTasks collect { case b if a != b && applicable(a, b) && affects(a, b) => (a, b) } }
                        )
@@ -282,11 +282,11 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
   val time3   = System.currentTimeMillis()
   println(((allSCCS map { _.size } groupBy { x => x }).toSeq.sortBy(_._1) map { case (k, s) => s.size + "x" + k } mkString (", ")) + " in " + (time3 - time2) / 1000.0)
 
-  val disablingGraphSCCOrdering: Seq[Seq[Task]] = disablingGraph.condensation.topologicalOrdering.get.reverse map { _.toSeq }
+  val disablingGraphSCCOrdering: Seq[Seq[Task]] = disablingGraph.condensation.topologicalOrdering.get.reverse map { _.toSeq.reverse }
   val disablingGraphTotalOrder : Array[Task]    = disablingGraphSCCOrdering.flatten.toArray
 
-  //Dot2PdfCompiler.writeDotToFile(disablingGraph, "disablingGraph.pdf")
-  //println("Disabling Graph Order:\n" + disablingGraphTotalOrder.map(_.name).mkString("\n"))
+  Dot2PdfCompiler.writeDotToFile(disablingGraph, "disablingGraph.pdf")
+  println("Disabling Graph Order:\n" + disablingGraphTotalOrder.map(_.name).mkString("\n"))
 
   //println("Non trivial SCCs")
   //println(scc.filter(_.size > 1) map {s => s.map(_.name).mkString(", ")} mkString("\n"))
@@ -296,43 +296,57 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
   def chain(position: Int, j: Int, chainID: String): String = "chain_" + position + "^" + j + ";" + chainID
 
 
-  def generateChainFor(E: Array[(Task, Int)], R: Array[(Task, Int)], chainID: String): Seq[Clause] = {
-    val x = Range(0, taskSequenceLength) flatMap { case position =>
-      val time0 = System.currentTimeMillis()
-      // generate chain restriction for every SCC
-      val f1: Seq[Clause] = E.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (oi, i)) =>
-        // search forward for next R
-        var newR = rpos
-        while (newR < R.length && R(newR)._2 <= i) newR += 1
+  def generateChainForAtTime(E: Array[(Task, Int)], R: Array[(Task, Int)], chainID: String, position: Int, qualifierOption: Option[String]): Seq[Clause] = {
+    val time0 = System.currentTimeMillis()
+    // generate chain restriction for every SCC
+    val f1: Seq[Clause] = E.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (oi, i)) =>
+      // search forward for next R
+      var newR = rpos
+      while (newR < R.length && R(newR)._2 <= i) newR += 1
 
-        if (newR < R.length)
-          (clausesSoFar :+ impliesSingle(action(K - 1, position, oi), chain(position, R(newR)._2, chainID)), newR)
-        else
-          (clausesSoFar, newR)
-                                                                     })._1
-      val time1 = System.currentTimeMillis()
+      if (newR < R.length) {
+        val newClause = qualifierOption match {
+          case None            => impliesSingle(action(K - 1, position, oi), chain(position, R(newR)._2, chainID))
+          case Some(qualifier) => Clause((action(K - 1, position, oi), false) :: (chain(position, R(newR)._2, chainID), true) :: (qualifier, true) :: Nil)
+        }
+        (clausesSoFar :+ newClause, newR)
+      } else
+        (clausesSoFar, newR)
+                                                                   })._1
+    val time1 = System.currentTimeMillis()
 
-      val f2 = R.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (ai, i)) =>
-        // search forward for next R
-        var newR = rpos
-        while (newR < R.length && R(newR)._2 <= i) newR += 1
+    val f2 = R.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (ai, i)) =>
+      // search forward for next R
+      var newR = rpos
+      while (newR < R.length && R(newR)._2 <= i) newR += 1
 
-        if (newR < R.length)
-          (clausesSoFar :+ impliesSingle(chain(position, i, chainID), chain(position, R(newR)._2, chainID)), newR)
-        else
-          (clausesSoFar, newR)
-                                                        })._1
-      val time2 = System.currentTimeMillis()
+      if (newR < R.length) {
+        val newClause = qualifierOption match {
+          case None            => impliesSingle(chain(position, i, chainID), chain(position, R(newR)._2, chainID))
+          case Some(qualifier) => Clause((chain(position, i, chainID), false) :: (chain(position, R(newR)._2, chainID), true) :: (qualifier, true) :: Nil)
+        }
+        (clausesSoFar :+ newClause, newR)
+      } else
+        (clausesSoFar, newR)
+                                                      })._1
+    val time2 = System.currentTimeMillis()
 
-      val f3 = R map { case (ai, i) => impliesNot(chain(position, i, chainID), action(K - 1, position, ai)) }
-      val time3 = System.currentTimeMillis()
-      println("Chain f's " + (time1 - time0) + "ms " + (time2 - time1) + "ms " + (time3 - time2) + "ms " + E.length)
-
-      f1 ++ f2 ++ f3
+    val f3: Seq[Clause] = R map { case (ai, i) =>
+      qualifierOption match {
+        case None            => impliesNot(chain(position, i, chainID), action(K - 1, position, ai))
+        case Some(qualifier) => Clause((chain(position, i, chainID), false) :: (action(K - 1, position, ai), false) :: (qualifier, true) :: Nil)
+      }
     }
+    val time3 = System.currentTimeMillis()
+    //println("Chain f's " + (time1 - time0) + "ms " + (time2 - time1) + "ms " + (time3 - time2) + "ms " + E.length)
 
-    x
+    f1 ++ f2 ++ f3
   }
+
+
+  // chain for E/R, but only if qualifier is true
+  def generateChainFor(E: Array[(Task, Int)], R: Array[(Task, Int)], chainID: String, qualifierOption: Option[String] = None): Seq[Clause] =
+    Range(0, taskSequenceLength) flatMap { case position => generateChainForAtTime(E, R, chainID, position, qualifierOption) }
 
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
@@ -355,7 +369,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
 
     val transitionFormula = stateTransitionFormulaOfLength(taskSequenceLength)
     val t0003 = System.currentTimeMillis()
-    println("State Transition Formula: " + (t0003 - t0002 ) + "ms")
+    println("State Transition Formula: " + (t0003 - t0002) + "ms")
 
     transitionFormula ++ parallelismFormula ++ invariantFormula
   }
