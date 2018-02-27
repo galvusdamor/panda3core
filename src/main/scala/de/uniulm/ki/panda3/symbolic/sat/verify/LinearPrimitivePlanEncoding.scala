@@ -77,9 +77,9 @@ trait LinearPrimitivePlanEncoding extends VerifyEncoding with EncodingWithLinear
     initialPlan.goal.substitutedPreconditions map { case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, length, pred), isPos))    }
 
 
-  override def linearPlan: scala.Seq[Map[Task, String]] = Range(0, taskSequenceLength) map { case i => domain.primitiveTasks map { t => t -> { action(K - 1, i, t) } } toMap }
+  override lazy val linearPlan: scala.Seq[Map[Task, String]] = Range(0, taskSequenceLength) map { case i => domain.primitiveTasks map { t => t -> { action(K - 1, i, t) } } toMap }
 
 
-  override def linearStateFeatures: scala.Seq[Map[Predicate, String]] =
+  override lazy val linearStateFeatures: scala.Seq[Map[Predicate, String]] =
     Range(0, taskSequenceLength + 1) map { case i => domain.predicates map { p => p -> { statePredicate(K - 1, i, p) } } toMap }
 }

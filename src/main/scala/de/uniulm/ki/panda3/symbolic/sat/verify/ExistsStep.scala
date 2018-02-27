@@ -292,7 +292,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
   }
   val disablingGraphTotalOrder : Array[Task]    = disablingGraphSCCOrdering.flatten.toArray
 
-  Dot2PdfCompiler.writeDotToFile(disablingGraph, "disablingGraph.pdf")
+  //Dot2PdfCompiler.writeDotToFile(disablingGraph, "disablingGraph.pdf")
   println("Disabling Graph Order:\n" + disablingGraphTotalOrder.map(_.name).mkString("\n"))
 
   //println("Non trivial SCCs")

@@ -20,14 +20,14 @@ trait SOGClassicalEncoding extends SOGEncoding with EncodingWithLinearPlan {
   protected def pathActive(p1: Seq[Int]) = "active!" + "_" + p1.mkString(";")
 
 
-  override def linearPlan: scala.Seq[Map[Task, String]] = {
+  override lazy val linearPlan: scala.Seq[Map[Task, String]] = {
     val allTasksArePossibleEverywhere: Set[Task] = primitivePaths flatMap { _._2 } toSet
 
     Range(0, taskSequenceLength) map { case i => allTasksArePossibleEverywhere map { t => t -> { action(K - 1, i, t) } } toMap }
   }
 
 
-  override def linearStateFeatures: scala.Seq[Map[Predicate, String]] = {
+  override lazy val linearStateFeatures: scala.Seq[Map[Predicate, String]] = {
     // there is one more state
     Range(0, taskSequenceLength + 1) map { case i => domain.predicates map { p => p -> { statePredicate(K - 1, i, p) } } toMap }
   }
