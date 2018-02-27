@@ -9,7 +9,7 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedChains: Boolean) extends AdditionalSATConstraint with AdditionalEdgesInDisablingGraph {
+case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedChains: Boolean) extends AdditionalSATConstraint with MattmüllerDisablingGraphExtension {
 
   val formulaIDMap: Map[LTLFormula, Int] = lTLFormula.allSubformulae.zipWithIndex toMap
   val idFormulaMap: Map[Int, LTLFormula] = formulaIDMap map { _.swap }
@@ -107,7 +107,7 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedCh
                                                                             .action(linearEncoding.K - 1, position, _)
                                                                         }))*/
 
-        val holeFormulaHolds = Clause(formulaHoldsAtTime(lTLFormula, 0)) :: Nil
+      val holeFormulaHolds = Clause(formulaHoldsAtTime(lTLFormula, 0)) :: Nil
 
         // add the chains necessary for the formulae
         val chainClauses = {
@@ -141,8 +141,13 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedCh
     //System exit 0
     x
   }
+}
 
-  override def additionalEdges(encoding: ExistsStep)(
+
+trait MattmüllerDisablingGraphExtension extends AdditionalEdgesInDisablingGraph {
+  def lTLFormula : LTLFormula
+
+   override def additionalEdges(encoding: ExistsStep)(
     predicateToAdding: Map[Predicate, Array[encoding.IntTask]], predicateToDeleting: Map[Predicate, Array[encoding.IntTask]],
     predicateToNeeding: Map[Predicate, Array[encoding.IntTask]]): Seq[(encoding.IntTask, encoding.IntTask)] = {
     // first get relevant predicates

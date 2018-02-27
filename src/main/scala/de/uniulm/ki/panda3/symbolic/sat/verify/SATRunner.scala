@@ -169,9 +169,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                                          case (a: AlternatingAutomaton, i) => AlternatingAutomatonFormulaEncoding(a, "aauto_" + i)
                                        }) ++
           ltlFormulaAndEncoding.zipWithIndex.map({
-                                                   case ((f, MattmüllerEncoding), i)         => LTLMattmüllerEncoding(f, "matt_" + i, improvedChaines = false)
-                                                   case ((f, MattmüllerImprovedEncoding), i) => LTLMattmüllerEncoding(f, "matt_" + i, improvedChaines = true)
-                                                   case ((f, OnParallelEncoding), i)         => LTLOnParallelEncoding(f, "matt_" + i)
+                                                   case ((f, MattmüllerEncoding), i)         => LTLMattmüllerEncoding(f, "matt_" + i, improvedChains = false)
+                                                   case ((f, MattmüllerImprovedEncoding), i) => LTLMattmüllerEncoding(f, "matt_" + i, improvedChains = true)
+                                                   case ((f, OnParallelEncoding), i)         => LTLOnParallelEncoding(f, "onparallel_" + i)
                                                  }) ++
           (planDistanceMetric map {
             case MissingOperators(maximumDifference)              => ActionSetDifference(referencePlan.get, maximumDifference)
@@ -605,6 +605,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //println(stateAtTime(actionsPerPosition.keys.max + 1))
 
         println(allTrueAtoms.toSeq filter {_.startsWith("matt")} sortBy {_.split("@")(1).toInt} mkString "\n")
+        println(allTrueAtoms.toSeq filter {_.startsWith("onparallel")} sortBy {_.split("@")(1).toInt} mkString "\n")
 
         //println(domain.tasks.find(_.name == "Y[]").get.longInfo)
 

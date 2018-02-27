@@ -149,6 +149,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
   lazy val addEffectsAsPredicateSet      = addEffectsAsPredicate toSet
   lazy val delEffectsAsPredicate         = effectsAsPredicateBool collect { case (p, false) => p }
   lazy val delEffectsAsPredicateSet      = delEffectsAsPredicate toSet
+  lazy val effectAsPredicateSet          = addEffectsAsPredicateSet ++ delEffectsAsPredicateSet
   lazy val posPreconditionAsPredicate    = preconditionsAsPredicateBool collect { case (p, true) => p }
   lazy val posPreconditionAsPredicateSet = posPreconditionAsPredicate.toSet
 

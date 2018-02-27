@@ -1954,7 +1954,7 @@ object OnParallelEncoding extends LTLEncodingMethod
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      ltlFormula: Option[LTLFormula] = None,
-                     formulaEncoding: LTLEncodingMethod = MattmüllerEncoding,
+                     formulaEncoding: LTLEncodingMethod = OnParallelEncoding,
                      planToMinimiseDistanceTo: Option[Seq[String]] = None,
                      planDistanceMetric: Seq[PlanDistanceMetric] = Nil,
                      checkResult: Boolean = false,

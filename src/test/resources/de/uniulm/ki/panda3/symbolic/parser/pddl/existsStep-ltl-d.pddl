@@ -7,6 +7,7 @@
 		(d)
 		(e)
 		(f)
+		(g)
 )
 
 ;; solution
@@ -20,6 +21,7 @@
 
 ;; test G (d & a -> G - e)   // should not have a solution
 ;; test G (d & a -> F f)   // should have a solution (*must* execute essZ)
+
 
 
 (:action X
@@ -48,5 +50,12 @@
    :precondition
     (and (c) (d))
    :effect
-    (and (f)))
+    (and (g)))
+
+(:action W
+  :parameters()
+  :precondition
+   (and (g))
+  :effect
+   (and (f) ))
 )
