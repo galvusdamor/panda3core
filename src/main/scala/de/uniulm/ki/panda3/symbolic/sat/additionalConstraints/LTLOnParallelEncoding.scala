@@ -9,7 +9,7 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends AdditionalSATConstraint with MattmüllerDisablingGraphExtension {
+case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends AdditionalSATConstraint {
 
   val formulaIDMap: Map[LTLFormula, Int] = lTLFormula.allSubformulae.zipWithIndex toMap
   val idFormulaMap: Map[Int, LTLFormula] = formulaIDMap map { _.swap }
