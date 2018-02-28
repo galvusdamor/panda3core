@@ -170,10 +170,12 @@ action_def :
 
 //
 // Goal Description
-// @LABEL {gd means "goal description". It is used to define goals and preconditions.}
+// @LABEL {gd means "goal description". It is used to define goals and preconditions. The PDDL 2.1 definition has been extended by the LTL defintions given by Gerevini andLon "Plan Constraints and Preferences in PDDL3"}
 //
-// @PDDL
-gd : gd_empty | atomic_formula | gd_negation | gd_implication | gd_conjuction | gd_disjuction | gd_existential | gd_universal | gd_equality_constraint;
+// @MODIFIED
+gd : gd_empty | atomic_formula | gd_negation | gd_implication | gd_conjuction | gd_disjuction | gd_existential | gd_universal | gd_equality_constraint
+              | gd_ltl_at_end | gd_ltl_always | gd_ltl_sometime | gd_ltl_at_most_once | gd_ltl_sometime_after | gd_ltl_sometime_before
+              | gd_preference;
 
 gd_empty : '(' ')';
 gd_conjuction : '(' 'and' gd+ ')';
@@ -184,6 +186,16 @@ gd_existential : '(' 'exists' '(' typed_var_list ')' gd ')';
 gd_universal : '(' 'forall' '(' typed_var_list ')' gd ')';
 
 gd_equality_constraint : equallity var_or_const var_or_const ')';
+
+gd_ltl_at_end : '(' 'at end' gd ')';
+gd_ltl_always : '(' 'always' gd ')';
+gd_ltl_sometime : '(' 'sometime' gd ')';
+gd_ltl_at_most_once : '(' 'at-most-once' gd ')';
+gd_ltl_sometime_after : '(' 'sometime-after' gd gd ')';
+gd_ltl_sometime_before : '(' 'sometime-before' gd gd ')';
+
+gd_preference : '(' 'preference' NAME gd ')';
+
 
 //
 // Effects
@@ -248,7 +260,7 @@ func_symbol : NAME;
 NAME : [a-zA-Z][a-zA-Z0-9\-_]* ;
 COMMENT : (';' ~[\r\n]* ('\r'|'\n') ('\r'|'\n')? ) -> skip ;
 WS : [ \t\r\n]+ -> skip ;
-NUMBER : [0-9][0-9]* ;
+NUMBER : [0-9][0-9]* '.'? [0-9]* | '.' [0-9]*;
 
 //
 /*********************************************************************************/
@@ -263,6 +275,7 @@ problem : '(' 'define' '(' 'problem' NAME ')'
               p_htn?
               p_init
               p_goal?
+              p_constraint?
               metric_spec?
               ')';
 
@@ -279,8 +292,11 @@ p_htn : '(' (':htn'|':htnti')
 metric_spec : '(' ':metric' optimization ground_f_exp')';
 optimization : 'minimize' | 'maximize';
 ground_f_exp : '(' bin_op ground_f_exp ground_f_exp ')'
+             | '(' multi_op ground_f_exp ground_f_exp+ ')'
              | ('(' '-' | '(-') ground_f_exp ')'
              | NUMBER
              | '(' func_symbol NAME* ')'
              | 'total-time'
              | func_symbol;
+
+p_constraint : '(' ':constraints' gd ')';
