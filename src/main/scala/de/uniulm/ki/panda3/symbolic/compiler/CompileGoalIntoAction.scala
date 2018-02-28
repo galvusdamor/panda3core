@@ -33,7 +33,8 @@ object CompileGoalIntoAction extends DomainTransformer[Unit] {
     val planSteps = psInit :: psPlanTask :: plan.goal :: psGoal :: Nil
     val ordering = TaskOrdering.totalOrdering(planSteps)
     val csp = CSP(psInit.argumentSet, Nil)
-    val initialPlan = Plan(planSteps, Nil, ordering, csp, psInit, psGoal,plan.isModificationAllowed,plan.isFlawAllowed, Map(), Map())
+    val initialPlan = Plan(planSteps, Nil, ordering, csp, psInit, psGoal,plan.isModificationAllowed,plan.isFlawAllowed, Map(), Map(),
+                           plan.dontExpandVariableConstraints,plan.ltlConstraint)
 
 
     val newDomain = domain.copy(tasks = (domain.tasks :+ plan.goal.schema :+ planTask).distinct,

@@ -58,7 +58,8 @@ object SHOPMethodCompiler extends DomainTransformerWithOutInformation {
           (SimpleDecompositionMethod(abstractTask, new Plan(subPlan.planSteps ++ additionalPlanSteps,
                                                             subPlan.causalLinks, newOrderingWithPrec, subPlan.variableConstraints, subPlan.init,
                                                             subPlan.goal, subPlan.isModificationAllowed, subPlan.isFlawAllowed, subPlan.planStepDecomposedByMethod,
-                                                            subPlan.planStepParentInDecompositionTree), name), additionalPlanSteps map { _.schema })
+                                                            subPlan.planStepParentInDecompositionTree, subPlan.dontExpandVariableConstraints,
+                                                            subPlan.ltlConstraint), name), additionalPlanSteps map { _.schema })
         }
     }
     (Domain(domain.sorts, domain.predicates, domain.tasks ++ (compiledMethods flatMap { _._2 }), compiledMethods map { _._1 }, domain.decompositionAxioms,

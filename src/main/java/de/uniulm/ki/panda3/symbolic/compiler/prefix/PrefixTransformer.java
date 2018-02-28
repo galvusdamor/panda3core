@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.domain.updates.*;
 import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.LTLTrue$;
 import de.uniulm.ki.panda3.util.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
@@ -355,7 +356,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
             Plan subPlan = new Plan(internalTN.planSteps(), internalTN.causalLinks(), internalTN.taskOrderings(),
                     internalTN.csp().addVariables(psO.arguments()), psInit, psGoal, domPlan._2().isModificationAllowed(),
-                    domPlan._2().isFlawAllowed(), domPlan._2().planStepDecomposedByMethod(), domPlan._2().planStepParentInDecompositionTree(),false);
+                    domPlan._2().isFlawAllowed(), domPlan._2().planStepDecomposedByMethod(), domPlan._2().planStepParentInDecompositionTree(),false, LTLTrue$.MODULE$);
 
             DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(compoundTask, subPlan, "new method");
             newMethods.add(decompositionMethod);
@@ -398,14 +399,16 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
 
                 tempSubPlan = new Plan(subnetwork.planSteps(), subnetwork.causalLinks(), subnetwork.taskOrderings(),
                         subnetwork.csp().addVariables(tempPlanStep_O.arguments()).addVariables(psProcess.arguments()),
-                        psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy, hddlPanda3Visitor.planStepsDecompositionParents,false);
+                        psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy, hddlPanda3Visitor.planStepsDecompositionParents,false,
+                        LTLTrue$.MODULE$);
 
             } else {
                 subnetwork.addOrdering(tempPlanStep_O, psGoal);
 
                 tempSubPlan = new Plan(subnetwork.planSteps(), subnetwork.causalLinks(), subnetwork.taskOrderings(),
                         subnetwork.csp().addVariables(tempPlanStep_O.arguments()),
-                        psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy, hddlPanda3Visitor.planStepsDecompositionParents,false);
+                        psInit, psGoal, NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy, hddlPanda3Visitor.planStepsDecompositionParents,false,
+                        LTLTrue$.MODULE$);
             }
 
             DecompositionMethod decompositionMethod = new SimpleDecompositionMethod(correspondingCompoundTask, tempSubPlan, "some method");

@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.LTLTrue
 import de.uniulm.ki.panda3.symbolic.search.{NoFlaws, NoModifications}
 
 /**
@@ -85,7 +86,9 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
           isModificationAllowed = NoModifications,
           isFlawAllowed = NoFlaws,
           planStepDecomposedByMethod = Map(),
-          planStepParentInDecompositionTree = Map())
+          planStepParentInDecompositionTree = Map(),
+          dontExpandVariableConstraints = false,
+          ltlConstraint = LTLTrue)
   }
 
   private final case class Simplification(original: Task, replacement: Task, newTasks: Seq[Task], newMethods: Seq[DecompositionMethod]) {

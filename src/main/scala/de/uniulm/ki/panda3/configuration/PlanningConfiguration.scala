@@ -943,7 +943,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       }
 
       val pddlPlan = Plan(withGoalPlan.initAndGoal, Nil, TaskOrdering(OrderingConstraint(withGoalPlan.init, withGoalPlan.goal) :: Nil, withGoalPlan.initAndGoal),
-                          withGoalPlan.variableConstraints, withGoalPlan.init, withGoalPlan.goal, withGoalPlan.isModificationAllowed, withGoalPlan.isFlawAllowed, Map(), Map())
+                          withGoalPlan.variableConstraints, withGoalPlan.init, withGoalPlan.goal, withGoalPlan.isModificationAllowed, withGoalPlan.isFlawAllowed, Map(), Map(),
+                          false, LTLTrue)
 
       // FD can't handle either in the sort hierarchy, so we have to use predicates when writing them ...
       val uuid = UUID.randomUUID().toString

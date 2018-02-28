@@ -1,9 +1,9 @@
 package de.uniulm.ki.panda3.efficient
 
 import de.uniulm.ki.panda3.efficient.csp.{EfficientCSP, EfficientVariableConstraint}
-import de.uniulm.ki.panda3.efficient.domain.{EfficientDecompositionMethod, EfficientTask, EfficientDomain}
+import de.uniulm.ki.panda3.efficient.domain.{EfficientDecompositionMethod, EfficientDomain, EfficientTask}
 import de.uniulm.ki.panda3.efficient.logic.EfficientLiteral
-import de.uniulm.ki.panda3.efficient.plan.{ProblemConfiguration, EfficientPlan}
+import de.uniulm.ki.panda3.efficient.plan.{EfficientPlan, ProblemConfiguration}
 import de.uniulm.ki.panda3.efficient.plan.element.EfficientCausalLink
 import de.uniulm.ki.panda3.efficient.plan.flaw._
 import de.uniulm.ki.panda3.efficient.plan.modification._
@@ -18,8 +18,10 @@ import de.uniulm.ki.panda3.symbolic.plan.modification._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.LTLTrue
 import de.uniulm.ki.panda3.symbolic.search._
-import de.uniulm.ki.util.{SimpleDirectedGraph, BiMap}
+import de.uniulm.ki.util.{BiMap, SimpleDirectedGraph}
 
 import scala.collection.mutable
 
@@ -418,9 +420,10 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
             (planStepArray(ps), (planStepArray(parent), appliedDecompositionMethod.subPlan.planStepsAndRemovedPlanStepsWithoutInitGoal(subPlanPS - 2)))
         }).toMap
 
+    // TODO: efficient representation can't handle LTL
     // and return the actual plan
     val symbolicPlan = Plan(planStepArray.toSeq, causalLinks, ordering, csp, planStepArray(0), planStepArray(1), ModificationsByClass(allowedModifications: _*),
-                            FlawsByClass(allowedFlaws: _*), planStepDecomposedByMethod, parentsInDecompositionTree)
+                            FlawsByClass(allowedFlaws: _*), planStepDecomposedByMethod, parentsInDecompositionTree, false, LTLTrue)
     // sanity checks
     if (symbolicPlan.variableConstraints.isSolvable.getOrElse(true) != plan.variableConstraints.potentiallyConsistent) {
       println(symbolicPlan.variableConstraints.isSolvable + " " + plan.variableConstraints.potentiallyConsistent)
@@ -558,7 +561,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
 
       val ordering = TaskOrdering(OrderingConstraint.allBetween(init, goal, insertedPlanSteps: _*) ++ subPlanOrderingConstraints, subPlanPlanSteps)
       val csp = CSP((newVariables ++ nonPresentDecomposedPlanStep.arguments).toSet, innerConstraints)
-      val subPlan = Plan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](), Map[PlanStep, (PlanStep, PlanStep)]())
+      val subPlan = Plan(subPlanPlanSteps, innerLinks, ordering, csp, init, goal, NoModifications, NoFlaws, Map[PlanStep, DecompositionMethod](), Map[PlanStep, (PlanStep, PlanStep)](),
+                         false, additionalConstraints.LTLTrue)
 
       // construct the modification
       DecomposePlanStep(wrapPlanStep(decomposedPS, wrappedPlan), nonPresentDecomposedPlanStep, subPlan, outerConstraints, inheritedLinks, appliedDecompositionMethod, planStepMapping,

@@ -15,6 +15,8 @@ import de.uniulm.ki.panda3.symbolic.plan.flaw.OpenPrecondition;
 import de.uniulm.ki.panda3.symbolic.plan.flaw.UnboundVariable;
 import de.uniulm.ki.panda3.symbolic.plan.modification.*;
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering;
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.LTLTrue;
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.LTLTrue$;
 import de.uniulm.ki.panda3.symbolic.search.FlawsByClass;
 import de.uniulm.ki.panda3.symbolic.search.IsFlawAllowed;
 import de.uniulm.ki.panda3.symbolic.search.IsModificationAllowed;
@@ -199,7 +201,7 @@ public class CfGrammarIntersectionToHTN {
 
         TaskOrdering taskOrderings = new TaskOrdering(ordSeq.result(), planSteps.result());
         Plan p = new Plan(planSteps.result(), new seqProviderList<CausalLink>().result(), taskOrderings, csp, psInit, psGoal,
-                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false);
+                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false, LTLTrue$.MODULE$);
 
         return new Tuple2<>(d, p);
     }
@@ -244,7 +246,8 @@ public class CfGrammarIntersectionToHTN {
             ordSeq.add(new OrderingConstraint(psInit, psGoal));
 
             TaskOrdering ordering = new TaskOrdering(ordSeq.result(), subtasks.result());
-            Plan subplan = new Plan(subtasks.result(), new Vector<CausalLink>(0, 0, 0), ordering, csp, psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false);
+            Plan subplan = new Plan(subtasks.result(), new Vector<CausalLink>(0, 0, 0), ordering, csp, psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy,
+                    planStepsDecompositionParents,false,LTLTrue$.MODULE$);
             DecompositionMethod dm = new SimpleDecompositionMethod(absT, subplan, name);
             decompositionMethods.add(dm);
         }

@@ -582,6 +582,10 @@ case class LTLUntil(leftFormula: LTLFormula, rightFormula: LTLFormula) extends L
   lazy val toPositiveBooleanFormula : PositiveBooleanFormula = PositiveElementary(this)
 }
 
+object LTLWeakUntil{
+  def apply(left : LTLFormula, right : LTLFormula) : LTLFormula = LTLUntil(left,LTLOr(right :: LTLAlways(left):: Nil))
+}
+
 /**
   * Release
   */

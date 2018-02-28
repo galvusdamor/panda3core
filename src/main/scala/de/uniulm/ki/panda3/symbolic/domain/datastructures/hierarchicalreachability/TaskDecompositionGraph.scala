@@ -56,7 +56,8 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
     val topOrdering = TaskOrdering(initialPlanInternalOrderings ++ OrderingConstraint.allBetween(topInit, topGoal, initialPlan.planStepsAndRemovedPlanStepsWithoutInitGoal: _*), topPlanTasks)
     val initialPlanWithout = Plan(topPlanTasks, initialPlan.causalLinksAndRemovedCausalLinks, topOrdering, initialPlan.variableConstraints, topInit, topGoal,
                                   initialPlan.isModificationAllowed,
-                                  initialPlan.isFlawAllowed, initialPlan.planStepDecomposedByMethod, initialPlan.planStepParentInDecompositionTree)
+                                  initialPlan.isFlawAllowed, initialPlan.planStepDecomposedByMethod, initialPlan.planStepParentInDecompositionTree,
+                                  initialPlan.dontExpandVariableConstraints, initialPlan.ltlConstraint)
 
     // create an artificial method
     val createdTopTask = ReducedTask("__grounding__top", isPrimitive = false, initialPlanAlreadyGroundedVariableMapping.keys.toSeq, Nil, Nil, And(Nil), And(Nil))
@@ -72,13 +73,11 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
       val emptyInit = GroundTask(initAndGoalNOOP, Nil)
       val abstractWithOutDecomposition = ReducedTask("__fail_abstract", isPrimitive = false, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil))
       val abstractGT = GroundTask(abstractWithOutDecomposition, Nil)
-      val abstractPlanTemp = Plan(PlanStep(3,abstractWithOutDecomposition,Nil) :: Nil, initAndGoalNOOP, initAndGoalNOOP,
+      val abstractPlanTemp = Plan(PlanStep(3, abstractWithOutDecomposition, Nil) :: Nil, initAndGoalNOOP, initAndGoalNOOP,
                                   Map[PlanStep, DecompositionMethod](), Map[PlanStep, (PlanStep, PlanStep)]())
       val abstractPlan = abstractPlanTemp.copy(parameterVariableConstraints = abstractPlanTemp.variableConstraints.addVariables(topTask.parameters))
       val topToAbstract = SimpleDecompositionMethod(topTask, abstractPlan, "useless method")
-      val topGroundMethod = GroundedDecompositionMethod(topToAbstract,groundedTopTask.task.parameters.zip(groundedTopTask.arguments).toMap)
-
-
+      val topGroundMethod = GroundedDecompositionMethod(topToAbstract, groundedTopTask.task.parameters.zip(groundedTopTask.arguments).toMap)
 
 
       val emptyTDG = SimpleAndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod](Set(abstractGT), Set(),

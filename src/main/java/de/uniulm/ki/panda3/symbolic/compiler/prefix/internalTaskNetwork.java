@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.hddlPanda3Visitor;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.antlrHDDLParser;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.parserUtil;
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.LTLTrue$;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import de.uniulm.ki.panda3.util.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
@@ -223,7 +224,7 @@ public class internalTaskNetwork {
 
         Plan subPlan = new Plan(ps, causalLinks.result(), this.taskOrderings, this.csp, psInit, psGoal,
                 NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy,
-                hddlPanda3Visitor.planStepsDecompositionParents,false);
+                hddlPanda3Visitor.planStepsDecompositionParents,false, LTLTrue$.MODULE$);
         return subPlan;
     }
 

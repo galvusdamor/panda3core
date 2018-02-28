@@ -7,6 +7,7 @@ import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint;
 import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.domain.updates.ExchangeVariable;
 import de.uniulm.ki.panda3.symbolic.logic.*;
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.LTLTrue$;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import de.uniulm.ki.panda3.util.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
@@ -29,7 +30,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
 
         Domain d = new Domain(dIn.sorts(), dIn.predicates(), dIn.tasks(), updatedMethods, dIn.decompositionAxioms(), None$.empty(),None$.empty());
         Plan p = new Plan(pIn.planSteps(), pIn.causalLinks(), pIn.orderingConstraints(), pIn.variableConstraints(), pIn.init(), pIn.goal(), pIn.isModificationAllowed(),pIn
-                .isFlawAllowed(),pIn.planStepDecomposedByMethod(),pIn.planStepParentInDecompositionTree(),false);
+                .isFlawAllowed(),pIn.planStepDecomposedByMethod(),pIn.planStepParentInDecompositionTree(),false, LTLTrue$.MODULE$);
 
         return new Tuple2<>(d, p);
     }
@@ -55,7 +56,8 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
                         sdm.subPlan().isModificationAllowed(),
                         sdm.subPlan().isFlawAllowed(),
                         sdm.subPlan().planStepDecomposedByMethod(),
-                        sdm.subPlan().planStepParentInDecompositionTree(),false);
+                        sdm.subPlan().planStepParentInDecompositionTree(),false, LTLTrue$.MODULE$);
+
 
                 // TODO reat effects
                 updatedMethods.add(new SHOPDecompositionMethod(sdm.abstractTask(), newSubPlan, updated._3(), sdm.methodEffect(), sdm.name()));

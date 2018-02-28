@@ -79,7 +79,7 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
       val ordering = TaskOrdering(OrderingConstraint.allBetween(plan.init, plan.goal, topPS), planSteps)
       val unnecessaryVariables = plan.variableConstraints.variables filterNot { v => planSteps exists { _.arguments.contains(v) } } toSeq
       val initialPlan = Plan(planSteps, Nil, ordering, plan.variableConstraints update RemoveVariables(unnecessaryVariables), plan.init, plan.goal,
-                             plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map())
+                             plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map(), plan.dontExpandVariableConstraints, plan.ltlConstraint)
 
       (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks :+ topTask), initialPlan)
     }
