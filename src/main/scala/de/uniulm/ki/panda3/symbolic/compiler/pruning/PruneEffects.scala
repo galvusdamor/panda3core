@@ -17,6 +17,7 @@ object PruneEffects extends DomainTransformer[(Set[Task], Set[String])] {
     val (reachableTasks, predicatesToProtect) = config
 
     //println(domain.predicates map {_.name} mkString "\n")
+    //println("TO protect")
     //println(config._2 mkString "\n")
 
     // determine which predicates (with negation) are actually necessary

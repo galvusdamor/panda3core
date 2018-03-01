@@ -123,7 +123,7 @@ public class hddlPanda3Visitor {
         Task init = visitInitialState(vctx, varConstraints, sorts, predicates, ctxProblem.p_init());
         Task goal = visitGoalState(vctx, varConstraints, sorts, predicates, ctxProblem.p_goal());
         LTLFormula ltlConstraints = LTLTrue$.MODULE$;
-        if (ctxProblem.p_constraint() != null) ltlConstraints = visitConstraints(sorts, predicates, ctxProblem.p_constraint());
+        if (ctxProblem.p_constraint() != null) ltlConstraints = visitConstraints(sorts, predicates, ctxProblem.p_constraint()).nnf();
         Seq<Task> tasks = visitTaskDefs(sorts, predicates, ctxDomain);
 
         Seq<DecompositionMethod> decompositionMethods = visitMethodDef(ctxDomain.method_def(), sorts, predicates, tasks);

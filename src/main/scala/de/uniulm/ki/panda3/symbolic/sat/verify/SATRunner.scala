@@ -604,8 +604,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //println("Time " + (actionsPerPosition.keys.max + 1))
         //println(stateAtTime(actionsPerPosition.keys.max + 1))
 
-        println(allTrueAtoms.toSeq filter {_.startsWith("matt")} sortBy {_.split("@")(1).toInt} mkString "\n")
-        println(allTrueAtoms.toSeq filter {_.startsWith("onparallel")} sortBy {_.split("@")(1).toInt} mkString "\n")
+        //println(allTrueAtoms.toSeq filter {_.startsWith("matt")} sortBy {_.split("@")(1).toInt} mkString "\n")
+        //println(allTrueAtoms.toSeq filter {_.startsWith("onparallel")} sortBy {_.split("@")(1).toInt} mkString "\n")
 
         //println(domain.tasks.find(_.name == "Y[]").get.longInfo)
 

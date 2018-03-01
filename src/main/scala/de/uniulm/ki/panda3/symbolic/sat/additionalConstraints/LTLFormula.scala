@@ -134,7 +134,7 @@ case class PredicateNameAtom(predicate: String, arguments: Seq[String]) extends 
 
   override def longInfo: String = predicate + arguments.mkString("(", ",", ")")
 
-  lazy val nnf: LTLFormula = this.copy(predicate = "+" + predicate)
+  lazy val nnf: LTLFormula = if (predicate.startsWith("+") || predicate.startsWith("-")) this else this.copy(predicate = "+" + predicate)
 
   lazy val negate: LTLFormula = LTLNot(this)
 
@@ -412,7 +412,8 @@ case class LTLImply(left: LTLFormula, right: LTLFormula) extends LTLFormula {
   override def longInfo: String = "(" + left.longInfo + " -> " + right.longInfo + ")"
 
   lazy val allPredicates: Set[Predicate] = ???
-  lazy val allPredicatesNames: Set[String] = ???
+
+  lazy val allPredicatesNames: Set[String] = left.allPredicatesNames ++ right.allPredicatesNames
 
   lazy val allSubformulae : Set[LTLFormula] = Set(this) ++ left.allSubformulae ++ right.allSubformulae
 

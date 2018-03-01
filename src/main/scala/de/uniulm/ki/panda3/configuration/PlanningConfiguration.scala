@@ -316,7 +316,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       case satSearch: SATSearch                          =>
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val separatedFormulae = satSearch.ltlFormula match {
+
+          val combinedFormula = (satSearch.ltlFormula, domainAndPlan._2.ltlConstraint) match {
+            case (None, LTLTrue)    => None
+            case (Some(x), LTLTrue) => Some(x)
+            case (None, x)          => Some(x)
+            case (Some(x), y)       => Some(LTLAnd(x :: y :: Nil))
+          }
+
+          val separatedFormulaeBeforeRandomSelection = combinedFormula match {
             case None          => Nil
             case Some(formula) =>
               val formulaInNNF = formula.nnf.parseAndGround(domainAndPlan._1, domainAndPlanFullyParsed._1, Map()).simplify
@@ -324,6 +332,27 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case LTLAnd(conj) => conj
                 case x            => x :: Nil
               }
+          }
+
+          val rand = new Random(randomSeed)
+
+          val separatedFormulae = if (separatedFormulaeBeforeRandomSelection.length <= 3) separatedFormulaeBeforeRandomSelection else {
+            Range(0, 3).foldLeft[(Seq[LTLFormula], Seq[LTLFormula])]((separatedFormulaeBeforeRandomSelection, Nil))(
+              { case ((l, sel), _) =>
+                val r = rand.nextInt(l.length)
+                (l.patch(r, Nil, 1), sel :+ l(r))
+              }
+                                                                                                                   )._2
+          }
+
+
+          if (separatedFormulae.nonEmpty) {
+            //domainAndPlan._2.ltlConstraint match {case LTLAnd(x) => println(x map { _.longInfo } mkString "\n")}
+
+            //println(domainAndPlan._1.predicates map { "\t" + _.name } mkString "\n")
+
+            println("LTL Requirements: ")
+            println(separatedFormulae map { "\t" + _.longInfo } mkString "\n")
           }
 
           // if a formula is provided, translate it into a Büchi automaton
@@ -825,7 +854,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule start PARSER_CWA
-    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(flattened, (true, protectedPredicates)) else flattened
+    val cwaApplied =
+      if (parsingConfiguration.closedWorldAssumption)
+        ClosedWorldAssumption.transform(flattened, (true, protectedPredicatesFromConfiguration ++ flattened._2.ltlConstraint.allPredicatesNames))
+      else flattened
     timeCapsule stop PARSER_CWA
 
     timeCapsule start PARSER_ELIMINATE_EQUALITY
@@ -893,7 +925,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     val predicatesRemoved = if (domain.isGround && preprocessingConfiguration.removeUnnecessaryPredicates) {
       info("Removing unnecessary predicates ... ")
-      val compiled = PrunePredicates.transform(domain, problem, protectedPredicates)
+      val compiled = PrunePredicates.transform(domain, problem, protectedPredicatesFromConfiguration ++ problem.ltlConstraint.allPredicatesNames)
       info("done.\n")
       extra(compiled._1.statisticsString + "\n")
       compiled
@@ -909,7 +941,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
       val hierarchyPruned = PruneHierarchy.transform(predicatesRemoved._1, predicatesRemoved._2, disallowedTasks.toSet)
-      val pruned = PruneEffects.transform(hierarchyPruned, (domain.primitiveTasks.toSet, protectedPredicates))
+      val pruned = PruneEffects.transform(hierarchyPruned, (domain.primitiveTasks.toSet, protectedPredicatesFromConfiguration ++ problem.ltlConstraint.allPredicatesNames))
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
@@ -1015,7 +1047,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
       val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
-      val pruned = PruneEffects.transform(hierarchyPruned, (domain.primitiveTasks.toSet, protectedPredicates))
+      val pruned = PruneEffects.transform(hierarchyPruned, (domain.primitiveTasks.toSet, protectedPredicatesFromConfiguration ++ problem.ltlConstraint.allPredicatesNames))
 
       info("done (" + (System.currentTimeMillis() - sasStart) + " ms).\n")
       info("Number of Grounded Actions " + sasPlusParser.reachableGroundPrimitiveActions.length + "\n")
@@ -1264,7 +1296,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       val predicatedPruned = if (preprocessingConfiguration.removeUnnecessaryPredicates) {
         info("Removing unnecessary predicates ... ")
-        val compiled = PrunePredicates.transform(methodsWithIdenticalTasks._1, methodsWithIdenticalTasks._2, protectedPredicates)
+        val compiled = PrunePredicates.transform(methodsWithIdenticalTasks._1, methodsWithIdenticalTasks._2,
+                                                 protectedPredicatesFromConfiguration ++ methodsWithIdenticalTasks._2.ltlConstraint.allPredicatesNames)
         info("done.\n")
         extra(compiled._1.statisticsString + "\n")
         compiled
@@ -1362,7 +1395,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     case _: PostprocessingConfiguration => {case p: PostprocessingConfiguration => this.copy(postprocessingConfiguration = p).asInstanceOf[this.type]}
   }
 
-  private val protectedPredicates: Set[String] = searchConfiguration match {
+  private val protectedPredicatesFromConfiguration: Set[String] = searchConfiguration match {
     case SATSearch(_, _, Some(f), _, _, _, _, _, _, _) => f.nnf.allPredicatesNames
     case _                                             => Set()
   }
@@ -1955,7 +1988,7 @@ object OnParallelEncoding extends LTLEncodingMethod
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
                      ltlFormula: Option[LTLFormula] = None,
-                     formulaEncoding: LTLEncodingMethod = OnParallelEncoding,
+                     formulaEncoding: LTLEncodingMethod = MattmüllerEncoding,
                      planToMinimiseDistanceTo: Option[Seq[String]] = None,
                      planDistanceMetric: Seq[PlanDistanceMetric] = Nil,
                      checkResult: Boolean = false,
