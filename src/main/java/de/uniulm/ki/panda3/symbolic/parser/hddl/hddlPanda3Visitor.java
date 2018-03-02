@@ -231,8 +231,8 @@ public class hddlPanda3Visitor {
             }
             return formula;
         } else if (ctx.gd_existential() != null) {
-            LTLFormula formula = visitLTLGoalDefinition(ctx.gd_universal().gd());
-            for (antlrHDDLParser.Typed_varsContext typedVars : ctx.gd_universal().typed_var_list().typed_vars()) {
+            LTLFormula formula = visitLTLGoalDefinition(ctx.gd_existential().gd());
+            for (antlrHDDLParser.Typed_varsContext typedVars : ctx.gd_existential().typed_var_list().typed_vars()) {
                 for (TerminalNode typedVar : typedVars.VAR_NAME()) {
                     formula = new LTLExists(typedVar.getText(), typedVars.var_type().NAME().getText(), formula);
                 }
@@ -777,6 +777,9 @@ public class hddlPanda3Visitor {
         } else if (ctx.gd_equality_constraint() != null) {
             return visitEqConstraint(vctx, sorts, constraints, ctx);
         } else if (ctx.gd_empty() != null) {
+            return new And<Literal>(new Vector<Literal>(0, 0, 0));
+        } else if (ctx.gd_preference() != null) {
+            if (warningOutput) System.out.println("I am ignoring the following goal description: " + ctx.getText());
             return new And<Literal>(new Vector<Literal>(0, 0, 0));
         } else {
             if (warningOutput) System.out.println(ctx.getText());

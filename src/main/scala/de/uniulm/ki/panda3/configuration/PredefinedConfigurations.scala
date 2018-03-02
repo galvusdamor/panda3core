@@ -200,6 +200,14 @@ object PredefinedConfigurations {
   def pandaProConfig(algorithm: SearchAlgorithmType, sasHeuristic: SasHeuristics): ProgressionSearch =
     ProgressionSearch(algorithm, Some(HierarchicalHeuristicRelaxedComposition(sasHeuristic)), PriorityQueueSearch.abstractTaskSelection.random)
 
+  def ltlConfig(encodingMethod: LTLEncodingMethod) = {
+    val parse = ParsingConfiguration(parserType = HDDLParserType, eliminateEquality = false, stripHybrid = true)
+    val prep = PredefinedConfigurations.groundingPreprocess.copy(compileInitialPlan = false, removeUnnecessaryPredicates = true)
+    val search = SATSearch(CRYPTOMINISAT, OptimalSATRun(Some(6)), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepEncoding, formulaEncoding = encodingMethod)
+
+    (parse, prep, search)
+  }
+
 
   val searchConfigs = Map(
                            "-GAStarAPR" -> planSearchAStarAPR,
@@ -473,8 +481,12 @@ object PredefinedConfigurations {
          "-prep-split-naive" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(NaiveTDG)), NoSearch),
          "-prep-split-bottomup" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(BottomUpTDG)), NoSearch),
          "-prep-split-topdown" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TopDownTDG)), NoSearch),
-         "-prep-split-twoway" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TwoWayTDG)), NoSearch)
+         "-prep-split-twoway" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TwoWayTDG)), NoSearch),
+
+         "-ltl-mattmüller" -> ltlConfig(MattmüllerEncoding),
+         "-ltl-mattmüllerImproved" -> ltlConfig(MattmüllerImprovedEncoding),
+         "-ltl-onParallel" -> ltlConfig(OnParallelEncoding)
 
 
-         )
+       )
 }
