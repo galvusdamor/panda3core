@@ -6,8 +6,7 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic,
-EfficientGroundedPlanningGraphImplementation}
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic, EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
@@ -24,7 +23,7 @@ import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints._
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
+import de.uniulm.ki.panda3.symbolic.sat.verify._
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, SASPlusGrounding}
@@ -37,6 +36,7 @@ import de.uniulm.ki.panda3.symbolic.parser.hpddl.HPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.symbolic.writer.anml.ANMLWriter
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
@@ -315,6 +315,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         })
 
       case satSearch: SATSearch                          =>
+        // create the partial int-representation that might be needed by an exists-step based encoding
+
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
 
           val combinedFormula = (satSearch.ltlFormula, domainAndPlan._2.ltlConstraint) match {
@@ -375,15 +377,21 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case _                                            => Nil
           }
 
-          val directLTLEncoding: Seq[(LTLFormula, LTLEncodingMethod)] = satSearch.formulaEncoding match {
+          val directLTLEncoding: Seq[AdditionalSATConstraint] = satSearch.formulaEncoding match {
             case AlternatingAutomatonEncoding | BüchiEncoding => Nil
-            case x                                            => separatedFormulae map { (_, x) }
+            case MattmüllerEncoding                           => separatedFormulae.zipWithIndex map { case (f, i) => LTLMattmüllerEncoding(f, "matt_" + i, improvedChains = false) }
+            case MattmüllerImprovedEncoding                   => separatedFormulae.zipWithIndex map { case (f, i) => LTLMattmüllerEncoding(f, "matt_" + i, improvedChains = true) }
+            case OnParallelEncoding                           => separatedFormulae.zipWithIndex map { case (f, i) => LTLOnParallelEncoding(f, "onparallel_" + i) }
           }
 
+          val additionalEdgesInDisablingGraph : Seq[AdditionalEdgesInDisablingGraph] = directLTLEncoding collect {case x : AdditionalEdgesInDisablingGraph => x}
+          val withRelevantPredicates : Seq[WithRelevantPredicates] = directLTLEncoding collect {case x : WithRelevantPredicates => x}
+
+          val intProblem = IntProblem(domainAndPlan._1, domainAndPlan._2, additionalEdgesInDisablingGraph, withRelevantPredicates)
 
           val referencePlan: Option[Seq[Task]] = satSearch.planToMinimiseDistanceTo map { _ map { taskName: String => domainAndPlan._1.tasks.find(_.name == taskName).get } }
 
-          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
+          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, intProblem, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
                                  automaton, directLTLEncoding,
                                  referencePlan, satSearch.planDistanceMetric,
                                  satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.encodingToUse,
@@ -2044,7 +2052,7 @@ case class SATSearch(solverType: Solvertype,
                         ("override K", single.overrideK.getOrElse("false")) :: Nil
                     case fullRun: FullSATRun  =>
                       ("full planner run", "true") :: Nil
-                    case OptimalSATRun(_)  =>
+                    case OptimalSATRun(_)     =>
                       ("optimal run", "true") :: Nil
                   }
                     ) ++ (

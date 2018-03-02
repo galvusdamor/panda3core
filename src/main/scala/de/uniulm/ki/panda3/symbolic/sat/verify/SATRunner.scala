@@ -10,7 +10,8 @@ import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints._
-import de.uniulm.ki.panda3.symbolic.plan.element.{PlanStep, GroundTask}
+import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.util._
 
 import scala.collection.{JavaConversions, Seq}
@@ -20,8 +21,9 @@ import scala.io.Source
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // scalastyle:off method.length cyclomatic.complexity
-case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
-                     büchiAutomata: Seq[LTLAutomaton[_, _]], ltlFormulaAndEncoding: Seq[(LTLFormula, LTLEncodingMethod)],
+case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
+                     satSolver: Solvertype, solverPath: Option[String],
+                     büchiAutomata: Seq[LTLAutomaton[_, _]], ltlFormulaAndEncoding: Seq[AdditionalSATConstraint],
                      referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
                      encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean,
@@ -168,11 +170,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                                          case (b: BüchiAutomaton, i)       => BüchiFormulaEncoding(b, "büchi_" + i)
                                          case (a: AlternatingAutomaton, i) => AlternatingAutomatonFormulaEncoding(a, "aauto_" + i)
                                        }) ++
-          ltlFormulaAndEncoding.zipWithIndex.map({
-                                                   case ((f, MattmüllerEncoding), i)         => LTLMattmüllerEncoding(f, "matt_" + i, improvedChains = false)
-                                                   case ((f, MattmüllerImprovedEncoding), i) => LTLMattmüllerEncoding(f, "matt_" + i, improvedChains = true)
-                                                   case ((f, OnParallelEncoding), i)         => LTLOnParallelEncoding(f, "onparallel_" + i)
-                                                 }) ++
+          ltlFormulaAndEncoding ++
           (planDistanceMetric map {
             case MissingOperators(maximumDifference)              => ActionSetDifference(referencePlan.get, maximumDifference)
             case MissingTaskInstances(maximumDifference)          => ActionMatchingDifference(referencePlan.get, maximumDifference)
@@ -188,7 +186,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         if (domain.isClassical) {
           encodingToUse match {
             case KautzSelmanEncoding => KautzSelman(timeCapsule, domain, initialPlan, planLength)
-            case ExistsStepEncoding  => ExistsStep(timeCapsule, domain, initialPlan, planLength, additionalConstraintsGenerators collect { case e: AdditionalEdgesInDisablingGraph => e })
+            case ExistsStepEncoding  => ExistsStep(timeCapsule, domain, initialPlan, intProblem, planLength,
+                                                   additionalConstraintsGenerators collect { case e: AdditionalEdgesInDisablingGraph => e })
           }
         }
         //else if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
@@ -589,7 +588,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
           val actionOrdering: Seq[Task] = executedActions.toSeq.sortWith(
             {
-              case (t1, t2) => es.disablingGraphTotalOrder.indexOf(t1) < es.disablingGraphTotalOrder.indexOf(t2)
+              case (t1, t2) => es.intProblem.disablingGraphTotalOrder.indexOf(t1) < es.intProblem.disablingGraphTotalOrder.indexOf(t2)
             })
 
           val x: Seq[PlanStep] = actionOrdering map { case a => c += 1; PlanStep(c, a, Nil) }

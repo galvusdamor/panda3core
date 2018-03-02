@@ -9,12 +9,14 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends AdditionalSATConstraint {
+case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends AdditionalSATConstraint with WithRelevantPredicates{
 
-  val formulaIDMap: Map[LTLFormula, Int] = lTLFormula.allSubformulae.zipWithIndex toMap
+  private val allSubformulae : Seq[LTLFormula] = lTLFormula.allSubformulae.toSeq
+
+  val formulaIDMap: Map[LTLFormula, Int] = allSubformulae.zipWithIndex toMap
   val idFormulaMap: Map[Int, LTLFormula] = formulaIDMap map { _.swap }
 
-  println(idFormulaMap.toSeq.sortBy(_._1) map { case (a, b) => a + " " + b.longInfo } mkString "\n")
+  //println(idFormulaMap.toSeq.sortBy(_._1) map { case (a, b) => a + " " + b.longInfo } mkString "\n")
 
   private def formulaHoldsAtTime(formula: LTLFormula, position: Int, time: Int): String = id + "_holds_" + formulaIDMap(formula) + "_" + position + "@" + time
 
@@ -28,23 +30,12 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
 
   private def noActionBeforePosition(position: Int, time: Int): String = id + "_noAction_pos_" + position + "@" + time
 
+  override val relevantPredicates = lTLFormula.allPredicates
+
+
   override def apply(linearEncoding: LinearPrimitivePlanEncoding): Seq[Clause] = linearEncoding match {
     case e: ExistsStep =>
-      val relevantPredicates = lTLFormula.allPredicates
-      // determine places of intermediate steps in one exists-step phase. We have to compute the full relevant state whenever one action altering said state has been executed
-      // position i here means that we have to check *after* action i was executed
-      val ltlCheckPositions = e.disablingGraphTotalOrder.zipWithIndex.foldLeft[(Set[Predicate], Seq[Int])]((Set(), Nil))(
-        { case ((currentPredicates, breaksSoFar), (task, taskIndex)) =>
-          val currentEffects = task.effectAsPredicateSet intersect relevantPredicates
-
-          // we can continue the sequence started by the last task
-          val taskIndices = if (currentEffects.subsetOf(currentPredicates) && taskIndex != 0) breaksSoFar else breaksSoFar :+ (taskIndex - 1)
-
-          (currentEffects, taskIndices)
-        })._2 :+ (e.disablingGraphTotalOrder.length - 1) // we always have to check after the last position ...
-
-      println(ltlCheckPositions mkString ", ")
-
+      val ltlCheckPositions = e.intProblem.ltlCheckPositions(this)
 
       val predicatesWithIndex: Seq[(Predicate, Int)] = relevantPredicates.toSeq.zipWithIndex
       val predicatesToIndex: Map[Predicate, Int] = predicatesWithIndex.toMap
@@ -59,13 +50,16 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
 
           // the first time-point has to be identical to the actual state before executing the actions
           val lastTimeStep = predicatesWithIndex flatMap { case (p, pi) =>
-            linearEncoding.impliesSingle(predicateTrueAtPosition(pi, e.disablingGraphTotalOrder.length - 1, time), linearEncoding.statePredicate(linearEncoding.K - 1, time + 1, p)) ::
-              linearEncoding.impliesSingle(linearEncoding.statePredicate(linearEncoding.K - 1, time + 1, p), predicateTrueAtPosition(pi, e.disablingGraphTotalOrder.length - 1, time)) :: Nil
+            linearEncoding.impliesSingle(predicateTrueAtPosition(pi, e.intProblem.disablingGraphTotalOrder.length - 1, time),
+                                         linearEncoding.statePredicate(linearEncoding.K - 1, time + 1, p)) ::
+              linearEncoding.impliesSingle(linearEncoding.statePredicate(linearEncoding.K - 1, time + 1, p),
+                                           predicateTrueAtPosition(pi, e.intProblem.disablingGraphTotalOrder.length - 1, time)) :: Nil
           }
 
 
           // first add clauses tracing the truth of the predicates relevant to the formula
-          val actionsDoSomething: Seq[Clause] = e.disablingGraphTotalOrder.zipWithIndex.foldLeft[(Seq[Clause], Seq[Int], Seq[(Task, Int)], Int)]((Nil, ltlCheckPositions.drop(1), Nil, -1))(
+          val actionsDoSomething: Seq[Clause] = e.intProblem.disablingGraphTotalOrder.zipWithIndex.
+            foldLeft[(Seq[Clause], Seq[Int], Seq[(Task, Int)], Int)]((Nil, ltlCheckPositions.drop(1), Nil, -1))(
             {
               case ((clausesSoFar, positionsToProcess, unprocessedTasks, previousPosition), nextTask) =>
                 val (lastTask, taskPosition) = nextTask
@@ -94,10 +88,10 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
                   val actionLiterals = tasksToProcess map { case (t, _) => linearEncoding.linearPlan(time)(t) }
                   // qualifier clauses for next-operator
                   val atMostOne = linearEncoding.atMostOneOf(actionLiterals, Some(atMostOneActionBeforePosition(taskPosition, time)))
-                  val atLeastOne  = linearEncoding.impliesRightOr(atLeastOneActionBeforePosition(taskPosition, time) :: Nil, actionLiterals)
-                  val exactlyOne = linearEncoding.impliesRightAnd(exactlyOneActionBeforePosition(taskPosition,time) :: Nil,
-                                                                  atMostOneActionBeforePosition(taskPosition,time) ::
-                                                                 atLeastOneActionBeforePosition(taskPosition, time) :: Nil)
+                  val atLeastOne = linearEncoding.impliesRightOr(atLeastOneActionBeforePosition(taskPosition, time) :: Nil, actionLiterals)
+                  val exactlyOne = linearEncoding.impliesRightAnd(exactlyOneActionBeforePosition(taskPosition, time) :: Nil,
+                                                                  atMostOneActionBeforePosition(taskPosition, time) ::
+                                                                    atLeastOneActionBeforePosition(taskPosition, time) :: Nil)
                   val noneAtAll = linearEncoding.impliesAllNot(noActionBeforePosition(taskPosition, time), actionLiterals)
 
                   (clausesSoFar ++ effectsMustHold ++ frameAxioms ++ atMostOne ++ noneAtAll ++ exactlyOne :+ atLeastOne, positionsToProcess.drop(1), Nil, taskPosition)
@@ -115,8 +109,8 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
       val formulaTruth = Range(0, linearEncoding.taskSequenceLength) flatMap { time =>
         // formulas that don't need temporal expressions to be evaluated
         val nonTimeDependentPart = ltlCheckPositions flatMap { case thisPosition =>
-          val last = time == linearEncoding.taskSequenceLength - 1 && thisPosition == e.disablingGraphTotalOrder.length - 1
-          lTLFormula.allSubformulae flatMap { sub =>
+          val last = time == linearEncoding.taskSequenceLength - 1 && thisPosition == e.intProblem.disablingGraphTotalOrder.length - 1
+          allSubformulae flatMap { sub =>
             sub match {
               case PredicateAtom(p) => linearEncoding.impliesSingle(formulaHoldsAtTime(sub, thisPosition, time), predicateTrueAtPosition(predicatesToIndex(p), thisPosition, time)) :: Nil
               case TaskAtom(t)      => assert(false, "can't handle yet"); Nil
@@ -146,7 +140,7 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
 
         // parts of the formula that are actual temporal operators
         val ltlPartBetween = ltlCheckPositions.zip(ltlCheckPositions.drop(1)) flatMap { case (thisPosition, nextPosition) =>
-          lTLFormula.allSubformulae flatMap { sub =>
+          allSubformulae flatMap { sub =>
             sub match {
               case LTLAlways(f) =>
                 linearEncoding.impliesRightAnd(formulaHoldsAtTime(sub, thisPosition, time) :: Nil,
@@ -206,9 +200,9 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
 
       // assert that formulas in between are true
       val timestepConnectors = Range(0, linearEncoding.taskSequenceLength) flatMap { case time =>
-        lTLFormula.allSubformulae flatMap { sub =>
-          linearEncoding.impliesSingle(formulaHoldsAtTime(sub, e.disablingGraphTotalOrder.length - 1, time), formulaHoldsAtTime(sub, -1, time + 1)) ::
-            linearEncoding.impliesSingle(formulaHoldsAtTime(sub, -1, time + 1), formulaHoldsAtTime(sub, e.disablingGraphTotalOrder.length - 1, time)) ::
+        allSubformulae flatMap { sub =>
+          linearEncoding.impliesSingle(formulaHoldsAtTime(sub, e.intProblem.disablingGraphTotalOrder.length - 1, time), formulaHoldsAtTime(sub, -1, time + 1)) ::
+            linearEncoding.impliesSingle(formulaHoldsAtTime(sub, -1, time + 1), formulaHoldsAtTime(sub, e.intProblem.disablingGraphTotalOrder.length - 1, time)) ::
             Nil
         }
       }
@@ -217,4 +211,8 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
       predicateTruth ++ formulaTruth ++ holeFormulaHolds ++ timestepConnectors
 
   }
+}
+
+trait WithRelevantPredicates{
+  def relevantPredicates : Set[Predicate]
 }
