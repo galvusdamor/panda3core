@@ -117,6 +117,7 @@ trait VerifyEncoding {
   def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
 
 
+
   def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) :: (leftFalse, true) :: (right, false) :: Nil) :: Nil
 
   def impliesLeftTrueAndFalseImpliesTrue(leftTrue: Seq[String], leftFalse: Seq[String], right: String): Clause =
@@ -187,6 +188,7 @@ trait VerifyEncoding {
 
   def goalState: Seq[Clause]
 
+  def planLengthDependentFormula(actualPlanLength : Int) : Seq[Clause] = Nil
 
   def miniSATString(formulas: Array[Clause], writer: BufferedWriter): scala.Predef.Map[String, Int] = {
 

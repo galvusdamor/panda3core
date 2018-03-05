@@ -17,7 +17,7 @@ import scala.annotation.elidable._
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrintable[DirectedGraphDotOptions] {
+trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMethod with DotPrintable[DirectedGraphDotOptions] {
 
   def domain: Domain
 
@@ -32,40 +32,6 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
   def groundedDecompositionMethods: Map[GroundTask, Set[GroundedDecompositionMethod]]
 
   val isInitialPlanGround = initialPlan.variableConstraints.variables forall { v => initialPlan.variableConstraints.getRepresentative(v).isInstanceOf[Constant] }
-
-
-  val (topTask, topMethod, initAndGoalNOOP, groundedTopTask) = {
-    val initialPlanAlreadyGroundedVariableMapping = initialPlan.variableConstraints.variables map { vari => (vari, initialPlan.variableConstraints.getRepresentative(vari)) } collect {
-      case (v, c: Constant) => (v, c)
-    } toMap
-
-    // just to be safe, we create a new initial abstract task, and ensure that it is fully grounded
-    // create a new virtual abstract task
-    assert(initialPlan.init.schema.isInstanceOf[ReducedTask])
-    assert(initialPlan.goal.schema.isInstanceOf[ReducedTask])
-
-    // TODO we cant handle this case (yet)
-    assert(!(initialPlan.causalLinks exists { _.containsOne(initialPlan.initAndGoal: _*) }))
-
-    val noop = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
-    val topInit = PlanStep(initialPlan.init.id, noop, Nil)
-    val topGoal = PlanStep(initialPlan.goal.id, noop, Nil)
-
-    val topPlanTasks = initialPlan.planStepsAndRemovedPlanStepsWithoutInitGoal :+ topInit :+ topGoal
-    val initialPlanInternalOrderings = initialPlan.orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(initialPlan.initAndGoal: _*) }
-    val topOrdering = TaskOrdering(initialPlanInternalOrderings ++ OrderingConstraint.allBetween(topInit, topGoal, initialPlan.planStepsAndRemovedPlanStepsWithoutInitGoal: _*), topPlanTasks)
-    val initialPlanWithout = Plan(topPlanTasks, initialPlan.causalLinksAndRemovedCausalLinks, topOrdering, initialPlan.variableConstraints, topInit, topGoal,
-                                  initialPlan.isModificationAllowed,
-                                  initialPlan.isFlawAllowed, initialPlan.planStepDecomposedByMethod, initialPlan.planStepParentInDecompositionTree,
-                                  initialPlan.dontExpandVariableConstraints, initialPlan.ltlConstraint)
-
-    // create an artificial method
-    val createdTopTask = ReducedTask("__grounding__top", isPrimitive = false, initialPlanAlreadyGroundedVariableMapping.keys.toSeq, Nil, Nil, And(Nil), And(Nil))
-    val createdTopMethod = SimpleDecompositionMethod(createdTopTask, initialPlanWithout, "__top")
-    val groundedTop = GroundTask(createdTopTask, createdTopTask.parameters map initialPlanAlreadyGroundedVariableMapping)
-
-    (createdTopTask, createdTopMethod, noop, groundedTop)
-  }
 
 
   lazy val taskDecompositionGraph: (AndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod], Seq[GroundTask], Seq[GroundedDecompositionMethod]) =
@@ -106,9 +72,8 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
           // find all supported abstract tasks
           val stillSupportedAbstractGroundTasks: Set[GroundTask] = stillSupportedMethods map { _.groundAbstractTask }
           val stillSupportedPrimitiveGroundTasks: Set[GroundTask] =
-            if (prunePrimitive) stillSupportedMethods flatMap { _.subPlanGroundedTasksWithoutInitAndGoal filter { _.task.isPrimitive } } else remainingGroundTasks filter {
-              _.task
-                .isPrimitive
+            if (prunePrimitive) stillSupportedMethods flatMap { _.subPlanGroundedTasksWithoutInitAndGoal filter { _.task.isPrimitive } } else remainingGroundTasks filter { _.task
+              .isPrimitive
             }
 
           val stillSupportedTasks = stillSupportedAbstractGroundTasks ++ stillSupportedPrimitiveGroundTasks
@@ -174,4 +139,43 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with DotPrinta
 
   /** The DOT representation of the object with options */
   override def dotString(options: DirectedGraphDotOptions): String = taskDecompositionGraph._1.dotString(options)
+}
+
+trait WithTopMethod {
+
+  def domain: Domain
+
+  def initialPlan: Plan
+
+  val (topTask, topMethod, initAndGoalNOOP, groundedTopTask) = {
+    val initialPlanAlreadyGroundedVariableMapping = initialPlan.variableConstraints.variables map { vari => (vari, initialPlan.variableConstraints.getRepresentative(vari)) } collect {
+      case (v, c: Constant) => (v, c)
+    } toMap
+
+    // just to be safe, we create a new initial abstract task, and ensure that it is fully grounded
+    // create a new virtual abstract task
+    assert(initialPlan.init.schema.isInstanceOf[ReducedTask])
+    assert(initialPlan.goal.schema.isInstanceOf[ReducedTask])
+
+    // TODO we cant handle this case (yet)
+    assert(!(initialPlan.causalLinks exists { _.containsOne(initialPlan.initAndGoal: _*) }))
+
+    val noop = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+    val topInit = PlanStep(initialPlan.init.id, noop, Nil)
+    val topGoal = PlanStep(initialPlan.goal.id, noop, Nil)
+
+    val topPlanTasks = initialPlan.planStepsAndRemovedPlanStepsWithoutInitGoal :+ topInit :+ topGoal
+    val initialPlanInternalOrderings = initialPlan.orderingConstraints.originalOrderingConstraints filterNot { _.containsAny(initialPlan.initAndGoal: _*) }
+    val topOrdering = TaskOrdering(initialPlanInternalOrderings ++ OrderingConstraint.allBetween(topInit, topGoal, initialPlan.planStepsAndRemovedPlanStepsWithoutInitGoal: _*), topPlanTasks)
+    val initialPlanWithout = Plan(topPlanTasks, initialPlan.causalLinksAndRemovedCausalLinks, topOrdering, initialPlan.variableConstraints, topInit, topGoal,
+                                  initialPlan.isModificationAllowed,
+                                  initialPlan.isFlawAllowed, initialPlan.planStepDecomposedByMethod, initialPlan.planStepParentInDecompositionTree)
+
+    // create an artificial method
+    val createdTopTask = ReducedTask("__grounding__top", isPrimitive = false, initialPlanAlreadyGroundedVariableMapping.keys.toSeq, Nil, Nil, And(Nil), And(Nil))
+    val createdTopMethod = SimpleDecompositionMethod(createdTopTask, initialPlanWithout, "__top")
+    val groundedTop = GroundTask(createdTopTask, createdTopTask.parameters map initialPlanAlreadyGroundedVariableMapping)
+
+    (createdTopTask, createdTopMethod, noop, groundedTop)
+  }
 }

@@ -13,7 +13,7 @@ import scala.collection.Seq
 case class KautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int) extends LinearPrimitivePlanEncoding with EncodingWithLinearPlan {
   override lazy val offsetToK = 0
 
-  override lazy val overrideK = None
+  override lazy val overrideK = Some(0)
 
   override lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 

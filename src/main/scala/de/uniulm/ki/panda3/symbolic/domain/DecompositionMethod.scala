@@ -23,14 +23,7 @@ trait DecompositionMethod extends DomainUpdatable {
   assert(!abstractTask.isPrimitive)
   (abstractTask, subPlan.init.schema) match {
     case (reducedAbstractTask: ReducedTask, _: ReducedTask) =>
-      if (reducedAbstractTask.precondition.conjuncts.size != subPlan.init.substitutedEffects.size)
-        println("WAT")
       assert(reducedAbstractTask.precondition.conjuncts.size == subPlan.init.substitutedEffects.size)
-      if (!(reducedAbstractTask.effect.conjuncts.size == subPlan.goal.substitutedPreconditions.size)) {
-        val a = reducedAbstractTask.effect.conjuncts
-        val b = subPlan.goal.substitutedPreconditions
-        println("SIZE " + a.size + "!=" + b.size)
-      }
       assert(reducedAbstractTask.effect.conjuncts.size == subPlan.goal.substitutedPreconditions.size)
       assert((reducedAbstractTask.precondition.conjuncts zip subPlan.init.substitutedEffects) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
       assert((reducedAbstractTask.effect.conjuncts zip subPlan.init.substitutedPreconditions) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })

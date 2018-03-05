@@ -538,6 +538,18 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     })
   }
 
+  lazy val groundedInitialStateOnlyPositive: Seq[GroundLiteral] =
+    init.substitutedEffects collect { case Literal(predicate, true, parameters) =>
+      GroundLiteral(predicate, true, parameters map { v =>
+        val value = variableConstraints.getRepresentative(v)
+        assert(value.isInstanceOf[Constant])
+        value.asInstanceOf[Constant]
+      })
+    }
+
+  lazy val groundedInitialStateOnlyPositiveSet: Set[GroundLiteral] = groundedInitialStateOnlyPositive toSet
+
+
   lazy val groundInitialStateOnlyPositivesSetOnlyPredicates: Set[Predicate] = groundedInitialStateOnlyPositiveSet map { _.predicate }
 
   lazy val groundedInitialTask: GroundTask = {
@@ -547,9 +559,6 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     }
     GroundTask(init.schema, arguments)
   }
-
-  lazy val groundedInitialStateOnlyPositive   : Seq[GroundLiteral] = groundedInitialState filter { _.isPositive }
-  lazy val groundedInitialStateOnlyPositiveSet: Set[GroundLiteral] = groundedInitialStateOnlyPositive toSet
 
   lazy val groundedGoalState: Seq[GroundLiteral] = goal.substitutedPreconditions map { case Literal(predicate, isPositive, parameters) =>
     GroundLiteral(predicate, isPositive, parameters map { v =>

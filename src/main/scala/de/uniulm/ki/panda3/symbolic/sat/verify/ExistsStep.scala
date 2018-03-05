@@ -19,7 +19,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
                       ltlEncodings: Seq[AdditionalEdgesInDisablingGraph]) extends LinearPrimitivePlanEncoding {
   override lazy val offsetToK = 0
 
-  override lazy val overrideK = None
+  override lazy val overrideK = Some(0)
 
   override lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 

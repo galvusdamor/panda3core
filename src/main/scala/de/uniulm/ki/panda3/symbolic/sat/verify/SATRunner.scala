@@ -55,7 +55,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
     method.invoke(vmManager).asInstanceOf[Int]
   }
 
-  def runWithTimeLimit(timelimit: Long, timeLimitForLastRun: Long, planLength: Int, offsetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false):
+  def runWithTimeLimit(timelimit: Long, timeLimitForLastRun: Long, planLength: Int, offsetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None,
+                       checkSolution: Boolean = false, runOptimiser: Boolean = false):
   (Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])], Boolean, Boolean) = {
 
     val timerSemaphore = new Semaphore(0)
@@ -65,7 +66,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
       override def run(): Unit = {
         timeCapsule switchTimerToCurrentThread Timings.TOTAL_TIME
-        result = Some(SATRunner.this.run(planLength: Int, offsetToK, includeGoal, defineK, checkSolution))
+        result = Some(SATRunner.this.run(planLength: Int, offsetToK, includeGoal, defineK, checkSolution, runOptimiser))
         timerSemaphore.acquire()
       }
     }
@@ -153,7 +154,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
     if (checkGoal) initialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => exitIfNot(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
   }
 
-  def run(planLength: Int, offSetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false):
+  def run(planLength: Int, offSetToK: Int, includeGoal: Boolean = true, defineK: Option[Int] = None, checkSolution: Boolean = false, runOptimiser: Boolean = false):
   Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] =
     try {
       informationCapsule.set(Information.PLAN_LENGTH, planLength)
@@ -232,8 +233,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         }
       }
 
-      val usedFormula = planningFormula ++ additionalConstraintsFormula
-      println("NUMBER OF CLAUSES " + usedFormula.length)
+      val usedFormulaGeneral = planningFormula ++ additionalConstraintsFormula
+      println("NUMBER OF CLAUSES " + usedFormulaGeneral.length)
       println("NUMBER OF STATE CLAUSES " + stateFormula.length)
       println("NUMBER OF DECOMPOSITION CLAUSES " + encoder.decompositionFormula.length)
       println("NUMBER OF ADDITIONAL CONSTRAINT CLAUSES " + additionalConstraintsFormula.length)
@@ -243,241 +244,249 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
       //System.in.read()
       timeCapsule stop Timings.GENERATE_FORMULA
 
-      //writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
+      ///////////////// END OF PRIMARY FORMULA GENERATION
+      // if we are optimising in the short loop (currently only POCL encoding), then this here becomes a loop
 
-      timeCapsule start Timings.TRANSFORM_DIMACS
-      println("READY TO WRITE")
-      val uniqFileIdentifier = UUID.randomUUID().toString
-      println("UUID " + uniqFileIdentifier)
-      val writer = new BufferedWriter(new FileWriter(new File(fileDir + "__cnfString" + uniqFileIdentifier)))
-      val atomMap: Map[String, Int] = encoder.miniSATString(usedFormula, writer)
-      println("FLUSH")
-      writer.flush()
-      writer.close()
-      println("CLOSE")
-      timeCapsule stop Timings.TRANSFORM_DIMACS
+      // do sime kind of binary search for the plan size ...
+      var lo = 1
+      var hi = -1
+      var next = if (runOptimiser) 1 else planLength
+      var foundSolution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
 
-      val tritivallUnsatisfiable = encoder match {
-        case pathbased: PathBasedEncoding[_, _] =>
-          //println(tot.primitivePaths map { case (a, b) => (a, b map { _.name }) } mkString "\n")
-          informationCapsule.set(Information.NUMBER_OF_PATHS, pathbased.primitivePaths.length)
-          println("NUMBER OF PATHS " + pathbased.primitivePaths.length)
+      while ((next > 0 || next == planLength) && (lo + 1 < hi || hi == -1)) {
+        timeCapsule startOrLetRun  Timings.VERIFY_TOTAL
+        println("\t\t\t\t\tRunning with plan length " + next + " lo " + lo + " " + hi)
+        // generate appropriate formula
+        val usedFormula = usedFormulaGeneral ++ encoder.planLengthDependentFormula(next)
 
-          pathbased.primitivePaths.length == 0
-        case _                                  => false
-      }
+        //writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
 
-      encoder match {
-        case tot: TotallyOrderedEncoding     => informationCapsule.set(Information.MAX_PLAN_LENGTH, tot.primitivePaths.length)
-        case tree: TreeVariableOrderEncoding => informationCapsule.set(Information.MAX_PLAN_LENGTH, tree.taskSequenceLength)
-        case _                               =>
-      }
+        timeCapsule start Timings.TRANSFORM_DIMACS
+        println("READY TO WRITE")
+        val uniqFileIdentifier = UUID.randomUUID().toString
+        println("UUID " + uniqFileIdentifier)
+        val writer = new BufferedWriter(new FileWriter(new File(fileDir + "__cnfString" + uniqFileIdentifier)))
+        val atomMap: Map[String, Int] = encoder.miniSATString(usedFormula, writer)
+        println("FLUSH")
+        writer.flush()
+        writer.close()
+        println("CLOSE")
+        timeCapsule stop Timings.TRANSFORM_DIMACS
 
-      //println(timeCapsule.integralDataMap())
+        val tritivallUnsatisfiable = encoder match {
+          case pathbased: PathBasedEncoding[_, _] =>
+            //println(tot.primitivePaths map { case (a, b) => (a, b map { _.name }) } mkString "\n")
+            informationCapsule.set(Information.NUMBER_OF_PATHS, pathbased.primitivePaths.length)
+            println("NUMBER OF PATHS " + pathbased.primitivePaths.length)
 
-      def removeCommentAtBeginning(s: String): String = {
-        var i = 0
-        while (s.charAt(i) == 'c') {
-          while (s.length > i && s.charAt(i) != '\n')
+            pathbased.primitivePaths.length == 0
+          case _                                  => false
+        }
+
+        encoder match {
+          case tot: TotallyOrderedEncoding     => informationCapsule.set(Information.MAX_PLAN_LENGTH, tot.primitivePaths.length)
+          case tree: TreeVariableOrderEncoding => informationCapsule.set(Information.MAX_PLAN_LENGTH, tree.taskSequenceLength)
+          case _                               =>
+        }
+
+        //println(timeCapsule.integralDataMap())
+
+        def removeCommentAtBeginning(s: String): String = {
+          var i = 0
+          while (s.charAt(i) == 'c') {
+            while (s.length > i && s.charAt(i) != '\n')
+              i += 1
             i += 1
-          i += 1
-        }
-
-        s.substring(i)
-      }
-
-      // if we can't reach a primitive decomposition the whole PDT will be pruned, resulting in a trivially satisfiable SAT formula,
-      // but the planning problem is clearly unsatisfiable
-      if (tritivallUnsatisfiable) {
-        println("Problem is trivially unsatisfiable ... exiting")
-        timeCapsule stop Timings.VERIFY_TOTAL
-        println("Removing files ... ")
-        System.getProperty("os.name").toLowerCase match {
-          case osname if osname startsWith "windows" =>
-            ("cmd.exe /q /c del " + fileDir + "__cnfString" + uniqFileIdentifier) !!
-
-          case osname if osname startsWith "mac os x" => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier) !
-          case _                                      => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier) !
-
-        }
-        None
-      } else {
-        //System exit 0
-
-        //timeCapsule start VerifyRunner.WRITE_FORMULA
-        //writeStringToFile(cnfString, new File("__cnfString"))
-        //timeCapsule stop VerifyRunner.WRITE_FORMULA
-
-        //writeStringToFile(usedFormula map {_.disjuncts mkString "\t"} mkString "\n", new File("__formulaString"))
-
-        try {
-          val stdout = new StringBuilder
-          val stderr = new StringBuilder
-          val logger = ProcessLogger({ s => stdout append (s + "\n") }, { s => stderr append (s + "\n") })
-
-          val outerScriptString = System.getProperty("os.name").toLowerCase match {
-            case osname if osname startsWith "windows"  => ""
-            case osname if osname startsWith "mac os x" => "#!/bin/bash\n"
-            case _                                      => "#!/bin/bash\n/usr/bin/time -f '%U %S' "
           }
 
-          val scriptFileName = fileDir + "__run" + uniqFileIdentifier + ".bat"
+          s.substring(i)
+        }
+
+        // if we can't reach a primitive decomposition the whole PDT will be pruned, resulting in a trivially satisfiable SAT formula,
+        // but the planning problem is clearly unsatisfiable
+        if (tritivallUnsatisfiable) {
+          println("Problem is trivially unsatisfiable ... exiting")
+          timeCapsule stop Timings.VERIFY_TOTAL
+          println("Removing files ... ")
+          System.getProperty("os.name").toLowerCase match {
+            case osname if osname startsWith "windows" =>
+              ("cmd.exe /q /c del " + fileDir + "__cnfString" + uniqFileIdentifier) !!
+
+            case osname if osname startsWith "mac os x" => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier) !
+            case _                                      => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier) !
+
+          }
+          None
+        } else {
+          //System exit 0
+
+          //timeCapsule start VerifyRunner.WRITE_FORMULA
+          //writeStringToFile(cnfString, new File("__cnfString"))
+          //timeCapsule stop VerifyRunner.WRITE_FORMULA
+
+          //writeStringToFile(usedFormula map {_.disjuncts mkString "\t"} mkString "\n", new File("__formulaString"))
+
+          try {
+            val stdout = new StringBuilder
+            val stderr = new StringBuilder
+            val logger = ProcessLogger({ s => stdout append (s + "\n") }, { s => stderr append (s + "\n") })
+
+            val outerScriptString = System.getProperty("os.name").toLowerCase match {
+              case osname if osname startsWith "windows"  => ""
+              case osname if osname startsWith "mac os x" => "#!/bin/bash\n"
+              case _                                      => "#!/bin/bash\n/usr/bin/time -f '%U %S' "
+            }
+
+            val scriptFileName = fileDir + "__run" + uniqFileIdentifier + ".bat"
 
           val solverCallString = satSolver match {
             case MINISAT =>
               println("Starting minisat")
               solverPath.get + " -rnd-seed=" + randomSeed + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
-
             case CRYPTOMINISAT =>
               println("Starting cryptominisat5")
               solverPath.get + " -t " + solverThreads + " -r " + randomSeed + " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-
             case RISS6 =>
               println("Starting riss6")
               // -config=Riss6:-no-enabled_cp3
               solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-
             case MapleCOMSPS =>
               println("Starting mapleCOMSPS")
               solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
           }
+            writeStringToFile(outerScriptString + solverCallString, scriptFileName)
 
-          writeStringToFile(outerScriptString + solverCallString, scriptFileName)
-
-          solverLastStarted = System.currentTimeMillis()
-          println("Setting starttime of solver to " + solverLastStarted)
-          val runScriptString = System.getProperty("os.name").toLowerCase match {
-            case osname if osname startsWith "windows"  => "cmd.exe /q /c  " + scriptFileName
-            case osname if osname startsWith "mac os x" => "bash " + scriptFileName
-            case _                                      => "bash " + scriptFileName
-          }
-
-          satProcess = Some(runScriptString.run(logger))
-
-          // wait for termination
-          satProcess.get.exitValue()
-          satSolver match {
-            case CRYPTOMINISAT | RISS6 | MapleCOMSPS =>
-              val outString = stdout.toString()
-              //println("OUTSTRING " + outString)
-              writeStringToFile(outString, new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
-            case _                                   =>
-          }
-
-          // remove runscript
-          System.getProperty("os.name").toLowerCase match {
-            case osname if osname startsWith "windows"  => ("cmd.exe /q /c del " + scriptFileName) !!
-            case osname if osname startsWith "mac os x" => ("rm " + scriptFileName) !
-            case _                                      => ("rm " + scriptFileName) !
-          }
-
-
-          // get time measurement
-          val totalTime = System.getProperty("os.name").toLowerCase match {
-            case osname if osname startsWith "windows"  => 0
-            case osname if osname startsWith "mac os x" => 0
-            case _                                      =>
-              val errString = removeCommentAtBeginning(stderr.toString())
-              println(errString)
-
-              (errString.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
-          }
-
-          println("Time command gave the following runtime for the solver: " + totalTime)
-
-          timeCapsule.addTo(SAT_SOLVER, totalTime)
-          //timeCapsule.addTo(TOTAL_TIME, totalTime)
-          //timeCapsule.addTo(VERIFY_TOTAL, totalTime)
-
-        } catch {
-          case rt: RuntimeException => println("Minisat exitcode problem ..." + rt.toString)
-            rt.printStackTrace()
-            System exit 0
-        }
-        timeCapsule stop Timings.VERIFY_TOTAL
-
-        print("Logging statistical information about the run ... ")
-        val formulaVariables: Seq[String] = atomMap.keys.toSeq
-        val averageClauseLength = (usedFormula map { _.disjuncts.length } sum).toDouble / usedFormula.length
-        val assertClauses = usedFormula count { c => c.disjuncts.length == 1 && c.disjuncts.head > 0 }
-        //val oneSided = usedFormula count { c => val x = c.disjuncts.head._2; c.disjuncts forall { _._2 == x } }
-        val horn = usedFormula count { c => c.disjuncts.count(_ > 0) <= 1 }
-        informationCapsule.set(Information.NUMBER_OF_VARIABLES, formulaVariables.size)
-        informationCapsule.set(Information.NUMBER_OF_CLAUSES, usedFormula.length)
-        informationCapsule.set(Information.AVERAGE_SIZE_OF_CLAUSES, "" + averageClauseLength)
-        informationCapsule.set(Information.NUMBER_OF_ASSERT, assertClauses)
-        //informationCapsule.set(Information.NUMBER_OF_ONE_SIDED, oneSided)
-        informationCapsule.set(Information.NUMBER_OF_HORN, horn)
-
-        informationCapsule.set(Information.STATE_FORMULA, stateFormula.length)
-        //informationCapsule.set(Information.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
-        informationCapsule.set(Information.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
-        println("done")
-
-        // postprocessing
-        print("Reading solver output ... ")
-        val t1 = System.currentTimeMillis()
-        val solverSource = Source.fromFile(fileDir + "__res" + uniqFileIdentifier + ".txt")
-        val t2 = System.currentTimeMillis()
-        val solverOutput = solverSource.mkString
-        val t3 = System.currentTimeMillis()
-        println("done")
-        //println("done  " + (t2 - t1) + " " + (t3 - t2))
-        print("Preparing solver output ... ")
-        val t4 = System.currentTimeMillis()
-        val (solveState, literals) = satSolver match {
-          case MINISAT                             =>
-            val splitted = solverOutput.split("\n")
-            if (splitted.length == 1) (splitted(0), Set[Int]()) else (splitted(0), (splitted(1).split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet)
-          case CRYPTOMINISAT | RISS6 | MapleCOMSPS =>
-
-            //println(solverOutput)
-            //System exit 0
-
-            val nonCommentOutput = removeCommentAtBeginning(solverOutput)
-
-            val stateSplit = nonCommentOutput.split("\n", 2)
-            val cleanState = stateSplit.head.replaceAll("s ", "")
-
-            if (stateSplit.length == 1) (cleanState, Set[Int]())
-            else {
-              val lits = stateSplit(1).split(" ").collect({ case s if s != "" && s != "\nv" && s != "v" && s != "0" && s != "0\n" => s.toInt }).toSet
-
-              (cleanState, lits)
+            solverLastStarted = System.currentTimeMillis()
+            println("Setting starttime of solver to " + solverLastStarted)
+            val runScriptString = System.getProperty("os.name").toLowerCase match {
+              case osname if osname startsWith "windows"  => "cmd.exe /q /c  " + scriptFileName
+              case osname if osname startsWith "mac os x" => "bash " + scriptFileName
+              case _                                      => "bash " + scriptFileName
             }
-        }
-        val t5 = System.currentTimeMillis()
-        println("done")
-        //println("done " + (t5 - t4))
 
-        // delete files
-        System.getProperty("os.name").toLowerCase match {
-          case osname if osname startsWith "windows" =>
-            ("cmd.exe /q /c del " + fileDir + "__cnfString" + uniqFileIdentifier) !!
+            satProcess = Some(runScriptString.run(logger))
 
-            ("cmd.exe /q /c del " + fileDir + "__res" + uniqFileIdentifier) !!
+            // wait for termination
+            satProcess.get.exitValue()
+            satSolver match {
+              case CRYPTOMINISAT | RISS6 | MapleCOMSPS =>
+                val outString = stdout.toString()
+                //println("OUTSTRING " + outString)
+                writeStringToFile(outString, new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
+              case _                                   =>
+            }
 
-          case osname if osname startsWith "mac os x" => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
-          case _                                      => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+            // remove runscript
+            System.getProperty("os.name").toLowerCase match {
+              case osname if osname startsWith "windows"  => ("cmd.exe /q /c del " + scriptFileName) !!
+              case osname if osname startsWith "mac os x" => ("rm " + scriptFileName) !
+              case _                                      => ("rm " + scriptFileName) !
+            }
+            // get time measurement
+            val totalTime = System.getProperty("os.name").toLowerCase match {
+              case osname if osname startsWith "windows"  => 0
+              case osname if osname startsWith "mac os x" => 0
+              case _                                      =>
+                val errString = removeCommentAtBeginning(stderr.toString())
+                //println(errString)
 
-        }
+                (errString.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
+            }
+
+            println("Time command gave the following runtime for the solver: " + totalTime)
+
+            timeCapsule.addTo(SAT_SOLVER, totalTime)
+            //timeCapsule.addTo(TOTAL_TIME, totalTime)
+            //timeCapsule.addTo(VERIFY_TOTAL, totalTime)
+
+          } catch {
+            case rt: RuntimeException => println("Minisat exitcode problem ..." + rt.toString)
+              rt.printStackTrace()
+              System exit 0
+          }
+          timeCapsule stop Timings.VERIFY_TOTAL
+
+          print("Logging statistical information about the run ... ")
+          val formulaVariables: Seq[String] = atomMap.keys.toSeq
+          val averageClauseLength = (usedFormula map { _.disjuncts.length } sum).toDouble / usedFormula.length
+          val assertClauses = usedFormula count { c => c.disjuncts.length == 1 && c.disjuncts.head > 0 }
+          //val oneSided = usedFormula count { c => val x = c.disjuncts.head._2; c.disjuncts forall { _._2 == x } }
+          val horn = usedFormula count { c => c.disjuncts.count(_ > 0) <= 1 }
+          informationCapsule.set(Information.NUMBER_OF_VARIABLES, formulaVariables.size)
+          informationCapsule.set(Information.NUMBER_OF_CLAUSES, usedFormula.length)
+          informationCapsule.set(Information.AVERAGE_SIZE_OF_CLAUSES, "" + averageClauseLength)
+          informationCapsule.set(Information.NUMBER_OF_ASSERT, assertClauses)
+          //informationCapsule.set(Information.NUMBER_OF_ONE_SIDED, oneSided)
+          informationCapsule.set(Information.NUMBER_OF_HORN, horn)
+
+          informationCapsule.set(Information.STATE_FORMULA, stateFormula.length)
+          //informationCapsule.set(Information.ORDER_CLAUSES, encoder.decompositionFormula count { _.disjuncts forall { case (a, _) => a.startsWith("before") || a.startsWith("childof") } })
+          informationCapsule.set(Information.METHOD_CHILDREN_CLAUSES, encoder.numberOfChildrenClauses)
+          println("done")
+
+          // postprocessing
+          print("Reading solver output ... ")
+          val t1 = System.currentTimeMillis()
+          val solverSource = Source.fromFile(fileDir + "__res" + uniqFileIdentifier + ".txt")
+          val t2 = System.currentTimeMillis()
+          val solverOutput = solverSource.mkString
+          val t3 = System.currentTimeMillis()
+          println("done")
+          //println("done  " + (t2 - t1) + " " + (t3 - t2))
+          print("Preparing solver output ... ")
+          val t4 = System.currentTimeMillis()
+          val (solveState, literals) = satSolver match {
+            case MINISAT                             =>
+              val splitted = solverOutput.split("\n")
+              if (splitted.length == 1) (splitted(0), Set[Int]()) else (splitted(0), (splitted(1).split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet)
+            case CRYPTOMINISAT | RISS6 | MapleCOMSPS =>
+              //println(solverOutput)
+              //System exit 0
+
+              val nonCommentOutput = removeCommentAtBeginning(solverOutput)
+
+              val stateSplit = nonCommentOutput.split("\n", 2)
+              val cleanState = stateSplit.head.replaceAll("s ", "")
+
+              if (stateSplit.length == 1) (cleanState, Set[Int]())
+              else {
+                val lits = stateSplit(1).split(" ").collect({ case s if s != "" && s != "\nv" && s != "v" && s != "0" && s != "0\n" => s.toInt }).toSet
+
+                (cleanState, lits)
+              }
+          }
+          val t5 = System.currentTimeMillis()
+          println("done")
+          //println("done " + (t5 - t4))
+
+          // delete files
+          System.getProperty("os.name").toLowerCase match {
+            case osname if osname startsWith "windows" =>
+              ("cmd.exe /q /c del " + fileDir + "__cnfString" + uniqFileIdentifier) !!
+
+              ("cmd.exe /q /c del " + fileDir + "__res" + uniqFileIdentifier) !!
+
+            case osname if osname startsWith "mac os x" => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+            case _                                      => ("rm " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt") !
+
+          }
 
 
-        // report on the result
-        println("SAT-Solver says: " + solveState)
-        val solved = solveState == "SAT" || solveState == "SATISFIABLE"
+          // report on the result
+          println("SAT-Solver says: " + solveState)
+          val solved = solveState == "SAT" || solveState == "SATISFIABLE"
 
 
-        // postprocessing
-        if (solved) {
-          println("")
-          val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-          //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+          // postprocessing
+          if (solved) {
+            println("")
+            val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
+            //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
-          //println((allTrueAtoms filter {_.startsWith("act_")}).toSeq.sorted mkString "\n")
-          //println((allTrueAtoms filter {_.startsWith("auto_state")}).toSeq sortBy {case x => x.split('_').last.toInt}  mkString "\n")
+            //println((allTrueAtoms filter {_.startsWith("act_")}).toSeq.sorted mkString "\n")
+            //println((allTrueAtoms filter {_.startsWith("auto_state")}).toSeq sortBy {case x => x.split('_').last.toInt}  mkString "\n")
 
-          /*val db = allTrueAtoms filter { _ contains "direct_before" }
+            /*val db = allTrueAtoms filter { _ contains "direct_before" }
 
           val v: Set[String] = db flatMap { a => a.split("_").drop(2) }
           val e :Set[(String,String)]= db map { a => val x = a.split("_").drop(2); (x(0), x(1)) }
@@ -485,22 +494,53 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           val gg = SimpleDirectedGraph(v.toSeq, e.toSeq)
           Dot2PdfCompiler.writeDotToFile(gg,"graph.pdf")*/
 
-          //System exit 0
+            //System exit 0
 
-          println("extracting solution")
-          val (graphNodes, graphEdges, solutionSequence, methodsForAbstractTasks, parentsInDecompositionTree) =
-            extractSolutionAndDecompositionGraph(encoder, atomMap, literals, formulaVariables, allTrueAtoms)
+            println("extracting solution")
+            val (graphNodes, graphEdges, solutionSequence, methodsForAbstractTasks, parentsInDecompositionTree) =
+              extractSolutionAndDecompositionGraph(encoder, atomMap, literals, formulaVariables, allTrueAtoms)
 
 
-          if (checkSolution) runSolutionIntegrityCheck(encoder, graphNodes, graphEdges)
+            if (checkSolution) runSolutionIntegrityCheck(encoder, graphNodes, graphEdges)
 
-          // return the found solution
-          Some(solutionSequence, methodsForAbstractTasks, parentsInDecompositionTree)
-        } else {
-          //System exit 0
-          None
+            // return the found solution
+            foundSolution = Some(solutionSequence, methodsForAbstractTasks, parentsInDecompositionTree)
+
+            // if we have solved and this is the "only" run, return
+            if (!runOptimiser) {
+              next = -2
+            } else {
+              // we are optimising
+              if (hi == -1) {
+                // this is the first solution we found: yipee, we have an upper bound, just start binary search
+                hi = next
+                next = (lo + hi) / 2
+              } else {
+                // binary search step, hi is ok
+                hi = next
+                next = (lo + hi) / 2
+              }
+            }
+
+          } else {
+            // have not found a solution, and the foundSolution already reflects that
+            if (!runOptimiser) {
+              next = -2
+            } else {
+              if (hi == -1) {
+                lo = next // better lower bound for binary search
+                next = next * 2 // just try larger plans
+              } else {
+                // binary search step, hi is not ok
+                lo = next
+                next = (lo + hi) / 2
+              }
+            }
+          }
         }
       }
+
+      foundSolution
     } catch {
       case t: Throwable =>
         t.printStackTrace()
