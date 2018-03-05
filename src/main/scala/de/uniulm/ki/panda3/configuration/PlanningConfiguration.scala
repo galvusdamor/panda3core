@@ -813,7 +813,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap, typing: HierarchyTyping): AnalysisMap = {
     val groundedInitialState = problem.groundedInitialStateOnlyPositive filter { _.isPositive }
-    val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = Some(typing))
+    val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = Some(typing),debuggingMode = DebuggingMode.Disabled)
     val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, config)
     // add analysis to map
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
@@ -1030,12 +1030,17 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             null
         }
 
+      val time0 = System.currentTimeMillis()
       val reachable = newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = sasPlusResult._1._1.primitiveTasks filterNot reachable.contains
       val pruned = PruneHierarchy.transform(sasPlusResult._1._1, sasPlusResult._1._2, disallowedTasks.toSet)
+      val time1 = System.currentTimeMillis()
       info("done.\n")
       info("Number of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
       info("Number of Grounded Literals " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.length + "\n")
+      //info("Time " + (time1 - time0))
+
+      //System exit 0
 
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)

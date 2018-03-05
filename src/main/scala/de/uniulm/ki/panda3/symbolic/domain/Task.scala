@@ -179,6 +179,7 @@ case class GeneralTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 
 }
 
+//scalastyle:off
 case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], artificialParametersRepresentingConstants: Seq[Variable],
                        parameterConstraints: Seq[VariableConstraint], precondition: And[Literal], effect: And[Literal]) extends Task with HashMemo {
   /*if (!((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })){
@@ -205,6 +206,35 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 
   override def equals(o: scala.Any): Boolean =
     if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[ReducedTask].productIterator) } else false
+
+  lazy val preconditionPerPredicate: Map[Predicate, Seq[Literal]] = precondition.conjuncts.groupBy(_.predicate).map({ case (p, ls) => p -> ls }).withDefaultValue(Nil)
+
+  lazy val possibleVariableValues: Map[Variable, Seq[Constant]] = parameters map { v =>
+    val vals = if (parameterConstraints exists { case Equal(`v`, c: Constant) => true; case _ => false }) {
+      parameterConstraints.find({ case Equal(`v`, c: Constant) => true; case _ => false }).get match {
+        case Equal(_, c: Constant) => c :: Nil
+      }
+    } else {
+      val allConst = v.sort.elements filterNot {c => parameterConstraints.contains(NotEqual(v,c))}
+
+      // check that the instantiation is also allowed for all involved predicates
+      allConst filter {c => (precondition.conjuncts ++ effect.conjuncts) forall {case Literal(pred,_,args) =>
+        args.zipWithIndex forall {
+          case (`v`,argI) => pred.argumentSorts(argI).elements contains c
+          case _ => true
+        }
+      }}
+    }
+
+    v -> vals
+  } toMap
+
+  lazy val possibleValuesForPreconditionLiteralPosition: Map[Predicate, Seq[Set[Constant]]] = precondition.conjuncts.groupBy(_.predicate) map { case (p, ls) =>
+    val possibleValues : Seq[Set[Constant]] = p.argumentSorts.indices map {pi => ls map {_.parameterVariables(pi)} flatMap possibleVariableValues toSet }
+    p -> possibleValues
+  }
+
+
 }
 
 object ReducedTask extends Internable[(String, Boolean, Seq[Variable], Seq[Variable], Seq[VariableConstraint], And[Literal], And[Literal]), ReducedTask] {

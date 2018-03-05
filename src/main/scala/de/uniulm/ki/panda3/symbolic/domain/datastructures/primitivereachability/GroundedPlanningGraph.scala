@@ -448,26 +448,45 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
      * Find all tasks that could be up for instantiation because either at least one of their preconditions were added in the previous layer or
      * two of its preconditions were contained in a now deleted mutex. The tasks are paired up with propositions which are the reason the tasks are considered.
      */
+    if (configuration.debuggingMode.id > 0) println("STEP 1")
+    val time0 = System.currentTimeMillis()
     val tasksFromAddedPropositions: Set[(Set[GroundLiteral], Seq[ReducedTask])] =
       addedPropositions map { proposition => (Set(proposition), domain.primitiveConsumerOf(proposition.predicate)) }
+    val time1 = System.currentTimeMillis()
+    if (configuration.debuggingMode.id > 0) println("STEP 2: " + (time1 - time0))
     val tasksFromDeletedMutexes: Set[(Set[GroundLiteral], Seq[ReducedTask])] =
       deletedMutexes map { case (proposition1, proposition2) =>
         (Set(proposition1, proposition2), domain.primitiveConsumerOf(proposition1.predicate) intersect domain.primitiveConsumerOf(proposition2.predicate))
       }
+    val time2 = System.currentTimeMillis()
+    if (configuration.debuggingMode.id > 0) println("STEP 3: " + (time2 - time1))
 
     // Merge the sets of tasks-proposition pairs that could be up for instantiation and filter them for forbidden lifted tasks, since they are not allowed to be instantiated.
-    val tasksToConsider: Set[(Set[GroundLiteral], Seq[ReducedTask])] = (tasksFromAddedPropositions ++ tasksFromDeletedMutexes) map {
-      case (propositions, tasks) => (propositions, tasks filterNot { task => configuration.forbiddenLiftedTasks contains task })
+    val tasksToConsider: Seq[(Set[GroundLiteral], Seq[ReducedTask])] = (tasksFromAddedPropositions.toSeq ++ tasksFromDeletedMutexes) map {
+      case (propositions, tasks) => (propositions, tasks filterNot { task => configuration.forbiddenLiftedTasks contains task } filter { task =>
+        propositions forall { prop => task.possibleValuesForPreconditionLiteralPosition(prop.predicate).zip(prop.parameter).forall({ case (possible, c) => possible contains c }) }
+      })
     }
+    val time3 = System.currentTimeMillis()
+    if (configuration.debuggingMode.id > 0) println("STEP 4: " + (time3 - time2))
 
     // Find for every tasks-proposition pair all preconditions of the tasks the propositions could be inserted for
     // to generate pairs consisting of a task and multiple proposition-precondition pairs.
     val tasksWithLiteralPairs = tasksToConsider flatMap { case (propositions, tasks) => tasks flatMap { task => findLiteralPairs(task, propositions) } }
-
+    //println("LP " + tasksToConsider.map(_._2.length).sum + " " + tasksWithLiteralPairs.length + " " + tasksToConsider.length)
+    val time4 = System.currentTimeMillis()
+    if (configuration.debuggingMode.id > 0) println("STEP 5: " + (time4 - time3))
+    val predicateAndConstantMap: Map[Predicate, Seq[Map[Constant, Set[GroundLiteral]]]] = predicateMap map { case (p, lits) =>
+      p -> p.argumentSorts.indices.map({ case argI => lits.groupBy(_.parameter(argI)).withDefaultValue(Set()) })
+    } withDefault { p => p.argumentSorts map { s => Map[Constant, Set[GroundLiteral]]().withDefaultValue(Set()) } }
+    val time4b = System.currentTimeMillis()
+    if (configuration.debuggingMode.id > 0) println("STEP 5b: " + (time4b - time4))
     // Compute new actions based on the tasks with literal pairs.
     val newActions: Set[GroundTask] = tasksWithLiteralPairs flatMap { case (task, literalPairs) =>
-      instantiateActions(task, literalPairs, configuration.forbiddenGroundedTasks, task.precondition.conjuncts, predicateMap, propositionMutexes)
-    }
+      instantiateActions(task, literalPairs, configuration.forbiddenGroundedTasks, task.precondition.conjuncts, predicateMap, predicateAndConstantMap, propositionMutexes)
+    } toSet
+    val time5 = System.currentTimeMillis()
+    if (configuration.debuggingMode.id > 0) println("STEP 6: " + (time5 - time4) + " " + tasksWithLiteralPairs.length + " " + newActions.size)
 
     // special treatment for tasks without preconditions. the are always applicable in the first action layer
     val newActionsFromParameters: Set[GroundTask] = firstLayer match {
@@ -476,7 +495,11 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
       } flatMap { case task: ReducedTask => createActionInstancesForTasksWithoutPreconditions(task) } toSet
       case false => Set.empty[GroundTask]
     }
+    val time6 = System.currentTimeMillis()
+    if (configuration.debuggingMode.id > 0) println("STEP 7: " + (time6 - time5))
     val newNoOps: Set[GroundTask] = addedPropositions map { proposition => createNOOP(proposition) }
+    val time7 = System.currentTimeMillis()
+    if (configuration.debuggingMode.id > 0) println("STEP 8: " + (time7 - time6))
     newActions ++ newActionsFromParameters ++ newNoOps
   }
 
@@ -488,20 +511,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     * @return Returns a Set of tuple with a lifted task and a number of literal pairs.
     */
   private def findLiteralPairs(task: ReducedTask, groundLiterals: Set[GroundLiteral]): Seq[(ReducedTask, Seq[(GroundLiteral, Literal)])] = {
-    val potentialLiterals: Set[(GroundLiteral, Set[Literal])] = groundLiterals map { proposition =>
-      (proposition, Set(task.precondition.conjuncts filter { literal => literal.predicate == proposition.predicate }) flatten)
-    }
-    // TODO can code be removed?
-    /*val literalPairs: Set[Seq[(GroundLiteral, Literal)]] =
-      potentialLiterals.foldLeft[Set[Seq[(GroundLiteral, Literal)]]](Set(Nil))(
-        { case (setOfPairs, (proposition, literals)) =>
-          setOfPairs map { pairs: Seq[(GroundLiteral, Literal)] => pairs ++ (literals map { literal: Literal => (proposition, literal) })
-          }
-        })
-    literalPairs map { setOfPairs => (task, setOfPairs) }*/
-
-    potentialLiterals.foldLeft[Seq[(ReducedTask, Seq[(GroundLiteral, Literal)])]](Nil)(
-      { case (old, (groundLiteral, preconditions)) => old ++ (preconditions map { prec => (task, (groundLiteral, prec) :: Nil) }) })
+    val potentialLiterals: Seq[(GroundLiteral, Seq[Literal])] = groundLiterals.toSeq map { proposition => (proposition, task.preconditionPerPredicate(proposition.predicate)) }
+    potentialLiterals flatMap { case (groundLiteral, preconditions) => preconditions map { prec => (task, (groundLiteral, prec) :: Nil) } }
   }
 
   /**
@@ -574,6 +585,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
                                  disallowedActions: Set[GroundTask],
                                  unfulfilledPreconditions: Seq[Literal],
                                  predicateMap: Map[Predicate, Set[GroundLiteral]],
+                                 predicateAndConstantMap: Map[Predicate, Seq[Map[Constant, Set[GroundLiteral]]]],
                                  mutexes: Set[(GroundLiteral, GroundLiteral)],
                                  assignmentMap: Map[Variable, Constant] = Map(),
                                  usedPropositions: Seq[GroundLiteral] = Seq.empty[GroundLiteral]): Set[GroundTask] = {
@@ -639,18 +651,44 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
         } else {
 
           if (remainingLiteralPairs.isEmpty) {
-            val nextLiteral = remainingUnfulfilledPreconditions.head
-            val preconditionCandidates = predicateMap.getOrElse(nextLiteral.predicate, Set.empty[GroundLiteral]) filter {
-              gLCandidate => isMutexFree(updatedUsedPropositions, mutexes, gLCandidate) && !checkForAssignmentConflict(nextLiteral, gLCandidate, updatedAssignmentMap)
+            val (nextLiteral, _) = remainingUnfulfilledPreconditions map { l => (l, l.parameterVariables.count(updatedAssignmentMap.contains)) } maxBy (_._2)
+
+            val allSet = nextLiteral.parameterVariables forall { v => updatedAssignmentMap.contains(v) }
+            val matchingGroundInstances: Set[GroundLiteral] = nextLiteral.parameterVariables find { v => updatedAssignmentMap.contains(v) } match {
+              case None    => predicateMap.getOrElse(nextLiteral.predicate, Set())
+              case Some(v) =>
+                val setValue = updatedAssignmentMap(v)
+                val setIndex = nextLiteral.parameterVariables.indexOf(v)
+
+                predicateAndConstantMap(nextLiteral.predicate)(setIndex)(setValue)
+            }
+
+            val preconditionCandidates: Seq[GroundLiteral] = if (allSet) {
+              val parameterConstants = nextLiteral.parameterVariables map updatedAssignmentMap
+              if (parameterConstants zip nextLiteral.predicate.argumentSorts exists { case (c, s) => !s.elements.contains(c) }) {
+                Nil
+              } else {
+                val candidate: GroundLiteral = GroundLiteral(nextLiteral.predicate, nextLiteral.isPositive, parameterConstants)
+
+                if (matchingGroundInstances contains candidate) candidate :: Nil else Nil
+              }
+            }
+            else {
+              val res = matchingGroundInstances filter {
+                gLCandidate => isMutexFree(updatedUsedPropositions, mutexes, gLCandidate) && !checkForAssignmentConflict(nextLiteral, gLCandidate, updatedAssignmentMap)
+              }
+
+              res.toSeq
             }
 
             preconditionCandidates flatMap {
               nextPrecondition =>
                 instantiateActions(task, Seq((nextPrecondition, nextLiteral)), disallowedActions,
-                                   remainingUnfulfilledPreconditions, predicateMap, mutexes, updatedAssignmentMap, updatedUsedPropositions)
-            }
+                                   remainingUnfulfilledPreconditions, predicateMap, predicateAndConstantMap, mutexes, updatedAssignmentMap, updatedUsedPropositions)
+            } toSet
           } else {
-            instantiateActions(task, remainingLiteralPairs, disallowedActions, remainingUnfulfilledPreconditions, predicateMap, mutexes, updatedAssignmentMap, updatedUsedPropositions)
+            instantiateActions(task, remainingLiteralPairs, disallowedActions, remainingUnfulfilledPreconditions, predicateMap, predicateAndConstantMap,
+                               mutexes, updatedAssignmentMap, updatedUsedPropositions)
           }
         }
       } else Set()
@@ -701,6 +739,16 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     } map { arguments => GroundTask(task, arguments) } toSet
   }
 
+  private lazy val noopTasksForPredicates: Map[Predicate, ReducedTask] = domain.predicates map { p =>
+    val parameters: Seq[Variable] = p.argumentSorts.zipWithIndex map { case (sort, id) => Variable(id, "no-op", sort) }
+    // Create a literal corresponding to the proposition.
+    val literal: Literal = Literal(p, isPositive = true, parameters)
+    // Create a lifted task that has the literal as precondition and add-effect.
+    val task: ReducedTask = ReducedTask("NO-OP[" + p.name + "]", isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
+
+    p -> task
+  } toMap
+
   /**
     * Creates a NO-OP action for the proposition parameter.
     *
@@ -708,17 +756,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     * @return Returns the NO-OP action.
     */
   private def createNOOP(proposition: GroundLiteral): GroundTask = {
-    // Create a sequence of variables corresponding to the constants contained in the proposition.
-    val parameters: Seq[Variable] = proposition.parameter.zipWithIndex map { case (constant, id) => Variable(id, "no-op",
-                                                                                                             (domain.sorts find { sort => sort.elements contains constant }).get)
-    }
-    // Create a literal corresponding to the proposition.
-    val literal: Literal = Literal(proposition.predicate, isPositive = true, parameters)
-    // Create a lifted task that has the literal as precondition and add-effect.
-    val task: ReducedTask = ReducedTask("NO-OP[" + proposition.predicate.name + "]",
-                                        isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
     // Instantiate an action based on the lifted task and return it.
-    GroundTask(task, proposition.parameter)
+    GroundTask(noopTasksForPredicates(proposition.predicate), proposition.parameter)
   }
 
 }
