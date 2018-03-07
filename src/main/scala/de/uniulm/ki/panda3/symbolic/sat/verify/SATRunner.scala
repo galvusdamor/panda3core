@@ -644,17 +644,18 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         //println(stateAtTime(actionsPerPosition.keys.max + 1))
 
         //println(allTrueAtoms.toSeq filter {_.startsWith("matt")} sortBy {_.split("@")(1).toInt} mkString "\n")
-        //println(allTrueAtoms.toSeq filter {_.startsWith("onparallel")} sortBy {_.split("@")(1).toInt} mkString "\n")
+        //println(allTrueAtoms.toSeq filter {_.startsWith("onparallel_2_")} sortBy {x => 2000*x.split("@")(1).toInt + x.split("@").head.split("_").last.toInt} mkString "\n")
 
         //println(domain.tasks.find(_.name == "Y[]").get.longInfo)
 
-        //System exit 0
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
         println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")
+
+        //System exit 0
 
         (Nil, Nil, primitiveSolution, Map(), Map())
       case pbe: PathBasedEncoding[_, _] =>

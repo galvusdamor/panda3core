@@ -319,6 +319,7 @@ case class IntProblem(domain: Domain, initialPlan: Plan,
         (currentEffects, taskIndices)
       })._2 :+ (disablingGraphTotalOrder.length - 1) // we always have to check after the last position ...
     println(res mkString ", ")
+    //println(disablingGraphTotalOrder.zipWithIndex map { case (t,i) => i + " " + t.name } mkString "\n")
     rel -> res
   } toMap
 

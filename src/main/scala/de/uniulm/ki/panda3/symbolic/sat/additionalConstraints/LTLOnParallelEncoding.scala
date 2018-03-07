@@ -16,7 +16,7 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
   val formulaIDMap: Map[LTLFormula, Int] = allSubformulae.zipWithIndex toMap
   val idFormulaMap: Map[Int, LTLFormula] = formulaIDMap map { _.swap }
 
-  //println(idFormulaMap.toSeq.sortBy(_._1) map { case (a, b) => a + " " + b.longInfo } mkString "\n")
+  println(idFormulaMap.toSeq.sortBy(_._1) map { case (a, b) => a + " " + b.longInfo } mkString "\n")
 
   private def formulaHoldsAtTime(formula: LTLFormula, position: Int, time: Int): String = id + "_holds_" + formulaIDMap(formula) + "_" + position + "@" + time
 
@@ -131,7 +131,8 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
                 linearEncoding.impliesSingle(formulaHoldsAtTime(sub, thisPosition, time), formulaHoldsAtTime(f2, thisPosition, time)) :: Nil
 
               case LTLWeakNext(f) =>
-                Nil // weak next is always true at the last timepoint
+                val atMostOneActionBefore = linearEncoding.impliesSingle(formulaHoldsAtTime(sub, thisPosition, time), atMostOneActionBeforePosition(thisPosition, time))
+                atMostOneActionBefore :: Nil // weak next is always true at the last timepoint
 
               case _ => Nil // Anything else is time dependent
             }
@@ -167,8 +168,6 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
               // TODO: check this !!!!
 
               case LTLWeakNext(f) =>
-                val atMostOneActionBefore = linearEncoding.impliesSingle(formulaHoldsAtTime(sub, thisPosition, time), atMostOneActionBeforePosition(thisPosition, time))
-
                 // formula Xf -> (None & Xf+1) v (One & f+1)
                 // == for clauses
                 // -Xf v None v One
@@ -185,7 +184,6 @@ case class LTLOnParallelEncoding(lTLFormula: LTLFormula, id: String) extends Add
                   Clause((xf, false) :: (none, true) :: (f1, true) :: Nil) ::
                   Clause((xf, false) :: (xf1, true) :: (one, true) :: Nil) ::
                   Clause((xf, false) :: (xf1, true) :: (f1, true) :: Nil) ::
-                  atMostOneActionBefore ::
                   Nil
               case _              => Nil // Anything else is not time dependent
             }

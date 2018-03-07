@@ -324,7 +324,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case (None, LTLTrue)    => None
             case (Some(x), LTLTrue) => Some(x)
             case (None, x)          => Some(x)
-            case (Some(x), y)       => Some(LTLAnd(x :: y :: Nil))
+            case (Some(x), y)       => Some(x) //Some(LTLAnd(x :: y :: Nil))
           }
 
           val separatedFormulaeBeforeRandomSelection = combinedFormula match {
@@ -339,14 +339,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           val rand = new Random(randomSeed)
 
-          val separatedFormulae = if (separatedFormulaeBeforeRandomSelection.length <= 3) separatedFormulaeBeforeRandomSelection else {
+          val separatedFormulae = separatedFormulaeBeforeRandomSelection /*if (separatedFormulaeBeforeRandomSelection.length <= 3) separatedFormulaeBeforeRandomSelection else {
             Range(0, 3).foldLeft[(Seq[LTLFormula], Seq[LTLFormula])]((separatedFormulaeBeforeRandomSelection, Nil))(
               { case ((l, sel), _) =>
                 val r = rand.nextInt(l.length)
                 (l.patch(r, Nil, 1), sel :+ l(r))
               }
                                                                                                                    )._2
-          }
+          }*/
 
 
           if (separatedFormulae.nonEmpty) {

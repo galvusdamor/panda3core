@@ -5,6 +5,7 @@ import de.uniulm.ki.panda3.symbolic.compiler.OneOfTheNecessaryOrderings
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
 import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints._
 import de.uniulm.ki.panda3.symbolic.sat.verify._
 
 
@@ -200,13 +201,19 @@ object PredefinedConfigurations {
   def pandaProConfig(algorithm: SearchAlgorithmType, sasHeuristic: SasHeuristics): ProgressionSearch =
     ProgressionSearch(algorithm, Some(HierarchicalHeuristicRelaxedComposition(sasHeuristic)), PriorityQueueSearch.abstractTaskSelection.random)
 
-  def ltlConfig(encodingMethod: LTLEncodingMethod) = {
+  def ltlConfig(encodingMethod: LTLEncodingMethod, solvertype: Solvertype, formula : Option[LTLFormula] = None) = {
     val parse = ParsingConfiguration(parserType = HDDLParserType, eliminateEquality = false, stripHybrid = true)
     val prep = PredefinedConfigurations.groundingPreprocess.copy(compileInitialPlan = false, removeUnnecessaryPredicates = true)
-    val search = SATSearch(CRYPTOMINISAT, OptimalSATRun(Some(6)), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepEncoding, formulaEncoding = encodingMethod)
+    val search = SATSearch(solvertype, OptimalSATRun(Some(6)), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepEncoding, formulaEncoding = encodingMethod,
+                           ltlFormula = formula)
 
     (parse, prep, search)
   }
+
+  val ltlTruck = LTLForall("?t", "truck", LTLForall("?l", "location", LTLAlways(LTLImply(PredicateNameAtom("at", "?t" :: "?l" :: Nil),
+                                                                                           LTLWeakNext(LTLOr(LTLNot(PredicateNameAtom("at", "?t" :: "?l" :: Nil)) ::
+                                                                                                               LTLWeakNext(LTLNot(PredicateNameAtom("at", "?t" :: "?l" :: Nil))) :: Nil))
+                                                                                          ))))
 
 
   val searchConfigs = Map(
@@ -483,9 +490,16 @@ object PredefinedConfigurations {
          "-prep-split-topdown" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TopDownTDG)), NoSearch),
          "-prep-split-twoway" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TwoWayTDG)), NoSearch),
 
-         "-ltl-mattmüller" -> ltlConfig(MattmüllerEncoding),
-         "-ltl-mattmüllerImproved" -> ltlConfig(MattmüllerImprovedEncoding),
-         "-ltl-onParallel" -> ltlConfig(OnParallelEncoding)
+         "-ltl-mattmüller" -> ltlConfig(MattmüllerEncoding,CRYPTOMINISAT),
+         "-ltl-mattmüllerImproved" -> ltlConfig(MattmüllerImprovedEncoding,CRYPTOMINISAT),
+         "-ltl-onParallel" -> ltlConfig(OnParallelEncoding,CRYPTOMINISAT),
+
+         "-ltl-truck-mattmüller" -> ltlConfig(MattmüllerEncoding,CRYPTOMINISAT,Some(ltlTruck)),
+         "-ltl-truck-mattmüllerImproved" -> ltlConfig(MattmüllerImprovedEncoding,CRYPTOMINISAT, Some(ltlTruck)),
+         "-ltl-truck-onParallel" -> ltlConfig(OnParallelEncoding,CRYPTOMINISAT,Some(ltlTruck)),
+         "-ltl-truck-riss6-mattmüller" -> ltlConfig(MattmüllerEncoding,RISS6,Some(ltlTruck)),
+         "-ltl-truck-riss6-mattmüllerImproved" -> ltlConfig(MattmüllerImprovedEncoding,RISS6, Some(ltlTruck)),
+         "-ltl-truck-riss6-onParallel" -> ltlConfig(OnParallelEncoding,RISS6,Some(ltlTruck))
 
 
        )
