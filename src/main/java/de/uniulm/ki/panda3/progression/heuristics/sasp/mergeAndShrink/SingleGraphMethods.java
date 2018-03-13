@@ -33,7 +33,9 @@ public final class SingleGraphMethods {
 
         //EdgeLabelledGraphSingle<String,String> stringGraph = convertSingleGraphToStringGraph(p, graph);
 
-        Dot2PdfCompiler.writeDotToFile(graph.graph,outputfile);
+        //Dot2PdfCompiler.writeDotToFile(graph.graph,outputfile);
+
+        Utils.printMultiGraph(p,graph,outputfile);
 
 
     }

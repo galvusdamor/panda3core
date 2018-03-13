@@ -272,7 +272,10 @@ public class HtnMerging {
             nodesToAppend.addAll(resultsOfAppending._1);
 
 
+            //Iterator<Integer> iter = nodesToAppend.iterator();
             for (int nodeIDToAppend : nodesToAppend) {
+            /*while (iter.hasNext()){
+                int nodeIDToAppend = iter.next();*/
 
                 NodeValue nodeValue = temporaryGraph.idMapping.get(nodeIDToAppend);
 
@@ -284,7 +287,7 @@ public class HtnMerging {
                 resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph2, nodeIDToAppend);
 
                 temporaryGraph = resultsOfAppending._2;
-                nodesToAppend.addAll(resultsOfAppending._1);
+                //nodesToAppend.addAll(resultsOfAppending._1);
 
             }
 

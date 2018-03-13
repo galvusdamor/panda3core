@@ -42,7 +42,7 @@ case class ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem, goalNode: 
 
 
 
-  override lazy val longInfo: String = value.toString //+ ": " + sasPlusProblem.factStrs(value)
+  override lazy val longInfo: String = value.toString + ": " + sasPlusProblem.factStrs(value)
 
   override def containsShrink() : Boolean = false
 
@@ -62,8 +62,9 @@ case class MergeNode(left: ClassicalNodeValue, right: ClassicalNodeValue, sasPlu
 
   override lazy val containsFactIndexes: Set[Int] = left.containsFactIndexes | right.containsFactIndexes
 
-  //override def longInfo: String = "(" + left.longInfo + ", \n" + right.longInfo + ")"
-  override lazy val longInfo: String = size.toString /*{
+  override def longInfo: String = "(" + left.longInfo + ", \n" + right.longInfo + ")"
+  //override lazy val longInfo: String = size.toString
+  //override lazy val longInfo: String = size.toString /*{
 /*    left match {
       case ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem) =>
         right match {
@@ -86,7 +87,7 @@ case class MergeNode(left: ClassicalNodeValue, right: ClassicalNodeValue, sasPlu
     }
 
 
-  }*/
+
   override lazy val size : Long = left.size + right.size
 }
 
@@ -95,7 +96,8 @@ case class ShrinkNode(left: ClassicalNodeValue, right: ClassicalNodeValue, sasPl
   override lazy val isGoalNode : java.lang.Boolean = left.isGoalNode || right.isGoalNode
   override def isContained(state: util.BitSet): Boolean = left.isContained(state) || right.isContained(state)
 
-  override lazy val longInfo: String = size.toString //"(" + left.longInfo + ")\n or \n(" + right.longInfo + ")"
+  //override lazy val longInfo: String = size.toString //"(" + left.longInfo + ")\n or \n(" + right.longInfo + ")"
+  override lazy val longInfo: String = "(" + left.longInfo + ")\n or \n(" + right.longInfo + ")"
 
   override def containsShrink() : Boolean = true
 

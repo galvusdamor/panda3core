@@ -23,6 +23,13 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
+
+        Testing.printNiceGraphs(p);
+
+
+        System.exit(0);
+
+
         int[] oldS0 = p.s0List;
         int[] oldG = p.gList;
         int[] newS0 = new int[s0.cardinality()];
@@ -93,27 +100,7 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         return distancesFromClosestGoalNode.get(testGraph.startNodeID);
     }
 
-    public ClassicalMSGraph getMultiGraphUntilVarID(SasPlusProblem p, int lastVarID) {
 
-        ClassicalMSGraph graph1 = SingleGraphMethods.getSingleGraphForVarIndex(p,0);
-
-        //EdgeLabelledGraph<Integer, Integer, HashMap<Integer, NodeValue>> graph2;
-
-        for (int i = 1; ((i <= lastVarID) && (i < p.numOfVars)); i++) {
-
-            //graph2 = SingleGraphMethods.getSingleGraphForVarIndex(p, i);
-
-            //graph1 = mergingStep(p, graph1, graph2);
-
-            MergingStrategy mergingStrategy = new MergingStrategy1();
-
-            graph1 = mergingStrategy.mergeWithVar(p, graph1, i, 1000000000, new ShrinkingStrategy1());
-
-        }
-
-        return graph1;
-
-    }
 
 
 

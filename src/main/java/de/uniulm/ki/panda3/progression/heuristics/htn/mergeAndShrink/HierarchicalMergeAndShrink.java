@@ -117,10 +117,12 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
 
         //System.out.println("Size of Graph 81: " + graph81.idMapping.size());
-        //System.out.println("Size of Graph 83: " + graph83.idMapping.size());
+        System.out.println("Test");
 
 
-        Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Rover");
+        Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
+
+        Utils.printHtnGraph(flatProblem, presentGraphs.get(16), "Transport\\Graph16.pdf");
 
         System.exit(0);
 
