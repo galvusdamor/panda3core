@@ -71,11 +71,23 @@ public final class Testing {
         MergingStrategy mergingStrategy = new MergingStrategy1();
         ShrinkingStrategy shrinkingStrategy = new ShrinkingStrategy1();
 
-        int lastVarID = 1;
+        int lastVarID = 0;
 
         ClassicalMSGraph graph = getMultiGraphUntilVarID(p, lastVarID, 100, mergingStrategy, shrinkingStrategy);
 
         String outputfile = "Graphpics\\graphUntilVar" + lastVarID + ".pdf";
+
+        Utils.printMultiGraph(p, graph, outputfile);
+
+        graph = mergingStrategy.mergeWithVar(p, graph, 2, 100, shrinkingStrategy);
+
+        outputfile = "Graphpics\\mergedGraph.pdf";
+
+        Utils.printMultiGraph(p, graph, outputfile);
+
+        graph=shrinkingStrategy.shrink(p, graph);
+
+        outputfile = "Graphpics\\shrinkedGraph.pdf";
 
         Utils.printMultiGraph(p, graph, outputfile);
 
