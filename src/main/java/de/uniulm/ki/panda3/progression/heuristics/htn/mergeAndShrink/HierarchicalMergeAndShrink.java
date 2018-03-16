@@ -38,7 +38,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         ClassicalMergeAndShrink classicalMergeAndShrink = new ClassicalMergeAndShrink(flatProblem);
         ClassicalMSGraph testGraph = classicalMergeAndShrink.mergeAndShrinkProcess(flatProblem, 50);
 
-        Utils.printMultiGraph(flatProblem, testGraph, "ClassicalMSGraph.pdf");
+        //Utils.printMultiGraph(flatProblem, testGraph, "ClassicalMSGraph.pdf");
 
 
         Task[] allTasks = ProgressionNetwork.indexToTask;
@@ -53,7 +53,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         //var i = 0
         DirectedGraph<?> layerGraph = domain.taskSchemaTransitionGraph().condensation();
-        Dot2PdfCompiler$.MODULE$.writeDotToFile(layerGraph, "decomp_hierarchy0.pdf");
+        //Dot2PdfCompiler$.MODULE$.writeDotToFile(layerGraph, "decomp_hierarchy0.pdf");
 
         List<?> layer = JavaConverters.seqAsJavaList(layerGraph.topologicalOrdering().get().reverse());
 
@@ -81,7 +81,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
             }
         }
 
-        StratificationPlotter$.MODULE$.plotStratification(domain);
+        //StratificationPlotter$.MODULE$.plotStratification(domain);
 
         /*HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
 
@@ -120,9 +120,9 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         System.out.println("Test");
 
 
-        Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
+        Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Rover");
 
-        Utils.printHtnGraph(flatProblem, presentGraphs.get(16), "Transport\\Graph16.pdf");
+        //Utils.printHtnGraph(flatProblem, presentGraphs.get(16), "Transport\\Graph16.pdf");
 
         System.exit(0);
 

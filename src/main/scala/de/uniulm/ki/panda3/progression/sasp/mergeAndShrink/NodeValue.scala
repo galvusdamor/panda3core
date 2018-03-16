@@ -78,13 +78,13 @@ case class MergeNode(left: ClassicalNodeValue, right: ClassicalNodeValue, sasPlu
     }*/
 
 
-    containsShrink() match {
+    /*containsShrink() match {
 
       case true =>
         "(" +left.longInfo + ")\n and \n(" + right.longInfo + ")"
       case _ =>
         left.longInfo + ", \n" + right.longInfo
-    }
+    }*/
 
 
 

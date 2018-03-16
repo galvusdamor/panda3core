@@ -51,7 +51,7 @@ public final class GraphMinimation {
 
         index++;
         //outputfile = "MinimizedGraph" + index + ".pdf";
-        Utils.printHtnGraph(p, graph, outputfile);
+        //Utils.printHtnGraph(p, graph, outputfile);
 
         //System.out.println("To Shrink by outgoing edges: " + idsToShrinkByOutgoingEdges);
 
@@ -70,7 +70,7 @@ public final class GraphMinimation {
 
             index++;
             //outputfile = "MinimizedGraph" + index + ".pdf";
-            Utils.printHtnGraph(p, graph, outputfile);
+            //Utils.printHtnGraph(p, graph, outputfile);
 
 
             outgoingEdgesMap = getIDToIncomingOrOutgoingEdgesMap(graph, false);
@@ -87,7 +87,7 @@ public final class GraphMinimation {
 
             index++;
             //outputfile = "MinimizedGraph" + index + ".pdf";
-            Utils.printHtnGraph(p, graph, outputfile);
+            //Utils.printHtnGraph(p, graph, outputfile);
 
 
         }
