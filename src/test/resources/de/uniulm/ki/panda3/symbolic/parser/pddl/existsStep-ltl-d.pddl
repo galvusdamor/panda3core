@@ -43,7 +43,7 @@
   :precondition
    (and (c) (d))
   :effect
-   (and (e) (not (a)) (not (c)) ))
+   (and (e) (not (c))))
 
 (:action essZ
    :parameters()
