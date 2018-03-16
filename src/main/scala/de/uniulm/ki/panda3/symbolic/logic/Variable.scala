@@ -12,9 +12,7 @@ import de.uniulm.ki.util.{HashMemo, Internable}
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class Variable(id: Int, name: String, sort: Sort) extends Value with PrettyPrintable with HashMemo {
-
-  if (name == "?c2_ps2")
-    println("UIIII")
+  
   /** the map must contain EVERY sort of the domain, even if does not change */
   override def update(domainUpdate: DomainUpdate): Variable = domainUpdate match {
     case ExchangeVariable(oldVariable, newVariable) => if (this == oldVariable) newVariable else this

@@ -1,18 +1,21 @@
 package de.uniulm.ki.panda3.symbolic.csp
 
+import scala.reflect.ClassTag
+
 /**
  * Represents a simple substitution, given by two lists of
  *
  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
  */
-case class PartialSubstitution[T](oldVariables: Seq[T], newVariables: Seq[T]) extends (T => T) {
+case class PartialSubstitution[T:ClassTag](oldVariables: Seq[T], newVariables: Seq[T]) extends (T => T) {
 
   private lazy val indexAccessMap: Map[T, Int] = oldVariables.zipWithIndex.toMap
+  private lazy val newVarsArray : Array[T] = newVariables.toArray[T]
 
   def apply(v: T): T = {
     val index = indexAccessMap.getOrElse(v, -1)
 
-    if (index == -1) v else newVariables(index)
+    if (index == -1) v else newVarsArray(index)
   }
 }
 

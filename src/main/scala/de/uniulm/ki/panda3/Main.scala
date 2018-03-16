@@ -230,6 +230,10 @@ object Main {
       }
     }
 
+    if (results.map.contains(SearchResultInVerificationFormat)){
+      println("%%R " + results(SearchResultInVerificationFormat))
+    }
+
     if (results.map.contains(SearchResult) && results.map.contains(SearchStatus) && results(SearchStatus) == SearchState.SOLUTION && plannerConfiguration.outputFile.isDefined) {
       val solution = results(SearchResult).get
       //println(solution.planSteps.length)

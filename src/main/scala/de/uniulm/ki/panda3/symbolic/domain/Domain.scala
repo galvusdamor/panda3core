@@ -57,6 +57,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     //
     tasks foreach { t =>
       (t.precondition.containedPredicatesWithSign ++ t.effect.containedPredicatesWithSign) map { _._1 } foreach { p =>
+        assert(p != null, "List contains null")
         assert(predicateSet contains p, "Predicate " + p.name + " not contained in predicate list")
       }
     }
@@ -77,12 +78,11 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   assert(assertion())
 
-  lazy val predicateSet: Set[Predicate] = predicates.toSet
-
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
   lazy val constants                : Seq[Constant]             = (sorts flatMap { _.elements }).distinct
   lazy val sortGraph                : DirectedGraph[Sort]       = SimpleDirectedGraph(sorts, (sorts map { s => (s, s.subSorts) }).toMap)
   lazy val taskSet                  : Set[Task]                 = tasks.toSet
+  lazy val predicateSet             : Set[Predicate]            = predicates.toSet
 
   // producer and consumer
   lazy val producersOf      : Map[Predicate, Seq[ReducedTask]]                     = (producersOfPosNeg map { case (a, (b, c)) => a -> (b ++ c).toSeq }).withDefaultValue(Nil)

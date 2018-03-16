@@ -23,10 +23,10 @@ import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, POEncoding, SATRunner, VerifyRunner}
+import de.uniulm.ki.panda3.symbolic.sat.verify._
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning._
-import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, SASPlusGrounding}
+import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, HierarchyTyping, SASPlusGrounding}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
 import de.uniulm.ki.panda3.symbolic.domain._
@@ -334,7 +334,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               runner.runWithTimeLimit(remainingTime, remainingTime, maximumPlanLength, 0, defineK = overrideK, checkSolution = satSearch.checkResult) match {case (a, b, c) => (a, b)}
             case FullSATRun()                               =>
               // start with K = 0 and loop
-              // TODO this is only good for total order ...
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
               var currentK = if (domainAndPlan._1.isClassical) 1 else 0
@@ -360,10 +359,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
               (solution, false)
 
+            case OptimalSATRun(overrideK) if satSearch.encodingToUse == POCLDirectEncoding || satSearch.encodingToUse == POCLDeleterEncoding =>
+              // TODO: 1 is just a placeholder for "generate the base formula"
+              runner.runWithTimeLimit(remainingTime, remainingTime, 1, 0, defineK = overrideK, checkSolution = satSearch.checkResult, runOptimiser = true) match {case (a, b, c) => (a, b)}
 
             case OptimalSATRun(overrideK) =>
               // start with K = 0 and loop
-              // TODO this is only good for total order ...
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
               var currentLength = 1
@@ -705,6 +706,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         case SearchResult | SearchResultWithDecompositionTree =>
           // start process of translating the solution back to something readable (i.e. lifted)
           result.headOption
+        case SearchResultInVerificationFormat => result.headOption.map({p =>
+          p.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive } map { ps => ps.schema.name } mkString ";"
+                                                                       }).getOrElse("")
         case AllFoundPlans                                    => result
         case SearchStatistics                                 =>
           // write memory info
@@ -816,12 +820,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }
 
-  private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap): AnalysisMap = {
-    val groundedInitialState = problem.groundedInitialState filter {
-      _.isPositive
-    }
-    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet,
-                                                                                                    GroundedPlanningGraphConfiguration(computeMutexes = useMutexes))
+  private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap, typing: HierarchyTyping): AnalysisMap = {
+    val groundedInitialState = problem.groundedInitialStateOnlyPositive filter { _.isPositive }
+    val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = Some(typing),debuggingMode = DebuggingMode.Disabled)
+    val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, config)
     // add analysis to map
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
   }
@@ -1005,6 +1007,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       }
       info(infoText + " ... ")
 
+      // run typing
+      val typing = HierarchyTyping(sasPlusResult._1._1, sasPlusResult._1._2)
+      typing.initialise()
+
       // run the actual analysis
       val newAnalysisMap =
         actualType match {
@@ -1014,7 +1020,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               case PlanningGraph            => false
               case PlanningGraphWithMutexes => true
             }
-            val x = runGroundedPlanningGraph(sasPlusResult._1._1, sasPlusResult._1._2, useMutexes, sasPlusResult._2)
+            val x = runGroundedPlanningGraph(sasPlusResult._1._1, sasPlusResult._1._2, useMutexes, sasPlusResult._2, typing)
             /*if (firstAnalysis) {
               println("Writing File")
               writeStringToFile(x(SymbolicGroundedReachability).reachableGroundPrimitiveActions.map(_.shortInfo).mkString("\n"), "allPrimAct.txt")
@@ -1033,11 +1039,17 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             null
         }
 
+      val time0 = System.currentTimeMillis()
       val reachable = newAnalysisMap(SymbolicGroundedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = sasPlusResult._1._1.primitiveTasks filterNot reachable.contains
       val pruned = PruneHierarchy.transform(sasPlusResult._1._1, sasPlusResult._1._2, disallowedTasks.toSet)
+      val time1 = System.currentTimeMillis()
       info("done.\n")
       info("Number of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
+      info("Number of Grounded Literals " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.length + "\n")
+      //info("Time " + (time1 - time0))
+
+      //System exit 0
 
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
@@ -1978,11 +1990,14 @@ case class SATSearch(solverType: Solvertype,
   override def longInfo: String = "SAT-Planning Configuration\n--------------------------\n" +
     alignConfig((("solver", solverType.longInfo) :: Nil) ++
                   (runConfiguration match {
-                    case single: SingleSATRun =>
+                    case single: SingleSATRun   =>
                       ("maximum plan length", single.maximumPlanLength) ::
                         ("override K", single.overrideK.getOrElse("false")) :: Nil
-                    case fullRun: FullSATRun  =>
+                    case fullRun: FullSATRun    =>
                       ("full planner run", "true") :: Nil
+                    case optimal: OptimalSATRun =>
+                      ("optimal planner run", "true") ::
+                        ("override K", optimal.overrideK.getOrElse("false")) :: Nil
                   }
                     ) ++ (
       ("reduction method", reductionMethod.longInfo) ::
@@ -2044,6 +2059,7 @@ case class PostprocessingConfiguration(resultsToProduce: Set[ResultType]) extend
          "-outputStatus" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchStatus).asInstanceOf[this.type] }),
          "-outputPlan" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchResult).asInstanceOf[this.type] }),
          "-outputPlanWithHierarchy" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchResultWithDecompositionTree).asInstanceOf[this.type] }),
+         "-outputPlanForVerification" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + SearchResultInVerificationFormat).asInstanceOf[this.type] }),
          "-outputInternalPlan" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + InternalSearchResult).asInstanceOf[this.type] }),
          "-outputAllPlans" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + AllFoundPlans).asInstanceOf[this.type] }),
          "-outputAllPlansWithH*" -> (NoParameter, { l: Option[String] => this.copy(resultsToProduce = resultsToProduce + AllFoundSolutionPathsWithHStar).asInstanceOf[this.type] }),

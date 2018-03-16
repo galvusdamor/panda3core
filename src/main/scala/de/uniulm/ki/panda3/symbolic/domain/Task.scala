@@ -30,10 +30,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
   lazy val isAbstract: Boolean = !isPrimitive
   lazy val taskCSP   : CSP     = CSP(parameters.toSet, parameterConstraints)
 
-  def substitute(literal: Literal, newParameter: Seq[Variable]): Literal = {
-    val sub = PartialSubstitution(parameters, newParameter)
-    Literal(literal.predicate, literal.isPositive, literal.parameterVariables map sub)
-  }
+  def substitute(literal: Literal, sub: PartialSubstitution[Variable]): Literal = Literal(literal.predicate, literal.isPositive, literal.parameterVariables map sub)
 
   override def compare(that: Task): Int = this.name compare that.name
 
@@ -109,7 +106,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
           ReducedTask.intern(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
                              parameterConstraints map { _.update(domainUpdate) }, pre.asInstanceOf[And[Literal]],
                              eff.asInstanceOf[And[Literal]])
-        case _                                                                                              =>
+        case _                                                                                                =>
           GeneralTask(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
                       parameterConstraints map { _.update(domainUpdate) }, newPrecondition, newEffect)
       }
@@ -145,6 +142,12 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
 
   val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)]
   val effectsAsPredicateBool      : Seq[(Predicate, Boolean)]
+  lazy val addEffectsAsPredicate         = effectsAsPredicateBool collect { case (p, true) => p }
+  lazy val addEffectsAsPredicateSet      = addEffectsAsPredicate toSet
+  lazy val delEffectsAsPredicate         = effectsAsPredicateBool collect { case (p, false) => p }
+  lazy val delEffectsAsPredicateSet      = delEffectsAsPredicate toSet
+  lazy val posPreconditionAsPredicate    = preconditionsAsPredicateBool collect { case (p, true) => p }
+  lazy val posPreconditionAsPredicateSet = posPreconditionAsPredicate.toSet
 
   def areParametersAllowed(parameterConstants: Seq[Constant]): Boolean = parameterConstraints forall {
     case Equal(var1, var2: Variable)     => parameterConstants(parameters indexOf var1) == parameterConstants(parameters indexOf var2)
@@ -176,6 +179,7 @@ case class GeneralTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 
 }
 
+//scalastyle:off
 case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], artificialParametersRepresentingConstants: Seq[Variable],
                        parameterConstraints: Seq[VariableConstraint], precondition: And[Literal], effect: And[Literal]) extends Task with HashMemo {
   /*if (!((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })){
@@ -187,6 +191,7 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
   }*/
   assert(artificialParametersRepresentingConstants forall parameters.contains)
   assert((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })
+  assert(parameters.distinct.size == parameters.size)
 
   if (parameters.isEmpty) {
     // if ground, don't have something both in the add and del effects!
@@ -201,6 +206,35 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 
   override def equals(o: scala.Any): Boolean =
     if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[ReducedTask].productIterator) } else false
+
+  lazy val preconditionPerPredicate: Map[Predicate, Seq[Literal]] = precondition.conjuncts.groupBy(_.predicate).map({ case (p, ls) => p -> ls }).withDefaultValue(Nil)
+
+  lazy val possibleVariableValues: Map[Variable, Seq[Constant]] = parameters map { v =>
+    val vals = if (parameterConstraints exists { case Equal(`v`, c: Constant) => true; case _ => false }) {
+      parameterConstraints.find({ case Equal(`v`, c: Constant) => true; case _ => false }).get match {
+        case Equal(_, c: Constant) => c :: Nil
+      }
+    } else {
+      val allConst = v.sort.elements filterNot {c => parameterConstraints.contains(NotEqual(v,c))}
+
+      // check that the instantiation is also allowed for all involved predicates
+      allConst filter {c => (precondition.conjuncts ++ effect.conjuncts) forall {case Literal(pred,_,args) =>
+        args.zipWithIndex forall {
+          case (`v`,argI) => pred.argumentSorts(argI).elements contains c
+          case _ => true
+        }
+      }}
+    }
+
+    v -> vals
+  } toMap
+
+  lazy val possibleValuesForPreconditionLiteralPosition: Map[Predicate, Seq[Set[Constant]]] = precondition.conjuncts.groupBy(_.predicate) map { case (p, ls) =>
+    val possibleValues : Seq[Set[Constant]] = p.argumentSorts.indices map {pi => ls map {_.parameterVariables(pi)} flatMap possibleVariableValues toSet }
+    p -> possibleValues
+  }
+
+
 }
 
 object ReducedTask extends Internable[(String, Boolean, Seq[Variable], Seq[Variable], Seq[VariableConstraint], And[Literal], And[Literal]), ReducedTask] {

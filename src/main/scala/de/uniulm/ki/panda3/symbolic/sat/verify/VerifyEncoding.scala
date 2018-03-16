@@ -106,6 +106,8 @@ trait VerifyEncoding {
 
   protected def impliesNot(left: Seq[String], right: String): Clause = Clause((left map { l => (l, false) }).+:(right, false))
 
+  protected def notImplies(left: String, right: String): Clause = Clause((left, true) :: (right, true) :: Nil)
+
   protected def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
 
   protected def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) :: (leftFalse, true) :: (right, false) :: Nil) :: Nil
@@ -173,6 +175,7 @@ trait VerifyEncoding {
 
   def goalState: Seq[Clause]
 
+  def planLengthDependentFormula(actualPlanLength : Int) : Seq[Clause] = Nil
 
   def miniSATString(formulas: Array[Clause], writer: BufferedWriter): scala.Predef.Map[String, Int] = {
 
@@ -327,7 +330,9 @@ object VerifyEncoding {
   }
 }
 
-case class Clause(disjuncts: Array[Int]) {}
+case class Clause(disjuncts: Array[Int]) {
+  override def toString: String = "Clause(" + disjuncts.mkString(",") + ")"
+}
 
 object Clause {
   val atomIndices = new mutable.HashMap[String, Int]()
