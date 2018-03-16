@@ -7,7 +7,7 @@ import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.WithRelevantPredicates
 import de.uniulm.ki.panda3.symbolic.sat.verify.AdditionalEdgesInDisablingGraph
-import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraph}
+import de.uniulm.ki.util.{DirectedGraph, Dot2PdfCompiler, SimpleDirectedGraph}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
