@@ -1,11 +1,14 @@
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
+import de.uniulm.ki.panda3.symbolic.logic.Predicate
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.panda3.symbolic.sat.verify.{Clause, EncodingWithLinearPlan, ExistsStep, LinearPrimitivePlanEncoding}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class AlternatingAutomatonFormulaEncoding(automaton: AlternatingAutomaton, id: String) extends LTLFormulaEncoding[LTLFormula, PositiveBooleanFormula] {
+case class AlternatingAutomatonFormulaEncoding(automaton: AlternatingAutomaton, id: String) extends LTLFormulaEncoding[LTLFormula, PositiveBooleanFormula]
+                                                                                                    with MattmüllerDisablingGraphExtension  {
 
   val stateRestrictionsToIndex: Map[PositiveBooleanFormula, Int] = automaton.transitions.values.flatMap(_.values).flatMap(_.allSubformulae).toSeq.distinct.zipWithIndex.toMap
 
@@ -74,4 +77,6 @@ case class AlternatingAutomatonFormulaEncoding(automaton: AlternatingAutomaton, 
 
     maintainStateAtNoPresent(linearEncoding) ++ transitionRules ++ lastAutomationTransition ++ restrictionRules ++ init ++ goal
   }
+
+  override lazy val lTLFormula = automaton.initialState
 }
