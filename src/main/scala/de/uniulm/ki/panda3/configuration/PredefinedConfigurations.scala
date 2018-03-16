@@ -201,10 +201,10 @@ object PredefinedConfigurations {
   def pandaProConfig(algorithm: SearchAlgorithmType, sasHeuristic: SasHeuristics): ProgressionSearch =
     ProgressionSearch(algorithm, Some(HierarchicalHeuristicRelaxedComposition(sasHeuristic)), PriorityQueueSearch.abstractTaskSelection.random)
 
-  def ltlConfig(encodingMethod: LTLEncodingMethod, solvertype: Solvertype, formula : Option[LTLFormula] = None) = {
+  def ltlConfig(encodingMethod: LTLEncodingMethod, solvertype: Solvertype, formula : Option[LTLFormula] = None, encoding : POEncoding = ExistsStepEncoding) = {
     val parse = ParsingConfiguration(parserType = HDDLParserType, eliminateEquality = false, stripHybrid = true)
     val prep = PredefinedConfigurations.groundingPreprocess.copy(compileInitialPlan = false, removeUnnecessaryPredicates = true)
-    val search = SATSearch(solvertype, OptimalSATRun(Some(6)), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepEncoding, formulaEncoding = encodingMethod,
+    val search = SATSearch(solvertype, OptimalSATRun(Some(6)), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = encoding, formulaEncoding = encodingMethod,
                            ltlFormula = formula)
 
     (parse, prep, search)
@@ -490,10 +490,12 @@ object PredefinedConfigurations {
          "-prep-split-topdown" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TopDownTDG)), NoSearch),
          "-prep-split-twoway" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TwoWayTDG)), NoSearch),
 
+         "-ltl-aa" -> ltlConfig(AlternatingAutomatonEncoding,CRYPTOMINISAT),
          "-ltl-mattmüller" -> ltlConfig(MattmüllerEncoding,CRYPTOMINISAT),
          "-ltl-mattmüllerImproved" -> ltlConfig(MattmüllerImprovedEncoding,CRYPTOMINISAT),
          "-ltl-onParallel" -> ltlConfig(OnParallelEncoding,CRYPTOMINISAT),
 
+         "-ltl-truck-aa" -> ltlConfig(AlternatingAutomatonEncoding,CRYPTOMINISAT,Some(ltlTruck), KautzSelmanEncoding),
          "-ltl-truck-mattmüller" -> ltlConfig(MattmüllerEncoding,CRYPTOMINISAT,Some(ltlTruck)),
          "-ltl-truck-mattmüllerImproved" -> ltlConfig(MattmüllerImprovedEncoding,CRYPTOMINISAT, Some(ltlTruck)),
          "-ltl-truck-onParallel" -> ltlConfig(OnParallelEncoding,CRYPTOMINISAT,Some(ltlTruck)),

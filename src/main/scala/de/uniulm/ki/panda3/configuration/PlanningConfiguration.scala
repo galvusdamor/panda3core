@@ -6,7 +6,8 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic, EfficientGroundedPlanningGraphImplementation}
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraphFromSymbolic,
+EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic._
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
@@ -324,7 +325,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case (None, LTLTrue)    => None
             case (Some(x), LTLTrue) => Some(x)
             case (None, x)          => Some(x)
-            case (Some(x), y)       => Some(x) //Some(LTLAnd(x :: y :: Nil))
+            case (Some(x), y)       => Some(LTLAnd(x :: y :: Nil))
           }
 
           val separatedFormulaeBeforeRandomSelection = combinedFormula match {
@@ -339,14 +340,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           val rand = new Random(randomSeed)
 
-          val separatedFormulae = separatedFormulaeBeforeRandomSelection /*if (separatedFormulaeBeforeRandomSelection.length <= 3) separatedFormulaeBeforeRandomSelection else {
-            Range(0, 3).foldLeft[(Seq[LTLFormula], Seq[LTLFormula])]((separatedFormulaeBeforeRandomSelection, Nil))(
-              { case ((l, sel), _) =>
-                val r = rand.nextInt(l.length)
-                (l.patch(r, Nil, 1), sel :+ l(r))
-              }
-                                                                                                                   )._2
-          }*/
+          val separatedFormulae: Seq[LTLFormula] = //separatedFormulaeBeforeRandomSelection
+            if (separatedFormulaeBeforeRandomSelection.length <= 3) separatedFormulaeBeforeRandomSelection else {
+              Range(0, 3).foldLeft[(Seq[LTLFormula], Seq[LTLFormula])]((separatedFormulaeBeforeRandomSelection, Nil))(
+                { case ((l, sel), _) =>
+                  val r = rand.nextInt(l.length)
+                  (l.patch(r, Nil, 1), sel :+ l(r))
+                }
+                                                                                                                     )._2
+            }
 
 
           if (separatedFormulae.nonEmpty) {
@@ -385,8 +387,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case OnParallelEncoding                           => separatedFormulae.zipWithIndex map { case (f, i) => LTLOnParallelEncoding(f, "onparallel_" + i) }
           }
 
-          val additionalEdgesInDisablingGraph : Seq[AdditionalEdgesInDisablingGraph] = directLTLEncoding collect {case x : AdditionalEdgesInDisablingGraph => x}
-          val withRelevantPredicates : Seq[WithRelevantPredicates] = directLTLEncoding collect {case x : WithRelevantPredicates => x}
+          val additionalEdgesInDisablingGraph: Seq[AdditionalEdgesInDisablingGraph] = (directLTLEncoding collect { case x: AdditionalEdgesInDisablingGraph => x }) ++
+            (automaton collect { case x: AlternatingAutomaton => AlternatingAutomatonFormulaEncoding(x,"none") })
+          val withRelevantPredicates: Seq[WithRelevantPredicates] = directLTLEncoding collect { case x: WithRelevantPredicates => x }
 
           val intProblem = IntProblem(domainAndPlan._1, domainAndPlan._2, additionalEdgesInDisablingGraph, withRelevantPredicates)
 
@@ -895,8 +898,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap, typing: HierarchyTyping): AnalysisMap = {
     val groundedInitialState = problem.groundedInitialStateOnlyPositive filter { _.isPositive }
-    val chosenTyping = if (problem.isModificationAllowed(InsertPlanStepWithLink(null,null,null,null))) None else Some(typing)
-    val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = chosenTyping,debuggingMode = DebuggingMode.Disabled)
+    val chosenTyping = if (problem.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) None else Some(typing)
+    val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = chosenTyping, debuggingMode = DebuggingMode.Disabled)
     val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, config)
     // add analysis to map
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
