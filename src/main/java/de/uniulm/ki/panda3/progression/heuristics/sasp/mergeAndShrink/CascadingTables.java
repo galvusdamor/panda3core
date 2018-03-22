@@ -11,7 +11,7 @@ import java.util.concurrent.ExecutionException;
 public class CascadingTables {
 
 
-    LinkedList<CascadingTable> cascadingTables;
+    public LinkedList<CascadingTable> cascadingTables;
 
     public CascadingTables(){
 
@@ -80,100 +80,3 @@ public class CascadingTables {
 }
 
 
-abstract class CascadingTable{
-
-    int index;
-
-    abstract int getNewNodeID(int[] state, HashMap<Integer, Integer> resultsFromFormerOperations);
-
-}
-
-
-class VariableTable extends CascadingTable{
-
-    private int varIndex;
-
-    private HashMap<Integer, Integer> varValueToNodeIDMapping;
-
-    public VariableTable(int index, int varIndex, HashMap<Integer, Integer> varValueToNodeIDMapping){
-
-        this.index = index;
-        this.varIndex = varIndex;
-        this.varValueToNodeIDMapping = varValueToNodeIDMapping;
-
-    }
-
-    public int getNewNodeID(int[] state, HashMap<Integer, Integer> resultsFromFormerOperations){
-
-        int variableValue = state[varIndex];
-
-        int respectiveNodeID = varValueToNodeIDMapping.get(variableValue);
-        resultsFromFormerOperations.put(index, respectiveNodeID);
-
-        return respectiveNodeID;
-    }
-}
-
-
-class MergeTable extends CascadingTable{
-
-    int mergeIndex1;
-    int mergeIndex2;
-    int[][] mergeTable;
-
-    public MergeTable(int index, int mergeIndex1, int mergeIndex2, int[][] mergeTable){
-
-        this.index = index;
-        this.mergeIndex1 = mergeIndex1;
-        this.mergeIndex2 = mergeIndex2;
-        this.mergeTable = mergeTable;
-
-    }
-
-
-    public int getNewNodeID(int[] state, HashMap<Integer, Integer> resultsFromFormerOperations){
-
-
-        int oldNodeID1 = resultsFromFormerOperations.get(mergeIndex1);
-        int oldNodeID2 = resultsFromFormerOperations.get(mergeIndex2);
-
-        int respectiveNodeID = mergeTable[oldNodeID1][oldNodeID2];
-
-        resultsFromFormerOperations.remove(mergeIndex1);
-        resultsFromFormerOperations.remove(mergeIndex2);
-        resultsFromFormerOperations.put(index, respectiveNodeID);
-
-        return respectiveNodeID;
-    }
-
-
-}
-
-class ShrinkTable extends CascadingTable{
-
-    int indexOfTableBeforeShrinking;
-    HashMap<Integer, Integer> nodeIDToNewNodeIDMapping;
-
-    public ShrinkTable(int index, int indexOfTableBeforeShrinking, HashMap<Integer, Integer> nodeIDToNewNodeIDMapping){
-
-        this.index = index;
-        this.indexOfTableBeforeShrinking = indexOfTableBeforeShrinking;
-        this.nodeIDToNewNodeIDMapping = nodeIDToNewNodeIDMapping;
-
-
-    }
-
-    public int getNewNodeID(int[] state, HashMap<Integer, Integer> resultsFromFormerOperations){
-
-        int oldNodeID = resultsFromFormerOperations.get(indexOfTableBeforeShrinking);
-
-        int respectiveNodeID = nodeIDToNewNodeIDMapping.get(oldNodeID);
-
-        resultsFromFormerOperations.remove(indexOfTableBeforeShrinking);
-        resultsFromFormerOperations.put(index, respectiveNodeID);
-
-        return respectiveNodeID;
-
-    }
-
-}

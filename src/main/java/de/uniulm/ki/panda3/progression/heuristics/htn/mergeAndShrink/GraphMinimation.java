@@ -32,13 +32,13 @@ public final class GraphMinimation {
         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> incomingEdgesMap = getIDToIncomingOrOutgoingEdgesMap(graph, true);
         HashSet<HashSet<Integer>> idsToShrinkByIncomingEdges = getIDsToShrink(incomingEdgesMap, true);
 
-        String outputfile = "MinimizedGraph" + index + ".pdf";
+        //String outputfile = "MinimizedGraph" + index + ".pdf";
         //Utils.printHtnGraph(p, graph, outputfile);
 
         graph = Shrinking.shrinkingStep(p, graph, idsToShrinkByIncomingEdges);
 
         index++;
-        outputfile = "MinimizedGraph" + index + ".pdf";
+        //outputfile = "MinimizedGraph" + index + ".pdf";
         //Utils.printHtnGraph(p, graph, outputfile);
 
         //System.out.println("To Shrink by incoming edges: " + idsToShrinkByIncomingEdges);
@@ -51,7 +51,7 @@ public final class GraphMinimation {
 
         index++;
         //outputfile = "MinimizedGraph" + index + ".pdf";
-        Utils.printHtnGraph(p, graph, outputfile);
+        //Utils.printHtnGraph(p, graph, outputfile);
 
         //System.out.println("To Shrink by outgoing edges: " + idsToShrinkByOutgoingEdges);
 
@@ -70,7 +70,7 @@ public final class GraphMinimation {
 
             index++;
             //outputfile = "MinimizedGraph" + index + ".pdf";
-            Utils.printHtnGraph(p, graph, outputfile);
+            //Utils.printHtnGraph(p, graph, outputfile);
 
 
             outgoingEdgesMap = getIDToIncomingOrOutgoingEdgesMap(graph, false);
@@ -87,7 +87,7 @@ public final class GraphMinimation {
 
             index++;
             //outputfile = "MinimizedGraph" + index + ".pdf";
-            Utils.printHtnGraph(p, graph, outputfile);
+            //Utils.printHtnGraph(p, graph, outputfile);
 
 
         }
