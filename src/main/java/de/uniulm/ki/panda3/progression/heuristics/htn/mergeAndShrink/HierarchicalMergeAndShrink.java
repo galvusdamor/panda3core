@@ -15,13 +15,12 @@ import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.util.DirectedGraph;
 import de.uniulm.ki.util.Dot2PdfCompiler$;
 import scala.Tuple2;
+import scala.Tuple3;
 import scala.collection.JavaConverters;
 
 import java.util.*;
 
-/**
- * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
- */
+
 public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
     HashMap<Task, List<ProMethod>> methods;
@@ -36,9 +35,9 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
 
         ClassicalMergeAndShrink classicalMergeAndShrink = new ClassicalMergeAndShrink(flatProblem);
-        ClassicalMSGraph testGraph = classicalMergeAndShrink.mergeAndShrinkProcess(flatProblem, 50);
+        ClassicalMSGraph classicalMSGraph = classicalMergeAndShrink.mergeAndShrinkProcess(flatProblem, 30);
 
-        Utils.printMultiGraph(flatProblem, testGraph, "ClassicalMSGraph.pdf");
+        Utils.printMultiGraph(flatProblem, classicalMSGraph, "Transport\\ClassicalMSGraph.pdf");
 
 
         Task[] allTasks = ProgressionNetwork.indexToTask;
@@ -108,7 +107,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         //HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
         int obergrenze = 165;
-        int shrinkingBound = 50;
+        int shrinkingBound = 30;
         HtnShrinkingStrategy shrinkingStrategy = new HtnShrinkingStrategy1();
         HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, shrinkingStrategy);
 
@@ -117,12 +116,29 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
 
         //System.out.println("Size of Graph 81: " + graph81.idMapping.size());
-        System.out.println("Test");
+        //System.out.println("Test");
 
 
-        Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
+        //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
 
-        Utils.printHtnGraph(flatProblem, presentGraphs.get(16), "Transport\\Graph16.pdf");
+        HtnMsGraph htnMsGraph = presentGraphs.get(9);
+
+
+        ClassicalMSGraph combinedGraph = OverlayOfClassicalAndHTNGraph.findWaysThroughBothGraphs(flatProblem, classicalMSGraph, htnMsGraph);
+
+        /*System.out.println(combinedGraph.idMapping.keySet());
+
+        for(Tuple3<Integer,Integer,Integer> edge:combinedGraph.labelledEdges){
+
+            System.out.println(edge.toString());
+
+        }*/
+
+
+
+        Utils.printMultiGraph(flatProblem, combinedGraph, "Transport\\combinedGraph.pdf");
+
+        //Utils.printHtnGraph(flatProblem, presentGraphs.get(16), "Transport\\Graph16.pdf");
 
         System.exit(0);
 

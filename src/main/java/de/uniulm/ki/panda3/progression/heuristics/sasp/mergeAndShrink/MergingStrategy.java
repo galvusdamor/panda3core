@@ -4,18 +4,15 @@ import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ClassicalNodeValue;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.MergeNode;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.NodeValue;
-import de.uniulm.ki.util.EdgeLabelledGraph;
 import scala.Tuple2;
 import scala.Tuple3;
 
 import java.util.*;
 
-import static de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.SingleGraphMethods.getSingleEdgesForAllContainedIndexes;
-
 /**
  * Created by biederma on 11.01.2018.
  */
-abstract class MergingStrategy {
+public abstract class MergingStrategy {
 
 
 
