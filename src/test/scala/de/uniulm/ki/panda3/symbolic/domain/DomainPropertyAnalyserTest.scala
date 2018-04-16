@@ -25,7 +25,7 @@ class DomainPropertyAnalyserTest extends FlatSpec {
 
     val initialState = plan.groundedInitialStateOnlyPositive
     val planningGraph = GroundedPlanningGraph(domain, initialState toSet, GroundedPlanningGraphConfiguration(isSerial = true))
-    val tdg = NaiveGroundedTaskDecompositionGraph(domain, plan, planningGraph, prunePrimitive = true)
+    val tdg = NaiveGroundedTaskDecompositionGraph(domain, plan, planningGraph, prunePrimitive = true, println)
 
     DomainPropertyAnalyser(domain, tdg)
   }

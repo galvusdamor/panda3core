@@ -1376,17 +1376,22 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
          }))
        )
 
-  override def potentialRecursiveChildren: Seq[Configuration] = (searchConfiguration match {
-    case NoSearch =>
-      defaultPlanSearchConfiguration ::
+
+
+  override def potentialRecursiveChildren: Seq[Configuration] =
+    {
+      val allDefaultConfigurations : Seq[SearchConfiguration] =
+        defaultPlanSearchConfiguration ::
         defaultProgressionConfiguration ::
         defaultSATConfiguration ::
         defaultVerifyConfiguration ::
         NoSearch ::
         FAPESearch ::
         SHOP2Search :: Nil
-    case x        => x :: Nil
-  }) ++ (parsingConfiguration :: preprocessingConfiguration :: postprocessingConfiguration :: Nil)
+
+      (allDefaultConfigurations filterNot {_.isInstanceOf[searchConfiguration.type ]) ++
+        (parsingConfiguration :: preprocessingConfiguration :: searchConfiguration ::   postprocessingConfiguration :: Nil)
+    }
 
   protected override def recursiveMethods(conf: Configuration): (conf.type) => PlanningConfiguration.this.type = conf match {
     case _: ParsingConfiguration        => {
