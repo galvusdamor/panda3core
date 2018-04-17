@@ -199,7 +199,7 @@ object Main {
     redistributedLines mkString "\n"
   }
 
-  val helpDB: Map[String, (String, String, Seq[String], String, Seq[String])] = {
+  val helpDB: Map[String, (String, String, Seq[String], String, Seq[String], String)] = {
     val dbLines: Seq[String] = Source.fromInputStream(getClass.getResourceAsStream("helpdb.txt"),"UTF-8").getLines().toSeq
 
     val parsed: Seq[Seq[String]] = dbLines.foldLeft[(Seq[Seq[String]], Seq[String])]((Nil, Nil))(
@@ -211,20 +211,22 @@ object Main {
           else (processed, x)
       })._1
 
-    val entries: Seq[(String, (String, String, Seq[String], String, Seq[String]))] = parsed map { entry =>
+    val entries: Seq[(String, (String, String, Seq[String], String, Seq[String], String))] = parsed map { entry =>
       val keys: Seq[String] = entry.head split " "
-      val short: String = entry(1)
-      val optionsHeader: String = entry(2)
-      val long: String = entry.drop(3).dropRight(1).mkString("\n")
+      val offset: Int = if(entry(1).startsWith("!")) 1 else 0
+      val options: String = if(offset == 1) entry(1).drop(1) else ""
+      val short: String = entry(1 + offset)
+      val optionsHeader: String = entry(entry.length - 2)
+      val long: String = entry.drop(2 + offset).dropRight(2).mkString("\n")
       val children: Seq[String] = entry.last.split(" ").drop(1)
 
-      (keys, (short, long, optionsHeader, children))
-    } flatMap { case (as, (s, l, o, c)) => as map { a => (a, (s, l, as.filter(_ != a), o, c)) } }
+      (keys, (short, long, optionsHeader, children, options))
+    } flatMap { case (as, (s, l, o, c, op)) => as map { a => (a, (s, l, as.filter(_ != a), o, c, op)) } }
 
     val entryMap = Map(entries: _*)
 
     // consistency
-    entries foreach { case (key, (_, _, _, _, children)) => children foreach { c =>
+    entries foreach { case (key, (_, _, _, _, children, _)) => children foreach { c =>
       assert(entryMap contains c, "No explanation found for key \"" + c + "\" occurring in key \"" + key + "\"")
     }
     }
@@ -238,7 +240,7 @@ object Main {
 
     entries foreach {
       case ("main", _)                => // it's ok
-      case (key, (_, _, alter, _, _)) =>
+      case (key, (_, _, alter, _, _, _)) =>
       assert(alter :+ key exists { k => entries exists(_._2._5 contains k)}, "Key \"" + key + "\" does not occur as part of the explanation tree.")
     }
 
@@ -247,16 +249,18 @@ object Main {
 
 
   def getHelpTextFor(item: String): String = if (!helpDB.contains(item)) "No entry found for \"" + item + "\"" else {
-    val (_, longText, _, optionsText, children) = helpDB(item)
+    val (_, longText, _, optionsText, children, options) = helpDB(item)
 
     if (children.isEmpty) longText else {
       def generateChildrenLines(childrenToDisplay: Seq[String]): String = {
 
         val childrenTexts = childrenToDisplay map { c =>
           val alternates = helpDB(c)._3
-          val optionText = if (alternates.isEmpty) c else c + "|" + alternates.mkString("|")
+          val optionText = (if (alternates.isEmpty) c else c + "|" + alternates.mkString("|")) + helpDB(c)._6
           optionText -> helpDB(c)._1
+
         }
+
         val maxChildLength = childrenTexts map { _._1.length } max
         val childrenLines = childrenTexts map { case (i, t) => " " + i + (Range(i.length, maxChildLength + 2) map { _ => " " }).mkString("") + t }
 

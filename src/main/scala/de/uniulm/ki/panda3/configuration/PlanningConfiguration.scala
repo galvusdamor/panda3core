@@ -232,6 +232,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case NewestFlaw            => NewestFlawFirst
             case RandomFlaw            => RandomFlawSelector(new Random(randomSeed))
             case UMCPFlaw              => UMCPFlawSelection
+            case OneModFlaw            => OneModFlawSelector
+            case OpenPrecFlaw          => OCFlawSelector
+            case AbstractTaskFlaw      => AbstractTaskFlawSelector
             case s: SequentialSelector =>
               val subSelectorArray = s.sequence map {
                 case LCFR         => LeastCostFlawRepair
@@ -239,6 +242,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 case CausalThreat => CausalThreatSelector
                 case FrontFlaw    => FrontFlawFirst
                 case NewestFlaw   => NewestFlawFirst
+                case OneModFlaw            => OneModFlawSelector
+                case OpenPrecFlaw          => OCFlawSelector
+                case AbstractTaskFlaw      => AbstractTaskFlawSelector
               } toArray
 
               SequentialEfficientFlawSelector(subSelectorArray)
@@ -1861,6 +1867,9 @@ object SearchFlawSelector {
         case "front-flaw"                            => FrontFlaw
         case "newest-flaw"                           => NewestFlaw
         case "causal-threat" | "causal-threat-first" => CausalThreat
+        case "open-precs"                            => OpenPrecFlaw
+        case "abstract-task"                         => AbstractTaskFlaw
+        case "one-mod"                               => OneModFlaw
       }
     })
 
@@ -1879,6 +1888,12 @@ object FrontFlaw extends SearchFlawSelector {override val longInfo: String = "fr
 object NewestFlaw extends SearchFlawSelector {override val longInfo: String = "newest-flaw"}
 
 object CausalThreat extends SearchFlawSelector {override val longInfo: String = "causal-threat first"}
+
+object OneModFlaw extends SearchFlawSelector {override val longInfo: String = "one-modification flaws"}
+
+object AbstractTaskFlaw extends SearchFlawSelector {override val longInfo: String = "abstract-task flaws"}
+
+object OpenPrecFlaw extends SearchFlawSelector {override val longInfo: String = "open-preconditions flaws"}
 
 
 case class SequentialSelector(sequence: SearchFlawSelector*) extends SearchFlawSelector {override val longInfo: String = sequence map { _.longInfo } mkString " -> "}
