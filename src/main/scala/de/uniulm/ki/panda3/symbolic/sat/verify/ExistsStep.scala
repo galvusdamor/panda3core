@@ -13,10 +13,8 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int) extends LinearPrimitivePlanEncoding {
+case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, overrideK : Option[Int] = None) extends LinearPrimitivePlanEncoding {
   override lazy val offsetToK = 0
-
-  override lazy val overrideK = None
 
   override lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
@@ -69,7 +67,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
         (pMap(ap) * (if (ab) 1 else -1), pMap(bp) * (if (bb) 1 else -1))
       } distinct
 
-    println("candicates build")
+    println("candidates build")
 
     def filter(invar: Array[(Int, Int)], tasks: Seq[IntTask]): Array[(Int, Int)] = {
       // marked for deleteion
@@ -336,4 +334,5 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     goalStateOfLength(taskSequenceLength)
 
   println("Exists-Step, plan length: " + taskSequenceLength)
+  println("Exists-Step, K = " + K)
 }

@@ -364,6 +364,14 @@ object PredefinedConfigurations {
          "-satFFFullMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod =        FFReductionWithFullTest)),
          */
 
+         "-totSat" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding)),
+         "-totSatFF" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReduction, encodingToUse = TotSATEncoding)),
+         "-totSatH2" -> (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = H2Reduction, encodingToUse = TotSATEncoding)),
+         "-totSatFull" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = FFReductionWithFullTest, encodingToUse = TotSATEncoding)),
+         "-totSatRiss6" -> (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding)),
+         "-totSatMaple" -> (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding)),
+
 
          "-treeBeforeSat" ->
            (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding)),
@@ -476,5 +484,5 @@ object PredefinedConfigurations {
          "-prep-split-twoway" -> (htnParsing, groundingPreprocess.copy(splitIndependentParameters = true, groundedTaskDecompositionGraph = Some(TwoWayTDG)), NoSearch)
 
 
-         )
+       )
 }

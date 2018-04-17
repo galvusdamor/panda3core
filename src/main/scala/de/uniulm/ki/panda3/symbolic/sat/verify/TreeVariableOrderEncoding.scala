@@ -11,11 +11,8 @@ import scala.collection.{Seq, mutable}
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class TreeVariableOrderEncoding(timeCapsule: TimeCapsule,
-                                     domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
-  extends TreeEncoding with LinearPrimitivePlanEncoding {
+trait TreeVariableOrderEncoding extends TreeEncoding with LinearPrimitivePlanEncoding {
 
-  lazy val taskSequenceLength: Int = primitivePaths.length
 
   override val optimiser = GreedyNumberOfAbstractChildrenOptimiser
   //override val optimiser = GreedyNumberOfChildrenFromTotallyOrderedOptimiser
@@ -41,7 +38,7 @@ case class TreeVariableOrderEncoding(timeCapsule: TimeCapsule,
     orderBefore(commonPath.length, commonPath, beforeInMethod, afterInMethod)
                                                                                           })
 
-  override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions: Map[Int,Int]): Seq[Clause] = {
+  override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions: Map[Int, Int]): Seq[Clause] = {
     val orderings = method.subPlan.orderingConstraints.allOrderingConstraints() filterNot { _.containsAny(method.subPlan.initAndGoal: _*) }
 
     val orderingAtoms = orderings map { case OrderingConstraint(before, after) =>
@@ -114,8 +111,10 @@ case class TreeVariableOrderEncoding(timeCapsule: TimeCapsule,
 
     //orderingKept
 
-    stateTransitionFormulaOfLength(taskSequenceLength) ++ atMostOneConstraints ++ selected ++ onlySelectableIfChosen ++ onlyPrimitiveIfChosen ++ sameAction ++ orderingKept
+     stateTransitionFormulaProvider() ++ atMostOneConstraints ++ selected ++ onlySelectableIfChosen ++ onlyPrimitiveIfChosen ++ sameAction ++ orderingKept
   }
+
+  def stateTransitionFormulaProvider() : Seq[Clause]
 
   override def noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
 
@@ -133,3 +132,24 @@ case class TreeVariableOrderEncoding(timeCapsule: TimeCapsule,
     pdt.restrictPathDecompositionTree(dontRemovePrimitives)
   }
 }
+
+case class TreeVariableOrderEncodingKautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
+  extends TreeVariableOrderEncoding {
+
+  override def stateTransitionFormulaProvider() : Seq[Clause] = stateTransitionFormulaOfLength(taskSequenceLength)
+
+  lazy val taskSequenceLength: Int = primitivePaths.length
+}
+
+case class TreeVariableOrderEncodingExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
+  extends TreeVariableOrderEncoding {
+
+  val exsitsStepEncoding = ExistsStep(timeCapsule,domain,initialPlan,taskSequenceLength, Some(K))
+
+  override def stateTransitionFormulaProvider() : Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
+
+  lazy val taskSequenceLength: Int = primitivePaths.length
+}
+
+
+
