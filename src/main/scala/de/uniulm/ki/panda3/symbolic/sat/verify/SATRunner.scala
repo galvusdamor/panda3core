@@ -158,6 +158,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domain.primitiveTasks.length)
       informationCapsule.set(Information.NUMBER_OF_METHODS, domain.decompositionMethods.length)
 
+      // clear index cache of clause class
+      Clause.clearCache()
+
       //val restrictionMethod: RestrictionMethod = SlotGloballyRestriction
       val restrictionMethod: RestrictionMethod = SlotOverTimeRestriction
 
@@ -709,6 +712,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           case tree: TreeVariableOrderEncodingExistsStep =>
             val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
             val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
+            val pathToPosWithTask = allTrueAtoms filter { _.startsWith("withTaskPathToPos_") }
             val pathToPosByPos : Map[String,String] = pathToPos groupBy { _.split("-").last } map { case (a, b) => exitIfNot(b.size == 1); a -> b.head }
             val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
 
@@ -726,13 +730,16 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                   case ((t1,_), (t2,_)) => tree.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t1) < tree.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t2)
                 })
 
+              println("Time " + p)
+              println(actionOrdering map { "\t" + _._1.name } mkString ("\n"))
+
               actionOrdering map {_._2}
             }
 
             val taskSequence = actionSequence map { case solAction =>
               val pos = solAction.split("_").last.split(",").head
-              val ptP = pathToPosByPos(pos)
-              val path = ptP.split("_").last.split("-").head
+              val taskID = solAction.split("_").last.split(",").last
+              val path = (pathToPosWithTask find {_.endsWith("-" + pos + ":" + taskID)}).get.split("_").last.split("-").head
 
               // find matching atom
               nodes find { _ contains ("_" + path + ",") } get

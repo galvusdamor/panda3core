@@ -21,6 +21,9 @@ trait TreeVariableOrderEncoding extends TreeEncoding with LinearPrimitivePlanEnc
 
   protected def pathToPos(path: Seq[Int], position: Int): String = "pathToPos_" + path.mkString(";") + "-" + position
 
+  protected def pathToPosWithTask(path: Seq[Int], position: Int, task: Task): String =
+    "withTaskPathToPos_" + path.mkString(";") + "-" + position + ":" + taskIndex(task)
+
   protected def orderBefore(l: Int, p: Seq[Int], before: Int, after: Int) = {
     assert(p.length == l, p + " " + p.length + " " + l)
     "before!" + l + "_" + p.mkString(";") + "," + before + "<" + after
@@ -51,6 +54,7 @@ trait TreeVariableOrderEncoding extends TreeEncoding with LinearPrimitivePlanEnc
     impliesRightAnd(methodString :: Nil, orderingAtoms)
   }
 
+  def restrictionPathsPerPosition(positionsPerPath: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause]
 
   override def stateTransitionFormula: Seq[Clause] = {
     println("TREE P:" + primitivePaths.length + " S: " + taskSequenceLength)
@@ -61,7 +65,8 @@ trait TreeVariableOrderEncoding extends TreeEncoding with LinearPrimitivePlanEnc
     val positionsPerPath: Map[Int, Seq[(Int, Int, String)]] = pathAndPosition groupBy { _._1 }
     val pathsPerPosition: Map[Int, Seq[(Int, Int, String)]] = pathAndPosition groupBy { _._2 }
 
-    val atMostOneConstraints = (positionsPerPath flatMap { case (a, s) => atMostOneOf(s map { _._3 }) }) ++ (pathsPerPosition flatMap { case (a, s) => atMostOneOf(s map { _._3 }) })
+
+    val atMostOneConstraints = restrictionPathsPerPosition(positionsPerPath) ++ (pathsPerPosition flatMap { case (a, s) => atMostOneOf(s map { _._3 }) })
     println("A " + atMostOneConstraints.size)
 
     val selected = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
@@ -111,10 +116,10 @@ trait TreeVariableOrderEncoding extends TreeEncoding with LinearPrimitivePlanEnc
 
     //orderingKept
 
-     stateTransitionFormulaProvider() ++ atMostOneConstraints ++ selected ++ onlySelectableIfChosen ++ onlyPrimitiveIfChosen ++ sameAction ++ orderingKept
+    stateTransitionFormulaProvider() ++ atMostOneConstraints ++ selected ++ onlySelectableIfChosen ++ onlyPrimitiveIfChosen ++ sameAction ++ orderingKept
   }
 
-  def stateTransitionFormulaProvider() : Seq[Clause]
+  def stateTransitionFormulaProvider(): Seq[Clause]
 
   override def noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
 
@@ -136,19 +141,47 @@ trait TreeVariableOrderEncoding extends TreeEncoding with LinearPrimitivePlanEnc
 case class TreeVariableOrderEncodingKautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
   extends TreeVariableOrderEncoding {
 
-  override def stateTransitionFormulaProvider() : Seq[Clause] = stateTransitionFormulaOfLength(taskSequenceLength)
+  override def stateTransitionFormulaProvider(): Seq[Clause] = stateTransitionFormulaOfLength(taskSequenceLength)
+
 
   lazy val taskSequenceLength: Int = primitivePaths.length
+
+  override def restrictionPathsPerPosition(positionsPerPath: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] =
+    positionsPerPath.toSeq flatMap { case (a, s) => atMostOneOf(s map { _._3 }) }
 }
 
 case class TreeVariableOrderEncodingExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
   extends TreeVariableOrderEncoding {
 
-  val exsitsStepEncoding = ExistsStep(timeCapsule,domain,initialPlan,taskSequenceLength, Some(K))
-
-  override def stateTransitionFormulaProvider() : Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
-
+  // TODO: determine this size more intelligently
   lazy val taskSequenceLength: Int = primitivePaths.length
+
+  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, taskSequenceLength, Some(K))
+
+  override def stateTransitionFormulaProvider(): Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
+
+  override def restrictionPathsPerPosition(positionsPerPath: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] = {
+    val taskToPosWithTask: Seq[Clause] = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
+      tasks.toSeq map { t => (t, pathAction(path.length, path, t)) } flatMap { case (t, actionAtom) =>
+        positionsPerPath(pindex) flatMap { case (_, position, connectionAtom) =>
+          //println(actionAtom + " + " + connectionAtom + " => "  + pathToPosWithTask(path, position, t))
+
+          impliesSingle(pathToPosWithTask(path, position, t), actionAtom) ::
+            impliesSingle(pathToPosWithTask(path, position, t), connectionAtom) ::
+            impliesRightAndSingle(actionAtom :: connectionAtom :: Nil, pathToPosWithTask(path, position, t)) :: Nil
+        }
+      }
+    }
+
+    val atMostOnePathTask = positionsPerPath flatMap { case (path, positions) =>
+      primitivePaths(path)._2 flatMap { case t => atMostOneOf(positions map { case (_, pos, _) =>
+        //println(primitivePaths(path)._1)
+        pathToPosWithTask(primitivePaths(path)._1, pos, t) }) }
+    }
+
+    taskToPosWithTask ++ atMostOnePathTask
+  }
+
 }
 
 

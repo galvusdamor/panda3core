@@ -337,6 +337,8 @@ case class Clause(disjuncts: Array[Int]) {
 object Clause {
   val atomIndices = new mutable.HashMap[String, Int]()
 
+  def clearCache() : Unit = atomIndices.clear()
+
   def apply(disjuncts: Array[(String, Boolean)]): Clause = {
     val compressed = new Array[Int](disjuncts.length)
     var i = 0
