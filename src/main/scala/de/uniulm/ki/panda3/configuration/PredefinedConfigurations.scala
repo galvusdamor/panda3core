@@ -401,6 +401,21 @@ object PredefinedConfigurations {
          "-classicalFImpSatMaple" ->
            (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding)),
 
+        // existstep- versions of the above
+         "-existsFSat" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding)),
+         "-existsFSatRiss6" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding)),
+         "-existsFSatMaple" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding)),
+
+         "-existsFImpSat" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding)),
+         "-existsFImpSatRiss6" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding)),
+         "-existsFImpSatMaple" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding)),
+
          "-classicalN4Sat" ->
            (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding)),
          "-classicalN4SatRiss6" ->

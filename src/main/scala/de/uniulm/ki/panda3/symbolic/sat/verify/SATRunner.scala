@@ -177,15 +177,17 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
           encodingToUse match {
-            case TotSATEncoding               => TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
-            case TreeBeforeEncoding           => TreeVariableOrderEncodingKautzSelman(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
-            case TreeBeforeExistsStepEncoding => TreeVariableOrderEncodingExistsStep(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
-            case ClassicalForbiddenEncoding   => SOGClassicalForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = false)
-            case ClassicalImplicationEncoding => SOGClassicalForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = true)
-            case ClassicalN4Encoding          => SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
-            case POCLDirectEncoding           => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
-            case POCLDeleterEncoding          => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
-            case POStateEncoding              => SOGPOREncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
+            case TotSATEncoding                => TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
+            case TreeBeforeEncoding            => TreeVariableOrderEncodingKautzSelman(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
+            case TreeBeforeExistsStepEncoding  => TreeVariableOrderEncodingExistsStep(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
+            case ClassicalForbiddenEncoding    => SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = false)
+            case ExistsStepForbiddenEncoding   => SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = false)
+            case ClassicalImplicationEncoding  => SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = true)
+            case ExistsStepImplicationEncoding => SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = true)
+            case ClassicalN4Encoding           => SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
+            case POCLDirectEncoding            => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
+            case POCLDeleterEncoding           => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
+            case POStateEncoding               => SOGPOREncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
           }
         }
 
@@ -713,33 +715,32 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
             val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
             val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
             val pathToPosWithTask = allTrueAtoms filter { _.startsWith("withTaskPathToPos_") }
-            val pathToPosByPos : Map[String,String] = pathToPos groupBy { _.split("-").last } map { case (a, b) => exitIfNot(b.size == 1); a -> b.head }
             val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
 
             // try to get a linearisation of each position
             var c = -1
             val actionSequence: Seq[String] = actionsPerPosition.toSeq.sortBy(_._1) flatMap { case (p, acts) =>
-              val executedActions: Set[(Task,String)] = acts map { solAction =>
+              val executedActions: Set[(Task, String)] = acts map { solAction =>
                 val pos = solAction.split("_").last.split(",").head.toInt
                 val actionIDX = solAction.split(",").last.toInt
-                (domain.tasks(actionIDX),solAction)
+                (domain.tasks(actionIDX), solAction)
               }
 
-              val actionOrdering: Seq[(Task,String)] = executedActions.toSeq.sortWith(
+              val actionOrdering: Seq[(Task, String)] = executedActions.toSeq.sortWith(
                 {
-                  case ((t1,_), (t2,_)) => tree.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t1) < tree.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t2)
+                  case ((t1, _), (t2, _)) => tree.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t1) < tree.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t2)
                 })
 
               println("Time " + p)
               println(actionOrdering map { "\t" + _._1.name } mkString ("\n"))
 
-              actionOrdering map {_._2}
+              actionOrdering map { _._2 }
             }
 
             val taskSequence = actionSequence map { case solAction =>
               val pos = solAction.split("_").last.split(",").head
               val taskID = solAction.split("_").last.split(",").last
-              val path = (pathToPosWithTask find {_.endsWith("-" + pos + ":" + taskID)}).get.split("_").last.split("-").head
+              val path = (pathToPosWithTask find { _.endsWith("-" + pos + ":" + taskID) }).get.split("_").last.split("-").head
 
               // find matching atom
               nodes find { _ contains ("_" + path + ",") } get
@@ -750,7 +751,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
           case tree: TreeVariableOrderEncoding           =>
             val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
             val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
-            val pathToPosByPos : Map[String,String] = pathToPos groupBy { _.split("-").last } map { case (a, b) => exitIfNot(b.size == 1); a -> b.head }
+            val pathToPosByPos: Map[String, String] = pathToPos groupBy { _.split("-").last } map { case (a, b) => exitIfNot(b.size == 1); a -> b.head }
             //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
             val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
             val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => exitIfNot(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
@@ -847,18 +848,58 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
               case tree: SOGClassicalEncoding =>
                 val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
                 val pathToPos = allTrueAtoms filter { _.startsWith("pathToPos_") }
-                val pathToPosByPos = pathToPos groupBy { _.split("-").last } map { case (a, b) => exitIfNot(b.size == 1); a -> b.head }
-                //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
                 val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
-                val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => exitIfNot(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
-                val taskSequence = actionSequence map { case solAction =>
-                  val pos = solAction.split("_").last.split(",").head
-                  val ptP = pathToPosByPos(pos)
-                  val path = ptP.split("_").last.split("-").head
 
-                  // find matching atom
-                  nodes find { _ contains ("_" + path + ",") } get
-                } map actionStringToTask
+                val taskSequence = tree match {
+                  case t: SOGKautzSelmanForbiddenEncoding =>
+                    val pathToPosByPos = pathToPos groupBy { _.split("-").last } map { case (a, b) => exitIfNot(b.size == 1); a -> b.head }
+                    //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
+                    val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => exitIfNot(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
+                    actionSequence map { case solAction =>
+                      val pos = solAction.split("_").last.split(",").head
+                      val ptP = pathToPosByPos(pos)
+                      val path = ptP.split("_").last.split("-").head
+
+                      // find matching atom
+                      nodes find { _ contains ("_" + path + ",") } get
+                    } map actionStringToTask
+
+                  case t: SOGExistsStepForbiddenEncoding =>
+                    val pathToPosWithTask = allTrueAtoms filter { _.startsWith("withTaskPathToPos_") }
+
+
+                    // try to get a linearisation of each position
+                    var c = -1
+                    val actionSequence: Seq[String] = actionsPerPosition.toSeq.sortBy(_._1) flatMap { case (p, acts) =>
+                      val executedActions: Set[(Task, String)] = acts map { solAction =>
+                        val pos = solAction.split("_").last.split(",").head.toInt
+                        val actionIDX = solAction.split(",").last.toInt
+                        (domain.tasks(actionIDX), solAction)
+                      }
+
+                      val actionOrdering: Seq[(Task, String)] = executedActions.toSeq.sortWith(
+                        {
+                          case ((t1, _), (t2, _)) => t.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t1) < t.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t2)
+                        })
+
+                      println("Time " + p)
+                      println(actionOrdering map { "\t" + _._1.name } mkString ("\n"))
+
+                      actionOrdering map { _._2 }
+                    }
+
+                    val taskSeq = actionSequence map { case solAction =>
+                      val pos = solAction.split("_").last.split(",").head
+                      val taskID = solAction.split("_").last.split(",").last
+                      val path = (pathToPosWithTask find { _.endsWith("-" + pos + ":" + taskID) }).get.split("_").last.split("-").head
+
+                      // find matching atom
+                      nodes find { _ contains ("_" + path + ",") } get
+                    } map actionStringToTask
+
+
+                    taskSeq
+                }
 
 
                 //println("Primitive Sequence with paths")
@@ -1018,7 +1059,11 @@ object TreeBeforeExistsStepEncoding extends POEncoding
 
 object ClassicalForbiddenEncoding extends POEncoding
 
+object ExistsStepForbiddenEncoding extends POEncoding
+
 object ClassicalImplicationEncoding extends POEncoding
+
+object ExistsStepImplicationEncoding extends POEncoding
 
 object ClassicalN4Encoding extends POEncoding
 
