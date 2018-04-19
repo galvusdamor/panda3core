@@ -197,12 +197,14 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
   }
 
   def ifActionAtPositionThenConnected(actionAtoms: Seq[(String, Task)], pathsPerPosition: Map[Int, Seq[(Int, Int, String)]], position: Int): Seq[Clause] = {
-    actionAtoms map { case (atom, task) =>
+    actionAtoms flatMap { case (atom, task) =>
       val possibleAchievers = pathsPerPosition(position) collect { case (pathIndex, _, _) if primitivePaths(pathIndex)._2 contains task =>
         pathToPosWithTask(primitivePaths(pathIndex)._1, position, task)
       }
 
-      impliesRightOr(atom :: Nil, possibleAchievers)
+      if (possibleAchievers.nonEmpty)
+        atMostOneOf(possibleAchievers) :+ impliesRightOr(atom :: Nil, possibleAchievers)
+      else Nil
     }
   }
 

@@ -866,7 +866,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
                   case t: SOGExistsStepForbiddenEncoding =>
                     val pathToPosWithTask = allTrueAtoms filter { _.startsWith("withTaskPathToPos_") }
-
+                    println(pathToPosWithTask mkString "\n")
 
                     // try to get a linearisation of each position
                     var c = -1
@@ -910,9 +910,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
                 //println(innerActions map actionStringToInfoString mkString "\n")
 
 
-                //println(pathToPos mkString "\n")
+                println(pathToPos mkString "\n")
+                println(primitiveActions mkString "\n")
                 val active = allTrueAtoms filter { _.startsWith("active") }
                 //println(active mkString "\n")
+                println(pathToPos.size + "==" + taskSequence.length)
                 exitIfNot(pathToPos.size == taskSequence.length)
                 exitIfNot(active.size == taskSequence.length)
 
