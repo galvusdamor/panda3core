@@ -16,7 +16,7 @@ public abstract class MergingStrategy {
 
 
 
-    abstract ClassicalMSGraph merge(SasPlusProblem p, ClassicalMSGraph graph, int shrinkingBound, long seed);
+    abstract ClassicalMSGraph merge(SasPlusProblem p, ClassicalMSGraph graph, int shrinkingBound, long seed, ShrinkingStrategy shrinkingStrategy);
 
 
 
@@ -474,71 +474,4 @@ public abstract class MergingStrategy {
 
 
 
-class MergingStrategy1 extends MergingStrategy{
 
-
-    public ClassicalMSGraph merge(SasPlusProblem p, ClassicalMSGraph graph, int shrinkingBound, long seed){
-
-
-        Set<Integer> notYetUsedVariables = getNotYetUsedVariables(p, graph);
-
-        ArrayList<Integer> variablesToMerge = new ArrayList<>(notYetUsedVariables);
-
-        ArrayList<Integer> allGoalVars = new ArrayList<>();
-
-        HashSet<Integer> goalVariables = new HashSet<>();
-
-        if (graph==null){
-            goalVariables = SingleGraphMethods.getGoalVariables(p);
-        }else{
-            goalVariables = graph.goalVariables;
-        }
-
-        for (int var : variablesToMerge) if (goalVariables.contains(var)) allGoalVars.add(var);
-
-        if (allGoalVars.size() > 0) {
-            variablesToMerge = allGoalVars;
-            //System.out.println("Goal var left");
-        } else {
-            //System.out.println("No Goal var left");
-        }
-
-
-        ClassicalMSGraph newGraph;
-
-        if (!(graph==null)) {
-
-            //System.out.println("Not yet used Variables: " + notYetUsedVariables);
-
-            int randomVarIndex = Utils.randomIntGenerator(variablesToMerge.size(), seed);
-
-            int randomVar = variablesToMerge.get(randomVarIndex);
-
-            //System.out.println("Merge with Variable: " + randomVar);
-
-
-            newGraph = mergeWithVar(p, graph, randomVar, shrinkingBound, new ShrinkingStrategy1());
-
-
-        }else{
-
-            int randomVarIndex = Utils.randomIntGenerator(variablesToMerge.size(), seed);
-
-            int randomVar = variablesToMerge.get(randomVarIndex);
-
-            //System.out.println("Start with Variable: " + randomVar);
-
-            newGraph = SingleGraphMethods.getSingleGraphForVarIndex(p, randomVar);
-
-        }
-
-        return newGraph;
-
-
-    }
-
-
-
-
-
-}

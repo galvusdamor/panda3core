@@ -24,11 +24,23 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
     @Override
     public int calcHeu(BitSet s0, BitSet g) {
 
-        Testing.printNiceGraphs(p);
+        //Testing.printNiceGraphs(p);
+        //System.exit(0);
+
+        MergingStrategy mergingStrategy = new MergingStrategy1();
+        ShrinkingStrategy shrinkingStrategy = new ShrinkingStrategy1();
 
 
-        System.exit(0);
+        ClassicalMSGraph classicalMSGraph = getGraph(s0,g, mergingStrategy, shrinkingStrategy);
 
+
+        HashMap<Integer,Integer> distancesFromClosestGoalNode = ShrinkingStrategy.getDistancesFromGoal(p, classicalMSGraph);
+
+        return distancesFromClosestGoalNode.get(classicalMSGraph.startNodeID);
+    }
+
+
+    public ClassicalMSGraph getGraph(BitSet s0, BitSet g, MergingStrategy mergingStrategy, ShrinkingStrategy shrinkingStrategy){
 
         int[] oldS0 = p.s0List;
         int[] oldG = p.gList;
@@ -52,8 +64,8 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         System.out.println(p.correctModel());
 
 
-             ClassicalMSGraph testGraph =
-                mergeAndShrinkProcess(p, 5000);
+        ClassicalMSGraph classicalMSGraph =
+                mergeAndShrinkProcess(p, 5000, mergingStrategy, shrinkingStrategy);
 
         //Utils.printMultiGraph(p, testGraph, "graph6.pdf");
 
@@ -79,11 +91,10 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         System.out.println("Node ID: " + testGraph.cascadingTables().getNodeID(queryState));
         */
 
-        HashMap<Integer,Integer> distancesFromClosestGoalNode = ShrinkingStrategy.getDistancesFromGoal(p, testGraph);
         //System.out.println(testGraph.startNodeID);
-        System.out.println(distancesFromClosestGoalNode.get(testGraph.startNodeID));
+        //System.out.println(distancesFromClosestGoalNode.get(testGraph.startNodeID));
 
-        NodeValue val = testGraph.idMapping.get(testGraph.startNodeID);
+        //NodeValue val = testGraph.idMapping.get(testGraph.startNodeID);
         //System.out.println(val.longInfo());
 
 
@@ -95,9 +106,8 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
         p.s0Bitset = null;
         p.gList = oldG;
 
+        return classicalMSGraph;
 
-
-        return distancesFromClosestGoalNode.get(testGraph.startNodeID);
     }
 
 
@@ -107,16 +117,13 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
 
 
 
+    public ClassicalMSGraph mergeAndShrinkProcess(SasPlusProblem p, int shrinkingBound, MergingStrategy mergingStrategy, ShrinkingStrategy shrinkingStrategy){
 
 
-    public ClassicalMSGraph mergeAndShrinkProcess(SasPlusProblem p, int shrinkingBound){
 
+        ClassicalMSGraph graph = mergingStrategy.merge(p, null, shrinkingBound, 0, shrinkingStrategy);
 
-        MergingStrategy mergingStrategy = new MergingStrategy1();
-
-        ClassicalMSGraph graph = mergingStrategy.merge(p, null, shrinkingBound, 0);
-
-        int counter = 0;
+        //int counter = 0;
 
         while (graph.notYetUsedVariables.size()!=0){
 
@@ -126,16 +133,15 @@ public class ClassicalMergeAndShrink extends SasHeuristic {
             }*/
 
             //System.out.println("MERGE step " + counter);
-            graph = mergingStrategy.merge(p, graph,shrinkingBound, 0);
+            graph = mergingStrategy.merge(p, graph,shrinkingBound, 0, shrinkingStrategy);
 
-            counter++;
-
-            String name = "testGraph" + counter + ".pdf";
-
+            //counter++;
+            //String name = "testGraph" + counter + ".pdf";
             //Utils.printMultiGraph(p, graph, name);
-            NodeValue superNode = graph.idMapping.get(1);
+
+            //NodeValue superNode = graph.idMapping.get(1);
             //System.out.println("START is " + graph.startNodeID);
-            HashMap<Integer,Integer> distancesFromClosestGoalNode = ShrinkingStrategy.getDistancesFromGoal(p, graph);
+            //HashMap<Integer,Integer> distancesFromClosestGoalNode = ShrinkingStrategy.getDistancesFromGoal(p, graph);
             //System.out.println(distancesFromClosestGoalNode.get(graph.startNodeID));
             //System.out.println();
             //System.out.println();

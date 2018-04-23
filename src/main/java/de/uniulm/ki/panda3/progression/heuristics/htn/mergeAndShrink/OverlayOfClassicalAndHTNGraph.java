@@ -99,6 +99,27 @@ public final class OverlayOfClassicalAndHTNGraph {
 
         }
 
+        HashMap<Integer, Integer> shrinkingTableInfo = new HashMap<>();
+
+        for (int nodeID : classicalMSGraph.idMapping.keySet()){
+
+
+            if (nodeAssignments.keySet().contains(nodeID)){
+
+                newIDMapping.put(nodeID, classicalMSGraph.idMapping.get(nodeID));
+                shrinkingTableInfo.put(nodeID, -1);
+
+            }else {
+
+                shrinkingTableInfo.put(nodeID, nodeID);
+
+            }
+        }
+
+        int oldIndex = classicalMSGraph.cascadingTables.cascadingTables.size() -1;
+
+        classicalMSGraph.cascadingTables.addNewShrinkTable(oldIndex,shrinkingTableInfo);
+
         Integer[] nodeIDs = Utils.convertNodeIDArrayListToArray(newIDMapping);
 
         ArrayList<Tuple3<Integer, Integer, Integer>> edgeArrayList = new ArrayList<>();
