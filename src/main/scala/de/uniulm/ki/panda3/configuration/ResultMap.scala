@@ -35,6 +35,18 @@ object SearchResult extends ResultType {
   override def longInfo: String = "search result"
 }
 
+object SearchResultInVerificationFormat extends ResultType {
+  type ResultType = Option[String]
+
+  override def longInfo: String = "search result in verification format"
+}
+
+object SearchResultWithDecompositionTree extends ResultType {
+  type ResultType = Option[Plan]
+
+  override def longInfo: String = "search result with Decomposition Tree"
+}
+
 
 object InternalSearchResult extends ResultType {
   type ResultType = Option[Plan]
@@ -121,7 +133,9 @@ object Timings {
   val COMPILE_UNIT_METHODS            = "02 preprocessing:02:compile unit methods"
   val COMPILE_ORDER_IN_METHODS        = "02 preprocessing:03:compile order in methods"
   val SPLIT_PARAMETERS                = "02 preprocessing:04:split parameter"
+  val USELESS_ABSTRACT_TASKS          = "02 preprocessing:05:expand useless abstract tasks"
   val TOP_TASK                        = "02 preprocessing:99:create artificial top task"
+  val LAST_TASK                       = "02 preprocessing:98:ensure last task in method"
   val LIFTED_REACHABILITY_ANALYSIS    = "02 preprocessing:11:lifted reachabiltiy analysis"
   val GROUNDED_PLANNINGGRAPH_ANALYSIS = "02 preprocessing:12:grounded planning graph analysis"
   val GROUNDED_TDG_ANALYSIS           = "02 preprocessing:23:grounded task decomposition graph analysis"
@@ -140,9 +154,14 @@ object Timings {
   val SEARCH_GENERATE_SUCCESSORS      = "20 search:30:apply modifications"
   val SEARCH_COMPUTE_HEURISTIC        = "20 search:40:compute heuristic"
   val SEARCH_COMPUTE_FILTER           = "20 search:50:compute filter"
+  val SEARCH_FAPE                     = "20 search:99:FAPE"
+  val SEARCH_SHOP                     = "20 search:98:SHOP"
 
   val VERIFY_TOTAL     = "40 sat:00:total"
   val GENERATE_FORMULA = "40 sat:10:generate formula"
+  val GENERATE_PDT     = "40 sat:11:generate path decomposition tree"
+  val NORMALISE_PDT    = "40 sat:12:normalise path decomposition tree"
+  val GENERATE_CLAUSES = "40 sat:13:translate path decomposition tree to clauses"
   val TRANSFORM_DIMACS = "40 sat:20:transform to DIMACS"
   val WRITE_FORMULA    = "40 sat:30:write formula"
   val SAT_SOLVER       = "40 sat:40:SAT solver"
@@ -153,6 +172,7 @@ object Information {
   val PROBLEM_NAME = "00 global:01:problem"
   val RANDOM_SEED  = "00 global:02:randomseed"
   val SOLVED_STATE = "00 global:90:planner result"
+  val PEAKMEMORY   = "00 global:80:peak memory"
   val ERROR        = "00 global:99:error"
 
   val SOLUTION_LENGTH = "01 solution:01:number of primitive plan steps"
@@ -162,6 +182,7 @@ object Information {
   val REGULAR                      = "02 properties:03:regular"
   val TAIL_RECURSIVE               = "02 properties:04:tail recursive"
   val TOTALLY_ORDERED              = "02 properties:05:totally ordered"
+  val LAST_TASK_IN_METHODS         = "02 properties:06:last task in all methods"
   val MINIMUM_DECOMPOSITION_HEIGHT = "02 properties:10:minimum decomposition height"
 
   val NUMBER_OF_NODES             = "10 search nodes:00:total"
@@ -192,6 +213,10 @@ object Information {
   val PLAN_LENGTH             = "40 sat:00:plan length"
   val NUMBER_OF_VARIABLES     = "40 sat:01:number of variables"
   val NUMBER_OF_CLAUSES       = "40 sat:02:number of clauses"
+  val AVERAGE_SIZE_OF_CLAUSES = "40 sat:03:average size of clauses"
+  val NUMBER_OF_ASSERT        = "40 sat:03:number of assert"
+  val NUMBER_OF_ONE_SIDED     = "40 sat:03:number of one-sided"
+  val NUMBER_OF_HORN          = "40 sat:03:number of horn"
   val ICAPS_K                 = "40 sat:10:K ICAPS"
   val LOG_K                   = "40 sat:11:K LOG"
   val TSTG_K                  = "40 sat:12:K task schema transition graph"
@@ -205,6 +230,8 @@ object Information {
   val MAX_PLAN_LENGTH         = "40 sat:31:maximum plan length"
   val SOLVED                  = "40 sat:90:solved"
   val TIMEOUT                 = "40 sat:91:timeout"
+
+  val PLAN_VERIFIED = "40 sat:99:plan verified"
 
 }
 

@@ -61,6 +61,7 @@ object SHOPMethodCompiler extends DomainTransformerWithOutInformation {
                                                             subPlan.planStepParentInDecompositionTree), name), additionalPlanSteps map { _.schema })
         }
     }
-    (Domain(domain.sorts, domain.predicates, domain.tasks ++ (compiledMethods flatMap { _._2 }), compiledMethods map { _._1 }, domain.decompositionAxioms), plan)
+    (Domain(domain.sorts, domain.predicates, domain.tasks ++ (compiledMethods flatMap { _._2 }), compiledMethods map { _._1 }, domain.decompositionAxioms,
+            domain.mappingToOriginalGrounding, domain.sasPlusRepresentation), plan)
   }
 }

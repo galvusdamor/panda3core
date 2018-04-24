@@ -20,16 +20,16 @@ import de.uniulm.ki.panda3.symbolic.search.*;
 import de.uniulm.ki.panda3.util.JavaToScala;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import scala.None$;
 import scala.Tuple2;
+import scala.collection.JavaConversions;
 import scala.collection.Seq;
 import scala.collection.immutable.Map;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Created by dhoeller on 14.04.15.
@@ -69,7 +69,37 @@ public class hddlPanda3Visitor {
 
     private parseReport report = new parseReport();
 
+    private int currentVarId = 0;
+    private int nextVarId() {
+        return ++currentVarId;
+    }
+
+    private List<String> requirements = new ArrayList<String>();
+
+    public Domain visitDomain(antlrHDDLParser.DomainContext domainCtx) {
+        Seq<Sort> sorts;
+        if ((domainCtx.type_def() != null) && (domainCtx.type_def().type_def_list() != null)) {
+            sorts = visitTypeAndObjDef(domainCtx, null);
+        } else {
+            sorts = new seqProviderList<Sort>().result();
+        }
+
+        Seq<Predicate> predicates = visitPredicateDeclaration(sorts, domainCtx.predicates_def());
+
+        Seq<Task> tasks = visitTaskDefs(sorts, predicates, domainCtx);
+
+        Seq<DecompositionMethod> decompositionMethods = visitMethodDef(domainCtx.method_def(), sorts, predicates, tasks);
+        Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
+
+        return new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms, None$.empty(), None$.empty());
+    }
+
     public Tuple2<Domain, Plan> visitInstance(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
+        if ((ctxDomain.require_def() != null)) {
+            for (TerminalNode r : ctxDomain.require_def().require_defs().REQUIRE_NAME()) {
+                requirements.add(r.toString());
+            }
+        }
 
         Seq<Sort> sorts;
         if ((ctxDomain.type_def() != null) && (ctxDomain.type_def().type_def_list() != null)) {
@@ -80,14 +110,21 @@ public class hddlPanda3Visitor {
 
         Seq<Predicate> predicates = visitPredicateDeclaration(sorts, ctxDomain.predicates_def());
 
-        Task init = visitInitialState(sorts, predicates, ctxProblem.p_init());
-        Task goal = visitGoalState(sorts, predicates, ctxProblem.p_goal());
+        seqProviderList<VariableConstraint> varConstraints = new seqProviderList<>();
+
+        VarContext vctx = new VarContext();
+        for (Variable v : getVariableForEveryConst(sorts, varConstraints).getList()) {
+            vctx.addParameter(v);
+        }
+
+        Task init = visitInitialState(vctx, varConstraints, sorts, predicates, ctxProblem.p_init());
+        Task goal = visitGoalState(vctx, varConstraints, sorts, predicates, ctxProblem.p_goal());
         Seq<Task> tasks = visitTaskDefs(sorts, predicates, ctxDomain);
 
         Seq<DecompositionMethod> decompositionMethods = visitMethodDef(ctxDomain.method_def(), sorts, predicates, tasks);
         Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
 
-        Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms);
+        Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms, None$.empty(), None$.empty());
 
         Seq<Variable> initArguments = init.parameters();
         PlanStep psInit = new PlanStep(0, init, initArguments);
@@ -117,28 +154,36 @@ public class hddlPanda3Visitor {
         IsModificationAllowed allowedModifications = new ModificationsByClass(JavaToScala.toScalaSeq(allowedModificationsClasses));
         IsFlawAllowed allowedFlaws = new FlawsByClass(JavaToScala.toScalaSeq(allowedFlawClasses));
 
-        seqProviderList<Variable> tniVars = new seqProviderList<>();
-        tniVars.add(init.parameters());
+
+        if (ctxProblem.p_htn() != null && ctxProblem.p_htn().typed_var_list() != null) {
+            seqProviderList<Variable> tniVars = typedParamsToVars(sorts, 0, ctxProblem.p_htn().typed_var_list().typed_vars());
+            vctx.addParamaters(tniVars.getList());
+        }
+
+
+        if (!goal.parameterConstraints().equals(init.parameterConstraints())) {
+            throw new RuntimeException("init and goal constraints should be equal: " + goal.parameterConstraints().equals(init.parameterConstraints()));
+        }
 
         seqProviderList<VariableConstraint> tniConstr = new seqProviderList<>();
-        tniConstr.add(init.parameterConstraints());
+        //tniConstr.add(init.parameterConstraints()); //init.parameterConstraints()
         tniConstr.add(goal.parameterConstraints());
 
         antlrHDDLParser.Tasknetwork_defContext tnCtx = null;
 
         Plan p;
         if (ctxProblem.p_htn() != null) { // HTN or TIHTN
-            p = visitTaskNetwork(ctxProblem.p_htn().tasknetwork_def(), tniVars, tniConstr, psInit, psGoal, tasks, predicates, sorts,
+            p = visitTaskNetwork(ctxProblem.p_htn().tasknetwork_def(), vctx, tniConstr, psInit, psGoal, tasks, predicates, sorts,
                     allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
         } else {
-            CSP csp = new CSP(JavaToScala.toScalaSet(tniVars.getList()), tniConstr.result());
+            CSP csp = new CSP(JavaToScala.toScalaSet(vctx.parameters), tniConstr.result());
             seqProviderList<PlanStep> planSteps = new seqProviderList<>();
             planSteps.add(psInit);
             planSteps.add(psGoal);
             TaskOrdering taskOrderings = new TaskOrdering(new VectorBuilder<OrderingConstraint>().result(), new VectorBuilder<PlanStep>().result());
             taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit,psGoal);
             p = new Plan(planSteps.result(), new seqProviderList<CausalLink>().result(), taskOrderings, csp, psInit, psGoal,
-                    allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+                    allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false);
         }
         report.printReport();
 
@@ -146,7 +191,7 @@ public class hddlPanda3Visitor {
         return initialProblem;
     }
 
-    private Plan visitTaskNetwork(antlrHDDLParser.Tasknetwork_defContext tnCtx, seqProviderList<Variable> variables,
+    private Plan visitTaskNetwork(antlrHDDLParser.Tasknetwork_defContext tnCtx, VarContext vctx,
                                   seqProviderList<VariableConstraint> constraints, PlanStep psInit, PlanStep psGoal,
                                   Seq<Task> tasks, Seq<Predicate> predicates, Seq<Sort> sorts,
                                   IsModificationAllowed allowedModifications, IsFlawAllowed allowedFlaws,
@@ -176,7 +221,7 @@ public class hddlPanda3Visitor {
                 // get variables that are passed from the method to the subtask
                 seqProviderList<Variable> psVars = new seqProviderList<>();
                 for (antlrHDDLParser.Var_or_constContext vName : psCtx.var_or_const()) {
-                    Variable v = getVariable(vName, variables, constraints, sorts);
+                    Variable v = getVariable(vName, vctx, constraints, sorts);
                     psVars.add(v);
                 }
 
@@ -187,9 +232,9 @@ public class hddlPanda3Visitor {
 
                 for (int parameter = psVars.size(); parameter < schema.parameters().length(); parameter++) {
                     Variable v = schema.parameters().apply(parameter);
-                    Variable newVar = new Variable(parameter, psName + v.name(), v.sort());
+                    Variable newVar = new Variable(nextVarId(), psName + v.name(), v.sort());
                     psVars.add(newVar);
-                    variables.add(newVar);
+                    vctx.addParameter(newVar);
                     // the constraints will be added by the plan
                 }
 
@@ -219,7 +264,7 @@ public class hddlPanda3Visitor {
                 // variables for equals constraint
                 List<Variable> constrainedVars = new ArrayList<>();
                 for (antlrHDDLParser.Var_or_constContext vName : constraint.var_or_const()) {
-                    Variable v = getVariable(vName, variables, constraints, sorts);
+                    Variable v = getVariable(vName, vctx, constraints, sorts);
                     constrainedVars.add(v);
                 }
 
@@ -228,7 +273,8 @@ public class hddlPanda3Visitor {
                 Sort sort = null;
                 Variable vari = null;
                 if (typedVarContext != null) {
-                    vari = getVariableByName(typedVarContext.VAR_NAME(), variables);
+                    //vari = getVariableByName(typedVarContext.VAR_NAME(), variables);
+                    vari = vctx.getVarByName(typedVarContext.VAR_NAME().toString());
                     String sortName = typedVarContext.var_type().NAME().toString();
                     for (int i = 0; i < sorts.length(); i++) {
                         Sort that = sorts.apply(i);
@@ -323,56 +369,98 @@ public class hddlPanda3Visitor {
                 Literal literal;
 
                 if (cl.literal().atomic_formula() != null) {
-                    literal = visitAtomFormula(variables, predicates, sorts, constraints, true, cl.literal().atomic_formula());
+                    literal = visitAtomFormula(vctx, predicates, sorts, constraints, true, cl.literal().atomic_formula());
                 } else { // negative literal
-                    literal = visitAtomFormula(variables, predicates, sorts, constraints, false, cl.literal().neg_atomic_formula().atomic_formula());
+                    literal = visitAtomFormula(vctx, predicates, sorts, constraints, false, cl.literal().neg_atomic_formula().atomic_formula());
                 }
                 causalLinks.add(new CausalLink(producer, consumer, literal));
             }
         }
 
-        CSP csp = new CSP(JavaToScala.toScalaSet(variables.getList()), constraints.result());
+        CSP csp = new CSP(JavaToScala.toScalaSet(vctx.parameters), constraints.result());
         Plan subPlan = new Plan(planSteps.result(), causalLinks.result(), taskOrderings, csp, psInit, psGoal,
-                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents);
+                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false);
         return subPlan;
     }
 
-    private Task visitGoalState(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_goalContext ctx) {
-        seqProviderList<VariableConstraint> parameterConstraints = new seqProviderList<VariableConstraint>();
-        seqProviderList<Variable> taskParameters = getVariableForEveryConst(sorts, parameterConstraints);
+    private Task visitGoalState(VarContext vctx, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_goalContext ctx) {
+        //seqProviderList<VariableConstraint> parameterConstraints = new seqProviderList<VariableConstraint>();
+        //seqProviderList<Variable> taskParameters = getVariableForEveryConst(sorts, parameterConstraints);
+        //for (Variable v : taskParameters.getList()) {
+        //    vctx.addParameter(v);
+        //}
         Formula f = new And<Literal>(new Vector<Literal>(0, 0, 0));
         if (ctx != null) {
-            f = visitGoalConditions(predicates, taskParameters, sorts, parameterConstraints, ctx.gd());
+            f = visitGoalConditions(vctx, predicates, sorts, constraints, ctx.gd());
         }
-        return new GeneralTask("goal", true, taskParameters.result(), taskParameters.result(), parameterConstraints.result(), f, new And<Literal>(new Vector<Literal>(0, 0, 0)));
+        return new GeneralTask("goal(<Instance>)", true, JavaToScala.toScalaSeq(vctx.parameters), JavaToScala.toScalaSeq(vctx.parameters), constraints.result(), f, new And<Literal>(new Vector<Literal>(0, 0, 0)));
     }
 
-    private Task visitInitialState(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_initContext ctx) {
-        seqProviderList<VariableConstraint> varConstraints = new seqProviderList<>();
-        seqProviderList<Variable> parameter = getVariableForEveryConst(sorts, varConstraints);
-
+    private Task visitInitialState(VarContext vctx, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_initContext ctx) {
         seqProviderList<Literal> initEffects = new seqProviderList<>();
         for (antlrHDDLParser.Init_elContext el : ctx.init_el()) {
             if (el.literal() != null) { // normal STRIPS init
                 if (el.literal().atomic_formula() != null) {
-                    initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, true, el.literal().atomic_formula()));
+                    initEffects.add(visitAtomFormula(vctx, predicates, sorts, constraints, true, el.literal().atomic_formula()));
                 } else if (el.literal().neg_atomic_formula() != null) {
-                    initEffects.add(visitAtomFormula(parameter, predicates, sorts, varConstraints, false, el.literal().atomic_formula()));
+                    initEffects.add(visitAtomFormula(vctx, predicates, sorts, constraints, false, el.literal().atomic_formula()));
                 }
             }
         }
 
-        return new ReducedTask("init", true, parameter.result(), parameter.result(), varConstraints.result(), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(initEffects.result()));
+        if (requirements.contains(":equals-predicate")) {
+            Predicate eqPred = null;
+            for (Predicate p : JavaConversions.seqAsJavaList(predicates)) {
+                if (p.name().equals("equals")) {
+                    eqPred = p;
+                    break;
+                }
+            }
+            Sort rootSort = null;
+            for (Sort s : JavaConversions.seqAsJavaList(sorts)) {
+                if (s.name().equals(ARTIFICIAL_ROOT_SORT)) {
+                    rootSort = s;
+                    break;
+                }
+            }
+            for (Constant c : JavaConversions.seqAsJavaList(rootSort.allElements())) {
+                VectorBuilder<Variable> params = new VectorBuilder<>();
+                Variable cVar = getArtificialVariable(c.name(), vctx, constraints, sorts);
+                params.$plus$eq(cVar);
+                params.$plus$eq(cVar);
+                initEffects.add(new Literal(eqPred, true, params.result()));
+            }
+        }
+
+        if (requirements.contains(":typeof-predicate")) {
+            Predicate typeofPred = null;
+            for (Predicate p : JavaConversions.seqAsJavaList(predicates)) {
+                if (p.name().equals("typeOf")) {
+                    typeofPred = p;
+                    break;
+                }
+            }
+            for (Sort s : JavaConversions.seqAsJavaList(sorts)) {
+                Variable sortVar = getArtificialVariable(s.name(), vctx, constraints, sorts);
+                for (Constant c : JavaConversions.seqAsJavaList(s.allElements())) {
+                    VectorBuilder<Variable> params = new VectorBuilder<>();
+                    params.$plus$eq(getArtificialVariable(c.name(), vctx, constraints, sorts));
+                    params.$plus$eq(sortVar);
+                    initEffects.add(new Literal(typeofPred, true, params.result()));
+                }
+            }
+        }
+
+        return new ReducedTask("init(<Instance>)", true, JavaToScala.toScalaSeq(vctx.parameters), JavaToScala.toScalaSeq(vctx.parameters), constraints.result(), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(initEffects.result()));
     }
 
     private seqProviderList<Variable> getVariableForEveryConst(Seq<Sort> sorts, seqProviderList<VariableConstraint> varConstraints) {
         seqProviderList<Variable> taskParameter = new seqProviderList<>();
-        int cspId = 0;
         for (int i = 0; i < sorts.length(); i++) {
             Sort s = sorts.apply(i);
             for (int j = 0; j < s.elements().length(); j++) {
                 Constant c = s.elements().apply(j);
-                Variable v = new Variable(cspId++, "varFor" + c.name(), s);
+                Variable v = new Variable(nextVarId(), "varFor" + c.name(), s);
 
                 taskParameter.add(v);
                 Equal eq = new Equal(v, c);
@@ -401,14 +489,17 @@ public class hddlPanda3Visitor {
 
             // Read method's name and parameters
             String nameStr = m.method_symbol().NAME().toString();
-            if (nameStr.equals("m1"))
-                System.out.println();
             seqProviderList<Variable> methodParams = typedParamsToVars(sorts, abstractTask.parameters().size(), m.typed_var_list().typed_vars());
 
             seqProviderList<Variable> tnVars = new seqProviderList<>();
             seqProviderList<VariableConstraint> tnConstraints = new seqProviderList<>();
             tnVars.add(methodParams.result());
             tnVars.add(abstractTask.parameters());
+
+            VarContext vctx = new VarContext();
+            for (Variable v: tnVars.getList()) {
+                vctx.addParameter(v);
+            }
 
             // Read task's parameters and connect them to method's parameters
             boolean paramsOk = this.connectMethVarsAndTaskVars(methodParams.result(), tnConstraints, abstractTask, m.var_or_const());
@@ -421,7 +512,7 @@ public class hddlPanda3Visitor {
             boolean hasPrecondition;
             if (m.gd() != null) {
                 seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
-                precFormula = visitGoalConditions(predicates, tnVars, sorts, constraints, m.gd());
+                precFormula = visitGoalConditions(vctx, predicates, sorts, constraints, m.gd());
                 tnConstraints.add(constraints.result());
                 hasPrecondition = true;
             } else {
@@ -430,24 +521,41 @@ public class hddlPanda3Visitor {
 
             boolean hasEffect = false;
             Formula effect = new And<Literal>(new Vector<Literal>(0, 0, 0));
-            if (m.effect_body() != null) {
-                if ((m.effect_body() != null) && (m.effect_body().c_effect() != null)) {
-                    effect = visitConEff(methodParams, tnConstraints, sorts, predicates, m.effect_body().c_effect());
-                } else if ((m.effect_body() != null) && (m.effect_body().eff_conjuntion() != null)) {
-                    effect = visitConEffConj(methodParams, tnConstraints, sorts, predicates, m.effect_body().eff_conjuntion());
-                }
+            if (m.effect() != null) {
+                effect = visitEffect(vctx, tnConstraints, sorts, predicates, m.effect());
                 hasEffect = true;
             }
 
             // Create subplan, method and add it to method list
-            GeneralTask initSchema = new GeneralTask("init", true, abstractTask.parameters(), abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), abstractTask.precondition());
-            GeneralTask goalSchema = new GeneralTask("goal", true, abstractTask.parameters(), abstractTask.parameters(), new Vector<VariableConstraint>(0, 0, 0), abstractTask.effect(), new And<Literal>(new Vector<Literal>(0, 0, 0)));
+            GeneralTask initSchema = new GeneralTask("init(" + nameStr + ")", true,
+                    abstractTask.parameters(),
+                    abstractTask.parameters(),
+                    new Vector<VariableConstraint>(0, 0, 0),
+                    new And<Literal>(new Vector<Literal>(0, 0, 0)),
+                    abstractTask.precondition());
+            GeneralTask goalSchema = new GeneralTask("goal(" + nameStr + ")", true,
+                    abstractTask.parameters(),
+                    abstractTask.parameters(),
+                    new Vector<VariableConstraint>(0, 0, 0),
+                    abstractTask.effect(),
+                    new And<Literal>(new Vector<Literal>(0, 0, 0)));
 
             PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters());
             PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters());
 
-            Plan subPlan = visitTaskNetwork(m.tasknetwork_def(), tnVars, tnConstraints, psInit, psGoal, tasks, predicates, sorts,
-                    NoModifications$.MODULE$, NoFlaws$.MODULE$, hddlPanda3Visitor.planStepsDecomposedBy, hddlPanda3Visitor.planStepsDecompositionParents);
+            Plan subPlan = visitTaskNetwork(
+                    m.tasknetwork_def(),
+                    vctx,
+                    tnConstraints,
+                    psInit,
+                    psGoal,
+                    tasks,
+                    predicates,
+                    sorts,
+                    NoModifications$.MODULE$,
+                    NoFlaws$.MODULE$,
+                    hddlPanda3Visitor.planStepsDecomposedBy,
+                    hddlPanda3Visitor.planStepsDecompositionParents);
 
             DecompositionMethod method;
             if (hasPrecondition || hasEffect) {
@@ -507,10 +615,15 @@ public class hddlPanda3Visitor {
         // due to constants in the definition, this may increase. However, we want to know the original count.
         int numOfParams = parameters.size();
 
+        VarContext vctx = new VarContext();
+        for (Variable v : parameters.getList()) {
+            vctx.addParameter(v);
+        }
+
         // build preconditions
         Formula f = new And<Literal>(new Vector<Literal>(0, 0, 0));
         if (ctxTask.gd() != null) {
-            f = visitGoalConditions(predicates, parameters, sorts, constraints, ctxTask.gd());
+            f = visitGoalConditions(vctx, predicates, sorts, constraints, ctxTask.gd());
         }
 
         // build effects
@@ -518,12 +631,15 @@ public class hddlPanda3Visitor {
 
         Formula f2 = new And<Literal>(new Vector<Literal>(0, 0, 0));
 
-        if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().c_effect() != null)) {
-            f2 = visitConEff(parameters, constraints, sorts, predicates, ctxTask.effect_body().c_effect());
-        } else if ((ctxTask.effect_body() != null) && (ctxTask.effect_body().eff_conjuntion() != null)) {
-            f2 = visitConEffConj(parameters, constraints, sorts, predicates, ctxTask.effect_body().eff_conjuntion());
+        if (ctxTask.effect() != null) {
+            f2 = visitEffect(vctx, constraints, sorts, predicates, ctxTask.effect());
         }
-        return new GeneralTask(taskName, isPrimitive, parameters.result(), parameters.result(numOfParams), constraints.result(), f, f2);
+        return new GeneralTask(
+                taskName,
+                isPrimitive,
+                JavaToScala.toScalaSeq(vctx.parameters),
+                JavaToScala.toScalaSeq(vctx.parameters).toVector().take(numOfParams),
+                constraints.result(), f, f2);
     }
 
     private seqProviderList<Variable> typedParamsToVars(Seq<Sort> sorts, int startId, List<antlrHDDLParser.Typed_varsContext> vars) {
@@ -537,7 +653,7 @@ public class hddlPanda3Visitor {
         seqProviderList<Variable> bParameters = new seqProviderList<>();
 
         for (int i = 0; i < varNames.length(); i++) {
-            bParameters.add(new Variable(startId + i, varNames.apply(i), varSorts.apply(i)));
+            bParameters.add(new Variable(nextVarId(), varNames.apply(i), varSorts.apply(i)));
         }
         return bParameters;
     }
@@ -546,21 +662,29 @@ public class hddlPanda3Visitor {
      * Dispatcher for parsing goal descriptions (GD). Please be aware that these descriptions are used at several
      * places in the grammar, e.g. as precondition of actions, tasks or methods and not just as goal condition.
      */
-    private Formula visitGoalConditions(Seq<Predicate> predicates, seqProviderList<Variable> parameters, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.GdContext ctx) {
+    private Formula visitGoalConditions(
+            VarContext vctx,
+            Seq<Predicate> predicates,
+            //seqProviderList<Variable> parameters,
+            Seq<Sort> sorts,
+            seqProviderList<VariableConstraint> constraints,
+            antlrHDDLParser.GdContext ctx) {
         if (ctx.atomic_formula() != null) { // a single precondition
-            return visitAtomFormula(parameters, predicates, sorts, constraints, true, ctx.atomic_formula());
+            return visitAtomFormula(vctx, predicates, sorts, constraints, true, ctx.atomic_formula());
         } else if (ctx.gd_negation() != null) { // a negated single precondition
-            return visitNegAtomFormula(parameters, predicates, sorts, constraints, ctx.gd_negation());
+            return visitNegAtomFormula(vctx, predicates, sorts, constraints, ctx.gd_negation());
         } else if (ctx.gd_conjuction() != null) { // a conduction of preconditions
-            return visitGdConOrDisjunktion(conOrDis.and, parameters, predicates, sorts, constraints, ctx.gd_conjuction().gd());
-        } else if (ctx.gd_univeral() != null) {
-            return visitUniveralQuantifier(parameters, predicates, sorts, constraints, ctx.gd_univeral());
+            return visitGdConOrDisjunction(conOrDis.and, vctx, predicates, sorts, constraints, ctx.gd_conjuction().gd());
+        } else if (ctx.gd_universal() != null) {
+            return visitUniversalQuantifier(vctx, predicates, sorts, constraints, ctx.gd_universal());
         } else if (ctx.gd_existential() != null) {
-            return visitExistentialQuantifier(parameters, predicates, sorts, constraints, ctx.gd_existential());
+            return visitExistentialQuantifier(vctx, predicates, sorts, constraints, ctx.gd_existential());
         } else if (ctx.gd_disjuction() != null) { // well ...
-            return visitGdConOrDisjunktion(conOrDis.or, parameters, predicates, sorts, constraints, ctx.gd_disjuction().gd());
+            return visitGdConOrDisjunction(conOrDis.or, vctx, predicates, sorts, constraints, ctx.gd_disjuction().gd());
+        } else if (ctx.gd_implication() != null) { // new
+            return visitImplication(vctx, predicates, sorts, constraints, ctx.gd_implication());
         } else if (ctx.gd_equality_constraint() != null) {
-            return visitEqConstraint(parameters, sorts, constraints, ctx);
+            return visitEqConstraint(vctx, sorts, constraints, ctx);
         } else if (ctx.gd_empty() != null) {
             return new And<Literal>(new Vector<Literal>(0, 0, 0));
         } else {
@@ -569,34 +693,60 @@ public class hddlPanda3Visitor {
         }
     }
 
-    private Formula visitEqConstraint(seqProviderList<Variable> parameters, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.GdContext ctx) {
-        Variable var1 = getVariable(ctx.gd_equality_constraint().var_or_const(0), parameters, constraints, sorts);
-        Variable var2 = getVariable(ctx.gd_equality_constraint().var_or_const(1), parameters, constraints, sorts);
+    private Formula visitEqConstraint(VarContext vctx, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.GdContext ctx) {
+        Variable var1 = getVariable(ctx.gd_equality_constraint().var_or_const(0), vctx, constraints, sorts);
+        Variable var2 = getVariable(ctx.gd_equality_constraint().var_or_const(1), vctx, constraints, sorts);
         Equal ne = new Equal(var1, var2);
         constraints.add(ne);
         return new And<Literal>(new Vector<Literal>(0, 0, 0));
     }
 
-    private Formula visitExistentialQuantifier(seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.Gd_existentialContext gd_existentialContext) {
-        Tuple2<Seq<Variable>, Formula> inner2 = readInner(parameters, predicates, sorts, constraints, gd_existentialContext.typed_var_list().typed_vars(), gd_existentialContext.gd());
-        return new Exists(inner2._1().apply(0), inner2._2());
+    private Formula visitExistentialQuantifier(
+            VarContext vctx,
+            Seq<Predicate> predicates,
+            Seq<Sort> sorts,
+            seqProviderList<VariableConstraint> constraints,
+            antlrHDDLParser.Gd_existentialContext gd_existentialContext) {
+        Tuple2<Seq<Variable>, Formula> inner = readInner(
+                vctx.child(), predicates, sorts, constraints,
+                gd_existentialContext.typed_var_list().typed_vars(), gd_existentialContext.gd());
+        return Exists.apply(inner._1, inner._2);
     }
 
-    private Formula visitUniveralQuantifier(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.Gd_univeralContext gd_conjuctionContext) {
-        Tuple2<Seq<Variable>, Formula> inner2 = readInner(methodParams, predicates, sorts, constraints, gd_conjuctionContext.typed_var_list().typed_vars(), gd_conjuctionContext.gd());
-        return new Forall(inner2._1().apply(0), inner2._2());
+    private Formula visitUniversalQuantifier(
+            VarContext vctx,
+            Seq<Predicate> predicates,
+            Seq<Sort> sorts,
+            seqProviderList<VariableConstraint> constraints,
+            antlrHDDLParser.Gd_universalContext gd_conjuctionContext) {
+        Tuple2<Seq<Variable>, Formula> inner = readInner(
+                vctx.child(), predicates, sorts, constraints,
+                gd_conjuctionContext.typed_var_list().typed_vars(), gd_conjuctionContext.gd());
+        return Forall.apply(inner._1, inner._2);
     }
 
-    private Tuple2<Seq<Variable>, Formula> readInner(seqProviderList<Variable> methodParams, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, List<antlrHDDLParser.Typed_varsContext> typed_varsContexts, antlrHDDLParser.GdContext gd) {
+    private Formula visitImplication(
+            VarContext vctx,
+            Seq<Predicate> predicates,
+            Seq<Sort> sorts,
+            seqProviderList<VariableConstraint> constraints,
+            antlrHDDLParser.Gd_implicationContext gd_implicationContext) {
+        return new Implies(
+                visitGoalConditions(vctx, predicates, sorts, constraints, gd_implicationContext.gd(0)),
+                visitGoalConditions(vctx, predicates, sorts, constraints, gd_implicationContext.gd(1)));
+    }
 
-        // read new variables
-        int curIndex = methodParams.size();
-        seqProviderList<Variable> parameters2 = new seqProviderList<>();
+
+
+    private Tuple2<Seq<Variable>, Formula> readInner(
+            VarContext vctx,
+            Seq<Predicate> predicates,
+            Seq<Sort> sorts,
+            seqProviderList<VariableConstraint> constraints,
+            List<antlrHDDLParser.Typed_varsContext> typed_varsContexts,
+            antlrHDDLParser.GdContext gd) {
+
         seqProviderList<Variable> quantifiedVars = new seqProviderList<>();
-
-        for (int i = 0; i < methodParams.size(); i++) {
-            parameters2.add(methodParams.get(i));
-        }
 
         VectorBuilder<Sort> newSorts = new VectorBuilder<>();
         VectorBuilder<String> newVarnames = new VectorBuilder<>();
@@ -606,46 +756,76 @@ public class hddlPanda3Visitor {
         Seq<String> newN = newVarnames.result();
 
         for (int i = 0; i < newN.size(); i++) {
-            parameters2.add(new Variable(curIndex + i, newN.apply(i), newS.apply(i)));
-            quantifiedVars.add(new Variable(curIndex + i, newN.apply(i), newS.apply(i)));
+            Variable v = new Variable(nextVarId(), newN.apply(i), newS.apply(i));
+            quantifiedVars.add(v);
+            vctx.addQuantifiedVar(v);
         }
 
-        if (quantifiedVars.size() > 1) {
-            if (warningOutput)
-                System.out.println("ERROR: More than one quantified Variable - this is not yet implemented.");
-        }
-
-        // read inner formula
-        Formula inner = visitGoalConditions(predicates, parameters2, sorts, constraints, gd);
+        Formula inner = visitGoalConditions(vctx, predicates, sorts, constraints, gd);
         return new Tuple2<>(quantifiedVars.result(), inner);
     }
 
-    private Formula visitConEffConj(seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Eff_conjuntionContext ctx) {
-        seqProviderList<Literal> conj = new seqProviderList<>();
+    private Tuple2<Seq<Variable>, Formula> readInnerEffect(
+            VarContext vctx,
+            Seq<Predicate> predicates,
+            Seq<Sort> sorts,
+            seqProviderList<VariableConstraint> constraints,
+            List<antlrHDDLParser.Typed_varsContext> typed_varsContexts,
+            antlrHDDLParser.EffectContext ctx) {
 
-        for (antlrHDDLParser.C_effectContext eff : ctx.c_effect()) {
-            Literal t = visitConEff(parameters, constraints, sorts, predicates, eff);
-            if (t != null) // it may be null if it uses a not yet implemented feature. This should already have been reported, so that we can skip it here
-                conj.add(t);
+        seqProviderList<Variable> quantifiedVars = new seqProviderList<>();
+
+        VectorBuilder<Sort> newSorts = new VectorBuilder<>();
+        VectorBuilder<String> newVarnames = new VectorBuilder<>();
+        visitTypedList(newSorts, newVarnames, sorts, typed_varsContexts);
+
+
+        Seq<Sort> newS = newSorts.result();
+        Seq<String> newN = newVarnames.result();
+
+        for (int i = 0; i < newN.size(); i++) {
+            Variable v = new Variable(nextVarId(), newN.apply(i), newS.apply(i));
+            quantifiedVars.add(v);
+            vctx.addQuantifiedVar(v);
         }
-        return new And(conj.result());
+
+        Formula inner = visitEffect(vctx, constraints, sorts, predicates, ctx);
+        return new Tuple2<>(quantifiedVars.result(), inner);
     }
 
-    private Literal visitConEff(seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.C_effectContext ctx) {
+    private Formula visitEffect(
+            VarContext vctx,
+            seqProviderList<VariableConstraint> constraints,
+            Seq<Sort> sorts,
+            Seq<Predicate> predicates,
+            antlrHDDLParser.EffectContext ctx) {
         if (ctx.literal() != null) {
             if (ctx.literal().atomic_formula() != null) {
-                return visitAtomFormula(parameters, predicates, sorts, constraints, true, ctx.literal().atomic_formula());
+                return visitAtomFormula(vctx, predicates, sorts, constraints, true, ctx.literal().atomic_formula());
             } else if (ctx.literal().neg_atomic_formula() != null) {
-                return visitAtomFormula(parameters, predicates, sorts, constraints, false, ctx.literal().neg_atomic_formula().atomic_formula());
+                return visitAtomFormula(vctx, predicates, sorts, constraints, false, ctx.literal().neg_atomic_formula().atomic_formula());
             }
-        } else if (ctx.forall_effect() != null) {
-            this.report.reportForallEffect();
-        } else if (ctx.conditional_effect() != null) {
-            this.report.reportConditionalEffects();
+        } else if (ctx.eff_empty() != null) {
+            return new And<Literal>(new Vector<Literal>(0, 0, 0));
+        } else if (ctx.eff_conjunction() != null) {
+            return new And<>(JavaToScala.toScalaSeq(ctx.eff_conjunction().effect().stream().map(x ->
+                    visitEffect(vctx, constraints, sorts, predicates, x)
+            ).collect(Collectors.toList())));
+        } else if (ctx.eff_universal() != null) {
+            Tuple2<Seq<Variable>, Formula> inner = readInnerEffect(
+                    vctx.child(), predicates, sorts, constraints,
+                    ctx.eff_universal().typed_var_list().typed_vars(), ctx.eff_universal().effect());
+            return Forall.apply(inner._1, inner._2);
+        } else if (ctx.eff_conditional() != null) {
+            return new When(
+                    visitGoalConditions(vctx, predicates, sorts, constraints, ctx.eff_conditional().gd()),
+                    visitEffect(vctx, constraints, sorts, predicates, ctx.eff_conditional().effect()));
         } else if (ctx.p_effect() != null) {
             this.report.reportNumericEffect();
-        } else {
-            if (warningOutput) System.out.println("ERROR: found an empty effect in action declaration.");
+        } else if (ctx.eff_empty() != null && warningOutput) {
+            System.out.println("ERROR: found an empty effect in action declaration.");
+        } else if (warningOutput) {
+            System.out.println("ERROR: unexpected token in effect declaration");
         }
         return null;
     }
@@ -657,10 +837,10 @@ public class hddlPanda3Visitor {
     /**
      * Parse a conjunction or disjunction of goal conditions
      */
-    private Formula visitGdConOrDisjunktion(conOrDis what, seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, List<antlrHDDLParser.GdContext> ctx) {
+    private Formula visitGdConOrDisjunction(conOrDis what, VarContext vctx, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, List<antlrHDDLParser.GdContext> ctx) {
         seqProviderList<Formula> elements = new seqProviderList<>();
         for (antlrHDDLParser.GdContext gd : ctx) {
-            Formula f = visitGoalConditions(predicates, parameters, sorts, constraints, gd);
+            Formula f = visitGoalConditions(vctx, predicates, sorts, constraints, gd);
             elements.add(f);
         }
         if (what == conOrDis.and)
@@ -675,21 +855,21 @@ public class hddlPanda3Visitor {
      * @return In the first case it returns the negation of the inner formula, in the second case it adds
      * the constraint and returns the logical identity.
      */
-    private Formula visitNegAtomFormula(seqProviderList<Variable> parameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.Gd_negationContext ctx) {
+    private Formula visitNegAtomFormula(VarContext vctx, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, antlrHDDLParser.Gd_negationContext ctx) {
         if (ctx.gd().gd_equality_constraint() != null) {
-            Variable var1 = getVariable(ctx.gd().gd_equality_constraint().var_or_const(0), parameters, constraints, sorts);
-            Variable var2 = getVariable(ctx.gd().gd_equality_constraint().var_or_const(1), parameters, constraints, sorts);
+            Variable var1 = getVariable(ctx.gd().gd_equality_constraint().var_or_const(0), vctx, constraints, sorts);
+            Variable var2 = getVariable(ctx.gd().gd_equality_constraint().var_or_const(1), vctx, constraints, sorts);
             NotEqual ne = new NotEqual(var1, var2);
             constraints.add(ne);
             return new And<Literal>(new Vector<Literal>(0, 0, 0));
         } else {
-            Formula inner = visitGoalConditions(predicates, parameters, sorts, constraints, ctx.gd());
+            Formula inner = visitGoalConditions(vctx, predicates, sorts, constraints, ctx.gd());
             return new Not(inner);
         }
     }
 
     /**
-     * @param taskParameters
+     * @param vctx
      * @param predicates
      * @param sorts
      * @param constraints
@@ -697,7 +877,7 @@ public class hddlPanda3Visitor {
      * @param ctx
      * @return
      */
-    private Literal visitAtomFormula(seqProviderList<Variable> taskParameters, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, boolean isPositive, antlrHDDLParser.Atomic_formulaContext ctx) {
+    private Literal visitAtomFormula(VarContext vctx, Seq<Predicate> predicates, Seq<Sort> sorts, seqProviderList<VariableConstraint> constraints, boolean isPositive, antlrHDDLParser.Atomic_formulaContext ctx) {
         //
         // get predicate definition
         //
@@ -722,7 +902,7 @@ public class hddlPanda3Visitor {
         List<antlrHDDLParser.Var_or_constContext> params = ctx.var_or_const();
 
         for (antlrHDDLParser.Var_or_constContext param : params) {
-            Variable var = getVariable(param, taskParameters, constraints, sorts);
+            Variable var = getVariable(param, vctx, constraints, sorts);
             parameterVariables.add(var);
         }
 
@@ -761,56 +941,20 @@ public class hddlPanda3Visitor {
      * // add it to the parameter-list
      *
      * @param param       (in) The parse tree containing the object or variable
-     * @param parameters  (in/out) The parameter list in the given context (e.g. action/method parameters).
-     *                    It may be updated
+     * @param vctx        (in/out) The parameter list / quantified variables in the given context
+     *                    (e.g. action/method parameters). It may be updated
      * @param constraints (in/out) The constraint network in the given context. It may be updated
      * @param sorts       (in) The sort hierarchy that also contains constants for every sort.
      * @return Method returns a variable that may be out of the parameter list, or the initial state definition
      */
-    private Variable getVariable(antlrHDDLParser.Var_or_constContext param, seqProviderList<Variable> parameters, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts) {
+    private Variable getVariable(antlrHDDLParser.Var_or_constContext param, VarContext vctx, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts) {
         Variable var = null;
         if (param.VAR_NAME() != null) {
             // this is a variable
             String pname = param.VAR_NAME().getText();
-            for (int i = 0; i < parameters.size(); i++) {
-                Variable v = parameters.get(i);
-                if (v.name().equals(pname)) {
-                    var = v;
-                    break;
-                }
-            }
+            var = vctx.getVarByName(pname);
         } else {
-            String pname = param.NAME().getText();
-
-            // - this may be an object that has already been defined in s0 -> there is already a const and a var
-            // - a const in a task/method AND it is not the fist occurrence -> there is already a variable
-            for (int i = 0; i < constraints.size(); i++) {
-                VariableConstraint vc = constraints.get(i);
-                if (vc instanceof Equal) {
-                    Equal e = (Equal) vc;
-                    if ((e.right() instanceof Constant) && (((Constant) e.right()).name().equals(pname))) {
-                        var = e.left();
-                    }
-                }
-            }
-
-            if (var == null) {
-                // (2) constants in method or action definition, need to introduce a new var, bind it to const, and
-                // add it to the parameter-list
-                loopGetConst:
-                for (int i = 0; i < sorts.size(); i++) {
-                    Sort s = sorts.apply(i);
-                    for (int j = 0; j < s.elements().size(); j++) {
-                        Constant c = s.elements().apply(j);
-                        if (c.name().equals(pname)) {
-                            var = new Variable(parameters.size() + 1, "varToConst" + c, s);
-                            parameters.add(var);
-                            constraints.add(new Equal(var, c));
-                            break loopGetConst;
-                        }
-                    }
-                }
-            }
+            var = getArtificialVariable(param.NAME().getText(), vctx, constraints, sorts);
         }
         if (var == null) {
             if (warningOutput)
@@ -820,7 +964,40 @@ public class hddlPanda3Visitor {
         }
         return var;
     }
+    private Variable getArtificialVariable(String name, VarContext vctx, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts) {
+        Variable var = null;
 
+        // - this may be an object that has already been defined in s0 -> there is already a const and a var
+        // - a const in a task/method AND it is not the fist occurrence -> there is already a variable
+        for (int i = 0; i < constraints.size(); i++) {
+            VariableConstraint vc = constraints.get(i);
+            if (vc instanceof Equal) {
+                Equal e = (Equal) vc;
+                if ((e.right() instanceof Constant) && (((Constant) e.right()).name().equals(name))) {
+                    var = e.left();
+                }
+            }
+        }
+
+        if (var == null) {
+            // (2) constants in method or action definition, need to introduce a new var, bind it to const, and
+            // add it to the parameter-list
+            loopGetConst:
+            for (int i = 0; i < sorts.size(); i++) {
+                Sort s = sorts.apply(i);
+                for (int j = 0; j < s.elements().size(); j++) {
+                    Constant c = s.elements().apply(j);
+                    if (c.name().equals(name)) {
+                        var = new Variable(nextVarId(), "varToConst" + c, s);
+                        vctx.parameters.add(var);
+                        constraints.add(new Equal(var, c));
+                        break loopGetConst;
+                    }
+                }
+            }
+        }
+        return var;
+    }
 
     private Seq<Predicate> visitPredicateDeclaration(Seq<Sort> sorts, antlrHDDLParser.Predicates_defContext ctx) {
         VectorBuilder<Predicate> predicates = new VectorBuilder<>();
@@ -837,6 +1014,38 @@ public class hddlPanda3Visitor {
 
             predicates.$plus$eq(new Predicate(predName, pSorts.result()));
         }
+
+        if (requirements.contains(":equals-predicate")) {
+            Sort rootSort = null;
+            for (Sort s : JavaConversions.seqAsJavaList(sorts)) {
+                if (s.name().equals(ARTIFICIAL_ROOT_SORT)) {
+                    rootSort = s;
+                    break;
+                }
+            }
+            VectorBuilder<Sort> pSorts = new VectorBuilder<>();
+            pSorts.$plus$eq(rootSort);
+            pSorts.$plus$eq(rootSort);
+            predicates.$plus$eq(new Predicate("equals", pSorts.result()));
+        }
+
+        if (requirements.contains(":typeof-predicate")) {
+            Sort typeSort = null;
+            Sort rootSort = null;
+            for (Sort s : JavaConversions.seqAsJavaList(sorts)) {
+                if (s.name().equals(ARTIFICIAL_ROOT_SORT)) {
+                    rootSort = s;
+                }
+                if (s.name().equals("Type")) {
+                    typeSort = s;
+                }
+            }
+            VectorBuilder<Sort> pSorts = new VectorBuilder<>();
+            pSorts.$plus$eq(rootSort);
+            pSorts.$plus$eq(typeSort);
+            predicates.$plus$eq(new Predicate("typeOf", pSorts.result()));
+        }
+
         return predicates.result();
     }
 
@@ -850,7 +1059,6 @@ public class hddlPanda3Visitor {
 
     private void readTypedList(VectorBuilder<Sort> outSorts, VectorBuilder<String> outNames, Seq<Sort> sorts, List<antlrHDDLParser.Typed_varsContext> ctx, String ErrorMsgWhoIsReader) {
         for (antlrHDDLParser.Typed_varsContext varList : ctx) { // one list contains one or more var of the same type
-
             String sortName = varList.var_type().NAME().toString();
             Sort s = null;
             for (int i = 0; i < sorts.length(); i++) {
@@ -874,8 +1082,7 @@ public class hddlPanda3Visitor {
 
     private static final String ARTIFICIAL_ROOT_SORT = "__Object";
 
-    public Seq<Sort> visitTypeAndObjDef(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
-
+    public Seq<Sort> visitTypeAndObjDef(@NotNull antlrHDDLParser.DomainContext ctxDomain, antlrHDDLParser.ProblemContext ctxProblem) {
         // Extract type hierarchy from domain file
         internalSortsAndConsts internalSortModel = new internalSortsAndConsts(); // do not pass out, use only here
 
@@ -897,15 +1104,21 @@ public class hddlPanda3Visitor {
         for (TerminalNode singletonType : typeDefList.NAME())
             internalSortModel.addParent(singletonType.toString(), ARTIFICIAL_ROOT_SORT);
 
-
         // Extract constant symbols from domain and problem file
         if (ctxDomain.const_def() != null) {
             List<antlrHDDLParser.Typed_objsContext> domainConsts = ctxDomain.const_def().typed_obj_list().typed_objs();
             addToInternalModel(internalSortModel, domainConsts);
         }
-        if (ctxProblem.p_object_declaration() != null) {
+        if (ctxProblem != null && ctxProblem.p_object_declaration() != null) {
             List<antlrHDDLParser.Typed_objsContext> problemConsts = ctxProblem.p_object_declaration().typed_obj_list().typed_objs();
             addToInternalModel(internalSortModel, problemConsts);
+        }
+
+        if (requirements.contains(":typeof-predicate")) {
+            internalSortModel.addParent("Type", ARTIFICIAL_ROOT_SORT);
+            for (String type : internalSortModel.allTypeNamesInRightOrder())  {
+                internalSortModel.addConst("Type", type);
+            }
         }
 
         internalSortModel.checkConsistency();
@@ -936,6 +1149,78 @@ public class hddlPanda3Visitor {
                 final String constName = c.new_consts().get(j).getText();
                 internalModel.addConst(type, constName);
             }
+        }
+    }
+
+    // Note: names of parameters or quantified variables can not be rebound:
+    // ∀x:∀x:P(x) is not allowed
+    //
+    public static class VarContext {
+        public java.util.List<Variable> parameters = new ArrayList<>();
+        public java.util.List<Variable> quantifiedVars = new ArrayList<>();
+
+        public VarContext child() {
+            VarContext child = new VarContext();
+
+            // defensive copy
+            child.quantifiedVars = new ArrayList<>(quantifiedVars);
+
+            // changes to the parameters of the child also have to affect the parent
+            child.parameters = parameters;
+
+            return child;
+        }
+
+        public Variable getVarByName(String name) {
+            for (Variable u : parameters) {
+                if (u.name().equals(name)) {
+                    return u;
+                }
+            }
+            for (Variable u : quantifiedVars) {
+                if (u.name().equals(name)) {
+                    return u;
+                }
+            }
+            return null;
+        }
+
+        public Variable getVarById(int id) {
+            for (Variable u : parameters) {
+                if (u.id() == id) {
+                    return u;
+                }
+            }
+            for (Variable u : quantifiedVars) {
+                if (u.id() == id) {
+                    return u;
+                }
+            }
+            return null;
+        }
+
+        public void addParameter(Variable v) {
+            if (getVarById(v.id()) != null) {
+                throw new RuntimeException("A  variable with id " + v.id() + " does already exist in this context!");
+            }
+            // name duplicates do not matter for actual and artificial parameters
+            parameters.add(v);
+        }
+
+        public void addParamaters(List<Variable> vs) {
+            for (Variable v : vs) {
+                addParameter(v);
+            }
+        }
+
+        public void addQuantifiedVar(Variable v) {
+            if (getVarById(v.id()) != null) {
+                throw new RuntimeException("A variable with id " + v.id() + " does already exist in this context!");
+            }
+            if (getVarByName(v.name()) != null) {
+                throw new RuntimeException("A variable with name " + v.name() + " does already exist in this context!");
+            }
+            quantifiedVars.add(v);
         }
     }
 }

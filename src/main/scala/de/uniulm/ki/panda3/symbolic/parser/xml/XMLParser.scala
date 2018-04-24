@@ -161,7 +161,7 @@ object XMLParser extends StepwiseParser {
     // Sequence of Decomposition Methods
     // still to do:
     // Sequence of Decomposition Axioms
-    Domain(sortSeq, predicates, tasks, decompositionMethods, Nil)
+    Domain(sortSeq, predicates, tasks, decompositionMethods, Nil,None,None)
   }
 
 

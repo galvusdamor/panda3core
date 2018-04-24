@@ -2,4 +2,4 @@ resolvers += "sonatype-releases" at "https://oss.sonatype.org/content/repositori
 
 resolvers += Classpaths.sbtPluginReleases
 
-addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.1")
+addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.14.5")

@@ -23,6 +23,9 @@ import scala.io.Source
   */
 //scalastyle:off number.of.methods
 trait VerifyEncoding {
+
+  def timeCapsule: TimeCapsule
+
   def domain: Domain
 
   def initialPlan: Plan
@@ -31,11 +34,13 @@ trait VerifyEncoding {
 
   def offsetToK: Int
 
-  def overrideK : Option[Int]
+  def overrideK: Option[Int]
 
   val K: Int = if (overrideK.isDefined) overrideK.get else VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
 
   def numberOfChildrenClauses: Int
+
+  def expansionPossible: Boolean
 
   domain.tasks foreach { t => assert(t.parameters.isEmpty) }
   domain.predicates foreach { p => assert(p.argumentSorts.isEmpty) }
@@ -45,13 +50,12 @@ trait VerifyEncoding {
   lazy val numberOfLayers = K
 
 
-  protected val taskIndices          : Map[Task, Int]                = domain.tasks.zipWithIndex.toMap.withDefaultValue(-1)
+  protected val taskIndices          : Map[Task, Int]                = (domain.tasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).zipWithIndex.toMap.withDefaultValue(-1)
   protected val predicateIndices     : Map[Predicate, Int]           = domain.predicates.zipWithIndex.toMap
   protected val methodIndices        : Map[DecompositionMethod, Int] = domain.decompositionMethods.zipWithIndex.toMap
   protected val methodPlanStepIndices: Map[Int, Map[PlanStep, Int]]  = (domain.decompositionMethods map { method =>
     (methodIndices(method), method.subPlan.planStepsWithoutInitGoal.zipWithIndex.toMap)
   }).toMap
-
 
   protected def methodIndex(method: DecompositionMethod): Int = methodIndices(method)
 
@@ -72,8 +76,8 @@ trait VerifyEncoding {
 
     atoms.zipWithIndex foreach { case (atom, index) =>
       bits foreach { case (bitString, b) =>
-        if ((index & (1 << b)) == 0) buffer append Clause((atom, false) ::(bitString, false) :: Nil)
-        else buffer append Clause((atom, false) ::(bitString, true) :: Nil)
+        if ((index & (1 << b)) == 0) buffer append Clause((atom, false) :: (bitString, false) :: Nil)
+        else buffer append Clause((atom, false) :: (bitString, true) :: Nil)
       }
     }
 
@@ -98,28 +102,36 @@ trait VerifyEncoding {
 
   protected def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms).+:(atLeastOneOf(atoms))
 
-  protected def impliesNot(left: String, right: String): Clause = Clause((left, false) ::(right, false) :: Nil)
+  protected def impliesNot(left: String, right: String): Clause = Clause((left, false) :: (right, false) :: Nil)
 
   protected def impliesNot(left: Seq[String], right: String): Clause = Clause((left map { l => (l, false) }).+:(right, false))
 
+  protected def notImplies(left: String, right: String): Clause = Clause((left, true) :: (right, true) :: Nil)
+
   protected def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
 
-  protected def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) ::(leftFalse, true) ::(right, false) :: Nil) :: Nil
+  protected def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) :: (leftFalse, true) :: (right, false) :: Nil) :: Nil
 
   protected def impliesAllNot(left: String, right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
 
   protected def notImpliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = {
     val leftList = left map { (_, true) }
 
-    right map { r => Clause(leftList.+:((r, false))) }
+    right map { r => Clause(leftList.:+((r, false))) }
   }
 
-  protected def impliesSingle(left: String, right: String): Clause = Clause((left, false) ::(right, true) :: Nil)
+  protected def impliesSingle(left: String, right: String): Clause = Clause((left, false) :: (right, true) :: Nil)
 
 
   protected def impliesRightAnd(leftConjunct: Seq[String], rightConjunct: Seq[String]): Seq[Clause] = {
     val negLeft = leftConjunct map { (_, false) }
-    rightConjunct map { r => Clause(negLeft.+:(r, true)) }
+    rightConjunct map { r => Clause(negLeft.:+(r, true)) }
+  }
+
+  protected def impliesRightNotAll(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
+    val negLeft = leftConjunct map { (_, false) }
+    val negRight = rightConjunct map { (_, false) }
+    Clause(negLeft ++ negRight)
   }
 
   protected def impliesRightAndSingle(leftConjunct: Seq[String], right: String): Clause = {
@@ -127,9 +139,9 @@ trait VerifyEncoding {
     Clause(negLeft.+:(right, true))
   }
 
-  protected def impliesRightOr(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
+  protected def impliesRightOr(leftConjunct: Seq[String], rightDisjunct: Seq[String]): Clause = {
     val negLeft = leftConjunct map { (_, false) }
-    Clause(negLeft ++ (rightConjunct map { x => (x, true) }))
+    Clause(negLeft ++ (rightDisjunct map { x => (x, true) }))
   }
 
   protected def allImply(left: Seq[String], target: String): Seq[Clause] = left flatMap { x => impliesRightAnd(x :: Nil, target :: Nil) }
@@ -163,13 +175,12 @@ trait VerifyEncoding {
 
   def goalState: Seq[Clause]
 
+  def planLengthDependentFormula(actualPlanLength : Int) : Seq[Clause] = Nil
 
-  def miniSATString(formulasSeq: Seq[Clause], writer: BufferedWriter): Map[String, Int] = {
-    val formulas = formulasSeq.toArray
-    println("NUMBER OF CLAUSES " + formulas.length)
+  def miniSATString(formulas: Array[Clause], writer: BufferedWriter): scala.Predef.Map[String, Int] = {
 
     // generate the atoms to int map
-    val atomIndices = new mutable.HashMap[String, Int]()
+    /*val atomIndices = new mutable.HashMap[String, Int]()
     var i = 0
     while (i < formulas.length) {
       val lits = formulas(i).disjuncts
@@ -181,24 +192,24 @@ trait VerifyEncoding {
         j += 1
       }
       i += 1
-    }
+    }*/
 
     // generate the DIMACS string
 
-    val header = "p cnf " + atomIndices.size + " " + formulas.length + "\n"
+    val header = "p cnf " + Clause.atomIndices.size + " " + formulas.length + "\n"
 
     //val stringBuffer = new StringBuffer()
     //stringBuffer append header
     writer write header
 
-    i = 0
+    var i = 0
     while (i < formulas.length) {
       val lits = formulas(i).disjuncts
       var j = 0
       while (j < lits.length) {
-        val atomInt = (atomIndices(lits(j)._1) + 1) * (if (lits(j)._2) 1 else -1)
+        //val atomInt = (atomIndices(lits(j)._1) + 1) * (if (lits(j)._2) 1 else -1)
         //stringBuffer append atomInt
-        writer write ("" + atomInt)
+        writer write ("" + lits(j))
         //stringBuffer append ' '
         writer write ' '
         j += 1
@@ -209,7 +220,7 @@ trait VerifyEncoding {
     }
 
     //stringBuffer.toString
-    atomIndices.toMap
+    Clause.atomIndices.toMap
   }
 }
 
@@ -217,7 +228,7 @@ object VerifyEncoding {
 
   def computeICAPSK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = 2 * taskSequenceLength * (domain.abstractTasks.length + 1)
 
-  def computeTSTGK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = domain.taskSchemaTransitionGraph.longestPathLength match {case Some(x) => x; case _ => Integer.MAX_VALUE }
+  def computeTSTGK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = domain.taskSchemaTransitionGraph.longestPathLength match {case Some(x) => x; case _ => Integer.MAX_VALUE}
 
   def computeMethodSize(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
     // recognize the case where only top has a unit method
@@ -234,11 +245,11 @@ object VerifyEncoding {
     if (minMethodSize >= 2) Math.ceil((taskSequenceLength - plan.planStepsWithoutInitGoal.length).toDouble / (minMethodSize - 1)).toInt + heightIncrease else Integer.MAX_VALUE
   }
 
-  def computeTDG(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, accumulate : (Int,Int) => Int, initialValue : Int): Int = {
+  def computeTDG(domain: Domain, initialPlan: Plan, taskSequenceLength: Int, accumulate: (Int, Int) => Int, initialValue: Int): Int = {
 
     def printMap(map: Map[Task, Map[Int, Int]]): Unit = {
       println("\nMAP")
-      println(map map { case (t, m) => t.name + " -> " + m.toString } mkString "\n")
+      println(map.toSeq.sortBy(_._1.name) map { case (t, m) => t.name + " map: " + m.toSeq.sorted.map(x => x._1 + "->" + x._2).mkString(" ") } mkString "\n")
     }
 
     def recomputePlan(plan: Plan, map: Map[Task, Map[Int, Int]]): Map[Int, Int] = {
@@ -256,6 +267,7 @@ object VerifyEncoding {
           cached((currentTask, remainingLength)) = result
           result
         }
+
         totalLength -> minimumByDistribution(0, totalLength)
       } collect { case (length, Some(height)) => length -> (1 + height) } toMap
     }
@@ -274,6 +286,7 @@ object VerifyEncoding {
     // run through the topological sorting of the condensation
     val expandedMap = condensationTopSort.foldLeft(Map[Task, Map[Int, Int]]())(
       { case (map, scc) =>
+        //println("deal with " + scc.map(_.name).mkString(" "))
         var initalised = scc.foldLeft(map)({ case (m, t) => m + (t -> (if (t.isPrimitive) Map(1 -> 1) else Map())) })
 
         var changed = true
@@ -291,6 +304,10 @@ object VerifyEncoding {
 
     val initialPlanMap = recomputePlan(initialPlan, expandedMap)
 
+    //printMap(expandedMap)
+
+    //println(initialPlan.planStepsWithoutInitGoal map {_.schema.name} mkString "\n")
+
     if (initialPlanMap.isEmpty) 0 else initialPlanMap.values.max
   }
 
@@ -299,23 +316,43 @@ object VerifyEncoding {
     val TSTGPath = computeTSTGK(domain, plan, taskSequenceLength)
     val minimumMethodSize = computeMethodSize(domain, plan, taskSequenceLength)
     val tdg = computeTDG(domain, plan, taskSequenceLength, Math.max, 0)
-    val tdgmin = computeTDG(domain, plan, taskSequenceLength, Math.min, Integer.MAX_VALUE)
+    //val tdgmin = computeTDG(domain, plan, taskSequenceLength, Math.min, Integer.MAX_VALUE)
 
     println("LEN " + taskSequenceLength)
     println("ICAPS: " + icapsPaperLimit)
     println("TSTG: " + TSTGPath)
     println("Method: " + minimumMethodSize)
     println("DP max: " + tdg)
-    println("DP min: " + tdgmin)
+    //println("DP min: " + tdgmin)
     //System exit 0
 
     Math.min(icapsPaperLimit, Math.min(TSTGPath, Math.min(minimumMethodSize, tdg)))
   }
 }
 
-case class Clause(disjuncts: Array[(String, Boolean)]) {}
+case class Clause(disjuncts: Array[Int]) {
+  override def toString: String = "Clause(" + disjuncts.mkString(",") + ")"
+}
 
 object Clause {
+  val atomIndices = new mutable.HashMap[String, Int]()
+
+  def clearCache() : Unit = atomIndices.clear()
+
+  def apply(disjuncts: Array[(String, Boolean)]): Clause = {
+    val compressed = new Array[Int](disjuncts.length)
+    var i = 0
+    while (i < disjuncts.length) {
+      val atomIndex = atomIndices.getOrElseUpdate(disjuncts(i)._1, atomIndices.size)
+      if (disjuncts(i)._2)
+        compressed(i) = atomIndex + 1
+      else
+        compressed(i) = -1 * atomIndex - 1
+      i += 1
+    }
+    Clause(compressed)
+  }
+
   def apply(disjuncts: Seq[(String, Boolean)]): Clause = Clause(disjuncts.toArray)
 
   def apply(atom: String): Clause = Clause((atom, true) :: Nil)

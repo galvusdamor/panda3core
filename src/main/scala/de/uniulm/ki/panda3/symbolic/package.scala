@@ -9,6 +9,7 @@ package object symbolic {
   val REINSTANTIATINGPLANSINOUTSIDEMETHODS = "re-instantiating plan that are not part of methods"
   val UNSUPPORTEDPROBLEMTYPE = "any problem type apart from non-hierachical, pure-hierarchical and hybrid domains"
   val LIFTEDGOAL = "a lifted goal description"
+  val LIFTEDINIT = "a lifted init description"
 
   def noSupport(message: String): Nothing = throw new UnsupportedOperationException("The current version of PANDA3 does not support " + message)
 }

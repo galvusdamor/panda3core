@@ -57,12 +57,17 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
     val topInit = PlanStep(plan.init.id, initAndGoalNOOP, Nil)
     val topGoal = PlanStep(plan.goal.id, initAndGoalNOOP, Nil)
     val initialPlanWithout = plan.replaceInitAndGoal(topInit, topGoal, plan.init.arguments ++ plan.goal.arguments)
-    val topTask = ReducedTask("__" + transformationName + "Compilation__top", isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
-    val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top")
+    val topTask = ReducedTask("__" + transformationName + "Compilation__top_" + DecompositionMethodTransformer.instanceCounter, isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
+    val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top_" + DecompositionMethodTransformer.instanceCounter)
+    DecompositionMethodTransformer.instanceCounter += 1
 
     val (extendedMethods, newTasks) = transformMethods(domain.decompositionMethods, topMethod, info, domain)
 
-    if ((extendedMethods count { _.abstractTask == topTask }) == 1 && allowToRemoveTopMethod) {
+    val numberOfTopMethods = extendedMethods count { _.abstractTask == topTask }
+    if (numberOfTopMethods == 0) {
+      // if the compiler does not want to add a top method, it's ok
+      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks), plan)
+    } else if (numberOfTopMethods == 1 && allowToRemoveTopMethod) {
       // regenerate the initial plan, as it may have changed
       val remainingTopMethod = (extendedMethods find { _.abstractTask == topTask }).get.subPlan
       val newPlan = remainingTopMethod.replaceInitAndGoal(plan.init, plan.goal, Nil)
@@ -79,4 +84,8 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
       (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks :+ topTask), initialPlan)
     }
   }
+}
+
+object DecompositionMethodTransformer {
+  private var instanceCounter = 0
 }

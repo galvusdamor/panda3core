@@ -45,26 +45,43 @@ object Main {
                                                                                     PreprocessingConfiguration(compileNegativePreconditions = false,
                                                                                                                compileUnitMethods = false,
                                                                                                                compileInitialPlan = false,
+                                                                                                               removeUnnecessaryPredicates = false,
+                                                                                                               ensureMethodsHaveLastTask = false,
+                                                                                                               convertToSASP = false,
+                                                                                                               allowSASPFromStrips = false,
                                                                                                                compileOrderInMethods = None,
                                                                                                                splitIndependentParameters = false,
+                                                                                                               compileUselessAbstractTasks = false,
                                                                                                                liftedReachability = false,
                                                                                                                groundedReachability = None,
                                                                                                                groundedTaskDecompositionGraph = None,
                                                                                                                iterateReachabilityAnalysis = false,
-                                                                                                               groundDomain = false),
+                                                                                                               groundDomain = false,
+                                                                                                               stopDirectlyAfterGrounding = false),
                                                                                     NoSearch, PostprocessingConfiguration(Set()))) extends PrettyPrintable {
 
     def processCommandLineArguments(args: Seq[String]): RunConfiguration = {
       // determine which arguments belong together
       val groupedArguments = args.foldLeft[(Option[String], Seq[Either[String, (String, String)]])]((None, Nil))(
         {
-          case ((Some(command), grouped), nextArgument) if !nextArgument.startsWith("-") => (None, grouped :+ Right(command, nextArgument))
-          case ((Some(command), grouped), nextArgument) if nextArgument.startsWith("-")  => (Some(nextArgument), grouped :+ Left(command))
-          case ((None, grouped), nextArgument) if !nextArgument.startsWith("-")          => (None, grouped :+ Left(nextArgument))
-          case ((None, grouped), nextArgument) if nextArgument.startsWith("-")           => (Some(nextArgument), grouped)
+          case ((Some(command), grouped), nextArgument) =>
+            if (this.config.modifyOnOptionString contains command)
+              this.config.modifyOnOptionString(command)._1 match {
+                case NoParameter                                        => (Some(nextArgument), grouped :+ Left(command))
+                case OptionalParameter if !nextArgument.startsWith("-") => (None, grouped :+ Right(command, nextArgument))
+                case OptionalParameter if nextArgument.startsWith("-")  => (Some(nextArgument), grouped :+ Left(command))
+                case NecessaryParameter                                 => (None, grouped :+ Right(command, nextArgument))
+              } else (Some(nextArgument), grouped :+ Left(command))
+
+          case ((None, grouped), nextArgument) if !nextArgument.startsWith("-") => (None, grouped :+ Left(nextArgument))
+          case ((None, grouped), nextArgument) if nextArgument.startsWith("-")  => (Some(nextArgument), grouped)
         }) match {
         case (None, l)          => l
-        case (Some(command), l) => l :+ Left(command)
+        case (Some(command), l) =>
+          this.config.modifyOnOptionString.getOrElse(command,(NoParameter,()))._1 match {
+            case NecessaryParameter => assert(false, "no argument provided for " + command); l // this will never be reached. it is just for the sake of completeness
+            case _                  => l :+ Left(command)
+          }
       }
 
       groupedArguments.foldLeft(this)(
@@ -98,7 +115,7 @@ object Main {
             val y = key match {
               case _ =>
                 if (conf.config.modifyOnOptionString.contains(key))
-                  conf.copy(config = conf.config.modifyOnOptionString(key)(value))
+                  conf.copy(config = conf.config.modifyOnOptionString(key)._2(value))
                 else {
                   println("Option \"" + key + "\" unavailable in current circumstance")
                   println(conf.config.modifyOnOptionString.keySet)
@@ -290,8 +307,9 @@ object Main {
       println("Panda says: " + results(SearchStatus))
 
 
-    if (results.map.contains(SearchStatistics))
+    if (results.map.contains(SearchStatistics)) {
       println(results(SearchStatistics).shortInfo)
+    }
     if (results.map.contains(ProcessingTimings)) {
       println("----------------- TIMINGS -----------------")
       println(results(ProcessingTimings).shortInfo)
@@ -328,6 +346,10 @@ object Main {
 
         println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
       }
+    }
+
+    if (results.map.contains(SearchResultInVerificationFormat)){
+      println("%%R " + results(SearchResultInVerificationFormat))
     }
 
     if (results.map.contains(SearchResult) && results.map.contains(SearchStatus) && results(SearchStatus) == SearchState.SOLUTION && plannerConfiguration.outputFile.isDefined) {

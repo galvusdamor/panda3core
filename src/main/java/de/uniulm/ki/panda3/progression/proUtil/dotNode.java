@@ -1,9 +1,5 @@
 package de.uniulm.ki.panda3.progression.proUtil;
 
-import de.uniulm.ki.panda3.progression.htn.operators.method;
-
-import java.util.List;
-
 /**
  * Created by dhoeller on 27.07.16.
  */

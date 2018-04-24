@@ -24,11 +24,6 @@ trait DecompositionMethod extends DomainUpdatable {
   (abstractTask, subPlan.init.schema) match {
     case (reducedAbstractTask: ReducedTask, _: ReducedTask) =>
       assert(reducedAbstractTask.precondition.conjuncts.size == subPlan.init.substitutedEffects.size)
-      if (!(reducedAbstractTask.effect.conjuncts.size == subPlan.goal.substitutedPreconditions.size)) {
-        val a = reducedAbstractTask.effect.conjuncts
-        val b = subPlan.goal.substitutedPreconditions
-        println("SIZE " + a.size + "!=" + b.size)
-      }
       assert(reducedAbstractTask.effect.conjuncts.size == subPlan.goal.substitutedPreconditions.size)
       assert((reducedAbstractTask.precondition.conjuncts zip subPlan.init.substitutedEffects) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
       assert((reducedAbstractTask.effect.conjuncts zip subPlan.init.substitutedPreconditions) forall { case (l1, l2) => l1.predicate == l2.predicate && l1.isNegative == l2.isNegative })
@@ -43,10 +38,11 @@ trait DecompositionMethod extends DomainUpdatable {
 
   override def update(domainUpdate: DomainUpdate): DecompositionMethod
 
-  def containsTask(task: Task): Boolean =
-    task == abstractTask || (subPlan.planStepTasksSet contains task)
+  def containsTask(task: Task): Boolean = task == abstractTask || (subPlan.planStepTasksSet contains task)
 
-  def areParametersAllowed(instantiation: Map[Variable, Constant]): Boolean = subPlan.variableConstraints.constraints forall {
+  def containsAnyFrom(tasks: Set[Task]): Boolean = (tasks contains abstractTask) || (subPlan.planStepTasksSet exists tasks.contains)
+
+  def areParametersAllowed(instantiation: Map[Variable, Constant]): Boolean = (subPlan.variableConstraints.constraints ++ abstractTask.parameterConstraints) forall {
     case Equal(var1, var2: Variable)     => instantiation(var1) == instantiation(var2)
     case Equal(vari, const: Constant)    => instantiation(vari) == const
     case NotEqual(var1, var2: Variable)  => instantiation(var1) != instantiation(var2)
@@ -73,7 +69,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
       prec.conjuncts foreach { case l@Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
           case ReducedTask(_, _, _, _, _, tPre, _) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
-          case _                                   => false
+          case _                                   => true // was false
         }
         assert(canBeInherited, "Method " + name + "' subplan does not contain a precondition able to inherit " + l.shortInfo)
       }
@@ -82,7 +78,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
       eff.conjuncts foreach { case l@Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
           case ReducedTask(_, _, _, _, _, _, tEff) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
-          case _                                   => false
+          case _                                   => true // was false
         }
         assert(canBeInherited, "Method " + name + "' subplan does not contain a effect able to inherit " + l.shortInfo)
       }
@@ -169,6 +165,18 @@ case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrec
     case ExchangeLiteralsByPredicate(map, false) =>
       SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update ExchangeLiteralsByPredicate(map, invertedTreatment = true),
                               methodPrecondition update domainUpdate, methodEffect update domainUpdate, name)
+    case ExchangeTask(exchangeMap)               =>
+      if (exchangeMap contains abstractTask) {
+        val newAbstract = exchangeMap(abstractTask)
+        val newVars = newAbstract.parameters filterNot abstractTask.parameters.contains
+
+        // rebuild init and goal
+        val newInitSchema: Task = GeneralTask("init", isPrimitive = true, newAbstract.parameters, Nil, Nil, And(Nil), exchangeMap(abstractTask).precondition)
+        val newGoalSchema: Task = GeneralTask("goal", isPrimitive = true, newAbstract.parameters, Nil, Nil, exchangeMap(abstractTask).effect, And(Nil))
+        val extendedExchangeMap = exchangeMap.+((subPlan.init.schema, newInitSchema)).+((subPlan.goal.schema, newGoalSchema))
+
+        SHOPDecompositionMethod(exchangeMap(abstractTask), subPlan.update(ExchangeTask(extendedExchangeMap)) update AddVariables(newVars), methodPrecondition, methodEffect, name)
+      } else SHOPDecompositionMethod(abstractTask, subPlan.update(domainUpdate), methodPrecondition, methodEffect, name)
     case _                                       => SHOPDecompositionMethod(abstractTask update domainUpdate, subPlan update domainUpdate,
                                                                             methodPrecondition update domainUpdate, methodEffect update domainUpdate, name)
   }

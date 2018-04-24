@@ -1,21 +1,17 @@
 package de.uniulm.ki.panda3.progression.htn.search.searchRoutine;
 
-import de.uniulm.ki.panda3.progression.htn.operators.method;
-import de.uniulm.ki.panda3.progression.htn.operators.operators;
+import de.uniulm.ki.panda3.progression.htn.search.SolutionStep;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
-import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
-
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * Created by dh on 15.09.16.
  */
 public class EnforcedHillClimbing extends ProgressionSearchRoutine{
 
-    public List<Object> search(ProgressionNetwork firstSearchNode) {
+    public SolutionStep search(ProgressionNetwork firstSearchNode) {
+        /*
         System.out.println("\nStarting enforced hill climbing search");
         int searchnodes = 1;
         int bestMetric = firstSearchNode.metric;
@@ -94,11 +90,12 @@ public class EnforcedHillClimbing extends ProgressionSearchRoutine{
 
         System.out.println("Generated search nodes (total): " + searchnodes);
         System.out.println("Search time: " + (System.currentTimeMillis() - time) + " ms");
-        return solution;
+        return solution;*/
+        return null;
     }
 
     @Override
-    public List<Object> search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
+    public SolutionStep search(ProgressionNetwork firstSearchNode, InformationCapsule info, TimeCapsule timing) {
         return null;
     }
 }

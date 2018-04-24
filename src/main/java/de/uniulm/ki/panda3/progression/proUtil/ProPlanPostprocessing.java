@@ -1,9 +1,6 @@
 package de.uniulm.ki.panda3.progression.proUtil;
 
-import de.uniulm.ki.panda3.progression.htn.operators.operators;
-
 import java.util.BitSet;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -12,7 +9,7 @@ import java.util.List;
 public class ProPlanPostprocessing {
 
     public static void inferCausalLinks(BitSet s0, List<Integer> solution) {
-        List<Integer> sol = new LinkedList<>(); // copy array to keep changes local to the function
+        /*List<Integer> sol = new LinkedList<>(); // copy array to keep changes local to the function
         sol.addAll(solution);
         sol.add(0, -1); // add dummy to simplify index-magic
 
@@ -63,16 +60,17 @@ public class ProPlanPostprocessing {
             if (!found) {
                 System.out.println("There is no supporter for a precondition");
             }
-        }
+        }*/
     }
 
     private static boolean noThreat(List<Integer> solution, int producer, int consumer, int effI) {
-        for (int i = producer + 1; i < consumer; i++) {
+        /*for (int i = producer + 1; i < consumer; i++) {
             int action = solution.get(i);
             if (operators.del[action].get(effI)) {
                 return false;
             }
         }
-        return true;
+        return true;*/
+        return false;
     }
 }

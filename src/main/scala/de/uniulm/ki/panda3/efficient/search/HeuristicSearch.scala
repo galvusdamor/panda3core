@@ -97,7 +97,8 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
           val nps = nodes.asInstanceOf[Double] / (nTime - initTime) * 1000
           val npsRecent = recentNodes.asInstanceOf[Double] / (nTime - lastReportTime) * 1000
           if (printSearchInfo) println("Plans Expanded: " + nodes + " node/sec avg: " + nps.toInt + " recent: " + npsRecent.toInt + " Queue size " + searchQueue.length + " Recently lowest" +
-                                         " Heuristic " + minHeuristicCurrentInterval + " Recently highest Heuristic " + maxHeuristicCurrentInterval)
+                                         " Heuristic " + minHeuristicCurrentInterval + " Recently highest Heuristic " + maxHeuristicCurrentInterval +
+                                      " time limit " + timeLimitInMilliSeconds + "ms current " + timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME))
           minHeuristicCurrentInterval = Double.MaxValue
           maxHeuristicCurrentInterval = -Double.MaxValue
           lastReportTime = nTime
@@ -181,7 +182,7 @@ case class HeuristicSearch[Payload <: AnyVal](heuristic: Array[EfficientHeuristi
                 }
                 timeCapsule stop SEARCH_COMPUTE_HEURISTIC
 
-                assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps)
+                assert(newPlan.numberOfPlanSteps >= plan.numberOfPlanSteps, "old plan " + plan.numberOfPlanSteps + " new plan " + newPlan.numberOfPlanSteps)
 
                 val nodeNumber = informationCapsule(NUMBER_OF_NODES)
                 val searchNode: EfficientSearchNode[Payload] = if (buildTree) new EfficientSearchNode[Payload](nodeNumber, newPlan, myNode, h, distanceValue)

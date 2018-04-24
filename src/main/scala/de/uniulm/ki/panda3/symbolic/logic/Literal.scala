@@ -3,7 +3,7 @@ package de.uniulm.ki.panda3.symbolic.logic
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeLiteralsByPredicate, DomainUpdate}
-import de.uniulm.ki.util.HashMemo
+import de.uniulm.ki.util.{Internable, HashMemo}
 
 /**
   * A simple literal in First Order Logic
@@ -11,6 +11,8 @@ import de.uniulm.ki.util.HashMemo
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables: Seq[Variable]) extends Formula with PrettyPrintable with HashMemo {
+  assert(predicate.argumentSorts.length == parameterVariables.length)
+  assert(!(parameterVariables contains null), "Predicate " + predicate.name + " has been instantiated with null.")
 
   /** negated version of the literal */
   lazy val negate: Literal = copy(isPositive = !isPositive)
@@ -55,8 +57,8 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
   override def update(domainUpdate: DomainUpdate): Literal = domainUpdate match {
     case ExchangeLiteralsByPredicate(exchangeMap, _) if exchangeMap contains predicate =>
       val newPredicate = if (isPositive) exchangeMap(predicate)._1 else exchangeMap(predicate)._2
-      Literal(newPredicate, true, parameterVariables)
-    case _                                                                             => Literal(predicate.update(domainUpdate), isPositive,
+      Literal.intern(newPredicate, true, parameterVariables)
+    case _                                                                             => Literal.intern(predicate.update(domainUpdate), isPositive,
                                                                                                   parameterVariables map { _.update(domainUpdate) })
   }
 
@@ -77,7 +79,8 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 }
 
 case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo with Ordered[GroundLiteral] {
-  assert(predicate.argumentSorts.length == parameter.length)
+  assert(predicate.argumentSorts.length == parameter.length,
+         "Predicate " + predicate.name + " is instantiated with " + parameter.length + " but it should have " + predicate.argumentSorts.length)
   predicate.argumentSorts.zipWithIndex zip parameter foreach { case ((s, i), p) => assert(s.elements contains p, "Predicate " + predicate.name + " argument " + i + " value " + p.name + " " +
     "not contained in sort " + s.name)
   }
@@ -104,14 +107,18 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
   override def longInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameter map { _.longInfo }).mkString("(", ", ", ")")
 
   override def compare(that: GroundLiteral): Int = {
-      this.predicate compare that.predicate match {
-        case 0 => this.isPositive compare that.isPositive match {
-          case 0 => ((this.parameter zip that.parameter) map { case (x, y) => x compare y }) find ((i: Int) => i != 0) getOrElse 0
-          case _ => this.isPositive compare that.isPositive
-        }
-        case _ => this.predicate compare that.predicate
+    this.predicate compare that.predicate match {
+      case 0 => this.isPositive compare that.isPositive match {
+        case 0 => ((this.parameter zip that.parameter) map { case (x, y) => x compare y }) find ((i: Int) => i != 0) getOrElse 0
+        case _ => this.isPositive compare that.isPositive
       }
+      case _ => this.predicate compare that.predicate
+    }
   }
 
   def compileQuantors(): (Formula, Seq[Variable]) = (this, Nil)
+}
+
+object Literal extends Internable[(Predicate, Boolean, Seq[Variable]), Literal] {
+  override protected val applyTuple = (Literal.apply _).tupled
 }
