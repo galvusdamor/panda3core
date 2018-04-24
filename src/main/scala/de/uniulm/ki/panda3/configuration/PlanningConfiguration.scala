@@ -918,7 +918,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         case _                                                 => "/" // normal OSes
       }
 
-      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true),
+      writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeDomain(pddlDomain, includeAllConstants = false, writeEitherWithPredicates = true, noConstantReplacement = false),
                         ".fd" + uuid + separator + "__sasdomain.pddl")
       writeStringToFile(HDDLWriter("tosasp", "tosasp01").writeProblem(pddlDomain, pddlPlan, writeEitherWithPredicates = true),
                         ".fd" + uuid + separator + "__sasproblem.pddl")

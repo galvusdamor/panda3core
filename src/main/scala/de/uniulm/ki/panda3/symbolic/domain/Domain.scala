@@ -129,7 +129,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val hasNegativePreconditions: Boolean = tasks exists { _.preconditionsAsPredicateBool exists { !_._2 } }
 
 
-  lazy val containEitherType: Boolean = sorts exists { s => (sortGraph.edgeList count { _._2 == s }) > 1 }
+  lazy val containEitherType: Boolean = false // sorts exists { s => (sortGraph.edgeList count { _._2 == s }) > 1 }
 
   /** A map showing for each task how deep the decomposition tree has to be, to be able to reach a primitive decomposition */
   lazy val minimumDecompositionHeightToPrimitive: Map[Task, Int] =
