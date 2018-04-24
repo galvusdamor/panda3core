@@ -12,7 +12,7 @@ import java.util.List;
  * Created by dh on 22.06.17.
  */
 public class hAddhFFEq extends SasHeuristic {
-    private final SasHeuristics heuristic;
+    private final SasHeuristic.SasHeuristics heuristic;
     private final int[] precLessOps;
     private final int[] hValPropInit;
     SasPlusProblem p;
