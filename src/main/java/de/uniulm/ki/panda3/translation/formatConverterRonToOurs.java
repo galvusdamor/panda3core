@@ -32,13 +32,13 @@ public class formatConverterRonToOurs {
         String txtFile = readFile(inFile);
 
         if (txtFile.contains(":domain")) { // yes, then it's a PROBLEM ;-)
-            processProblem(outFile, txtFile);
+            processProblem(outFile, txtFile, new HashMap<>());
         } else {
             processDomain(outFile, txtFile);
         }
     }
 
-    public static void processProblem(String problemOut, String txtFile) throws Exception {
+    public static void processProblem(String problemOut, String txtFile, Map<String,String> taskReplacement) throws Exception {
         FileWriter fw = new FileWriter(problemOut);
         BufferedWriter bw = new BufferedWriter(fw);
         bw.write("(");
@@ -68,7 +68,7 @@ public class formatConverterRonToOurs {
         bw.write("  :tasks (and\n");
 
         for (String def : tasks) {
-            bw.write(transformInitialTN(def) + "\n");
+            bw.write(transformInitialTN(def, taskReplacement) + "\n");
         }
         bw.write("  )\n");
         bw.write("  :ordering ( )\n");
@@ -86,33 +86,39 @@ public class formatConverterRonToOurs {
         String res;
         String init2 = init.trim();
         res = init2.substring(0, init2.length() - 1);
-        String goal2 = goal.trim();
-        if ((!goal2.startsWith("(:goal (and")) || (!goal2.endsWith("))"))) {
-            System.out.println("ERROR: Could not transform goal");
+        if (!goal.equals("")) {
+            String goal2 = goal.trim();
+            if ((!goal2.startsWith("(:goal (and")) || (!goal2.endsWith("))"))) {
+                System.out.println("ERROR: Could not transform goal");
+            }
+            goal2 = goal2.substring("(:goal (and".length() + 1, goal2.length() - 2).trim();
+            goal2 = goal2.replaceAll("\\(", "(goal_");
+            res = res + "\n" + goal2;
         }
-        goal2 = goal2.substring("(:goal (and".length() + 1, goal2.length() - 2).trim();
-        goal2 = goal2.replaceAll("\\(", "(goal_");
-        res = res + "\n" + goal2 + ")";
-        return res;
+        return res + ")";
     }
 
     static String initTaskRegEx = "\\(\\:tasks[\\s]+(\\([a-zA-Z0-9]+[\\s]*\\([^\\)]+\\)\\))\\)";
     static Pattern pInitTN = Pattern.compile(initTaskRegEx);
 
-    private static String transformInitialTN(String def) {
+    private static String transformInitialTN(String def, Map<String,String> taskReplacement) {
         StringBuilder res = new StringBuilder();
         Matcher mTasks = pInitTN.matcher(def);
 
         int offset = 0;
         while (mTasks.find(offset)) { // should be one, but anyway...
             res.append("    ");
-            res.append(mTasks.group(1));
+            String taskLine = mTasks.group(1);
+            // execute all task replacements
+            for (Map.Entry<String,String> entry : taskReplacement.entrySet())
+                taskLine = taskLine.replaceAll(entry.getKey() + " ", entry.getValue() + " ");
+            res.append(taskLine);
             offset = mTasks.end();
         }
         return res.toString();
     }
 
-    public static void processDomain(String domainOut, String txtFile) throws Exception {
+    public static Map<String, String> processDomain(String domainOut, String txtFile) throws Exception {
         FileWriter fw = new FileWriter(domainOut);
         BufferedWriter bw = new BufferedWriter(fw);
         bw.write("(");
@@ -166,6 +172,8 @@ public class formatConverterRonToOurs {
         bw.write(")");
         bw.close();
         fw.close();
+
+        return taskReplacementMap;
     }
 
     static int newMethodID = 1;
