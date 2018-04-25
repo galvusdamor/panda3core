@@ -16,8 +16,11 @@
 
 package de.uniulm.ki.panda3.configuration
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristics
+import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.symbolic.compiler.OneOfTheNecessaryOrderings
 import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
+import de.uniulm.ki.panda3.symbolic.sat.verify.{TotSATEncoding, TreeBeforeEncoding}
 
 
 /**
@@ -150,6 +153,11 @@ object PredefinedConfigurations {
   private val planSearchAStarADDReusing = PlanBasedSearch(None, AStarActionsType(2), ADDReusing :: Nil, Nil, LCFR)
   private val planSearchAStarRelax      = PlanBasedSearch(None, AStarActionsType(2), Relax :: Nil, Nil, LCFR)
 
+  val shop2         = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
+  val shop2Improved = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.random)
+
+  def pandaProConfig(algorithm: SearchAlgorithmType, sasHeuristic: SasHeuristics): ProgressionSearch =
+    ProgressionSearch(algorithm, Some(HierarchicalHeuristicRelaxedComposition(sasHeuristic)), PriorityQueueSearch.abstractTaskSelection.random)
 
   val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
     Map(
@@ -162,9 +170,15 @@ object PredefinedConfigurations {
          "IJCAI-2017-AdmissibleHeuristics(UMCP-DF)" -> (htnParsing, groundingPreprocess, umcpDF),
          "IJCAI-2017-AdmissibleHeuristics(UMCP-H)" -> (htnParsing, groundingPreprocess, umcpH),
 
-         "UMCP(BF)" ->(htnParsing, groundingPreprocess, umcpBF),
-         "UMCP(DF)" ->(htnParsing, groundingPreprocess, umcpDF),
-         "UMCP(h)" ->(htnParsing, groundingPreprocess, umcpH),
+         "UMCP(BF)" -> (htnParsing, groundingPreprocess, umcpBF),
+         "UMCP(DF)" -> (htnParsing, groundingPreprocess, umcpDF),
+         "UMCP(h)" -> (htnParsing, groundingPreprocess, umcpH),
+
+         "SHOP2(grounded)" -> (htnParsing, groundingPreprocess, SHOP2Search),
+         "SHOP2(lifted)" -> (htnParsing, liftedPreprocess, SHOP2Search),
+
+         "FAPE(grounded)" -> (htnParsing, groundingPreprocess, FAPESearch),
+         "FAPE(lifted)" -> (htnParsing, liftedPreprocess, FAPESearch),
 
          // A*
          "IJCAI-2017-AdmissibleHeuristics(astar,add)" -> (htnParsing, groundingPreprocess, AStarADD),
@@ -200,7 +214,39 @@ object PredefinedConfigurations {
 
 
          // plan verification á la ICAPS'17
-         "ICAPS-2017-verify" -> (htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, ""))
+         "ICAPS-2017-verify" -> (htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, "")),
+
+         // AAAI totsat
+         "AAAI-2018-totSAT(cryptominisat)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding)),
+         "AAAI-2018-totSAT(RISS6)" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding)),
+         "AAAI-2018-totSAT(MapleCOMSPS)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding)),
+
+         // ICAPS 18 - PANDA-pro
+         "SHOP2-emulation" -> (htnParsing, groundingPreprocess, shop2),
+         "SHOP2-improved" -> (htnParsing, groundingPreprocess, shop2Improved),
+
+         "ICAPS-2018-RC(filter,astar)" -> (htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFilter)),
+         "ICAPS-2018-RC(FF,astar)" -> (htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFF)),
+         "ICAPS-2018-RC(lmcut,astar)" -> (htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hLmCut)),
+         "ICAPS-2018-RC(add,astar)" -> (htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hAdd)),
+         "ICAPS-2018-RC(FF,gastar)" -> (htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hFF)),
+         "ICAPS-2018-RC(lmcut,gastar)" -> (htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hLmCut)),
+         "ICAPS-2018-RC(add,gastar)" -> (htnParsing, groundingPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hAdd)),
+         "ICAPS-2018-RC(FF,greedy)" -> (htnParsing, groundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hFF)),
+         "ICAPS-2018-RC(lmcut,greedy)" -> (htnParsing, groundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hLmCut)),
+         "ICAPS-2018-RC(add,greedy)" -> (htnParsing, groundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd)),
+
+
+         // HTN-WS partsat
+         "HTN-WS-2018-treeBefore(cryptominisat)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding)),
+         "HTN-WS-2018-treeBefore(RISS6)" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding)),
+         "HTN-WS-2018-treeBefore(MapleCOMSPS)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding))
        )
 
 }
