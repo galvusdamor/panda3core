@@ -382,7 +382,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 error |= satError
                 solution = satResult
                 expansion = expansionPossible
-                if (domainAndPlan._1.isClassical) currentK *= 2
+                if (domainAndPlan._1.isClassical) currentK += 1
                 else currentK += 1
                 remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
                 usedTime = remainingTime / Math.max(1, 10 / (currentK + 1))
