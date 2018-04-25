@@ -671,6 +671,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         val initialState = domainAndPlan._2.groundedInitialState collect {
           case GroundLiteral(task, true, args) =>
             (wrapper.unwrap(task), args map wrapper.unwrap toArray)
+        }
+
         heuristicConfig match {
           case ADD | ADDReusing =>
             val reusing = if (heuristicConfig == ADDReusing) true else false
@@ -1377,7 +1379,6 @@ object PlanningConfiguration {
   private val defaultProgressionConfiguration = ProgressionSearch(BFSType, None, PriorityQueueSearch.abstractTaskSelection.random)
   private val defaultSATConfiguration         = SATSearch(MINISAT, SingleSATRun())
   private val defaultVerifyConfiguration      = SATPlanVerification(MINISAT, "")
-  private val defaultVerifyConfiguration = SATPlanVerification(MINISAT, "")
 }
 
 /**
@@ -1570,7 +1571,7 @@ case class PreprocessingConfiguration(
          "-dontStopAfterGrounding" -> (NoParameter, { p: Option[String] => this.copy(stopDirectlyAfterGrounding = false).asInstanceOf[this.type] }),
 
          "-compileUselessAbstracts" -> (NoParameter, { p: Option[String] => this.copy(compileUselessAbstractTasks = true).asInstanceOf[this.type] }),
-         "-dontCompileUselessAbstracts" -> (NoParameter, { p: Option[String] => this.copy(compileUselessAbstractTasks = false).asInstanceOf[this.type] })
+         "-dontCompileUselessAbstracts" -> (NoParameter, { p: Option[String] => this.copy(compileUselessAbstractTasks = false).asInstanceOf[this.type] }),
 
          "-groundPlanning" -> (NoParameter, { p: Option[String] => this.copy(groundDomain = true).asInstanceOf[this.type] }),
          "-liftedPlanning" -> (NoParameter, { p: Option[String] => this.copy(groundDomain = false).asInstanceOf[this.type] })
