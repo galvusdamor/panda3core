@@ -94,10 +94,10 @@ public final class OverlayOfClassicalAndHTNGraph {
 
         HashMap<Integer,NodeValue> newIDMapping = new HashMap<>();
 
-        for(int nodeID:nodeAssignments.keySet()){
+        /*for(int nodeID:nodeAssignments.keySet()){
             newIDMapping.put(nodeID, classicalMSGraph.idMapping.get(nodeID));
 
-        }
+        }*/
 
         HashMap<Integer, Integer> shrinkingTableInfo = new HashMap<>();
 
@@ -107,11 +107,11 @@ public final class OverlayOfClassicalAndHTNGraph {
             if (nodeAssignments.keySet().contains(nodeID)){
 
                 newIDMapping.put(nodeID, classicalMSGraph.idMapping.get(nodeID));
-                shrinkingTableInfo.put(nodeID, -1);
+                shrinkingTableInfo.put(nodeID, nodeID);
 
             }else {
 
-                shrinkingTableInfo.put(nodeID, nodeID);
+                shrinkingTableInfo.put(nodeID, -1);
 
             }
         }
