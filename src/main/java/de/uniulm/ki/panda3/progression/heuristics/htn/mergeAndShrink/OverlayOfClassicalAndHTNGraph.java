@@ -101,13 +101,15 @@ public final class OverlayOfClassicalAndHTNGraph {
 
         HashMap<Integer, Integer> shrinkingTableInfo = new HashMap<>();
 
+        int index=0;
         for (int nodeID : classicalMSGraph.idMapping.keySet()){
 
 
             if (nodeAssignments.keySet().contains(nodeID)){
 
-                newIDMapping.put(nodeID, classicalMSGraph.idMapping.get(nodeID));
-                shrinkingTableInfo.put(nodeID, nodeID);
+                newIDMapping.put(index, classicalMSGraph.idMapping.get(nodeID));
+                shrinkingTableInfo.put(nodeID, index);
+                index++;
 
             }else {
 
@@ -116,19 +118,30 @@ public final class OverlayOfClassicalAndHTNGraph {
             }
         }
 
+
+        ArrayList<Tuple3<Integer, Integer, Integer>> newEdgesArraylist = new ArrayList<>();
+        newEdgesArraylist.addAll(newEdges);
+
+        Tuple3<Integer, Integer, Integer>[] newEdges2 = Utils.convertEdgeArrayListToTuple3(newEdgesArraylist);
+
+
+        Tuple3<Integer, Integer, Integer>[] newEdgeTuple = Shrinking.shrinkEdges(newEdges2, shrinkingTableInfo);
+
+        int newStartID = shrinkingTableInfo.get(classicalMSGraph.startNodeID);
+
         int oldIndex = classicalMSGraph.cascadingTables.cascadingTables.size() -1;
 
         classicalMSGraph.cascadingTables.addNewShrinkTable(oldIndex,shrinkingTableInfo);
 
         Integer[] nodeIDs = Utils.convertNodeIDArrayListToArray(newIDMapping);
 
-        ArrayList<Tuple3<Integer, Integer, Integer>> edgeArrayList = new ArrayList<>();
-        edgeArrayList.addAll(newEdges);
+        //ArrayList<Tuple3<Integer, Integer, Integer>> edgeArrayList = new ArrayList<>();
+        //edgeArrayList.addAll(newEdges);
 
-        Tuple3<Integer, Integer, Integer>[] edgeTuple = Utils.convertEdgeArrayListToTuple3(edgeArrayList);
+        //Tuple3<Integer, Integer, Integer>[] edgeTuple = Utils.convertEdgeArrayListToTuple3(edgeArrayList);
 
 
-        ClassicalMSGraph combinedGraph = new ClassicalMSGraph(nodeIDs, edgeTuple, newIDMapping, classicalMSGraph.startNodeID,
+        ClassicalMSGraph combinedGraph = new ClassicalMSGraph(nodeIDs, newEdgeTuple, newIDMapping, newStartID,
                 classicalMSGraph.usedFactIndexes, classicalMSGraph.usedVariables, classicalMSGraph.notYetUsedVariables, classicalMSGraph.goalVariables, classicalMSGraph.allVariables, classicalMSGraph.cascadingTables);
 
 

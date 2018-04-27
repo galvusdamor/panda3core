@@ -53,7 +53,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
        distancesFromGoal =  ShrinkingStrategy.getDistancesFromGoal(flatProblem, combinedGraph);
 
 
-        int[] testState = new  int[4];
+        int[] testState = new  int[3];
         testState[0] = 1;
         testState[1] = 3;
         testState[2] = 7;
@@ -195,7 +195,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
 
 
-        Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Rover");
+        //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Rover");
 
         int goalTaskIndex = ProgressionNetwork.taskToIndex.get(goalTask);
         HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
