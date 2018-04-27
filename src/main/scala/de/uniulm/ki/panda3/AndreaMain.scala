@@ -68,9 +68,9 @@ object MainAndrea {
                                                        groundedReachability = None,
                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                        iterateReachabilityAnalysis = true, groundDomain = true, stopDirectlyAfterGrounding = false),
-                            PredefinedConfigurations.sasPlusConfig(AStarActionsType(2), SasHeuristics.hMS),
+                            //PredefinedConfigurations.sasPlusConfig(AStarActionsType(2), SasHeuristics.hMS),
                             //PredefinedConfigurations.pandaProConfig(AStarActionsType(2), SasHeuristics.hMS),
-                            //ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink), PriorityQueueSearch.abstractTaskSelection.random),
+                            ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink), PriorityQueueSearch.abstractTaskSelection.random),
                             postprocessing,
                             Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
                             //Map(FastDownward -> "../../fd"))

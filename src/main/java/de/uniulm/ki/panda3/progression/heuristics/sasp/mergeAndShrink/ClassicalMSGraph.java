@@ -27,7 +27,8 @@ public class ClassicalMSGraph {
 
 
 
-    public ClassicalMSGraph(Integer[] nodeIDS, Tuple3<Integer, Integer, Integer>[] edges, HashMap<Integer, NodeValue> IDMapping, int startNodeID, HashSet<Integer> usedFactIndexes, HashSet<Integer> usedVariables, HashSet<Integer> notYetUsedVariables, HashSet<Integer> goalVariables,  HashSet<Integer> allVariables, CascadingTables cascadingTables){
+    public ClassicalMSGraph(Integer[] nodeIDS, Tuple3<Integer, Integer, Integer>[] edges, HashMap<Integer, NodeValue> IDMapping, int startNodeID,
+                            HashSet<Integer> usedFactIndexes, HashSet<Integer> usedVariables, HashSet<Integer> notYetUsedVariables, HashSet<Integer> goalVariables,  HashSet<Integer> allVariables, CascadingTables cascadingTables){
 
 
 

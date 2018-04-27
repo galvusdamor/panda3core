@@ -935,6 +935,26 @@ public class HtnMerging {
     }
 
 
+    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToOutgoingEdgesMap(HtnMsGraph graph){
+
+        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
+
+        for (int i: graph.idMapping.keySet()){
+            ArrayList<Tuple3<Integer, Integer, Integer>> edges = new ArrayList<>();
+            outgoingEdgesMap.put(i,edges);
+        }
+
+        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges){
+
+            outgoingEdgesMap.get(edge._1()).add(edge);
+
+        }
+
+        return outgoingEdgesMap;
+
+    }
+
+
 
 }
 

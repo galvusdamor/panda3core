@@ -1,5 +1,6 @@
-package de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink;
+package de.uniulm.ki.panda3.progression.heuristics.htn.mergeAndShrink;
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.*;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ClassicalNodeValue;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.MergeNode;
@@ -9,245 +10,21 @@ import scala.Tuple3;
 
 import java.util.*;
 
-/**
- * Created by biederma on 11.01.2018.
- */
-public abstract class MergingStrategy {
+public final class HTNandClassicalMerging {
+
+    public static ClassicalMSGraph mergeHtnWithClassicalMSGraph(HtnMsGraph htnMsGraph, ClassicalMSGraph classicalMSGraph){
 
 
 
-    abstract ClassicalMSGraph merge(SasPlusProblem p, ClassicalMSGraph graph, int shrinkingBound, long seed, ShrinkingStrategy shrinkingStrategy);
 
 
 
-    public static HashSet<Integer> getNotYetUsedVariables(SasPlusProblem p, ClassicalMSGraph graph){
-
-        HashSet<Integer> notYetUsedVariables;
-
-        if (!(graph==null)) {
-
-            //System.out.println("All Variables: " + graph.allVariables);
-            notYetUsedVariables = new HashSet<>(graph.allVariables);
-
-            Set<Integer> usedVariables = graph.usedVariables;
-
-            //System.out.println("Used Variables: " + usedVariables);
-
-            notYetUsedVariables.removeAll(graph.usedVariables);
-
-            //System.out.println("Not yet Used Variables: " + notYetUsedVariables);
 
 
-            /*for (int i = 0; i < p.numOfVars; i++) {
-                if (!usedVariables.contains(i)) notYetUsedVariables.add(i);
-            }*/
-
-        }else{
-
-            notYetUsedVariables = new HashSet<>();
-
-            for (int i = 0; i < p.numOfVars; i++) {
-                notYetUsedVariables.add(i);
-            }
-
-        }
-
-        return notYetUsedVariables;
-
+        return null;
     }
 
 
-    public ClassicalMSGraph mergeWithVar(SasPlusProblem p, ClassicalMSGraph graph1, int varIndex, int shrinkingBound, ShrinkingStrategy shrinkingStrategy){
-
-        if (varIndex >= p.numOfVars){
-
-            System.out.println("Variable " + varIndex + " does not exist.");
-            return graph1;
-        }
-
-
-        ClassicalMSGraph graph2 = SingleGraphMethods.getSingleGraphForVarIndex(p, varIndex);
-
-
-        //Utils.printMultiGraph(p, graph2, "elementary.pdf");
-        //Utils.printMultiGraph(p, graph1, "current.pdf");
-
-        int sizeOfGraph1 = graph1.idMapping.keySet().size();
-        int sizeOfGraph2 = graph2.idMapping.keySet().size();
-
-        //System.out.println("Shrinking Bound: " + shrinkingBound);
-
-        int sizeOfNewGraph = sizeOfGraph1*sizeOfGraph2;
-
-        while (sizeOfNewGraph>shrinkingBound){
-
-
-
-
-            //System.out.println("Size of new Graph: " + sizeOfNewGraph);
-
-            //System.out.println("Size of Graph 1: " + sizeOfGraph1);
-            //System.out.println("Size of Graph 2: " + sizeOfGraph2);
-
-
-
-
-            if (sizeOfGraph2>sizeOfGraph1){
-                graph2 = shrinkingStrategy.shrink(p, graph2);
-            }else {
-                graph1 = shrinkingStrategy.shrink(p, graph1);
-            }
-
-            sizeOfGraph1 = graph1.idMapping.keySet().size();
-            sizeOfGraph2 = graph2.idMapping.keySet().size();
-
-            sizeOfNewGraph = sizeOfGraph1*sizeOfGraph2;
-
-
-        }
-        //Utils.printMultiGraph(p, graph2, "elementary-shrinked.pdf");
-        //Utils.printMultiGraph(p, graph1, "current-shrinked.pdf");
-
-
-        ClassicalMSGraph newGraph = mergingStep(p, graph1, graph2);
-
-        newGraph = dismissNotReachableNodes(newGraph);
-
-        return newGraph;
-
-
-    }
-
-    public ClassicalMSGraph dismissNotReachableNodes(ClassicalMSGraph graph){
-
-        HashMap<Integer, Integer> cascadingTable = new HashMap<>();
-
-        int startNodeID = graph.startNodeID;
-
-        ArrayList<Integer> allNodeIDs = new ArrayList<>(graph.idMapping.keySet());
-
-        ArrayList<Integer> nodesToKeep = new ArrayList<>();
-
-        ArrayList<Integer> nextNodes = new ArrayList<>();
-
-        Tuple3<Integer,Integer,Integer>[] edges = graph.labelledEdges;
-
-        nextNodes.add(startNodeID);
-
-        nodesToKeep.add(startNodeID);
-
-        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = getIDToOutgoingEdgesMap(graph);
-
-        nodesToKeep = breadthSearch(nextNodes, nodesToKeep, outgoingEdgesMap);
-
-        ArrayList<Integer> nodesToDismiss = new ArrayList<>(allNodeIDs);
-        nodesToDismiss.removeAll(nodesToKeep);
-
-
-        HashMap<Integer, NodeValue> dismissedIDMapping = new HashMap<>();
-
-        for (int i=0; i<nodesToKeep.size(); i++){
-            int id = nodesToKeep.get(i);
-            cascadingTable.put(id, i);
-            dismissedIDMapping.put(i,graph.idMapping.get(id));
-        }
-        for (int i: nodesToDismiss){
-            cascadingTable.put(i, -1);
-        }
-
-        Tuple3<Integer,Integer,Integer>[] dismissedEdges = dismissEdgesOfNotReachableNodes(edges, nodesToDismiss, cascadingTable);
-
-
-        HashSet<Integer> usedFactIndexes = new HashSet<>(graph.usedFactIndexes);
-
-        HashSet<Integer> usedVariables = new HashSet<>(graph.usedVariables);
-
-        HashSet<Integer> notYetUsedVariables = new HashSet<>(graph.notYetUsedVariables);
-
-
-        CascadingTables cascadingTables = graph.cascadingTables;
-
-        int indexOfTableBeforeShrinking = cascadingTables.cascadingTables.size()-1;
-
-        cascadingTables.addNewShrinkTable(indexOfTableBeforeShrinking,cascadingTable);
-
-
-
-
-        ClassicalMSGraph newGraph =
-                new ClassicalMSGraph(Utils.convertNodeIDArrayListToArray(dismissedIDMapping), dismissedEdges, dismissedIDMapping, cascadingTable.get(graph.startNodeID), usedFactIndexes, usedVariables, notYetUsedVariables, graph.goalVariables, graph.allVariables, cascadingTables);
-
-
-
-        return newGraph;
-    }
-
-    public Tuple3<Integer,Integer,Integer>[] dismissEdgesOfNotReachableNodes(Tuple3<Integer,Integer,Integer>[] oldEdges, ArrayList<Integer> nodesToDismiss, HashMap<Integer, Integer> cascadingTable){
-
-        ArrayList<Tuple3<Integer,Integer,Integer>> newEdgeArrayList = new ArrayList<>();
-
-        for(Tuple3<Integer,Integer,Integer> edge : oldEdges){
-            if ((!nodesToDismiss.contains(edge._1())) && (!nodesToDismiss.contains(edge._3()))){
-                int newStartEdge = cascadingTable.get(edge._1());
-                int newEndEdge = cascadingTable.get(edge._3());
-                Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(newStartEdge, edge._2(), newEndEdge);
-                newEdgeArrayList.add(newEdge);
-            }
-        }
-
-
-        return Utils.convertEdgeArrayListToTuple3(newEdgeArrayList);
-
-    }
-
-    public ArrayList<Integer> breadthSearch(ArrayList<Integer> nextNodes, ArrayList<Integer> nodesToKeep,
-                                            HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap){
-
-        ArrayList<Integer> newNextNodes = new ArrayList<>(nextNodes);
-
-        ArrayList<Integer> reachedNodes = new ArrayList<>(nodesToKeep);
-
-        if (nextNodes.size()>0) {
-
-            int nextNode = nextNodes.get(0);
-
-
-            ArrayList<Tuple3<Integer, Integer, Integer>> outgoingEdges = outgoingEdgesMap.get(nextNode);
-            newNextNodes.remove(0);
-            for (Tuple3<Integer, Integer, Integer> outgoingEdge : outgoingEdges){
-                int endID = outgoingEdge._3();
-                if (!reachedNodes.contains(endID)){
-                    reachedNodes.add(endID);
-                    newNextNodes.add(endID);
-                }
-            }
-
-            return breadthSearch(newNextNodes, reachedNodes, outgoingEdgesMap);
-
-        }
-
-        return reachedNodes;
-
-    }
-
-    public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToOutgoingEdgesMap(ClassicalMSGraph graph){
-
-        HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
-
-        for (int i: graph.idMapping.keySet()){
-            ArrayList<Tuple3<Integer, Integer, Integer>> edges = new ArrayList<>();
-            outgoingEdgesMap.put(i,edges);
-        }
-
-        for (Tuple3<Integer, Integer, Integer> edge : graph.labelledEdges){
-
-            outgoingEdgesMap.get(edge._1()).add(edge);
-
-        }
-
-        return outgoingEdgesMap;
-
-    }
 
     public ClassicalMSGraph mergingStep(SasPlusProblem p, ClassicalMSGraph graph1, ClassicalMSGraph graph2) {
 
@@ -446,7 +223,6 @@ public abstract class MergingStrategy {
     }
 
 
-
     public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getOpIDToEdgesMap(SasPlusProblem p, ClassicalMSGraph graph){
 
         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> opIDToOutgoingEdgesMap = new HashMap<>();
@@ -466,12 +242,6 @@ public abstract class MergingStrategy {
 
     }
 
+
+
 }
-
-
-
-
-
-
-
-
