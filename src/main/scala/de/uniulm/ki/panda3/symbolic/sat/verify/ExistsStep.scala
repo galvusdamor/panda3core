@@ -13,10 +13,8 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int) extends LinearPrimitivePlanEncoding {
+case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, overrideK : Option[Int] = None) extends LinearPrimitivePlanEncoding {
   override lazy val offsetToK = 0
-
-  override lazy val overrideK = None
 
   override lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
@@ -69,7 +67,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
         (pMap(ap) * (if (ab) 1 else -1), pMap(bp) * (if (bb) 1 else -1))
       } distinct
 
-    println("candicates build")
+    println("candidates build")
 
     def filter(invar: Array[(Int, Int)], tasks: Seq[IntTask]): Array[(Int, Int)] = {
       // marked for deleteion
@@ -273,7 +271,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
   val disablingGraphSCCOrdering: Seq[Seq[Task]] = disablingGraph.condensation.topologicalOrdering.get.reverse map { _.toSeq }
   val disablingGraphTotalOrder : Array[Task]    = disablingGraphSCCOrdering.flatten.toArray
 
-  //Dot2PdfCompiler.writeDotToFile(disablingGraph, "disablingGraph.pdf")
+  Dot2PdfCompiler.writeDotToFile(disablingGraph, "disablingGraph.pdf")
   //println("Disabling Graph Order:\n" + disablingGraphTotalOrder.map(_.name).mkString("\n"))
 
   //println("Non trivial SCCs")
@@ -336,4 +334,5 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     goalStateOfLength(taskSequenceLength)
 
   println("Exists-Step, plan length: " + taskSequenceLength)
+  println("Exists-Step, K = " + K)
 }

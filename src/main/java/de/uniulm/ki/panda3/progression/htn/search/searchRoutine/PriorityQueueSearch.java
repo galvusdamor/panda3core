@@ -61,7 +61,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
     }
 
     public PriorityQueueSearch(boolean aStar, boolean output, boolean findShortest,
-                               abstractTaskSelection taskSelectionStrategy) {
+                               PriorityQueueSearch.abstractTaskSelection taskSelectionStrategy) {
         this.aStar = aStar;
         this.output = output;
         this.findShortest = findShortest;

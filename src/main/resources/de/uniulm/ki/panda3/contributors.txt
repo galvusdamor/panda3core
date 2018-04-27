@@ -1,0 +1,13 @@
+Many have contributed to this work, some via discussions concerning design choices, others via implementing certain parts of the planner(s). Here, we give a list of some of the contributors of this work, ordered by the time their contributions were incorporated.
+
+Pascal Bercher, http://www.uni-ulm.de/in/ki/bercher
+Our colleague Pascal contributed in terms of various discussions concerning design choices of the planner and by providing his knowledge and experience in HTN planning, POCL planning, and hybrid planning in general, and with PANDA2 (a predecessor of PANDA3) in particular. PANDA2 was mainly developed by our former colleague Bastian Seegebarth and by Pascal. Furthermore, several techniques and heuristics were developed (in theory and practically in PANDA2) by Pascal and reimplemented in PANDA3 under his supervision. He was also responsible for the (usability of the) input commands, including the -help decriptions for the usage of our planner(s).
+
+Thomas Geier, http://www.uni-ulm.de/in/ki/geier
+We thank our former colleague Thomas for supporting us with his Scala knowledge during the early stages of developing the planning system. Also, several program configuration files are by him.
+
+Kadir Dede
+Our former student assistant Kadir implemented the parser for an earlier planning description standard in XML, in which HTN, POCL, and hybrid planning problems can be expressed.
+
+Kristof Mickeleit
+Our student assistant Kristof implemented the efficient version of the planning graph and a converter that adds type definitions into PDDL files, in which no types are in the model (which is, according the newer PDDL standards, not valid PDDL anymore). Such PDDL models are used in some of the very early IPCs, however.

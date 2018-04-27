@@ -36,6 +36,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   assert(planStepsAndRemovedPlanSteps forall { ps => ps.arguments.size == ps.schema.parameters.size })
   //assert(planSteps forall { ps => ps.arguments forall { v => parameterVariableConstraints.variables.contains(v) } })
   planStepsAndRemovedPlanSteps foreach {
+
     ps =>
       ps.arguments foreach {
         v =>
@@ -48,6 +49,9 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     assert(planStepsAndRemovedPlanSteps contains parent, "PS " + parent.schema.name + " id: " + parent.id + " prim: " + parent.schema.isPrimitive + " is not contained.")
     assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod), "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)
   }
+
+  planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod),
+                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)}
 
   planStepsWithoutInitGoal foreach {
     ps =>

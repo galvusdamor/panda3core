@@ -96,7 +96,7 @@ public class gphRcFFMulticount extends GroundedProgressionHeuristic {
     static heuristicExtraction heuEx = heuristicExtraction.multicount;
 
     public gphRcFFMulticount(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Set<Task> allActions, boolean useTDReachability,
-                             producerSelection selectionStrategy, heuristicExtraction heuEx) {
+                             gphRcFFMulticount.producerSelection selectionStrategy, gphRcFFMulticount.heuristicExtraction heuEx) {
         gphRcFFMulticount.prod = selectionStrategy;
         gphRcFFMulticount.heuEx = heuEx;
         gphRcFFMulticount.topDownReachability = useTDReachability;

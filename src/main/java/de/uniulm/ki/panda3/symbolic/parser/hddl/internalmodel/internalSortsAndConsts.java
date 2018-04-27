@@ -14,16 +14,19 @@ import java.util.List;
  */
 public class internalSortsAndConsts {
 
-    HashMap<String, String> parentof = new HashMap<>();
+    HashMap<String, List<String>> parentof = new HashMap<>();
     HashMap<String, VectorBuilder<Constant>> constsOfType = new HashMap<>();
 
     public final int cOK = 0;
     public final int cMinorError = -1;
 
     public void addParent(String child, String parent) {
-        parentof.put(child, parent);
-        if (parentof.get(parent) == null)
-            parentof.put(parent, null);
+        if (parentof.get(child) == null) parentof.put(child,new LinkedList<>());
+        if (parentof.get(parent) == null) parentof.put(parent,new LinkedList<>());
+
+        List<String> oldParentList = parentof.get(child);
+        oldParentList.add(parent);
+        parentof.put(child, oldParentList);
     }
 
     public void addConst(String type, String constName) {
@@ -50,14 +53,12 @@ public class internalSortsAndConsts {
             for (String type : alltypes) {
                 boolean hasNewChild = false;
                 for (String other : parentof.keySet()) {
-                    String parentOfOther = parentof.get(other);
-                    if (parentOfOther == null) {// root of type hierarchy
-                        continue;
-                    }
-                    if (parentOfOther.equals(type) && !res.contains(other)) {
-                        hasNewChild = true;
-                        break;
-                    }
+                    List<String> parentsOfOther = parentof.get(other);
+                    for (String parentOfOther : parentsOfOther)
+                        if (parentOfOther.equals(type) && !res.contains(other)) {
+                            hasNewChild = true;
+                            break;
+                        }
                 }
                 if (!hasNewChild) {
                     res.add(type);
@@ -95,8 +96,8 @@ public class internalSortsAndConsts {
     public List<String> getSubSorts(String type) {
         List<String> res = new LinkedList<>();
         for (String subtype : parentof.keySet()) {
-            String parent = parentof.get(subtype);
-            if ((parent != null) && (parent.equals(type))) {
+            List<String> parents = parentof.get(subtype);
+            if ((parents != null) && (parents.contains(type))) {
                 res.add(subtype);
             }
         }

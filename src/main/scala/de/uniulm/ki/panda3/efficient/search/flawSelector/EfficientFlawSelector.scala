@@ -140,6 +140,65 @@ object UMCPFlawSelection extends EfficientFlawSelector {
   }
 }
 
+object OCFlawSelector extends EfficientFlawSubsetSelector {
+
+  override def reduceSelection(plan: EfficientPlan, activeFlaws: Array[Boolean], flaws: Array[EfficientFlaw], numberOfModifications: Array[Int]): Int = {
+    var iterator = 0
+    val numOfFlaws = flaws.length
+    var removedFlaws = 0
+    while (iterator < numOfFlaws) {
+      if (activeFlaws(iterator)) {
+        val flaw = flaws(iterator)
+        if (!flaw.isInstanceOf[EfficientOpenPrecondition]) {
+          activeFlaws(iterator) = false
+          removedFlaws += 1
+        }
+      }
+      iterator += 1
+    }
+    removedFlaws
+  }
+}
+
+object AbstractTaskFlawSelector extends EfficientFlawSubsetSelector {
+
+  override def reduceSelection(plan: EfficientPlan, activeFlaws: Array[Boolean], flaws: Array[EfficientFlaw], numberOfModifications: Array[Int]): Int = {
+    var iterator = 0
+    var nonActive = 0
+    val numOfFlaws = flaws.length
+    while (iterator < numOfFlaws) {
+      if (activeFlaws(iterator)) {
+        val flaw = flaws(iterator)
+        if (!flaw.isInstanceOf[EfficientAbstractPlanStep]) {
+          activeFlaws(iterator) = false
+          nonActive += 1
+        }
+      }
+      iterator += 1
+    }
+    nonActive
+  }
+}
+
+object OneModFlawSelector extends EfficientFlawSubsetSelector {
+
+  override def reduceSelection(plan: EfficientPlan, activeFlaws: Array[Boolean], flaws: Array[EfficientFlaw], numberOfModifications: Array[Int]): Int = {
+    var iterator = 0
+    var nonActive = 0
+    val numOfFlaws = flaws.length
+    while (iterator < numOfFlaws) {
+      if(activeFlaws(iterator)) {
+        val flaw = flaws(iterator)
+        if (flaw.resolver.length != 1) {
+          activeFlaws(iterator) = false
+          nonActive += 1
+        }
+      }
+      iterator += 1
+    }
+    nonActive
+  }
+}
 
 case class AbstractFirstWithDeferred(deferred: Set[Int]) extends EfficientFlawSelector {
   override def selectFlaw(plan: EfficientPlan, flaws: Array[EfficientFlaw], numberOfModifications: Array[Int]): Int = {
@@ -212,10 +271,10 @@ object CausalThreatSelector extends EfficientFlawSubsetSelector {
 object FrontFlawFirst extends EfficientFlawSubsetSelector {
 
   private def getContainedTaskIndices(flaw: EfficientFlaw): Int = flaw match {
-    case EfficientAbstractPlanStep(plan, ps)             => ps
-    case EfficientCausalThreat(plan, cl, threater, _, _) => -1
-    case EfficientOpenPrecondition(plan, ps, _)          => ps
-    case EfficientUnboundVariable(_, _)                  => -1
+    case EfficientAbstractPlanStep(plan, ps) => ps
+    case EfficientCausalThreat(plan, cl, threater, _, _) => Math.min(Math.min(cl.producer, cl.consumer), threater)
+    case EfficientOpenPrecondition(plan, ps, _) => ps
+    case EfficientUnboundVariable(_, _) => -1
   }
 
   /**
@@ -260,10 +319,10 @@ object FrontFlawFirst extends EfficientFlawSubsetSelector {
 object NewestFlawFirst extends EfficientFlawSubsetSelector {
 
   private def getContainedTaskIndices(flaw: EfficientFlaw): Int = flaw match {
-    case EfficientAbstractPlanStep(plan, ps)             => plan.depthPerPlanStep(ps)
+    case EfficientAbstractPlanStep(plan, ps) => plan.depthPerPlanStep(ps)
     case EfficientCausalThreat(plan, cl, threater, _, _) => Math.max(plan.depthPerCausalLink(plan.causalLinks.indexOf(cl)), plan.depthPerPlanStep(threater))
-    case EfficientOpenPrecondition(plan, ps, _)          => plan.depthPerPlanStep(ps)
-    case EfficientUnboundVariable(_, _)                  => Int.MaxValue
+    case EfficientOpenPrecondition(plan, ps, _) => plan.depthPerPlanStep(ps)
+    case EfficientUnboundVariable(_, _) => Int.MaxValue
   }
 
   /**

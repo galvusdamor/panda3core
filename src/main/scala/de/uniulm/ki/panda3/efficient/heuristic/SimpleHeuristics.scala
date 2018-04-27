@@ -58,6 +58,16 @@ object EfficientUMCPHeuristic extends EfficientHeuristic[Unit] {
   def computeInitialPayLoad(plan: EfficientPlan): Unit = ()
 }
 
+object EfficientUMCPBFHeuristic extends EfficientHeuristic[Unit] {
+  override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: Option[EfficientModification], depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule):
+  (Double, Unit) = {
+    val abstractPS = plan.abstractPlanSteps.length
+    (if (abstractPS == 0) -depth else depth, ())
+  }
+
+  def computeInitialPayLoad(plan: EfficientPlan): Unit = ()
+}
+
 
 case class EfficientRandomHeuristic(random: Random) extends EfficientHeuristic[Unit] {
   override def computeHeuristic(plan: EfficientPlan, unit: Unit, mod: Option[EfficientModification], depth: Int, oldHeuristic: Double, informationCapsule: InformationCapsule):

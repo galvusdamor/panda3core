@@ -1,0 +1,1672 @@
+% short documentation:
+% behind $ list the possible input values; be careful to mention
+% only one representative per set of equivalent keys. E.g., if a* and astar are
+% equivalent, only list one of them behind $ -- the synonyms are only defined
+% for the actual definition of the respective key.
+%
+% Template for a helbdb entry:
+%
+%   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   **STRING** (this is the name of the entry as it is listed "somewhere", i.e., behind "$" of some other entry)
+%   ! **STRING** (type of parameters of the entry, if any. The entire line(!) is optional, but should be given in case there are some, i.e., [INT] or [KEY])
+%   **STRING** (this is a short info about the entry, shown in the right of the entry)
+%
+%   **STRING** (long info about the entry, maybe several paragraphs)
+%
+%   **STRING** (this line should either be: "Available options for <<entry-name-from-first-line>>:" or something like "No options available." (but don't let it empty)
+%   $ **STRING-1** **STRING-2** ... **STRING-n** (list of all parameters for this entry, possibly empty)
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+main
+! [KEY]
+---- no text necessary, because main is never listed. It's just the entry point of the program.
+
+To run PANDA, you have to specify at least a domain and a problem file. For most parameters, their order does not matter. Parameters can be freely interleaved with the specification of a domain, problem, and output file.
+\n
+PANDA's general call syntax is as follows:
+    java -jar panda.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
+\n
+If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
+
+Available options for PANDA:
+$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flawSelection -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegPreconditions -liftedPlanning -systemConfig -prune
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-help
+! [OPTION or KEY]
+Lists the available keys for a given option and explains what a given option or key does.
+
+Run "-help [OPTION or KEY]" to show help for the respective option or key.
+
+Available options for -help:
+$
+% note the special case here: ordinarily, one has to specifiy all available options. Here, however,
+% this is not required because help takes, by definition, *all* existing parameter names.
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-parser
+! [KEY]
+Select the parser for the input files.
+
+We support various different input formats for our planner. Default value is "auto", which should select the correct parser depending on the input file.
+
+Available parsers:
+$ xml old-pddl pddl hpddl hddl auto
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+xml
+Parser for our PANDA XML standard.
+
+We do not posses a description of our XML-based input specification. We also do not provide support, since we will abandon that format in favor of hddl, a new input language HDDL that we are currently developing.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "xml" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+hddl
+Parser for our HDDL standard.
+
+HDDL is a novel input language for hierarchical planning problems that we are currently developing. It extends PDDL 2.1, language level 1 (at least most of its features), by language features for HTN and hybrid planning.
+\n
+For questions regarding this standard, please contact Daniel Höller.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "hddl" IS A KEY, NOT AN OPTION.
+$
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+hpddl
+Parser for the HPDDL standard.
+
+HPDDL stands for hierarchical PDDL. It is a description for HTN planning problems, developed by Dr. Ron Alford. It is used, for instance, by the planner (that compiles HTN problems into a sequence of PDDL problems) that is described in the following paper:
+\n
+@InProceedings{Alford16BoundToPlan,
+  Title                    = {Bound to Plan: Exploiting Classical Heuristics via Automatic Translations of Tail-Recursive HTN Problems},
+  Author                   = {Ron Alford and Gregor Behnke and Daniel H{\"o}ller and Pascal Bercher and Susanne Biundo and David Aha},
+  Booktitle                = {Proceedings of the 26th International Conference on Automated Planning and Scheduling ({ICAPS} 2016)},
+  Year                     = {2016},
+  Pages                    = {20--28},
+  Publisher                = {{AAAI} Press}
+}
+\n
+Note, however, that this description language is not part of the paper. The planner that is uses is, however, openly available on http://github.com/ronwalf/HTN-Translation
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "hpddl" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pddl
+Parser for the PDDL standard.
+
+This is the parser for the well-known PDDL standard.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "pddl" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+old-pddl
+Parser for PDDL without types.
+
+The parser for old-pddl is a PDDL parser that can read the older PDDL standard in which there are no types.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "old-pddl" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+auto
+Automatic parser selection.
+
+This option chooses the parser automatically depending on the input file. If this works correctly, no other parser needs to be selected.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "auto" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noGeneralInfo
+Suppress additional information during planning.
+
+By default, the planners will show -- during planning -- what they are currently doing, such as constructing the planning graph, etc.
+\n
+When using this command, the planners will suppress this information during planning.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noGeneralInfo" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noSearchInfo
+Suppress additional information during planning.
+
+By default, the planners will show -- during planning -- their current search process. This information includes, for example, the number of created nodes per second, the number of expanded search nodes, and the number of nodes in the queue.
+\n
+When using this command, the planners will suppress this information during planning.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noSearchInfo" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-continueOnSolution
+Don't stop planning after a solution has been found.
+
+By default, the standard PANDA3 planner will stop after some solution has been generated. Using this option will cause the planner to continue search and finding additional solutions until the time or space limit is exceeded.
+\n
+This feature has never been tested sufficiently and is very likely buggy. That is, please do not use it for scientific comparisons.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-continueOnSolution" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noDomainInfo
+Suppressed information about the domain.
+
+By default, the planner gives statistical information about the domain, for example the number of tasks, primitive tasks, abstract tasks, decomposition methods, predicates, sorts, and constants. Using this option supresses this information.
+\n
+Please note that this information is shown several times: Many of our heuristics base upon very basic language features, that is: a ground model in which primitive tasks have only positive preconditions. Also our decomposition methods do not have preconditions (as opposed to the SHOP2 model) or effects (yes, some hierarchical planning formalisms even allow effects of methods). We compile all these higher-level language features away and after each compilation step the domain information is printed (if not supressed).
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noDomainInfo" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-planningProcedure
+! [KEY]
+Choose the planning procedure.
+
+PANDA is more than just "one planning system". Apart from additional capabilities like repairing and explaining plans (not yet provided online), or validating plans, we also have two differently working planners (only one of them is provided online at the moment). While these planners share the same preprocessing, e.g., grounding, they are completely different in the way they solve problems.
+\n
+At the moment, we only support the "traditional" PANDA, but in its newest version, PANDA3, which performs search in the space of partial plans. We refer to its search procedure as hybrid planning, because it fuses hierarchical planning with partial order causal link (POCL) planning. The algorithm is a standard flaw-based POCL algorithm that can additionally cope with abstract tasks. It is explained in the following paper:
+\n
+@InProceedings{Bercher14TDGHeuristics,
+  Title                    = {Hybrid Planning Heuristics Based on Task Decomposition Graphs},
+  Author                   = {Pascal Bercher and Shawn Keen and Susanne Biundo},
+  Booktitle                = {Proceedings of the 7th Annual Symposium on Combinatorial Search ({SoCS} 2014)},
+  Year                     = {2014},
+  Pages                    = {35--43},
+  Publisher                = {{AAAI} Press},
+
+  Abstract                 = {Hybrid Planning combines Hierarchical Task Network (HTN) planning with concepts known from Partial-Order Causal-Link (POCL) planning. We introduce novel heuristics for Hybrid Planning that estimate the number of necessary modifications to turn a partial plan into a solution. These estimates are based on the task decomposition graph that contains all decompositions of the abstract tasks in the planning domain. Our empirical evaluation shows that the proposed heuristics can significantly improve planning performance.},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+Please note that this plan space-based planning algorithm requires a search algorithm (like BFS or A*) and a flaw selection function.
+\n
+We further want to note that this planner is able of solving a broad variety of problem classes, including HTN problems, TIHTN problems (HTN problems with task insertion), hybrid problems with or without task insertion (these problems extend HTN/TIHTN problems via preconditions and effects of abstract tasks and by causal links in the domain model's partial plans), classical problems, and POCL problems (which are like classical problems, but with an initial primitive partial plan). Please note that the property whether task insertion is allowed cannot be passed on to the planner as an option, but it needs to be specified in the domain or problem file, since this is not an algorithmic choice, but a property of the problem (class) that is solved.
+
+Available planning procedures:
+$ PANDA3
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+PANDA3
+The "traditional" plan space-based planner.
+
+PANDA3 performs search in the space of partial plans. We refer to its search procedure as hybrid planning, because it fuses hierarchical planning with partial order causal link (POCL) planning. The algorithm is a standard flaw-based POCL algorithm that can additionally cope with abstract tasks. It is explained in the following paper:
+\n
+@InProceedings{Bercher14TDGHeuristics,
+  Title                    = {Hybrid Planning Heuristics Based on Task Decomposition Graphs},
+  Author                   = {Pascal Bercher and Shawn Keen and Susanne Biundo},
+  Booktitle                = {Proceedings of the 7th Annual Symposium on Combinatorial Search ({SoCS} 2014)},
+  Year                     = {2014},
+  Pages                    = {35--43},
+  Publisher                = {{AAAI} Press},
+
+  Abstract                 = {Hybrid Planning combines Hierarchical Task Network (HTN) planning with concepts known from Partial-Order Causal-Link (POCL) planning. We introduce novel heuristics for Hybrid Planning that estimate the number of necessary modifications to turn a partial plan into a solution. These estimates are based on the task decomposition graph that contains all decompositions of the abstract tasks in the planning domain. Our empirical evaluation shows that the proposed heuristics can significantly improve planning performance.},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+Please note that this plan space-based planning algorithm requires a search algorithm (like BFS or A*) and a flaw selection function.
+\n
+We further want to note that this planner is able of solving a broad variety of problem classes, including HTN problems, TIHTN problems (HTN problems with task insertion), hybrid problems with or without task insertion (these problems extend HTN/TIHTN problems via preconditions and effects of abstract tasks and by causal links in the domain model's partial plans), classical problems, and POCL problems (which are like classical problems, but with an initial primitive partial plan). Please note that the property whether task insertion is allowed cannot be passed on to the planner as an option, but it needs to be specified in the domain or problem file, since this is not an algorithmic choice, but a property of the problem (class) that is solved.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "PANDA3" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noProblemSolving
+Terminate after the preprocessing.
+
+This option is mainly for debugging purposes: choosing it will cause the planner to terminate as soon as it finished all preprocessing steps, i.e., right before it would initiate the search.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noProblemSolving" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-searchAlgorithm
+! [KEY]
+Choose the search algorithm.
+
+Using "-searchAlgorithm [KEY]" allows to select the search algorithm given plan-based search ("traditional PANDA3") was selected.
+
+Available search strategies:
+$ BFS DFS greedy uniform-cost a* depth-a*
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+BFS
+Breadth-first Search.
+
+This is the standard breadth-first search strategy as described in the text books using a queue.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "bfs" IS A KEY, NOT AN OPTION.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+DFS
+Depth-first Search.
+
+This is the standard depth-first search strategy as described in the text books using a stack.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "dfs" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+greedy
+Greedy Search.
+
+This is standard greedy search, i.e., you must also define a heuristic.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "greedy" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+uniform-cost dijkstra
+Uniform cost search.
+
+This is standard dijkstra algorithm, that is, standard uniform-cost search. Thus, action costs are ignored and assumed being equal to one instead.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "dijkstra" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+astar a*
+A*, f(n)=w*g(n)+h(n), w weight, g cost, h heuristic
+
+This is weighted A*, i.e., search nodes n are selected according to their value f(n)=g(n)+w*h(n), where w is a weight, g(n) is the node's action cost and h(n) is its heuristic value. Please note that our planners currently do not support action costs, i.e., we assume cost 1 for each primitive action.
+\n
+If you just select this heuristic, standard A* search is performed. For weighted A*, add the weight in parentheses, e.g., astar(2).
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "a*" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+depth-astar depth-a*
+A*, f(n)=d(n)+w*h(n), w weight, d depth, h heuristic
+
+This is weighted A*, i.e., search nodes n are selected according to their value f(n)=d(n)+w*h(n), but d(n) is the depth in the search tree rather than the cost of the current search node as usual; w is the weight and h(n) is its heuristic value.
+\n
+If you just select this heuristic, standard depth-A* search is performed. For weighted depth-A*, add the weight in parentheses, e.g., depth-astar(2).
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "depth-astar" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-flawSelection -f
+! [KEY]
+Choose a flaw selection strategy.
+
+Using "-flawSelection [KEYS]" allows to select a flaw selection strategy for the plan space-based search algorithm PANDA3.
+\n
+Please note that you can select a sequence of flaw selection strategies for tie-breaking. To give such a sequence, use a semicolon-separated list of flaw selection functions without whitespaces. Specifying sequences of flaw selection functions makes sense to be more discriminative about the flaw to be actually selected, because the first flaw selection function might not restrict the set of candidate flaws to a single one, so adding a second (third, etc.) selection function reduces the available flaws in this set reducing the impact of randomness.
+
+Available flaw selection strategies:
+$ LCFR front-flaw newest-flaw causal-threat open-precs abstract-task one-mod random-flaw
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+LCFR
+Least-Cost Flaw-Repair (restrict to flaws with a minimal modification branching factor).
+
+The flaw selection strategy LCFR, Least-Cost Flaw-Repair, for the plan space-based PANDA3 algorithm is both extremely simple and efficient: it always selects a flaw for which there are the least number of "repairs", i.e., plan modifications. That way, the branching factor of the explored search space is locally minimized, which shows empirically good results on average.
+\n
+It was introduced in the following paper:
+\n
+@InProceedings{Joslin94LCFR,
+  Title                    = {Least-Cost Flaw Repair: A Plan Refinement Strategy for Partial-Order Planning},
+  Author                   = {David Joslin and Martha E. Pollack},
+  Booktitle                = {Proceedings of the 12th National Conference on Artificial Intelligence ({AAAI} 1994)},
+  Year                     = {1994},
+  Pages                    = {1004--1009},
+  Publisher                = {{AAAI} Press},
+  Abstract                 = {We describe the least-cost flaw repair (LCFR) strategy for performing flaw selection during partial-order causal link (POCL) planning. LCFR can be seen as a generalization of Peot and Smith's "Delay-Unforced Threats" (DUnf) strategy [Peot & Smith 1993]; where DUnf treats threats differently from open conditions, LCFR has a uniform mechanism for handling all flaws. We provide experimental results that demonstrate that the power of DUnf does not come from delaying threat repairs per se, but rather from the fact that this delay has the effect of imposing a partial preference for least-cost flaw selection. Our experiments also show that extending this to a complete preference for least-cost selection reduces search-space size even further. We consider the computational overhead of employing LCFR, and discuss techniques for reducing this overhead. In particular, we describe QLCFR, a strategy that reduces computational overhead by approximating repair costs.}
+}
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "lcfr" IS A KEY, NOT AN OPTION.
+$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+front-flaw
+Restrict to flaws that are closest to the initial state.
+
+This flaw selection function for the plan space-based PANDA3 algorithm selects a flaw that is closest to the initial state (i.e., to the artificial action encoding that state). That is, only flaws are selected that do not possess a predecessor in a plan. For causal threat flaws, its "earliest" plan component determines its distance to init, i.e., the causal link's producer or the threatening plan step (which ever is closer to init).
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "front-flaw" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+newest-flaw
+Restrict to flaws that were introduced most recently.
+
+This flaw selection function for the plan space-based PANDA3 algorithm selects a flaw that was introduced most recently.
+\n
+Relying on that strategy somehow resembles a depth-first search regarding flaws. In a hierarchical setting, this means that deeper expansions are preferred before shallow ones (and before inserting certain causal links). In the non-hierarchical POCL setting, this means that first a totally ordered action sequence is generated that eventually roots in the initial state before other preconditions are supported.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "newest-flaw" IS A KEY, NOT AN OPTION.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+causal-threat
+Restrict to causal threat flaws.
+
+This flaw selection function for the plan space-based PANDA3 algorithm selects a causal threat flaw.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "causal-threat" IS A KEY, NOT AN OPTION.
+$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+open-precs
+Restrict to open (pre)condition flaws.
+
+This flaw selection function for the plan space-based PANDA3 algorithm selects an open (pre)condition flaw. Though this flaw selection function is extremely simple and probably the most canonical one for partial order causal link (POCL) planning; if you feel to cite a paper for it, you might use ("Heuristic 1") the following:
+\n
+@InProceedings{Nguyen01RevivingPOP,
+  Title                    = {Reviving Partial Order Planning},
+  Author                   = {XuanLong Nguyen and Subbarao Kambhampati},
+  Booktitle                = {Proceedings of the 17th International Joint Conference on Artificial Intelligence ({IJCAI} 2001)},
+  Year                     = {2001},
+  Pages                    = {459--466},
+  Publisher                = {Morgan Kaufmann},
+  Abstract                 = {This paper challenges the prevailing pessimism about the scalability of partial order planning (POP) algorithms by presenting several novel heuristic control techniques that make them competitive with the state of the art plan synthesis algorithms. Our key insight is that the techniques responsible for the efficiency of the currently successful planners–viz., distance based heuristics, reachability analysis and disjunctive constraint handling–can also be adapted to dramatically improve the efficiency of the POP algorithm. We implement our ideas in a variant of UCPOP called REPOP1. Our empirical results show that in addition to dominating UCPOP, REPOP also convincingly outperforms Graphplan in several “parallel” domains. The plans generated by REPOP also tend to be better than those generated by Graphplan and state search planners in terms of execution flexibility.}
+}
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "oc" IS A KEY, NOT AN OPTION.
+$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+abstract-task
+Restrict to abstract task flaws.
+
+This flaw selection function for the plan space-based PANDA3 algorithm selects an abstract task flaw.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "abstract-task" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+one-mod
+Restrict to flaws for which there is exactly one modification.
+
+This flaw selection function for the plan space-based PANDA3 algorithm selects a flaw for which there exists exactly one modification. This strategy is thereby subsumed by LCFR; it is intended to be used in combination with other strategies for tie-breaking.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "one-mod" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+random-flaw
+*Selects* a random flaw.
+
+This flaw selection function for the plan space-based PANDA3 algorithm selects a random flaw. It is initialized with the default random seed. Note that this flaw selection function is, in contrast to all others an actual *selection* function, i.e. it selects a specific flaw; no more tie-breaking is possible afterwards. This is done so that that the impact of randomness can be systematically evaluated.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "random-flaw" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-heuristic -h
+! [KEY]
+Choose heuristics for the search strategy and for tie-breaking.
+
+Using "-heuristic [KEYS]" allows to select heuristics that are used for the plan selection function and for tie-breaking. You can specify a sequence of heuristics by putting a semicolon in between them. If you specify a sequence of k heuristics, then the search algorithm equation, such as "f(n) = g(n) + h(n)" in case of A* is used k times, where h(n) is always the k-th heuristic. Later entries are used for tie-breaking only.
+\n
+Most heuristics have additional arguments, which can be passed on using the following syntax:
+    -heuristic HEURISTIC_NAME(PARAM1=VALUE1,PARAM2=VALUE2)
+
+Available heuristics:
+$ random-heuristic flaw oc ps abstract add add-r relax tdg-m tdg-m-r tdg-m-lifted tdg-c tdg-c-r tdg-c-lifted
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+random-heuristic
+Returns random integers.
+
+This plan selection heuristic for the plan space-based PANDA3 algorithm returns a random integer. It is initialized with the default random seed.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "random-heuristic" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-m-lifted
+TDG-m for lifted planning.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the lifted variant of the TDG-m heuristic (i.e., it gives admissible estimates of the number of modifications requiried to turn a current plan into a solution).
+\n
+This variant does not perform recomputation and it is suited for lifted planning, where the plan steps in search nodes may still contain variables. For this, given a plan step, it first builds all groundings for this step and retrieves all corresponding heuristic values from the TDG, of which it retrieves the minimum.
+\n
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
+\n
+The heuristic is described in the following paper:
+\n
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+Please note that the empirical evaluation in the paper did not evaluate this lifted variant.
+\n
+Also if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-m-lifted" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-c-lifted
+TDG-c for lifted planning.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the lifted variant of the TDG-c heuristic (i.e., it gives admissible estimates of the action costs* of the missing primitive actions to be inserted into a current plan in order to turn it into a solution).
+\n
+*Please note that at the moment, our planner does not yet have the capability to cope with action costs. For this reason, this heuristic assumes unit costs, i.e., it currently estimates the number of actions that have to be inserted.
+\n
+This variant does not perform recomputation and it is suited for lifted planning, where the plan steps in search nodes may still contain variables. For this, given a plan step, it first builds all groundings for this step and retrieves all corresponding heuristic values from the task decomposition graph (TDG), of which it retrieves the minimum.
+\n
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
+\n
+The heuristic is described in the following paper:
+\n
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+Please note that the empirical evaluation in the paper did not evaluate this lifted variant.
+\n
+Also if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-c-lifted" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-m tdg-m-ground
+TDG-m for ground planning.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the standard variant of the TDG-m heuristic (i.e., it gives admissible estimates of the number of modifications requiried to turn a current plan into a solution).
+\n
+This standard variant does *not* perform any recomputation of the underlying task decompostion graph (TDG) and it is suited for ground planning, where all plan steps in all search nodes are always ground.
+\n
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
+\n
+The heuristic is described in the following paper:
+\n
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+This is one of the heuristics that we evaluated in the paper.
+\n
+However, if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-m" IS A KEY, NOT AN OPTION.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-m-r tdg-m-ground-recompute
+TDG-m for ground planning with TDG recomputation.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the recomputation variant of the TDG-c heuristic (i.e., it gives admissible estimates of the number of modifications requiried to turn a current plan into a solution), but it recomputes the underlying TDG after certain plan modifications.
+\n
+This variant is suited for ground planning, where all plan steps in all search nodes are always ground. In addition, it recomputes the underlying task decomposition graph (TDG) after a plan modification has been performed that could change this TDG, e.g. after each task decomposition (in case there have been more than one method available for it), for details, we refer to the paper (seel below).
+\n
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
+\n
+The heuristic is described in the following paper:
+\n
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+This is one of the heuristics that we evaluated in the paper.
+\n
+However, if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-m-r" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-c tdg-c-ground
+TDG-c for ground planning.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the standard variant of the TDG-c heuristic (i.e., it gives admissible estimates of the action costs* of the missing primitive actions to be inserted into a current plan in order to turn it into a solution).
+\n
+*Please note that at the moment, our planner does not yet have the capability to cope with action costs. For this reason, this heuristic assumes unit costs, i.e., it currently estimates the number of actions that have to be inserted.
+\n
+This standard variant does *not* perform any recomputation of the underlying task decompostion graph (TDG) and it is suited for ground planning, where all plan steps in all search nodes are always ground.
+\n
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
+\n
+The heuristic is described in the following paper:
+\n
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+This is one of the heuristics that we evaluated in the paper.
+\n
+However, if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-c" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+tdg-c-r tdg-c-ground-recompute
+TDG-c for ground planning with TDG recomputation.
+
+This is a heuristic for the plan space-based PANDA3 algorithm. It is the recomputation variant of the TDG-c heuristic (i.e., it gives admissible estimates of the action costs* of the missing primitive actions to be inserted into a current plan in order to turn it into a solution), but it recomputes the underlying TDG after certain plan modifications.
+\n
+*Please note that at the moment, our planner does not yet have the capability to cope with action costs. For this reason, this heuristic assumes unit costs, i.e., it currently estimates the number of actions that have to be inserted.
+\n
+This variant is suited for ground planning, where all plan steps in all search nodes are always ground. In addition, it recomputes the underlying task decomposition graph (TDG) after a plan modification has been performed that could change this TDG, e.g. after each task decomposition (in case there have been more than one method available for it), for details, we refer to the paper (seel below).
+\n
+Since this heuristic is based upon the TDG and this TDG in turn depends on the planning graph (PG), options concerning the PG also influence this heuristic. We use our *default PG* for the heuristic, which does not use mutexes. However, if you change this default (by specifying which PG is used via the option "-primitiveReachability"), then this improved PG is used for the heuristic.
+\n
+The heuristic is described in the following paper:
+\n
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+This is one of the heuristics that we evaluated in the paper.
+\n
+However, if you want to use PANDA3 for scientific comparisons (to be published), then please be aware that there are further system options that can have a tremendous impact on its performance (such as the underlying PG, as noted above). To reproduce the results of our IJCAI 2017 paper, we have provided pre-defined system configurations that you can use for this purpose (see "-systemConfig").
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "tdg-c-r" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+flaw number-of-flaws
+Number of flaws.
+
+
+This plan selection heuristic for the plan space-based PANDA3 algorithm returns the number of flaws of the respective plan.
+\n
+Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all problem classes that can be solved by PANDA3.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#flaw" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+oc number-of-open-preconditions
+Number of open preconditions.
+
+
+This plan selection heuristic for the plan space-based PANDA3 algorithm returns the number of open (pre-)conditions.
+Though this heuristic is extremely simple and probably the most canonical one for partial order causal link (POCL) planning; if you feel to cite a paper for it, you might use ("Heuristic 1") the following:
+\n
+@InProceedings{Nguyen01RevivingPOP,
+  Title                    = {Reviving Partial Order Planning},
+  Author                   = {XuanLong Nguyen and Subbarao Kambhampati},
+  Booktitle                = {Proceedings of the 17th International Joint Conference on Artificial Intelligence ({IJCAI} 2001)},
+  Year                     = {2001},
+  Pages                    = {459--466},
+  Publisher                = {Morgan Kaufmann},
+  Abstract                 = {This paper challenges the prevailing pessimism about the scalability of partial order planning (POP) algorithms by presenting several novel heuristic control techniques that make them competitive with the state of the art plan synthesis algorithms. Our key insight is that the techniques responsible for the efficiency of the currently successful planners–viz., distance based heuristics, reachability analysis and disjunctive constraint handling–can also be adapted to dramatically improve the efficiency of the POP algorithm. We implement our ideas in a variant of UCPOP called REPOP1. Our empirical results show that in addition to dominating UCPOP, REPOP also convincingly outperforms Graphplan in several “parallel” domains. The plans generated by REPOP also tend to be better than those generated by Graphplan and state search planners in terms of execution flexibility.}
+}
+Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all problem classes that can be solved by PANDA3.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#oc" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ps number-of-plan-steps
+Number of plan steps.
+
+This plan selection heuristic for the plan space-based PANDA3 algorithm returns the number of plan steps in a partial plan (excluding the artificial start and end steps).
+\n
+Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all problem classes that can be solved by PANDA3.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#ps" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+abstract number-of-abstract-plan-steps
+Number of abstract plan steps.
+
+This plan selection heuristic for the plan space-based PANDA3 algorithm returns the number of abstract plan steps in a partial plan.
+\n
+Please note that this heuristic only works for the plan space-based PANDA3 algorithm. It works both for ground and for lifted planning. It works for all hierarchical problem classes that can be solved by PANDA3 (for the non-hierarchical ones, it returns 0, of course).
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "#abstract" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+add
+This is the Add heuristic for POCL planning.
+
+This plan selection heuristic for the plan space-based PANDA3 algorithm is the Add heuristic for POCL planning as desribed in the following paper:
+\n
+@Article{Younes03VHPOP,
+  Title                    = {{VHPOP}: Versatile heuristic partial order planner},
+  Author                   = {H{\aa}kan L. S. Younes and Reid G. Simmons},
+  Journal                  = {Journal of Artificial Intelligence Research ({JAIR})},
+  Year                     = {2003},
+  Pages                    = {405--430},
+  Volume                   = {20},
+  Abstract                 = {VHPOP is a partial order causal link (POCL) planner loosely based on UCPOP. It draws from the experience gained in the early to mid 1990's on flaw selection strategies for POCL planning, and combines this with more recent developments in the field of domain independent planning such as distance based heuristics and reachability analysis. We present an adaptation of the additive heuristic for plan space planning, and modify it to account for possible reuse of existing actions in a plan. We also propose a large set of novel flaw selection strategies, and show how these can help us solve more problems than previously possible by POCL planners. VHPOP also supports planning with durative actions by incorporating standard techniques for temporal constraint reasoning. We demonstrate that the same heuristic techniques used to boost the performance of classical POCL planning can be effective in domains with durative actions as well. The result is a versatile heuristic POCL planner competitive with established CSP-based and heuristic state space planners.}
+}
+\n
+In a nutshell, this heuristic takes all open preconditions of the current partial plan (i.e., those that are not protected by a causal link) and uses them as goal state the achievement of which is estimated relying on the Add heuristic for classical planning (however, the underlying planning graph is calculated only once, because the "current state" is always the initial state).
+\n
+Please note that this heuristic can not only be applied to non-hierarchical problems, but to all that can be solved by PANDA3. In case of hierarchical problems, the heuristic either ignores abstract tasks (in case they do not have preconditions, as is the case of HTN and TIHTN problems) or they are "regarded primitive", i.e. their preconditions are used as well in case they have some specified (as is the case for hybrid problems).
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "add" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+add-r add-reusing
+This is the Add heuristic for POCL planning reusing actions.
+
+This plan selection heuristic for the plan space-based PANDA3 algorithm is the Add heuristic for POCL planning reusing actions as desribed in the following paper:
+\n
+@Article{Younes03VHPOP,
+  Title                    = {{VHPOP}: Versatile heuristic partial order planner},
+  Author                   = {H{\aa}kan L. S. Younes and Reid G. Simmons},
+  Journal                  = {Journal of Artificial Intelligence Research ({JAIR})},
+  Year                     = {2003},
+  Pages                    = {405--430},
+  Volume                   = {20},
+  Abstract                 = {VHPOP is a partial order causal link (POCL) planner loosely based on UCPOP. It draws from the experience gained in the early to mid 1990's on flaw selection strategies for POCL planning, and combines this with more recent developments in the field of domain independent planning such as distance based heuristics and reachability analysis. We present an adaptation of the additive heuristic for plan space planning, and modify it to account for possible reuse of existing actions in a plan. We also propose a large set of novel flaw selection strategies, and show how these can help us solve more problems than previously possible by POCL planners. VHPOP also supports planning with durative actions by incorporating standard techniques for temporal constraint reasoning. We demonstrate that the same heuristic techniques used to boost the performance of classical POCL planning can be effective in domains with durative actions as well. The result is a versatile heuristic POCL planner competitive with established CSP-based and heuristic state space planners.}
+}
+\n
+In a nutshell, this heuristic takes *some* of the open preconditions of the current partial plan (i.e., a subset of those that are not protected by a causal link) and uses them as goal state the achievement of which is estimated relying on the Add heuristic for classical planning (however, the underlying planning graph is calculated only once, because the "current state" is always the initial state). Instead of taking *all* unprotected preconditions (as the Add heuristic for POCL planning does), the Add-r heuristic only takes those open preconditions for which there is no action in the current partial plan that can, according to the ordering and variable constraints, potentially be used as a supporter.
+\n
+As it is the case for the Add heuristic for POCL planning, this heuristic can not only be applied to non-hierarchical problems, but to all that can be solved by PANDA3. In case of hierarchical problems, the heuristic either ignores abstract tasks (in case they do not have preconditions, as is the case of HTN and TIHTN problems) or they are "regarded primitive", i.e. their preconditions are used as well in case they have some specified (as is the case for hybrid problems).
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "add-r" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+relax
+This is the Relax heuristic for POCL planning.
+
+This plan selection heuristic for the plan space-based PANDA3 algorithm is the Relax heuristic as desribed in the following paper:
+\n
+@InProceedings{Nguyen01RevivingPOP,
+  Title                    = {Reviving Partial Order Planning},
+  Author                   = {XuanLong Nguyen and Subbarao Kambhampati},
+  Booktitle                = {Proceedings of the 17th International Joint Conference on Artificial Intelligence ({IJCAI} 2001)},
+  Year                     = {2001},
+  Pages                    = {459--466},
+  Publisher                = {Morgan Kaufmann},
+  Abstract                 = {This paper challenges the prevailing pessimism about the scalability of partial order planning (POP) algorithms by presenting several novel heuristic control techniques that make them competitive with the state of the art plan synthesis algorithms. Our key insight is that the techniques responsible for the efficiency of the currently successful planners–viz., distance based heuristics, reachability analysis and disjunctive constraint handling–can also be adapted to dramatically improve the efficiency of the POP algorithm. We implement our ideas in a variant of UCPOP called REPOP1. Our empirical results show that in addition to dominating UCPOP, REPOP also convincingly outperforms Graphplan in several “parallel” domains. The plans generated by REPOP also tend to be better than those generated by Graphplan and state search planners in terms of execution flexibility.}
+}
+\n
+In a nutshell, this heuristic takes all open preconditions of the current partial plan (i.e., those that are not protected by a causal link) and uses them as goal state the achievement of which is estimated relying on the FF heuristic for classical planning (however, the underlying (serial) planning graph is calculated only once, because the "current state" is always the initial state). The cost of the extracted relaxed plan is used as heuristic. However, actions in that relaxed plan that do also occur in the input partial plan do not contribute towards the heuristic.
+\n
+As it is the case for the Add and Add-r heuristic for POCL planning, this heuristic can not only be applied to non-hierarchical problems, but to all that can be solved by PANDA3. In case of hierarchical problems, the heuristic either ignores abstract tasks (in case they do not have preconditions, as is the case of HTN and TIHTN problems) or they are "regarded primitive", i.e. their preconditions are used as well in case they have some specified (as is the case for hybrid problems).
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "relax" IS A KEY, NOT AN OPTION.
+$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%set-level
+%This is the Set-level heuristic for POCL planning.
+%
+%This plan selection heuristic for the plan space-based PANDA3 algorithm is the Set-level heuristic as described in the following paper:
+%\n
+%State space-based version of the heuristic can be found here:
+%@inproceedings{kambhampati1997understanding,
+%  title={Understanding and extending graphplan},
+%  author={Kambhampati, Subbarao and Parker, Eric and Lambrecht, Eric},
+%  booktitle={European Conference on Planning},
+%  pages={260--272},
+%  year={1997},
+%  organization={Springer}
+%}
+%The altered version for plan space-based planning can be found here:
+%@inproceedings{shekhar2015extending,
+%  title={Extending and Tuning Heuristics for a Partial Order Causal Link Planner},
+%  author={Shekhar, Shashank and Khemani, Deepak},
+%  booktitle={International Conference on Mining Intelligence and Knowledge Exploration},
+%  pages={81--92},
+%  year={2015},
+%  organization={Springer}
+%}
+%\n
+%In a nutshell, this heuristic searches for the layer in which all goal propositions appear mutex-free in a serial planning graph.
+%
+%THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "set-level" IS A KEY, NOT AN OPTION.
+%$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%partition-2
+%This is the Partition-2 heuristic for POCL planning.
+%
+%This plan selection heuristic for the plan space-based PANDA3 algorithm is the Partition-2 heuristic as described in the following paper:
+%\n
+%State space-based version of the heuristic can be found here:
+%@inproceedings{nguyen2000extracting,
+%  title={Extracting effective and admissible state space heuristics from the planning graph},
+%  author={Nguyen, XuanLong and Kambhampati, Subbarao},
+%  booktitle={AAAI/IAAI},
+%  pages={798--805},
+%  year={2000}
+%}
+%The altered version for plan space-based planning can be found here:
+%@inproceedings{shekhar2015extending,
+%  title={Extending and Tuning Heuristics for a Partial Order Causal Link Planner},
+%  author={Shekhar, Shashank and Khemani, Deepak},
+%  booktitle={International Conference on Mining Intelligence and Knowledge Exploration},
+%  pages={81--92},
+%  year={2015},
+%  organization={Springer}
+%}
+%\n
+%In a nutshell, this heuristic partitions the goal state into sets of two. Propositions of greatest levels are put into different
+%partitions and then sums up the level of all partitions.
+%
+%THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "partition-2" IS A KEY, NOT AN OPTION.
+%$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%adjust-sum
+%This is the Adjust-sum heuristic for POCL planning.
+%
+%This plan selection heuristic for the plan space-based PANDA3 algorithm is the Adjust-sum heuristic as described in the following paper:
+%\n
+%State space-based version of the heuristic can be found here:
+%@inproceedings{nguyen2000extracting,
+%  title={Extracting effective and admissible state space heuristics from the planning graph},
+%  author={Nguyen, XuanLong and Kambhampati, Subbarao},
+%  booktitle={AAAI/IAAI},
+%  pages={798--805},
+%  year={2000}
+%}
+%The altered version for plan space-based planning can be found here:
+%@inproceedings{shekhar2015extending,
+%  title={Extending and Tuning Heuristics for a Partial Order Causal Link Planner},
+%  author={Shekhar, Shashank and Khemani, Deepak},
+%  booktitle={International Conference on Mining Intelligence and Knowledge Exploration},
+%  pages={81--92},
+%  year={2015},
+%  organization={Springer}
+%}\n
+%In a nutshell, this heuristic sums up multiple heuristic estimates: Add-heuristic + Set-level heuristic - Max heuristic.
+%
+%THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "adjust-sum" IS A KEY, NOT AN OPTION.
+%$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%adjust-sum2
+%This is the Adjust-sum2 heuristic for POCL planning.
+%
+%This plan selection heuristic for the plan space-based PANDA3 algorithm is the Adjust-sum2 heuristic as described in the following paper:
+%\n
+%State space-based version of the heuristic can be found here:
+%@inproceedings{nguyen2000extracting,
+%  title={Extracting effective and admissible state space heuristics from the planning graph},
+%  author={Nguyen, XuanLong and Kambhampati, Subbarao},
+%  booktitle={AAAI/IAAI},
+%  pages={798--805},
+%  year={2000}
+%}
+%The altered version for plan space-based planning can be found here:
+%@inproceedings{shekhar2015extending,
+%  title={Extending and Tuning Heuristics for a Partial Order Causal Link Planner},
+%  author={Shekhar, Shashank and Khemani, Deepak},
+%  booktitle={International Conference on Mining Intelligence and Knowledge Exploration},
+%  pages={81--92},
+%  year={2015},
+%  organization={Springer}
+%}
+%\n
+%In a nutshell, this heuristic sums up multiple heuristic estimates: Relax-heuristic + Set-level heuristic - Max heuristic.
+%
+%THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "adjust-sum2" IS A KEY, NOT AN OPTION.
+%$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%combo
+%This is the Combo heuristic for POCL planning.
+%
+%This plan selection heuristic for the plan space-based PANDA3 algorithm is the Combo heuristic as described in the following paper:
+%\n
+%State space-based version of the heuristic can be found here:
+%@inproceedings{nguyen2000extracting,
+%  title={Extracting effective and admissible state space heuristics from the planning graph},
+%  author={Nguyen, XuanLong and Kambhampati, Subbarao},
+%  booktitle={AAAI/IAAI},
+%  pages={798--805},
+%  year={2000}
+%}
+%The altered version for plan space-based planning can be found here:
+%@inproceedings{shekhar2015extending,
+%  title={Extending and Tuning Heuristics for a Partial Order Causal Link Planner},
+%  author={Shekhar, Shashank and Khemani, Deepak},
+%  booktitle={International Conference on Mining Intelligence and Knowledge Exploration},
+%  pages={81--92},
+%  year={2015},
+%  organization={Springer}
+%}
+%\n
+%In a nutshell, this heuristic adds up the estimate values of the Relax heuristic and the Set-level heuristic.
+%
+%THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "combo" IS A KEY, NOT AN OPTION.
+%$
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-timeLimit
+! [INT]
+Terminate after a specified number of seconds.
+
+Sets the time limit in seconds.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-timeLimit" TAKES AN INTEGER, NO OPTIONS.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-nodeLimit
+! [INT]
+Terminate after a specified limit of search nodes.
+
+Sets the node limit in terms of number of nodes, after which the search ends.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-nodeLimit" TAKES AN INTEGER, NO OPTIONS.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-seed
+! [INT]
+Sets the initial random seed.
+
+Sets the initial random seed to the specified integer. Otherwise, the pre-defined value 42 is used.
+\n
+Random seeds are used to systematically evaluate the impact of randomness in our systems. When ever some choice is made arbitrary (for instance, if search nodes are still invariant after breaking ties according to the given tie-breaking strategy), then this choice further depends on the random seed so that different runs can be made producing potentially different outcomes -- while still having deterministic behavior given the same random seed.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-seed" TAKES AN INTEGER, NO OPTIONS.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-programPath
+! [STRING]
+For configuration of external programs.
+
+Some of our programs, e.g. PANDA-totSAT (not yet delivered) or our plan verifyer base upon a SAT solver. Others (like PANDA3) depend on other external programs as well (not yet delivered). Using this option allows to specify the respective external program that is used as well as the position where it can be found on the local machine. This is the syntax:
+\n
+For specifying the SAT solver paths, use "-programPath SOLVER=PATH", where PATH is the external program file (inlcuding its absolute path) and SOLVER is the description of this solver, which is one of the following: minisat, cryptominisat, riss6, and mapleCOMSPS.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-programPath" TAKES A STRING, NO KEYS.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noDomainCleanup
+Deactivates domain simplifications.
+
+By default, all planners perform some domain simplifications. The following optimizations/simplifications are performed:
+\n
+(1) predicates that do not occur in preconditions are eliminated
+\n
+(2) unreachable primitive and abstract tasks are eliminated as follows:
+- A mutex-free variable-relaxed planning graph (pg) is constructed
+- all primitive actions not contained in this pg are removed from the model
+- all methods containing removed actions are removed as well
+- abstract tasks without remaining methods are removed
+This second step is a simplification of the domain pruning technique introduced in the following paper:
+\n
+@InProceedings{Elkawkagy10LandmarksInHTN,
+  Title                    = {Landmarks in Hierarchical Planning},
+  Author                   = {Mohamed Elkawkagy and Bernd Schattenberg and Susanne Biundo},
+  Booktitle                = {Proceedings of the 20th European Conference on Artificial Intelligence ({ECAI} 2010)},
+  Year                     = {2010},
+  Pages                    = {229--234},
+  Publisher                = {{IOS} Press},
+  Abstract                 = {In this paper we introduce a novel landmark technique for hierarchical planning. Landmarks are abstract tasks that are mandatory. They have to be performed by any solution plan. Our technique relies on a landmark extraction procedure that pre-processes a given planning problm by systematically analyzing the ways in which relevant abstract tasks can be decomposed. We show how the landmark information is used to guide hierarchical planning and present some experimental results that give evidence for the considerable performance increase gained through our technique.},
+  Doi                      = {10.3233/978-1-60750-606-5-229}
+}
+\n
+However, the technique introduced by Elkawkagy et al. relies on a ground model, which is way more concise, but it also required grounding the model, whereas our extremely fast preprocessing only takes the action and predicate names into account. Please note that we furthermore do *not* perform a reachabilty analysis of the tasks that are reachable from the initial task network. This test is only done in the actual TDG construction (see option "-hierarchicalReachability").
+\n
+Using this option deactivates theses simplifications.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noDomainCleanup" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-primitiveReachability
+! [KEY]
+Use the planning graph for grounding.
+
+By default, all planners rely on a ground model. To obtain the ground mode, we rely on a reachability analysis based on the planning graph (PG), which can be build either with or without the mutexes. By default, the reachability relying on the PG without mutexes is performed.
+\n
+Please note that this planning graph is not only used for creating the ground model. Even if you do *not* plan if a ground way (i.e., lifted, which you can do by using "-liftedPlanning"), then creating this planning graph might still produce a smaller *lifted* model (i.e., lifted actions get removed if there isn't a reachable grounding). Furthermore, some heuristics use the planning graph that is created here (this is noted in the respective heuristic). So, even if you plan in a lifted way this grounding process is still activated, so deactivate it if desired in this case.
+\n
+By default, the primitiveReachability is *activated* and it does *not* use mutexes.
+
+Available options for -primitiveReachability
+$ pg pgm
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pg
+Planning graph without mutexes.
+
+Computes the planning graph without mutexes.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "pg" IS A KEY, NOT AN OPTION.
+$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+pgm
+Planning graph with mutexes.
+
+Computes the planning graph with mutexes.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "pgm" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noPrimitiveReachability
+Do not rely on the planning graph for grounding the primitive tasks.
+
+If you plan in a *ground* fashion (this is done by default) and this option is chosen, then the ground model is obtained by naively building all groundings -- without performing any reachability analysis (this is highly unrecommended, do not do this).
+\n
+If you plan in a *lifted* fashion (you had to explicitly choose so), then choosing this option prevents the grounding process altogether. (However, the cleanup option might still delete some of the unreachable actions if activated.)
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noPrimitiveReachability" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-hierarchicalReachability
+! [KEY]
+Use the task decomposition graph for grounding.
+
+When ever a hierarchical problem is solved, we rely on the grounded task decomposition graph (TDG) in order to ground the model. The *result* of this process is always the same ground TDG. The different ways of creating this have different runtime properties and space requirements, however. The resulting TFG is used both for ground planning (as it describes a ground model), but also for lifted planning (similar to the planning graph, the ground model can also be used to reduce the lifted model), as well as for some heuristics, which are also based upon a ground TDG.
+\n
+The resulting TDG is described in the following paper:
+\n
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+As noted, the process of *how* this ground TDG is built has a strong influence on its performance in terms of runtime and maximal memory usage. We offer various ways how to construct it. See the respective help pages (using -help) for a description of the respective keys.
+\n
+Please also note that the TDG *always* relies on a planning graph (PG) in order to restrict the TDG to a subgraph that only contains actions that are reachable -- which is identified relying on the PG. More specifically, the planningPG that is used as a basis for the TDG is the very same one resulting from the option (-primitiveReachablity) -- so choosing to create this PG with or without mutexes has an influence on this hierarchical reachability as well. Furthermore, the TDG-based heuristics directly rely on this resulting TDG.
+\n
+Note that using the TDG for grounding is activated by default, *even* if lifted planning is chosen. In the latter case, the resulting ground TDG is used to eliminate certain lifted tasks and methods (a lifted task/method can be eliminated from the model if there is no reachable grounding). By default, we use the option "twoWay", as it is -- empirically -- the best-performing one on average.
+
+Available options for -hierarchicalReachability:
+$ topDown bottomUp twoWay naive
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+topDown
+Builds the ground task decomposition graph in a top-down way.
+
+This key for the -hierarchicalReachability option builds the Task Decomposition Graph (TDG) in a top-down fashion. That is, it starts with the initial plan and successively expands abstract tasks, similar to the inductive definition of TDGs as defined in the following paper:
+\n
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+Unreachable parts of the TDG are removed, as explained in the paper.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "topDown" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+twoWay
+Builds the ground task decomposition graph in a hybrid way that combines both bottom-up and top-down.
+
+This key for the -hierarchicalReachability option builds the Task Decomposition Graph (TDG) in a hybrid way that combines top-down construction with bottom-up.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "twoWay" IS A KEY, NOT AN OPTION.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+bottomUp
+Builds the ground task decomposition graph in a bottom-up fashion.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "bottomUp" IS A KEY, NOT AN OPTION.
+
+This key for the -hierarchicalReachability option builds the Task Decomposition Graph (TDG) in a bottom-up way, i.e., starting with the actions reachable (identified using the planning graph) and inferring which ground abstract tasks become reachable as well.
+\n
+(This way of building the TDG is currently not yet integrated; or it is buggy at the moment.)
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+naive
+Builds the ground task decomposition graph in a naive way for debugging purposes.
+
+This key for the -hierarchicalReachability option builds the Task Decomposition Graph (TDG) in a naive way that is intended for debugging purposes only. Instead of doing it bottom-up, top-down, or in a hybrid manner, this variant first builds the entire ground model without performing any reachability analysis, and then restricts the model to the respective TDG that can be obtained from the top-down reachability and by restricting to actions that are reachable relying on the relaxed planning graph.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "naive" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-noHierarchicalReachability
+Do not rely on the task decomposition graph for grounding the primitive and abstract tasks.
+
+If you plan in a *ground* fashion (this is done by default) and this option is chosen, then the ground model is obtained by naively building all groundings -- without performing any reachability analysis (this is highly unrecommended, do not do this).
+\n
+If you plan in a *lifted* fashion (you had to explicitly choose so), then choosing this option prevents the TDG grounding process altogether. (However, the cleanup option might still delete some of the unreachable actions if activated.)
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-noHierarchicalReachability" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-prune
+! [KEY]
+Remove certain plans from the search fringe.
+
+You can give certain criteria under which plans can be discarded upon creation (i.e., before they get inserted into the search fringe). Some pruning criteria are independent of each other, so they can be specified at the same time. Different options can be concatenated by putting a semicolon in between. (Use -help -prune to see the list of available pruning criteria.)
+
+Available pruning criteria
+$ recompute-htn planLength
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+recompute-htn
+Prune a plan based on hierarchical reachability.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "recompute-htn" IS A KEY, NOT AN OPTION.
+
+This pruning criterion discards a plan if and only if the recomputation-based TDG-based heuristics published at IJCAI 2017 (see -TDG-m-rec for a short description) would return a heuristic value of infinity.
+\n
+In a nutshell, given a current search node (with at least one abstract task) the pruning technique builds a new task decomposion graph (TDG) for that very search node (which includes creating a planning graph relying on the primitive tasks contained in that TDG) and checks whether every abstract task in the given plan can be decomposed into a primitive plan in which all actions are contained in the PG. If so, nothing is done; if not, it is discarded. As is the case with the TDG-c and TDG-m heuristics, the TDG resulting from the -hierarchicalReachability is used as the basis.
+\n
+Please note that in its current stage, this pruning technique is not as efficient as it could be. More precisely, the TDG is built for *every* search node, which is far more calculation effort than actually necessary. In the before-mentioned IJCAI paper, we have shown that in many cases rebuilding the TDG is not beneficial and the heuristic values could be calculated incrementally; in these cases, a searche node can also not be pruned, so performing the TDG calculation is pointless. These case distinctions have not been implemented in this pruning technique, however.
+$
+
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+planLength
+Prune a plan based on its length.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "planLength" IS A KEY, NOT AN OPTION.
+
+You need to pass on an integer n as parameter to this key. Any plan with strictly more tasks (primitive or abstract) than this number will be discarded. You do this by putting the respective plan length n in parentheses.
+\n
+Please be aware that in case of hierarchical planning with "empty" decomposition methods (i.e., methods that allow the decomposition into an empty task network) there might be unintended or wrong behavior. The reason is that in these cases, the current plan size is not an admissible estimate of the final plan size. Incorporating the admissible TDG-c heuristic (see heuristic "TDG-c" for more information) would eliminate this undesired behavior and even be more effective, because plans can be pruned earlier. This has not been implemented at the moment, however.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-satSolver
+! [KEY]
+Choose the SAT solver used for plan verification or for HTN planning as SAT (not yet delivered).
+
+Both the verification tool ("Is the given plan a solution to the problem?" -- see option "-planToVerify") as well as HTN planning as SAT, PANDA-totSAT  (currently not yet delivered), base upon an external SAT solver. The respective solver is chosen here.
+\n
+See the respective help pages (using -help) for a description of the supported SAT solvers.
+
+Available SAT solvers:
+$ minisat cryptominisat riss6 mapleCOMSPS
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+minisat
+Choose the SAT solver MiniSAT.
+
+Choose MiniSAT as SAT solver. As apart to the other available SAT solvers, this one is available in most Linux distributions. It is, however, slower than the others.
+\n
+Don't forget to specify the program path using "-programPath".
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "minisat" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+cryptominisat
+Choose the SAT solver cryptominisat.
+
+Choose cryptominisat as SAT solver. Together with riss6 and mapleCOMSPS, it was one of the top performers at the SAT-Race 2016.
+\n
+Don't forget to specify the program path using "-programPath".
+\n
+This SAT solver is also the one that was used for the empirical evaluation in the following paper about plan verification:
+\n
+@InProceedings{Behnke2017HTNSolutionVerification,
+  Title                    = {This is a solution! (... but is it though?) -- Verifying solutions of hierarchical planning problems},
+  Author                   = {Gregor Behnke and Daniel H{\"o}ller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 27th International Conference on Automated Planning and Scheduling ({ICAPS} 2017)},
+  Year                     = {2017},
+  Pages                    = {20--28},
+  Publisher                = {{AAAI} Press},
+  Abstract                 = {Plan-Verification is the task of determining whether a plan is a solution to a given planning problem. Any plan verifier has, apart from showing that verifying plans is possible in practice, a wide range of possible applications. These include mixed-initiative planning, where a user is integrated into the planning process, and local search, e.g., for post-optimising plans or for plan repair. In addition to its practical interest, plan verification is also a problem worth investigating for theoretical reasons. Recent work showed plan verification for hierarchical planning problems to be NP-complete, as opposed to classical planning where it is in P. As such, plan verification for hierarchical planning problem was -- until now -- not possible. We describe the first plan verifier for hierarchical planning. It uses a translation of the problem into a SAT formula. Further we conduct an empirical evaluation, showing that the correct output is produced within acceptable time.},
+  File                     = {see Behnke's website, www.uni-ulm.de/in/ki/behnke/}
+}
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "cryptominisat" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+riss6
+Choose the SAT solver riss6.
+
+Choose riss6 as SAT solver. Together with cryptominisat and mapleCOMSPS, it was one of the top performers at the SAT-Race 2016.
+\n
+Don't forget to specify the program path using "-programPath".
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "riss6" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mapleCOMSPS
+Choose the SAT solver mapleCOMSPS.
+
+Choose mapleCOMSPS as SAT solver. Together with riss6 and cryptominisat, it was one of the top performers at the SAT-Race 2016.
+\n
+Don't forget to specify the program path using "-programPath".
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "mapleCOMSPS" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-planToVerify
+! [STRING]
+Specify the plan to be verified.
+
+This option is used not to solve planning problems, but to verify that a given plan is actually a valid solution to a given HTN planning problem.
+\n
+The techniques for verification are described in the following paper:
+\n
+@InProceedings{Behnke2017HTNSolutionVerification,
+  Title                    = {This is a solution! (... but is it though?) -- Verifying solutions of hierarchical planning problems},
+  Author                   = {Gregor Behnke and Daniel H{\"o}ller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 27th International Conference on Automated Planning and Scheduling ({ICAPS} 2017)},
+  Year                     = {2017},
+  Pages                    = {20--28},
+  Publisher                = {{AAAI} Press},
+  Abstract                 = {Plan-Verification is the task of determining whether a plan is a solution to a given planning problem. Any plan verifier has, apart from showing that verifying plans is possible in practice, a wide range of possible applications. These include mixed-initiative planning, where a user is integrated into the planning process, and local search, e.g., for post-optimising plans or for plan repair. In addition to its practical interest, plan verification is also a problem worth investigating for theoretical reasons. Recent work showed plan verification for hierarchical planning problems to be NP-complete, as opposed to classical planning where it is in P. As such, plan verification for hierarchical planning problem was -- until now -- not possible. We describe the first plan verifier for hierarchical planning. It uses a translation of the problem into a SAT formula. Further we conduct an empirical evaluation, showing that the correct output is produced within acceptable time.},
+  File                     = {see Behnke's website, www.uni-ulm.de/in/ki/behnke/}
+}
+\n
+The "plan" to verify is a ground sequence of actions. Actions are separated by ";" while arguments are given in "[] braces, separated with commas.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "planToVerify" TAKES A STRING, NO KEYS.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-stripHybrid
+Convert hybrid domains into HTN domains.
+
+If this option is chosen, hybrid planning domains/problems are converted into standard HTN domains/problems. This is done by simply ignoring/removing all causal links as well as the preconditions and effects of abstract tasks. Quiet obviously, this conversion is not solution-preserving.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-stripHybrid" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-dontCompileNegPreconditions
+Do not compile away negative preconditions.
+
+By default, negative preconditions are compiled away in the usual way. However, the plan space-based planner PANDA3 as well as PANDA-totSAT (not yet delivered) can also cope with negative preconditions natively. Choosing this option will *not* compile them away.
+\n
+Please note that this feature has not been tested for a long time, so it can be regarded experimenatal. In particular, the planning graph (on which many heuristics and grounding procedures for hierarchical planning rely) has not been tested without compilation of negative preconditions.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-dontCompileNegPreconditions" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-liftedPlanning
+Perform lifted (instead of ground) planning.
+
+By default, the plan space-based planner PANDA3 relies on a ground model. However, the underlying planning procedure also supports lifted planning, which follows the least commitment principle to a larger extent (it omits early commitment by binding variables only if required). This changes the available plan modification options, of course, because flaws and modifications then need to cope with (unbound) variables. Note that certain heuristics might not be available anymore, since they might rely on a ground model.
+\n
+Please carefully choose the available options (especially for preprocessing and heuristics) for PANDA3 when choosing this option. For instance, the option -primitiveReachablity (which grounds the model based on a planning graph) is chosen by default, *even* when lifted planning is chosen. This still makes sense, because also the lifted model might be reduced bases on a ground reachability analysis. However, you might still want to prevent grounding altogether when you choose to plan in a lifted fashion; in this case, you should deactivate the grounded reachability analysis.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-liftedPlanning" IS A SWITCH, NOT AN OPTION.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-systemConfig
+! [KEY]
+Choose a *complete* pre-defined system configuration, e.g., to reproduce results from specific papers.
+
+Choose this option to run the system in a standard configuration which we authors deemed to be generally useful (e.g., because it is very efficient on average, because it simulates a system from the literature, or because it reproduces results from a specific paper).
+\n
+Please be aware that choosing *additional* options might contradict the options chosen here; options are *performed* in the order they are set, so specifying "-systemConfig CONF1 -optionX Y" will perfrom "optionX = Y" even the system configuration CONF1 will explicitly state the opposite. This is especially important when you want to reproduce results from scientific papers; then, you should not choose any further options.
+
+Availabe pre-defined system configurations:
+$ UMCP IJCAI-2017-AdmissibleHeuristics ICAPS-2017-verify
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+UMCP
+Simulate the system UMCP within PANDA3.
+
+The plan space-based planning system UMCP by Erol et al. can be simulated within the PANDA3 planner. UMCP is basically a standard plan space-based HTN planning system that uses different search strategies for selecting a most promising plan from a search fringe. In contrast to PANDA3, UMCP "fixates" a primitive plan as soon as one is found and then either turns it into a solution (if possible) or discards it in case this is impossible. Only after this has been done, a different plan is taken from the fringe. Note that our simulation of this relies on the standard POCL planning techniques, i.e., also proving that a primitive plan can be turned into a solution is done relying on this technique (i.e, this is not done with just one single search node, but via search as well). We do this via a depth-first search (i.e., as soon as a primitive plan is found, PANDA3 switches to depth-first *for this plan* before another plan is considered according to the primary UMCP search strategy).
+\n
+In accordance to the UMCP search algorithm (which is not a POCL procedure, though), we always pick an abstract task flaw. Ties are broken using the LCFR flaw selector (this is not reporated in the UMCP paper, but it gives good results on average).
+\n
+The basic planning algorithm is given in Fig. 4 in the following paper:
+\n
+@InProceedings{Erol94UMCP,
+  Title                    = {{UMCP}: A Sound and Complete Procedure for Hierarchical Task-Network Planning},
+  Author                   = {Kutluhan Erol and James Hendler and Dana S. Nau},
+  Booktitle                = {Proceedings of the 2nd International Conference on Artificial Intelligence Planning Systems ({AIPS} 1994)},
+  Year                     = {1994},
+  Pages                    = {249--254},
+  Publisher                = {{AAAI} Press},
+  Abstract                 = {One big obstacle to understanding the nature of hierarchical task network (HTN) planning has been the lack of a clear theoretical framework. In particular, no one has yet presented a clear and concise HTN algorithm that is sound and complete. In this paper, we present a formal syntax and semantics for HTN planning. Based on this syntax and semantics, we are able to define an algorithm for HTN planning and prove it sound and complete.}
+}
+\n
+In the dissertation of Erol, he has proposed various plan selection functions for picking the most promising plan out of the search fringe (page 69/70 in this PhD thesis).
+\n
+@PhdThesis{Erol96HTNPlanning,
+  Title                    = {Hierarchical Task Network Planning: Formalization, Analysis, and Implementation},
+  Author                   = {Kutluhan Erol},
+  School                   = {University of Maryland},
+  Year                     = {1996},
+  Abstract                 = {Planning is a central activity in many areas including robotics, manufacturing, space mission sequencing, and logistics. as the size and complexity of planning problems grow, there is great economic pressure to automate this process in order to reduce the cost of planning effort, and to improve the quality of produced plans. AI planning research has focused on general-purpose planning systems which can process the specifications of an application domain and generate solutions to planning problems in that domain. Unfortunately, there is a big gap between theoretical and application oriented work in AI planning. The theoretical work has been mostly based on state-based planning, which has limited practical applications. The application- oriented work has been based on hierarchical task network (HTN) planning, which lacks a theoretical foundation. As a result, in spite of many years of research, building planning applications remains a formidable task. The goal of this dissertation is to facilitate building reliable and effective planning applications. The methodology includes design of a mathematical framework for HTN planning, analysis of this framework, development of provably correct algorithms based on this analysis, and the implementation of these algorithms for further evaluation and exploration. The representation, analyses, and algorithms described in this thesis will make it easier to apply HTN planning techniques effectively and correctly to planning applications. The precise and mathematical nature of the descriptions will also help teaching about HTN planning, will clarify misconceptions in the literature, and will stimulate further research.}
+}
+\n
+These selection strategies are: breadth-first search, depth-first search, and best-first. The latter variant is also referred to as "heuristic version" and it selects a plan with the fewest number of abstract tasks. You need to select one of these three variants by passing the respective parameter (BF, DF, or h) on to the configuration. For this, put the respective parameter in parentheses behind the "UMCP".
+\n
+Because UMCP was originally designed for standard HTN problems, choosing this configuration also implies the option "-stripHybrid", which removes all hybrid language features (see -help of that option for details). However, the UMCP strategy can also be used for solving hybrid problems as well. For this, you have to overwrite that option by using "-dontStripHybrid" *after* you have specified the UMCP strategy.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "UMCP" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+IJCAI-2017-AdmissibleHeuristics
+Select a configuration from that paper.
+
+Using this key allows you to select from the various system configurations that we have used in the empirical evaluation of the following paper:
+\n
+@InProceedings{Bercher17AdmissibleHTNHeuristic,
+  Title                    = {An Admissible HTN Planning Heuristic},
+  Author                   = {Pascal Bercher and Gregor Behnke and Daniel H\"oller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 26th International Joint Conference on Artificial Intelligence ({IJCAI} 2017)},
+  Year                     = {2017},
+  Pages                    = {480--488},
+  Publisher                = {AAAI Press},
+  Abstract                 = {Hierarchical task network (HTN) planning is well-known for being an efficient planning approach. This is mainly due to the success of the HTN planning system SHOP2. However, its performance depends on hand-designed search control knowledge. At the time being, there are only very few domain-independent heuristics, which are designed for differing hierarchical planning formalisms. Here, we propose an admissible heuristic for standard HTN planning, which allows to find optimal solutions heuristically. It bases upon the so-called task decomposition graph (TDG), a data structure reflecting reachable parts of the task hierarchy. We show (both in theory and empirically) that rebuilding it during planning can improve heuristic accuracy thereby decreasing the explored search space. The evaluation further studies the heuristic both in terms of plan quality and coverage.},
+  Doi                      = {10.24963/ijcai.2017/68},
+  File                     = {see Bercher's website, www.uni-ulm.de/in/ki/bercher/},
+}
+\n
+You will have to pass on the respective parameters (see below) to the configuration name by putting them in a comma-separated list in parenthesis; for example: "-IJCAI-2017-AdmissibleHeuristics(astar,TDG-c)".
+\n
+As first parameter, you will have to specify one of the following search algorithms:
+\n
+- BFS (breadth-first search)
+- DFS (depth-first search)
+- uniform (uniform cost search)
+- astar (A* search, requires a heuristic)
+- gastar (greedy A* search with weight 2 on heuristics, requires a heuristic)
+\n
+In case of A* and greedy A*, one of the following heuristics must be chosen as second parameter:
+\n
+- add (the additive heuristic for POCL planning, see heuristic "add")
+- add-r (the additive heuristic for POCL planning reusing actions,
+         see heuristic "add-r")
+- relax (the relax heuristic for POCL planning, see heuristic "relax")
+- oc (the open (pre-)conditions heuristic, see heuristic "#oc")
+- TDG-m (the paper's TDG heuristic estimating the number of modifications)
+- TDG-m-rec (as TDG-m, but performing the TDG recomputation)
+- TDG-c (the paper's cost-sensitive TDG heuristic)
+- TDG-c-rec (as TDG-c, but performing the TDG recomputation)
+\n
+For a more detailed explanation of the latter four heuristics, see the help descriptions of the respective heuristics of the paper.
+\n
+In addtion, we have evaluated the simulation of variants of the HTN planning system UMCP. These are:
+- UMCP-BF
+- UMCP-DF
+- UMCP-H
+\n
+Please note that these three variants can also be called as "normal system configurations" that can be chosen directly, not just as a configuration of the IJCAI-2017 setting (call "-help UMCP" to get further information about these configurations). Note, however, that we have noticed an implementation error in the IJCAI version of UMCP-BF. Here, that configuration always performs standard breadth-first search with the flaw-selector sequence "abstract-task,LCFR". That is, that strategy does not, as it should, turn a primitive plan into a solution (or prove that this is impossible) before it considers another plan. We have fixed this error in the standard UMCP-BF configuration (choose it with "-systemConfig UMCP(BF)"), whereas this IJCAI configuration of UMCP-BF is the flawed one we have used in the empirical evaluation of the paper.
+\n
+All system configurations share the same general options (for preprocessing, etc.) and only differ in the used search strategy (plan selection and heuristic). For documentation purposes, we here give the list of chosen options for our configurations:
+\n
+- compile negative preconditions = true
+  (see description of "-dontCompileNegPreconditions" for details)
+- compile unit methods = false
+  (we can, in principle, compile away abstract tasks with just one method;
+   this can result into an exponential domain blow-up, however)
+- compile initial plan = true
+  (introduce a new initial plan containing just a single, new, abstract
+   task that decomposes into the original initial plan)
+- compile away the order in methods = false
+  (we can, in principle, replace methods with a partially ordered plan
+   into a set of totally ordered plan; in general not solution-preserving)
+- split independent parameters = true
+  (this is solution-preserving preprocessing compilation that splits
+   certain abstract tasks into several thereby reducing the set of
+   possible groundings; it is always done by default.)
+- compile useless abstract tasks = true
+  (replace abstract tasks with just one method by it decompostion)
+- domain cleanup = true
+  (see description of "-noDomainCleanup" for details)
+- primitive reachability = mutex-free planning graph
+  (see description of "-primitiveReachability" for details)
+- hierarchical reachability = two-way TDG
+  (see description of "-hierarchicalReachability" for details)
+- iterate hierarchical reachability analysis = true
+  (we can, in principle, suppress the iteration of the planning graph
+   construction and the top-down reachability analysis)
+- ground planning = true
+  (see description of "-liftedPlanning" for details)
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "IJCAI-2017-AdmissibleHeuristics" IS A KEY, NOT AN OPTION.
+$
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ICAPS-2017-verify
+System configuration from ICAPS 2017, depth first search.
+
+System configuration from the ICAPS 2017 paper (see below) for plan verification.
+\n
+@InProceedings{Behnke2017HTNSolutionVerification,
+  Title                    = {This is a solution! (... but is it though?) - Verifying solutions of hierarchical planning problems},
+  Author                   = {Gregor Behnke and Daniel H{\"o}ller and Susanne Biundo},
+  Booktitle                = {Proceedings of the 27th International Conference on Automated Planning and Scheduling ({ICAPS} 2017)},
+  Year                     = {2017},
+  Pages                    = {20--28},
+  Publisher                = {{AAAI} Press},
+  Abstract                 = {Plan-Verification is the task of determining whether a plan is a solution to a given planning problem. Any plan verifier has, apart from showing that verifying plans is possible in practice, a wide range of possible applications. These include mixed-initiative planning, where a user is integrated into the planning process, and local search, e.g., for post-optimising plans or for plan repair. In addition to its practical interest, plan verification is also a problem worth investigating for theoretical reasons. Recent work showed plan verification for hierarchical planning problems to be NP-complete, as opposed to classical planning where it is in P. As such, plan verification for hierarchical planning problem was – until now – not possible. We describe the first plan verifier for hierarchical planning. It uses a translation of the problem into a SAT formula. Further we conduct an empirical evaluation, showing that the correct output is produced within acceptable time.},
+  File                     = {see Behnke's website, www.uni-ulm.de/in/ki/behnke/}
+}
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "verify" IS A KEY, NOT AN OPTION.
+$

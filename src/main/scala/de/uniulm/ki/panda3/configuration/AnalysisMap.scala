@@ -21,6 +21,10 @@ object EfficientGroundedTDG extends AnalysisType {type ResultType = EfficientGro
 
 object EfficientGroundedPlanningGraph extends AnalysisType {type ResultType = de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph}
 
+object EfficientGroundedPlanningGraphForRelax extends AnalysisType {
+  type ResultType = de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.EfficientGroundedPlanningGraph
+}
+
 object SASPInput extends AnalysisType {type ResultType = SASPlusGrounding}
 
 case class AnalysisMap(map: Map[AnalysisType, Any]) extends (AnalysisType => Any) {

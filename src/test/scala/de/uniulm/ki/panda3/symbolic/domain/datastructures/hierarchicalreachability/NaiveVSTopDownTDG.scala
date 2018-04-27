@@ -37,10 +37,10 @@ class NaiveVSTopDownTDG extends FlatSpec {
       val initialState = problem.groundedInitialStateOnlyPositive
       val planningGraph = GroundedPlanningGraph(domain, initialState.toSet, GroundedPlanningGraphConfiguration())
 
-      val naiveTDG = NaiveGroundedTaskDecompositionGraph(domain, problem, planningGraph, prunePrimitive = true)
-      val topDownTDG = TopDownTaskDecompositionGraph(domain, problem, planningGraph, prunePrimitive = true)
-      val twoWayTDG = TwoStepDecompositionGraph(domain, problem, planningGraph, prunePrimitive = true, omitTopDownStep = false)
-      val bottomUpTDG = TwoStepDecompositionGraph(domain, problem, planningGraph, prunePrimitive = true, omitTopDownStep = false)
+      val naiveTDG = NaiveGroundedTaskDecompositionGraph(domain, problem, planningGraph, prunePrimitive = true, println)
+      val topDownTDG = TopDownTaskDecompositionGraph(domain, problem, planningGraph, prunePrimitive = true, println)
+      val twoWayTDG = TwoStepDecompositionGraph(domain, problem, planningGraph, prunePrimitive = true, omitTopDownStep = false, println)
+      val bottomUpTDG = TwoStepDecompositionGraph(domain, problem, planningGraph, prunePrimitive = true, omitTopDownStep = false, println)
 
       naiveTDG.taskDecompositionGraph
       topDownTDG.taskDecompositionGraph

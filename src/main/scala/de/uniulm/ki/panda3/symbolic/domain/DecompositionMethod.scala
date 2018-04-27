@@ -80,7 +80,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
           case ReducedTask(_, _, _, _, _, _, tEff) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
           case _                                   => true // was false
         }
-        assert(canBeInherited, "Method " + name + "' subplan does not contain a effect able to inherit " + l.shortInfo)
+        assert(canBeInherited, "Method " + name + "' subplan does not contain an effect able to inherit " + l.shortInfo)
       }
     case _                                     =>
   }
