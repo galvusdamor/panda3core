@@ -23,8 +23,7 @@ import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic,
-EfficientGroundedPlanningGraphImplementation}
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic, EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps, _}
 import de.uniulm.ki.panda3.efficient.search.flawSelector._
@@ -48,7 +47,7 @@ import de.uniulm.ki.panda3.symbolic.parser.hpddl.HPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify._
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
@@ -1239,14 +1238,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val flatTaskToGroundedTask = groundedDomainAndProblem._1.mappingToOriginalGrounding.get.taskMapping
 
           val exchangeMap = flatTaskToGroundedTask collect {
-            case (currentTask, groundTask) if sasPlusGrounder.groundedTasksToNewGroundTasksMapping contains groundTask =>
-              currentTask -> sasPlusGrounder.groundedTasksToNewGroundTasksMapping(groundTask)
-            case (currentTask, _) if !currentTask.isAbstract => assert(false, "Prim not found: " + currentTask.name); null
+            case (currentTask, groundTask) if sasPlusGrounder.groundedTasksToNewGroundTasksMapping contains (groundTask.task.name, groundTask.arguments) =>
+              currentTask -> sasPlusGrounder.groundedTasksToNewGroundTasksMapping((groundTask.task.name, groundTask.arguments))
           }
 
           val sasPlusDomain = groundedDomainAndProblem._1.update(AddPredicate(sasPlusGrounder.sasPlusPredicates)).update(ExchangeTask(exchangeMap)).
             update(RemovePredicate(groundedDomainAndProblem._1.predicates.toSet))
           val sasPlusPlan = groundedDomainAndProblem._2.update(ExchangeTask(exchangeMap))
+
+          sasPlusPlan.init.schema.addEffectsAsPredicate foreach {p => assert(sasPlusDomain.predicateSet.contains(p), "Effect " + p.name + " of init is not a valid predicate.")}
 
           // as we have done the TDG grounding after the SAS+ process, there might be tasks in mapping that have already been pruned
           val saspRepresentation = SASPlusRepresentation(sasPlusGrounder.sasPlusProblem,

@@ -33,11 +33,11 @@ case class SASPlusGrounding(domain: Domain, problem: Plan, sasPlusProblem: SasPl
   override lazy val reachableGroundLiterals: Seq[GroundLiteral] =
     ((reachableGroundPrimitiveActions flatMap { t => t.substitutedPreconditions ++ t.substitutedEffects }) ++ problem.groundedInitialState) distinct
 
-  override lazy val reachableGroundPrimitiveActions: Seq[GroundTask] = groundedTasksToNewGroundTasksMapping.keys.toSeq
+  override lazy val reachableGroundPrimitiveActions: Seq[GroundTask] = originalMap.keys.toSeq
 
   lazy val sasPlusPredicates: Array[Predicate] = sasPlusProblem.factStrs map { v => Predicate(/*"var" + varNum + "=" +*/ v, Nil) }
 
-  lazy val (groundedTasksToNewGroundTasksMapping, sasPlusTaskIndexToNewGroundTask) = {
+  lazy val (groundedTasksToNewGroundTasksMapping, originalMap, sasPlusTaskIndexToNewGroundTask) = {
     val generalActions: Seq[((GroundTask, Task), (Int, Task))] = sasPlusProblem.getGroundedOperatorSignatures.zipWithIndex map { case (op, i) =>
       val splitted = op split " "
       val operatorName = splitted.head
@@ -93,6 +93,8 @@ case class SASPlusGrounding(domain: Domain, problem: Plan, sasPlusProblem: SasPl
     val groundedToNewGroundMap: Map[GroundTask, Task] = (generalActions map { _._1 }) ++ ((problem.groundedInitialTask, newInitTask) ::(problem.groundedGoalTask, newGoalTask) :: Nil) toMap
     val sasPlusIndexMap: Map[Int, Task] = generalActions map { _._2 } toMap
 
-    (groundedToNewGroundMap, sasPlusIndexMap)
+    val simplifiedGroundedToNewGroundMap : Map[(String, Seq[Constant]), Task] = groundedToNewGroundMap map {case (k,v) => (k.task.name, k.arguments) -> v }
+
+    (simplifiedGroundedToNewGroundMap, groundedToNewGroundMap, sasPlusIndexMap)
   }
 }
