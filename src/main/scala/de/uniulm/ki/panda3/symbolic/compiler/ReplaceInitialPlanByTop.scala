@@ -26,7 +26,9 @@ object ReplaceInitialPlanByTop extends DecompositionMethodTransformer[Unit] {
   override protected val allowToRemoveTopMethod = false
 
   override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, unit: Unit, originalDomain: Domain):
-  (Seq[DecompositionMethod], Seq[Task]) = (methods :+ topMethod, Nil)
+  (Seq[DecompositionMethod], Seq[Task]) =
+    if (topMethod.subPlan.planStepsWithoutInitAndGoalTasksSet.size == 1 &&
+      topMethod.subPlan.planStepsWithoutInitAndGoalTasksSet.forall(_.isAbstract)) (methods,Nil) else (methods :+ topMethod, Nil)
 
   override protected val transformationName: String = "artificialTop"
 }
