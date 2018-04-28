@@ -26,7 +26,7 @@ object PruneEffects extends DomainTransformer[Set[Task]] {
     val predicateUpdate = RemovePredicate(unnecessaryPredicates)
 
     val newDom = domain update effectUpdate update predicateUpdate
-    val newPlan = plan update effectUpdate
+    val newPlan = plan update effectUpdate update predicateUpdate
 
      (newDom,  newPlan)
   }
