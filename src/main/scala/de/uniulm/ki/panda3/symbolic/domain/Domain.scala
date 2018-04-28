@@ -277,7 +277,11 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val statisticsString: String           = statistics.mkString("\n")
 }
 
-case class GroundedDomainToDomainMapping(taskMapping: Map[Task, GroundTask])
+case class GroundedDomainToDomainMapping(taskMapping: Map[Task, GroundTask]) extends DomainUpdatable {
+  override def update(domainUpdate: DomainUpdate): GroundedDomainToDomainMapping =
+    GroundedDomainToDomainMapping(taskMapping map {case (t,gt) => t.update(domainUpdate) -> gt.update(domainUpdate)})
+
+}
 
 case class SASPlusRepresentation(sasPlusProblem: SasPlusProblem, sasPlusIndexToTask: Map[Int, Task], sasPlusIndexToPredicate: Map[Int, Predicate]) extends DomainUpdatable {
   lazy val taskToSASPlusIndex: Map[Task, Int] = sasPlusIndexToTask map { case (a, b) => b -> a }

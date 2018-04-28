@@ -106,7 +106,7 @@ object PlanStep extends Internable[(Int, Task, Seq[Variable]), PlanStep] {
 /**
   * A ground task is basically a planstep without an id.
   */
-case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo with Ordered[GroundTask] with PrettyPrintable {
+case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo with Ordered[GroundTask] with PrettyPrintable with DomainUpdatable {
   task.parameters.size
   arguments.size
   assert(task.parameters.size == arguments.size, "Incorrect argument number " + task.name + " " + task.parameters.size + " != " + arguments.size)
@@ -150,6 +150,8 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
       case _ => this.task compare that.task
     }
   }
+
+  override def update(domainUpdate: DomainUpdate): GroundTask = GroundTask(task.update(domainUpdate), arguments map {_.update(domainUpdate)})
 
   /** returns a string by which this object may be referenced */
   override def shortInfo: String = task.name + (arguments map { _.name }).mkString("(", ",", ")")
