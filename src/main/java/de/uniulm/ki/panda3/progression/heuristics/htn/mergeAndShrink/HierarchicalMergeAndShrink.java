@@ -25,7 +25,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     HashMap<Task, List<ProMethod>> methods;
     List<ProgressionPlanStep> initialTasks;
     ClassicalMSGraph combinedGraph;
-    HashMap<Integer,Integer> distancesFromGoal;
+    HashMap<Integer, Integer> distancesFromGoal;
 
 
     public HierarchicalMergeAndShrink(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain) {
@@ -45,28 +45,29 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         ShrinkingStrategy classicalShrinkingStrategy = new ShrinkingStrategy1();
         HtnShrinkingStrategy HtnShrinkingStrategy = new HtnShrinkingStrategy1();
 
-        Task goalTask = ProgressionNetwork.indexToTask[9];
+        assert initialTasks.size() == 1;
 
-        combinedGraph = getCombinedGraph( flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
+        Task goalTask = initialTasks.get(0).getTask();
+
+        combinedGraph = getCombinedGraph(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
                 classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy);
 
-       distancesFromGoal =  ShrinkingStrategy.getDistancesFromGoal(flatProblem, combinedGraph);
+        distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, combinedGraph);
 
 
-        int[] testState = new  int[3];
+        int[] testState = new int[3];
         testState[0] = 1;
         testState[1] = 3;
         testState[2] = 7;
 
 
-
         int[] state = testState;
         //int[] state = flatProblem.s0List;
 
-       int heuristicValue = calcHeu(state);
+        int heuristicValue = calcHeu(state);
 
 
-        System.exit(0);
+        //System.exit(0);
 
 /*
         //Utils.printHtnGraph(flatProblem, presentGraphs.get(16), "Transport\\Graph16.pdf");
@@ -123,8 +124,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
     public ClassicalMSGraph getCombinedGraph(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain, Task goalTask,
                                              int classicalShrinkingBound, MergingStrategy classicalMergingStrategy, ShrinkingStrategy classicalShrinkingStrategy,
-                                             HtnShrinkingStrategy htnShrinkingStrategy){
-
+                                             HtnShrinkingStrategy htnShrinkingStrategy) {
 
 
         this.methods = methods;
@@ -139,7 +139,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         Task[] allTasks = ProgressionNetwork.indexToTask;
 
-        for (int i=0; i<allTasks.length;i++) {
+        for (int i = 0; i < allTasks.length; i++) {
 
             Task t = allTasks[i];
 
@@ -168,8 +168,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
                         DirectedGraph<PlanStep> methodGraph = pm.m.subPlan().orderingConstraints().fullGraph();
                         //System.out.println("\t\t" + methodGraph);
 
-                        if ((pm.subtasks.length>1) &&(pm.orderings.size() == 0)) System.out.println("Task " + taskIndex);
-
+                        if ((pm.subtasks.length > 1) && (pm.orderings.size() == 0)) System.out.println("Task " + taskIndex);
 
 
                     }
@@ -180,19 +179,12 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         //StratificationPlotter$.MODULE$.plotStratification(domain);
 
 
-
-
-
-
-
         //Testing.testGraphs(flatProblem, methods, domain);
 
         //HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
         int upperBound = 165;
         int shrinkingBound = 30;
-        HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy);
-
-
+        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy);
 
 
         //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Rover");
@@ -211,25 +203,23 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     }
 
 
+    public int calcHeu(int[] state) {
 
-    public int calcHeu(int[] state){
 
-
-        int index=0;
-        for (int i:state) {
+        /*int index = 0;
+        for (int i : state) {
             System.out.println("Variable " + index + ": " + i);
             index++;
-        }
+        }*/
 
         int nodeID = combinedGraph.cascadingTables.getNodeID(state);
 
-        System.out.println(nodeID);
+        //System.out.println(nodeID);
 
-        if (nodeID==-1) return -1;
+        if (nodeID == -1) return -1;
 
 
-
-        int distanceFromGoal=distancesFromGoal.get(nodeID);
+        int distanceFromGoal = distancesFromGoal.get(nodeID);
 
         System.out.println("Heuristic Value: " + distanceFromGoal);
 
@@ -247,23 +237,38 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
     }
 
+
+    private int currentHeuristicValue = 0;
+
     @Override
     public GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, ProMethod m) {
-        return null;
+        return update(newTN, ps);
     }
 
     @Override
     public GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps) {
-        return null;
+        BitSet bs = newTN.state;
+        int[] arrayState = new int[bs.size()];
+
+        int i = 0;
+        int j = 0;
+        while ((i = bs.nextSetBit(i)) != -1) {
+            arrayState[j++] = i++;
+        }
+
+        currentHeuristicValue = calcHeu(arrayState);
+
+
+        return this;
     }
 
     @Override
     public int getHeuristic() {
-        return 0;
+        return currentHeuristicValue;
     }
 
     @Override
     public boolean goalRelaxedReachable() {
-        return false;
+        return currentHeuristicValue != -1;
     }
 }
