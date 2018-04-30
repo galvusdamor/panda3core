@@ -48,9 +48,9 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
                                  HashMap<Task, List<ProMethod>> methods,
                                  List<ProgressionPlanStep> initialTasks) {
 
-        /*if (flat.createdFromStrips)
+        if (flat.createdFromStrips)
             this.compEnc = new RelaxedCompositionSTRIPS(flat);
-        else*/
+        else
             this.compEnc = new RelaxedCompositionSAS(flat);
 
         if (heuristic == SasHeuristic.SasHeuristics.hLmCutOpt)
