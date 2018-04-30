@@ -33,6 +33,8 @@ case class AnalysisMap(map: Map[AnalysisType, Any]) extends (AnalysisType => Any
 
   def apply(analysis: AnalysisType): analysis.ResultType = map(analysis).asInstanceOf[analysis.ResultType]
 
+  def getOrElse(analysis: AnalysisType): Option[analysis.ResultType] = if (map.contains(analysis)) Some(map(analysis).asInstanceOf[analysis.ResultType]) else None
+
   def contains(analysis: AnalysisType): Boolean = map contains analysis
 
   def +(analysis: (AnalysisType, Any)): AnalysisMap = AnalysisMap(map + analysis)

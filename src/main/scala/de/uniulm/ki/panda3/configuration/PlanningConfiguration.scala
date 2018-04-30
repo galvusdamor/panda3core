@@ -903,7 +903,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
   private def runReachabilityAnalyses(domain: Domain, problem: Plan, runForGrounder: Boolean, timeCapsule: TimeCapsule = new TimeCapsule(),
-                                      firstAnalysis: Boolean = false): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
+                                      firstAnalysis: Boolean = false, savedSASPlusParser : Option[SASPlusGrounding] = None): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     val emptyAnalysis = AnalysisMap(Map())
 
     assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall {
@@ -1048,7 +1048,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       // for now
       (pruned, newAnalysisMap)
-    } else liftedResult
+    } else {
+      val newAnalysisMap = savedSASPlusParser match {
+        case Some(parser) => liftedResult._2 + (SASPInput -> parser) + (SymbolicGroundedReachability -> parser)
+        case None => liftedResult._2
+      }
+
+      (liftedResult._1,newAnalysisMap)
+    }
 
 
     // grounded reachability analysis
@@ -1169,7 +1176,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length ||
       (compiledResult._1.abstractTasks.nonEmpty && compiledResult._1.decompositionMethods.isEmpty)) ((compiledResult, tdgResult._2), timeCapsule)
-    else runReachabilityAnalyses(compiledResult._1, compiledResult._2, runForGrounder, timeCapsule)
+    else runReachabilityAnalyses(compiledResult._1, compiledResult._2, runForGrounder, timeCapsule, firstAnalysis = false, savedSASPlusParser = tdgResult._2.getOrElse(SASPInput))
   }
 
   private case class CompilerConfiguration[T](domainTransformer: DomainTransformer[T], information: T, name: String, timingName: String) {
@@ -1234,6 +1241,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val exchangeMap = flatTaskToGroundedTask collect {
             case (currentTask, groundTask) if sasPlusGrounder.groundedTasksToNewGroundTasksMapping contains groundTask =>
               currentTask -> sasPlusGrounder.groundedTasksToNewGroundTasksMapping(groundTask)
+            case (currentTask, _) if !currentTask.isAbstract => assert(false, "Prim not found: " + currentTask.name); null
           }
 
           val sasPlusDomain = groundedDomainAndProblem._1.update(AddPredicate(sasPlusGrounder.sasPlusPredicates)).update(ExchangeTask(exchangeMap)).
