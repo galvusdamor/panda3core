@@ -71,7 +71,7 @@ class GroundedPlanningGraphCompareWithCppImplementation extends FlatSpec {
     val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(sortsExpanded, info = true)
     val plain = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
     val negPre = RemoveNegativePreconditions.transform(plain, ())
-    val (domain, initialPlan) = Grounding.transform(negPre, EverythingIsHiearchicallyReachable(negPre._1, negPre._2))
+    val (domain, initialPlan) = Grounding.transform(negPre, (EverythingIsHiearchicallyReachable(negPre._1, negPre._2), Map()))
 
     val domainString = writeDomainAndProblemToSimpleFormat(domain, initialPlan)
     val runID = Random.nextInt()

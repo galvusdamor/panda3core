@@ -33,11 +33,13 @@ case class SASPlusGrounding(domain: Domain, problem: Plan, sasPlusProblem: SasPl
   override lazy val reachableGroundLiterals: Seq[GroundLiteral] =
     ((reachableGroundPrimitiveActions flatMap { t => t.substitutedPreconditions ++ t.substitutedEffects }) ++ problem.groundedInitialState) distinct
 
-  override lazy val reachableGroundPrimitiveActions: Seq[GroundTask] = originalMap.keys.toSeq
+  override lazy val reachableGroundPrimitiveActions: Seq[GroundTask] = tempReachableGroundPrimitiveActions
 
   lazy val sasPlusPredicates: Array[Predicate] = sasPlusProblem.factStrs map { v => Predicate(/*"var" + varNum + "=" +*/ v, Nil) }
 
-  lazy val (groundedTasksToNewGroundTasksMapping, originalMap, sasPlusTaskIndexToNewGroundTask) = {
+  val tasksWithMultipleGroundings: Map[GroundTask, Int] = tempTasksWithMultipleGroundings
+
+  lazy val (groundedTasksToNewGroundTasksMapping, tempReachableGroundPrimitiveActions, sasPlusTaskIndexToNewGroundTask, tempTasksWithMultipleGroundings) = {
     val generalActions: Seq[((GroundTask, Task), (Int, Task))] = sasPlusProblem.getGroundedOperatorSignatures.zipWithIndex map { case (op, i) =>
       val splitted = op split " "
       val operatorName = splitted.head
@@ -90,11 +92,35 @@ case class SASPlusGrounding(domain: Domain, problem: Plan, sasPlusProblem: SasPl
       ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And(preconditions), And(Nil))
     }
 
-    val groundedToNewGroundMap: Map[GroundTask, Task] = (generalActions map { _._1 }) ++ ((problem.groundedInitialTask, newInitTask) ::(problem.groundedGoalTask, newGoalTask) :: Nil) toMap
-    val sasPlusIndexMap: Map[Int, Task] = generalActions map { _._2 } toMap
+    //val groundedToNewGroundMap: Map[GroundTask, Task] = (generalActions map { _._1 })
+    // toMap
 
-    val simplifiedGroundedToNewGroundMap : Map[(String, Seq[Constant]), Task] = groundedToNewGroundMap map {case (k,v) => (k.task.name, k.arguments) -> v }
+    // check for duplicates in general actions map
+    val sasActionsGroupedByGroundAction: Map[GroundTask, Seq[((GroundTask, Task), (Int, Task))]] = generalActions.groupBy(_._1._1)
+    val groundTasksWithMultipleGroundings: Map[GroundTask, Int] = sasActionsGroupedByGroundAction filter { _._2.size != 1 } map { case (gt, l) => gt -> l.size }
 
-    (simplifiedGroundedToNewGroundMap, groundedToNewGroundMap, sasPlusIndexMap)
+    val sasPlusIndexMap: Map[Int, Task] = sasActionsGroupedByGroundAction flatMap {
+      case (_, indexList) if indexList.size == 1 =>
+        (indexList.head._2._1 -> indexList.head._2._2) :: Nil
+      case (_, indexList)                        =>
+        indexList.zipWithIndex map { case ((_, (sasIndex, task)), copyIndex) =>
+          sasIndex -> task.asInstanceOf[ReducedTask].copy(name = task.name + "#" + copyIndex)
+        }
+    }
+
+
+    val simplifiedGroundedToNewGroundMap: Map[(String, Seq[Constant]), Task] = (sasActionsGroupedByGroundAction flatMap {
+      case (gtInModel, instance) if instance.size == 1 =>
+        ((gtInModel.task.name, gtInModel.arguments) -> instance.head._1._2) :: Nil
+
+      case (gtInModel, possibleInstances) =>
+        possibleInstances.zipWithIndex map { case (((_, groundedTask), _), index) =>
+          (gtInModel.task.name + "#" + index, gtInModel.arguments) -> groundedTask.asInstanceOf[ReducedTask].copy(name = groundedTask.name + "#" + index)
+        }
+    }) ++ (((problem.groundedInitialTask.task.name, problem.groundedInitialTask.arguments), newInitTask) ::
+      ((problem.groundedGoalTask.task.name, problem.groundedGoalTask.arguments), newGoalTask) :: Nil)
+
+    (simplifiedGroundedToNewGroundMap, generalActions.map(_._1._1).distinct :+ problem.groundedInitialTask :+ problem.groundedGoalTask,
+      sasPlusIndexMap, groundTasksWithMultipleGroundings)
   }
 }

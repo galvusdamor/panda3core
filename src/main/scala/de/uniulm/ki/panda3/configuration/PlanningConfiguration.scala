@@ -1230,10 +1230,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       timeCapsule start GROUNDING
 
       val groundingResult: (Domain, Plan) = {
-        val groundedDomainAndProblem = Grounding.transform(domainAndPlan, tdg) // since we grounded the domain every analysis we performed so far becomes invalid
-
         if (preprocessingConfiguration.convertToSASP && (!domainAndPlan._1.containEitherType || !preprocessingConfiguration.allowSASPFromStrips)) {
           val sasPlusGrounder: SASPlusGrounding = analysisMap(SASPInput)
+          // since we grounded the domain every analysis we performed so far becomes invalid
+          val groundedDomainAndProblem = Grounding.transform(domainAndPlan, (tdg,sasPlusGrounder.tasksWithMultipleGroundings))
+
           assert(groundedDomainAndProblem._1.mappingToOriginalGrounding.isDefined)
           val flatTaskToGroundedTask = groundedDomainAndProblem._1.mappingToOriginalGrounding.get.taskMapping
 
@@ -1248,6 +1249,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           sasPlusPlan.init.schema.addEffectsAsPredicate foreach {p => assert(sasPlusDomain.predicateSet.contains(p), "Effect " + p.name + " of init is not a valid predicate.")}
 
+
           // as we have done the TDG grounding after the SAS+ process, there might be tasks in mapping that have already been pruned
           val saspRepresentation = SASPlusRepresentation(sasPlusGrounder.sasPlusProblem,
                                                          sasPlusGrounder.sasPlusTaskIndexToNewGroundTask filter { case (i, t) => sasPlusDomain.taskSet contains t },
@@ -1255,6 +1257,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           (sasPlusDomain.copy(sasPlusRepresentation = Some(saspRepresentation)), sasPlusPlan)
         } else {
+          val groundedDomainAndProblem = Grounding.transform(domainAndPlan, (tdg,Map())) // since we grounded the domain every analysis we performed so far becomes invalid
           // generate simple SAS+ representation from strips
           val (saspProblem, sasOperatorOrdering, sasPredicateOrdering) = SasPlusProblem.generateFromSTRIPS(groundedDomainAndProblem._1, groundedDomainAndProblem._2)
           val saspRepresentation = SASPlusRepresentation(saspProblem,
