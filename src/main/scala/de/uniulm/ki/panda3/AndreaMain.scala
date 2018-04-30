@@ -1,3 +1,19 @@
+// PANDA 3 -- a domain-independent planner for classical and hierarchical planning
+// Copyright (C) 2014-2017 the original author or authors.
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 package de.uniulm.ki.panda3
 
 import java.io.{File, FileInputStream}
@@ -32,8 +48,22 @@ object MainAndrea {
     val outputPDF = "dot.pdf"
 
     // TRANSPORT
-    val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
-    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
+    //val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
+    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
+    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile10".replace('\\', File.separatorChar)
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/domains/satellite2.hddl"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/problems/8obs-3sat-4mod.hddl"
+
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Woodworking/domains/woodworking-legal-fewer-htn-groundings.hddl"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Woodworking/problems/00--p01-variant.hddl"
+    //val domFile = "/home/gregor/Workspace/Woodworking/domains/woodworking-legal-fewer-htn-groundings.hddl"
+    //val probFile = "/home/gregor/Workspace/Woodworking/problems/00--p01-variant.hddl"
+
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/SmartPhone/domains/SmartPhone-HierarchicalNoAxioms.hddl"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/SmartPhone/problems/01-OrganizeMeeting_VeryVerySmall.hddl"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/SmartPhone/problems/02-OrganizeMeeting_VerySmall.hddl"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/SmartPhone/problems/03-OrganizeMeeting_Small.hddl"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/SmartPhone/problems/04-OrganizeMeeting_Large.hddl"
 
     // ROVER
     //val domFile = "rover-domain.hddl"
@@ -61,16 +91,18 @@ object MainAndrea {
                                                        compileOrderInMethods = None,
                                                        ensureMethodsHaveLastTask = false,
                                                        ensureMethodsHaveAtMostTwoTasks = true,
-                                                       removeUnnecessaryPredicates = true,
+                                                       removeUnnecessaryPredicates = false,
                                                        splitIndependentParameters = true,
                                                        compileUselessAbstractTasks = false,
                                                        liftedReachability = true,
                                                        groundedReachability = None,
                                                        groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                        iterateReachabilityAnalysis = true, groundDomain = true, stopDirectlyAfterGrounding = false),
+                            //PredefinedConfigurations.groundingPreprocess,
                             //PredefinedConfigurations.sasPlusConfig(AStarActionsType(2), SasHeuristics.hMS),
                             //PredefinedConfigurations.pandaProConfig(AStarActionsType(2), SasHeuristics.hMS),
                             ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink), PriorityQueueSearch.abstractTaskSelection.random),
+                            //ProgressionSearch(AStarActionsType(2), Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hFF)), PriorityQueueSearch.abstractTaskSelection.random),
                             postprocessing,
                             Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
                             //Map(FastDownward -> "../../fd"))
