@@ -16,7 +16,7 @@ public final class OverlayOfClassicalAndHTNGraph {
     public static ClassicalMSGraph findWaysThroughBothGraphs(SasPlusProblem p, ClassicalMSGraph classicalMSGraph, HtnMsGraph htnMsGraph){
 
 
-        System.out.println("Overlay starts now");
+        //System.out.println("Overlay starts now");
 
         HashMap<Integer, NodeCombination> nodeAssignments = new HashMap<>();
         LinkedList<Tuple2<Integer,Integer>> nextQueue = new LinkedList<>();
@@ -44,7 +44,7 @@ public final class OverlayOfClassicalAndHTNGraph {
             Tuple2<Integer,Integer> next = nextQueue.poll();
             alreadyQueuedCombinations.add(next);
 
-            System.out.println("At Node " + next._1 + ", " + next._2);
+            //System.out.println("At Node " + next._1 + ", " + next._2);
 
             ArrayList<Tuple3<Integer, Integer, Integer>> classicalOutgoingEdges = edgesOfClassicalGraph.get(next._1);
 

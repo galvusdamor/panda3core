@@ -60,9 +60,9 @@ object MainAndrea {
 
 
     val domFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\woodworking-legal-fewer-htn-groundings.hddl"
-    //val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\00--p01-variant.hddl"
+    val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\00--p01-variant.hddl"
     //val probFile = "D:\\\\IdeaProjects\\\\panda3core\\\\Domains\\\\Woodworking\\\\01--p01-complete.hddl"
-    val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\02--p02-part1.hddl"
+    //val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\04--p02-part3.hddl"
 
 
 
