@@ -288,7 +288,8 @@ public final class SingleGraphMethods {
 
     public static String getOpString(SasPlusProblem p, int OpIndex){
 
-        String s = "\"" + OpIndex + ": " + p.opNames[OpIndex] +  "\"";
+        String s = "";
+        //String s = "\"" + OpIndex + ": " + p.opNames[OpIndex] +  "\"";
 
         return s;
 

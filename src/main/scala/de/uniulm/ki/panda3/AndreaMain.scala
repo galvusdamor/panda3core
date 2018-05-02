@@ -54,8 +54,19 @@ object MainAndrea {
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/domains/satellite2.hddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/problems/8obs-3sat-4mod.hddl"
 
-    val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Woodworking/domains/woodworking-legal-fewer-htn-groundings.hddl"
-    val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Woodworking/problems/00--p01-variant.hddl"
+    //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Woodworking/domains/woodworking-legal-fewer-htn-groundings.hddl"
+    //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Woodworking/problems/00--p01-variant.hddl"
+
+
+
+    val domFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\woodworking-legal-fewer-htn-groundings.hddl"
+    //val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\00--p01-variant.hddl"
+    //val probFile = "D:\\\\IdeaProjects\\\\panda3core\\\\Domains\\\\Woodworking\\\\01--p01-complete.hddl"
+    val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\02--p02-part1.hddl"
+
+
+
+
     //val domFile = "/home/gregor/Workspace/Woodworking/domains/woodworking-legal-fewer-htn-groundings.hddl"
     //val probFile = "/home/gregor/Workspace/Woodworking/problems/00--p01-variant.hddl"
 

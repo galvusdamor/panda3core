@@ -55,7 +55,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, combinedGraph);
 
 
-        int[] testState = new int[3];
+       /* int[] testState = new int[3];
         testState[0] = 1;
         testState[1] = 3;
         testState[2] = 7;
@@ -64,7 +64,8 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         int[] state = testState;
         //int[] state = flatProblem.s0List;
 
-        int heuristicValue = calcHeu(state);
+        int heuristicValue = calcHeu(state);*/
+
 
 
         //System.exit(0);
@@ -195,7 +196,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         ClassicalMSGraph combinedGraph = OverlayOfClassicalAndHTNGraph.findWaysThroughBothGraphs(flatProblem, classicalMSGraph, htnMsGraph);
 
-        Utils.printMultiGraph(flatProblem, combinedGraph, "Transport\\combinedGraph.pdf");
+        Utils.printMultiGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\combinedGraph.pdf");
 
         return combinedGraph;
 
@@ -221,6 +222,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         int distanceFromGoal = distancesFromGoal.get(nodeID);
 
+        System.out.println("Node : " + nodeID);
         System.out.println("Heuristic Value: " + distanceFromGoal);
 
         return distanceFromGoal;

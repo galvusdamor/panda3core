@@ -16,6 +16,8 @@ public final class OverlayOfClassicalAndHTNGraph {
     public static ClassicalMSGraph findWaysThroughBothGraphs(SasPlusProblem p, ClassicalMSGraph classicalMSGraph, HtnMsGraph htnMsGraph){
 
 
+        System.out.println("Overlay starts now");
+
         HashMap<Integer, NodeCombination> nodeAssignments = new HashMap<>();
         LinkedList<Tuple2<Integer,Integer>> nextQueue = new LinkedList<>();
 
@@ -27,6 +29,7 @@ public final class OverlayOfClassicalAndHTNGraph {
 
         HashSet<Tuple3<Integer, Integer, Integer>> newEdges = new HashSet<>();
         HashSet<Tuple2<Integer,Integer>> alreadyVisitedCombinations = new HashSet<>();
+        HashSet<Tuple2<Integer,Integer>> alreadyQueuedCombinations = new HashSet<>();
 
 
         //neuen, leeren Graphen erstellen
@@ -39,8 +42,9 @@ public final class OverlayOfClassicalAndHTNGraph {
         while (nextQueue.size()>0){
 
             Tuple2<Integer,Integer> next = nextQueue.poll();
-            alreadyVisitedCombinations.add(next);
+            alreadyQueuedCombinations.add(next);
 
+            System.out.println("At Node " + next._1 + ", " + next._2);
 
             ArrayList<Tuple3<Integer, Integer, Integer>> classicalOutgoingEdges = edgesOfClassicalGraph.get(next._1);
 
@@ -67,7 +71,7 @@ public final class OverlayOfClassicalAndHTNGraph {
 
                         Tuple2<Integer, Integer> endCombination = new Tuple2<>(classicalEndNode,htnEndeNode);
 
-                        if(!alreadyVisitedCombinations.contains(endCombination)){
+                        if(!alreadyQueuedCombinations.contains(endCombination)){
 
 
 
@@ -81,6 +85,7 @@ public final class OverlayOfClassicalAndHTNGraph {
                             }
 
                             nextQueue.addLast(endCombination);
+                            alreadyQueuedCombinations.add(endCombination);
 
                         }
 
