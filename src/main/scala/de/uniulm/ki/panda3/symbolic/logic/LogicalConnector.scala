@@ -34,7 +34,7 @@ case class Not(formula: Formula) extends LogicalConnector with DefaultLongInfo w
 
   lazy val containedVariables: Set[Variable] = formula.containedVariables
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = formula.containedPredicatesWithSign map { case (a, b) => (a, !b) }
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = formula.containedPredicatesWithSign map { case (a, b, c) => (a, b, !c) }
 
   override def longInfo: String = "!" + formula.longInfo
 
@@ -89,7 +89,7 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
 
   lazy val containedVariables: Set[Variable] = conjuncts.flatMap(_.containedVariables).toSet
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = conjuncts flatMap { case f: Formula => f.containedPredicatesWithSign } toSet
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = conjuncts flatMap { case f: Formula => f.containedPredicatesWithSign } toSet
 
   override def longInfo: String = (conjuncts map { _.longInfo }).mkString("\n")
 
@@ -113,7 +113,7 @@ case class Identity[SubFormulas <: Formula]() extends LogicalConnector with Defa
 
   lazy val containedVariables: Set[Variable] = Set[Variable]()
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = Set[(Predicate, Boolean)]()
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = Set[(Predicate, Seq[Variable], Boolean)]()
 
   override def longInfo: String = "Identity"
 
@@ -129,7 +129,7 @@ case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends Logic
 
   lazy val containedVariables: Set[Variable] = disjuncts.flatMap(_.containedVariables).toSet
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = disjuncts flatMap { case f: Formula => f.containedPredicatesWithSign } toSet
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = disjuncts flatMap { case f: Formula => f.containedPredicatesWithSign } toSet
 
   override def longInfo: String = (disjuncts map {
     _.longInfo
@@ -151,7 +151,7 @@ case class Implies(left: Formula, right: Formula) extends LogicalConnector with 
 
   lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
 
   override def longInfo: String = left.longInfo + " => " + right.longInfo
 
@@ -170,7 +170,7 @@ case class When(left: Formula, right: Formula) extends LogicalConnector with Def
 
   lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
 
   override def longInfo: String = left.longInfo + " ~> " + right.longInfo
 
@@ -189,7 +189,7 @@ case class Equivalence(left: Formula, right: Formula) extends LogicalConnector w
 
   lazy val containedVariables: Set[Variable] = left.containedVariables ++ right.containedVariables
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = left.containedPredicatesWithSign ++ right.containedPredicatesWithSign
 
   override def longInfo: String = left.longInfo + " == " + right.longInfo
 
@@ -208,7 +208,7 @@ case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLon
 
   lazy val containedVariables: Set[Variable] = formula.containedVariables - v
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = formula.containedPredicatesWithSign
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = formula.containedPredicatesWithSign
 
   override def longInfo: String = "exists " + v.shortInfo + " in (" + formula.longInfo + ")"
 
@@ -235,7 +235,7 @@ case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLon
 
   lazy val containedVariables: Set[Variable] = formula.containedVariables - v
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = formula.containedPredicatesWithSign
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = formula.containedPredicatesWithSign
 
   override def longInfo: String = "forall " + v.shortInfo + " in (" + formula.longInfo + ")"
 

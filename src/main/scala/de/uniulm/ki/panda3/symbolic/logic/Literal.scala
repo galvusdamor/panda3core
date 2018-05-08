@@ -21,7 +21,7 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
 
   lazy val containedVariables: Set[Variable] = parameterVariables.toSet
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = Set((predicate, isPositive))
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = Set((predicate, parameterVariables, isPositive))
 
   /** check whether two literals are identical given a CSP */
   def =?=(that: Literal)(csp: CSP): Boolean = this.predicate == that.predicate && this.isPositive == that.isPositive &&
@@ -59,7 +59,7 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
       val newPredicate = if (isPositive) exchangeMap(predicate)._1 else exchangeMap(predicate)._2
       Literal.intern(newPredicate, true, parameterVariables)
     case _                                                                             => Literal.intern(predicate.update(domainUpdate), isPositive,
-                                                                                                  parameterVariables map { _.update(domainUpdate) })
+                                                                                                         parameterVariables map { _.update(domainUpdate) })
   }
 
   /** returns a short information about the object */
@@ -95,7 +95,7 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
 
   override val containedVariables: Set[Variable] = Set()
 
-  lazy val containedPredicatesWithSign: Set[(Predicate, Boolean)] = Set((predicate, isPositive))
+  lazy val containedPredicatesWithSign: Set[(Predicate, Seq[Variable], Boolean)] = ??? // Set((predicate, isPositive))
 
   /** returns a string that can be utilized to define the object */
   override def mediumInfo: String = (if (!isPositive) "!" else "") + predicate.shortInfo + (parameter map { _.mediumInfo }).mkString("(", ", ", ")")
