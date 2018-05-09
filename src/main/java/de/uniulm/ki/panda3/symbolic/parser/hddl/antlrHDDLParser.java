@@ -1,4 +1,4 @@
-// Generated from /home/dh/IdeaProjects/panda3core_with_planning_graph/src/main/java/de/uniulm/ki/panda3/symbolic/parser/hddl/antlrHDDL.g4 by ANTLR 4.5.3
+// Generated from /home/dh/IdeaProjects/panda3core_with_planning_graph/src/main/java/de/uniulm/ki/panda3/symbolic/parser/hddl/antlrHDDL.g4 by ANTLR 4.7
 package de.uniulm.ki.panda3.symbolic.parser.hddl;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class antlrHDDLParser extends Parser {
-	static { RuntimeMetaData.checkVersion("4.5.3", RuntimeMetaData.VERSION); }
+	static { RuntimeMetaData.checkVersion("4.7", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
 	protected static final PredictionContextCache _sharedContextCache =
@@ -913,6 +913,7 @@ public class antlrHDDLParser extends Parser {
 			setState(285);
 			match(T__3);
 			setState(288);
+			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==T__13) {
 				{
@@ -924,6 +925,7 @@ public class antlrHDDLParser extends Parser {
 			}
 
 			setState(292);
+			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==T__14) {
 				{
@@ -1053,6 +1055,7 @@ public class antlrHDDLParser extends Parser {
 			setState(314);
 			match(T__3);
 			setState(317);
+			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==T__13) {
 				{
@@ -1064,6 +1067,7 @@ public class antlrHDDLParser extends Parser {
 			}
 
 			setState(321);
+			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==T__14) {
 				{
@@ -1116,6 +1120,7 @@ public class antlrHDDLParser extends Parser {
 			enterOuterAlt(_localctx, 1);
 			{
 			setState(327);
+			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if ((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << T__16) | (1L << T__17) | (1L << T__18) | (1L << T__19))) != 0)) {
 				{
@@ -1123,7 +1128,10 @@ public class antlrHDDLParser extends Parser {
 				_la = _input.LA(1);
 				if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << T__16) | (1L << T__17) | (1L << T__18) | (1L << T__19))) != 0)) ) {
 				_errHandler.recoverInline(this);
-				} else {
+				}
+				else {
+					if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+					_errHandler.reportMatch(this);
 					consume();
 				}
 				setState(326);
@@ -1132,6 +1140,7 @@ public class antlrHDDLParser extends Parser {
 			}
 
 			setState(331);
+			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==T__20 || _la==T__21) {
 				{
@@ -1139,7 +1148,10 @@ public class antlrHDDLParser extends Parser {
 				_la = _input.LA(1);
 				if ( !(_la==T__20 || _la==T__21) ) {
 				_errHandler.recoverInline(this);
-				} else {
+				}
+				else {
+					if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+					_errHandler.reportMatch(this);
 					consume();
 				}
 				setState(330);
@@ -1148,6 +1160,7 @@ public class antlrHDDLParser extends Parser {
 			}
 
 			setState(335);
+			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==T__22) {
 				{
@@ -1159,6 +1172,7 @@ public class antlrHDDLParser extends Parser {
 			}
 
 			setState(339);
+			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==T__23 || _la==T__24) {
 				{
@@ -1166,7 +1180,10 @@ public class antlrHDDLParser extends Parser {
 				_la = _input.LA(1);
 				if ( !(_la==T__23 || _la==T__24) ) {
 				_errHandler.recoverInline(this);
-				} else {
+				}
+				else {
+					if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+					_errHandler.reportMatch(this);
 					consume();
 				}
 				setState(338);
@@ -1688,7 +1705,10 @@ public class antlrHDDLParser extends Parser {
 				_la = _input.LA(1);
 				if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << T__28) | (1L << T__29) | (1L << T__30) | (1L << T__31))) != 0)) ) {
 				_errHandler.recoverInline(this);
-				} else {
+				}
+				else {
+					if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+					_errHandler.reportMatch(this);
 					consume();
 				}
 				setState(437);
@@ -1710,7 +1730,10 @@ public class antlrHDDLParser extends Parser {
 				_la = _input.LA(1);
 				if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << T__28) | (1L << T__29) | (1L << T__30) | (1L << T__31))) != 0)) ) {
 				_errHandler.recoverInline(this);
-				} else {
+				}
+				else {
+					if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+					_errHandler.reportMatch(this);
 					consume();
 				}
 				setState(444);
@@ -3103,7 +3126,10 @@ public class antlrHDDLParser extends Parser {
 			_la = _input.LA(1);
 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & ((1L << T__45) | (1L << T__46) | (1L << T__47) | (1L << T__48) | (1L << T__49))) != 0)) ) {
 			_errHandler.recoverInline(this);
-			} else {
+			}
+			else {
+				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+				_errHandler.reportMatch(this);
 				consume();
 			}
 			}
@@ -3141,6 +3167,7 @@ public class antlrHDDLParser extends Parser {
 		int _la;
 		try {
 			setState(645);
+			_errHandler.sync(this);
 			switch (_input.LA(1)) {
 			case NAME:
 				enterOuterAlt(_localctx, 1);
@@ -3317,6 +3344,7 @@ public class antlrHDDLParser extends Parser {
 		enterRule(_localctx, 110, RULE_bin_op);
 		try {
 			setState(675);
+			_errHandler.sync(this);
 			switch (_input.LA(1)) {
 			case T__51:
 			case T__52:
@@ -3373,7 +3401,10 @@ public class antlrHDDLParser extends Parser {
 			_la = _input.LA(1);
 			if ( !(_la==T__51 || _la==T__52) ) {
 			_errHandler.recoverInline(this);
-			} else {
+			}
+			else {
+				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+				_errHandler.reportMatch(this);
 				consume();
 			}
 			}
@@ -3486,6 +3517,7 @@ public class antlrHDDLParser extends Parser {
 		enterRule(_localctx, 118, RULE_equallity);
 		try {
 			setState(694);
+			_errHandler.sync(this);
 			switch (_input.LA(1)) {
 			case T__0:
 				enterOuterAlt(_localctx, 1);
@@ -3803,6 +3835,7 @@ public class antlrHDDLParser extends Parser {
 		int _la;
 		try {
 			setState(740);
+			_errHandler.sync(this);
 			switch (_input.LA(1)) {
 			case NAME:
 				enterOuterAlt(_localctx, 1);
@@ -3871,7 +3904,10 @@ public class antlrHDDLParser extends Parser {
 			_la = _input.LA(1);
 			if ( !(_la==VAR_NAME || _la==NAME) ) {
 			_errHandler.recoverInline(this);
-			} else {
+			}
+			else {
+				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+				_errHandler.reportMatch(this);
 				consume();
 			}
 			}
@@ -3904,6 +3940,7 @@ public class antlrHDDLParser extends Parser {
 		enterRule(_localctx, 136, RULE_term);
 		try {
 			setState(747);
+			_errHandler.sync(this);
 			switch (_input.LA(1)) {
 			case NAME:
 				enterOuterAlt(_localctx, 1);
@@ -4138,6 +4175,7 @@ public class antlrHDDLParser extends Parser {
 				break;
 			}
 			setState(788);
+			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==T__0) {
 				{
@@ -4402,10 +4440,14 @@ public class antlrHDDLParser extends Parser {
 			_la = _input.LA(1);
 			if ( !(_la==T__61 || _la==T__62) ) {
 			_errHandler.recoverInline(this);
-			} else {
+			}
+			else {
+				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+				_errHandler.reportMatch(this);
 				consume();
 			}
 			setState(828);
+			_errHandler.sync(this);
 			_la = _input.LA(1);
 			if (_la==T__12) {
 				{
@@ -4495,7 +4537,10 @@ public class antlrHDDLParser extends Parser {
 			_la = _input.LA(1);
 			if ( !(_la==T__64 || _la==T__65) ) {
 			_errHandler.recoverInline(this);
-			} else {
+			}
+			else {
+				if ( _input.LA(1)==Token.EOF ) matchedEOF = true;
+				_errHandler.reportMatch(this);
 				consume();
 			}
 			}
@@ -4592,6 +4637,7 @@ public class antlrHDDLParser extends Parser {
 				enterOuterAlt(_localctx, 3);
 				{
 				setState(859);
+				_errHandler.sync(this);
 				switch (_input.LA(1)) {
 				case T__0:
 					{
@@ -4713,7 +4759,7 @@ public class antlrHDDLParser extends Parser {
 	}
 
 	public static final String _serializedATN =
-		"\3\u0430\ud6d1\u8206\uad2d\u4417\uaef1\u8d80\uaadd\3L\u0377\4\2\t\2\4"+
+		"\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3L\u0377\4\2\t\2\4"+
 		"\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t\7\4\b\t\b\4\t\t\t\4\n\t\n\4\13\t"+
 		"\13\4\f\t\f\4\r\t\r\4\16\t\16\4\17\t\17\4\20\t\20\4\21\t\21\4\22\t\22"+
 		"\4\23\t\23\4\24\t\24\4\25\t\25\4\26\t\26\4\27\t\27\4\30\t\30\4\31\t\31"+
@@ -4776,14 +4822,14 @@ public class antlrHDDLParser extends Parser {
 		"\22\24\26\30\32\34\36 \"$&(*,.\60\62\64\668:<>@BDFHJLNPRTVXZ\\^`bdfhj"+
 		"lnprtvxz|~\u0080\u0082\u0084\u0086\u0088\u008a\u008c\u008e\u0090\u0092"+
 		"\u0094\u0096\u0098\u009a\u009c\u009e\u00a0\u00a2\u00a4\2\13\3\2\23\26"+
-		"\3\2\27\30\3\2\32\33\3\2\37\"\3\2\60\64\3\2\66\67\3\2HI\3\2@A\3\2CD\u038f"+
-		"\2\u00a8\3\2\2\2\4\u00aa\3\2\2\2\6\u00d3\3\2\2\2\b\u00d5\3\2\2\2\n\u00db"+
-		"\3\2\2\2\f\u00df\3\2\2\2\16\u00ef\3\2\2\2\20\u00f2\3\2\2\2\22\u00f6\3"+
-		"\2\2\2\24\u00fb\3\2\2\2\26\u0104\3\2\2\2\30\u0109\3\2\2\2\32\u0117\3\2"+
-		"\2\2\34\u011b\3\2\2\2\36\u012a\3\2\2\2 \u012c\3\2\2\2\"\u0149\3\2\2\2"+
-		"$\u0159\3\2\2\2&\u0167\3\2\2\2(\u0180\3\2\2\2*\u0182\3\2\2\2,\u0190\3"+
-		"\2\2\2.\u0192\3\2\2\2\60\u01a4\3\2\2\2\62\u01c2\3\2\2\2\64\u01d0\3\2\2"+
-		"\2\66\u01d2\3\2\2\28\u01d8\3\2\2\2:\u01ec\3\2\2\2<\u01ee\3\2\2\2>\u01f1"+
+		"\3\2\27\30\3\2\32\33\3\2\37\"\3\2\60\64\3\2\66\67\3\2HI\3\2@A\3\2CD\2"+
+		"\u038f\2\u00a8\3\2\2\2\4\u00aa\3\2\2\2\6\u00d3\3\2\2\2\b\u00d5\3\2\2\2"+
+		"\n\u00db\3\2\2\2\f\u00df\3\2\2\2\16\u00ef\3\2\2\2\20\u00f2\3\2\2\2\22"+
+		"\u00f6\3\2\2\2\24\u00fb\3\2\2\2\26\u0104\3\2\2\2\30\u0109\3\2\2\2\32\u0117"+
+		"\3\2\2\2\34\u011b\3\2\2\2\36\u012a\3\2\2\2 \u012c\3\2\2\2\"\u0149\3\2"+
+		"\2\2$\u0159\3\2\2\2&\u0167\3\2\2\2(\u0180\3\2\2\2*\u0182\3\2\2\2,\u0190"+
+		"\3\2\2\2.\u0192\3\2\2\2\60\u01a4\3\2\2\2\62\u01c2\3\2\2\2\64\u01d0\3\2"+
+		"\2\2\66\u01d2\3\2\2\28\u01d8\3\2\2\2:\u01ec\3\2\2\2<\u01ee\3\2\2\2>\u01f1"+
 		"\3\2\2\2@\u01fa\3\2\2\2B\u0203\3\2\2\2D\u0208\3\2\2\2F\u020e\3\2\2\2H"+
 		"\u0216\3\2\2\2J\u021e\3\2\2\2L\u0223\3\2\2\2N\u0228\3\2\2\2P\u022d\3\2"+
 		"\2\2R\u0232\3\2\2\2T\u0237\3\2\2\2V\u023d\3\2\2\2X\u0243\3\2\2\2Z\u024f"+
