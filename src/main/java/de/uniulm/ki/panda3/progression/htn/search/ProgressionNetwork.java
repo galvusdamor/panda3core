@@ -300,6 +300,27 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
         return res;
     }
 
+    public ProgressionNetwork insertAction(int action) {
+        ProgressionNetwork res = this.clone();
+        res.state = (BitSet) this.state.clone();
+
+        res.solution = new SolutionStep(this.solution, action);
+        res.numProgressionSteps++;
+
+        assert (isApplicable(res.state, action));
+
+        // transfer state
+        for (int df : ProgressionNetwork.flatProblem.delLists[action])
+            res.state.set(df, false);
+        for (int af : ProgressionNetwork.flatProblem.addLists[action])
+            res.state.set(af, true);
+
+        if (printProgressionTrace) {
+            res.progressionTrace += "\n";
+            res.progressionTrace += res.toString();
+        }
+        return res;
+    }
     private boolean isApplicable(BitSet state, int action) {
         for (int pre : ProgressionNetwork.flatProblem.precLists[action]) {
             if (!state.get(pre))
