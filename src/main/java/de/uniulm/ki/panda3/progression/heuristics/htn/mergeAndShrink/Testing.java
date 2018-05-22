@@ -15,10 +15,10 @@ public class Testing {
 
 
 
-    public static void testGraphMinimization(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
+    public static void testGraphMinimization(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy, boolean withVariables){
 
 
-        HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(p, methods, domain, shrinkingBound, shrinkingStrategy);
+        HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(p, methods, domain, shrinkingBound, shrinkingStrategy, withVariables);
 
         HtnMsGraph testGraph = presentGraphs.get(16);
 
@@ -32,7 +32,7 @@ public class Testing {
 
 
 
-    public static HashMap<Integer,HtnMsGraph> getAllGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
+    public static HashMap<Integer,HtnMsGraph> getAllGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy, boolean withVariables){
 
         HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
 
@@ -56,7 +56,7 @@ public class Testing {
 
                 //System.out.println(index + ": Handle Task " + taskIndex);
 
-                presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs, shrinkingBound, shrinkingStrategy);
+                presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs, shrinkingBound, shrinkingStrategy, withVariables);
 
                 //System.out.println("Tasks in present Tasks: " + presentGraphs.keySet());
 
@@ -69,7 +69,7 @@ public class Testing {
 
 
 
-    public static void testGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
+    public static void testGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy, boolean withVariables){
 
 
         HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
@@ -86,7 +86,7 @@ public class Testing {
 
         for (int testTaskIndex : testIndexes) {
 
-            presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, testTaskIndex, presentGraphs, shrinkingBound, shrinkingStrategy);
+            presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, testTaskIndex, presentGraphs, shrinkingBound, shrinkingStrategy, withVariables);
 
         }
 
@@ -104,7 +104,7 @@ public class Testing {
 
 
 
-    public static HashMap<Integer,HtnMsGraph> getxGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int x,  int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
+    public static HashMap<Integer,HtnMsGraph> getxGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int x,  int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy, boolean withVariables){
 
         HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
 
@@ -131,7 +131,7 @@ public class Testing {
 
                 //System.out.println("isPrimitive " + t.isPrimitive());
 
-                presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs, shrinkingBound, shrinkingStrategy);
+                presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs, shrinkingBound, shrinkingStrategy, withVariables);
 
                 //System.out.println("Tasks in present Tasks: " + presentGraphs.keySet());
 

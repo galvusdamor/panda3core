@@ -119,7 +119,13 @@ public class Shrinking {
         int newStartID = tempReverseIDMapping.get(graph.startNodeID);
 
 
-        HtnMsGraph newGraph = new HtnMsGraph(Utils.convertNodeIDArrayListToArray(newIDMapping), newEdges, newIDMapping, newStartID);
+        HtnMsGraph newGraph;
+
+        if(graph instanceof HtnMsGraphWithMethods){
+            newGraph=new HtnMsGraphWithMethods(Utils.convertNodeIDArrayListToArray(newIDMapping), newEdges, newIDMapping, newStartID);
+        } else {
+            newGraph=new HtnMsGraphWithoutMethods(Utils.convertNodeIDArrayListToArray(newIDMapping), newEdges, newIDMapping, newStartID);
+        }
 
         return newGraph;
     }

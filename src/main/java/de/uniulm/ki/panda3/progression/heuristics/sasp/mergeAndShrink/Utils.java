@@ -1,6 +1,6 @@
 package de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink;
 
-import de.uniulm.ki.panda3.progression.heuristics.htn.mergeAndShrink.HtnMsGraph;
+import de.uniulm.ki.panda3.progression.heuristics.htn.mergeAndShrink.*;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ElementaryNode;

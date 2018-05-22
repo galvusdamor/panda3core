@@ -15,7 +15,7 @@ public class HtnMerging {
 
 
 
-    public static HashMap<Integer,HtnMsGraph> getHtnMsGraphForTaskIndex(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, int taskIndex, HashMap<Integer,HtnMsGraph> presentGraphs,  int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy){
+    public static HashMap<Integer,HtnMsGraph> getHtnMsGraphForTaskIndex(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, int taskIndex, HashMap<Integer,HtnMsGraph> presentGraphs,  int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy, boolean withMethods){
 
 
         Task t = ProgressionNetwork.indexToTask[taskIndex];
@@ -26,7 +26,8 @@ public class HtnMerging {
 
         if (t.isPrimitive()){
 
-            graph = getHtnMsGraphForPrimitiveTask(p, taskIndex);
+
+            graph = getHtnMsGraphForPrimitiveTask(p, taskIndex, withMethods);
 
             graph = GraphMinimation.minimizeGraph(p, graph);
 
@@ -44,7 +45,13 @@ public class HtnMerging {
 
             LinkedList<Tuple3<Integer,Integer,Integer>> edges = new LinkedList<>();
 
-            TemporaryHtnMsGraph temporaryGraph = new TemporaryHtnMsGraph(edges, idMapping, 0);
+            TemporaryHtnMsGraph temporaryGraph;
+
+            if(withMethods==true){
+                temporaryGraph = new TemporaryHtnMsGraphWithMethods(edges, idMapping, 0);
+            } else {
+                temporaryGraph = new TemporaryHtnMsGraphWithoutMethods(edges, idMapping, 0);
+            }
 
 
             List<ProMethod> proMethods = methods.get(t);
@@ -514,7 +521,7 @@ public class HtnMerging {
         return size;
     }
 
-    public static HtnMsGraph getHtnMsGraphForPrimitiveTask(SasPlusProblem p, int taskIndex){
+    public static HtnMsGraph getHtnMsGraphForPrimitiveTask(SasPlusProblem p, int taskIndex, boolean withMethods){
 
         HtnElementaryNode startNode = new HtnElementaryNode(p, false);
 
@@ -541,7 +548,13 @@ public class HtnMerging {
 
 
 
-        HtnMsGraph graph = new HtnMsGraph(nodeIDs, edgeTuple, idMapping, 0);
+        HtnMsGraph graph;
+
+        if(withMethods==true){
+           graph = new HtnMsGraphWithMethods(nodeIDs, edgeTuple, idMapping, 0);
+        } else {
+            graph = new HtnMsGraphWithoutMethods(nodeIDs, edgeTuple, idMapping, 0);
+        }
 
         return graph;
 
@@ -852,7 +865,14 @@ public class HtnMerging {
 
         int newStartID = tempReverseIdMapping.get(oldStartIDs);
 
-        TemporaryHtnMsGraph newGraph = new TemporaryHtnMsGraph(newMultiEdges, idMapping, newStartID);
+        TemporaryHtnMsGraph newGraph;
+
+        if(graph1 instanceof HtnMsGraphWithMethods){
+            newGraph = new TemporaryHtnMsGraphWithMethods(newMultiEdges, idMapping, newStartID);
+        } else {
+            newGraph = new TemporaryHtnMsGraphWithoutMethods(newMultiEdges, idMapping, newStartID);
+        }
+
 
         HtnMsGraph mergedGraph = newGraph.convertToHtnMsGraph();
 

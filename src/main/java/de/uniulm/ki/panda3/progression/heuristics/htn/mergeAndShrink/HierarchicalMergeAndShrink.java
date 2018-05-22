@@ -6,14 +6,10 @@ import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
-import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.StratificationPlotter$;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.util.DirectedGraph;
-import de.uniulm.ki.util.Dot2PdfCompiler$;
-import scala.Tuple2;
-import scala.Tuple3;
 import scala.collection.JavaConverters;
 
 
@@ -24,17 +20,19 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
     HashMap<Task, List<ProMethod>> methods;
     List<ProgressionPlanStep> initialTasks;
-    ClassicalMSGraph combinedGraph;
+    ClassicalMSGraph classicalCombinedGraph;
+    HtnMsGraph HtnCombinedGraph;
     HashMap<Integer, Integer> distancesFromGoal;
+    boolean withMethods;
 
 
     public HierarchicalMergeAndShrink(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain) {
 
         super();
 
-        /*System.out.println(combinedGraph.idMapping.keySet());
+        /*System.out.println(classicalCombinedGraph.idMapping.keySet());
 
-        for(Tuple3<Integer,Integer,Integer> edge:combinedGraph.labelledEdges){
+        for(Tuple3<Integer,Integer,Integer> edge:classicalCombinedGraph.labelledEdges){
 
             System.out.println(edge.toString());
 
@@ -44,15 +42,23 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         MergingStrategy classicalMergingStrategy = new MergingStrategy1();
         ShrinkingStrategy classicalShrinkingStrategy = new ShrinkingStrategy1();
         HtnShrinkingStrategy HtnShrinkingStrategy = new HtnShrinkingStrategy1();
+        boolean withMethods = false;
+        this.withMethods=withMethods;
 
         assert initialTasks.size() == 1;
 
         Task goalTask = initialTasks.get(0).getTask();
 
-        combinedGraph = getCombinedGraph(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
-                classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy);
 
-        distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, combinedGraph);
+        if(withMethods==true){
+
+        }else {
+
+            classicalCombinedGraph = getCombinedGraph(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
+                    classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy, withMethods);
+
+            distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, classicalCombinedGraph);
+        }
 
 
        /* int[] testState = new int[3];
@@ -125,7 +131,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
     public ClassicalMSGraph getCombinedGraph(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain, Task goalTask,
                                              int shrinkingBound, MergingStrategy classicalMergingStrategy, ShrinkingStrategy classicalShrinkingStrategy,
-                                             HtnShrinkingStrategy htnShrinkingStrategy) {
+                                             HtnShrinkingStrategy htnShrinkingStrategy, boolean withVariables) {
 
 
         this.methods = methods;
@@ -183,9 +189,9 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         //Testing.testGraphs(flatProblem, methods, domain);
 
         //HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
-        int upperBound = 165;
+        //int upperBound = 165;
         //int shrinkingBound = 30;
-        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy);
+        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withVariables);
 
 
         //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Rover");
@@ -198,7 +204,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         System.out.println("Size: " + combinedGraph.idMapping.size());
 
-        //Utils.printMultiGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\combinedGraph.pdf");
+        //Utils.printMultiGraph(flatProblem, classicalCombinedGraph, "D:\\IdeaProjects\\panda3core\\classicalCombinedGraph.pdf");
 
         return combinedGraph;
 
@@ -214,15 +220,23 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
             System.out.println("Variable " + index + ": " + i);
             index++;
         }*/
+        int distanceFromGoal;
 
-        int nodeID = combinedGraph.cascadingTables.getNodeID(state);
+        if(withMethods==true){
 
-        //System.out.println(nodeID);
+            distanceFromGoal =-1;
 
-        if (nodeID == -1) return -1;
+        }else {
+            int nodeID = classicalCombinedGraph.cascadingTables.getNodeID(state);
+
+            //System.out.println(nodeID);
+
+            if (nodeID == -1) return -1;
 
 
-        int distanceFromGoal = distancesFromGoal.get(nodeID);
+            distanceFromGoal = distancesFromGoal.get(nodeID);
+
+        }
 
         //System.out.println("Node : " + nodeID);
         //System.out.println("Heuristic Value: " + distanceFromGoal);
