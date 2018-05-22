@@ -10,6 +10,7 @@ import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.util.DirectedGraph;
+import de.uniulm.ki.util.Dot2PdfCompiler$;
 import scala.Tuple3;
 import scala.collection.JavaConverters;
 
@@ -167,7 +168,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         //var i = 0
         DirectedGraph<?> layerGraph = domain.taskSchemaTransitionGraph().condensation();
-        //Dot2PdfCompiler$.MODULE$.writeDotToFile(layerGraph, "decomp_hierarchy0.pdf");
+        Dot2PdfCompiler$.MODULE$.writeDotToFile(layerGraph, "decomp_hierarchy1.pdf");
 
         List<?> layer = JavaConverters.seqAsJavaList(layerGraph.topologicalOrdering().get().reverse());
 
@@ -205,12 +206,19 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withVariables);
 
 
-        //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Rover");
+        Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
 
         int goalTaskIndex = ProgressionNetwork.taskToIndex.get(goalTask);
-        HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
+        int testIndex = 16;
 
-        Utils.printHtnGraph(flatProblem,htnMsGraph,"GoalTask.pdf");
+
+        //HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
+
+        HtnMsGraph htnMsGraph = presentGraphs.get(testIndex);
+
+        System.out.println("Task: " + ProgressionNetwork.indexToTask[testIndex]);
+
+        Utils.printHtnGraph(flatProblem,htnMsGraph,"Transport\\TestTask.pdf");
 
         System.out.println("HashMap: ");
 
@@ -229,6 +237,8 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
             }
 
         }
+
+        System.exit(0);
 
 
         //System.out.println("Test");
