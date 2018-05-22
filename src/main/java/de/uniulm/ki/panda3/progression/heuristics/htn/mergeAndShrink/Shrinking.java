@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.progression.heuristics.htn.mergeAndShrink;
 
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.Utils;
+import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.HtnElementaryNode;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.HtnNodeValue;
@@ -116,13 +117,34 @@ public class Shrinking {
 
         Tuple3<Integer, Integer, Integer>[] newEdges = shrinkEdges(oldEdges, tempReverseIDMapping);
 
+
+
         int newStartID = tempReverseIDMapping.get(graph.startNodeID);
 
 
         HtnMsGraph newGraph;
 
         if(graph instanceof HtnMsGraphWithMethods){
-            newGraph=new HtnMsGraphWithMethods(Utils.convertNodeIDArrayListToArray(newIDMapping), newEdges, newIDMapping, newStartID);
+
+            HtnMsGraphWithMethods htnMsGraphWithMethods = ((HtnMsGraphWithMethods) graph);
+
+            HashMap<Tuple3<Integer,Integer,Integer>, LinkedList<ProMethod>> linkedProMethods = new HashMap<>();
+
+            for (Tuple3<Integer,Integer,Integer> edge : oldEdges){
+                LinkedList<ProMethod> linkedProMethodsForEdge = htnMsGraphWithMethods.linkedMethods.get(edge);
+
+                if (linkedProMethodsForEdge!=null){
+
+                    int newStartEdgeID = tempReverseIDMapping.get(edge._1());
+                    int newEndEdgeID = tempReverseIDMapping.get(edge._3());
+
+                    Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(newStartEdgeID, edge._2(), newEndEdgeID);
+
+                    linkedProMethods.put(newEdge,linkedProMethodsForEdge);
+                }
+            }
+
+            newGraph=new HtnMsGraphWithMethods(Utils.convertNodeIDArrayListToArray(newIDMapping), newEdges, newIDMapping, newStartID, linkedProMethods);
         } else {
             newGraph=new HtnMsGraphWithoutMethods(Utils.convertNodeIDArrayListToArray(newIDMapping), newEdges, newIDMapping, newStartID);
         }

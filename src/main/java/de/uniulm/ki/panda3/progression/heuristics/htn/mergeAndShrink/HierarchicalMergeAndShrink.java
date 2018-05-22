@@ -10,6 +10,7 @@ import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
 import de.uniulm.ki.util.DirectedGraph;
+import scala.Tuple3;
 import scala.collection.JavaConverters;
 
 
@@ -24,6 +25,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     HtnMsGraph HtnCombinedGraph;
     HashMap<Integer, Integer> distancesFromGoal;
     boolean withMethods;
+    LinkedList<ProMethod> steps;
 
 
     public HierarchicalMergeAndShrink(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain) {
@@ -42,7 +44,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         MergingStrategy classicalMergingStrategy = new MergingStrategy1();
         ShrinkingStrategy classicalShrinkingStrategy = new ShrinkingStrategy1();
         HtnShrinkingStrategy HtnShrinkingStrategy = new HtnShrinkingStrategy1();
-        boolean withMethods = false;
+        boolean withMethods = true;
         this.withMethods=withMethods;
 
         assert initialTasks.size() == 1;
@@ -52,7 +54,16 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         if(withMethods==true){
 
+            steps = new LinkedList<>();
+
+            classicalCombinedGraph = getCombinedGraph(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
+                    classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy, withMethods);
+
+            distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, classicalCombinedGraph);
+
         }else {
+
+            steps = new LinkedList<>();
 
             classicalCombinedGraph = getCombinedGraph(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
                     classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy, withMethods);
@@ -199,10 +210,33 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         int goalTaskIndex = ProgressionNetwork.taskToIndex.get(goalTask);
         HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
 
+        Utils.printHtnGraph(flatProblem,htnMsGraph,"GoalTask.pdf");
+
+        System.out.println("HashMap: ");
+
+        HtnMsGraphWithMethods htnMsGraphWithMethods = ((HtnMsGraphWithMethods) htnMsGraph);
+
+        for(Tuple3<Integer,Integer,Integer> edge : htnMsGraphWithMethods.linkedMethods.keySet()){
+
+            System.out.println("Edge:" + edge);
+
+            LinkedList<ProMethod> proMethods = htnMsGraphWithMethods.linkedMethods.get(edge);
+
+            for(ProMethod proMethod: proMethods){
+
+                System.out.println("Promethod:" + proMethod.m.name());
+
+            }
+
+        }
+
+
+        //System.out.println("Test");
+
 
         ClassicalMSGraph combinedGraph = OverlayOfClassicalAndHTNGraph.findWaysThroughBothGraphs(flatProblem, classicalMSGraph, htnMsGraph);
 
-        System.out.println("Size: " + combinedGraph.idMapping.size());
+        //System.out.println("Size: " + combinedGraph.idMapping.size());
 
         //Utils.printMultiGraph(flatProblem, classicalCombinedGraph, "D:\\IdeaProjects\\panda3core\\classicalCombinedGraph.pdf");
 
@@ -222,9 +256,17 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         }*/
         int distanceFromGoal;
 
+
         if(withMethods==true){
 
-            distanceFromGoal =-1;
+            int nodeID = classicalCombinedGraph.cascadingTables.getNodeID(state);
+
+            //System.out.println(nodeID);
+
+            if (nodeID == -1) return -1;
+
+
+            distanceFromGoal = distancesFromGoal.get(nodeID);
 
         }else {
             int nodeID = classicalCombinedGraph.cascadingTables.getNodeID(state);
@@ -260,6 +302,14 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
     @Override
     public GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, ProMethod m) {
+        //System.out.println("ProMethod: " + m);
+        steps.addLast(m);
+        //System.out.println("Steps Size: " + steps.size());
+
+        /*if(steps.size()==39){
+            System.out.println(steps);
+        }*/
+
         return update(newTN, ps);
     }
 

@@ -48,7 +48,8 @@ public class HtnMerging {
             TemporaryHtnMsGraph temporaryGraph;
 
             if(withMethods==true){
-                temporaryGraph = new TemporaryHtnMsGraphWithMethods(edges, idMapping, 0);
+                HashMap<Tuple3<Integer,Integer,Integer>,LinkedList<ProMethod>> linkedProMethods = new HashMap<>();
+                temporaryGraph = new TemporaryHtnMsGraphWithMethods(edges, idMapping, 0, linkedProMethods);
             } else {
                 temporaryGraph = new TemporaryHtnMsGraphWithoutMethods(edges, idMapping, 0);
             }
@@ -100,7 +101,7 @@ public class HtnMerging {
 
                     HtnMsGraph subgraph = presentGraphs.get(subtaskIndex);
                     int additionalSize = subgraph.arrayVertices.length-1;
-                    TaskDecomposition decomposition = new SingleDecomposition(additionalSize, subgraph);
+                    TaskDecomposition decomposition = new SingleDecomposition(additionalSize, subgraph, proMethod);
                     proMethodToTaskDecompositionMap.put(i, decomposition);
                     proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
 
@@ -135,7 +136,7 @@ public class HtnMerging {
                     if (subtask2Index==taskIndex){
 
                         int additionalSize = graph1.arrayVertices.length-2;
-                        OrderedRecursiveDecomposition decomposition = new OrderedRecursiveDecomposition(additionalSize, graph1);
+                        OrderedRecursiveDecomposition decomposition = new OrderedRecursiveDecomposition(additionalSize, graph1, proMethod);
                         proMethodToTaskDecompositionMap.put(i,decomposition);
                         proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
 
@@ -143,7 +144,7 @@ public class HtnMerging {
                         HtnMsGraph graph2 = presentGraphs.get(subtask2Index);
                         int additionalSize = calculateSizeOfOrderedSubGraphs(graph1, graph2)-1;
 
-                        OrderedDecomposition decomposition = new OrderedDecomposition(additionalSize, graph1, graph2);
+                        OrderedDecomposition decomposition = new OrderedDecomposition(additionalSize, graph1, graph2, proMethod);
                         proMethodToTaskDecompositionMap.put(i,decomposition);
                         proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
                     }
@@ -160,7 +161,7 @@ public class HtnMerging {
                     HtnMsGraph graph2 = presentGraphs.get(subtask2Index);
 
                     int additionalSize = calculateSizeOfOrderedSubGraphs(graph1, graph2)-1;
-                    UnorderedDecomposition decomposition = new UnorderedDecomposition(additionalSize, graph1, graph2);
+                    UnorderedDecomposition decomposition = new UnorderedDecomposition(additionalSize, graph1, graph2, proMethod);
                     proMethodToTaskDecompositionMap.put(i,decomposition);
                     proMethodIndexToAdditionalSizeMap.put(i, additionalSize);
 
@@ -262,7 +263,25 @@ public class HtnMerging {
 
             HtnMsGraph subgraph = ((SingleDecomposition) taskDecomposition).graph1;
 
-            temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph,subgraph, temporaryGraph.startNodeID)._2;
+            if (subgraph instanceof HtnMsGraphWithMethods){
+
+                ProMethod proMethod = taskDecomposition.proMethod;
+
+                temporaryGraph = appendGraphToTemporaryGraphWithMethodsAtIndex(temporaryGraph, subgraph, temporaryGraph.startNodeID, proMethod)._2;
+
+
+
+                if (temporaryGraph instanceof TemporaryHtnMsGraphWithMethods){
+
+                    /*System.out.println("Single Decomposition:\nPromethod: " + proMethod);
+                    System.out.println("HashMap: " + ((TemporaryHtnMsGraphWithMethods) temporaryGraph).linkedMethods);*/
+                }
+
+
+            }else {
+
+                temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph, subgraph, temporaryGraph.startNodeID)._2;
+            }
 
         }
         if (taskDecomposition instanceof OrderedDecomposition) {
@@ -291,8 +310,27 @@ public class HtnMerging {
                     temporaryGraph.idMapping.put(nodeIDToAppend, newNodeValue);
                 }
 
-                resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph2, nodeIDToAppend);
+                //resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph2, nodeIDToAppend);
 
+
+                if (graph2 instanceof HtnMsGraphWithMethods){
+
+                    ProMethod proMethod = taskDecomposition.proMethod;
+
+                    resultsOfAppending = appendGraphToTemporaryGraphWithMethodsAtIndex(temporaryGraph, graph2, nodeIDToAppend, proMethod);
+
+
+
+
+                    /*System.out.println("Ordered Decomposition:\nPromethod: " + proMethod);
+                    System.out.println("HashMap: " + ((TemporaryHtnMsGraphWithMethods) resultsOfAppending._2).linkedMethods);*/
+
+
+
+                }else {
+
+                    resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph2, nodeIDToAppend);
+                }
                 temporaryGraph = resultsOfAppending._2;
                 //nodesToAppend.addAll(resultsOfAppending._1);
 
@@ -306,7 +344,21 @@ public class HtnMerging {
 
             HashSet<Integer> nodesToAppend = new HashSet<>();
 
-            Tuple2<HashSet<Integer>, TemporaryHtnMsGraph> resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph1, temporaryGraph.startNodeID);
+            Tuple2<HashSet<Integer>, TemporaryHtnMsGraph> resultsOfAppending;
+
+            if (graph1 instanceof HtnMsGraphWithMethods){
+
+                ProMethod proMethod = taskDecomposition.proMethod;
+
+                resultsOfAppending = appendGraphToTemporaryGraphWithMethodsAtIndex(temporaryGraph, graph1, temporaryGraph.startNodeID, proMethod);
+
+
+            }else {
+
+                resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph1, temporaryGraph.startNodeID);
+            }
+
+           // = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph1, temporaryGraph.startNodeID);
 
             temporaryGraph = resultsOfAppending._2;
             nodesToAppend.addAll(resultsOfAppending._1);
@@ -323,6 +375,20 @@ public class HtnMerging {
                     edgesToRemove.add(edge);
                     //temporaryGraph.edges.remove(edge);
                     temporaryGraph.edges.add(newEdge);
+
+                    if (temporaryGraph instanceof TemporaryHtnMsGraphWithMethods){
+
+                        TemporaryHtnMsGraphWithMethods temporaryHtnMsGraphWithMethods = ((TemporaryHtnMsGraphWithMethods) temporaryGraph);
+
+                        LinkedList<ProMethod> linkedProMethodsForEdge = temporaryHtnMsGraphWithMethods.linkedMethods.get(edge);
+
+                        if (linkedProMethodsForEdge!=null){
+                            temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge,linkedProMethodsForEdge);
+                            temporaryHtnMsGraphWithMethods.linkedMethods.remove(edge);
+                        }
+
+                        temporaryGraph = temporaryHtnMsGraphWithMethods;
+                    }
                 }
             }
 
@@ -341,9 +407,17 @@ public class HtnMerging {
             HtnMsGraph graphOfSubtask2 = unorderedDecomposition.graph2;
 
 
-            HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p);
+            HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, taskDecomposition.proMethod, p);
 
-            temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph, newGraph, temporaryGraph.startNodeID)._2;
+            if (temporaryGraph instanceof TemporaryHtnMsGraphWithMethods){
+
+                temporaryGraph = appendGraphToTemporaryGraphWithMethodsAtIndex(temporaryGraph, newGraph, temporaryGraph.startNodeID,taskDecomposition.proMethod)._2;
+
+            }else {
+
+                temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph, newGraph, temporaryGraph.startNodeID)._2;
+
+            }
 
 
         }
@@ -387,7 +461,7 @@ public class HtnMerging {
 
 
 
-            TaskDecomposition newTaskDecomposition = new SingleDecomposition(additionalSizeOfNewGraph, graph1);
+            TaskDecomposition newTaskDecomposition = new SingleDecomposition(additionalSizeOfNewGraph, graph1, taskDecomposition.proMethod);
             return newTaskDecomposition;
 
         }
@@ -425,7 +499,7 @@ public class HtnMerging {
 
 
 
-            TaskDecomposition newTaskDecomposition = new OrderedDecomposition(additionalSizeOfNewGraph, graph1, graph2);
+            TaskDecomposition newTaskDecomposition = new OrderedDecomposition(additionalSizeOfNewGraph, graph1, graph2, taskDecomposition.proMethod);
             return newTaskDecomposition;
 
         }
@@ -452,7 +526,7 @@ public class HtnMerging {
 
 
 
-            TaskDecomposition newTaskDecomposition = new OrderedRecursiveDecomposition(additionalSizeOfNewGraph, graph1);
+            TaskDecomposition newTaskDecomposition = new OrderedRecursiveDecomposition(additionalSizeOfNewGraph, graph1, taskDecomposition.proMethod);
             return newTaskDecomposition;
 
         }
@@ -496,7 +570,7 @@ public class HtnMerging {
 
 
 
-            TaskDecomposition newTaskDecomposition = new UnorderedDecomposition(additionalSizeOfNewGraph, graph1, graph2);
+            TaskDecomposition newTaskDecomposition = new UnorderedDecomposition(additionalSizeOfNewGraph, graph1, graph2, taskDecomposition.proMethod);
             return newTaskDecomposition;
 
         }
@@ -551,7 +625,8 @@ public class HtnMerging {
         HtnMsGraph graph;
 
         if(withMethods==true){
-           graph = new HtnMsGraphWithMethods(nodeIDs, edgeTuple, idMapping, 0);
+            HashMap<Tuple3<Integer, Integer, Integer>, LinkedList<ProMethod>> linkedMethods = new HashMap<>();
+            graph = new HtnMsGraphWithMethods(nodeIDs, edgeTuple, idMapping, 0, linkedMethods);
         } else {
             graph = new HtnMsGraphWithoutMethods(nodeIDs, edgeTuple, idMapping, 0);
         }
@@ -700,7 +775,7 @@ public class HtnMerging {
 
 
                 //HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p, shrinkingBound, shrinkingStrategy);
-                HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, p);
+                HtnMsGraph newGraph = mergeGraphs(graphOfSubtask1, graphOfSubtask2, proMethod, p);
 
                 temporaryGraph = appendGraphToTemporaryGraphAtIndex(temporaryGraph, newGraph, temporaryGraph.startNodeID)._2;
 
@@ -716,7 +791,7 @@ public class HtnMerging {
 
     }
 
-    public static HtnMsGraph mergeGraphs(HtnMsGraph graph1, HtnMsGraph graph2, SasPlusProblem p){
+    public static HtnMsGraph mergeGraphs(HtnMsGraph graph1, HtnMsGraph graph2, ProMethod proMethod, SasPlusProblem p){
 
         /*int sizeOfGraph1 = graph1.idMapping.keySet().size();
         int sizeOfGraph2 = graph2.idMapping.keySet().size();
@@ -757,7 +832,20 @@ public class HtnMerging {
 
         Integer[] graph2Nodes = (Integer[]) graph2.arrayVertices;
 
+        HashMap<Tuple3<Integer, Integer, Integer>, LinkedList<ProMethod>> linkedProMethodsGraph1 = new HashMap<>();
+        HashMap<Tuple3<Integer, Integer, Integer>, LinkedList<ProMethod>> linkedProMethodsGraph2= new HashMap<>();
 
+        HashMap<Tuple3<Integer, Integer, Integer>, LinkedList<ProMethod>> newLinkedProMethods = new HashMap<>();
+
+        if(graph1 instanceof HtnMsGraphWithMethods) {
+
+            linkedProMethodsGraph1 = ((HtnMsGraphWithMethods) graph1).linkedMethods;
+            linkedProMethodsGraph2 = ((HtnMsGraphWithMethods) graph2).linkedMethods;
+
+
+
+
+        }
 
 
         HashMap<Integer, Tuple2<Integer, Integer>> tempIdMapping = new HashMap<>();
@@ -833,6 +921,27 @@ public class HtnMerging {
 
                     Tuple3<Integer, Integer, Integer> newEdge = new Tuple3<>(newStartNodeID, taskIDofEdge, newEndNodeID);
                     newMultiEdges.add(newEdge);
+
+                    if(graph1 instanceof HtnMsGraphWithMethods) {
+
+                        LinkedList<ProMethod> linkedProMethodsOfEdgeGraph1 = linkedProMethodsGraph1.get(edgeOfGraph1);
+
+                        if (linkedProMethodsOfEdgeGraph1==null){
+
+                            LinkedList<ProMethod> newLinkedProMethodsForEdge = new LinkedList<>();
+                            newLinkedProMethodsForEdge.add(proMethod);
+                            newLinkedProMethods.put(newEdge,newLinkedProMethodsForEdge);
+
+                        }else {
+
+                            LinkedList<ProMethod> newLinkedProMethodsForEdge = new LinkedList<>();
+                            newLinkedProMethodsForEdge.addAll(linkedProMethodsOfEdgeGraph1);
+                            newLinkedProMethodsForEdge.addLast(proMethod);
+                            newLinkedProMethods.put(newEdge,newLinkedProMethodsForEdge);
+                        }
+
+                    }
+
                 }
 
         }
@@ -854,6 +963,27 @@ public class HtnMerging {
 
                 Tuple3<Integer, Integer, Integer> newEdge = new Tuple3<>(newStartNodeID, taskIDofEdge, newEndNodeID);
                 newMultiEdges.add(newEdge);
+
+
+                if(graph2 instanceof HtnMsGraphWithMethods) {
+
+                    LinkedList<ProMethod> linkedProMethodsOfEdgeGraph2 = linkedProMethodsGraph2.get(edgeOfGraph2);
+
+                    if (linkedProMethodsOfEdgeGraph2==null){
+
+                        LinkedList<ProMethod> newLinkedProMethodsForEdge = new LinkedList<>();
+                        newLinkedProMethodsForEdge.add(proMethod);
+                        newLinkedProMethods.put(newEdge,newLinkedProMethodsForEdge);
+
+                    }else {
+
+                        LinkedList<ProMethod> newLinkedProMethodsForEdge = new LinkedList<>();
+                        newLinkedProMethodsForEdge.addAll(linkedProMethodsOfEdgeGraph2);
+                        newLinkedProMethodsForEdge.addLast(proMethod);
+                        newLinkedProMethods.put(newEdge,newLinkedProMethodsForEdge);
+                    }
+
+                }
             }
 
 
@@ -868,7 +998,8 @@ public class HtnMerging {
         TemporaryHtnMsGraph newGraph;
 
         if(graph1 instanceof HtnMsGraphWithMethods){
-            newGraph = new TemporaryHtnMsGraphWithMethods(newMultiEdges, idMapping, newStartID);
+
+            newGraph = new TemporaryHtnMsGraphWithMethods(newMultiEdges, idMapping, newStartID, newLinkedProMethods);
         } else {
             newGraph = new TemporaryHtnMsGraphWithoutMethods(newMultiEdges, idMapping, newStartID);
         }
@@ -955,6 +1086,140 @@ public class HtnMerging {
     }
 
 
+    public static Tuple2<HashSet<Integer>,TemporaryHtnMsGraph> appendGraphToTemporaryGraphWithMethodsAtIndex(TemporaryHtnMsGraph temporaryGraph, HtnMsGraph graphToAppend, int index, ProMethod proMethod){
+
+        if (!temporaryGraph.idMapping.keySet().contains(index)){
+            System.out.println("cannot append it at this node ID, because the node ID does not exist.");
+            System.exit(1);
+        }
+
+
+
+        if(!((temporaryGraph instanceof TemporaryHtnMsGraphWithMethods) && (graphToAppend instanceof HtnMsGraphWithMethods))){
+            System.out.println("Error! Wrong settings regarding with/without mappings!");
+            System.exit(1);
+        }
+        TemporaryHtnMsGraphWithMethods temporaryHtnMsGraphWithMethods = (TemporaryHtnMsGraphWithMethods) temporaryGraph;
+        HtnMsGraphWithMethods htnMsGraphWithMethods = (HtnMsGraphWithMethods) graphToAppend;
+
+
+
+
+        HashMap<Integer, Integer> oldIdToNewIdMapping = new HashMap<>();
+
+        if (graphToAppend== null){
+
+            System.out.println("Graph is null!");
+            System.out.println("index: " + index);
+            System.exit(1);
+        }
+
+        HashSet<Integer> IdsToAppend = new HashSet<>();
+        IdsToAppend.addAll(graphToAppend.idMapping.keySet());
+
+        oldIdToNewIdMapping.put(graphToAppend.startNodeID, index);
+
+        IdsToAppend.remove(graphToAppend.startNodeID);
+
+        int i=temporaryHtnMsGraphWithMethods.idMapping.keySet().size();
+
+        for (int oldID: IdsToAppend){
+            oldIdToNewIdMapping.put(oldID,i);
+            temporaryHtnMsGraphWithMethods.idMapping.put(i,graphToAppend.idMapping.get(oldID));
+            i++;
+        }
+
+
+        for (Tuple3<Integer,Integer,Integer> edge : graphToAppend.labelledEdges){
+
+            int newStartNodeID = oldIdToNewIdMapping.get(edge._1());
+            int newGoalNodeID = oldIdToNewIdMapping.get(edge._3());
+
+            Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(newStartNodeID, edge._2(), newGoalNodeID);
+
+            temporaryHtnMsGraphWithMethods.edges.add(newEdge);
+        }
+
+        HashSet<Integer> oldGoalNodes = getGoalNodes(graphToAppend);
+        HashSet<Integer> newGoalNodes = new HashSet<>();
+
+        for (int oldGoalNode: oldGoalNodes){
+
+            newGoalNodes.add(oldIdToNewIdMapping.get(oldGoalNode));
+
+        }
+
+        if(htnMsGraphWithMethods.linkedMethods!=null) {
+            for (Tuple3<Integer, Integer, Integer> edge : htnMsGraphWithMethods.linkedMethods.keySet()) {
+
+                int startNode = oldIdToNewIdMapping.get(edge._1());
+                int endNode = oldIdToNewIdMapping.get(edge._3());
+
+                Tuple3<Integer, Integer, Integer> newEdge = new Tuple3<>(startNode, edge._2(), endNode);
+
+                LinkedList<ProMethod> linkedProMethodsForEdge1 = htnMsGraphWithMethods.linkedMethods.get(edge);
+                LinkedList<ProMethod> linkedProMethodsForEdge2 = temporaryHtnMsGraphWithMethods.linkedMethods.get(edge);
+
+                if ((linkedProMethodsForEdge1 == null) && (linkedProMethodsForEdge2 == null)) {
+
+                    LinkedList<ProMethod> linkedProMethodsForNewEdge = new LinkedList<>();
+                    linkedProMethodsForNewEdge.add(proMethod);
+                    temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge, linkedProMethodsForNewEdge);
+
+                } else {
+
+                    LinkedList<ProMethod> linkedProMethodsForNewEdge = new LinkedList<>();
+                    if (linkedProMethodsForEdge1!=null) linkedProMethodsForNewEdge.addAll(linkedProMethodsForEdge1);
+                    if (linkedProMethodsForEdge2!=null)linkedProMethodsForNewEdge.addAll(linkedProMethodsForEdge2);
+                    linkedProMethodsForNewEdge.addLast(proMethod);
+                    temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge, linkedProMethodsForNewEdge);
+
+                }
+
+                //linkedProMethods.put(edge,temporaryHtnMsGraphWithMethods.linkedMethods.get(edge));
+
+            }
+        }
+
+        HashSet<Tuple3<Integer, Integer, Integer>> startEdges = new HashSet<>();
+
+        for (Tuple3<Integer, Integer, Integer> edge : graphToAppend.labelledEdges){
+
+            if (edge._1()==graphToAppend.startNodeID){
+
+                int startNode = oldIdToNewIdMapping.get(edge._1());
+                int endNode = oldIdToNewIdMapping.get(edge._3());
+
+                Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(startNode,edge._2(),endNode);
+
+                LinkedList<ProMethod> linkedProMethodsForEdge = temporaryHtnMsGraphWithMethods.linkedMethods.get(newEdge);
+
+                if (linkedProMethodsForEdge == null){
+
+                    LinkedList<ProMethod> linkedProMethodsForNewEdge = new LinkedList<>();
+                    linkedProMethodsForNewEdge.add(proMethod);
+                    temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge, linkedProMethodsForNewEdge);
+
+                }else {
+                    LinkedList<ProMethod> linkedProMethodsForNewEdge = new LinkedList<>();
+                    linkedProMethodsForNewEdge.addAll(linkedProMethodsForEdge);
+                    linkedProMethodsForNewEdge.addLast(proMethod);
+                    temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge, linkedProMethodsForNewEdge);
+                }
+
+            }
+
+
+        }
+
+
+        Tuple2<HashSet<Integer>,TemporaryHtnMsGraph> results = new Tuple2<>(newGoalNodes, temporaryHtnMsGraphWithMethods);
+
+        return results;
+
+    }
+
+
     public static HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> getIDToOutgoingEdgesMap(HtnMsGraph graph){
 
         HashMap<Integer, ArrayList<Tuple3<Integer, Integer, Integer>>> outgoingEdgesMap = new HashMap<>();
@@ -982,6 +1247,7 @@ public class HtnMerging {
 abstract class TaskDecomposition {
 
     int additionalSizeAfterExecution;
+    ProMethod proMethod;
 
 }
 
@@ -989,10 +1255,12 @@ class PrimitiveDecomposition extends TaskDecomposition {
 
     public int subtaskIndex;
 
-    public PrimitiveDecomposition(int sizeAfterExecution, int subtaskIndex){
+    public PrimitiveDecomposition(int sizeAfterExecution, int subtaskIndex, ProMethod proMethod){
 
         this.additionalSizeAfterExecution = sizeAfterExecution;
         this.subtaskIndex = subtaskIndex;
+        this.proMethod = proMethod;
+
     }
 
 }
@@ -1002,11 +1270,12 @@ class OrderedDecomposition extends TaskDecomposition {
     public HtnMsGraph graph1;
     public HtnMsGraph graph2;
 
-    public OrderedDecomposition(int sizeAfterExecution, HtnMsGraph graph1, HtnMsGraph graph2){
+    public OrderedDecomposition(int sizeAfterExecution, HtnMsGraph graph1, HtnMsGraph graph2, ProMethod proMethod){
 
         this.additionalSizeAfterExecution = sizeAfterExecution;
         this.graph1 = graph1;
         this.graph2 = graph2;
+        this.proMethod = proMethod;
     }
 
 }
@@ -1015,10 +1284,11 @@ class OrderedRecursiveDecomposition extends TaskDecomposition {
 
     public HtnMsGraph graph1;
 
-    public OrderedRecursiveDecomposition(int sizeAfterExecution, HtnMsGraph graph1){
+    public OrderedRecursiveDecomposition(int sizeAfterExecution, HtnMsGraph graph1, ProMethod proMethod){
 
         this.additionalSizeAfterExecution = sizeAfterExecution;
         this.graph1 = graph1;
+        this.proMethod = proMethod;
     }
 
 }
@@ -1027,10 +1297,11 @@ class SingleDecomposition extends TaskDecomposition {
 
     public HtnMsGraph graph1;
 
-    public SingleDecomposition(int sizeAfterExecution, HtnMsGraph graph1){
+    public SingleDecomposition(int sizeAfterExecution, HtnMsGraph graph1, ProMethod proMethod){
 
         this.additionalSizeAfterExecution = sizeAfterExecution;
         this.graph1 = graph1;
+        this.proMethod = proMethod;
     }
 
 }
@@ -1041,11 +1312,12 @@ class UnorderedDecomposition extends TaskDecomposition {
     public HtnMsGraph graph1;
     public HtnMsGraph graph2;
 
-    public UnorderedDecomposition(int sizeAfterExecution, HtnMsGraph graph1, HtnMsGraph graph2){
+    public UnorderedDecomposition(int sizeAfterExecution, HtnMsGraph graph1, HtnMsGraph graph2, ProMethod proMethod){
 
         this.additionalSizeAfterExecution = sizeAfterExecution;
         this.graph1 = graph1;
         this.graph2 = graph2;
+        this.proMethod = proMethod;
     }
 
 

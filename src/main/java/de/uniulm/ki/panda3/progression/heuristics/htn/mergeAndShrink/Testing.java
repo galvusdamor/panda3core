@@ -69,7 +69,7 @@ public class Testing {
 
 
 
-    public static void testGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy, boolean withVariables){
+    /*public static void testGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy, boolean withVariables){
 
 
         HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
@@ -99,7 +99,7 @@ public class Testing {
 
 
 
-    }
+    }*/
 
 
 

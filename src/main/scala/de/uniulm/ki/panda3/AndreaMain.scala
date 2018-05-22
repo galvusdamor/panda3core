@@ -48,8 +48,8 @@ object MainAndrea {
     val outputPDF = "dot.pdf"
 
     // TRANSPORT
-    //val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
-    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
+    val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
+    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
     //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile10".replace('\\', File.separatorChar)
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/domains/satellite2.hddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/problems/8obs-3sat-4mod.hddl"
@@ -59,8 +59,8 @@ object MainAndrea {
 
 
 
-    val domFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\woodworking-legal-fewer-htn-groundings.hddl"
-    val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\01--p01-complete.hddl"
+    //val domFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\woodworking-legal-fewer-htn-groundings.hddl"
+    //val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\01--p01-complete.hddl"
     //val probFile = "D:\\\\IdeaProjects\\\\panda3core\\\\Domains\\\\Woodworking\\\\01--p01-complete.hddl"
     //val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\04--p02-part3.hddl"
 
