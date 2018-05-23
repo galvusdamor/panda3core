@@ -45,7 +45,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         MergingStrategy classicalMergingStrategy = new MergingStrategy1();
         ShrinkingStrategy classicalShrinkingStrategy = new ShrinkingStrategy1();
         HtnShrinkingStrategy HtnShrinkingStrategy = new HtnShrinkingStrategy1();
-        boolean withMethods = true;
+        boolean withMethods = false;
         this.withMethods=withMethods;
 
         assert initialTasks.size() == 1;
@@ -206,10 +206,10 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withVariables);
 
 
-        Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
+        //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
 
         int goalTaskIndex = ProgressionNetwork.taskToIndex.get(goalTask);
-        int testIndex = 16;
+        int testIndex = goalTaskIndex;
 
 
         //HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
@@ -218,13 +218,13 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         System.out.println("Task: " + ProgressionNetwork.indexToTask[testIndex]);
 
-        Utils.printHtnGraph(flatProblem,htnMsGraph,"Transport\\TestTask.pdf");
+        //Utils.printHtnGraph(flatProblem,htnMsGraph,"Transport\\TestTask.pdf");
 
-        System.out.println("HashMap: ");
+        //System.out.println("HashMap: ");
 
-        HtnMsGraphWithMethods htnMsGraphWithMethods = ((HtnMsGraphWithMethods) htnMsGraph);
+        //HtnMsGraphWithMethods htnMsGraphWithMethods = ((HtnMsGraphWithMethods) htnMsGraph);
 
-        for(Tuple3<Integer,Integer,Integer> edge : htnMsGraphWithMethods.linkedMethods.keySet()){
+        /*for(Tuple3<Integer,Integer,Integer> edge : htnMsGraphWithMethods.linkedMethods.keySet()){
 
             System.out.println("Edge:" + edge);
 
@@ -236,9 +236,11 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
             }
 
-        }
+        }*/
 
-        System.exit(0);
+        //Testing.testNodeIdentificationByMethods(presentGraphs, methods);
+
+        //System.exit(0);
 
 
         //System.out.println("Test");

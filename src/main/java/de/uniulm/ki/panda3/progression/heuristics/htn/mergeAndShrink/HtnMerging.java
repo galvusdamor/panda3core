@@ -271,11 +271,12 @@ public class HtnMerging {
 
 
 
-                if (temporaryGraph instanceof TemporaryHtnMsGraphWithMethods){
+                /*if (temporaryGraph instanceof TemporaryHtnMsGraphWithMethods){
 
-                    /*System.out.println("Single Decomposition:\nPromethod: " + proMethod);
-                    System.out.println("HashMap: " + ((TemporaryHtnMsGraphWithMethods) temporaryGraph).linkedMethods);*/
-                }
+                    System.out.println("Single Decomposition:\nPromethod: " + proMethod);
+                    System.out.println("HashMap: " + ((TemporaryHtnMsGraphWithMethods) temporaryGraph).linkedMethods);
+
+                }*/
 
 
             }else {
@@ -291,8 +292,17 @@ public class HtnMerging {
 
 
             HashSet<Integer> nodesToAppend = new HashSet<>();
+            Tuple2<HashSet<Integer>, TemporaryHtnMsGraph> resultsOfAppending;
 
-            Tuple2<HashSet<Integer>, TemporaryHtnMsGraph> resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph1, temporaryGraph.startNodeID);
+            if (graph1 instanceof HtnMsGraphWithMethods) {
+
+                resultsOfAppending = appendGraphToTemporaryGraphWithMethodsAtIndex(temporaryGraph, graph1, temporaryGraph.startNodeID, taskDecomposition.proMethod);
+
+            } else {
+
+                resultsOfAppending = appendGraphToTemporaryGraphAtIndex(temporaryGraph, graph1, temporaryGraph.startNodeID);
+
+            }
 
             temporaryGraph = resultsOfAppending._2;
             nodesToAppend.addAll(resultsOfAppending._1);
@@ -369,12 +379,16 @@ public class HtnMerging {
 
             for (int j=0; j<tempEdges.size(); j++){
                 Tuple3<Integer, Integer, Integer> edge = tempEdges.get(j);
+
+                Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(edge._1(), edge._2(), temporaryGraph.startNodeID);
+
                 if (nodesToAppend.contains(edge._3())){
-                    Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(edge._1(), edge._2(), temporaryGraph.startNodeID);
+
 
                     edgesToRemove.add(edge);
                     //temporaryGraph.edges.remove(edge);
                     temporaryGraph.edges.add(newEdge);
+
 
                     if (temporaryGraph instanceof TemporaryHtnMsGraphWithMethods){
 
@@ -385,11 +399,16 @@ public class HtnMerging {
                         if (linkedProMethodsForEdge!=null){
                             temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge,linkedProMethodsForEdge);
                             temporaryHtnMsGraphWithMethods.linkedMethods.remove(edge);
+                            //System.out.println("Angehängt: " + newEdge);
                         }
 
                         temporaryGraph = temporaryHtnMsGraphWithMethods;
                     }
+
+
                 }
+
+
             }
 
             temporaryGraph.edges.removeAll(edgesToRemove);
@@ -1137,6 +1156,33 @@ public class HtnMerging {
 
             Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(newStartNodeID, edge._2(), newGoalNodeID);
 
+            LinkedList<ProMethod> linkedProMethodsForEdge1 = htnMsGraphWithMethods.linkedMethods.get(edge);
+            LinkedList<ProMethod> linkedProMethodsForEdge2 = temporaryHtnMsGraphWithMethods.linkedMethods.get(newEdge);
+
+            LinkedList<ProMethod> linkedProMethodsForNewEdge = new LinkedList<>();
+            if (linkedProMethodsForEdge1!=null) linkedProMethodsForNewEdge.addAll(linkedProMethodsForEdge1);
+            if (linkedProMethodsForEdge2!=null) linkedProMethodsForNewEdge.addAll(linkedProMethodsForEdge2);
+            //linkedProMethodsForNewEdge.addLast(proMethod);
+            //temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge, linkedProMethodsForNewEdge);
+
+            if (edge._1()==graphToAppend.startNodeID){
+
+                //LinkedList<ProMethod> linkedProMethodsForEdge = temporaryHtnMsGraphWithMethods.linkedMethods.get(newEdge);
+                //if (linkedProMethodsForEdge!=null) linkedProMethodsForNewEdge.addAll(linkedProMethodsForEdge);
+                linkedProMethodsForNewEdge.addLast(proMethod);
+
+
+                //System.out.println("At start edge " + newEdge);
+
+                /*if ((newEdge._1()==0)&&(newEdge._3()==3)){
+
+                    System.out.println("At start edge " + newEdge);
+                }*/
+
+            }
+
+            temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge, linkedProMethodsForNewEdge);
+
             temporaryHtnMsGraphWithMethods.edges.add(newEdge);
         }
 
@@ -1148,70 +1194,6 @@ public class HtnMerging {
             newGoalNodes.add(oldIdToNewIdMapping.get(oldGoalNode));
 
         }
-
-        if(htnMsGraphWithMethods.linkedMethods!=null) {
-            for (Tuple3<Integer, Integer, Integer> edge : htnMsGraphWithMethods.linkedMethods.keySet()) {
-
-                int startNode = oldIdToNewIdMapping.get(edge._1());
-                int endNode = oldIdToNewIdMapping.get(edge._3());
-
-                Tuple3<Integer, Integer, Integer> newEdge = new Tuple3<>(startNode, edge._2(), endNode);
-
-                LinkedList<ProMethod> linkedProMethodsForEdge1 = htnMsGraphWithMethods.linkedMethods.get(edge);
-                LinkedList<ProMethod> linkedProMethodsForEdge2 = temporaryHtnMsGraphWithMethods.linkedMethods.get(edge);
-
-                if ((linkedProMethodsForEdge1 == null) && (linkedProMethodsForEdge2 == null)) {
-
-                    LinkedList<ProMethod> linkedProMethodsForNewEdge = new LinkedList<>();
-                    linkedProMethodsForNewEdge.add(proMethod);
-                    temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge, linkedProMethodsForNewEdge);
-
-                } else {
-
-                    LinkedList<ProMethod> linkedProMethodsForNewEdge = new LinkedList<>();
-                    if (linkedProMethodsForEdge1!=null) linkedProMethodsForNewEdge.addAll(linkedProMethodsForEdge1);
-                    if (linkedProMethodsForEdge2!=null)linkedProMethodsForNewEdge.addAll(linkedProMethodsForEdge2);
-                    linkedProMethodsForNewEdge.addLast(proMethod);
-                    temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge, linkedProMethodsForNewEdge);
-
-                }
-
-                //linkedProMethods.put(edge,temporaryHtnMsGraphWithMethods.linkedMethods.get(edge));
-
-            }
-        }
-
-        HashSet<Tuple3<Integer, Integer, Integer>> startEdges = new HashSet<>();
-
-        for (Tuple3<Integer, Integer, Integer> edge : graphToAppend.labelledEdges){
-
-            if (edge._1()==graphToAppend.startNodeID){
-
-                int startNode = oldIdToNewIdMapping.get(edge._1());
-                int endNode = oldIdToNewIdMapping.get(edge._3());
-
-                Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(startNode,edge._2(),endNode);
-
-                LinkedList<ProMethod> linkedProMethodsForEdge = temporaryHtnMsGraphWithMethods.linkedMethods.get(newEdge);
-
-                if (linkedProMethodsForEdge == null){
-
-                    LinkedList<ProMethod> linkedProMethodsForNewEdge = new LinkedList<>();
-                    linkedProMethodsForNewEdge.add(proMethod);
-                    temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge, linkedProMethodsForNewEdge);
-
-                }else {
-                    LinkedList<ProMethod> linkedProMethodsForNewEdge = new LinkedList<>();
-                    linkedProMethodsForNewEdge.addAll(linkedProMethodsForEdge);
-                    linkedProMethodsForNewEdge.addLast(proMethod);
-                    temporaryHtnMsGraphWithMethods.linkedMethods.put(newEdge, linkedProMethodsForNewEdge);
-                }
-
-            }
-
-
-        }
-
 
         Tuple2<HashSet<Integer>,TemporaryHtnMsGraph> results = new Tuple2<>(newGoalNodes, temporaryHtnMsGraphWithMethods);
 

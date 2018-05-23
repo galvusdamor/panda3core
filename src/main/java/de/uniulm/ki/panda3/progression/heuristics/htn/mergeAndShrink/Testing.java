@@ -149,4 +149,28 @@ public class Testing {
 
     }
 
+
+    public static void testNodeIdentificationByMethods(HashMap<Integer, HtnMsGraph> presentGraphs, HashMap<Task, List<ProMethod>> methods){
+
+        int testIndex = 12;
+
+        HtnMsGraphWithMethods graph = (HtnMsGraphWithMethods) presentGraphs.get(testIndex);
+
+        LinkedList<ProMethod> usedProMethods = new LinkedList<>();
+
+
+
+        usedProMethods.add(methods.get(ProgressionNetwork.indexToTask[14]).get(1));
+
+        usedProMethods.add(methods.get(ProgressionNetwork.indexToTask[12]).get(1));
+
+        System.out.println("Used ProMethods: " + usedProMethods);
+
+
+        HashSet<Integer> correspondingStates = NodeIdentificationByMethods.identifyNodeByListOfProMethods(graph, usedProMethods);
+
+        System.out.println("Corresponding States: " + correspondingStates);
+
+    }
+
 }

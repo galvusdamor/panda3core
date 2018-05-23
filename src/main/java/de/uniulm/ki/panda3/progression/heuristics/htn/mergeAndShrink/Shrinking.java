@@ -121,6 +121,7 @@ public class Shrinking {
 
         int newStartID = tempReverseIDMapping.get(graph.startNodeID);
 
+        //System.out.println("Shrinking");
 
         HtnMsGraph newGraph;
 
@@ -129,16 +130,21 @@ public class Shrinking {
             HtnMsGraphWithMethods htnMsGraphWithMethods = ((HtnMsGraphWithMethods) graph);
 
             HashMap<Tuple3<Integer,Integer,Integer>, LinkedList<ProMethod>> linkedProMethods = new HashMap<>();
+            //linkedProMethods.putAll(htnMsGraphWithMethods.linkedMethods);
 
             for (Tuple3<Integer,Integer,Integer> edge : oldEdges){
                 LinkedList<ProMethod> linkedProMethodsForEdge = htnMsGraphWithMethods.linkedMethods.get(edge);
 
+                int newStartEdgeID = tempReverseIDMapping.get(edge._1());
+                int newEndEdgeID = tempReverseIDMapping.get(edge._3());
+
+                Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(newStartEdgeID, edge._2(), newEndEdgeID);
+
+                //LinkedList<ProMethod> linkedProMethodsForEdge2 = htnMsGraphWithMethods.linkedMethods.get(edge);
+
                 if (linkedProMethodsForEdge!=null){
 
-                    int newStartEdgeID = tempReverseIDMapping.get(edge._1());
-                    int newEndEdgeID = tempReverseIDMapping.get(edge._3());
 
-                    Tuple3<Integer,Integer,Integer> newEdge = new Tuple3<>(newStartEdgeID, edge._2(), newEndEdgeID);
 
                     linkedProMethods.put(newEdge,linkedProMethodsForEdge);
                 }
