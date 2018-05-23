@@ -352,7 +352,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           //println(d.taskSchemaTransitionGraph.condensation.dotString(DirectedGraphDotOptions(false),{t => t.size + ""}))
 
-          System exit 0
+          //System exit 0
 
 
           timeCapsule stop TOTAL_TIME
@@ -1027,6 +1027,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         // semantic empty line
         val sasreader = new SasPlusProblem(".fd" + uuid + separator + "output.sas")
         sasreader.prepareEfficientRep()
+        println(sasreader.toString)
+        //System exit 0
         //ProPlanningInstance.sasp = sasreader
         //sasreader.prepareSymbolicRep(domain,problem)
 
