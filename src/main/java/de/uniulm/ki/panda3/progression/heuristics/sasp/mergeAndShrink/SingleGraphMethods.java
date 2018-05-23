@@ -245,6 +245,13 @@ public final class SingleGraphMethods {
                         edges.add(edge);
                     }
 
+                    if (preListDismissed.isEmpty()) {
+                        Tuple3<Integer, Integer, Integer> edgeNoPrec = new Tuple3<>(endEdge, OpIndex, endEdge);
+                        if (!Utils.containsEdge(edges, edgeNoPrec)) {
+                            edges.add(edgeNoPrec);
+                        }
+                    }
+
                 }
             }
 
@@ -288,8 +295,8 @@ public final class SingleGraphMethods {
 
     public static String getOpString(SasPlusProblem p, int OpIndex){
 
-        String s = "";
-        //String s = "\"" + OpIndex + ": " + p.opNames[OpIndex] +  "\"";
+        //String s = "";
+        String s = "\"" + OpIndex + ": " + p.opNames[OpIndex] +  "\"";
 
         return s;
 
