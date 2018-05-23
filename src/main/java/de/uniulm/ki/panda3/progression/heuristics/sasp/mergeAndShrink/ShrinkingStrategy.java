@@ -140,7 +140,7 @@ public abstract class ShrinkingStrategy {
         Set<Integer> goalNodes = getGoalNodes(graph);
 
         for (int i: graph.idMapping.keySet())
-            distancesToGoalMap.put(i,Integer.MAX_VALUE);
+            distancesToGoalMap.put(i,-1);
 
 
         for (int i: goalNodes){
@@ -213,7 +213,7 @@ public abstract class ShrinkingStrategy {
             for (Tuple3<Integer, Integer, Integer> incomingEdge : incomingEdges){
                 int startID = incomingEdge._1();
                 int nextDistance = distanceOfNextNodeFromGoalNode + p.costs[incomingEdge._2()];
-                if (!distancesFromGoal.keySet().contains(startID) || (nextDistance<distancesFromGoal.get(startID))){
+                if (!distancesFromGoal.keySet().contains(startID) || (nextDistance<distancesFromGoal.get(startID) || distancesFromGoal.get(startID) == -1)){
                     newNextNodes.add(startID);
 
                     //distanceOfNextNodeFromGoalNode + 1;
