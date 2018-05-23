@@ -15,7 +15,7 @@ import java.util.List;
  */
 public abstract class RelaxedCompositionEncoding extends SasPlusProblem {
     public int methodCosts = 0;
-    int numOfNonHtnActions;
+    public int numOfNonHtnActions;
     public IActionReachability tdRechability;
     public void generateTaskCompGraph(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks){};
 
