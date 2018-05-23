@@ -54,6 +54,9 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
         else
             this.compEnc = new RelaxedCompositionSAS(flat);
 
+        if (this.compEnc.methodCosts == 0)
+            System.out.println("Using methodcosts = 0. This will be slow, but optimal ...");
+
         if (heuristic == SasHeuristic.SasHeuristics.hLmCutOpt)
             this.compEnc.methodCosts = 0;
 
