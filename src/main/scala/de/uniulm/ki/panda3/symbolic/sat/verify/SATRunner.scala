@@ -6,7 +6,7 @@ import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.configuration.Timings._
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, ReducedTask, Task}
-import de.uniulm.ki.panda3.symbolic.logic.And
+import de.uniulm.ki.panda3.symbolic.logic.{And, GroundLiteral}
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints._
@@ -24,6 +24,7 @@ import scala.io.Source
 case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                      satSolver: Solvertype, solverPath: Option[String],
                      büchiAutomata: Seq[LTLAutomaton[_, _]], ltlFormulaAndEncoding: Seq[AdditionalSATConstraint],
+                     pureLTLFormulae: Seq[LTLFormula],
                      referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
                      encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean,
@@ -137,20 +138,51 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
   }
 
 
+  private def evaluateLTLFormulaOnStates(formula: LTLFormula, states: Seq[Seq[GroundLiteral]]): Boolean = formula match {
+    case PredicateAtom(p) => if (states.head exists { _.predicate == p }) true else false
+    case LTLNot(f)        => evaluateLTLFormulaOnStates(f, states)
+    case LTLAnd(fs)       => fs.forall(f => evaluateLTLFormulaOnStates(f, states))
+    case LTLOr(fs)        => fs.exists(f => evaluateLTLFormulaOnStates(f, states))
+    case LTLNext(f)       => if (states.isEmpty) false else evaluateLTLFormulaOnStates(f, states.drop(1))
+    case LTLWeakNext(f)   => if (states.isEmpty) true else evaluateLTLFormulaOnStates(f, states.drop(1))
+    case LTLEventually(f) =>
+      if (states.isEmpty) false
+      else if (evaluateLTLFormulaOnStates(f, states)) true
+      else evaluateLTLFormulaOnStates(LTLEventually(f), states.drop(1))
+    case LTLAlways(f)     =>
+      if (states.isEmpty) true
+      else evaluateLTLFormulaOnStates(f, states) && evaluateLTLFormulaOnStates(LTLAlways(f), states.drop(1))
+    case LTLUntil(f, g)   =>
+      if (states.isEmpty) false
+      else if (evaluateLTLFormulaOnStates(g, states)) true
+      else evaluateLTLFormulaOnStates(f, states) && evaluateLTLFormulaOnStates(LTLUntil(f, g), states.drop(1))
+  }
+
   def checkIfTaskSequenceIsAValidPlan(sequenceToVerify: Seq[Task], checkGoal: Boolean = true): Unit = {
     val groundTasks = sequenceToVerify map { task => GroundTask(task, Nil) }
-    val finalState = groundTasks.foldLeft(initialPlan.groundedInitialStateOnlyPositive)(
-      { case (state, action) =>
+    val initialState: Seq[GroundLiteral] = initialPlan.groundedInitialStateOnlyPositive
+    val stateSequence = groundTasks.foldLeft(initialState :: Nil)(
+      { case (states, action) =>
         //println("STATE")
         //println(state map {x => "\t" + x.predicate.name} mkString("\n"))
         //println("PREC " + action.task.name)
         //println(action.task.preconditionsAsPredicateBool map {x => "\t" + x._1.name} mkString "\n")
         //println()
+        val state = states.last
 
         action.substitutedPreconditions foreach { prec => exitIfNot(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
-        (state diff action.substitutedDelEffects.map(_.copy(isPositive = true))) ++ action.substitutedAddEffects
+        val nextState = (state diff action.substitutedDelEffects.map(_.copy(isPositive = true))) ++ action.substitutedAddEffects
+
+        states :+ nextState
       })
 
+    pureLTLFormulae.zipWithIndex foreach { case (f, i) =>
+      val r = evaluateLTLFormulaOnStates(f, stateSequence)
+      println("Testing LTL formula #" + i + ": " + r)
+      exitIfNot(r, "Formula " + f.toString + " is not fulfilled")
+    }
+
+    val finalState = stateSequence.last
     if (checkGoal) initialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => exitIfNot(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
   }
 
@@ -254,7 +286,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
       var foundSolution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
 
       while ((next > 0 || next == planLength) && (lo + 1 < hi || hi == -1)) {
-        timeCapsule startOrLetRun  Timings.VERIFY_TOTAL
+        timeCapsule startOrLetRun Timings.VERIFY_TOTAL
         println("\t\t\t\t\tRunning with plan length " + next + " lo " + lo + " " + hi)
         // generate appropriate formula
         val usedFormula = usedFormulaGeneral ++ encoder.planLengthDependentFormula(next)
@@ -339,21 +371,21 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
             val scriptFileName = fileDir + "__run" + uniqFileIdentifier + ".bat"
 
-          val solverCallString = satSolver match {
-            case MINISAT =>
-              println("Starting minisat")
-              solverPath.get + " -rnd-seed=" + randomSeed + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
-            case CRYPTOMINISAT =>
-              println("Starting cryptominisat5")
-              solverPath.get + " -t " + solverThreads + " -r " + randomSeed + " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-            case RISS6 =>
-              println("Starting riss6")
-              // -config=Riss6:-no-enabled_cp3
-              solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-            case MapleCOMSPS =>
-              println("Starting mapleCOMSPS")
-              solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-          }
+            val solverCallString = satSolver match {
+              case MINISAT       =>
+                println("Starting minisat")
+                solverPath.get + " -rnd-seed=" + randomSeed + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
+              case CRYPTOMINISAT =>
+                println("Starting cryptominisat5")
+                solverPath.get + " -t " + solverThreads + " -r " + randomSeed + " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              case RISS6         =>
+                println("Starting riss6")
+                // -config=Riss6:-no-enabled_cp3
+                solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              case MapleCOMSPS   =>
+                println("Starting mapleCOMSPS")
+                solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+            }
             writeStringToFile(outerScriptString + solverCallString, scriptFileName)
 
             solverLastStarted = System.currentTimeMillis()

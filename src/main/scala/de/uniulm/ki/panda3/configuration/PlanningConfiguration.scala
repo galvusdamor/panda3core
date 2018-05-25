@@ -396,7 +396,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val referencePlan: Option[Seq[Task]] = satSearch.planToMinimiseDistanceTo map { _ map { taskName: String => domainAndPlan._1.tasks.find(_.name == taskName).get } }
 
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, intProblem, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
-                                 automaton, directLTLEncoding,
+                                 automaton, directLTLEncoding, separatedFormulae,
                                  referencePlan, satSearch.planDistanceMetric,
                                  satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.encodingToUse,
                                  postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree),
