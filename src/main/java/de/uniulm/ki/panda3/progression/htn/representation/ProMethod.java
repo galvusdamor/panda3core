@@ -26,7 +26,7 @@ public class ProMethod {
 
     public List<int[]> orderings;
     HashSet<Integer> firsts;
-    HashSet<Integer> lasts;
+    public HashSet<Integer> lasts;
     public int numberOfPrimSubtasks = 0;
     public int numberOfAbsSubtasks;
 
@@ -38,7 +38,6 @@ public class ProMethod {
         this.methods = new List[steps.size()];
 
         for (int i = 0; i < steps.size(); i++) {
-
             subtasks[i] = steps.apply(i).schema();
             if (subtasks[i].isPrimitive())
                 numberOfPrimSubtasks++;

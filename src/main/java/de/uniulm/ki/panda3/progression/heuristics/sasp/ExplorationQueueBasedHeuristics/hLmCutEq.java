@@ -90,9 +90,9 @@ public class hLmCutEq extends SasHeuristic {
             //assert implementationEquality(s0, g);
             //assert reachablilityOK(s0, this.hVal); // this is less restrictive than the one above
 
-            BitSet goalZone = new BitSet(p.numOfStateFeatures);
-            BitSet cut = new BitSet(p.numOfOperators);
-            BitSet precsOfCutNodes = new BitSet(p.numOfStateFeatures);
+            BitSet goalZone = new BitSet();
+            BitSet cut = new BitSet();
+            BitSet precsOfCutNodes = new BitSet();
             goalZone(goalZone, cut, precsOfCutNodes);
             assert cut.cardinality() > 0;
 
@@ -198,6 +198,8 @@ public class hLmCutEq extends SasHeuristic {
                 } else {
                     cut.set(producer);
                     precsOfCutNodes.set(singlePrec);
+                    if (debug)
+                        System.out.println(p.factStrs[singlePrec] + "->" + p.opNames[producer] + "->" + p.factStrs[fact]);
                 }
             }
         }

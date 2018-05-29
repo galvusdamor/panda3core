@@ -69,8 +69,10 @@ public class hAddhFFEq extends SasHeuristic {
         // actions without preconditions
         for (int a : precLessOps) {
             for (int f : p.addLists[a]) {
-                hValProp[f] = p.costs[a];
-                queue.add(hValProp[f], f);
+                if (hValProp[f] > p.costs[a]) {
+                    hValProp[f] = p.costs[a];
+                    queue.add(hValProp[f], f);
+                }
             }
         }
 
@@ -84,7 +86,7 @@ public class hAddhFFEq extends SasHeuristic {
                 if (heuristic == SasHeuristics.hAdd)
                     return getAddVal(g);
                 else
-                    return getFFVal(g);
+                    return getFFVal(s0, g);
             }
             for (int op : p.precToTask[prop]) {
                 hValOp[op] += pVal;
@@ -112,8 +114,8 @@ public class hAddhFFEq extends SasHeuristic {
         return hVal;
     }
 
-    private int getFFVal(BitSet g) {
-        BitSet markedFs = new BitSet();
+    private int getFFVal(BitSet s0, BitSet g) {
+        BitSet markedFs = (BitSet) s0.clone();
         BitSet markedOps = new BitSet();
         for (int f = g.nextSetBit(0); f >= 0; f = g.nextSetBit(f + 1)) {
             assert hValProp[f] != cUnreachable;
@@ -135,18 +137,16 @@ public class hAddhFFEq extends SasHeuristic {
     private void markRelaxedPlan(BitSet markedFs, BitSet markedOps, int f) {
         if (!markedFs.get(f)) {
             markedFs.set(f);
-            if (reachedBy[f] > 0) {
-                for (int prec : p.precLists[reachedBy[f]]) {
-                    markRelaxedPlan(markedFs, markedOps, prec);
-                }
-                markedOps.set(reachedBy[f]);
+            for (int prec : p.precLists[reachedBy[f]]) {
+                markRelaxedPlan(markedFs, markedOps, prec);
+            }
+            markedOps.set(reachedBy[f]);
 
-                // classical version of helpful actions
+            // classical version of helpful actions
                 /*int op = reachedBy[f];
                 if (hValOp[op] == p.costs[op]) { // the preconditions of op are free (i.e. in s0)
                     helpfulOps.set(op);
                 }*/
-            }
         }
     }
 }

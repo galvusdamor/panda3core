@@ -3,12 +3,13 @@ package de.uniulm.ki.panda3.progression.htn.representation;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
-import de.uniulm.ki.panda3.symbolic.logic.*;
+import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
+import de.uniulm.ki.panda3.symbolic.logic.Literal;
+import de.uniulm.ki.panda3.symbolic.logic.Variable;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.util.seqProviderList;
 import scala.Tuple2;
 import scala.Tuple3;
-import scala.collection.Seq;
 
 import java.io.*;
 import java.text.DecimalFormat;
@@ -53,6 +54,7 @@ public class SasPlusProblem {
     private int[][] goal; // enum of pairs [var-index, value-needed]
 
     public String[] opNames; // operator-index -> name-string
+    HashMap<String, List<Integer>> actionsByName;
 
     /* prevail conditions vs. preconditions vs. effect condition
      *
@@ -111,6 +113,7 @@ public class SasPlusProblem {
     public int[][] precToTask; // 1 -> [4, 5, 7] means that the tasks 4, 5 and 7 all have precondition 1
     public int[][] addToTask; // 1 -> [4, 5, 7] means that the tasks 4, 5 and 7 all add fact no. 1
     public int[] numPrecs; // gives the number of preconditions for each action
+    public int[] preclessActions;
 
     public int[] s0List;
     public BitSet s0Bitset = null;
@@ -176,6 +179,7 @@ public class SasPlusProblem {
         delLists = new int[numOfOperators][];
         expandedDelLists = new int[numOfOperators][];
         numPrecs = new int[numOfOperators];
+        BitSet tempPrecless = new BitSet();
 
         for (int i = 0; i < numOfOperators; i++) {
             List<Integer> precList = new ArrayList<>();
@@ -217,6 +221,8 @@ public class SasPlusProblem {
             }
 
             numPrecs[i] = precList.size();
+            if (numPrecs[i] == 0)
+                tempPrecless.set(i);
 
             // copy temporal structures to arrays
             this.precLists[i] = new int[precList.size()];
@@ -232,6 +238,11 @@ public class SasPlusProblem {
                 this.delLists[i][j] = delList.get(j);
             }
         }
+
+        preclessActions = new int[tempPrecless.cardinality()];
+        int k = 0;
+        for (int a = tempPrecless.nextSetBit(0); a >= 0; a = tempPrecless.nextSetBit(a + 1))
+            preclessActions[k++] = a;
 
         calcInverseMappings();
         calcExtendedDelLists();
@@ -325,9 +336,15 @@ public class SasPlusProblem {
         this.effectVarEff = new int[this.numOfOperators][];
         this.costs = new int[this.numOfOperators];
 
+        actionsByName = new HashMap<>();
         for (int i = 0; i < this.numOfOperators; i++) {
             readOperator(br, i);
+            String name = this.opNames[i];
+            if (!actionsByName.containsKey(name))
+                actionsByName.put(name, new ArrayList<>());
+            actionsByName.get(name).add(i);
         }
+
         br.close();
     }
 
