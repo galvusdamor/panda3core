@@ -135,8 +135,9 @@ public class ProPlanningInstance {
             initialNode.heuristic = new PureSASHeuristic(ProgressionNetwork.flatProblem, h.classicalHeuristic(), methods, initialTasks);
         } else if (heuristic instanceof GreedyProgression$)
             initialNode.heuristic = new ProGreedyProgression();
-        else if (heuristic instanceof  HierarchicalMergeAndShrink$) {
-            initialNode.heuristic = new HierarchicalMergeAndShrink(ProgressionNetwork.flatProblem, methods, initialTasks, d);
+        else if (heuristic instanceof  de.uniulm.ki.panda3.configuration.HierarchicalMergeAndShrink) {
+            initialNode.heuristic = new HierarchicalMergeAndShrink(ProgressionNetwork.flatProblem, methods, initialTasks, d,
+                    ((de.uniulm.ki.panda3.configuration.HierarchicalMergeAndShrink) heuristic).filterWithADD());
         } else {
             throw new IllegalArgumentException("Heuristic " + heuristic + " is not supported");
         }

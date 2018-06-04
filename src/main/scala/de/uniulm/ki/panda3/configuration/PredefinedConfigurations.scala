@@ -111,6 +111,21 @@ object PredefinedConfigurations {
                                                                                   iterateReachabilityAnalysis = true, groundDomain = true,
                                                                                   stopDirectlyAfterGrounding = false)
 
+  val mergeAndShrinkPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                            compileInitialPlan = true,
+                                                            convertToSASP = true,
+                                                            allowSASPFromStrips = false,
+                                                            compileOrderInMethods = None,
+                                                            ensureMethodsHaveLastTask = false,
+                                                            ensureMethodsHaveAtMostTwoTasks = true,
+                                                            removeUnnecessaryPredicates = false,
+                                                            splitIndependentParameters = true,
+                                                            compileUselessAbstractTasks = false,
+                                                            liftedReachability = true,
+                                                            groundedReachability = None,
+                                                            groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                            iterateReachabilityAnalysis = true, groundDomain = true, stopDirectlyAfterGrounding = false)
+
 
   val preprocessConfigs = Map(
                                "ordering" -> orderingGroundingPreprocess,
@@ -251,7 +266,21 @@ object PredefinedConfigurations {
          "HTN-WS-2018-treeBefore(RISS6)" ->
            (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding)),
          "HTN-WS-2018-treeBefore(MapleCOMSPS)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding))
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding)),
+
+
+         "MS-greedy" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(GreedyType, Some(HierarchicalMergeAndShrink(filterWithADD = false)),
+                                                                                 PriorityQueueSearch.abstractTaskSelection.random)),
+         "MS-astar" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(AStarActionsType(1), Some(HierarchicalMergeAndShrink(filterWithADD = false)),
+                                                                                PriorityQueueSearch.abstractTaskSelection.random)),
+         "MS-gastar" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink(filterWithADD = false)),
+                                                                                 PriorityQueueSearch.abstractTaskSelection.random)),
+  "MS-greedy-add" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(GreedyType, Some(HierarchicalMergeAndShrink(filterWithADD = true)),
+                                                                          PriorityQueueSearch.abstractTaskSelection.random)),
+  "MS-astar-add" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(AStarActionsType(1), Some(HierarchicalMergeAndShrink(filterWithADD = true)),
+                                                                         PriorityQueueSearch.abstractTaskSelection.random)),
+  "MS-gastar-add" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink(filterWithADD = true)),
+                                                                          PriorityQueueSearch.abstractTaskSelection.random))
        )
 
 }

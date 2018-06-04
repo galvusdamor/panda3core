@@ -1027,7 +1027,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         // semantic empty line
         val sasreader = new SasPlusProblem(".fd" + uuid + separator + "output.sas")
         sasreader.prepareEfficientRep()
-        println(sasreader.toString)
+        //println(sasreader.toString)
         //System exit 0
         //ProPlanningInstance.sasp = sasreader
         //sasreader.prepareSymbolicRep(domain,problem)
@@ -1900,7 +1900,7 @@ case class PureSASPlusEncoding(classicalHeuristic: SasHeuristics)
 case class HierarchicalHeuristicSimulatedProgression(classicalHeuristic: SasHeuristics, progressionBound: Int)
   extends SearchHeuristic {override val longInfo: String = "hhSP(" + classicalHeuristic.toString + ")"}
 
-object HierarchicalMergeAndShrink extends SearchHeuristic {override val longInfo: String = "hMS"}
+case class HierarchicalMergeAndShrink(filterWithADD : Boolean) extends SearchHeuristic {override val longInfo: String = "hMS"}
 
 sealed trait PruningTechnique extends DefaultLongInfo
 

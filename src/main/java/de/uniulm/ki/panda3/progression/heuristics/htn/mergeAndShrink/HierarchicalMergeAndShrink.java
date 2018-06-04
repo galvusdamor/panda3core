@@ -37,25 +37,27 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     LinkedList<ProMethod> steps;
 
 
-    public HierarchicalMergeAndShrink(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain) {
+    public HierarchicalMergeAndShrink(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain,
+                                      boolean filterWithADD) {
 
         super();
 
 
-        if (flatProblem.createdFromStrips)
-            this.compEnc = new RelaxedCompositionSTRIPS(flatProblem);
-        else
-            this.compEnc = new RelaxedCompositionSAS(flatProblem);
+        if (filterWithADD) {
+            if (flatProblem.createdFromStrips)
+                this.compEnc = new RelaxedCompositionSTRIPS(flatProblem);
+            else
+                this.compEnc = new RelaxedCompositionSAS(flatProblem);
 
-        if (this.compEnc.methodCosts == 0)
-            System.out.println("Using methodcosts = 0. This will be slow, but optimal ...");
+            if (this.compEnc.methodCosts == 0)
+                System.out.println("Using methodcosts = 0. This will be slow, but optimal ...");
 
-        this.compEnc.generateTaskCompGraph(methods, initialTasks);
-        System.out.println("Generating Relaxed Composition Model ...");
-        System.out.println(this.compEnc.getStatistics());
+            this.compEnc.generateTaskCompGraph(methods, initialTasks);
+            System.out.println("Generating Relaxed Composition Model ...");
+            System.out.println(this.compEnc.getStatistics());
 
-        this.heuristic = new hAddhFFEq(this.compEnc, SasHeuristic.SasHeuristics.hAdd);
-
+            this.heuristic = new hAddhFFEq(this.compEnc, SasHeuristic.SasHeuristics.hAdd);
+        } else this.heuristic = null;
 
 
         /*System.out.println(classicalCombinedGraph.idMapping.keySet());
@@ -337,6 +339,8 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     private int currentHeuristicValue = 0;
 
     protected void prepareS0andG(ProgressionPlanStep ps, BitSet r, BitSet g) {
+        if (heuristic == null) return;
+
         if (!ps.done) {
             ps.reachableTasks = new BitSet(compEnc.numOfOperators);
             ps.goalFacts = new BitSet(compEnc.numOfStateFeatures);
@@ -355,13 +359,8 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
     @Override
     public GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, ProMethod m) {
-        //System.out.println("ProMethod: " + m);
-        //steps.addLast(m);
-        //System.out.println("Steps Size: " + steps.size());
 
-        /*if(steps.size()==39){
-            System.out.println(steps);
-        }*/
+
         BitSet bs = newTN.state;
         int[] arrayState = new int[bs.size()];
 
@@ -373,41 +372,42 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         currentHeuristicValue = calcHeu(arrayState);
 
-        BitSet reachableActions = new BitSet(compEnc.numOfNonHtnActions);
-        BitSet htnGoal = new BitSet(compEnc.numOfStateFeatures);
+        if (heuristic != null) {
+            BitSet reachableActions = new BitSet(compEnc.numOfNonHtnActions);
+            BitSet htnGoal = new BitSet(compEnc.numOfStateFeatures);
 
-        for (ProgressionPlanStep first : newTN.getFirstAbstractTasks())
-            prepareS0andG(first, reachableActions, htnGoal);
+            for (ProgressionPlanStep first : newTN.getFirstAbstractTasks())
+                prepareS0andG(first, reachableActions, htnGoal);
 
-        for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
-            prepareS0andG(first, reachableActions, htnGoal);
+            for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
+                prepareS0andG(first, reachableActions, htnGoal);
 
-        //BitSet s0 = (BitSet) compEnc.s0mask.clone();
-        BitSet s0 = compEnc.initS0();
-        for (i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
-            compEnc.setReachable(s0, i);
-            //s0.set(compEnc.reachable[i]);
-            //s0.set(compEnc.unreachable[i], false);
+            //BitSet s0 = (BitSet) compEnc.s0mask.clone();
+            BitSet s0 = compEnc.initS0();
+            for (i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
+                compEnc.setReachable(s0, i);
+                //s0.set(compEnc.reachable[i]);
+                //s0.set(compEnc.unreachable[i], false);
+            }
+            s0.or(newTN.state);
+
+            BitSet g = new BitSet();
+
+            // prepare g
+            for (int fact : compEnc.gList) {
+                g.set(fact);
+            }
+
+            for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
+                compEnc.setReached(g, goalTask);
+                //g.set(compEnc.reached[goalTask]);
+                //g.set(compEnc.unreached[goalTask], false);
+                //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
+            }
+
+
+            if (heuristic.calcHeu(s0, g) == SasHeuristic.cUnreachable) currentHeuristicValue = -1;
         }
-        s0.or(newTN.state);
-
-        BitSet g = new BitSet();
-
-        // prepare g
-        for (int fact : compEnc.gList) {
-            g.set(fact);
-        }
-
-        for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
-            compEnc.setReached(g, goalTask);
-            //g.set(compEnc.reached[goalTask]);
-            //g.set(compEnc.unreached[goalTask], false);
-            //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
-        }
-
-
-        if (heuristic.calcHeu(s0, g) == SasHeuristic.cUnreachable) currentHeuristicValue = -1;
-
 
         return this;
     }
