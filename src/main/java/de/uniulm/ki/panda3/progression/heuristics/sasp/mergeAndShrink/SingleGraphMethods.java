@@ -129,6 +129,14 @@ public final class SingleGraphMethods {
 
         int[] goals = p.gList;
 
+        /*if (goals.length==0){
+
+            System.out.println("No goal specified!");
+
+            System.exit(0);
+
+        }*/
+
         HashSet<Integer> goalVariables = new HashSet<>();
 
         HashMap<Integer,Integer> mapping = new HashMap<>();

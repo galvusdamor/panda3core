@@ -4,6 +4,7 @@ import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.ClassicalM
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.MergingStrategy;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.Utils;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
+import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ClassicalNodeValue;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.NodeValue;
 import scala.Tuple2;
 import scala.Tuple3;
@@ -38,6 +39,7 @@ public final class OverlayOfClassicalAndHTNGraph {
         Tuple2<Integer,Integer> startCombination = new Tuple2<>(classicalMSGraph.startNodeID ,htnMsGraph.startNodeID);
         nextQueue.add(startCombination);
 
+        HashSet<Integer> goalNodes = new HashSet<>();
 
         while (nextQueue.size()>0){
 
@@ -54,6 +56,7 @@ public final class OverlayOfClassicalAndHTNGraph {
 
 
 
+
             for (Tuple3<Integer, Integer, Integer> classicalEdge : classicalOutgoingEdges){
 
                 int taskID = classicalEdge._2();
@@ -66,21 +69,30 @@ public final class OverlayOfClassicalAndHTNGraph {
 
                         newEdges.add(classicalEdge);
 
-                        int classicalEndNode = classicalEdge._3();
-                        int htnEndeNode = htnEdge._3();
 
-                        Tuple2<Integer, Integer> endCombination = new Tuple2<>(classicalEndNode,htnEndeNode);
+
+                        int classicalEndNode = classicalEdge._3();
+                        int htnEndNode = htnEdge._3();
+
+
+                        if (htnMsGraph.idMapping.get(htnEndNode).isGoalNode()){
+
+                            //System.out.println("Goal Combi:\n" + "classical: " + classicalEndNode + "\nHTN: " + htnEndNode);
+
+                            goalNodes.add(classicalEndNode);
+                        }
+
+                        Tuple2<Integer, Integer> endCombination = new Tuple2<>(classicalEndNode,htnEndNode);
 
                         if(!alreadyQueuedCombinations.contains(endCombination)){
 
 
-
                             if (nodeAssignments.containsKey(classicalEndNode)){
 
-                                nodeAssignments.get(classicalEndNode).addHtnNodeID(htnEndeNode);
+                                nodeAssignments.get(classicalEndNode).addHtnNodeID(htnEndNode);
 
                             }else {
-                                NodeCombination nextNode = new NodeCombination(classicalEndNode, htnEndeNode);
+                                NodeCombination nextNode = new NodeCombination(classicalEndNode, htnEndNode);
                                 nodeAssignments.put(classicalEndNode, nextNode);
                             }
 
@@ -112,7 +124,19 @@ public final class OverlayOfClassicalAndHTNGraph {
 
             if (nodeAssignments.keySet().contains(nodeID)){
 
-                newIDMapping.put(index, classicalMSGraph.idMapping.get(nodeID));
+                ClassicalNodeValue nodeValue = (ClassicalNodeValue) classicalMSGraph.idMapping.get(nodeID);
+
+                if(goalNodes.contains(nodeID)){
+                    nodeValue.setGoalNode(1);
+                    //System.out.println("Is goal");
+                }else {
+                    nodeValue.setGoalNode(0);
+                    //System.out.println("Is no goal");
+                }
+
+                //System.out.println("Is Goal Node?: " + nodeValue.isGoalNode());
+
+                newIDMapping.put(index, nodeValue);
                 shrinkingTableInfo.put(nodeID, index);
                 index++;
 
