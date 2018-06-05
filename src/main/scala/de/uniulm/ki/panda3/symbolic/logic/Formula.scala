@@ -17,7 +17,7 @@ trait Formula extends DomainUpdatable with PrettyPrintable{
 
   val containedVariables : Set[Variable]
 
-  def containedPredicatesWithSign : Set[(Predicate,Boolean)]
+  def containedPredicatesWithSign : Set[(Predicate,Seq[Variable], Boolean)]
 
   def compileQuantors() : (Formula, Seq[Variable])
 }

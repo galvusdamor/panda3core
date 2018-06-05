@@ -52,6 +52,21 @@ object PredefinedConfigurations {
                                                        iterateReachabilityAnalysis = true, groundDomain = true,
                                                        stopDirectlyAfterGrounding = false)
 
+  val sasGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
+                                                       compileInitialPlan = true,
+                                                       convertToSASP = true,
+                                                       allowSASPFromStrips = false,
+                                                       removeUnnecessaryPredicates = true,
+                                                       ensureMethodsHaveLastTask = false,
+                                                       ensureMethodsHaveAtMostTwoTasks = false,
+                                                       compileOrderInMethods = None,
+                                                       splitIndependentParameters = true,
+                                                       compileUselessAbstractTasks = true,
+                                                       liftedReachability = true, groundedReachability = None,
+                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                       iterateReachabilityAnalysis = true, groundDomain = true,
+                                                       stopDirectlyAfterGrounding = false)
+
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
                                                                convertToSASP = false,
@@ -269,18 +284,32 @@ object PredefinedConfigurations {
            (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding)),
 
 
+
+         "sas-ICAPS-2018-RC(filter,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFilter)),
+         "sas-ICAPS-2018-RC(FF,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFF)),
+         "sas-ICAPS-2018-RC(lmcut,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hLmCut)),
+         "sas-ICAPS-2018-RC(add,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hAdd)),
+         "sas-ICAPS-2018-RC(FF,gastar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hFF)),
+         "sas-ICAPS-2018-RC(lmcut,gastar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hLmCut)),
+         "sas-ICAPS-2018-RC(add,gastar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hAdd)),
+         "sas-ICAPS-2018-RC(FF,greedy)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hFF)),
+         "sas-ICAPS-2018-RC(lmcut,greedy)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hLmCut)),
+         "sas-ICAPS-2018-RC(add,greedy)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd)),
+
+
          "MS-greedy" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(GreedyType, Some(HierarchicalMergeAndShrink(filterWithADD = false)),
                                                                                  PriorityQueueSearch.abstractTaskSelection.random)),
          "MS-astar" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(AStarActionsType(1), Some(HierarchicalMergeAndShrink(filterWithADD = false)),
                                                                                 PriorityQueueSearch.abstractTaskSelection.random)),
          "MS-gastar" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink(filterWithADD = false)),
                                                                                  PriorityQueueSearch.abstractTaskSelection.random)),
-  "MS-greedy-add" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(GreedyType, Some(HierarchicalMergeAndShrink(filterWithADD = true)),
+         "MS-greedy-add" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(GreedyType, Some(HierarchicalMergeAndShrink(filterWithADD = true)),
                                                                           PriorityQueueSearch.abstractTaskSelection.random)),
-  "MS-astar-add" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(AStarActionsType(1), Some(HierarchicalMergeAndShrink(filterWithADD = true)),
+         "MS-astar-add" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(AStarActionsType(1), Some(HierarchicalMergeAndShrink(filterWithADD = true)),
                                                                          PriorityQueueSearch.abstractTaskSelection.random)),
-  "MS-gastar-add" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink(filterWithADD = true)),
-                                                                          PriorityQueueSearch.abstractTaskSelection.random))
+          "MS-gastar-add" -> (htnParsing, mergeAndShrinkPreprocess, ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink(filterWithADD = true)),
+                                                                        PriorityQueueSearch.abstractTaskSelection.random)),
+
        )
 
 }

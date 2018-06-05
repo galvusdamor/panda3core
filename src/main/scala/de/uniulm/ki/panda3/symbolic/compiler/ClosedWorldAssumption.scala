@@ -20,7 +20,7 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
   override def transform(domain: Domain, plan: Plan, dontNegateUnnecessarily: Boolean): (Domain, Plan) = {
-    val oldInit : PlanStep = plan.init
+    val oldInit: PlanStep = plan.init
 
     // determine whether there are all variables for constants we possibly need
     val existingVariablesForConstants: Map[Constant, Variable] = (oldInit.arguments collect { case v if plan.variableConstraints.getRepresentative(v).isConstant =>
@@ -37,17 +37,33 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
 
     // build the const->var map
     val variablesForConstants: Map[Constant, Variable] = existingVariablesForConstants ++ (newVariableConstraints map { case Equal(v, c) => c.asInstanceOf[Constant] -> v })
+    val variablesToConstants: Map[Variable, Constant] = variablesForConstants map { _.swap }
 
     // find predicates which never occur negatively in the domain at all ... we don't need to apply the CWA to them
-    val occurringNegativePredicates = ((domain.tasks ++ domain.hiddenTasks) flatMap { _.precondition.containedPredicatesWithSign }) ++ (domain.decompositionMethods collect {
+    val occurringNegativePredicatesWithArgumentVariables = ((domain.tasks ++ domain.hiddenTasks) flatMap { _.precondition.containedPredicatesWithSign }) ++ (domain.decompositionMethods
+      collect {
       case SHOPDecompositionMethod(_, _, precondition, _, _) => precondition.containedPredicatesWithSign
     } flatten)
+    val occurringNegativePredicates = occurringNegativePredicatesWithArgumentVariables map { case (p, _, s) => (p, s) } distinct
+    val negativePredicatesWithPossibleArguments: Map[Predicate, Seq[Seq[Variable]]] =
+      occurringNegativePredicatesWithArgumentVariables collect { case (p, vs, false) => (p, vs) } groupBy { _._1 } map { case (p, vss) => p -> (vss map { _._2 }) }
     val nonOccurringNegativePredicates = domain.predicates map { p => (p, false) } filterNot occurringNegativePredicates.contains map { _._1 }
 
     // create the new initial plan step
     // build a set of all literals
     val allLiterals: Seq[Literal] = if (dontNegateUnnecessarily)
-      (domain.predicates.toSet -- nonOccurringNegativePredicates) flatMap { _.instantiateWithVariables(variablesForConstants) } toSeq
+      (domain.predicates.toSet -- nonOccurringNegativePredicates) flatMap { case predicate =>
+        val allPossibleInstantiations = predicate.instantiateWithVariables(variablesForConstants)
+
+        // determine which arguments can actually occur negatively ...
+        val allowedVariables = negativePredicatesWithPossibleArguments(predicate)
+
+        // and take only those that may be useful
+        allPossibleInstantiations filter { case Literal(_, _, parameter) => allowedVariables exists { possibleParameters =>
+          parameter zip possibleParameters forall { case (actual, possible) => possible.sort.elements contains variablesToConstants(actual) }
+        }
+        }
+      } toSeq
     else domain.predicates.distinct flatMap { _.instantiateWithVariables(variablesForConstants) }
 
 
@@ -64,8 +80,8 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
     val newEffects = notPresentLiterals map { _.negate }
 
     val oldInitSchema = oldInit.schema match {
-      case rt : ReducedTask => rt
-      case _ => noSupport(FORUMLASNOTSUPPORTED)
+      case rt: ReducedTask => rt
+      case _               => noSupport(FORUMLASNOTSUPPORTED)
     }
 
     val newInitSchema: ReducedTask = ReducedTask(oldInit.schema.name, isPrimitive = true, oldInit.schema.parameters ++ newVariables,
