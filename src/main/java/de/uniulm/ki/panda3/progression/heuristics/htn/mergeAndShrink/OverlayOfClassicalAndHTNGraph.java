@@ -3,6 +3,7 @@ package de.uniulm.ki.panda3.progression.heuristics.htn.mergeAndShrink;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.ClassicalMSGraph;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.MergingStrategy;
 import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.Utils;
+import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.ClassicalNodeValue;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.HtnNodeValue;
@@ -181,7 +182,7 @@ public final class OverlayOfClassicalAndHTNGraph {
 
 
 
-    public static HtnMsGraph findWaysThroughBothGraphsHTN(SasPlusProblem p, ClassicalMSGraph classicalMSGraph, HtnMsGraph htnMsGraph){
+    public static HtnMsGraph findWaysThroughBothGraphsHTN(SasPlusProblem p, ClassicalMSGraph classicalMSGraph, HtnMsGraph htnMsGraph, boolean withMethods){
 
 
         //System.out.println("Overlay starts now");
@@ -361,7 +362,42 @@ public final class OverlayOfClassicalAndHTNGraph {
 
         //Tuple3<Integer, Integer, Integer>[] edgeTuple = Utils.convertEdgeArrayListToTuple3(edgeArrayList);
 
-        HtnMsGraphWithoutMethods combinedGraph = new HtnMsGraphWithoutMethods(nodeIDs,newEdgeTuple, newIDMapping, newStartID);
+        HtnMsGraph combinedGraph;
+
+        if(withMethods==true) {
+
+            HashMap<Tuple3<Integer, Integer, Integer>, LinkedList<ProMethod>> linkedProMethods = new HashMap<>();
+            //linkedProMethods.putAll(htnMsGraphWithMethods.linkedMethods);
+
+            for (Tuple3<Integer, Integer, Integer> edge : htnMsGraph.labelledEdges) {
+
+                HtnMsGraphWithMethods graphWithMethods = (HtnMsGraphWithMethods) htnMsGraph;
+
+                LinkedList<ProMethod> linkedProMethodsForEdge = graphWithMethods.linkedMethods.get(edge);
+
+                int newStartEdgeID = shrinkingTableInfoTemp.get(edge._1());
+                int newEndEdgeID = shrinkingTableInfoTemp.get(edge._3());
+
+                Tuple3<Integer, Integer, Integer> newEdge = new Tuple3<>(newStartEdgeID, edge._2(), newEndEdgeID);
+
+                //LinkedList<ProMethod> linkedProMethodsForEdge2 = htnMsGraphWithMethods.linkedMethods.get(edge);
+
+                if (linkedProMethodsForEdge != null) {
+
+
+                    linkedProMethods.put(newEdge, linkedProMethodsForEdge);
+                }
+
+
+            }
+
+            combinedGraph = new HtnMsGraphWithMethods(nodeIDs,newEdgeTuple, newIDMapping, newStartID, linkedProMethods);
+
+        }else {
+
+            combinedGraph = new HtnMsGraphWithoutMethods(nodeIDs,newEdgeTuple, newIDMapping, newStartID);
+        }
+
 
         combinedGraph.cascadingTables = classicalMSGraph.cascadingTables;
 

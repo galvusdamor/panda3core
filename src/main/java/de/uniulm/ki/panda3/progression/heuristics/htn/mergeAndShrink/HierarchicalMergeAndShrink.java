@@ -70,11 +70,11 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         }*/
 
-        int shrinkingBound = 100;
+        int shrinkingBound = 50;
         MergingStrategy classicalMergingStrategy = new MergingStrategy1();
         ShrinkingStrategy classicalShrinkingStrategy = new ShrinkingStrategy1();
         HtnShrinkingStrategy HtnShrinkingStrategy = new HtnShrinkingStrategy1();
-        boolean withMethods = false;
+        boolean withMethods = true;
         this.withMethods = withMethods;
 
         boolean overlayHTN = true;
@@ -124,76 +124,12 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         }
 
 
-       /* int[] testState = new int[3];
-        testState[0] = 1;
-        testState[1] = 3;
-        testState[2] = 7;
-
-
-        int[] state = testState;
-        //int[] state = flatProblem.s0List;
-
-        int heuristicValue = calcHeu(state);*/
-
-
-        //System.exit(0);
-
-/*
-        //Utils.printHtnGraph(flatProblem, presentGraphs.get(16), "Transport\\Graph16.pdf");
-
-        System.exit(0);
-
-
-
-        Testing.testGraphMinimization(flatProblem,methods,domain, shrinkingBound, HtnShrinkingStrategy);
-
-        System.exit(0);
-
-
-
-
-
-
-
-
-
-        //HashMap<Integer,HtnMsGraph> presentGraphs = getAllGraphs(flatProblem, methods, domain);
-
-
-
-        //
-
-
-
-
-        //Utils.printAllHtnGraphs(flatProblem, presentGraphs);
-
-
-
-
-
-
-        System.exit(0);
-
-        Task testTask = ProgressionNetwork.indexToTask[90];
-
-        System.out.println("Test Task: " + testTask.longInfo());
-
-        List<ProMethod> proMethods = methods.get(testTask);
-
-
-
-
-
-
-        System.exit(0);*/
-
     }
 
 
     public ClassicalMSGraph getCombinedGraph(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain, Task goalTask,
                                              int shrinkingBound, MergingStrategy classicalMergingStrategy, ShrinkingStrategy classicalShrinkingStrategy,
-                                             HtnShrinkingStrategy htnShrinkingStrategy, boolean withVariables) {
+                                             HtnShrinkingStrategy htnShrinkingStrategy, boolean withMethods) {
 
 
         this.methods = methods;
@@ -253,20 +189,20 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         //HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
         //int upperBound = 165;
         //int shrinkingBound = 30;
-        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withVariables);
+        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withMethods);
 
 
         //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
 
         int goalTaskIndex = ProgressionNetwork.taskToIndex.get(goalTask);
-        int testIndex = goalTaskIndex;
+        //int testIndex = goalTaskIndex;
 
 
         //HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
 
-        HtnMsGraph htnMsGraph = presentGraphs.get(testIndex);
+        HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
 
-        System.out.println("Task: " + ProgressionNetwork.indexToTask[testIndex]);
+        System.out.println("Goal Task: " + ProgressionNetwork.indexToTask[goalTaskIndex]);
 
         Utils.printHtnGraph(flatProblem,htnMsGraph,"TestTask.pdf");
 
@@ -294,6 +230,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
 
         //System.out.println("Test");
+
 
 
         ClassicalMSGraph combinedGraph = OverlayOfClassicalAndHTNGraph.findWaysThroughBothGraphs(flatProblem, classicalMSGraph, htnMsGraph);
@@ -309,7 +246,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
     public HtnMsGraph getCombinedGraphHTN(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain, Task goalTask,
                                              int shrinkingBound, MergingStrategy classicalMergingStrategy, ShrinkingStrategy classicalShrinkingStrategy,
-                                             HtnShrinkingStrategy htnShrinkingStrategy, boolean withVariables) {
+                                             HtnShrinkingStrategy htnShrinkingStrategy, boolean withMethods) {
 
 
         this.methods = methods;
@@ -369,7 +306,9 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         //HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
         //int upperBound = 165;
         //int shrinkingBound = 30;
-        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withVariables);
+
+
+        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withMethods);
 
 
         //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
@@ -411,8 +350,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         //System.out.println("Test");
 
-
-        HtnMsGraph combinedGraph = OverlayOfClassicalAndHTNGraph.findWaysThroughBothGraphsHTN(flatProblem, classicalMSGraph, htnMsGraph);
+        HtnMsGraph combinedGraph = OverlayOfClassicalAndHTNGraph.findWaysThroughBothGraphsHTN(flatProblem, classicalMSGraph, htnMsGraph, withMethods);
 
         //System.out.println("Size: " + combinedGraph.idMapping.size());
 
@@ -422,6 +360,9 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
 
     }
+
+
+
 
 
     public int calcHeu(int[] state) {
