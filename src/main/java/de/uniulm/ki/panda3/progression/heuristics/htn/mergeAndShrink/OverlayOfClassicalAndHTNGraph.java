@@ -77,7 +77,7 @@ public final class OverlayOfClassicalAndHTNGraph {
                         int htnEndNode = htnEdge._3();
 
 
-                        if (htnMsGraph.idMapping.get(htnEndNode).isGoalNode()){
+                        if (htnMsGraph.idMapping.get(htnEndNode).isGoalNode() && classicalMSGraph.idMapping.get(classicalEndNode).isGoalNode()){
 
                             //System.out.println("Goal Combi:\n" + "classical: " + classicalEndNode + "\nHTN: " + htnEndNode);
 
