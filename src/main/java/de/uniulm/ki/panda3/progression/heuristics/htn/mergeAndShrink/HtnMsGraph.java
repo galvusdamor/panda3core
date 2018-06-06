@@ -1,5 +1,7 @@
 package de.uniulm.ki.panda3.progression.heuristics.htn.mergeAndShrink;
 
+import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.CascadingTable;
+import de.uniulm.ki.panda3.progression.heuristics.sasp.mergeAndShrink.CascadingTables;
 import de.uniulm.ki.panda3.progression.sasp.mergeAndShrink.NodeValue;
 import de.uniulm.ki.util.EdgeLabelledGraph;
 import scala.Tuple3;
@@ -15,6 +17,8 @@ public abstract class HtnMsGraph{
     public int startNodeID;
     public Integer[] arrayVertices;
     public Tuple3<Integer, Integer, Integer>[] labelledEdges;
+
+    public CascadingTables cascadingTables;
 
 
 }

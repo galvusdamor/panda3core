@@ -31,9 +31,11 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     HashMap<Task, List<ProMethod>> methods;
     List<ProgressionPlanStep> initialTasks;
     ClassicalMSGraph classicalCombinedGraph;
+    HtnMsGraph htnCombinedGraph;
     HtnMsGraph HtnCombinedGraph;
     HashMap<Integer, Integer> distancesFromGoal;
     boolean withMethods;
+    boolean overlayHTN;
     LinkedList<ProMethod> steps;
 
 
@@ -68,12 +70,15 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         }*/
 
-        int shrinkingBound = 150;
+        int shrinkingBound = 100;
         MergingStrategy classicalMergingStrategy = new MergingStrategy1();
         ShrinkingStrategy classicalShrinkingStrategy = new ShrinkingStrategy1();
         HtnShrinkingStrategy HtnShrinkingStrategy = new HtnShrinkingStrategy1();
         boolean withMethods = false;
         this.withMethods = withMethods;
+
+        boolean overlayHTN = true;
+        this.overlayHTN = overlayHTN;
 
         assert initialTasks.size() == 1;
 
@@ -89,14 +94,33 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
             distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, classicalCombinedGraph);
 
+
+
         } else {
 
-            steps = new LinkedList<>();
+            if (overlayHTN==false) {
 
-            classicalCombinedGraph = getCombinedGraph(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
-                    classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy, withMethods);
+                steps = new LinkedList<>();
 
-            distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, classicalCombinedGraph);
+                classicalCombinedGraph = getCombinedGraph(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
+                        classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy, withMethods);
+
+                distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, classicalCombinedGraph);
+
+                System.out.println(distancesFromGoal);
+            }else {
+
+                htnCombinedGraph = getCombinedGraphHTN(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
+                        classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy, withMethods);
+
+                Utils.printHtnGraph(flatProblem, htnCombinedGraph, "HtnCombinedGraph.pdf");
+
+                distancesFromGoal = HtnShrinkingStrategy.getDistancesFromGoal(flatProblem, htnCombinedGraph);
+
+                System.out.println(distancesFromGoal);
+
+
+            }
         }
 
 
@@ -283,6 +307,122 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
     }
 
+    public HtnMsGraph getCombinedGraphHTN(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain, Task goalTask,
+                                             int shrinkingBound, MergingStrategy classicalMergingStrategy, ShrinkingStrategy classicalShrinkingStrategy,
+                                             HtnShrinkingStrategy htnShrinkingStrategy, boolean withVariables) {
+
+
+        this.methods = methods;
+        this.initialTasks = initialTasks;
+
+
+        ClassicalMergeAndShrink classicalMergeAndShrink = new ClassicalMergeAndShrink(flatProblem);
+        ClassicalMSGraph classicalMSGraph = classicalMergeAndShrink.mergeAndShrinkProcess(flatProblem, shrinkingBound, classicalMergingStrategy, classicalShrinkingStrategy);
+
+        Utils.printMultiGraph(flatProblem, classicalMSGraph, "ClassicalGraph.pdf");
+
+
+        Task[] allTasks = ProgressionNetwork.indexToTask;
+
+        for (int i = 0; i < allTasks.length; i++) {
+
+            Task t = allTasks[i];
+
+            System.out.println("\tTask: " + i + ": " + t.shortInfo());
+        }
+
+
+        //var i = 0
+        DirectedGraph<?> layerGraph = domain.taskSchemaTransitionGraph().condensation();
+        Dot2PdfCompiler$.MODULE$.writeDotToFile(layerGraph, "decomp_hierarchy1.pdf");
+
+        List<?> layer = JavaConverters.seqAsJavaList(layerGraph.topologicalOrdering().get().reverse());
+
+        for (Object l : layer) {
+            Set<Task> tasksInLayer = (Set<Task>) JavaConverters.setAsJavaSet((scala.collection.immutable.Set) l);
+            //System.out.println("Layer: " + tasksInLayer);
+
+            for (Task t : tasksInLayer) {
+                int taskIndex = ProgressionNetwork.taskToIndex.get(t);
+                //System.out.println("\tTask: " + taskIndex + ": " + t.shortInfo());
+                //System.out.println("\tTask: " + t + " Index: " + taskIndex);
+                List<ProMethod> methodsForTask = ProgressionNetwork.methods.get(t);
+                if (t.isAbstract()) {
+                    for (ProMethod pm : methodsForTask) {
+                        //System.out.println("\t\tMethod: " + pm.m.name());
+                        DirectedGraph<PlanStep> methodGraph = pm.m.subPlan().orderingConstraints().fullGraph();
+                        //System.out.println("\t\t" + methodGraph);
+
+                        //if ((pm.subtasks.length > 1) && (pm.orderings.size() == 0)) System.out.println("Task " + taskIndex);
+
+
+                    }
+                }
+            }
+        }
+
+        //StratificationPlotter$.MODULE$.plotStratification(domain);
+
+
+        //Testing.testGraphs(flatProblem, methods, domain);
+
+        //HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
+        //int upperBound = 165;
+        //int shrinkingBound = 30;
+        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withVariables);
+
+
+        //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
+
+        int goalTaskIndex = ProgressionNetwork.taskToIndex.get(goalTask);
+        int testIndex = goalTaskIndex;
+
+
+        //HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
+
+        HtnMsGraph htnMsGraph = presentGraphs.get(testIndex);
+
+        System.out.println("Task: " + ProgressionNetwork.indexToTask[testIndex]);
+
+        Utils.printHtnGraph(flatProblem,htnMsGraph,"TestTask.pdf");
+
+        //System.out.println("HashMap: ");
+
+        //HtnMsGraphWithMethods htnMsGraphWithMethods = ((HtnMsGraphWithMethods) htnMsGraph);
+
+        /*for(Tuple3<Integer,Integer,Integer> edge : htnMsGraphWithMethods.linkedMethods.keySet()){
+
+            System.out.println("Edge:" + edge);
+
+            LinkedList<ProMethod> proMethods = htnMsGraphWithMethods.linkedMethods.get(edge);
+
+            for(ProMethod proMethod: proMethods){
+
+                System.out.println("Promethod:" + proMethod.m.name());
+
+            }
+
+        }*/
+
+        //Testing.testNodeIdentificationByMethods(presentGraphs, methods);
+
+        //System.exit(0);
+
+
+        //System.out.println("Test");
+
+
+        HtnMsGraph combinedGraph = OverlayOfClassicalAndHTNGraph.findWaysThroughBothGraphsHTN(flatProblem, classicalMSGraph, htnMsGraph);
+
+        //System.out.println("Size: " + combinedGraph.idMapping.size());
+
+        Utils.printHtnGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\classicalCombinedGraph.pdf");
+
+        return combinedGraph;
+
+
+    }
+
 
     public int calcHeu(int[] state) {
 
@@ -307,14 +447,26 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
             distanceFromGoal = distancesFromGoal.get(nodeID);
 
         } else {
-            int nodeID = classicalCombinedGraph.cascadingTables.getNodeID(state);
 
-            //System.out.println(nodeID);
+            if (overlayHTN==false) {
+                int nodeID = classicalCombinedGraph.cascadingTables.getNodeID(state);
 
-            if (nodeID == -1) return -1;
+                //System.out.println(nodeID);
+
+                if (nodeID == -1) return -1;
 
 
-            distanceFromGoal = distancesFromGoal.get(nodeID);
+                distanceFromGoal = distancesFromGoal.get(nodeID);
+            }else {
+
+                int nodeID = htnCombinedGraph.cascadingTables.getNodeID(state);
+
+                if (nodeID == -1) return -1;
+
+
+                distanceFromGoal = distancesFromGoal.get(nodeID);
+
+            }
 
         }
 
