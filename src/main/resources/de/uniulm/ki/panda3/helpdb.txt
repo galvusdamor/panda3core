@@ -30,7 +30,7 @@ PANDA's general call syntax is as follows:
 If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
 
 Available options for PANDA:
-$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timeLimit -nodeLimit -planningProcedure -flawSelection -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegPreconditions -liftedPlanning -systemConfig -prune
+$ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timelimit -nodeLimit -planningProcedure -flawSelection -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegPreconditions -liftedPlanning -systemConfig -prune
 
 
 
@@ -1060,13 +1060,13 @@ $
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--timeLimit
+-timelimit
 ! [INT]
 Terminate after a specified number of seconds.
 
 Sets the time limit in seconds.
 
-THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-timeLimit" TAKES AN INTEGER, NO OPTIONS.
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-timelimit" TAKES AN INTEGER, NO OPTIONS.
 $
 
 
