@@ -1,6 +1,7 @@
 package de.uniulm.ki.panda3.progression.htn.search;
 
 import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
+import de.uniulm.ki.panda3.symbolic.domain.Task;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -65,6 +66,22 @@ public class SolutionStep {
         } else
             return ""; // the first node is a dummy
     }
+
+    public Task[] toPrimitiveSequence() {
+        Task[] solution = new Task[primitiveCount + shopCount];
+        int currentPos = solution.length - 1;
+
+        SolutionStep currentStep = this;
+        while (currentStep.predecessor != null) {
+            if (currentStep.method == null) {
+                solution[currentPos--] = ProgressionNetwork.indexToTask[currentStep.action];
+            }
+            currentStep = currentStep.predecessor;
+        }
+
+        return solution;
+    }
+
 
     public boolean isFirst() {
         return (predecessor == null);

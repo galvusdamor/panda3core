@@ -40,13 +40,13 @@ public class ProPlanningInstance {
     public static Random random;
     public static long randomSeed;
 
-    public boolean plan(Domain d, Plan p, Map<Task, Set<SimpleDecompositionMethod>> methodsByTask,
-                        InformationCapsule ic, TimeCapsule tc,
-                        PriorityQueueSearch.abstractTaskSelection taskSelectionStrategy,
-                        SearchHeuristic heuristic,
-                        SearchAlgorithmType search,
-                        long randomSeed,
-                        long quitAfterMs) throws ExecutionException, InterruptedException {
+    public Task[] plan(Domain d, Plan p, Map<Task, Set<SimpleDecompositionMethod>> methodsByTask,
+                       InformationCapsule ic, TimeCapsule tc,
+                       PriorityQueueSearch.abstractTaskSelection taskSelectionStrategy,
+                       SearchHeuristic heuristic,
+                       SearchAlgorithmType search,
+                       long randomSeed,
+                       long quitAfterMs) throws ExecutionException, InterruptedException {
         if (d.sasPlusRepresentation().isEmpty()) {
             System.out.println("Error: Progression search algorithm did not find action model.");
             System.exit(-1);
@@ -56,7 +56,7 @@ public class ProPlanningInstance {
         if (d.decompositionMethods().length() == 0) {
             // there cannot be a solution ...
             ic.set(Information.SEARCH_SPACE_FULLY_EXPLORED(), "true");
-            return false;
+            return null;
         }
 
         // Convert data structures
@@ -193,7 +193,10 @@ public class ProPlanningInstance {
             System.out.println("It contains " + solution.getLength() + " modifications, including " + solution.getPrimitiveCount() + " actions.");
         } else System.out.println("Problem unsolvable.");
 
-        return solution != null;
+        if (solution == null)
+            return null;
+        else
+            return solution.toPrimitiveSequence();
     }
 
     private void writeModelToHD(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, ProgressionNetwork initialNode, String uuid) {

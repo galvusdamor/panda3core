@@ -339,16 +339,20 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
         // scalastyle:off null
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val solutionFound = progressionInstance.plan(domainAndPlan._1, domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods),
-                                                       informationCapsule, timeCapsule,
-                                                       progression.abstractTaskSelectionStrategy,
-                                                       progression.heuristic.getOrElse(null),
-                                                       progression.searchAlgorithm,
-                                                       randomSeed,
-                                                       timeLimit.getOrElse(Int.MaxValue).toLong * 1000)
+          val primitiveSolution = progressionInstance.plan(domainAndPlan._1, domainAndPlan._2, JavaConversions.mapAsJavaMap(groundMethods),
+                                                           informationCapsule, timeCapsule,
+                                                           progression.abstractTaskSelectionStrategy,
+                                                           progression.heuristic.getOrElse(null),
+                                                           progression.searchAlgorithm,
+                                                           randomSeed,
+                                                           timeLimit.getOrElse(Int.MaxValue).toLong * 1000)
 
           timeCapsule stop TOTAL_TIME
-          runPostProcessing(timeCapsule, informationCapsule, null, if (solutionFound) null :: Nil else Nil, domainAndPlan, unprocessedDomain, analysisMap)
+
+          // build a plan from the primitive solution
+          val foundPlan = if (primitiveSolution == null) Nil else Plan.sequentialPlan(primitiveSolution) :: Nil
+
+          runPostProcessing(timeCapsule, informationCapsule, null, foundPlan, domainAndPlan, unprocessedDomain, analysisMap)
         })
 
       case satSearch: SATSearch                          =>
@@ -1055,7 +1059,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           // we have to adapt the parser to the new domain since action descriptions might have changed
           val parser = SASPlusGrounding(liftedResult._1._1, liftedResult._1._2, sasreader)
           liftedResult._2 + (SASPInput -> parser) + (SymbolicGroundedReachability -> parser)
-        case None         => liftedResult._2
+        case None            => liftedResult._2
       }
 
       (liftedResult._1, newAnalysisMap)
@@ -1181,7 +1185,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length ||
       (compiledResult._1.abstractTasks.nonEmpty && compiledResult._1.decompositionMethods.isEmpty)) ((compiledResult, tdgResult._2), timeCapsule)
     else runReachabilityAnalyses(compiledResult._1, compiledResult._2, runForGrounder, timeCapsule, firstAnalysis = false,
-                                 savedSASPlusParser = tdgResult._2.getOrElse(SASPInput) map {_.sasPlusProblem})
+                                 savedSASPlusParser = tdgResult._2.getOrElse(SASPInput) map { _.sasPlusProblem })
   }
 
   private case class CompilerConfiguration[T](domainTransformer: DomainTransformer[T], information: T, name: String, timingName: String) {
