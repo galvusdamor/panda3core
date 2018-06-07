@@ -6,6 +6,7 @@ import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.logic.GroundLiteral;
 import de.uniulm.ki.panda3.symbolic.logic.Literal;
 import de.uniulm.ki.panda3.symbolic.logic.Variable;
+import de.uniulm.ki.panda3.symbolic.logic.Predicate;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.util.seqProviderList;
 import scala.Tuple2;
