@@ -51,13 +51,13 @@ public class ProgressionNetwork implements Comparable<ProgressionNetwork>, Clone
     public BitSet helpfulActions;
     private Task initialTask;
 
-    public boolean isHelpFulAction(int action) {
+    public boolean isHelpfulAction(int action) {
         if (!useHelpfulActions)
             return false;
         return helpfulActions.get(action);
     }
 
-    public boolean isHelpFulMethod(ProMethod method) {
+    public boolean isHelpfulMethod(ProMethod method) {
         if (!useHelpfulActions)
             return false;
         return helpfulActions.get(method.methodID);

@@ -10,10 +10,7 @@ import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
 import de.uniulm.ki.panda3.progression.htn.search.fringe.AlternatingFringe;
 import de.uniulm.ki.panda3.progression.htn.search.fringe.IFringe;
 import de.uniulm.ki.panda3.progression.htn.search.fringe.QueueBasedFringe;
-import de.uniulm.ki.panda3.symbolic.domain.GroundedDecompositionMethod;
 import de.uniulm.ki.panda3.symbolic.domain.SimpleDecompositionMethod;
-import de.uniulm.ki.panda3.symbolic.domain.Task;
-import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask;
 import de.uniulm.ki.util.InformationCapsule;
 import de.uniulm.ki.util.TimeCapsule;
 
@@ -42,7 +39,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
     public static final String A_STAR = "30 progression:02:aStar";
     public static final String HEURISTIC = "30 progression:03:heuristic";
     public static final String NUM_SEARCH_NODES = "30 progression:04:numSearchNodes";
-    public static final String UNIT_PROPAGATION = "30 progression:05:unitPropagation";
     public static final String NUM_PRIM_TASKS = "30 progression:06:numPrimTasks";
     public static final String NUM_SHOP_TASKS = "30 progression:07:numShopTasks";
     public static final String NUM_DECOMPOSITIONS = "30 progression:08:numDecompositions";
@@ -52,7 +48,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
     private boolean findShortest = false;
     boolean aStar = true;
-    boolean deleteRelaxed = false;
     boolean output = true;
     boolean exitDueToTimeLimit = false;
 
@@ -84,11 +79,11 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         int planLength = -1;
         long foundFirstPlanAfter = 0;
         long foundShortestPlan = 0;
-        int unitPropagation = 0;
-        SolutionStep solution = null;
         long totalSearchTime = System.currentTimeMillis();
         long lastInfo = System.currentTimeMillis();
-        //PriorityQueue<ProgressionNetwork> fringe = new PriorityQueue<>();
+
+        int checkAfter = 5000;
+        int sinceCheck = 0;
 
         IFringe<ProgressionNetwork> fringe;
         if (firstSearchNode.heuristic.supportsHelpfulActions) {
@@ -98,22 +93,13 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         } else {
             fringe = new QueueBasedFringe<>();
         }
-
         fringe.add(firstSearchNode);
+        SolutionStep solution = null;
+
+        timing.start(SEARCH_TIME);
         long startedSearch = System.currentTimeMillis();
 
-        boolean collectTlts = false;
-        LinkedList<Long> timeStamps = new LinkedList<>();
-        LinkedList<String> tlts = new LinkedList<>();
-
-        int restartCount = -1;
-        long restart = -1;// (2 * 60 * 1000);
-        long nextRestart = -1;//restartCount * restart;
-
         boolean helpfulAction = false;
-        int checkAfter = 5000;
-        int sinceCheck = 0;
-        timing.start(SEARCH_TIME);
         planningloop:
         while (!fringe.isEmpty()) {
             ProgressionNetwork n = fringe.poll();
@@ -137,7 +123,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
                     if (node.heuristic.supportsHelpfulActions) {
                         node.helpfulActions = node.heuristic.helpfulOps();
-                        helpfulAction = n.isHelpFulAction(ps.action);
+                        helpfulAction = n.isHelpfulAction(ps.action);
                     }
 
                     // early goal test - NON-OPTIMAL
@@ -154,11 +140,8 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                             if (node.progressionTrace != null)
                                 System.out.println(node.progressionTrace);
                         }
-                        if (collectTlts) {
-                            collectPlanRecData(timeStamps, tlts, node);
-                        }
                         foundPlans++;
-                        if (!findShortest && !collectTlts) {
+                        if (!findShortest) {
                             break planningloop;
                         }
                     } else {
@@ -216,7 +199,7 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
 
                     if (node.heuristic.supportsHelpfulActions) {
                         node.helpfulActions = node.heuristic.helpfulOps();
-                        helpfulAction = n.isHelpFulMethod(m);
+                        helpfulAction = n.isHelpfulMethod(m);
                     }
 
                     fringe.add(node, helpfulAction);
@@ -224,16 +207,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             }
             if ((sinceCheck >= checkAfter) && ((System.currentTimeMillis() - lastInfo) > 1000)) {
                 sinceCheck = 0;
-                if ((restart > 0) && ((System.currentTimeMillis() - totalSearchTime) > nextRestart)) {
-                    restartCount++;
-                    nextRestart = restartCount * restart;
-                    System.out.println("Seems to be a bad run, let's try again! -> restart");
-                    fringe.clear();
-                    fringe.add(firstSearchNode);
-                    //ProPlanningInstance.randomSeed += 100;
-                    //ProPlanningInstance.random = new Random(ProPlanningInstance.randomSeed);
-                    continue planningloop;
-                }
                 if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
                     System.out.println("Reached time limit, search will stop.");
                     exitDueToTimeLimit = true;
@@ -255,7 +228,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         info.add("30 progression:92:foundShortestPlanAfter", (int) (foundFirstPlanAfter - startedSearch));
         info.add("30 progression:93:foundFirstPlanAfter", (int) (foundShortestPlan - startedSearch));
         info.add("30 progression:94:foundPlans", foundPlans);
-        //info.add("30 progression:95:randomSeed", ProPlanningInstance.randomSeed);
 
         // write statistics
         if (solution != null)
@@ -274,7 +246,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         info.set(HEURISTIC, firstSearchNode.heuristic.getName());
 
         info.set(NUM_SEARCH_NODES, searchnodes);
-        info.set(UNIT_PROPAGATION, unitPropagation);
         setSolInfo(solution, info);
 
         if (output) {
@@ -293,24 +264,15 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         int planLength = -1;
         long foundFirstPlanAfter = 0;
         long foundShortestPlan = 0;
-        int unitPropagation = 0;
-        int bestMetric = Integer.MAX_VALUE;
-        SolutionStep solution = null;
         long totalSearchTime = System.currentTimeMillis();
         long lastInfo = System.currentTimeMillis();
+
         PriorityQueue<ProgressionNetwork> fringe = new PriorityQueue<>();
         fringe.add(firstSearchNode);
+        SolutionStep solution = null;
 
         timing.start(SEARCH_TIME);
         long startedSearch = System.currentTimeMillis();
-
-        boolean collectTlts = false;
-        LinkedList<Long> timeStamps = new LinkedList<>();
-        LinkedList<String> tlts = new LinkedList<>();
-
-        int restartCount = -1;
-        long restart = -1;// (2 * 60 * 1000);
-        long nextRestart = -1;//restartCount * restart;
 
         planningloop:
         while (!fringe.isEmpty()) {
@@ -346,20 +308,12 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                             if (node.progressionTrace != null)
                                 System.out.println(node.progressionTrace);
                         }
-                        if (collectTlts) {
-                            collectPlanRecData(timeStamps, tlts, node);
-                        }
                         foundPlans++;
-                        if (!this.findShortest && !collectTlts) {
+                        if (!this.findShortest) {
                             break planningloop;
                         }
                     } else {
                         fringe.add(node);
-                    }
-                    if (node.metric < bestMetric) {
-                        bestMetric = node.metric;
-                        if (output)
-                            System.out.println(getInfoStr(searchnodes, fringe.size(), greediness, n, totalSearchTime));
                     }
                 }
             }
@@ -380,27 +334,11 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
                     node.goalRelaxedReachable = node.heuristic.goalRelaxedReachable();
 
                     if (node.goalRelaxedReachable) {
-
                         fringe.add(node);
-                        if (node.metric < bestMetric) {
-                            bestMetric = node.metric;
-                            if (output)
-                                System.out.println(getInfoStr(searchnodes, fringe.size(), greediness, n, totalSearchTime));
-                        }
                     }
                 }
             }
             if ((System.currentTimeMillis() - lastInfo) > 1000) {
-                if ((restart > 0) && ((System.currentTimeMillis() - totalSearchTime) > nextRestart)) {
-                    restartCount++;
-                    nextRestart = restartCount * restart;
-                    System.out.println("Seems to be a bad run, let's try again! -> restart");
-                    fringe.clear();
-                    fringe.add(firstSearchNode);
-                    //ProPlanningInstance.randomSeed += 100;
-                    //ProPlanningInstance.random = new Random(ProPlanningInstance.randomSeed);
-                    continue planningloop;
-                }
                 if ((wallTime > 0) && ((System.currentTimeMillis() - totalSearchTime) > wallTime)) {
                     System.out.println("Reached time limit, search will stop.");
                     exitDueToTimeLimit = true;
@@ -421,7 +359,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         info.add("30 progression:92:foundShortestPlanAfter", (int) (foundFirstPlanAfter - startedSearch));
         info.add("30 progression:93:foundFirstPlanAfter", (int) (foundShortestPlan - startedSearch));
         info.add("30 progression:94:foundPlans", foundPlans);
-        //info.add("30 progression:95:randomSeed", ProPlanningInstance.randomSeed);
 
         // write statistics
         if (solution != null)
@@ -440,7 +377,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
         info.set(HEURISTIC, firstSearchNode.heuristic.getClass().toString());
 
         info.set(NUM_SEARCH_NODES, searchnodes);
-        info.set(UNIT_PROPAGATION, unitPropagation);
         setSolInfo(solution, info);
 
         if (output)
@@ -449,24 +385,6 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             System.out.println("Search time: " + (System.currentTimeMillis() - totalSearchTime) + " ms");
         return solution;
     }
-
-    public void collectPlanRecData(LinkedList<Long> timeStamps, LinkedList<String> tlts, ProgressionNetwork node) {
-        timeStamps.add(System.currentTimeMillis());
-        findTlt:
-        for (Object a : node.solution.getSolution()) {
-            if (a instanceof Integer)
-                continue;
-            GroundedDecompositionMethod dm = (GroundedDecompositionMethod) a;
-            if (dm.groundAbstractTask().task().name().startsWith("tlt") && (dm.subPlanGroundedTasksWithoutInitAndGoal().size() > 0)) {
-                for (int i = 0; i < dm.subPlanGroundedTasksWithoutInitAndGoal().size(); i++) {
-                    GroundTask ps2 = dm.subPlanGroundedTasksWithoutInitAndGoal().apply(i);
-                    tlts.add(ps2.longInfo());
-                    break findTlt;
-                }
-            }
-        }
-    }
-
 
     @Override
     public String SearchName() {
@@ -519,6 +437,5 @@ public class PriorityQueueSearch extends ProgressionSearchRoutine {
             ic.set(INFERRED_TLT, FirstDecTask);
             ic.set(ENFORCED_PREFIX_LENGTH, enforcedPrefLength);
         }
-        //ic.set(SOLUTION, PrimitivePlan);
     }
 }

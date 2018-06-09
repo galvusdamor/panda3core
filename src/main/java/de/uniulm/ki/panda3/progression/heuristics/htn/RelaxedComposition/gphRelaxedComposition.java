@@ -56,8 +56,8 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
         if (heuristic == SasHeuristic.SasHeuristics.hLmCutOpt)
             this.compEnc.methodCosts = 0;
 
-        this.compEnc.generateTaskCompGraph(methods, initialTasks);
         System.out.println("Generating Relaxed Composition Model ...");
+        this.compEnc.generateTaskCompGraph(methods, initialTasks);
         System.out.println(this.compEnc.getStatistics());
 
         if (heuristic == SasHeuristic.SasHeuristics.hAdd) {
@@ -96,27 +96,20 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
         for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
             prepareS0andG(first, reachableActions, htnGoal);
 
-        //BitSet s0 = (BitSet) compEnc.s0mask.clone();
-        BitSet s0 = compEnc.initS0();
+        BitSet s0 = compEnc.initS0(); // this is currently a dummy, i.e. an empty bitset
         for (int i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
             compEnc.setReachable(s0, i);
-            //s0.set(compEnc.reachable[i]);
-            //s0.set(compEnc.unreachable[i], false);
         }
         s0.or(newTN.state);
 
-        BitSet g = new BitSet();
-
         // prepare g
-        for (int fact : compEnc.gList) {
+        BitSet g = new BitSet();
+        for (int fact : compEnc.gList) { // the state-based goal
             g.set(fact);
         }
 
         for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
             compEnc.setReached(g, goalTask);
-            //g.set(compEnc.reached[goalTask]);
-            //g.set(compEnc.unreached[goalTask], false);
-            //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
         }
 
         if (heuristic.isIncremental()) {
@@ -131,58 +124,20 @@ public class gphRelaxedComposition extends GroundedProgressionHeuristic {
             res.inc = this.heuristic.getIncInf();
             return res;
         } else {
-            /*
-            if(g.cardinality() == 0)
-                System.out.println();
-            int ffVal = heuristic2.calcHeu(s0, (BitSet) g.clone());
-            if (ffVal == Integer.MAX_VALUE)
-                if (reachable(s0, g, compEnc))
-                    if (reachable(s0, g, compEnc))
-                        System.out.println("oh oh");
-            int cgVal = heuristic.calcHeu(s0, g);
-            if((ffVal == Integer.MAX_VALUE) &&(cgVal < Integer.MAX_VALUE))
-                System.out.print("");
-            */
-            //if (heuristic2.calcHeu(s0, g) == SasHeuristic.cUnreachable)
-            //    this.heuristicVal = SasHeuristic.cUnreachable;
-            //else
             this.heuristicVal = heuristic.calcHeu(s0, g);
             return this;
         }
     }
 
-    private boolean reachable(BitSet s0, BitSet g, SasPlusProblem p) {
-        BitSet sOld = new BitSet();
-        BitSet s = (BitSet) s0.clone();
-        while (true) {
-            opLoop:
-            for (int i = 0; i < p.numOfOperators; i++) {
-                for (int prec : p.precLists[i]) {
-                    if (!s.get(prec))
-                        continue opLoop;
-                }
-                for (int add : p.addLists[i])
-                    s.set(add);
-            }
-            if (s.equals(sOld))
-                break;
-            sOld = (BitSet) s.clone();
-        }
-        for (int gf = g.nextSetBit(0); gf >= 0; gf = g.nextSetBit(gf + 1))
-            if (!s.get(gf))
-                return false;
-        return true;
-    }
-
     protected void prepareS0andG(ProgressionPlanStep ps, BitSet r, BitSet g) {
         if (!ps.done) {
-            ps.reachableTasks = new BitSet(compEnc.numOfOperators);
-            ps.goalFacts = new BitSet(compEnc.numOfStateFeatures);
+            ps.reachableTasks = new BitSet();
+            ps.goalFacts = new BitSet();
             ps.reachableTasks.or(compEnc.tdRechability.getReachableActions(ps.taskIndex));
             ps.goalFacts.set(ps.taskIndex);
 
-            for (ProgressionPlanStep ps2 : ps.successorList) {
-                prepareS0andG(ps2, ps.reachableTasks, ps.goalFacts);
+            for (ProgressionPlanStep psSucc : ps.successorList) {
+                prepareS0andG(psSucc, ps.reachableTasks, ps.goalFacts);
             }
             ps.done = true;
         }

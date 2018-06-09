@@ -185,8 +185,6 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
         }
         factStrs = tFactStrs;
         varNames = tFactStrs;
-        //System.out.println(this.toString());
-        //assert (this.correctModel());
     }
 
     @Override
