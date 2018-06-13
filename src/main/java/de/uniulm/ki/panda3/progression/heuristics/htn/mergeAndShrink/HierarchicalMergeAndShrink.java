@@ -12,6 +12,7 @@ import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
+import de.uniulm.ki.panda3.progression.htn.search.SolutionStep;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
@@ -19,6 +20,7 @@ import de.uniulm.ki.util.DirectedGraph;
 import de.uniulm.ki.util.Dot2PdfCompiler$;
 import scala.Tuple3;
 import scala.collection.JavaConverters;
+import sun.awt.image.ImageWatched;
 
 
 import java.util.*;
@@ -31,9 +33,11 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     HashMap<Task, List<ProMethod>> methods;
     List<ProgressionPlanStep> initialTasks;
     ClassicalMSGraph classicalCombinedGraph;
+    HtnMsGraph htnCombinedGraph;
     HtnMsGraph HtnCombinedGraph;
     HashMap<Integer, Integer> distancesFromGoal;
     boolean withMethods;
+    boolean overlayHTN;
     LinkedList<ProMethod> steps;
 
 
@@ -68,12 +72,15 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         }*/
 
-        int shrinkingBound = 100;
+        int shrinkingBound = 50;
         MergingStrategy classicalMergingStrategy = new MergingStrategy1();
         ShrinkingStrategy classicalShrinkingStrategy = new ShrinkingStrategy1();
         HtnShrinkingStrategy HtnShrinkingStrategy = new HtnShrinkingStrategy1();
         boolean withMethods = false;
         this.withMethods = withMethods;
+
+        boolean overlayHTN = true;
+        this.overlayHTN = overlayHTN;
 
         assert initialTasks.size() == 1;
 
@@ -89,87 +96,44 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
             distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, classicalCombinedGraph);
 
+
+
         } else {
 
-            steps = new LinkedList<>();
+            if (overlayHTN==false) {
 
-            classicalCombinedGraph = getCombinedGraph(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
-                    classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy, withMethods);
+                steps = new LinkedList<>();
 
-            distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, classicalCombinedGraph);
+                classicalCombinedGraph = getCombinedGraph(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
+                        classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy, withMethods);
+
+                distancesFromGoal = ShrinkingStrategy.getDistancesFromGoal(flatProblem, classicalCombinedGraph);
+
+                System.out.println(distancesFromGoal);
+            }else {
+
+                htnCombinedGraph = getCombinedGraphHTN(flatProblem, methods, initialTasks, domain, goalTask, shrinkingBound,
+                        classicalMergingStrategy, classicalShrinkingStrategy, HtnShrinkingStrategy, withMethods);
+
+                Utils.printHtnGraph(flatProblem, htnCombinedGraph, "HtnCombinedGraph.pdf");
+
+                distancesFromGoal = HtnShrinkingStrategy.getDistancesFromGoal(flatProblem, htnCombinedGraph);
+
+                System.out.println(distancesFromGoal);
+
+                System.out.println("Start Node ID: " + htnCombinedGraph.startNodeID);
+
+
+            }
         }
 
-
-       /* int[] testState = new int[3];
-        testState[0] = 1;
-        testState[1] = 3;
-        testState[2] = 7;
-
-
-        int[] state = testState;
-        //int[] state = flatProblem.s0List;
-
-        int heuristicValue = calcHeu(state);*/
-
-
-        //System.exit(0);
-
-/*
-        //Utils.printHtnGraph(flatProblem, presentGraphs.get(16), "Transport\\Graph16.pdf");
-
-        System.exit(0);
-
-
-
-        Testing.testGraphMinimization(flatProblem,methods,domain, shrinkingBound, HtnShrinkingStrategy);
-
-        System.exit(0);
-
-
-
-
-
-
-
-
-
-        //HashMap<Integer,HtnMsGraph> presentGraphs = getAllGraphs(flatProblem, methods, domain);
-
-
-
-        //
-
-
-
-
-        //Utils.printAllHtnGraphs(flatProblem, presentGraphs);
-
-
-
-
-
-
-        System.exit(0);
-
-        Task testTask = ProgressionNetwork.indexToTask[90];
-
-        System.out.println("Test Task: " + testTask.longInfo());
-
-        List<ProMethod> proMethods = methods.get(testTask);
-
-
-
-
-
-
-        System.exit(0);*/
 
     }
 
 
     public ClassicalMSGraph getCombinedGraph(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain, Task goalTask,
                                              int shrinkingBound, MergingStrategy classicalMergingStrategy, ShrinkingStrategy classicalShrinkingStrategy,
-                                             HtnShrinkingStrategy htnShrinkingStrategy, boolean withVariables) {
+                                             HtnShrinkingStrategy htnShrinkingStrategy, boolean withMethods) {
 
 
         this.methods = methods;
@@ -179,7 +143,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         ClassicalMergeAndShrink classicalMergeAndShrink = new ClassicalMergeAndShrink(flatProblem);
         ClassicalMSGraph classicalMSGraph = classicalMergeAndShrink.mergeAndShrinkProcess(flatProblem, shrinkingBound, classicalMergingStrategy, classicalShrinkingStrategy);
 
-        //Utils.printMultiGraph(flatProblem, classicalMSGraph, "Transport\\ClassicalMSGraph.pdf");
+        Utils.printMultiGraph(flatProblem, classicalMSGraph, "ClassicalGraph.pdf");
 
 
         Task[] allTasks = ProgressionNetwork.indexToTask;
@@ -229,22 +193,22 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         //HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
         //int upperBound = 165;
         //int shrinkingBound = 30;
-        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withVariables);
+        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withMethods);
 
 
         //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
 
         int goalTaskIndex = ProgressionNetwork.taskToIndex.get(goalTask);
-        int testIndex = goalTaskIndex;
+        //int testIndex = goalTaskIndex;
 
 
         //HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
 
-        HtnMsGraph htnMsGraph = presentGraphs.get(testIndex);
+        HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
 
-        System.out.println("Task: " + ProgressionNetwork.indexToTask[testIndex]);
+        System.out.println("Goal Task: " + ProgressionNetwork.indexToTask[goalTaskIndex]);
 
-        //Utils.printHtnGraph(flatProblem,htnMsGraph,"Transport\\TestTask.pdf");
+        Utils.printHtnGraph(flatProblem,htnMsGraph,"TestTask.pdf");
 
         //System.out.println("HashMap: ");
 
@@ -272,16 +236,153 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         //System.out.println("Test");
 
 
+
         ClassicalMSGraph combinedGraph = OverlayOfClassicalAndHTNGraph.findWaysThroughBothGraphs(flatProblem, classicalMSGraph, htnMsGraph);
 
         //System.out.println("Size: " + combinedGraph.idMapping.size());
 
-        //Utils.printMultiGraph(flatProblem, classicalCombinedGraph, "D:\\IdeaProjects\\panda3core\\classicalCombinedGraph.pdf");
+        //Utils.printMultiGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\classicalCombinedGraph.pdf");
 
         return combinedGraph;
 
 
     }
+
+    public HtnMsGraph getCombinedGraphHTN(SasPlusProblem flatProblem, HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, Domain domain, Task goalTask,
+                                             int shrinkingBound, MergingStrategy classicalMergingStrategy, ShrinkingStrategy classicalShrinkingStrategy,
+                                             HtnShrinkingStrategy htnShrinkingStrategy, boolean withMethods) {
+
+
+        this.methods = methods;
+        this.initialTasks = initialTasks;
+
+
+        ClassicalMergeAndShrink classicalMergeAndShrink = new ClassicalMergeAndShrink(flatProblem);
+        ClassicalMSGraph classicalMSGraph = classicalMergeAndShrink.mergeAndShrinkProcess(flatProblem, shrinkingBound, classicalMergingStrategy, classicalShrinkingStrategy);
+
+        //Utils.printMultiGraph(flatProblem, classicalMSGraph, "ClassicalGraph.pdf");
+
+
+        Task[] allTasks = ProgressionNetwork.indexToTask;
+
+        for (int i = 0; i < allTasks.length; i++) {
+
+            Task t = allTasks[i];
+
+            //System.out.println("\tTask: " + i + ": " + t.shortInfo());
+        }
+
+
+        //var i = 0
+        DirectedGraph<?> layerGraph = domain.taskSchemaTransitionGraph().condensation();
+        //Dot2PdfCompiler$.MODULE$.writeDotToFile(layerGraph, "decomp_hierarchy1.pdf");
+
+        List<?> layer = JavaConverters.seqAsJavaList(layerGraph.topologicalOrdering().get().reverse());
+
+        for (Object l : layer) {
+            Set<Task> tasksInLayer = (Set<Task>) JavaConverters.setAsJavaSet((scala.collection.immutable.Set) l);
+            //System.out.println("Layer: " + tasksInLayer);
+
+            for (Task t : tasksInLayer) {
+                int taskIndex = ProgressionNetwork.taskToIndex.get(t);
+                //System.out.println("\tTask: " + taskIndex + ": " + t.shortInfo());
+                //System.out.println("\tTask: " + t + " Index: " + taskIndex);
+                List<ProMethod> methodsForTask = ProgressionNetwork.methods.get(t);
+                if (t.isAbstract()) {
+                    for (ProMethod pm : methodsForTask) {
+                        //System.out.println("\t\tMethod: " + pm.m.name());
+                        DirectedGraph<PlanStep> methodGraph = pm.m.subPlan().orderingConstraints().fullGraph();
+                        //System.out.println("\t\t" + methodGraph);
+
+                        //if ((pm.subtasks.length > 1) && (pm.orderings.size() == 0)) System.out.println("Task " + taskIndex);
+
+
+                    }
+                }
+            }
+        }
+
+        //StratificationPlotter$.MODULE$.plotStratification(domain);
+
+
+        //Testing.testGraphs(flatProblem, methods, domain);
+
+        //HashMap<Integer,HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain);
+        //int upperBound = 165;
+        //int shrinkingBound = 30;
+
+        int goalTaskIndex = ProgressionNetwork.taskToIndex.get(goalTask);
+        int testIndex = goalTaskIndex;
+
+        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getGraphsUntilGoalGraph(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withMethods, goalTaskIndex);
+
+
+        //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Rover");
+
+
+
+        System.out.println("Goal Task: " + goalTaskIndex);
+
+        //HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
+
+        HtnMsGraph htnMsGraph = presentGraphs.get(testIndex);
+
+        System.out.println("Task: " + ProgressionNetwork.indexToTask[testIndex]);
+
+        //Utils.printHtnGraph(flatProblem,htnMsGraph,"TestTask.pdf");
+
+        //System.out.println("HashMap: ");
+
+        //HtnMsGraphWithMethods htnMsGraphWithMethods = ((HtnMsGraphWithMethods) htnMsGraph);
+
+        /*for(Tuple3<Integer,Integer,Integer> edge : htnMsGraphWithMethods.linkedMethods.keySet()){
+
+            System.out.println("Edge:" + edge);
+
+            LinkedList<ProMethod> proMethods = htnMsGraphWithMethods.linkedMethods.get(edge);
+
+            for(ProMethod proMethod: proMethods){
+
+                System.out.println("Promethod:" + proMethod.m.name());
+
+            }
+
+        }*/
+
+        //Testing.testNodeIdentificationByMethods(presentGraphs, methods);
+
+        //System.exit(0);
+
+
+        //System.out.println("Test");
+
+        HtnMsGraph combinedGraph = OverlayOfClassicalAndHTNGraph.findWaysThroughBothGraphsHTN(flatProblem, classicalMSGraph, htnMsGraph, withMethods);
+
+        //System.out.println("Size: " + combinedGraph.idMapping.size());
+
+        //Utils.printHtnGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\HierarchicalCombinedGraph.pdf");
+
+        return combinedGraph;
+
+
+    }
+
+
+    public int calcHeu(int nodeID) {
+
+        //System.out.println("Checks Node ID: " + nodeID);
+
+        if (nodeID == -1) return -1;
+
+
+
+
+        int distanceFromGoal = distancesFromGoal.get(nodeID);
+
+
+        return distanceFromGoal;
+    }
+
 
 
     public int calcHeu(int[] state) {
@@ -307,14 +408,26 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
             distanceFromGoal = distancesFromGoal.get(nodeID);
 
         } else {
-            int nodeID = classicalCombinedGraph.cascadingTables.getNodeID(state);
 
-            //System.out.println(nodeID);
+            if (overlayHTN==false) {
+                int nodeID = classicalCombinedGraph.cascadingTables.getNodeID(state);
 
-            if (nodeID == -1) return -1;
+                //System.out.println(nodeID);
+
+                if (nodeID == -1) return -1;
 
 
-            distanceFromGoal = distancesFromGoal.get(nodeID);
+                distanceFromGoal = distancesFromGoal.get(nodeID);
+            }else {
+
+                int nodeID = htnCombinedGraph.cascadingTables.getNodeID(state);
+
+                if (nodeID == -1) return -1;
+
+
+                distanceFromGoal = distancesFromGoal.get(nodeID);
+
+            }
 
         }
 
@@ -361,53 +474,93 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     public GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, ProMethod m) {
 
 
-        BitSet bs = newTN.state;
-        int[] arrayState = new int[bs.size()];
+        if((this.overlayHTN==true)&& (this.withMethods==false)){
 
-        int i = 0;
-        int j = 0;
-        while ((i = bs.nextSetBit(i)) != -1) {
-            arrayState[j++] = i++;
+            LinkedList<Integer> solutionSteps = newTN.solution.getSolutionSteps();
+
+            int nodeID = htnCombinedGraph.getNodeIDFromActionSequence(htnCombinedGraph.startNodeID, solutionSteps);
+
+            /*if(solutionSteps.size()>1) {
+
+                System.out.println("\nSolution: ");
+
+                for (int index : solutionSteps) {
+
+                    System.out.println(index + ": " + ProgressionNetwork.flatProblem.opNames[index]);
+                }
+
+                System.out.println("Matching Node ID: " + nodeID);
+
+            }*/
+
+
+
+
+
+
+            currentHeuristicValue = calcHeu(nodeID);
+
+
+
+
+
+
+        }else if((this.overlayHTN==false)&& (this.withMethods==false)){
+
+            BitSet bs = newTN.state;
+            int[] arrayState = new int[bs.size()];
+
+            int i = 0;
+            int j = 0;
+            while ((i = bs.nextSetBit(i)) != -1) {
+                arrayState[j++] = i++;
+            }
+
+            currentHeuristicValue = calcHeu(arrayState);
+
+            if (heuristic != null) {
+                BitSet reachableActions = new BitSet(compEnc.numOfNonHtnActions);
+                BitSet htnGoal = new BitSet(compEnc.numOfStateFeatures);
+
+                for (ProgressionPlanStep first : newTN.getFirstAbstractTasks())
+                    prepareS0andG(first, reachableActions, htnGoal);
+
+                for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
+                    prepareS0andG(first, reachableActions, htnGoal);
+
+                //BitSet s0 = (BitSet) compEnc.s0mask.clone();
+                BitSet s0 = compEnc.initS0();
+                for (i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
+                    compEnc.setReachable(s0, i);
+                    //s0.set(compEnc.reachable[i]);
+                    //s0.set(compEnc.unreachable[i], false);
+                }
+                s0.or(newTN.state);
+
+                BitSet g = new BitSet();
+
+                // prepare g
+                for (int fact : compEnc.gList) {
+                    g.set(fact);
+                }
+
+                for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
+                    compEnc.setReached(g, goalTask);
+                    //g.set(compEnc.reached[goalTask]);
+                    //g.set(compEnc.unreached[goalTask], false);
+                    //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
+                }
+
+
+                if (heuristic.calcHeu(s0, g) == SasHeuristic.cUnreachable) currentHeuristicValue = -1;
+            }
         }
 
-        currentHeuristicValue = calcHeu(arrayState);
-
-        if (heuristic != null) {
-            BitSet reachableActions = new BitSet(compEnc.numOfNonHtnActions);
-            BitSet htnGoal = new BitSet(compEnc.numOfStateFeatures);
-
-            for (ProgressionPlanStep first : newTN.getFirstAbstractTasks())
-                prepareS0andG(first, reachableActions, htnGoal);
-
-            for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
-                prepareS0andG(first, reachableActions, htnGoal);
-
-            //BitSet s0 = (BitSet) compEnc.s0mask.clone();
-            BitSet s0 = compEnc.initS0();
-            for (i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
-                compEnc.setReachable(s0, i);
-                //s0.set(compEnc.reachable[i]);
-                //s0.set(compEnc.unreachable[i], false);
-            }
-            s0.or(newTN.state);
-
-            BitSet g = new BitSet();
-
-            // prepare g
-            for (int fact : compEnc.gList) {
-                g.set(fact);
-            }
-
-            for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
-                compEnc.setReached(g, goalTask);
-                //g.set(compEnc.reached[goalTask]);
-                //g.set(compEnc.unreached[goalTask], false);
-                //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
-            }
 
 
-            if (heuristic.calcHeu(s0, g) == SasHeuristic.cUnreachable) currentHeuristicValue = -1;
-        }
+
+
+
 
         return this;
     }

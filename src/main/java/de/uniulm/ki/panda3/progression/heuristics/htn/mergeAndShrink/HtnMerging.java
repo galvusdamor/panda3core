@@ -1026,6 +1026,14 @@ public class HtnMerging {
 
         HtnMsGraph mergedGraph = newGraph.convertToHtnMsGraph();
 
+        //Utils.printHtnGraph(p, graph1, "graph1.pdf");
+
+        //Utils.printHtnGraph(p, graph2, "graph2.pdf");
+
+        //Utils.printHtnGraph(p, mergedGraph, "mergedGraph.pdf");
+
+
+
         return mergedGraph;
     }
 

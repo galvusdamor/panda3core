@@ -17,7 +17,7 @@ trait NodeValue extends DefaultLongInfo {
 
 
 
-  val isGoalNode: java.lang.Boolean
+  var isGoalNode: java.lang.Boolean
 
   def size : Long
 
@@ -30,19 +30,30 @@ trait ClassicalNodeValue extends NodeValue{
 
   def containsFactIndexes: Set[Int]
 
+  def setGoalNode(isGoal: Integer) = {
 
+    if(isGoal==1){
+      isGoalNode = true;
+    }else{
+      isGoalNode = false;
+    }
+
+
+
+  }
 
 }
 
 case class ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem, goalNode: java.lang.Boolean) extends ClassicalNodeValue {
 
-  override lazy val isGoalNode: java.lang.Boolean = goalNode
+  override var isGoalNode: java.lang.Boolean = goalNode
 
   override def isContained(state: util.BitSet): Boolean = state get value
 
 
 
-  override lazy val longInfo: String = value.toString + ": " + sasPlusProblem.factStrs(value)
+  override lazy val longInfo: String = "1"
+  //override lazy val longInfo: String = value.toString + ": " + sasPlusProblem.factStrs(value)
 
   override def containsShrink() : Boolean = false
 
@@ -54,7 +65,7 @@ case class ElementaryNode(value: Int, sasPlusProblem: SasPlusProblem, goalNode: 
 
 case class MergeNode(left: ClassicalNodeValue, right: ClassicalNodeValue, sasPlusProblem: SasPlusProblem) extends ClassicalNodeValue {
 
-  override lazy val isGoalNode : java.lang.Boolean = left.isGoalNode && right.isGoalNode
+  override var isGoalNode : java.lang.Boolean = left.isGoalNode && right.isGoalNode
 
   override def isContained(state: util.BitSet): Boolean = left.isContained(state) && right.isContained(state)
 
@@ -93,7 +104,7 @@ case class MergeNode(left: ClassicalNodeValue, right: ClassicalNodeValue, sasPlu
 
 case class ShrinkNode(left: ClassicalNodeValue, right: ClassicalNodeValue, sasPlusProblem: SasPlusProblem) extends ClassicalNodeValue {
 
-  override lazy val isGoalNode : java.lang.Boolean = left.isGoalNode || right.isGoalNode
+  override var isGoalNode : java.lang.Boolean = left.isGoalNode || right.isGoalNode
   override def isContained(state: util.BitSet): Boolean = left.isContained(state) || right.isContained(state)
 
   override lazy val longInfo: String = size.toString //"(" + left.longInfo + ")\n or \n(" + right.longInfo + ")"

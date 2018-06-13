@@ -49,8 +49,8 @@ object MainAndrea {
 
     // TRANSPORT
     val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
-    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
-    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile10".replace('\\', File.separatorChar)
+    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
+    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile3".replace('\\', File.separatorChar)
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/domains/satellite2.hddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/problems/8obs-3sat-4mod.hddl"
 
@@ -58,6 +58,10 @@ object MainAndrea {
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Woodworking/problems/00--p01-variant.hddl"
 
 
+
+    // Rover
+    //val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\rover\\domains\\rover-domain.lisp".replace('\\', File.separatorChar)
+    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\rover\\problems\\pfile3".replace('\\', File.separatorChar)
 
     //val domFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\woodworking-legal-fewer-htn-groundings.hddl"
     //val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\01--p01-complete.hddl"

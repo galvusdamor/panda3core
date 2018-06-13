@@ -68,11 +68,15 @@ public class Shrinking {
 
             //(1) ab hier mit unterem Code ersetzen, falls doch Shrink Node nötig
 
-            Boolean isGoalNode = newNodeValue.isGoalNode();
+            Boolean isGoalNode = false;
 
             for (int j = 1; j < toAggregate.size(); j++) {
 
                 NodeValue newNodeValue2 = graph.idMapping.get(toAggregate.get(j));
+
+                if (newNodeValue2.isGoalNode()) {
+                    isGoalNode = true;
+                }
 
                 if ((newNodeValue instanceof HtnNodeValue) && (newNodeValue2 instanceof HtnNodeValue)) {
                     /*HtnNodeValue newNodeValue12 = (HtnNodeValue) newNodeValue;

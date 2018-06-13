@@ -9,7 +9,7 @@ abstract class HtnNodeValue extends NodeValue {
 
 case class HtnElementaryNode(sasPlusProblem: SasPlusProblem, goalNode: java.lang.Boolean) extends HtnNodeValue {
 
-  override lazy val isGoalNode: java.lang.Boolean = goalNode
+  override var isGoalNode: java.lang.Boolean = goalNode
 
   override def containsShrink() : Boolean = false
 
@@ -26,7 +26,7 @@ case class HtnMergeNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasPl
 
   override lazy val size : Long = left.size + right.size
 
-  override lazy val isGoalNode : java.lang.Boolean = left.isGoalNode && right.isGoalNode
+  override var isGoalNode : java.lang.Boolean = left.isGoalNode && right.isGoalNode
 
   override def containsShrink() : Boolean = left.containsShrink() || right.containsShrink()
 
@@ -40,7 +40,7 @@ case class HtnShrinkNode(left: NodeValue, right: NodeValue, sasPlusProblem: SasP
 
   override lazy val size : Long = left.size + right.size
 
-  override lazy val isGoalNode : java.lang.Boolean = left.isGoalNode || right.isGoalNode
+  override var isGoalNode : java.lang.Boolean = left.isGoalNode || right.isGoalNode
 
   override lazy val longInfo: String = size.toString //"(" + left.longInfo + ")\n or \n(" + right.longInfo + ")"
 

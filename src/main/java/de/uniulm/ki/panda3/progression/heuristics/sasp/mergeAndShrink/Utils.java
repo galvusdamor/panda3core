@@ -178,6 +178,7 @@ public final class Utils {
     public static EdgeLabelledGraph<String, String, HashMap<Integer, NodeValue>, Integer> convertMultiGraphToStringGraph(SasPlusProblem p, ClassicalMSGraph graph) {
 
 
+
         HashMap<Integer, NodeValue> idMapping = graph.idMapping;
 
         String[] newNodes = convertNodesToStrings(p, idMapping);
