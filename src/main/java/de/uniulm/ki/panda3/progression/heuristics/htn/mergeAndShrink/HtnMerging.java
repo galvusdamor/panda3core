@@ -750,6 +750,11 @@ public class HtnMerging {
 
                         HtnMsGraph graphOfSubtask = presentGraphs.get(subTaskID);
 
+                        if (graphOfSubtask==null){
+                            System.out.println("Error! Problem might not be Tail Recursive, or wrong order!");
+                            System.exit(1);
+                        }
+
 
                         HashSet<Integer> newNodesToAppend = new HashSet<>();
 

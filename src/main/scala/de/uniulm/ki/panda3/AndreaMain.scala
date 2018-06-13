@@ -48,9 +48,9 @@ object MainAndrea {
     val outputPDF = "dot.pdf"
 
     // TRANSPORT
-    val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
+    //val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
     //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
-    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile3".replace('\\', File.separatorChar)
+    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile3".replace('\\', File.separatorChar)
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/domains/satellite2.hddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/problems/8obs-3sat-4mod.hddl"
 
@@ -71,6 +71,8 @@ object MainAndrea {
     //val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\04--p02-part3.hddl"
 
 
+    val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/UM-Translog/domains/UMTranslog.hddl"
+    val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/UM-Translog/problems/22-B-RegularTruck.hddl"
 
 
     //val domFile = "/home/gregor/Workspace/Woodworking/domains/woodworking-legal-fewer-htn-groundings.hddl"
@@ -121,8 +123,8 @@ object MainAndrea {
                             ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink(filterWithADD = true)), PriorityQueueSearch.abstractTaskSelection.random),
                             //ProgressionSearch(AStarActionsType(2), Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hFF)), PriorityQueueSearch.abstractTaskSelection.random),
                             postprocessing,
-                            Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
-                            //Map(FastDownward -> "../../fd"))
+                            //Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
+                            Map(FastDownward -> "../../fd"))
 
 
     val results: ResultMap = searchConfig.runResultSearch(domInputStream, probInputStream)

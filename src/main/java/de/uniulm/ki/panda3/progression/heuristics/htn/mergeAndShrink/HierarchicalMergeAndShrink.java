@@ -72,7 +72,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         }*/
 
-        int shrinkingBound = 50;
+        int shrinkingBound = 1000;
         MergingStrategy classicalMergingStrategy = new MergingStrategy1();
         ShrinkingStrategy classicalShrinkingStrategy = new ShrinkingStrategy1();
         HtnShrinkingStrategy HtnShrinkingStrategy = new HtnShrinkingStrategy1();
