@@ -2086,6 +2086,8 @@ case class SATSearch(solverType: Solvertype,
            val solver = l.get.toLowerCase match {
              case "minisat"       => MINISAT
              case "cryptominisat" => CRYPTOMINISAT
+             case "riss6"         => RISS6
+             case "maplecomsps"   => MapleCOMSPS
            }
            this.copy(solverType = solver).asInstanceOf[this.type]
          }),
@@ -2093,7 +2095,7 @@ case class SATSearch(solverType: Solvertype,
          "-runType" -> (NecessaryParameter, { l: Option[String] =>
            val newRunType: Seq[SATRunConfiguration] = ArgumentListParser.parse(l.get.toLowerCase, { case (hName, hParameterMap) =>
              hName match {
-               case "singlerun" => SingleSATRun(hParameterMap.getOrElse("planLength", "-1").toInt, hParameterMap.get("K").map(_.toInt))
+               case "singlerun" => SingleSATRun(hParameterMap.getOrElse("planlength", "-1").toInt, hParameterMap.get("k").map(_.toInt))
              }
            })
 
