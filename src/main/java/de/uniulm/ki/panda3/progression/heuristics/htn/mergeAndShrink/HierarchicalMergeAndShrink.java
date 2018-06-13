@@ -473,6 +473,14 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     @Override
     public GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, ProMethod m) {
 
+        BitSet bs = newTN.state;
+        int[] arrayState = new int[bs.size()];
+
+        int i = 0;
+        int j = 0;
+        while ((i = bs.nextSetBit(i)) != -1) {
+            arrayState[j++] = i++;
+        }
 
         if((this.overlayHTN==true)&& (this.withMethods==false)){
 
@@ -493,13 +501,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
             }*/
 
-
-
-
-
-
             currentHeuristicValue = calcHeu(nodeID);
-
 
 
 
@@ -507,56 +509,48 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         }else if((this.overlayHTN==false)&& (this.withMethods==false)){
 
-            BitSet bs = newTN.state;
-            int[] arrayState = new int[bs.size()];
-
-            int i = 0;
-            int j = 0;
-            while ((i = bs.nextSetBit(i)) != -1) {
-                arrayState[j++] = i++;
-            }
 
             currentHeuristicValue = calcHeu(arrayState);
 
-            if (heuristic != null) {
-                BitSet reachableActions = new BitSet(compEnc.numOfNonHtnActions);
-                BitSet htnGoal = new BitSet(compEnc.numOfStateFeatures);
-
-                for (ProgressionPlanStep first : newTN.getFirstAbstractTasks())
-                    prepareS0andG(first, reachableActions, htnGoal);
-
-                for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
-                    prepareS0andG(first, reachableActions, htnGoal);
-
-                //BitSet s0 = (BitSet) compEnc.s0mask.clone();
-                BitSet s0 = compEnc.initS0();
-                for (i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
-                    compEnc.setReachable(s0, i);
-                    //s0.set(compEnc.reachable[i]);
-                    //s0.set(compEnc.unreachable[i], false);
-                }
-                s0.or(newTN.state);
-
-                BitSet g = new BitSet();
-
-                // prepare g
-                for (int fact : compEnc.gList) {
-                    g.set(fact);
-                }
-
-                for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
-                    compEnc.setReached(g, goalTask);
-                    //g.set(compEnc.reached[goalTask]);
-                    //g.set(compEnc.unreached[goalTask], false);
-                    //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
-                }
-
-
-                if (heuristic.calcHeu(s0, g) == SasHeuristic.cUnreachable) currentHeuristicValue = -1;
-            }
         }
 
 
+        if (heuristic != null) {
+            BitSet reachableActions = new BitSet(compEnc.numOfNonHtnActions);
+            BitSet htnGoal = new BitSet(compEnc.numOfStateFeatures);
+
+            for (ProgressionPlanStep first : newTN.getFirstAbstractTasks())
+                prepareS0andG(first, reachableActions, htnGoal);
+
+            for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
+                prepareS0andG(first, reachableActions, htnGoal);
+
+            //BitSet s0 = (BitSet) compEnc.s0mask.clone();
+            BitSet s0 = compEnc.initS0();
+            for (i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
+                compEnc.setReachable(s0, i);
+                //s0.set(compEnc.reachable[i]);
+                //s0.set(compEnc.unreachable[i], false);
+            }
+            s0.or(newTN.state);
+
+            BitSet g = new BitSet();
+
+            // prepare g
+            for (int fact : compEnc.gList) {
+                g.set(fact);
+            }
+
+            for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
+                compEnc.setReached(g, goalTask);
+                //g.set(compEnc.reached[goalTask]);
+                //g.set(compEnc.unreached[goalTask], false);
+                //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
+            }
+
+
+            if (heuristic.calcHeu(s0, g) == SasHeuristic.cUnreachable) currentHeuristicValue = -1;
+        }
 
 
 
