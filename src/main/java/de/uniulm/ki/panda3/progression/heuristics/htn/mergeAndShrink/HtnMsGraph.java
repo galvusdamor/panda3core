@@ -56,7 +56,7 @@ public abstract class HtnMsGraph{
         nextActionSequence.addAll(actionSequence);
         nextActionSequence.removeFirst();
 
-        for (Tuple3<Integer,Integer,Integer> outgoingEdge : outgoingEdgesFromNode){
+        for (Tuple3<Integer,Integer,Integer> outgoingEdge : outgoingEdgesFromNode2){
 
             if (outgoingEdge._2()==actionSequence.getFirst()){
 

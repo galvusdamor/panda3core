@@ -118,8 +118,8 @@ object MainAndrea {
                             //PredefinedConfigurations.groundingPreprocess,
                             //PredefinedConfigurations.sasPlusConfig(AStarActionsType(2), SasHeuristics.hMS),
                             //PredefinedConfigurations.pandaProConfig(AStarActionsType(2), SasHeuristics.hMS),
-                            //ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink(filterWithADD = true)), PriorityQueueSearch.abstractTaskSelection.random),
-                            ProgressionSearch(AStarActionsType(2), Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hFF)), PriorityQueueSearch.abstractTaskSelection.random),
+                            ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink(filterWithADD = true)), PriorityQueueSearch.abstractTaskSelection.random),
+                            //ProgressionSearch(AStarActionsType(2), Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hFF)), PriorityQueueSearch.abstractTaskSelection.random),
                             postprocessing,
                             Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
                             //Map(FastDownward -> "../../fd"))

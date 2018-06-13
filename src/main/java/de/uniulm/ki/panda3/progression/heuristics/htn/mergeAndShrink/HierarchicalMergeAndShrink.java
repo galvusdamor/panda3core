@@ -72,7 +72,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         }*/
 
-        int shrinkingBound = 200;
+        int shrinkingBound = 50;
         MergingStrategy classicalMergingStrategy = new MergingStrategy1();
         ShrinkingStrategy classicalShrinkingStrategy = new ShrinkingStrategy1();
         HtnShrinkingStrategy HtnShrinkingStrategy = new HtnShrinkingStrategy1();
@@ -241,7 +241,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         //System.out.println("Size: " + combinedGraph.idMapping.size());
 
-        Utils.printMultiGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\classicalCombinedGraph.pdf");
+        //Utils.printMultiGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\classicalCombinedGraph.pdf");
 
         return combinedGraph;
 
@@ -260,7 +260,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         ClassicalMergeAndShrink classicalMergeAndShrink = new ClassicalMergeAndShrink(flatProblem);
         ClassicalMSGraph classicalMSGraph = classicalMergeAndShrink.mergeAndShrinkProcess(flatProblem, shrinkingBound, classicalMergingStrategy, classicalShrinkingStrategy);
 
-        Utils.printMultiGraph(flatProblem, classicalMSGraph, "ClassicalGraph.pdf");
+        //Utils.printMultiGraph(flatProblem, classicalMSGraph, "ClassicalGraph.pdf");
 
 
         Task[] allTasks = ProgressionNetwork.indexToTask;
@@ -269,13 +269,13 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
             Task t = allTasks[i];
 
-            System.out.println("\tTask: " + i + ": " + t.shortInfo());
+            //System.out.println("\tTask: " + i + ": " + t.shortInfo());
         }
 
 
         //var i = 0
         DirectedGraph<?> layerGraph = domain.taskSchemaTransitionGraph().condensation();
-        Dot2PdfCompiler$.MODULE$.writeDotToFile(layerGraph, "decomp_hierarchy1.pdf");
+        //Dot2PdfCompiler$.MODULE$.writeDotToFile(layerGraph, "decomp_hierarchy1.pdf");
 
         List<?> layer = JavaConverters.seqAsJavaList(layerGraph.topologicalOrdering().get().reverse());
 
@@ -329,7 +329,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         System.out.println("Task: " + ProgressionNetwork.indexToTask[testIndex]);
 
-        Utils.printHtnGraph(flatProblem,htnMsGraph,"TestTask.pdf");
+        //Utils.printHtnGraph(flatProblem,htnMsGraph,"TestTask.pdf");
 
         //System.out.println("HashMap: ");
 
@@ -360,7 +360,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         //System.out.println("Size: " + combinedGraph.idMapping.size());
 
-        Utils.printHtnGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\HierarchicalCombinedGraph.pdf");
+        //Utils.printHtnGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\HierarchicalCombinedGraph.pdf");
 
         return combinedGraph;
 
@@ -370,7 +370,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
     public int calcHeu(int nodeID) {
 
-        System.out.println("Checks Node ID: " + nodeID);
+        //System.out.println("Checks Node ID: " + nodeID);
 
         if (nodeID == -1) return -1;
 
