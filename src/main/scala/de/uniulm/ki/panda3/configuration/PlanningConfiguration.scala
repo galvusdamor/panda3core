@@ -23,7 +23,7 @@ import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic,
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic,
 EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps, _}
@@ -1102,13 +1102,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             }*/
             x
           case IntegerPlanningGraph                     =>
-            val wrapper = Wrapping(sasPlusResult._1)
+            /*val wrapper = Wrapping(sasPlusResult._1)
             val pgConfig = EFGPGConfiguration(serial = false, computeMutexes = false, new Array(0), new Array(0))
             val initialState = wrapper.unwrap(wrapper.initialPlan).groundInitialState
             println("StartPG")
             val pg = EfficientGroundedPlanningGraphImplementation(wrapper.efficientDomain, initialState, pgConfig)
             println("Done")
-            println(pg.factSpikeIDs mkString "\n")
+            println(pg.factSpikeIDs mkString "\n")*/
             System exit 0
             null
         }
@@ -2089,6 +2089,20 @@ case class SATSearch(solverType: Solvertype,
            }
            this.copy(solverType = solver).asInstanceOf[this.type]
          }),
+
+         "-runType" -> (NecessaryParameter, { l: Option[String] =>
+           val newRunType: Seq[SATRunConfiguration] = ArgumentListParser.parse(l.get.toLowerCase, { case (hName, hParameterMap) =>
+             hName match {
+               case "singlerun" => SingleSATRun(hParameterMap.getOrElse("planLength", "-1").toInt, hParameterMap.get("K").map(_.toInt))
+             }
+           })
+
+           assert(newRunType.size == 1)
+
+           this.copy(runConfiguration = newRunType.head).asInstanceOf[this.type]
+         }),
+
+
          "-reduction" -> (NecessaryParameter, { l: Option[String] =>
            val reduction = l.get.toLowerCase match {
              case "normalise" => OnlyNormalise

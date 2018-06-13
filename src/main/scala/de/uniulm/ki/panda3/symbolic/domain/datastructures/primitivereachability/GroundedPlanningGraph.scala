@@ -685,10 +685,9 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
               } else {
                 val candidate: GroundLiteral = GroundLiteral(nextLiteral.predicate, nextLiteral.isPositive, parameterConstants)
 
-                if (matchingGroundInstances contains candidate) candidate :: Nil else Nil
+                if (matchingGroundInstances.contains(candidate) && isMutexFree(updatedUsedPropositions, mutexes, candidate)) candidate :: Nil else Nil
               }
-            }
-            else {
+            } else {
               val res = matchingGroundInstances filter {
                 gLCandidate => isMutexFree(updatedUsedPropositions, mutexes, gLCandidate) && !checkForAssignmentConflict(nextLiteral, gLCandidate, updatedAssignmentMap)
               }
