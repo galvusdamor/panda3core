@@ -12,6 +12,7 @@ import de.uniulm.ki.panda3.progression.htn.representation.ProMethod;
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionNetwork;
 import de.uniulm.ki.panda3.progression.htn.search.ProgressionPlanStep;
+import de.uniulm.ki.panda3.progression.htn.search.SolutionStep;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep;
@@ -19,6 +20,7 @@ import de.uniulm.ki.util.DirectedGraph;
 import de.uniulm.ki.util.Dot2PdfCompiler$;
 import scala.Tuple3;
 import scala.collection.JavaConverters;
+import sun.awt.image.ImageWatched;
 
 
 import java.util.*;
@@ -70,11 +72,11 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         }*/
 
-        int shrinkingBound = 50;
+        int shrinkingBound = 200;
         MergingStrategy classicalMergingStrategy = new MergingStrategy1();
         ShrinkingStrategy classicalShrinkingStrategy = new ShrinkingStrategy1();
         HtnShrinkingStrategy HtnShrinkingStrategy = new HtnShrinkingStrategy1();
-        boolean withMethods = true;
+        boolean withMethods = false;
         this.withMethods = withMethods;
 
         boolean overlayHTN = true;
@@ -118,6 +120,8 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
                 distancesFromGoal = HtnShrinkingStrategy.getDistancesFromGoal(flatProblem, htnCombinedGraph);
 
                 System.out.println(distancesFromGoal);
+
+                System.out.println("Start Node ID: " + htnCombinedGraph.startNodeID);
 
 
             }
@@ -307,15 +311,17 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
         //int upperBound = 165;
         //int shrinkingBound = 30;
 
-
-        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getAllGraphs(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withMethods);
-
-
-        //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Transport");
-
         int goalTaskIndex = ProgressionNetwork.taskToIndex.get(goalTask);
         int testIndex = goalTaskIndex;
 
+        HashMap<Integer, HtnMsGraph> presentGraphs = Testing.getGraphsUntilGoalGraph(flatProblem, methods, domain, shrinkingBound, htnShrinkingStrategy, withMethods, goalTaskIndex);
+
+
+        //Utils.printAllHtnGraphs(flatProblem, presentGraphs, "Rover");
+
+
+
+        System.out.println("Goal Task: " + goalTaskIndex);
 
         //HtnMsGraph htnMsGraph = presentGraphs.get(goalTaskIndex);
 
@@ -354,7 +360,7 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
 
         //System.out.println("Size: " + combinedGraph.idMapping.size());
 
-        Utils.printHtnGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\classicalCombinedGraph.pdf");
+        Utils.printHtnGraph(flatProblem, combinedGraph, "D:\\IdeaProjects\\panda3core\\HierarchicalCombinedGraph.pdf");
 
         return combinedGraph;
 
@@ -362,6 +368,20 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     }
 
 
+    public int calcHeu(int nodeID) {
+
+        System.out.println("Checks Node ID: " + nodeID);
+
+        if (nodeID == -1) return -1;
+
+
+
+
+        int distanceFromGoal = distancesFromGoal.get(nodeID);
+
+
+        return distanceFromGoal;
+    }
 
 
 
@@ -454,53 +474,93 @@ public class HierarchicalMergeAndShrink extends GroundedProgressionHeuristic {
     public GroundedProgressionHeuristic update(ProgressionNetwork newTN, ProgressionPlanStep ps, ProMethod m) {
 
 
-        BitSet bs = newTN.state;
-        int[] arrayState = new int[bs.size()];
+        if((this.overlayHTN==true)&& (this.withMethods==false)){
 
-        int i = 0;
-        int j = 0;
-        while ((i = bs.nextSetBit(i)) != -1) {
-            arrayState[j++] = i++;
+            LinkedList<Integer> solutionSteps = newTN.solution.getSolutionSteps();
+
+            int nodeID = htnCombinedGraph.getNodeIDFromActionSequence(htnCombinedGraph.startNodeID, solutionSteps);
+
+            /*if(solutionSteps.size()>1) {
+
+                System.out.println("\nSolution: ");
+
+                for (int index : solutionSteps) {
+
+                    System.out.println(index + ": " + ProgressionNetwork.flatProblem.opNames[index]);
+                }
+
+                System.out.println("Matching Node ID: " + nodeID);
+
+            }*/
+
+
+
+
+
+
+            currentHeuristicValue = calcHeu(nodeID);
+
+
+
+
+
+
+        }else if((this.overlayHTN==false)&& (this.withMethods==false)){
+
+            BitSet bs = newTN.state;
+            int[] arrayState = new int[bs.size()];
+
+            int i = 0;
+            int j = 0;
+            while ((i = bs.nextSetBit(i)) != -1) {
+                arrayState[j++] = i++;
+            }
+
+            currentHeuristicValue = calcHeu(arrayState);
+
+            if (heuristic != null) {
+                BitSet reachableActions = new BitSet(compEnc.numOfNonHtnActions);
+                BitSet htnGoal = new BitSet(compEnc.numOfStateFeatures);
+
+                for (ProgressionPlanStep first : newTN.getFirstAbstractTasks())
+                    prepareS0andG(first, reachableActions, htnGoal);
+
+                for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
+                    prepareS0andG(first, reachableActions, htnGoal);
+
+                //BitSet s0 = (BitSet) compEnc.s0mask.clone();
+                BitSet s0 = compEnc.initS0();
+                for (i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
+                    compEnc.setReachable(s0, i);
+                    //s0.set(compEnc.reachable[i]);
+                    //s0.set(compEnc.unreachable[i], false);
+                }
+                s0.or(newTN.state);
+
+                BitSet g = new BitSet();
+
+                // prepare g
+                for (int fact : compEnc.gList) {
+                    g.set(fact);
+                }
+
+                for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
+                    compEnc.setReached(g, goalTask);
+                    //g.set(compEnc.reached[goalTask]);
+                    //g.set(compEnc.unreached[goalTask], false);
+                    //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
+                }
+
+
+                if (heuristic.calcHeu(s0, g) == SasHeuristic.cUnreachable) currentHeuristicValue = -1;
+            }
         }
 
-        currentHeuristicValue = calcHeu(arrayState);
-
-        if (heuristic != null) {
-            BitSet reachableActions = new BitSet(compEnc.numOfNonHtnActions);
-            BitSet htnGoal = new BitSet(compEnc.numOfStateFeatures);
-
-            for (ProgressionPlanStep first : newTN.getFirstAbstractTasks())
-                prepareS0andG(first, reachableActions, htnGoal);
-
-            for (ProgressionPlanStep first : newTN.getFirstPrimitiveTasks())
-                prepareS0andG(first, reachableActions, htnGoal);
-
-            //BitSet s0 = (BitSet) compEnc.s0mask.clone();
-            BitSet s0 = compEnc.initS0();
-            for (i = reachableActions.nextSetBit(0); i >= 0; i = reachableActions.nextSetBit(i + 1)) {
-                compEnc.setReachable(s0, i);
-                //s0.set(compEnc.reachable[i]);
-                //s0.set(compEnc.unreachable[i], false);
-            }
-            s0.or(newTN.state);
-
-            BitSet g = new BitSet();
-
-            // prepare g
-            for (int fact : compEnc.gList) {
-                g.set(fact);
-            }
-
-            for (int goalTask = htnGoal.nextSetBit(0); goalTask >= 0; goalTask = htnGoal.nextSetBit(goalTask + 1)) {
-                compEnc.setReached(g, goalTask);
-                //g.set(compEnc.reached[goalTask]);
-                //g.set(compEnc.unreached[goalTask], false);
-                //System.out.println(compEnc.factStrs[goalTask + this.compEnc.firstTaskCompIndex]); // for debugging
-            }
 
 
-            if (heuristic.calcHeu(s0, g) == SasHeuristic.cUnreachable) currentHeuristicValue = -1;
-        }
+
+
+
 
         return this;
     }

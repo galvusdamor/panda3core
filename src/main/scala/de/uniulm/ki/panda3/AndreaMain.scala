@@ -50,7 +50,7 @@ object MainAndrea {
     // TRANSPORT
     val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\domains\\domain-htn.lisp".replace('\\', File.separatorChar)
     //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile1-mitZiel".replace('\\', File.separatorChar)
-    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile10".replace('\\', File.separatorChar)
+    val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\transport\\problems\\pfile3".replace('\\', File.separatorChar)
     //val domFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/domains/satellite2.hddl"
     //val probFile = "/home/gregor/Workspace/panda2-system/domains/HDDL/Satellite/problems/8obs-3sat-4mod.hddl"
 
@@ -61,7 +61,7 @@ object MainAndrea {
 
     // Rover
     //val domFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\rover\\domains\\rover-domain.lisp".replace('\\', File.separatorChar)
-    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\rover\\problems\\pfile2".replace('\\', File.separatorChar)
+    //val probFile = "src\\test\\java\\UUBenchmarksets\\fromHTN\\rover\\problems\\pfile3".replace('\\', File.separatorChar)
 
     //val domFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\woodworking-legal-fewer-htn-groundings.hddl"
     //val probFile = "D:\\IdeaProjects\\panda3core\\Domains\\Woodworking\\01--p01-complete.hddl"
@@ -118,8 +118,8 @@ object MainAndrea {
                             //PredefinedConfigurations.groundingPreprocess,
                             //PredefinedConfigurations.sasPlusConfig(AStarActionsType(2), SasHeuristics.hMS),
                             //PredefinedConfigurations.pandaProConfig(AStarActionsType(2), SasHeuristics.hMS),
-                            ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink(filterWithADD = true)), PriorityQueueSearch.abstractTaskSelection.random),
-                            //ProgressionSearch(AStarActionsType(2), Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hFF)), PriorityQueueSearch.abstractTaskSelection.random),
+                            //ProgressionSearch(AStarActionsType(2), Some(HierarchicalMergeAndShrink(filterWithADD = true)), PriorityQueueSearch.abstractTaskSelection.random),
+                            ProgressionSearch(AStarActionsType(2), Some(HierarchicalHeuristicRelaxedComposition(SasHeuristics.hFF)), PriorityQueueSearch.abstractTaskSelection.random),
                             postprocessing,
                             Map(FastDownward -> "c:\\Fast-Downward-c46aa75d513e"))
                             //Map(FastDownward -> "../../fd"))

@@ -349,7 +349,8 @@ public final class OverlayOfClassicalAndHTNGraph {
 
         Tuple3<Integer, Integer, Integer>[] newEdgeTuple = Shrinking.shrinkEdges(newEdges2, shrinkingTableInfoTemp);
 
-        int newStartID = shrinkingTableInfo.get(classicalMSGraph.startNodeID);
+        //int newStartID = shrinkingTableInfo.get(classicalMSGraph.startNodeID);
+        int newStartID = shrinkingTableInfoTemp.get(htnMsGraph.startNodeID);
 
         int oldIndex = classicalMSGraph.cascadingTables.cascadingTables.size() -1;
 

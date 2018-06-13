@@ -20,6 +20,8 @@ public class SolutionStep {
     protected int primitiveCount;
     protected int shopCount;
 
+    private LinkedList<Integer> solutionSteps;
+
     public SolutionStep() {
         length = 0;
         primitiveCount = 0;
@@ -32,6 +34,7 @@ public class SolutionStep {
         this.length = predSol.length + 1;
         this.primitiveCount = predSol.primitiveCount;
         this.shopCount = predSol.shopCount;
+        this.solutionSteps = getActionsOfSolution();
 
         if (!ProgressionNetwork.ShopPrecActions.contains(action))
             primitiveCount++;
@@ -45,6 +48,7 @@ public class SolutionStep {
         this.length = predSol.length + 1;
         this.primitiveCount = predSol.primitiveCount;
         this.shopCount = predSol.shopCount;
+        this.solutionSteps = getActionsOfSolution();
     }
 
     @Override
@@ -78,6 +82,11 @@ public class SolutionStep {
         return primitiveCount;
     }
 
+    public int getAction(){
+        return getAction();
+    }
+
+
     public List<Object> getSolution() {
         if (this.isFirst())
             return new LinkedList<>();
@@ -90,5 +99,28 @@ public class SolutionStep {
             ((LinkedList) l).add(o);
             return l;
         }
+    }
+
+
+    private LinkedList<Integer> getActionsOfSolution() {
+
+        LinkedList<Integer> solutionSteps = new LinkedList<>();
+        if (this.isFirst())
+            return new LinkedList<>();
+        else {
+            LinkedList<Integer> l = predecessor.getActionsOfSolution();
+            solutionSteps.addAll(l);
+            Integer o;
+            if (this.method != null){}
+            else {
+                o = this.action;
+                solutionSteps.add(o);
+            }
+            return solutionSteps;
+        }
+    }
+
+    public LinkedList<Integer> getSolutionSteps() {
+        return solutionSteps;
     }
 }

@@ -67,6 +67,87 @@ public class Testing {
 
     }
 
+    public static HashMap<Integer,HtnMsGraph> getGraphsUntilGoalGraph(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy, boolean withVariables, int goalTaskIndex){
+
+        HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
+
+        Map<Task, Integer> taskToIndexMapping = ProgressionNetwork.taskToIndex;
+
+        int index =0;
+
+        DirectedGraph<?> layerGraph = domain.taskSchemaTransitionGraph().condensation();
+
+        List<?> layer = JavaConverters.seqAsJavaList(layerGraph.topologicalOrdering().get().reverse());
+
+        for (Object l : layer) {
+            Set<Task> tasksInLayer = (Set<Task>) JavaConverters.setAsJavaSet((scala.collection.immutable.Set) l);
+            //System.out.println("Layer: " + tasksInLayer);
+
+            for (Task t : tasksInLayer) {
+
+                index++;
+
+                int taskIndex = taskToIndexMapping.get(t);
+
+                //System.out.println(index + ": Handle Task " + taskIndex);
+
+                presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs, shrinkingBound, shrinkingStrategy, withVariables);
+
+                //System.out.println("Tasks in present Tasks: " + presentGraphs.keySet());
+
+                HtnMsGraph graph = presentGraphs.get(taskIndex);
+
+                if (!graph.containsGoalNode()) {
+                    System.out.println("Has no goal: " + taskIndex);
+                }
+
+                if (taskIndex==goalTaskIndex) return presentGraphs;
+
+            }
+        }
+
+        return presentGraphs;
+
+    }
+
+
+    public static HtnMsGraph getGoalGraph(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy, boolean withVariables, int goalTaskIndex){
+
+        HashMap<Integer,HtnMsGraph> presentGraphs = new HashMap<>();
+
+        Map<Task, Integer> taskToIndexMapping = ProgressionNetwork.taskToIndex;
+
+        int index =0;
+
+        DirectedGraph<?> layerGraph = domain.taskSchemaTransitionGraph().condensation();
+
+        List<?> layer = JavaConverters.seqAsJavaList(layerGraph.topologicalOrdering().get().reverse());
+
+        for (Object l : layer) {
+            Set<Task> tasksInLayer = (Set<Task>) JavaConverters.setAsJavaSet((scala.collection.immutable.Set) l);
+            //System.out.println("Layer: " + tasksInLayer);
+
+            for (Task t : tasksInLayer) {
+
+                index++;
+
+                int taskIndex = taskToIndexMapping.get(t);
+
+                //System.out.println(index + ": Handle Task " + taskIndex);
+
+                presentGraphs = HtnMerging.getHtnMsGraphForTaskIndex(p, methods, taskIndex, presentGraphs, shrinkingBound, shrinkingStrategy, withVariables);
+
+                //System.out.println("Tasks in present Tasks: " + presentGraphs.keySet());
+
+                if (taskIndex==goalTaskIndex) return presentGraphs.get(taskIndex);
+
+            }
+        }
+
+        return presentGraphs.get(goalTaskIndex);
+
+    }
+
 
 
     /*public static void testGraphs(SasPlusProblem p, HashMap<Task, List<ProMethod>> methods, Domain domain, int shrinkingBound, HtnShrinkingStrategy shrinkingStrategy, boolean withVariables){
