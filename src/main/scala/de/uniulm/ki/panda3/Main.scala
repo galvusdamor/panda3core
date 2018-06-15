@@ -333,11 +333,18 @@ object Main {
     println(longTitle)
     println()
     println()
+    println("PANDA was called with: " + args.mkString("\""," ","\""))
+    println()
+    println()
 
 
     val plannerConfiguration = initialConfiguration.processCommandLineArguments(args)
 
     println(plannerConfiguration.longInfo)
+
+    if (!plannerConfiguration.config.checkConfigurationIntegrity()){
+      System exit 0
+    }
 
     if (plannerConfiguration.domFile.isEmpty) {
       println("No domain file given. Exiting ... ")

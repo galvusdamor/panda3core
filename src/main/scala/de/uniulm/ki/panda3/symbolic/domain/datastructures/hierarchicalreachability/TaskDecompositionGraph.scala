@@ -49,7 +49,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
 
   val isInitialPlanGround = initialPlan.variableConstraints.variables forall { v => initialPlan.variableConstraints.getRepresentative(v).isInstanceOf[Constant] }
 
-  def messageFunction : String => Unit
+  def messageFunction: String => Unit
 
   lazy val taskDecompositionGraph: (AndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod], Seq[GroundTask], Seq[GroundedDecompositionMethod]) =
     if (!(abstractTaskGroundings contains topTask)) {
@@ -167,7 +167,7 @@ trait WithTopMethod {
 
   def initialPlan: Plan
 
-  val (topTask, topMethod, initAndGoalNOOP, groundedTopTask) = {
+  lazy val (topTask,topMethod,initAndGoalNOOP,groundedTopTask) = {
     val initialPlanAlreadyGroundedVariableMapping = initialPlan.variableConstraints.variables map { vari => (vari, initialPlan.variableConstraints.getRepresentative(vari)) } collect {
       case (v, c: Constant) => (v, c)
     } toMap

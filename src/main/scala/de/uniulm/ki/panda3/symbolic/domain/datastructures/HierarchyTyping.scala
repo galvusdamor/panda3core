@@ -22,6 +22,7 @@ import de.uniulm.ki.panda3.symbolic.logic.{Constant, Sort, Variable}
 import de.uniulm.ki.panda3.symbolic.{NONSIMPLEMETHOD, PrettyPrintable, noSupport}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.modification.InsertPlanStepWithLink
 
 import scala.collection.mutable
 
@@ -238,11 +239,14 @@ trait WithHierarchyTyping extends WithTopMethod {
   println("done")
 
 */
-  def checkPartialAssignment(task: Task, assignment: Map[Variable, Constant]): Boolean = cartTasksMap(task) exists { ct => ct.isCompatible(assignment) }
+  def checkPartialAssignment(task: Task, assignment: Map[Variable, Constant]): Boolean =
+    if (initialPlan.isModificationAllowed(InsertPlanStepWithLink(null,null,null,null)) && task.isPrimitive) true
+    else cartTasksMap(task) exists { ct => ct.isCompatible(assignment) }
 
 
-  def checkGrounding(groundAction: GroundTask): Boolean = {
-    cartTasksMap(groundAction.task) exists { ct => ct.isCompatible(groundAction) }
+  def checkGrounding(groundAction: GroundTask): Boolean =
+    if (initialPlan.isModificationAllowed(InsertPlanStepWithLink(null,null,null,null)) && groundAction.task.isPrimitive) true else {
+      cartTasksMap(groundAction.task) exists { ct => ct.isCompatible(groundAction) }
     /*(groundAction.arguments.zip(groundAction.task.parameters) forall { case (c1, v1) =>
       groundAction.arguments.zip(groundAction.task.parameters) forall { case (c2, v2) =>
         v1.id >= v2.id || allowedParameterCombinations(groundAction.task).contains(PossibleArgumentPair(v1, c1, v2, c2))

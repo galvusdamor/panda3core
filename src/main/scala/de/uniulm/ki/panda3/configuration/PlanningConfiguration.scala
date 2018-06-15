@@ -23,7 +23,7 @@ import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EFGPGConfiguration, EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic,
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic,
 EfficientGroundedPlanningGraphImplementation}
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps, _}
@@ -1102,13 +1102,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             }*/
             x
           case IntegerPlanningGraph                     =>
-            val wrapper = Wrapping(sasPlusResult._1)
+            /*val wrapper = Wrapping(sasPlusResult._1)
             val pgConfig = EFGPGConfiguration(serial = false, computeMutexes = false, new Array(0), new Array(0))
             val initialState = wrapper.unwrap(wrapper.initialPlan).groundInitialState
             println("StartPG")
             val pg = EfficientGroundedPlanningGraphImplementation(wrapper.efficientDomain, initialState, pgConfig)
             println("Done")
-            println(pg.factSpikeIDs mkString "\n")
+            println(pg.factSpikeIDs mkString "\n")*/
             System exit 0
             null
         }
@@ -1468,6 +1468,26 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case p: PostprocessingConfiguration => this.copy(postprocessingConfiguration = p).asInstanceOf[this.type]
     }
   }
+
+
+  def checkConfigurationIntegrity() : Boolean = {
+    var configOk = true
+    if (!parsingConfiguration.stripHybrid){
+      // if you don't remove causal links, certain options may not be used
+      if (preprocessingConfiguration.splitIndependentParameters){
+        println("Not stripping hybridity (i.e. causal links in the model) disallows parameter splitting")
+        configOk = false
+      }
+
+      if (preprocessingConfiguration.compileUselessAbstractTasks) {
+        println("Not stripping hybridity (i.e. causal links in the model) disallows removal of useless abstract tasks")
+        configOk = false
+      }
+
+    }
+
+    configOk
+  }
 }
 
 object PlanningConfiguration {
@@ -1541,7 +1561,7 @@ case class ParsingConfiguration(
          "-eliminateEquality" -> (NoParameter, { p: Option[String] => this.copy(eliminateEquality = true).asInstanceOf[this.type] }),
          "-dontEliminateEquality" -> (NoParameter, { p: Option[String] => this.copy(eliminateEquality = false).asInstanceOf[this.type] }),
 
-         "-stripHybrid" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = true).asInstanceOf[this.type] }),
+         "s" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = true).asInstanceOf[this.type] }),
 
          "-dontStripHybrid" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = false).asInstanceOf[this.type] })
        )
@@ -2086,9 +2106,25 @@ case class SATSearch(solverType: Solvertype,
            val solver = l.get.toLowerCase match {
              case "minisat"       => MINISAT
              case "cryptominisat" => CRYPTOMINISAT
+             case "riss6"         => RISS6
+             case "maplecomsps"   => MapleCOMSPS
            }
            this.copy(solverType = solver).asInstanceOf[this.type]
          }),
+
+         "-runType" -> (NecessaryParameter, { l: Option[String] =>
+           val newRunType: Seq[SATRunConfiguration] = ArgumentListParser.parse(l.get.toLowerCase, { case (hName, hParameterMap) =>
+             hName match {
+               case "singlerun" => SingleSATRun(hParameterMap.getOrElse("planlength", "-1").toInt, hParameterMap.get("k").map(_.toInt))
+             }
+           })
+
+           assert(newRunType.size == 1)
+
+           this.copy(runConfiguration = newRunType.head).asInstanceOf[this.type]
+         }),
+
+
          "-reduction" -> (NecessaryParameter, { l: Option[String] =>
            val reduction = l.get.toLowerCase match {
              case "normalise" => OnlyNormalise
