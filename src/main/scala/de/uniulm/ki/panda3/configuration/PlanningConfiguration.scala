@@ -1468,6 +1468,26 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case p: PostprocessingConfiguration => this.copy(postprocessingConfiguration = p).asInstanceOf[this.type]
     }
   }
+
+
+  def checkConfigurationIntegrity() : Boolean = {
+    var configOk = true
+    if (!parsingConfiguration.stripHybrid){
+      // if you don't remove causal links, certain options may not be used
+      if (preprocessingConfiguration.splitIndependentParameters){
+        println("Not stripping hybridity (i.e. causal links in the model) disallows parameter splitting")
+        configOk = false
+      }
+
+      if (preprocessingConfiguration.compileUselessAbstractTasks) {
+        println("Not stripping hybridity (i.e. causal links in the model) disallows removal of useless abstract tasks")
+        configOk = false
+      }
+
+    }
+
+    configOk
+  }
 }
 
 object PlanningConfiguration {
@@ -1541,7 +1561,7 @@ case class ParsingConfiguration(
          "-eliminateEquality" -> (NoParameter, { p: Option[String] => this.copy(eliminateEquality = true).asInstanceOf[this.type] }),
          "-dontEliminateEquality" -> (NoParameter, { p: Option[String] => this.copy(eliminateEquality = false).asInstanceOf[this.type] }),
 
-         "-stripHybrid" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = true).asInstanceOf[this.type] }),
+         "s" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = true).asInstanceOf[this.type] }),
 
          "-dontStripHybrid" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = false).asInstanceOf[this.type] })
        )
