@@ -28,6 +28,9 @@ PANDA's general call syntax is as follows:
     java -jar panda.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
 \n
 If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
+\n
+By default the output is restricted to 80 characters per line.
+To allow more characters in the output add the argument "-no80".
 
 Available options for PANDA:
 $ -help -noGeneralInfo -noDomainInfo -noSearchInfo -timelimit -nodeLimit -planningProcedure -flawSelection -noProblemSolving -searchAlgorithm -heuristic -seed -parser -continueOnSolution -noDomainCleanup -primitiveReachability -noPrimitiveReachability -hierarchicalReachability -noHierarchicalReachability -planToVerify -satSolver -programPath -stripHybrid -dontCompileNegPreconditions -liftedPlanning -systemConfig -prune
@@ -1107,7 +1110,7 @@ For configuration of external programs.
 
 Some of our programs, e.g. PANDA-totSAT (not yet delivered) or our plan verifyer base upon a SAT solver. Others (like PANDA3) depend on other external programs as well (not yet delivered). Using this option allows to specify the respective external program that is used as well as the position where it can be found on the local machine. This is the syntax:
 \n
-For specifying the SAT solver paths, use "-programPath SOLVER=PATH", where PATH is the external program file (inlcuding its absolute path) and SOLVER is the description of this solver, which is one of the following: minisat, cryptominisat, riss6, and mapleCOMSPS.
+For specifying the SAT solver paths, use "-programPath SOLVER=PATH", where PATH is the external program file (including its absolute path) and SOLVER is the description of this solver, which is one of the following: minisat, cryptominisat, riss6, and mapleCOMSPS.
 
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-programPath" TAKES A STRING, NO KEYS.
 $
@@ -1519,7 +1522,7 @@ Choose this option to run the system in a standard configuration which we author
 Please be aware that choosing *additional* options might contradict the options chosen here; options are *performed* in the order they are set, so specifying "-systemConfig CONF1 -optionX Y" will perfrom "optionX = Y" even the system configuration CONF1 will explicitly state the opposite. This is especially important when you want to reproduce results from scientific papers; then, you should not choose any further options.
 
 Availabe pre-defined system configurations:
-$ UMCP IJCAI-2017-AdmissibleHeuristics ICAPS-2017-verify
+$ UMCP SHOP2-emulation SHOP2-improved IJCAI-2017-AdmissibleHeuristics AAAI-2018-totSAT ICAPS-2018-RC HTN-WS-2018-treeBefore sat-pocl ICAPS-2017-verify
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 UMCP
@@ -1566,7 +1569,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 IJCAI-2017-AdmissibleHeuristics
-Select a configuration from that paper.
+Plan-space search using admissible heuristics
 
 Using this key allows you to select from the various system configurations that we have used in the empirical evaluation of the following paper:
 \n
@@ -1653,7 +1656,7 @@ $
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ICAPS-2017-verify
-System configuration from ICAPS 2017, depth first search.
+HTN plan verification using SAT
 
 System configuration from the ICAPS 2017 paper (see below) for plan verification.
 \n
@@ -1669,4 +1672,153 @@ System configuration from the ICAPS 2017 paper (see below) for plan verification
 }
 
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "verify" IS A KEY, NOT AN OPTION.
+$
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+AAAI-2018-totSAT
+SAT-based HTN planner restricted to totally-ordered domains
+
+System configuration used in the AAAI 2018 paper "totSAT - Totally-Ordered Hierarchical Planning through SAT".
+\n
+This planner translates the planning problem into propositional logic and then uses a SAT solver to find a solution.
+\n
+To use this planner, you have to specify which SAT solver should be used.
+Options are "minisat", "cryptominisat", "RISS6", and "MapleCOMSPS", i.e., the config might be "AAAI-2018-totSAT(minisat)"
+Further, you have to specify the location of the solver, i.e., how PANDA can call the solver's executable.
+This is done by using the "-programPath" option.
+See its documentation for more details.
+\n
+Note that if you are using Linux or MacOSX, you must have a separate executable of the time program under /usr/bin/time.
+To check whether you do and whether it is the correct version (BSD's time might not work), run the command "/usr/bin/time -f '%U %S' true".
+It should output "0.00 0.00"
+\n
+When referring to this planner, please cite:
+\n
+@inproceedings { Behnke2018totSAT,
+                Title = {{totSAT} -- {T}otally-Ordered Hierarchical Planning through {SAT}},
+                Year = {2018},
+                Pages = {6110--6118},
+                Publisher = {{AAAI Press}},
+                Booktitle = {Proceedings of the 32th {AAAI} Conference on {AI} ({AAAI} 2018)},
+                Author = {Behnke, Gregor and H{\"o}ller, Daniel and Biundo, Susanne}
+}
+
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE THIS IS A KEY, NOT AN OPTION.
+$
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ICAPS-2018-RC
+Progression-based HTN planner
+
+System configuration used in the ICAPS 2018 paper "A generic method to guide HTN progression search with classical heuristics".
+\n
+To use the planner you have to specify two options
+\n
+1. The classical heuristic to be used.
+This must be any of: "FF", "lmcut", and "add"
+\n
+2. The search algorithm to be used.
+This must be any of: "greedy", "astar", "gastar"
+\n
+For example you can use the configuration "ICAPS-2018-RC(FF,gastar)", which is the best known for satisficing HTN planning.
+\n
+When referring to this planner, please cite:
+\n
+@Inproceedings{Hoeller2018pandapro,
+                Author    = {H{\"{o}}ller, Daniel and Bercher, Pascal and Behnke, Gregor and Biundo, Biundo},
+                Title     = {A Generic Method to Guide {HTN} Progression Search with Classical Heuristics},
+                Booktitle = {Proceedings of the 28th International Conference on Automated Planning and Scheduling ({ICAPS} 2018)},
+                Year      = {2018},
+                Publisher = {AAAI Press}
+}
+
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE THIS IS A KEY, NOT AN OPTION.
+$
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+HTN-WS-2018-treeBefore
+SAT-based HTN planner
+
+System configuration used in the ICAPS-HTN-Workshop 2018 paper "Tracking Branches in Trees - A Propositional Encoding for Solving Partially-Ordered HTN Planning Problems".
+\n
+This planner translates the planning problem into propositional logic and then uses a SAT solver to find a solution.
+\n
+To use this planner, you have to specify which SAT solver should be used.
+Options are "minisat", "cryptominisat", "RISS6", and "MapleCOMSPS", i.e., the config might be "HTN-WS-2018-treeBefore(minisat)"
+Further, you have to specify the location of the solver, i.e., how PANDA can call the solver's executable.
+This is done by using the "-programPath" option.
+See its documentation for more details.
+\n
+Note that if you are using Linux or MacOSX, you must have a separate executable of the time program under /usr/bin/time.
+To check whether you do and whether it is the correct version (BSD's time might not work), run the command "/usr/bin/time -f '%U %S' true".
+It should output "0.00 0.00"
+\n
+When referring to this planner, please cite:
+\n
+@inproceedings { Behnke2018treeSAT,
+                Title = {Tracking Branches in Trees -- {A} Propositional Encoding for solving Partially-Ordered {HTN} Planning Problems},
+                Year = {2018},
+                Pages = {40--47},
+                Booktitle = {Proceedings of the First {ICAPS} Workshop on Hierarchical Planning},
+                Author = {Behnke, Gregor and H{\"o}ller, Daniel and Biundo, Susanne}
+}
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE THIS IS A KEY, NOT AN OPTION.
+$
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sat-pocl
+Improved SAT-based HTN planner
+
+System configuration of a yet unpublished, but highly efficient SAT-based HTN planner.
+\n
+This planner translates the planning problem into propositional logic and then uses a SAT solver to find a solution.
+\n
+To use this planner, you have to specify which SAT solver should be used.
+Options are "minisat", "cryptominisat", "RISS6", and "MapleCOMSPS", i.e., the config might be "sat-pocl(minisat)"
+Further, you have to specify the location of the solver, i.e., how PANDA can call the solver's executable.
+This is done by using the "-programPath" option.
+See its documentation for more details.
+\n
+Note that if you are using Linux or MacOSX, you must have a separate executable of the time program under /usr/bin/time.
+To check whether you do and whether it is the correct version (BSD's time might not work), run the command "/usr/bin/time -f '%U %S' true".
+It should output "0.00 0.00"
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE THIS IS A KEY, NOT AN OPTION.
+$
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+SHOP2-emulation
+SHOP2-style progression search
+
+This configuration uses the same algorithm as does SHOP2.
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE THIS IS A KEY, NOT AN OPTION.
+$
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+SHOP2-improved
+Improved SHOP2-style progression search
+
+This configuration uses an improved version of the SHOP2 algorithm, removing unnecessary branching.
+\n
+When referring to this planner, please cite:
+\n
+@Inproceedings{Hoeller2018pandapro,
+                Author    = {H{\"{o}}ller, Daniel and Bercher, Pascal and Behnke, Gregor and Biundo, Biundo},
+                Title     = {A Generic Method to Guide {HTN} Progression Search with Classical Heuristics},
+                Booktitle = {Proceedings of the 28th International Conference on Automated Planning and Scheduling ({ICAPS} 2018)},
+                Year      = {2018},
+                Publisher = {AAAI Press}
+}
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE THIS IS A KEY, NOT AN OPTION.
 $

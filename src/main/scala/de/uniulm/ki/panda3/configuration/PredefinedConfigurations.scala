@@ -20,7 +20,7 @@ import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristic
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.symbolic.compiler.OneOfTheNecessaryOrderings
 import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
-import de.uniulm.ki.panda3.symbolic.sat.verify.{TotSATEncoding, TreeBeforeEncoding}
+import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, TotSATEncoding, TreeBeforeEncoding}
 
 
 /**
@@ -237,6 +237,8 @@ object PredefinedConfigurations {
          "ICAPS-2017-verify" -> (htnParsing, groundingPreprocess, SATPlanVerification(CRYPTOMINISAT, "")),
 
          // AAAI totsat
+         "AAAI-2018-totSAT(minisat)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding)),
          "AAAI-2018-totSAT(cryptominisat)" ->
            (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding)),
          "AAAI-2018-totSAT(RISS6)" ->
@@ -261,6 +263,8 @@ object PredefinedConfigurations {
 
 
          // HTN-WS partsat
+         "HTN-WS-2018-treeBefore(minisat)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding)),
          "HTN-WS-2018-treeBefore(cryptominisat)" ->
            (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding)),
          "HTN-WS-2018-treeBefore(RISS6)" ->
@@ -268,6 +272,15 @@ object PredefinedConfigurations {
          "HTN-WS-2018-treeBefore(MapleCOMSPS)" ->
            (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding)),
 
+
+         "sat-pocl(minisat)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleterEncoding)),
+         "sat-pocl(cryptominisat)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleterEncoding)),
+         "sat-pocl(RISS6)" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleterEncoding)),
+         "sat-pocl(MapleCOMSPS)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleterEncoding)),
 
 
          "sas-ICAPS-2018-RC(filter,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFilter)),
