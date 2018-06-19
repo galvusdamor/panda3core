@@ -1,5 +1,5 @@
 // PANDA 3 -- a domain-independent planner for classical and hierarchical planning
-// Copyright (C) 2014-2017 the original author or authors.
+// Copyright (C) 2014-2018 the original author or authors.
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
