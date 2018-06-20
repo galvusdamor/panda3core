@@ -131,7 +131,7 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
 
   protected def pathPosForbidden(path: Seq[Int], position: Int): String = "forbidden_" + path.mkString(";") + "-" + position
 
-  def forbiddennessSubtractor : Int = 1
+  def forbiddennessSubtractor: Int = 1
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
     // force computation of SOG
@@ -187,7 +187,7 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
 
 }
 
-case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
+case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                                            taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
                                            useImplicationForbiddenness: Boolean) extends SOGClassicalForbiddenEncoding {
 
@@ -203,11 +203,11 @@ case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Dom
     atMostOneOf(actionAtoms map { _._1 })
 }
 
-case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
+case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                                           taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
                                           useImplicationForbiddenness: Boolean) extends SOGClassicalForbiddenEncoding {
 
-  override def forbiddennessSubtractor : Int = 0
+  override def forbiddennessSubtractor: Int = 0
 
   // TODO: determine this size more intelligently
   lazy val taskSequenceLength: Int = Math.max(if (primitivePaths.length == 0) 0 else 1, primitivePaths.length - 0)
@@ -217,11 +217,11 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
   override def stateTransitionFormulaProvider(): Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
 
   override def restrictionPathsPerPosition(pathsPerPosition: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] = {
-    val taskToPosWithTask: Seq[Clause] = Range(0, taskSequenceLength) flatMap {case position =>
-      pathsPerPosition(position) flatMap {case (pathIndex,_,connectionAtom) =>
+    val taskToPosWithTask: Seq[Clause] = Range(0, taskSequenceLength) flatMap { case position =>
+      pathsPerPosition(position) flatMap { case (pathIndex, _, connectionAtom) =>
         val path = primitivePaths(pathIndex)._1
         primitivePaths(pathIndex)._2 flatMap { t =>
-          val actionAtom = pathAction(path.length,path,t)
+          val actionAtom = pathAction(path.length, path, t)
 
           impliesSingle(pathToPosWithTask(path, position, t), actionAtom) ::
             impliesSingle(pathToPosWithTask(path, position, t), connectionAtom) ::
@@ -241,14 +241,15 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
 
       if (possibleAchievers.nonEmpty)
         atMostOneOf(possibleAchievers) :+ impliesRightOr(atom :: Nil, possibleAchievers)
-      else Nil
+      else Clause((atom, false)) :: Nil // if there is no achiever, this position can not be made true
     }
   }
 
 }
 
 case class SOGClassicalN4Encoding(timeCapsule: TimeCapsule,
-                                  domain: Domain, initialPlan: Plan, intProblem : IntProblem,taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGClassicalEncoding {
+                                  domain: Domain, initialPlan: Plan, intProblem: IntProblem, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
+  extends SOGClassicalEncoding {
 
   lazy val taskSequenceLength: Int = primitivePaths.length
 
