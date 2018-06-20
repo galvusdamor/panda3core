@@ -439,7 +439,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, intProblem, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
                                  automaton, directLTLEncoding, separatedFormulae,
                                  referencePlan, satSearch.planDistanceMetric,
-                                 satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.encodingToUse,
+                                 satSearch.reductionMethod, satSearch.usePDTMutexes,
+                                 timeCapsule, informationCapsule, satSearch.encodingToUse,
                                  postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree),
                                  randomSeed, satSearch.threads)
 
@@ -477,7 +478,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
               (solution, false)
 
-            case OptimalSATRun(overrideK) if satSearch.encodingToUse == POCLDirectEncoding || satSearch.encodingToUse == POCLDeleterEncoding =>
+            case OptimalSATRun(overrideK) if satSearch.encodingToUse == POCLDirectEncoding || satSearch.encodingToUse == POCLDeleteEncoding =>
               // TODO: 1 is just a placeholder for "generate the base formula"
               runner.runWithTimeLimit(remainingTime, remainingTime, 1, 0, defineK = overrideK, checkSolution = satSearch.checkResult, runOptimiser = true) match {case (a, b, c) => (a, b)}
 
@@ -1579,7 +1580,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
   private val protectedPredicatesFromConfiguration: Set[String] = searchConfiguration match {
-    case SATSearch(_, _, Some(f), _, _, _, _, _, _, _) => f.nnf.allPredicatesNames
+    case SATSearch(_, _, Some(f), _, _, _, _, _, _, _, _) => f.nnf.allPredicatesNames
     case _                                             => Set()
   }
 }
@@ -2195,7 +2196,8 @@ case class SATSearch(solverType: Solvertype,
                      planDistanceMetric: Seq[PlanDistanceMetric] = Nil,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
-                     encodingToUse: POEncoding = POCLDeleterEncoding,
+                     encodingToUse: POEncoding = POCLDeleteEncoding,
+                     usePDTMutexes : Boolean = true,
                      threads: Int = 1
                     ) extends SearchConfiguration {
 

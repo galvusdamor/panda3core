@@ -104,7 +104,7 @@ trait TreeVariableOrderEncoding extends TreeEncoding with LinearPrimitivePlanEnc
     val onlyPrimitiveIfChosen = Range(0, taskSequenceLength) flatMap { case position =>
       val actionAtoms = domain.primitiveTasks map { t => (action(K - 1, position, t), t) }
       val ifPresentConnected = ifActionAtPositionThenConnected(actionAtoms, pathsPerPosition, position)
-      val onlyIfConnected = notImpliesAllNot(pathsPerPosition(position) map { _._3 }, actionAtoms map {_._1})
+      val onlyIfConnected = notImpliesAllNot(pathsPerPosition(position) map { _._3 }, actionAtoms map { _._1 })
 
       ifPresentConnected ++ onlyIfConnected
     }
@@ -157,8 +157,8 @@ trait TreeVariableOrderEncoding extends TreeEncoding with LinearPrimitivePlanEnc
   }
 }
 
-case class TreeVariableOrderEncodingKautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
-                                                taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
+case class TreeVariableOrderEncodingKautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
+                                                taskSequenceLengthQQ: Int, offsetToK: Int, usePDTMutexes: Boolean, overrideK: Option[Int] = None)
   extends TreeVariableOrderEncoding {
 
   override def stateTransitionFormulaProvider(): Seq[Clause] = stateTransitionFormulaOfLength(taskSequenceLength)
@@ -166,7 +166,7 @@ case class TreeVariableOrderEncodingKautzSelman(timeCapsule: TimeCapsule, domain
 
   lazy val taskSequenceLength: Int = primitivePaths.length
 
-   override def restrictionPathsPerPosition(pathsPerPosition: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] =
+  override def restrictionPathsPerPosition(pathsPerPosition: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] =
     pathsPerPosition.toSeq flatMap { case (a, s) => atMostOneOf(s map { _._3 }) }
 
   def ifActionAtPositionThenConnected(actionAtoms: Seq[(String, Task)], pathsPerPosition: Map[Int, Seq[(Int, Int, String)]], position: Int): Seq[Clause] =
@@ -174,7 +174,8 @@ case class TreeVariableOrderEncodingKautzSelman(timeCapsule: TimeCapsule, domain
 
 }
 
-case class TreeVariableOrderEncodingExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
+case class TreeVariableOrderEncodingExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem, taskSequenceLengthQQ: Int, offsetToK: Int,
+                                               usePDTMutexes: Boolean, overrideK: Option[Int] = None)
   extends TreeVariableOrderEncoding {
 
   // TODO: determine this size more intelligently
@@ -185,11 +186,11 @@ case class TreeVariableOrderEncodingExistsStep(timeCapsule: TimeCapsule, domain:
   override def stateTransitionFormulaProvider(): Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
 
   override def restrictionPathsPerPosition(pathsPerPosition: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] = {
-    val taskToPosWithTask: Seq[Clause] = Range(0, taskSequenceLength) flatMap {case position =>
-      pathsPerPosition(position) flatMap {case (pathIndex,_,connectionAtom) =>
+    val taskToPosWithTask: Seq[Clause] = Range(0, taskSequenceLength) flatMap { case position =>
+      pathsPerPosition(position) flatMap { case (pathIndex, _, connectionAtom) =>
         val path = primitivePaths(pathIndex)._1
         primitivePaths(pathIndex)._2 flatMap { t =>
-          val actionAtom = pathAction(path.length,path,t)
+          val actionAtom = pathAction(path.length, path, t)
 
           impliesSingle(pathToPosWithTask(path, position, t), actionAtom) ::
             impliesSingle(pathToPosWithTask(path, position, t), connectionAtom) ::

@@ -72,7 +72,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
 
     // TODO we are currently mapping plansteps, maybe we should prefer plansteps with identical tasks to be mapped together
     //print("MINI " + possibleMethods.length + " " + possiblePrimitives.length + " ... ")
-    val lb = methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max
+    //val lb = methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max
     val optimiser =
     //OptimalBranchAndBoundOptimiser(minimiseChildrenWithAbstractTasks, lowerBound = lb) //, minimiseAbstractTaskOccurencesMetric)
       GreedyNumberOfAbstractChildrenOptimiser

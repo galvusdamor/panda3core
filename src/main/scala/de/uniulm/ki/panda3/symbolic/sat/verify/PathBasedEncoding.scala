@@ -30,6 +30,8 @@ import scala.collection.{mutable, Seq}
   */
 trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
+  def usePDTMutexes: Boolean
+
   // layer, path to that action, actual task
   /*private val action: ((Int, Seq[Int], Task)) => String = memoise[(Int, Seq[Int], Task), String]({ case (l, p, t) =>
     assert(p.length == l + 1)
@@ -47,7 +49,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
   ///// methods to make the formula generation configurable
 
-  protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions: Map[Int,Int]): Seq[Clause]
+  protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions: Map[Int, Int]): Seq[Clause]
 
   protected def initialPayload(possibleTasks: Set[Task], path: Seq[Int]): Payload
 
@@ -258,7 +260,24 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
     //println(pathDecompositionTree.localConditionalLandmarks map { case (t, s) => t.name + " -> " + (s map { _.name } mkString " ") } mkString "\n")
     //dd(pathDecompositionTree)
+
+    val mutexClauses = if (usePDTMutexes) {
+      print("Computed PDT mutexes ... ")
+      val pdtMutextes: Seq[((Seq[Int], Task), (Seq[Int], Task))] = pathDecompositionTree.mutexes
+      println(" found " + pdtMutextes.length + " mutexes ... generating formula ... ")
+      val clauses = pdtMutextes map { case ((path1, task1), (path2, task2)) =>
+        val atom1 = pathAction(path1.length, path1, task1)
+        val atom2 = pathAction(path2.length, path2, task2)
+
+        Clause((atom1, false) :: (atom2, false) :: Nil)
+      }
+      println("done")
+
+      clauses
+    } else Nil
+
     //System exit 0
+
 
     timeCapsule start GENERATE_CLAUSES
     print("Generating clauses representing decomposition ... ")
@@ -284,7 +303,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       Dot2PdfCompiler.writeDotToFile(graph, "dectree.pdf")
     }*/
 
-    val ret: (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean) = (initialPlanClauses :+ assertedTask, pPaths, payload, expansion)
+    val ret: (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean) = (mutexClauses ++ initialPlanClauses :+ assertedTask, pPaths, payload, expansion)
     ret
   }
 

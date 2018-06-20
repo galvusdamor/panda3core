@@ -22,7 +22,7 @@ import de.uniulm.ki.util._
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
-import scala.collection.{mutable, Seq}
+import scala.collection.{Seq, mutable}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -63,13 +63,13 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       childrenPossibleTasks.zip(children) foreach { case (actuallyRemainingTasks, child) => assert(child.possibleTasks.size == actuallyRemainingTasks.size) }
     }
 
-    possibleAbstracts foreach { at => assert(possibleMethods.exists(_._1.abstractTask == at)) }
+    //qqqpossibleAbstracts foreach { at => assert(possibleMethods.exists(_._1.abstractTask == at)) }
 
     if (isNormalised)
       assert(deepNormalised)
   }
 
-  def deepNormalised : Boolean = isNormalised && children.forall(_.deepNormalised)
+  def deepNormalised: Boolean = isNormalised && children.forall(_.deepNormalised)
 
   lazy val layer: Int        = path.length
   lazy val possibleAbstracts = possibleTasks filter { _.isAbstract } toSeq
@@ -182,7 +182,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
   }
 
   def restrictPathDecompositionTree(toRemoveFromLeafPaths: Seq[Set[Task]]): PathDecompositionTree[Payload] =
-    if (toRemoveFromLeafPaths.isEmpty && possibleTasks.forall(_.isAbstract) && children.isEmpty) this.copy(isNormalised = true, children = children map {_.normalise})
+    if (toRemoveFromLeafPaths.isEmpty && possibleTasks.forall(_.isAbstract) && children.isEmpty) this.copy(isNormalised = true, children = children map { _.normalise })
     else if (children.isEmpty) {
       // I am a leaf, so just execute the removal
       // TODO: do something with payloads ... this will become necessary once we will perform this operation also with SOGs
@@ -284,9 +284,84 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
                           payload, restrictedChildren, localExpansionPossible = localExpansionPossible, isNormalised = isNormalised)
   }
 
+
+  def possibleAssigmentsDFS(task: Task): Seq[(Seq[Int], Task)] = if (possiblePrimitives contains task) (path, task) :: Nil else {
+    val subAssigments: Seq[(Seq[Int], Task)] = possibleMethods.zipWithIndex filter { _._1._1.abstractTask == task } flatMap { case ((method, _), idx) =>
+      methodToPositions(idx).zip(method.subPlan.planStepSchemaArray) flatMap { case (childIndex, childTask) => children(childIndex).possibleAssigmentsDFS(childTask) }
+    }
+
+    subAssigments :+ (path, task)
+  }
+
+  lazy val possibleAssignments: Seq[(Seq[Int], Task)] = possiblePrimitives.map(p => (path, p)) ++ children.flatMap(_.possibleAssignments)
+
+  lazy val mutexes: Seq[((Seq[Int], Task), (Seq[Int], Task))] = {
+    //println(possibleAssignments map { case (p, t) => p.mkString("(", ",", ")") + " " + t.name } mkString "\n")
+
+    //println("Node")
+    val possibleTasksPerMethod: Array[Array[(Int, Seq[(Seq[Int], Task)])]] = possibleMethods.zipWithIndex map { case ((method, _), methodIDX) =>
+      val taskPossible = methodToPositions(methodIDX).zip(method.subPlan.planStepSchemaArray) map { case (idx, task) => (idx, children(idx).possibleAssigmentsDFS(task)) }
+
+      //println(taskPossible map { case (cIdx, poss) => "Child " + cIdx + ": " + poss.size } mkString "\n")
+
+      taskPossible
+    }
+
+    val allLocalMutexes: Seq[((Seq[Int], Task), (Seq[Int], Task))] = children.indices flatMap { child1 =>
+      val possibleChild1 = children(child1).possibleAssignments
+
+      val child2Mutexes = children.indices collect { case child2 if child1 != child2 =>
+        val possibleChild2 = children(child2).possibleAssignments
+
+        val foundMutexes: Seq[((Seq[Int], Task), (Seq[Int], Task))] = possibleChild1 flatMap { ass1 =>
+          possibleChild2 map { ass2 =>
+            // check all methods if violating
+            val hasViolating = possibleTasksPerMethod exists { case methodPoss: Array[(Int, Seq[(Seq[Int], Task)])] =>
+              val can1 = methodPoss.find(_._1 == child1) match {
+                case None                   => false
+                case Some((_, assignments)) => assignments contains ass1
+              }
+
+              val can2 = methodPoss.find(_._1 == child2) match {
+                case None                   => false
+                case Some((_, assignments)) => assignments contains ass2
+              }
+
+              can1 && can2
+            }
+
+            ((ass1, ass2), hasViolating)
+          } collect { case (x, false) => x }
+        }
+
+        foundMutexes
+
+      }
+
+      child2Mutexes.flatten
+    }
+
+    //println("Found " + allLocalMutexes.size + " local mutexes")
+    //println(allLocalMutexes map {case ((_,t1),(_,t2)) => t1.name + " vs " + t2.name} mkString "\n")
+
+
+    //println("done")
+
+    val subMutexes = children flatMap { _.mutexes }
+
+
+    //println("FOUND " + filteresCands.size)
+    //val childMutexes = children map { _.mutextes }
+
+    subMutexes ++ allLocalMutexes
+  }
+
+
   //////////// INTERNAL HELPER METHODS
 
-  private def buildChildrenTaskTable(methods: Array[((DecompositionMethod, Int), Array[Int])], primitives: Array[(Task, Int)]): Array[Set[Task]] = {
+  private def buildChildrenTaskTable(methods: Array[((DecompositionMethod, Int), Array[Int])], primitives: Array[(Task, Int)]): Array[Set[Task]]
+
+  = {
     val childrenPossibleTasks: Array[mutable.HashSet[Task]] = children.indices map { _ => new mutable.HashSet[Task]() } toArray
 
     // add tasks from methods
@@ -305,5 +380,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
 
   /** returns a detailed information about the object */
-  override def longInfo: String = "T:" + possibleTasks.size + " P:" + path.mkString(",")
+  override def longInfo: String
+
+  = "T:" + possibleTasks.size + " P:" + path.mkString(",")
 }

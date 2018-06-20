@@ -30,7 +30,7 @@ import scala.collection.Seq
   */
 case class SOGPOCLDeleteEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
                                  taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, overrideK: Option[Int] = None,
-                                 restrictionMethod: RestrictionMethod) extends SOGPOCLEncoding {
+                                 restrictionMethod: RestrictionMethod, usePDTMutexes: Boolean) extends SOGPOCLEncoding {
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected def deletes(path: Seq[Int], precondition: Predicate): String = "del^" + path.mkString(";") + "_" + precondition.name

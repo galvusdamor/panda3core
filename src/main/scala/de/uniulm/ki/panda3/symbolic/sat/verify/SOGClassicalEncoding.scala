@@ -189,7 +189,7 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
 
 case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                                            taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
-                                           useImplicationForbiddenness: Boolean) extends SOGClassicalForbiddenEncoding {
+                                           useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean) extends SOGClassicalForbiddenEncoding {
 
   override def stateTransitionFormulaProvider(): Seq[Clause] = stateTransitionFormulaOfLength(taskSequenceLength)
 
@@ -205,7 +205,7 @@ case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Dom
 
 case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                                           taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
-                                          useImplicationForbiddenness: Boolean) extends SOGClassicalForbiddenEncoding {
+                                          useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean) extends SOGClassicalForbiddenEncoding {
 
   override def forbiddennessSubtractor: Int = 0
 
@@ -248,7 +248,8 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
 }
 
 case class SOGClassicalN4Encoding(timeCapsule: TimeCapsule,
-                                  domain: Domain, initialPlan: Plan, intProblem: IntProblem, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
+                                  domain: Domain, initialPlan: Plan, intProblem: IntProblem, taskSequenceLengthQQ: Int, offsetToK: Int, usePDTMutexes: Boolean,
+                                  overrideK: Option[Int] = None)
   extends SOGClassicalEncoding {
 
   lazy val taskSequenceLength: Int = primitivePaths.length

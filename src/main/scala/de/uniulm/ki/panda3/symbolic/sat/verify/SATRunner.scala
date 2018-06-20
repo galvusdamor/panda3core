@@ -42,7 +42,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                      büchiAutomata: Seq[LTLAutomaton[_, _]], ltlFormulaAndEncoding: Seq[AdditionalSATConstraint],
                      pureLTLFormulae: Seq[LTLFormula],
                      referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
-                     reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
+                     reductionMethod: SATReductionMethod, usePDTMutexes: Boolean,
+                     timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
                      encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean,
                      randomSeed: Long, solverThreads: Int) {
 
@@ -247,17 +248,28 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
           encodingToUse match {
-            case TotSATEncoding                => TotallyOrderedEncoding(timeCapsule, domain, initialPlan, intProblem, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
-            case TreeBeforeEncoding            => TreeVariableOrderEncodingKautzSelman(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK)
-            case TreeBeforeExistsStepEncoding  => TreeVariableOrderEncodingExistsStep(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK)
-            case ClassicalForbiddenEncoding    => SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, false)
-            case ExistsStepForbiddenEncoding   => SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, false)
-            case ClassicalImplicationEncoding  => SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, true)
-            case ExistsStepImplicationEncoding => SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, true)
-            case ClassicalN4Encoding           => SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK)
-            case POCLDirectEncoding            => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
-            case POCLDeleterEncoding           => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
-            case POStateEncoding               => SOGPOREncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK)
+            case TotSATEncoding                =>
+              TotallyOrderedEncoding(timeCapsule, domain, initialPlan, intProblem, reductionMethod, planLength, offSetToK, defineK, restrictionMethod, usePDTMutexes)
+            case TreeBeforeEncoding            =>
+              TreeVariableOrderEncodingKautzSelman(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, usePDTMutexes, defineK)
+            case TreeBeforeExistsStepEncoding  =>
+              TreeVariableOrderEncodingExistsStep(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, usePDTMutexes, defineK)
+            case ClassicalForbiddenEncoding    =>
+              SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, false, usePDTMutexes)
+            case ExistsStepForbiddenEncoding   =>
+              SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, false, usePDTMutexes)
+            case ClassicalImplicationEncoding  =>
+              SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, true, usePDTMutexes)
+            case ExistsStepImplicationEncoding =>
+              SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, true, usePDTMutexes)
+            case ClassicalN4Encoding           =>
+              SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, usePDTMutexes, defineK)
+            case POCLDirectEncoding            =>
+              SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes)
+            case POCLDeleteEncoding            =>
+              SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes)
+            case POStateEncoding               =>
+              SOGPOREncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, usePDTMutexes, defineK)
           }
         }
 
@@ -314,8 +326,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         // generate appropriate formula
         val usedFormula = usedFormulaGeneral ++ encoder.planLengthDependentFormula(next)
 
-        //val bMAp = Clause.atomIndices.map(_.swap)
-        //writeStringToFile(usedFormula map { c => c.disjuncts map { case a => (if (a < 0) "not " else "") + bMAp(Math.abs(a)-1) } mkString "\t" } mkString "\n", "formula.txt")
+        val bMAp = Clause.atomIndices.map(_.swap)
+        writeStringToFile(usedFormula map { c => c.disjuncts map { case a => (if (a < 0) "not " else "") + bMAp(Math.abs(a) - 1) } mkString "\t" } mkString "\n", "formula.txt")
 
         timeCapsule start Timings.TRANSFORM_DIMACS
         println("READY TO WRITE")
@@ -539,7 +551,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           if (solved) {
             println("")
             val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-            //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+            writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
             //println((allTrueAtoms filter {_.startsWith("act_")}).toSeq.sorted mkString "\n")
             //println((allTrueAtoms filter {_.startsWith("auto_state")}).toSeq sortBy {case x => x.split('_').last.toInt}  mkString "\n")
@@ -964,9 +976,22 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                       nodes find { _ contains ("_" + path + ",") } get
                     } map actionStringToTask
 
+                  case t: SOGClassicalN4Encoding =>
+                    val pathToPosByPos = pathToPos groupBy { _.split("-").last } map { case (a, b) => exitIfNot(b.size == 1); a -> b.head }
+                    //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
+                    val actionSequence = actionsPerPosition.keySet.toSeq.sorted map { pos => exitIfNot(actionsPerPosition(pos).size == 1); actionsPerPosition(pos).head }
+                    actionSequence map { case solAction =>
+                      val pos = solAction.split("_").last.split(",").head
+                      val ptP = pathToPosByPos(pos)
+                      val path = ptP.split("_").last.split("-").head
+
+                      // find matching atom
+                      nodes find { _ contains ("_" + path + ",") } get
+                    } map actionStringToTask
+
                   case t: SOGExistsStepForbiddenEncoding =>
                     val pathToPosWithTask = allTrueAtoms filter { _.startsWith("withTaskPathToPos_") }
-                    println(pathToPosWithTask mkString "\n")
+                    //println(pathToPosWithTask mkString "\n")
 
                     // try to get a linearisation of each position
                     var c = -1
@@ -984,7 +1009,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                         })
 
                       println("Time " + p)
-                      println(actionOrdering map { "\t" + _._1.name } mkString ("\n"))
+                      println(actionOrdering map { "\t" + _._1.name } mkString "\n")
 
                       actionOrdering map { _._2 }
                     }
@@ -992,8 +1017,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                     val taskSeq = actionSequence map { case solAction =>
                       val pos = solAction.split("_").last.split(",").head
                       val taskID = solAction.split("_").last.split(",").last
-                      val path = (pathToPosWithTask find { _.endsWith("-" + pos + ":" + taskID) }).get.split("_").last.split("-").head
-
+                      val pathToPosOption = pathToPosWithTask find { _.endsWith("-" + pos + ":" + taskID) }
+                      val path = pathToPosOption match {
+                        case Some(s) => s.split("_").last.split("-").head
+                        case None    => exitIfNot(false, "action " + solAction + " has no connected path"); null
+                      }
                       // find matching atom
                       nodes find { _ contains ("_" + path + ",") } get
                     } map actionStringToTask
@@ -1011,11 +1039,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                 //println(innerActions map actionStringToInfoString mkString "\n")
 
 
-                println(pathToPos mkString "\n")
-                println(primitiveActions mkString "\n")
+                //println(pathToPos mkString "\n")
+                //println(primitiveActions mkString "\n")
                 val active = allTrueAtoms filter { _.startsWith("active") }
                 //println(active mkString "\n")
-                println(pathToPos.size + "==" + taskSequence.length)
+                //println(pathToPos.size + "==" + taskSequence.length)
                 exitIfNot(pathToPos.size == taskSequence.length)
                 exitIfNot(active.size == taskSequence.length)
 
@@ -1172,7 +1200,7 @@ object ClassicalN4Encoding extends POEncoding
 
 object POCLDirectEncoding extends POEncoding
 
-object POCLDeleterEncoding extends POEncoding
+object POCLDeleteEncoding extends POEncoding
 
 object POStateEncoding extends POEncoding
 

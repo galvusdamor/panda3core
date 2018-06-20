@@ -244,6 +244,7 @@ object Information {
   val METHOD_CHILDREN_CLAUSES = "40 sat:22:method children clauses"
   val NUMBER_OF_PATHS         = "40 sat:30:number of paths"
   val MAX_PLAN_LENGTH         = "40 sat:31:maximum plan length"
+  val PDT_MUTEXES             = "40 sat:40:number of global PDT mutexes"
   val SOLVED                  = "40 sat:90:solved"
   val TIMEOUT                 = "40 sat:91:timeout"
 

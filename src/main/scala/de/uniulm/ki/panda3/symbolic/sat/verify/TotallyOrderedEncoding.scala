@@ -33,7 +33,7 @@ import scala.collection.Seq
 case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
                                    domain: Domain, initialPlan: Plan, intProblem : IntProblem,
                                   reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None,
-                                  restrictionMethod: RestrictionMethod)
+                                  restrictionMethod: RestrictionMethod, usePDTMutexes: Boolean)
   extends TreeEncoding with EncodingWithLinearPlan with NumberOfActionsRestrictionViaAutomaton[Unit,Unit]{
 
 

@@ -20,7 +20,7 @@ import de.uniulm.ki.panda3.progression.heuristics.sasp.SasHeuristic.SasHeuristic
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.symbolic.compiler.OneOfTheNecessaryOrderings
 import de.uniulm.ki.panda3.symbolic.compiler.AllNecessaryOrderings
-import de.uniulm.ki.panda3.symbolic.sat.verify.{POCLDeleterEncoding, TotSATEncoding, TreeBeforeEncoding}
+import de.uniulm.ki.panda3.symbolic.sat.verify._
 
 
 /**
@@ -53,19 +53,19 @@ object PredefinedConfigurations {
                                                        stopDirectlyAfterGrounding = false)
 
   val sasGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
-                                                       compileInitialPlan = true,
-                                                       convertToSASP = true,
-                                                       allowSASPFromStrips = false,
-                                                       removeUnnecessaryPredicates = true,
-                                                       ensureMethodsHaveLastTask = false,
-                                                       ensureMethodsHaveAtMostTwoTasks = false,
-                                                       compileOrderInMethods = None,
-                                                       splitIndependentParameters = true,
-                                                       compileUselessAbstractTasks = true,
-                                                       liftedReachability = true, groundedReachability = None,
-                                                       groundedTaskDecompositionGraph = Some(TwoWayTDG),
-                                                       iterateReachabilityAnalysis = true, groundDomain = true,
-                                                       stopDirectlyAfterGrounding = false)
+                                                          compileInitialPlan = true,
+                                                          convertToSASP = true,
+                                                          allowSASPFromStrips = false,
+                                                          removeUnnecessaryPredicates = true,
+                                                          ensureMethodsHaveLastTask = false,
+                                                          ensureMethodsHaveAtMostTwoTasks = false,
+                                                          compileOrderInMethods = None,
+                                                          splitIndependentParameters = true,
+                                                          compileUselessAbstractTasks = true,
+                                                          liftedReachability = true, groundedReachability = None,
+                                                          groundedTaskDecompositionGraph = Some(TwoWayTDG),
+                                                          iterateReachabilityAnalysis = true, groundDomain = true,
+                                                          stopDirectlyAfterGrounding = false)
 
   val orderingGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                                compileOrderInMethods = Some(AllNecessaryOrderings),
@@ -274,13 +274,59 @@ object PredefinedConfigurations {
 
 
          "sat-pocl(minisat)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleterEncoding)),
+           (htnParsing, groundingPreprocess, SATSearch(MINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding)),
          "sat-pocl(cryptominisat)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleterEncoding)),
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding)),
          "sat-pocl(RISS6)" ->
-           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleterEncoding)),
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding)),
          "sat-pocl(MapleCOMSPS)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleterEncoding)),
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding)),
+
+
+         "sat-pocl-delete(cryptominisat,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-pocl-direct(cryptominisat,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden(cryptominisat,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalForbiddenEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-implication(cryptominisat,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-existsstep(cryptominisat,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-implication-existsstep(cryptominisat,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-classical-n4(cryptominisat,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding,
+                                                       usePDTMutexes = false)),
+
+
+         "sat-pocl-delete(cryptominisat,Mutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
+                                                       usePDTMutexes = true)),
+         "sat-pocl-direct(cryptominisat,Mutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
+                                                       usePDTMutexes = true)),
+         "sat-forbidden(cryptominisat,Mutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalForbiddenEncoding,
+                                                       usePDTMutexes = true)),
+         "sat-forbidden-implication(cryptominisat,Mutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding,
+                                                       usePDTMutexes = true)),
+         "sat-forbidden-existsstep(cryptominisat,Mutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding,
+                                                       usePDTMutexes = true)),
+         "sat-forbidden-implication-existsstep(cryptominisat,Mutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding,
+                                                       usePDTMutexes = true)),
+         "sat-classical-n4(cryptominisat,Mutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding,
+                                                       usePDTMutexes = true)),
 
 
          "sas-ICAPS-2018-RC(filter,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFilter)),
