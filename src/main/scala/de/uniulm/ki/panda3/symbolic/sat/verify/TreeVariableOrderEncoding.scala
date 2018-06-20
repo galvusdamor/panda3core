@@ -19,6 +19,7 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.{GreedyNumberOfAbstractChildrenOptimiser, GreedyNumberOfChildrenFromTotallyOrderedOptimiser}
 import de.uniulm.ki.util._
 
@@ -156,7 +157,8 @@ trait TreeVariableOrderEncoding extends TreeEncoding with LinearPrimitivePlanEnc
   }
 }
 
-case class TreeVariableOrderEncodingKautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
+case class TreeVariableOrderEncodingKautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
+                                                taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
   extends TreeVariableOrderEncoding {
 
   override def stateTransitionFormulaProvider(): Seq[Clause] = stateTransitionFormulaOfLength(taskSequenceLength)
@@ -172,13 +174,13 @@ case class TreeVariableOrderEncodingKautzSelman(timeCapsule: TimeCapsule, domain
 
 }
 
-case class TreeVariableOrderEncodingExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
+case class TreeVariableOrderEncodingExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None)
   extends TreeVariableOrderEncoding {
 
   // TODO: determine this size more intelligently
   lazy val taskSequenceLength: Int = Math.max(if (primitivePaths.length == 0) 0 else 1, primitivePaths.length - 0)
 
-  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, taskSequenceLength, Some(K))
+  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, intProblem, taskSequenceLength, Nil)
 
   override def stateTransitionFormulaProvider(): Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
 

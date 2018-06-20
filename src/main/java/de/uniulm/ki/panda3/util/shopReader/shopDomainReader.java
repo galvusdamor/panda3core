@@ -34,6 +34,7 @@ import de.uniulm.ki.panda3.symbolic.plan.modification.BindVariableToValue;
 import de.uniulm.ki.panda3.symbolic.plan.modification.InsertCausalLink;
 import de.uniulm.ki.panda3.symbolic.plan.modification.MakeLiteralsUnUnifiable;
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering;
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.LTLTrue$;
 import de.uniulm.ki.panda3.symbolic.search.NoFlaws$;
 import de.uniulm.ki.panda3.symbolic.search.NoModifications$;
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter;
@@ -290,7 +291,7 @@ public class shopDomainReader {
                             NoModifications$.MODULE$,
                             NoFlaws$.MODULE$,
                             hddlPanda3Visitor.planStepsDecomposedBy,
-                            hddlPanda3Visitor.planStepsDecompositionParents,true);
+                            hddlPanda3Visitor.planStepsDecompositionParents,true, LTLTrue$.MODULE$);
 
                     SHOPDecompositionMethod method = new SHOPDecompositionMethod(abs, subPlan, precFormula, emptyAnd, m.getName() + "-" + mCase);
                     tMethods.add(method);
@@ -324,7 +325,7 @@ public class shopDomainReader {
             Plan p = new Plan(tTni.result(), emptyCausalLink, to, tniCSP, tniInit, tniGoal, NoModifications$.MODULE$,
                     NoFlaws$.MODULE$,
                     hddlPanda3Visitor.planStepsDecomposedBy,
-                    hddlPanda3Visitor.planStepsDecompositionParents,true);
+                    hddlPanda3Visitor.planStepsDecompositionParents,true, LTLTrue$.MODULE$);
 
             return new Tuple2<>(d, p);
         } catch (Exception e) {

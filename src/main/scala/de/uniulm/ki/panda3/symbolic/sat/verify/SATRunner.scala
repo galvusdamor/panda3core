@@ -22,10 +22,12 @@ import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.configuration.Timings._
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, ReducedTask, Task}
-import de.uniulm.ki.panda3.symbolic.logic.And
+import de.uniulm.ki.panda3.symbolic.logic.{And, GroundLiteral}
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints._
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.util._
 
 import scala.collection.{JavaConversions, Seq}
@@ -35,7 +37,11 @@ import scala.io.Source
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 // scalastyle:off method.length cyclomatic.complexity
-case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, solverPath: Option[String],
+case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
+                     satSolver: Solvertype, solverPath: Option[String],
+                     büchiAutomata: Seq[LTLAutomaton[_, _]], ltlFormulaAndEncoding: Seq[AdditionalSATConstraint],
+                     pureLTLFormulae: Seq[LTLFormula],
+                     referencePlan: Option[Seq[Task]], planDistanceMetric: Seq[PlanDistanceMetric],
                      reductionMethod: SATReductionMethod, timeCapsule: TimeCapsule, informationCapsule: InformationCapsule,
                      encodingToUse: POEncoding, extractSolutionWithHierarchy: Boolean,
                      randomSeed: Long, solverThreads: Int) {
@@ -136,6 +142,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
     timerSemaphore.release()
 
     JavaConversions.mapAsScalaMap(Thread.getAllStackTraces).keys filter { t => thread.getThreadGroup == t.getThreadGroup } foreach { t => t.stop() }
+    timeCapsule.switchTimerToCurrentThreadOrIgnore(Timings.VERIFY_TOTAL)
+    timeCapsule stopOrIgnore Timings.VERIFY_TOTAL
 
 
     if (runner.result.isEmpty) {
@@ -146,20 +154,51 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
   }
 
 
+  private def evaluateLTLFormulaOnStates(formula: LTLFormula, states: Seq[Seq[GroundLiteral]]): Boolean = formula match {
+    case PredicateAtom(p) => if (states.head exists { _.predicate == p }) true else false
+    case LTLNot(f)        => evaluateLTLFormulaOnStates(f, states)
+    case LTLAnd(fs)       => fs.forall(f => evaluateLTLFormulaOnStates(f, states))
+    case LTLOr(fs)        => fs.exists(f => evaluateLTLFormulaOnStates(f, states))
+    case LTLNext(f)       => if (states.isEmpty) false else evaluateLTLFormulaOnStates(f, states.drop(1))
+    case LTLWeakNext(f)   => if (states.isEmpty) true else evaluateLTLFormulaOnStates(f, states.drop(1))
+    case LTLEventually(f) =>
+      if (states.isEmpty) false
+      else if (evaluateLTLFormulaOnStates(f, states)) true
+      else evaluateLTLFormulaOnStates(LTLEventually(f), states.drop(1))
+    case LTLAlways(f)     =>
+      if (states.isEmpty) true
+      else evaluateLTLFormulaOnStates(f, states) && evaluateLTLFormulaOnStates(LTLAlways(f), states.drop(1))
+    case LTLUntil(f, g)   =>
+      if (states.isEmpty) false
+      else if (evaluateLTLFormulaOnStates(g, states)) true
+      else evaluateLTLFormulaOnStates(f, states) && evaluateLTLFormulaOnStates(LTLUntil(f, g), states.drop(1))
+  }
+
   def checkIfTaskSequenceIsAValidPlan(sequenceToVerify: Seq[Task], checkGoal: Boolean = true): Unit = {
     val groundTasks = sequenceToVerify map { task => GroundTask(task, Nil) }
-    val finalState = groundTasks.foldLeft(initialPlan.groundedInitialStateOnlyPositive)(
-      { case (state, action) =>
+    val initialState: Seq[GroundLiteral] = initialPlan.groundedInitialStateOnlyPositive
+    val stateSequence = groundTasks.foldLeft(initialState :: Nil)(
+      { case (states, action) =>
         //println("STATE")
         //println(state map {x => "\t" + x.predicate.name} mkString("\n"))
         //println("PREC " + action.task.name)
         //println(action.task.preconditionsAsPredicateBool map {x => "\t" + x._1.name} mkString "\n")
         //println()
+        val state = states.last
 
         action.substitutedPreconditions foreach { prec => exitIfNot(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
-        (state diff action.substitutedDelEffects.map(_.copy(isPositive = true))) ++ action.substitutedAddEffects
+        val nextState = (state diff action.substitutedDelEffects.map(_.copy(isPositive = true))) ++ action.substitutedAddEffects
+
+        states :+ nextState
       })
 
+    pureLTLFormulae.zipWithIndex foreach { case (f, i) =>
+      val r = evaluateLTLFormulaOnStates(f, stateSequence)
+      println("Testing LTL formula #" + i + ": " + r)
+      exitIfNot(r, "Formula " + f.toString + " is not fulfilled")
+    }
+
+    val finalState = stateSequence.last
     if (checkGoal) initialPlan.groundedGoalTask.substitutedPreconditions foreach { goalLiteral => exitIfNot(finalState contains goalLiteral, "GOAL: " + goalLiteral.predicate.name) }
   }
 
@@ -177,6 +216,20 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       // clear index cache of clause class
       Clause.clearCache()
 
+
+      val additionalConstraintsGenerators: Seq[AdditionalSATConstraint] =
+        büchiAutomata.zipWithIndex.map({
+                                         case (b: BüchiAutomaton, i)       => BüchiFormulaEncoding(b, "büchi_" + i)
+                                         case (a: AlternatingAutomaton, i) => AlternatingAutomatonFormulaEncoding(a, "aauto_" + i)
+                                       }) ++
+          ltlFormulaAndEncoding ++
+          (planDistanceMetric map {
+            case MissingOperators(maximumDifference)              => ActionSetDifference(referencePlan.get, maximumDifference)
+            case MissingTaskInstances(maximumDifference)          => ActionMatchingDifference(referencePlan.get, maximumDifference)
+            case MinimumCommonSubplan(minimumLength, ignoreOrder) => LongestCommonSubplan(referencePlan.get, minimumLength, ignoreOrder)
+          })
+
+
       //val restrictionMethod: RestrictionMethod = SlotGloballyRestriction
       val restrictionMethod: RestrictionMethod = SlotOverTimeRestriction
 
@@ -184,8 +237,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       val encoder = //TreeEncoding(domain, initialPlan, sequenceToVerify.length, offSetToK)
         if (domain.isClassical) {
           encodingToUse match {
-            case KautzSelmanEncoding => KautzSelman(timeCapsule, domain, initialPlan, planLength)
-            case ExistsStepEncoding  => ExistsStep(timeCapsule, domain, initialPlan, planLength)
+            case KautzSelmanEncoding => KautzSelman(timeCapsule, domain, initialPlan, intProblem, planLength)
+            case ExistsStepEncoding  => ExistsStep(timeCapsule, domain, initialPlan, intProblem, planLength,
+                                                   additionalConstraintsGenerators collect { case e: AdditionalEdgesInDisablingGraph => e })
           }
         }
         //else if (domain.isTotallyOrdered && initialPlan.orderingConstraints.isTotalOrder())
@@ -193,17 +247,17 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
         //else GeneralEncoding(domain, initialPlan, Range(0,planLength) map {_ => null.asInstanceOf[Task]}, offSetToK, defineK).asInstanceOf[VerifyEncoding]
         else {
           encodingToUse match {
-            case TotSATEncoding                => TotallyOrderedEncoding(timeCapsule, domain, initialPlan, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
-            case TreeBeforeEncoding            => TreeVariableOrderEncodingKautzSelman(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
-            case TreeBeforeExistsStepEncoding  => TreeVariableOrderEncodingExistsStep(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
-            case ClassicalForbiddenEncoding    => SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = false)
-            case ExistsStepForbiddenEncoding   => SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = false)
-            case ClassicalImplicationEncoding  => SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = true)
-            case ExistsStepImplicationEncoding => SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK, useImplicationForbiddenness = true)
-            case ClassicalN4Encoding           => SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, planLength, offSetToK, defineK)
-            case POCLDirectEncoding            => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
-            case POCLDeleterEncoding           => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
-            case POStateEncoding               => SOGPOREncoding(timeCapsule, domain, initialPlan, planLength, reductionMethod, offSetToK, defineK)
+            case TotSATEncoding                => TotallyOrderedEncoding(timeCapsule, domain, initialPlan, intProblem, reductionMethod, planLength, offSetToK, defineK, restrictionMethod)
+            case TreeBeforeEncoding            => TreeVariableOrderEncodingKautzSelman(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK)
+            case TreeBeforeExistsStepEncoding  => TreeVariableOrderEncodingExistsStep(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK)
+            case ClassicalForbiddenEncoding    => SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, false)
+            case ExistsStepForbiddenEncoding   => SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, false)
+            case ClassicalImplicationEncoding  => SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, true)
+            case ExistsStepImplicationEncoding => SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, true)
+            case ClassicalN4Encoding           => SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK)
+            case POCLDirectEncoding            => SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
+            case POCLDeleterEncoding           => SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod)
+            case POStateEncoding               => SOGPOREncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK)
           }
         }
 
@@ -222,11 +276,23 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
       timeCapsule start Timings.GENERATE_FORMULA
       //println("READY")
       //System.in.read()
+
       val stateFormula = encoder.stateTransitionFormula ++ encoder.initialState ++ (if (includeGoal) encoder.goalState else Nil) ++ encoder.noAbstractsFormula
-      val usedFormulaGeneral = (encoder.decompositionFormula ++ stateFormula).toArray
+      val planningFormula = (encoder.decompositionFormula ++ stateFormula).toArray
+
+      val additionalConstraintsFormula = additionalConstraintsGenerators flatMap { constraint =>
+        encoder match {
+          //case x: EncodingWithLinearPlan       => constraint(x)
+          case lp: LinearPrimitivePlanEncoding => constraint(lp)
+          case _                               => assert(false); Nil
+        }
+      }
+
+      val usedFormulaGeneral = planningFormula ++ additionalConstraintsFormula
       println("NUMBER OF CLAUSES " + usedFormulaGeneral.length)
       println("NUMBER OF STATE CLAUSES " + stateFormula.length)
       println("NUMBER OF DECOMPOSITION CLAUSES " + encoder.decompositionFormula.length)
+      println("NUMBER OF ADDITIONAL CONSTRAINT CLAUSES " + additionalConstraintsFormula.length)
 
       expansionPossible = encoder.expansionPossible
       //println("Done")
@@ -598,10 +664,15 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
       case es: ExistsStep               =>
         val primitiveActions = allTrueAtoms filter { _.startsWith("action^") }
+        val statePredicates = allTrueAtoms filter { _.startsWith("predicate^") }
         //println("Primitive Actions: \n" + (primitiveActions mkString "\n"))
         val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
+        val predicatesPerPosition = statePredicates groupBy { _.split("_")(1).split(",")(0).toInt }
 
-        println(actionsPerPosition map { case (p, acts) => "Position " + p + "\n" + (acts map { "\t" + _ } mkString ("\n")) } mkString "\n")
+        //println(actionsPerPosition map { case (p, acts) => "Position " + p + "\n" + (acts map { "\t" + _ } mkString ("\n")) } mkString "\n")
+        //println(predicatesPerPosition map { case (p, preds) => "Position " + p + "\n" + (preds map { "\t" + _ } mkString ("\n")) } mkString "\n")
+
+        def stateAtTime(i: Int): String = predicatesPerPosition.getOrElse(i, Nil) map { pred => "\t" + domain.predicates(pred.split(",").last.toInt).name } mkString "\n"
 
         // try to get a linearisation of each position
         var c = -1
@@ -614,22 +685,34 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
           val actionOrdering: Seq[Task] = executedActions.toSeq.sortWith(
             {
-              case (t1, t2) => es.disablingGraphTotalOrder.indexOf(t1) < es.disablingGraphTotalOrder.indexOf(t2)
+              case (t1, t2) => es.intProblem.disablingGraphTotalOrder.indexOf(t1) < es.intProblem.disablingGraphTotalOrder.indexOf(t2)
             })
 
           val x: Seq[PlanStep] = actionOrdering map { case a => c += 1; PlanStep(c, a, Nil) }
 
           println("Time " + p)
+          //println(stateAtTime(p))
           println(actionOrdering map { "\t" + _.name } mkString ("\n"))
 
           x
         }
+
+        //println("Time " + (actionsPerPosition.keys.max + 1))
+        //println(stateAtTime(actionsPerPosition.keys.max + 1))
+
+        //println(allTrueAtoms.toSeq filter {_.startsWith("matt")} sortBy {_.split("@")(1).toInt} mkString "\n")
+        //println(allTrueAtoms.toSeq filter {_.startsWith("onparallel_2_")} sortBy {x => 2000*x.split("@")(1).toInt + x.split("@").head.split("_").last.toInt} mkString "\n")
+
+        //println(domain.tasks.find(_.name == "Y[]").get.longInfo)
+
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
         println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")
+
+        //System exit 0
 
         (Nil, Nil, primitiveSolution, Map(), Map())
       case pbe: PathBasedEncoding[_, _] =>
@@ -744,7 +827,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
               val actionOrdering: Seq[(Task, String)] = executedActions.toSeq.sortWith(
                 {
-                  case ((t1, _), (t2, _)) => tree.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t1) < tree.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t2)
+                  case ((t1, _), (t2, _)) => tree.exsitsStepEncoding.intProblem.disablingGraphTotalOrder.indexOf(t1) < tree.exsitsStepEncoding.intProblem.disablingGraphTotalOrder.indexOf(t2)
                 })
 
               println("Time " + p)
@@ -895,7 +978,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, satSolver: Solvertype, s
 
                       val actionOrdering: Seq[(Task, String)] = executedActions.toSeq.sortWith(
                         {
-                          case ((t1, _), (t2, _)) => t.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t1) < t.exsitsStepEncoding.disablingGraphTotalOrder.indexOf(t2)
+                          case ((t1, _), (t2, _)) => t.exsitsStepEncoding.intProblem.disablingGraphTotalOrder.indexOf(t1) < t.exsitsStepEncoding.intProblem.disablingGraphTotalOrder
+                            .indexOf(t2)
                         })
 
                       println("Time " + p)

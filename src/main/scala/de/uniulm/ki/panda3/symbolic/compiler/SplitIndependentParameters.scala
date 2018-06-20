@@ -64,7 +64,7 @@ object SplitIndependentParameters extends DecompositionMethodTransformer[Unit] {
           val extensionOrdering = TaskOrdering(OrderingConstraint.allBetween(extensionInit, extensionGoal, extensionPlanStep), allExtensionPlanSteps)
           val extensionCSP = CSP(arguments.toSet, Nil)
           val extensionPlan = Plan(allExtensionPlanSteps, Nil, extensionOrdering, extensionCSP, extensionInit, extensionGoal, subPlan.isModificationAllowed, subPlan.isFlawAllowed, Map(),
-                                   Map())
+                                   Map(), subPlan.dontExpandVariableConstraints,subPlan.ltlConstraint)
 
           val extensionMethod = SimpleDecompositionMethod(reducedSchema, extensionPlan, methodName + "_" + methodName + "_" + id)
 

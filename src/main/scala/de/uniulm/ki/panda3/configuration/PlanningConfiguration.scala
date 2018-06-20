@@ -23,8 +23,7 @@ import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.efficient.Wrapping
 import de.uniulm.ki.panda3.efficient.domain.datastructures.hiearchicalreachability.EfficientTDGFromGroundedSymbolic
-import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic,
-EfficientGroundedPlanningGraphImplementation}
+import de.uniulm.ki.panda3.efficient.domain.datastructures.primitivereachability.{EfficientGroundedPlanningGraph, EfficientGroundedPlanningGraphFromSymbolic}
 import de.uniulm.ki.panda3.efficient.heuristic.filter.{PlanLengthLimit, RecomputeHTN}
 import de.uniulm.ki.panda3.efficient.heuristic.{AlwaysZeroHeuristic, EfficientNumberOfFlaws, EfficientNumberOfPlanSteps, _}
 import de.uniulm.ki.panda3.efficient.search.flawSelector._
@@ -34,6 +33,7 @@ import de.uniulm.ki.panda3.progression.htn.ProPlanningInstance
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem
 import de.uniulm.ki.panda3.progression.htn.search.searchRoutine.PriorityQueueSearch
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints._
 import de.uniulm.ki.panda3.symbolic.compiler._
 import de.uniulm.ki.panda3.symbolic.compiler.pruning._
 import de.uniulm.ki.panda3.symbolic.domain._
@@ -48,9 +48,11 @@ import de.uniulm.ki.panda3.symbolic.parser.hpddl.HPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify._
+import de.uniulm.ki.panda3.symbolic.plan.modification.InsertPlanStepWithLink
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.symbolic.writer.anml.ANMLWriter
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
@@ -356,8 +358,87 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         })
 
       case satSearch: SATSearch                          =>
+        // create the partial int-representation that might be needed by an exists-step based encoding
+
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
-          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
+
+          val combinedFormula = (satSearch.ltlFormula, domainAndPlan._2.ltlConstraint) match {
+            case (None, LTLTrue)    => None
+            case (Some(x), LTLTrue) => Some(x)
+            case (None, x)          => Some(x)
+            case (Some(x), y)       => Some(LTLAnd(x :: y :: Nil))
+          }
+
+          val separatedFormulaeBeforeRandomSelection = combinedFormula match {
+            case None          => Nil
+            case Some(formula) =>
+              val formulaInNNF = formula.nnf.parseAndGround(domainAndPlan._1, domainAndPlanFullyParsed._1, Map()).simplify
+              formulaInNNF match {
+                case LTLAnd(conj) => conj
+                case x            => x :: Nil
+              }
+          }
+
+          val rand = new Random(randomSeed)
+
+          val separatedFormulae: Seq[LTLFormula] = //separatedFormulaeBeforeRandomSelection
+            if (separatedFormulaeBeforeRandomSelection.length <= 3) separatedFormulaeBeforeRandomSelection else {
+              Range(0, 3).foldLeft[(Seq[LTLFormula], Seq[LTLFormula])]((separatedFormulaeBeforeRandomSelection, Nil))(
+                { case ((l, sel), _) =>
+                  val r = rand.nextInt(l.length)
+                  (l.patch(r, Nil, 1), sel :+ l(r))
+                }
+                                                                                                                     )._2
+            }
+
+
+          if (separatedFormulae.nonEmpty) {
+            //domainAndPlan._2.ltlConstraint match {case LTLAnd(x) => println(x map { _.longInfo } mkString "\n")}
+
+            //println(domainAndPlan._1.predicates map { "\t" + _.name } mkString "\n")
+
+            println("LTL Requirements: ")
+            println(separatedFormulae map { "\t" + _.longInfo } mkString "\n")
+          }
+
+          // if a formula is provided, translate it into a Büchi automaton
+          val automaton: Seq[LTLAutomaton[_, _]] = satSearch.formulaEncoding match {
+            case AlternatingAutomatonEncoding | BüchiEncoding =>
+              val automata: Seq[LTLAutomaton[_, _]] = separatedFormulae map { f =>
+                satSearch.formulaEncoding match {
+                  case BüchiEncoding                => BüchiAutomaton(domainAndPlan._1, f)
+                  case AlternatingAutomatonEncoding => AlternatingAutomaton(domainAndPlan._1, f)
+                }
+              }
+
+              separatedFormulae.zip(automata).zipWithIndex foreach { case ((f, a), i) =>
+                info("Using LTL Formula in NNF: " + f.longInfo + "\n")
+                Dot2PdfCompiler.writeDotToFile(a, "ltl_automaton" + i + ".pdf")
+              }
+
+              //System exit 0
+              automata
+            case _                                            => Nil
+          }
+
+          val directLTLEncoding: Seq[AdditionalSATConstraint] = satSearch.formulaEncoding match {
+            case AlternatingAutomatonEncoding | BüchiEncoding => Nil
+            case MattmüllerEncoding                           => separatedFormulae.zipWithIndex map { case (f, i) => LTLMattmüllerEncoding(f, "matt_" + i, improvedChains = false) }
+            case MattmüllerImprovedEncoding                   => separatedFormulae.zipWithIndex map { case (f, i) => LTLMattmüllerEncoding(f, "matt_" + i, improvedChains = true) }
+            case OnParallelEncoding                           => separatedFormulae.zipWithIndex map { case (f, i) => LTLOnParallelEncoding(f, "onparallel_" + i) }
+          }
+
+          val additionalEdgesInDisablingGraph: Seq[AdditionalEdgesInDisablingGraph] = (directLTLEncoding collect { case x: AdditionalEdgesInDisablingGraph => x }) ++
+            (automaton collect { case x: AlternatingAutomaton => AlternatingAutomatonFormulaEncoding(x,"none") })
+          val withRelevantPredicates: Seq[WithRelevantPredicates] = directLTLEncoding collect { case x: WithRelevantPredicates => x }
+
+          val intProblem = IntProblem(domainAndPlan._1, domainAndPlan._2, additionalEdgesInDisablingGraph, withRelevantPredicates)
+
+          val referencePlan: Option[Seq[Task]] = satSearch.planToMinimiseDistanceTo map { _ map { taskName: String => domainAndPlan._1.tasks.find(_.name == taskName).get } }
+
+          val runner = SATRunner(domainAndPlan._1, domainAndPlan._2, intProblem, satSearch.solverType, externalProgramPaths.get(satSearch.solverType),
+                                 automaton, directLTLEncoding, separatedFormulae,
+                                 referencePlan, satSearch.planDistanceMetric,
                                  satSearch.reductionMethod, timeCapsule, informationCapsule, satSearch.encodingToUse,
                                  postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree),
                                  randomSeed, satSearch.threads)
@@ -371,25 +452,27 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               // start with K = 0 and loop
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var error: Boolean = false
-              var currentK = if (domainAndPlan._1.isClassical) 1 else 0
+              var currentK = 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-              var usedTime: Long = remainingTime / Math.max(1, 10 / (currentK + 1))
+              var usedTime: Long = (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
               var expansion: Boolean = true
               while (solution.isEmpty && !error && expansion && usedTime > 0) {
                 println("\nRunning SAT search with K = " + currentK)
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
 
-                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) currentK else -1,
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) Math.pow(2, currentK).toInt else -1,
                                                                                        0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
                 println("ERROR " + satError)
                 error |= satError
                 solution = satResult
                 expansion = expansionPossible
+
                 if (domainAndPlan._1.isClassical) currentK += 1
                 else currentK += 1
+
                 remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-                usedTime = remainingTime / Math.max(1, 10 / (currentK + 1))
+                usedTime = (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
               }
 
               (solution, false)
@@ -845,7 +928,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     timeCapsule stop PARSER_FLATTEN_FORMULA
 
     timeCapsule start PARSER_CWA
-    val cwaApplied = if (parsingConfiguration.closedWorldAssumption) ClosedWorldAssumption.transform(flattened, true) else flattened
+    val cwaApplied =
+      if (parsingConfiguration.closedWorldAssumption)
+        ClosedWorldAssumption.transform(flattened, (true, protectedPredicatesFromConfiguration ++ flattened._2.ltlConstraint.allPredicatesNames))
+      else flattened
     timeCapsule stop PARSER_CWA
 
     timeCapsule start PARSER_ELIMINATE_EQUALITY
@@ -873,7 +959,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap, typing: HierarchyTyping): AnalysisMap = {
     val groundedInitialState = problem.groundedInitialStateOnlyPositive filter { _.isPositive }
-    val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = Some(typing), debuggingMode = DebuggingMode.Disabled)
+    val chosenTyping = if (problem.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) None else Some(typing)
+    val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = chosenTyping, debuggingMode = DebuggingMode.Disabled)
     val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, config)
     // add analysis to map
     analysisMap + (SymbolicGroundedReachability -> groundedReachabilityAnalysis)
@@ -917,7 +1004,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     val predicatesRemoved = if (domain.isGround && preprocessingConfiguration.removeUnnecessaryPredicates) {
       info("Removing unnecessary predicates ... ")
-      val compiled = PrunePredicates.transform(domain, problem, ())
+      val compiled = PrunePredicates.transform(domain, problem, protectedPredicatesFromConfiguration ++ problem.ltlConstraint.allPredicatesNames)
       info("done.\n")
       extra(compiled._1.statisticsString + "\n")
       compiled
@@ -933,7 +1020,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
       val hierarchyPruned = PruneHierarchy.transform(predicatesRemoved._1, predicatesRemoved._2, disallowedTasks.toSet)
-      val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
+      val pruned = PruneEffects.transform(hierarchyPruned, (domain.primitiveTasks.toSet, protectedPredicatesFromConfiguration ++ problem.ltlConstraint.allPredicatesNames))
       info("done.\n")
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
@@ -973,7 +1060,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       }
 
       val pddlPlan = Plan(withGoalPlan.initAndGoal, Nil, TaskOrdering(OrderingConstraint(withGoalPlan.init, withGoalPlan.goal) :: Nil, withGoalPlan.initAndGoal),
-                          withGoalPlan.variableConstraints, withGoalPlan.init, withGoalPlan.goal, withGoalPlan.isModificationAllowed, withGoalPlan.isFlawAllowed, Map(), Map())
+                          withGoalPlan.variableConstraints, withGoalPlan.init, withGoalPlan.goal, withGoalPlan.isModificationAllowed, withGoalPlan.isFlawAllowed, Map(), Map(),
+                          false, LTLTrue)
 
       // FD can't handle either in the sort hierarchy, so we have to use predicates when writing them ...
       val uuid = UUID.randomUUID().toString
@@ -1045,7 +1133,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         if (newAnalysisMap.contains(SymbolicLiftedReachability)) newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet else domain.primitiveTasks.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
       val hierarchyPruned = PruneHierarchy.transform(domain, problem: Plan, disallowedTasks.toSet)
-      val pruned = PruneEffects.transform(hierarchyPruned, domain.primitiveTasks.toSet)
+      val pruned = PruneEffects.transform(hierarchyPruned, (domain.primitiveTasks.toSet, protectedPredicatesFromConfiguration ++ problem.ltlConstraint.allPredicatesNames))
 
       info("done (" + (System.currentTimeMillis() - sasStart) + " ms).\n")
       info("Number of Grounded Actions " + sasPlusParser.reachableGroundPrimitiveActions.length + "\n")
@@ -1320,7 +1408,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       val predicatedPruned = if (preprocessingConfiguration.removeUnnecessaryPredicates) {
         info("Removing unnecessary predicates ... ")
-        val compiled = PrunePredicates.transform(methodsWithIdenticalTasks._1, methodsWithIdenticalTasks._2, ())
+        val compiled = PrunePredicates.transform(methodsWithIdenticalTasks._1, methodsWithIdenticalTasks._2,
+                                                 protectedPredicatesFromConfiguration ++ methodsWithIdenticalTasks._2.ltlConstraint.allPredicatesNames)
         info("done.\n")
         extra(compiled._1.statisticsString + "\n")
         compiled
@@ -1487,6 +1576,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     }
 
     configOk
+  }
+
+  private val protectedPredicatesFromConfiguration: Set[String] = searchConfiguration match {
+    case SATSearch(_, _, Some(f), _, _, _, _, _, _, _) => f.nnf.allPredicatesNames
+    case _                                             => Set()
   }
 }
 
@@ -2051,7 +2145,6 @@ case class ProgressionSearch(searchAlgorithm: SearchAlgorithmType,
                   ("Heuristic", if (heuristic.isDefined) heuristic.get.longInfo else "none") ::
                   ("Abstract task selection strategy", abstractTaskSelectionStrategy) ::
                   Nil)
-
 }
 
 sealed trait SATReductionMethod extends DefaultLongInfo
@@ -2074,8 +2167,32 @@ case class FullSATRun() extends SATRunConfiguration {override def longInfo: Stri
 case class OptimalSATRun(overrideK: Option[Int]) extends SATRunConfiguration {override def longInfo: String = "optimal run"}
 
 
+sealed trait PlanDistanceMetric
+
+case class MissingOperators(maximumDifference: Int) extends PlanDistanceMetric
+
+case class MissingTaskInstances(maximumDifference: Int) extends PlanDistanceMetric
+
+case class MinimumCommonSubplan(minimumSimilarity: Int, ignoreOrder: Boolean = false) extends PlanDistanceMetric
+
+sealed trait LTLEncodingMethod
+
+object BüchiEncoding extends LTLEncodingMethod
+
+object AlternatingAutomatonEncoding extends LTLEncodingMethod
+
+object MattmüllerEncoding extends LTLEncodingMethod
+
+object MattmüllerImprovedEncoding extends LTLEncodingMethod
+
+object OnParallelEncoding extends LTLEncodingMethod
+
 case class SATSearch(solverType: Solvertype,
                      runConfiguration: SATRunConfiguration,
+                     ltlFormula: Option[LTLFormula] = None,
+                     formulaEncoding: LTLEncodingMethod = MattmüllerEncoding,
+                     planToMinimiseDistanceTo: Option[Seq[String]] = None,
+                     planDistanceMetric: Seq[PlanDistanceMetric] = Nil,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
                      encodingToUse: POEncoding = POCLDeleterEncoding,

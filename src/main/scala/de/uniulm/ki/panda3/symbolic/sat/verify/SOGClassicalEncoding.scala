@@ -17,13 +17,17 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
+import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.util.{DirectedGraph, DirectedGraphDotOptions, Dot2PdfCompiler, TimeCapsule}
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
+import de.uniulm.ki.util.{Dot2PdfCompiler, TimeCapsule}
 
 import scala.collection.{Seq, mutable}
 
-
-trait SOGClassicalEncoding extends SOGEncoding {
+/**
+  * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
+  */
+trait SOGClassicalEncoding extends SOGEncoding with EncodingWithLinearPlan {
 
   //lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
@@ -33,6 +37,20 @@ trait SOGClassicalEncoding extends SOGEncoding {
 
   protected def pathToPosWithTask(path: Seq[Int], position: Int, task: Task): String =
     "withTaskPathToPos_" + path.mkString(";") + "-" + position + ":" + taskIndex(task)
+
+
+  override lazy val linearPlan: scala.Seq[Map[Task, String]] = {
+    val allTasksArePossibleEverywhere: Set[Task] = primitivePaths flatMap { _._2 } toSet
+
+    Range(0, taskSequenceLength) map { case i => allTasksArePossibleEverywhere map { t => t -> { action(K - 1, i, t) } } toMap }
+  }
+
+
+  override lazy val linearStateFeatures: scala.Seq[Map[Predicate, String]] = {
+    // there is one more state
+    Range(0, taskSequenceLength + 1) map { case i => domain.predicates map { p => p -> { statePredicate(K - 1, i, p) } } toMap }
+  }
+
 
   override lazy val noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
 
@@ -44,7 +62,7 @@ trait SOGClassicalEncoding extends SOGEncoding {
     // force computation of SOG
     sog
 
-    Dot2PdfCompiler.writeDotToFile(sog.dotString(DirectedGraphDotOptions(), { case (p, t) => t map { _.name } mkString ";" }), "sog.pdf")
+    //Dot2PdfCompiler.writeDotToFile(sog.dotString(DirectedGraphDotOptions(), { case (p, t) => t map { _.name } mkString ";" }), "sog.pdf")
 
     //////
     // select mapping
@@ -110,6 +128,7 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
 
   def useImplicationForbiddenness: Boolean
 
+
   protected def pathPosForbidden(path: Seq[Int], position: Int): String = "forbidden_" + path.mkString(";") + "-" + position
 
   def forbiddennessSubtractor : Int = 1
@@ -168,7 +187,8 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
 
 }
 
-case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
+case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
+                                           taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
                                            useImplicationForbiddenness: Boolean) extends SOGClassicalForbiddenEncoding {
 
   override def stateTransitionFormulaProvider(): Seq[Clause] = stateTransitionFormulaOfLength(taskSequenceLength)
@@ -183,7 +203,8 @@ case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Dom
     atMostOneOf(actionAtoms map { _._1 })
 }
 
-case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
+case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
+                                          taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
                                           useImplicationForbiddenness: Boolean) extends SOGClassicalForbiddenEncoding {
 
   override def forbiddennessSubtractor : Int = 0
@@ -191,7 +212,7 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
   // TODO: determine this size more intelligently
   lazy val taskSequenceLength: Int = Math.max(if (primitivePaths.length == 0) 0 else 1, primitivePaths.length - 0)
 
-  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, taskSequenceLength, Some(K))
+  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, intProblem, taskSequenceLength, Nil)
 
   override def stateTransitionFormulaProvider(): Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
 
@@ -227,7 +248,8 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
 }
 
 case class SOGClassicalN4Encoding(timeCapsule: TimeCapsule,
-                                  domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGClassicalEncoding {
+                                  domain: Domain, initialPlan: Plan, intProblem : IntProblem,
+                                  taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGClassicalEncoding {
 
   lazy val taskSequenceLength: Int = primitivePaths.length
 

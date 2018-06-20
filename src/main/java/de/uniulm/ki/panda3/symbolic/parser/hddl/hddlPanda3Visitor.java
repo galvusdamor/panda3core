@@ -21,7 +21,7 @@ import de.uniulm.ki.panda3.symbolic.domain.*;
 import de.uniulm.ki.panda3.symbolic.logic.*;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.internalSortsAndConsts;
 import de.uniulm.ki.panda3.symbolic.parser.hddl.internalmodel.parserUtil;
-import de.uniulm.ki.panda3.symbolic.parser.xml.True;
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.*;
 import de.uniulm.ki.panda3.util.seqProviderList;
 import de.uniulm.ki.panda3.symbolic.plan.Plan;
 import de.uniulm.ki.panda3.symbolic.plan.element.CausalLink;
@@ -40,6 +40,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import scala.None$;
 import scala.Tuple2;
 import scala.collection.JavaConversions;
+import scala.collection.JavaConverters;
 import scala.collection.Seq;
 import scala.collection.immutable.Map;
 import scala.collection.immutable.Nil$;
@@ -88,6 +89,7 @@ public class hddlPanda3Visitor {
     private parseReport report = new parseReport();
 
     private int currentVarId = 0;
+
     private int nextVarId() {
         return ++currentVarId;
     }
@@ -137,6 +139,8 @@ public class hddlPanda3Visitor {
 
         Task init = visitInitialState(vctx, varConstraints, sorts, predicates, ctxProblem.p_init());
         Task goal = visitGoalState(vctx, varConstraints, sorts, predicates, ctxProblem.p_goal());
+        LTLFormula ltlConstraints = LTLTrue$.MODULE$;
+        if (ctxProblem.p_constraint() != null) ltlConstraints = visitConstraints(sorts, predicates, ctxProblem.p_constraint()).nnf();
         Seq<Task> tasks = visitTaskDefs(sorts, predicates, ctxDomain);
 
         Seq<DecompositionMethod> decompositionMethods = visitMethodDef(ctxDomain.method_def(), sorts, predicates, tasks);
@@ -199,15 +203,101 @@ public class hddlPanda3Visitor {
             planSteps.add(psInit);
             planSteps.add(psGoal);
             TaskOrdering taskOrderings = new TaskOrdering(new VectorBuilder<OrderingConstraint>().result(), new VectorBuilder<PlanStep>().result());
-            taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit,psGoal);
+            taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit, psGoal);
             p = new Plan(planSteps.result(), new seqProviderList<CausalLink>().result(), taskOrderings, csp, psInit, psGoal,
-                    allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false);
+                    allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents, false, ltlConstraints);
         }
         report.printReport();
 
         Tuple2<Domain, Plan> initialProblem = new Tuple2<>(d, p);
         return initialProblem;
     }
+
+    private LTLFormula visitConstraints(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_constraintContext p_constraintContext) {
+        return visitLTLGoalDefinition(p_constraintContext.gd());
+    }
+
+    private LTLFormula visitLTLGoalDefinition(antlrHDDLParser.GdContext ctx) {
+        if (ctx.atomic_formula() != null) { // a single precondition
+            String predicateName = ctx.atomic_formula().predicate().getText();
+
+            seqProviderList<String> argumentArray = new seqProviderList<String>();
+            for (int i = 0; i < ctx.atomic_formula().var_or_const().size(); i++) {
+                argumentArray.add(ctx.atomic_formula().var_or_const(i).getText());
+            }
+
+            return new PredicateNameAtom(predicateName, argumentArray.result());
+        } else if (ctx.gd_negation() != null) { // a negated single precondition
+            return new LTLNot(visitLTLGoalDefinition(ctx.gd_negation().gd()));
+        } else if (ctx.gd_conjuction() != null) { // a conduction of preconditions
+            seqProviderList<LTLFormula> argumentArray = new seqProviderList<LTLFormula>();
+            for (antlrHDDLParser.GdContext context : ctx.gd_conjuction().gd())
+                argumentArray.add(visitLTLGoalDefinition(context));
+            return new LTLAnd(argumentArray.result());
+        } else if (ctx.gd_disjuction() != null) { // well ...
+            seqProviderList<LTLFormula> argumentArray = new seqProviderList<LTLFormula>();
+            for (antlrHDDLParser.GdContext context : ctx.gd_conjuction().gd())
+                argumentArray.add(visitLTLGoalDefinition(context));
+            return new LTLOr(argumentArray.result());
+        } else if (ctx.gd_universal() != null) {
+            LTLFormula formula = visitLTLGoalDefinition(ctx.gd_universal().gd());
+            for (antlrHDDLParser.Typed_varsContext typedVars : ctx.gd_universal().typed_var_list().typed_vars()) {
+                for (TerminalNode typedVar : typedVars.VAR_NAME()) {
+                    formula = new LTLForall(typedVar.getText(), typedVars.var_type().NAME().getText(), formula);
+                }
+            }
+            return formula;
+        } else if (ctx.gd_existential() != null) {
+            LTLFormula formula = visitLTLGoalDefinition(ctx.gd_existential().gd());
+            for (antlrHDDLParser.Typed_varsContext typedVars : ctx.gd_existential().typed_var_list().typed_vars()) {
+                for (TerminalNode typedVar : typedVars.VAR_NAME()) {
+                    formula = new LTLExists(typedVar.getText(), typedVars.var_type().NAME().getText(), formula);
+                }
+            }
+            return formula;
+        } else if (ctx.gd_implication() != null) {
+            LTLFormula left = visitLTLGoalDefinition(ctx.gd_implication().gd().get(0));
+            LTLFormula right = visitLTLGoalDefinition(ctx.gd_implication().gd().get(1));
+            return new LTLImply(left, right);
+        } else if (ctx.gd_ltl_at_end() != null) {
+            LTLFormula sub = visitLTLGoalDefinition(ctx.gd_ltl_at_end().gd());
+            seqProviderList<LTLFormula> list = new seqProviderList<>();
+            list.add(sub);
+            list.add(new LTLNot(new LTLNext(LTLTrue$.MODULE$)));
+            return new LTLEventually(new LTLAnd(list.result()));
+        } else if (ctx.gd_ltl_always() != null) {
+            LTLFormula sub = visitLTLGoalDefinition(ctx.gd_ltl_always().gd());
+            return new LTLAlways(sub);
+        } else if (ctx.gd_ltl_sometime() != null) {
+            LTLFormula sub = visitLTLGoalDefinition(ctx.gd_ltl_sometime().gd());
+            return new LTLEventually(sub);
+        } else if (ctx.gd_ltl_at_most_once() != null) {
+            LTLFormula sub = visitLTLGoalDefinition(ctx.gd_ltl_at_most_once().gd());
+            return new LTLAlways(new LTLImply(sub, new LTLUntil(sub, new LTLAlways(new LTLNot(sub)))));
+        } else if (ctx.gd_ltl_sometime_after() != null) {
+            LTLFormula left = visitLTLGoalDefinition(ctx.gd_ltl_sometime_after().gd().get(0));
+            LTLFormula right = visitLTLGoalDefinition(ctx.gd_ltl_sometime_after().gd().get(1));
+            return new LTLAlways(new LTLImply(left,new LTLEventually(right)));
+         } else if (ctx.gd_ltl_sometime_before() != null) {
+            LTLFormula left = visitLTLGoalDefinition(ctx.gd_ltl_sometime_before().gd().get(0));
+            LTLFormula right = visitLTLGoalDefinition(ctx.gd_ltl_sometime_before().gd().get(1));
+            seqProviderList<LTLFormula> leftList = new seqProviderList<>();
+            seqProviderList<LTLFormula> rightList = new seqProviderList<>();
+
+            leftList.add(new LTLNot(left));
+            leftList.add(new LTLNot(right));
+            rightList.add(new LTLNot(left));
+            rightList.add(right);
+
+            return LTLWeakUntil.apply(new LTLAnd(leftList.result()),new LTLAnd(rightList.result()));
+        } else if (ctx.gd_preference() != null) {
+            return visitLTLGoalDefinition(ctx.gd_preference().gd());
+        } else {
+            if (warningOutput) System.out.println(ctx.getText());
+            throw new IllegalArgumentException("ERROR: Feature in LTL constraints is not implemented");
+        }
+    }
+
 
     private Plan visitTaskNetwork(antlrHDDLParser.Tasknetwork_defContext tnCtx, VarContext vctx,
                                   seqProviderList<VariableConstraint> constraints, PlanStep psInit, PlanStep psGoal,
@@ -220,7 +310,7 @@ public class hddlPanda3Visitor {
         seqProviderList<PlanStep> planSteps = new seqProviderList<>();
         planSteps.add(psInit);
         planSteps.add(psGoal);
-        taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit,psGoal);
+        taskOrderings = taskOrderings.addPlanStep(psInit).addPlanStep(psGoal).addOrdering(psInit, psGoal);
 
 
         if (tnCtx.subtask_defs() != null) {
@@ -397,7 +487,7 @@ public class hddlPanda3Visitor {
 
         CSP csp = new CSP(JavaToScala.toScalaSet(vctx.parameters), constraints.result());
         Plan subPlan = new Plan(planSteps.result(), causalLinks.result(), taskOrderings, csp, psInit, psGoal,
-                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false);
+                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents, false, LTLTrue$.MODULE$);
         return subPlan;
     }
 
@@ -515,7 +605,7 @@ public class hddlPanda3Visitor {
             tnVars.add(abstractTask.parameters());
 
             VarContext vctx = new VarContext();
-            for (Variable v: tnVars.getList()) {
+            for (Variable v : tnVars.getList()) {
                 vctx.addParameter(v);
             }
 
@@ -601,7 +691,7 @@ public class hddlPanda3Visitor {
             Variable methodVar = parserUtil.getVarByName(methodParams, param.VAR_NAME().toString());
             if (methodVar == null) {
                 if (warningOutput)
-                    System.out.println("ERROR: parameter used in method definition has not been found in method's parameter definition. (abstract task " + abstractTask.name()+ ")");
+                    System.out.println("ERROR: parameter used in method definition has not been found in method's parameter definition. (abstract task " + abstractTask.name() + ")");
                 paramsOk = false;
                 break;
             }
@@ -705,6 +795,9 @@ public class hddlPanda3Visitor {
             return visitEqConstraint(vctx, sorts, constraints, ctx);
         } else if (ctx.gd_empty() != null) {
             return new And<Literal>(new Vector<Literal>(0, 0, 0));
+        } else if (ctx.gd_preference() != null) {
+            if (warningOutput) System.out.println("I am ignoring the following goal description: " + ctx.getText());
+            return new And<Literal>(new Vector<Literal>(0, 0, 0));
         } else {
             if (warningOutput) System.out.println(ctx.getText());
             throw new IllegalArgumentException("ERROR: Feature in Precondition is not implemented");
@@ -753,7 +846,6 @@ public class hddlPanda3Visitor {
                 visitGoalConditions(vctx, predicates, sorts, constraints, gd_implicationContext.gd(0)),
                 visitGoalConditions(vctx, predicates, sorts, constraints, gd_implicationContext.gd(1)));
     }
-
 
 
     private Tuple2<Seq<Variable>, Formula> readInner(
@@ -983,6 +1075,7 @@ public class hddlPanda3Visitor {
         }
         return var;
     }
+
     private Variable getArtificialVariable(String name, VarContext vctx, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts) {
         Variable var = null;
 
@@ -1135,7 +1228,7 @@ public class hddlPanda3Visitor {
 
         if (requirements.contains(":typeof-predicate")) {
             internalSortModel.addParent("Type", ARTIFICIAL_ROOT_SORT);
-            for (String type : internalSortModel.allTypeNamesInRightOrder())  {
+            for (String type : internalSortModel.allTypeNamesInRightOrder()) {
                 internalSortModel.addConst("Type", type);
             }
         }

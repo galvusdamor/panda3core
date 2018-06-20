@@ -35,7 +35,7 @@ class GroundedPlanningGraphCompareWithOld extends FlatSpec {
     // we assume that the domain is grounded
 
     // cwa
-    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(sortsExpanded, info = true)
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(sortsExpanded, info = (true,Set[String]()))
     val plain = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
     val negPre = RemoveNegativePreconditions.transform(plain, ())
 

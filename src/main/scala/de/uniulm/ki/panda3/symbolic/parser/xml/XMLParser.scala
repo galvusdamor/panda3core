@@ -16,7 +16,7 @@
 
 package de.uniulm.ki.panda3.symbolic.parser.xml
 
-import java.io.{InputStream, FileInputStream}
+import java.io.{FileInputStream, InputStream}
 import javax.xml.bind.{JAXBContext, JAXBElement, Unmarshaller}
 import javax.xml.parsers.SAXParserFactory
 import javax.xml.transform.sax.SAXSource
@@ -25,15 +25,16 @@ import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate, Sort}
-import de.uniulm.ki.panda3.symbolic.parser.{StepwiseParser, Parser}
+import de.uniulm.ki.panda3.symbolic.parser.{Parser, StepwiseParser}
 import de.uniulm.ki.panda3.symbolic.parser.xml.problem.Problem
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
-import de.uniulm.ki.panda3.symbolic.plan.flaw.{AbstractPlanStep, UnboundVariable, OpenPrecondition, CausalThreat}
+import de.uniulm.ki.panda3.symbolic.plan.flaw.{AbstractPlanStep, CausalThreat, OpenPrecondition, UnboundVariable}
 import de.uniulm.ki.panda3.symbolic.plan.modification._
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.plan.{Plan, element}
 import de.uniulm.ki.panda3.symbolic.search._
 import de.uniulm.ki.panda3.symbolic._
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.LTLTrue
 import org.xml.sax.{EntityResolver, InputSource, XMLReader}
 
 import scala.collection._
@@ -315,7 +316,7 @@ object XMLParser extends StepwiseParser {
     val taskOrdering = TaskOrdering(orderingConstraints, planSteps)
 
     Plan(planSteps, causalLinks map { _._1 }, taskOrdering, csp, init, goal, NoModifications, NoFlaws, immutable.Map[PlanStep, DecompositionMethod](),
-         immutable.Map[PlanStep, (PlanStep, PlanStep)]())
+         immutable.Map[PlanStep, (PlanStep, PlanStep)](), false, LTLTrue)
   }
 
   def parseProblem(problemStream: InputStream, inputDomain: Domain): (Domain, Plan) = {
@@ -471,7 +472,7 @@ object XMLParser extends StepwiseParser {
     val planStepDecomposedBy = immutable.Map[PlanStep, DecompositionMethod]()
     val planStepParent = immutable.Map[PlanStep, (PlanStep, PlanStep)]()
     (domain, Plan(planStepsWithInitAndGoal, causalLinks, TaskOrdering(orderingConstraint, planStepsWithInitAndGoal), csp, init, goal,
-                  modifications, flaws, planStepDecomposedBy, planStepParent))
+                  modifications, flaws, planStepDecomposedBy, planStepParent, false, LTLTrue))
   }
 
   def factToLiteral(fact: problem.Fact, dom: Domain, nameToVariablesForConstants: Map[String, logic.Variable], isPositive: Boolean): Literal = {

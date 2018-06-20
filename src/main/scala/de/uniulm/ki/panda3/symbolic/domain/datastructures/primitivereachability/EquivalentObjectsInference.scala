@@ -108,7 +108,7 @@ object EquivalentObjectsInference {
 
     // cwa
     val expanded = ExpandSortHierarchy.transform(parsedDomainAndProblem, ())
-    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(expanded, true)
+    val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(expanded, (true,Set[String]()))
     val plainFormula = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
     val (domain, initialPlan) = RemoveNegativePreconditions.transform(plainFormula, ())
 

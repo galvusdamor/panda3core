@@ -95,7 +95,7 @@ case class VerifyRunner(domain: Domain, initialPlan: Plan, satsolver: Solvertype
       informationCapsule.set(Information.NUMBER_OF_METHODS, domain.decompositionMethods.length)
 
       // start verification
-      val encoder = GeneralEncoding(timeCapsule, domain, initialPlan, sequenceToVerify, offSetToK, defineK)
+      val encoder = GeneralEncoding(timeCapsule, domain, initialPlan, null, sequenceToVerify, offSetToK, defineK)
 
       // (3)
       println("K " + encoder.K)

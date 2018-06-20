@@ -16,8 +16,10 @@
 
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import de.uniulm.ki.panda3.symbolic.domain.Domain
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
+import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.util.TimeCapsule
 
 import scala.collection.Seq
@@ -25,10 +27,11 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class KautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, taskSequenceLengthQQ: Int) extends LinearPrimitivePlanEncoding {
+case class KautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
+                       taskSequenceLengthQQ: Int) extends LinearPrimitivePlanEncoding with EncodingWithLinearPlan {
   override lazy val offsetToK = 0
 
-  override lazy val overrideK = None
+  override lazy val overrideK = Some(0)
 
   override lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 

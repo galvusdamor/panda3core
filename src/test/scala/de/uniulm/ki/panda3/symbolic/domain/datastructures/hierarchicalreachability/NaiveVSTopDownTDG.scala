@@ -45,7 +45,7 @@ class NaiveVSTopDownTDG extends FlatSpec {
 
       val parsedDomainAndProblem = FileTypeDetector({ _ => () }).parseDomainAndProblem(new FileInputStream(domFile), new FileInputStream(probFile))
       val sortExpanded = ExpandSortHierarchy.transform(parsedDomainAndProblem, ())
-      val cwaApplied = ClosedWorldAssumption.transform(sortExpanded, true)
+      val cwaApplied = ClosedWorldAssumption.transform(sortExpanded, (true,Set[String]()))
       val simpleMethod = SHOPMethodCompiler.transform(cwaApplied, ())
       val flattened = ToPlainFormulaRepresentation.transform(simpleMethod, ())
       val (domain, problem) = RemoveNegativePreconditions(flattened, ())

@@ -19,23 +19,22 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.domain._
-import de.uniulm.ki.panda3.symbolic.logic.{And, Predicate, Literal}
+import de.uniulm.ki.panda3.symbolic.logic.{And, Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
-import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.{NativeOptimiser, GreedyNumberOfChildrenFromTotallyOrderedOptimiser, GreedyNumberOfAbstractChildrenOptimiser}
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
+import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.GreedyNumberOfChildrenFromTotallyOrderedOptimiser
 import de.uniulm.ki.util._
 
-import scala.annotation.elidable
-import scala.annotation.elidable._
-import scala.collection.{mutable, Seq}
+import scala.collection.Seq
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
-                                   domain: Domain, initialPlan: Plan, reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None,
+                                   domain: Domain, initialPlan: Plan, intProblem : IntProblem,
+                                  reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None,
                                   restrictionMethod: RestrictionMethod)
-  extends TreeEncoding with NumberOfActionsRestrictionViaAutomaton[Unit,Unit]{
+  extends TreeEncoding with EncodingWithLinearPlan with NumberOfActionsRestrictionViaAutomaton[Unit,Unit]{
 
 
   assert(domain.decompositionMethods forall { _.subPlan.orderingConstraints.fullGraph.allTotalOrderings.get.length == 1 })
@@ -111,6 +110,14 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
     initTrue ++ initFalse
   }
 
+
+  override def linearPlan: scala.Seq[Map[Task, String]] = primitivePaths map { case (path, tasks) => tasks map { t => t -> pathAction(path.length, path, t) } toMap }
+
+  override def linearStateFeatures = {
+    // there is one more state
+    Range(0, primitivePaths.length + 1) map { case i => domain.predicates map { p => p -> { statePredicate(K, i, p) } } toMap }
+  }
+
   override lazy val givenActionsFormula: Seq[Clause] = ???
 
   override protected def initialPayload(possibleTasks: Set[Task], path: scala.Seq[Int]): Unit = ()
@@ -128,7 +135,7 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
   }
 
 
-  protected def filterPrimitivesFF(sortedPaths: Array[(Seq[Int], Set[Task])], fullTest : Boolean = false): Seq[Set[Task]] = {
+  protected def filterPrimitivesFF(sortedPaths: Array[(Seq[Int], Set[Task])], fullTest: Boolean = false): Seq[Set[Task]] = {
     // perform simple PG-style reachability on the given list of actions
     val initialPredicates = initialPlan.init.schema.effectsAsPredicateBool collect { case (predicate, true) => predicate } toSet
     val initialAchiever: Map[Predicate, Seq[(Int, Task)]] = initialPredicates map { p => p -> ((-1, ReducedTask("init", true, Nil, Nil, Nil, And(Nil), And(Nil))) :: Nil) } toMap

@@ -24,9 +24,10 @@ import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, GroundTask, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification.Modification
-import de.uniulm.ki.panda3.symbolic.search.{NoModifications, NoFlaws}
+import de.uniulm.ki.panda3.symbolic.search.{NoFlaws, NoModifications}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
-import de.uniulm.ki.panda3.symbolic.search.{IsModificationAllowed, IsFlawAllowed}
+import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints.{LTLFormula, LTLTrue}
+import de.uniulm.ki.panda3.symbolic.search.{IsFlawAllowed, IsModificationAllowed}
 import de.uniulm.ki.util.{DirectedGraph, DotPrintable, HashMemo, SimpleDirectedGraph}
 import de.uniulm.ki.panda3.symbolic.writer._
 
@@ -42,7 +43,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
                 @Deprecated parameterVariableConstraints: CSP,
                 init: PlanStep, goal: PlanStep, isModificationAllowed: IsModificationAllowed, isFlawAllowed: IsFlawAllowed,
                 planStepDecomposedByMethod: Map[PlanStep, DecompositionMethod], planStepParentInDecompositionTree: Map[PlanStep, (PlanStep, PlanStep)],
-                dontExpandVariableConstraints: Boolean = false) extends
+                dontExpandVariableConstraints: Boolean = false, ltlConstraint: LTLFormula = LTLTrue) extends
   DomainUpdatable with PrettyPrintable with HashMemo with DotPrintable[PlanDotOptions] {
 
 
@@ -194,7 +195,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     val newPlanStepParentInDecompositionTree = planStepParentInDecompositionTree ++ modification.setParentOfPlanSteps
 
     Plan(newPlanStepsIncludingRemovedOnes, newCausalLinks, newOrderingConstraints, newVariableConstraints, init, goal, isModificationAllowed, isFlawAllowed,
-         newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree)
+         newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree, dontExpandVariableConstraints, ltlConstraint)
   }
 
   /** returns a completely new instantiated version of the current plan. This can e.g. be used to clone subplans of [[de.uniulm.ki.panda3.symbolic.domain.DecompositionMethod]]s. */
@@ -241,19 +242,21 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     assert(planStepDecomposedByMethod.isEmpty, "Not yet implemented")
     assert(planStepParentInDecompositionTree.isEmpty, "Not yet implemented")
 
-    (Plan(newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, newInit, newGoal, isModificationAllowed, isFlawAllowed, Map(), Map()), sub,
-      planStepMapping.toMap)
+    (Plan(newPlanSteps, newCausalLinks, newOrderingConstraints, newVariableConstraints, newInit, newGoal, isModificationAllowed, isFlawAllowed, Map(), Map(),
+          dontExpandVariableConstraints, ltlConstraint), sub, planStepMapping.toMap)
   }
 
   def update(domainUpdate: DomainUpdate): Plan = domainUpdate match {
     case SetExpandVariableConstraintsInPlans(dontExpand)                   => this.copy(dontExpandVariableConstraints = dontExpand)
     case AddVariables(newVariables)                                        => Plan(planStepsAndRemovedPlanSteps, causalLinksAndRemovedCausalLinks, orderingConstraints,
                                                                                    variableConstraints.addVariables(newVariables), init, goal, isModificationAllowed, isFlawAllowed,
-                                                                                   planStepDecomposedByMethod, planStepParentInDecompositionTree)
+                                                                                   planStepDecomposedByMethod, planStepParentInDecompositionTree,
+                                                                                   dontExpandVariableConstraints, ltlConstraint)
     case AddVariableConstraints(newVariableConstraints)                    => Plan(planStepsAndRemovedPlanSteps, causalLinksAndRemovedCausalLinks, orderingConstraints,
                                                                                    variableConstraints.addConstraints(newVariableConstraints), init, goal, isModificationAllowed,
                                                                                    isFlawAllowed,
-                                                                                   planStepDecomposedByMethod, planStepParentInDecompositionTree)
+                                                                                   planStepDecomposedByMethod, planStepParentInDecompositionTree,
+                                                                                   dontExpandVariableConstraints, ltlConstraint)
     case AddLiteralsToInitAndGoal(literalsInit, literalsGoal, constraints) =>
       // TODO: currently we only support this operation if all literals are 0-ary
       assert((literalsInit ++ literalsGoal) forall {
@@ -286,7 +289,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       Plan(planStepsAndRemovedPlanSteps map { _ update exchangeInit update exchangeGoal }, causalLinksAndRemovedCausalLinks map { _ update exchangeInit update exchangeGoal },
            orderingConstraints update exchangeInit update exchangeGoal, variableConstraints, newInit, goal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod,
-           planStepParentInDecompositionTree)
+           planStepParentInDecompositionTree, dontExpandVariableConstraints, ltlConstraint)
 
     case ExchangeTask(taskMap)                 =>
       // check if we are actually have to change anything
@@ -306,7 +309,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
              newPlan.orderingConstraints update domainUpdate, parameterVariableConstraints.addVariables(newVariables), newPlan.init update domainUpdate, newPlan.goal update domainUpdate,
              newPlan.isModificationAllowed, newPlan.isFlawAllowed,
              newPlan.planStepDecomposedByMethod map { case (a, b) => (a update domainUpdate, b update domainUpdate) },
-             newPlan.planStepParentInDecompositionTree map { case (a, (b, c)) => (a update domainUpdate, (b update domainUpdate, c update domainUpdate)) })
+             newPlan.planStepParentInDecompositionTree map { case (a, (b, c)) => (a update domainUpdate, (b update domainUpdate, c update domainUpdate)) },
+             dontExpandVariableConstraints, ltlConstraint)
       }
     case PropagateEquality(protectedVariables) =>
       // determine all variables that can be eliminated
@@ -359,7 +363,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
         case (ps, (parent, inPlan)) => (ps update possiblyInvertedUpdate, (parent update possiblyInvertedUpdate, inPlan update possiblyInvertedUpdate))
       }
       Plan(newPlanStepsAndRemovedPlanSteps, newCausalLinksAndRemovedCausalLinks, newOrderingConstraints, newVariableConstraint, newInit, newGoal, isModificationAllowed, isFlawAllowed,
-           newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree)
+           newPlanStepDecomposedByMethod, newPlanStepParentInDecompositionTree, dontExpandVariableConstraints, ltlConstraint)
   }
 
   def replaceInitAndGoal(newInit: PlanStep, newGoal: PlanStep, variablesToKeep: Seq[Variable]): Plan = {
@@ -378,7 +382,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       CausalLink(replace(p), replace(c), cond)
     }
     Plan(topPlanTasks, newCausalLinks, topOrdering, parameterVariableConstraints update RemoveVariables(variablesToRemove) update AddVariables(variablesToAdd.toSeq), newInit, newGoal,
-         isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree)
+         isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod, planStepParentInDecompositionTree, dontExpandVariableConstraints, ltlConstraint)
   }
 
   def isPresent(planStep: PlanStep): Boolean = !planStepDecomposedByMethod.contains(planStep)
@@ -594,7 +598,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
 
   lazy val normalise: Plan = Plan(planSteps, causalLinks, orderingConstraintsWithoutRemovedPlanSteps, parameterVariableConstraints, init, goal, isModificationAllowed, isFlawAllowed, Map(),
-                                  Map())
+                                  Map(), dontExpandVariableConstraints, ltlConstraint)
 
   // attention, this will essentially infer causal links anew
   lazy val maximalDeordering: Plan = {
@@ -771,7 +775,7 @@ object Plan {
 
 
     Plan(planStepSequence ++ removedPlanSteps, Nil, totalOrdering.addPlanSteps(removedPlanSteps), CSP(Set(), Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws,
-         planStepDecomposedByMethod, planStepParentInDecompositionTree)
+         planStepDecomposedByMethod, planStepParentInDecompositionTree, false, LTLTrue)
   }
 
 

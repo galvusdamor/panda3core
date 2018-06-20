@@ -99,7 +99,7 @@ trait NumberOfActionsRestrictionViaAutomaton[P, I] extends PathBasedEncoding[P, 
     // base case
     val countingBase =
       paths.zipWithIndex flatMap { case (p, i) =>
-        val elementary = impliesSingle(actionAt(p), numberOfActionsBetween(i, i, 1)) :: notImplies(actionAt(p), numberOfActionsBetween(i, i, 0)) :: Nil
+        val elementary = impliesSingle(actionAt(p), numberOfActionsBetween(i, i, 1)) :: notImplies(actionAt(p) :: Nil, numberOfActionsBetween(i, i, 0)) :: Nil
         val nonPresent = Range(2, paths.length + 1) map { x => Clause((numberOfActionsBetween(i, i, x), false)) }
         elementary ++ nonPresent
       }

@@ -17,10 +17,11 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, SimpleDecompositionMethod, Task, Domain}
-import de.uniulm.ki.panda3.symbolic.logic.{Predicate, Literal}
+import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, SimpleDecompositionMethod, Task}
+import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.OrderingConstraint
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.util._
 
 import scala.collection.Seq
@@ -29,7 +30,8 @@ import scala.collection.Seq
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class GeneralEncoding(timeCapsule: TimeCapsule,
-                           domain: Domain, initialPlan: Plan, taskSequence: Seq[Task], offsetToK: Int, overrideK: Option[Int] = None) extends LinearPrimitivePlanEncoding {
+                           domain: Domain, initialPlan: Plan, intProblem : IntProblem,
+                           taskSequence: Seq[Task], offsetToK: Int, overrideK: Option[Int] = None) extends  LinearPrimitivePlanEncoding {
 
   lazy val taskSequenceLength      = taskSequence.length
   lazy val numberOfActionsPerLayer = taskSequence.length
@@ -116,7 +118,7 @@ case class GeneralEncoding(timeCapsule: TimeCapsule,
       }
     }
 
-    (children flatMap atMostOneOf) ++ atMostOneOf(fathers) :+ impliesRightOr(actionUsed(layer, position) :: Nil, fathers)
+    children.flatMap(atMostOneOf(_)) ++ atMostOneOf(fathers) :+ impliesRightOr(actionUsed(layer, position) :: Nil, fathers)
   }
 
 

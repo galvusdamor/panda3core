@@ -16,16 +16,17 @@
 
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import java.io.{BufferedWriter, OutputStream, File, FileInputStream}
+import java.io.{BufferedWriter, File, FileInputStream, OutputStream}
 
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.panda3.symbolic.compiler.{ExpandSortHierarchy, ClosedWorldAssumption, SHOPMethodCompiler, ToPlainFormulaRepresentation}
+import de.uniulm.ki.panda3.symbolic.compiler.{ClosedWorldAssumption, ExpandSortHierarchy, SHOPMethodCompiler, ToPlainFormulaRepresentation}
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachability.TaskDecompositionGraph
 import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.util._
 
 import scala.collection._
@@ -43,6 +44,8 @@ trait VerifyEncoding {
   def timeCapsule: TimeCapsule
 
   def domain: Domain
+
+  def intProblem : IntProblem
 
   def initialPlan: Plan
 
@@ -81,19 +84,25 @@ trait VerifyEncoding {
 
 
   // LOGICALS ABBREVIATIONS
-  protected def atLeastOneOf(atoms: Seq[String]): Clause = Clause(atoms map { (_, true) })
+  def atLeastOneOf(atoms: Seq[String]): Clause = Clause(atoms map { (_, true) })
 
   protected var atMostCounter = 0
 
-  protected def atMostOneOf(atoms: Seq[String]): Seq[Clause] = {
+  // at most one of, but only if qualifier is true
+  def atMostOneOf(atoms: Seq[String], qualifier: Option[String] = None): Seq[Clause] = {
     val buffer = new ArrayBuffer[Clause]()
     val numberOfBits: Int = Math.ceil(Math.log(atoms.length) / Math.log(2)).toInt
     val bits = Range(0, numberOfBits) map { b => ("atMost_" + atMostCounter + "_" + b, b) }
 
+    val qualifierList : Seq[(String,Boolean)] = qualifier match {
+      case None => Nil
+      case Some(q) => (q,false) :: Nil
+    }
+
     atoms.zipWithIndex foreach { case (atom, index) =>
       bits foreach { case (bitString, b) =>
-        if ((index & (1 << b)) == 0) buffer append Clause((atom, false) :: (bitString, false) :: Nil)
-        else buffer append Clause((atom, false) :: (bitString, true) :: Nil)
+        if ((index & (1 << b)) == 0) buffer append Clause(((atom, false) :: (bitString, false) :: Nil) ++ qualifierList)
+        else buffer append Clause(((atom, false) :: (bitString, true) :: Nil) ++ qualifierList)
       }
     }
 
@@ -116,51 +125,58 @@ trait VerifyEncoding {
     buffer.toSeq*/
   }
 
-  protected def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms).+:(atLeastOneOf(atoms))
+  def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms).+:(atLeastOneOf(atoms))
 
-  protected def impliesNot(left: String, right: String): Clause = Clause((left, false) :: (right, false) :: Nil)
+  def impliesNot(left: String, right: String): Clause = Clause((left, false) :: (right, false) :: Nil)
 
-  protected def impliesNot(left: Seq[String], right: String): Clause = Clause((left map { l => (l, false) }).+:(right, false))
+  def impliesNot(left: Seq[String], right: String): Clause = Clause((left map { l => (l, false) }).+:(right, false))
 
-  protected def notImplies(left: String, right: String): Clause = Clause((left, true) :: (right, true) :: Nil)
+  def notImplies(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, true)))
 
-  protected def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
+  def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
 
-  protected def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) :: (leftFalse, true) :: (right, false) :: Nil) :: Nil
 
-  protected def impliesAllNot(left: String, right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
 
-  protected def notImpliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = {
+  def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) :: (leftFalse, true) :: (right, false) :: Nil) :: Nil
+
+  def impliesLeftTrueAndFalseImpliesTrue(leftTrue: Seq[String], leftFalse: Seq[String], right: String): Clause =
+    Clause(leftTrue.map((_, false)) ++ leftFalse.map((_, true)) ++ ((right, true) :: Nil))
+
+  def impliesAllNot(left: String, right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
+
+  def impliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
+
+  def notImpliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = {
     val leftList = left map { (_, true) }
 
     right map { r => Clause(leftList.:+((r, false))) }
   }
 
-  protected def impliesSingle(left: String, right: String): Clause = Clause((left, false) :: (right, true) :: Nil)
+  def impliesSingle(left: String, right: String): Clause = Clause((left, false) :: (right, true) :: Nil)
 
 
-  protected def impliesRightAnd(leftConjunct: Seq[String], rightConjunct: Seq[String]): Seq[Clause] = {
+  def impliesRightAnd(leftConjunct: Seq[String], rightConjunct: Seq[String]): Seq[Clause] = {
     val negLeft = leftConjunct map { (_, false) }
     rightConjunct map { r => Clause(negLeft.:+(r, true)) }
   }
 
-  protected def impliesRightNotAll(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
+  def impliesRightNotAll(leftConjunct: Seq[String], rightConjunct: Seq[String]): Clause = {
     val negLeft = leftConjunct map { (_, false) }
     val negRight = rightConjunct map { (_, false) }
     Clause(negLeft ++ negRight)
   }
 
-  protected def impliesRightAndSingle(leftConjunct: Seq[String], right: String): Clause = {
+  def impliesRightAndSingle(leftConjunct: Seq[String], right: String): Clause = {
     val negLeft = leftConjunct map { (_, false) }
     Clause(negLeft.+:(right, true))
   }
 
-  protected def impliesRightOr(leftConjunct: Seq[String], rightDisjunct: Seq[String]): Clause = {
+  def impliesRightOr(leftConjunct: Seq[String], rightDisjunct: Seq[String]): Clause = {
     val negLeft = leftConjunct map { (_, false) }
     Clause(negLeft ++ (rightDisjunct map { x => (x, true) }))
   }
 
-  protected def allImply(left: Seq[String], target: String): Seq[Clause] = left flatMap { x => impliesRightAnd(x :: Nil, target :: Nil) }
+  def allImply(left: Seq[String], target: String): Seq[Clause] = left flatMap { x => impliesRightAnd(x :: Nil, target :: Nil) }
 
 
   lazy val possibleAndImpossibleActionsPerLayer: Map[Int, (Seq[Task], Seq[Task])] = Range(-1, K) map { layer =>
@@ -372,6 +388,8 @@ object Clause {
   def apply(disjuncts: Seq[(String, Boolean)]): Clause = Clause(disjuncts.toArray)
 
   def apply(atom: String): Clause = Clause((atom, true) :: Nil)
+
+  def apply(atoms: Array[String]): Clause = Clause(atoms map { a => (a, true) })
 
   def apply(literal: (String, Boolean)): Clause = Clause(literal :: Nil)
 }

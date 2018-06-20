@@ -30,12 +30,13 @@ import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-object ClosedWorldAssumption extends DomainTransformer[Boolean] {
+object ClosedWorldAssumption extends DomainTransformer[(Boolean, Set[String])] {
 
-  def transform(inDomain: Domain, inPlan: Plan): (Domain, Plan) = transform(inDomain, inPlan, dontNegateUnnecessarily = true)
+  def transform(inDomain: Domain, inPlan: Plan): (Domain, Plan) = transform(inDomain, inPlan, (true, Set()))
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
-  override def transform(domain: Domain, plan: Plan, dontNegateUnnecessarily: Boolean): (Domain, Plan) = {
+  override def transform(domain: Domain, plan: Plan, config: (Boolean, Set[String])): (Domain, Plan) = {
+    val (dontNegateUnnecessarily, predicateToKeep) = config
     val oldInit: PlanStep = plan.init
 
     // determine whether there are all variables for constants we possibly need
@@ -60,10 +61,14 @@ object ClosedWorldAssumption extends DomainTransformer[Boolean] {
       collect {
       case SHOPDecompositionMethod(_, _, precondition, _, _) => precondition.containedPredicatesWithSign
     } flatten)
+
     val occurringNegativePredicates = occurringNegativePredicatesWithArgumentVariables map { case (p, _, s) => (p, s) } distinct
     val negativePredicatesWithPossibleArguments: Map[Predicate, Seq[Seq[Variable]]] =
       occurringNegativePredicatesWithArgumentVariables collect { case (p, vs, false) => (p, vs) } groupBy { _._1 } map { case (p, vss) => p -> (vss map { _._2 }) }
-    val nonOccurringNegativePredicates = domain.predicates map { p => (p, false) } filterNot occurringNegativePredicates.contains map { _._1 }
+    val nonOccurringNegativePredicates = domain.predicates map { p => (p, false) } filterNot occurringNegativePredicates.contains map { _._1 } filterNot {
+      p => predicateToKeep.exists(_.drop(1) == p.name)
+    }
+
 
     // create the new initial plan step
     // build a set of all literals

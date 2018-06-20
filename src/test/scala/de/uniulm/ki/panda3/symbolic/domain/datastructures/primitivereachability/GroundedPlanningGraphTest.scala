@@ -40,7 +40,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
       // we assume that the domain is grounded
 
       // cwa
-      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, true)
+      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, (true,Set[String]()))
       val (domain, initialPlan) = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
 
 
@@ -112,7 +112,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
       // we assume that the domain is grounded
 
       // cwa
-      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, true)
+      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, (true,Set[String]()))
       val plainFormula = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
       val (domain, initialPlan) = RemoveNegativePreconditions.transform(plainFormula, ())
 
@@ -189,7 +189,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
       // we assume that the domain is grounded
 
       // cwa
-      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, true)
+      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, (true,Set[String]()))
       val plainFormula = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
       val (domain, initialPlan) = RemoveNegativePreconditions.transform(plainFormula, ())
 
@@ -210,7 +210,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
       // we assume that the domain is grounded
 
       // cwa
-      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, true)
+      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, (true,Set[String]()))
       val plainFormula = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
       val (domain, initialPlan) = RemoveNegativePreconditions.transform(plainFormula, ())
 
@@ -229,7 +229,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
       // we assume that the domain is grounded
 
       // cwa
-      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, true)
+      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, (true,Set[String]()))
       val plainFormula = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
       val (domain, initialPlan) = RemoveNegativePreconditions.transform(plainFormula, ())
 
@@ -248,7 +248,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
       // we assume that the domain is grounded
 
       // cwa
-      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, true)
+      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, (true,Set[String]()))
       val plainFormula = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
       val (domain, initialPlan) = RemoveNegativePreconditions.transform(plainFormula, ())
 
@@ -276,7 +276,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
       // we assume that the domain is grounded
 
       // cwa
-      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, true)
+      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, (true,Set[String]()))
       val (domain, initialPlan) = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
 
 
@@ -299,7 +299,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
       // we assume that the domain is grounded
 
       // cwa
-      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, true)
+      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, (true,Set[String]()))
       val (domain, initialPlan) = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
 
 
@@ -315,7 +315,7 @@ class GroundedPlanningGraphTest extends FlatSpec {
       val problemFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/parser/pddl/IPC6/pegsol-strips/problems/p03.pddl"
 
       val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
-      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, info = true)
+      val cwaAppliedDomainAndProblem = ClosedWorldAssumption.transform(parsedDomainAndProblem, (true,Set[String]()))
       val plain = ToPlainFormulaRepresentation.transform(cwaAppliedDomainAndProblem, ())
       val (domain, problem) = RemoveNegativePreconditions.transform(plain, ())
 

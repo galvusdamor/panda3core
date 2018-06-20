@@ -20,6 +20,7 @@ import de.uniulm.ki.panda3.configuration.SATReductionMethod
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
+import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.util.TimeCapsule
 
 import scala.collection.Seq
@@ -27,7 +28,7 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class SOGPOCLDeleteEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan,
+case class SOGPOCLDeleteEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
                                  taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, overrideK: Option[Int] = None,
                                  restrictionMethod: RestrictionMethod) extends SOGPOCLEncoding {
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ

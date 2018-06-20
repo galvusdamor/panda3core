@@ -34,7 +34,7 @@ class DomainPropertyAnalyserTest extends FlatSpec {
     val domainFile = "src/test/resources/de/uniulm/ki/panda3/symbolic/domain/domainTypeTestDomain" + domainID + ".hddl"
     val parsedDomainAndProblem = HDDLParser.parseDomainAndProblem(new FileInputStream(domainFile), new FileInputStream(problemFile))
     val sortsExpanded = ExpandSortHierarchy(parsedDomainAndProblem, ())
-    val cwaApplied = ClosedWorldAssumption(sortsExpanded, true)
+    val cwaApplied = ClosedWorldAssumption(sortsExpanded, (true,Set[String]()))
     val shopCompiled = SHOPMethodCompiler(cwaApplied, ())
     val plainFormula = ToPlainFormulaRepresentation(shopCompiled, ())
     val (domain, plan) = RemoveNegativePreconditions(plainFormula, ())

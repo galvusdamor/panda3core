@@ -125,7 +125,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
     val dotStringBuilder = new StringBuilder()
 
     dotStringBuilder append "digraph someDirectedGraph{\n"
-    edgeList foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + ";\n" }
+    edgeList foreach { case (a, b) => dotStringBuilder append "\ta" + vertices.indexOf(a) + " -> a" + vertices.indexOf(b) + " [label=\"" + dotEdgeStyleRenderer(a, b) + "\"];\n" }
     dotStringBuilder append "\n"
     vertices.zipWithIndex foreach { case (obj, index) =>
       val string = (if (options.labelNodesWithNumbers) index.toString else obj match {case pp: PrettyPrintable => pp.shortInfo; case x => nodeRenderer(x)}).replace('\"', '\'')
@@ -137,6 +137,9 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   }
 
   protected def dotVertexStyleRenderer(v: T): String = ""
+
+  protected def dotEdgeStyleRenderer(from: T, to: T): String = ""
+
 
   def map[U](f: T => U): DirectedGraph[U] = SimpleDirectedGraph(vertices map f, edgeList map { case (a, b) => (f(a), f(b)) })
 

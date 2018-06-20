@@ -158,7 +158,8 @@ object Grounding extends DomainTransformer[(GroundedReachabilityAnalysis, Map[Gr
       }
 
       Plan(actualGroundedPlansteps, causalLinks, TaskOrdering(orderingConstraints, actualGroundedPlansteps), CSP(Set(), Nil),
-           groundedPlanStepMapping(plan.init), groundedPlanStepMapping(plan.goal), plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map())
+           groundedPlanStepMapping(plan.init), groundedPlanStepMapping(plan.goal), plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map(),
+           plan.dontExpandVariableConstraints, plan.ltlConstraint)
     }
 
 
@@ -193,7 +194,8 @@ object Grounding extends DomainTransformer[(GroundedReachabilityAnalysis, Map[Gr
       val topPS = PlanStep(2, topTask, topTask.parameters)
       val planSteps: Seq[PlanStep] = plan.init :: plan.goal :: topPS :: Nil
       val ordering = TaskOrdering(OrderingConstraint.allBetween(plan.init, plan.goal, topPS), planSteps)
-      val topPlan = Plan(planSteps, Nil, ordering, plan.variableConstraints, plan.init, plan.goal, plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map())
+      val topPlan = Plan(planSteps, Nil, ordering, plan.variableConstraints, plan.init, plan.goal, plan.isModificationAllowed, plan.isFlawAllowed, Map(), Map(),
+                         plan.dontExpandVariableConstraints, plan.ltlConstraint)
 
       groundPlan(topPlan, alreadyGroundedVariableMapping)
     }
