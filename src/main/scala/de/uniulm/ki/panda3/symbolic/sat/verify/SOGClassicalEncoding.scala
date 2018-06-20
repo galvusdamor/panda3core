@@ -20,7 +20,7 @@ import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.sat.IntProblem
-import de.uniulm.ki.util.TimeCapsule
+import de.uniulm.ki.util.{Dot2PdfCompiler, TimeCapsule}
 
 import scala.collection.{Seq, mutable}
 
@@ -212,7 +212,7 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
   // TODO: determine this size more intelligently
   lazy val taskSequenceLength: Int = Math.max(if (primitivePaths.length == 0) 0 else 1, primitivePaths.length - 0)
 
-  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, intProblem, taskSequenceLength, Nil, overrideOverrideK = Some(K))
+  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, intProblem, taskSequenceLength, Nil)
 
   override def stateTransitionFormulaProvider(): Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
 
@@ -248,8 +248,7 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
 }
 
 case class SOGClassicalN4Encoding(timeCapsule: TimeCapsule,
-                                  domain: Domain, initialPlan: Plan, intProblem : IntProblem,
-                                  taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGClassicalEncoding {
+                                  domain: Domain, initialPlan: Plan, intProblem : IntProblem,taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None) extends SOGClassicalEncoding {
 
   lazy val taskSequenceLength: Int = primitivePaths.length
 
