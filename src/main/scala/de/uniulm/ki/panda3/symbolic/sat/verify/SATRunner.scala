@@ -314,7 +314,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         // generate appropriate formula
         val usedFormula = usedFormulaGeneral ++ encoder.planLengthDependentFormula(next)
 
-        //writeStringToFile(usedFormula map { c => c.disjuncts map { case (a, p) => (if (!p) "not " else "") + a } mkString "\t" } mkString "\n", "formula.txt")
+        //val bMAp = Clause.atomIndices.map(_.swap)
+        //writeStringToFile(usedFormula map { c => c.disjuncts map { case a => (if (a < 0) "not " else "") + bMAp(Math.abs(a)-1) } mkString "\t" } mkString "\n", "formula.txt")
 
         timeCapsule start Timings.TRANSFORM_DIMACS
         println("READY TO WRITE")
@@ -716,7 +717,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
         (Nil, Nil, primitiveSolution, Map(), Map())
       case pbe: PathBasedEncoding[_, _] =>
-        val nodes = formulaVariables filter { _.startsWith("action!") } filter allTrueAtoms.contains
+        val nodes = formulaVariables filter { _.startsWith("pathaction!") } filter allTrueAtoms.contains
 
         val edges = nodes flatMap { parent =>
           nodes flatMap { child =>
@@ -867,7 +868,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             //println("Primitive Sequence with paths")
             //println(actionSequence map actionStringToInfoString mkString "\n")
 
-            //val innerActions = allTrueAtoms filter { _.startsWith("action!") } filterNot { t => t.contains("-1") || t.contains("-2") }
+            //val innerActions = allTrueAtoms filter { _.startsWith("pathaction!") } filterNot { t => t.contains("-1") || t.contains("-2") }
             //println("Inner actions with paths")
             //println(innerActions map actionStringToInfoString mkString "\n")
 
@@ -1005,7 +1006,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                 //println("Primitive Sequence with paths")
                 //println(actionSequence map actionStringToInfoString mkString "\n")
 
-                //val innerActions = allTrueAtoms filter { _.startsWith("action!") } filterNot { t => t.contains("-1") || t.contains("-2") }
+                //val innerActions = allTrueAtoms filter { _.startsWith("pathaction!") } filterNot { t => t.contains("-1") || t.contains("-2") }
                 //println("Inner actions with paths")
                 //println(innerActions map actionStringToInfoString mkString "\n")
 

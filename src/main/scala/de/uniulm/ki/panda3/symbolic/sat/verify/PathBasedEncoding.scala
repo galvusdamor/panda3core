@@ -38,7 +38,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
   protected def pathAction(l: Int, p: Seq[Int], t: Task) = {
     assert(p.length == l, "path " + p.mkString("(", ",", ")") + " does not have length " + l)
-    "action!" + l + "_" + p.mkString(";") + "," + taskIndex(t)
+    "pathaction!" + l + "_" + p.mkString(";") + "," + taskIndex(t)
   }
 
   // layer, path to that action, actual method
