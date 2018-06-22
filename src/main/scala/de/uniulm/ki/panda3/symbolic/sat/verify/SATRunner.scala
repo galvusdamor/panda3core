@@ -268,6 +268,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
               SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes)
             case POCLDeleteEncoding            =>
               SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes)
+            case POCLForbidEncoding            =>
+              SOGPOCLForbidEffectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes)
             case POStateEncoding               =>
               SOGPOREncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, usePDTMutexes, defineK)
           }
@@ -1201,6 +1203,8 @@ object ClassicalN4Encoding extends POEncoding
 object POCLDirectEncoding extends POEncoding
 
 object POCLDeleteEncoding extends POEncoding
+
+object POCLForbidEncoding extends POEncoding
 
 object POStateEncoding extends POEncoding
 

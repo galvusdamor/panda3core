@@ -34,6 +34,7 @@ abstract class SOGPartialNoPath extends SOGEncoding {
   override lazy val noAbstractsFormula: Seq[Clause] = primitivePaths flatMap { case (p, ts) => ts filter { _.isAbstract } map { t => Clause((pathAction(p.length - 1, p, t), false)) } }
 
 
+  val enforceTotalOrder: Boolean = false
 
   val initVertex : (Seq[Int], Set[Task])                = (-1 :: Nil, Set(initialPlan.init.schema))
   val goalVertex : (Seq[Int], Set[Task])                = (-2 :: Nil, Set(initialPlan.goal.schema))
@@ -51,11 +52,22 @@ abstract class SOGPartialNoPath extends SOGEncoding {
       var k = 0
       while (k < pathsWithInitAndGoal.length) {
         if (i != k && !(onlyPathSOG.reachable(pathsWithInitAndGoal(i)) contains pathsWithInitAndGoal(k))) {
+          if (enforceTotalOrder) clauses append Clause(Array(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)), before(pathsWithInitAndGoal(k), pathsWithInitAndGoal(i))))
+
           var j = 0
           while (j < pathsWithInitAndGoal.length) {
             if (j != i && j != k) {
-              clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(j)) :: before(pathsWithInitAndGoal(j), pathsWithInitAndGoal(k)) :: Nil,
-                                                   before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
+              // test whether one antecedant is already true
+              // note: both cannot be true, else i->k would already hold in the SOG
+              if (onlyPathSOG.reachable(pathsWithInitAndGoal(i)) contains pathsWithInitAndGoal(j))
+                clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(j), pathsWithInitAndGoal(k)) :: Nil,
+                                                     before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
+              else if (onlyPathSOG.reachable(pathsWithInitAndGoal(j)) contains pathsWithInitAndGoal(k))
+                clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(j)) :: Nil,
+                                                     before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
+              else
+                clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(j)) :: before(pathsWithInitAndGoal(j), pathsWithInitAndGoal(k)) :: Nil,
+                                                     before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
             }
             j += 1
           }
@@ -69,8 +81,7 @@ abstract class SOGPartialNoPath extends SOGEncoding {
     pathsWithInitAndGoal foreach { i => pathsWithInitAndGoal filter { _ != i } foreach { j => clauses append impliesNot(before(i, j), before(j, i)) } }
 
     //sogOrderMustBeRespected
-    extendedSOG.vertices foreach { case p@(i, _) => extendedSOG.reachable(p).-(p) map { _._1 } foreach { j => clauses append Clause(before(i, j)) } }
-
+    //extendedSOG.vertices foreach { case p@(i, _) => extendedSOG.reachable(p).-(p) map { _._1 } foreach { j => clauses append Clause(before(i, j)) } }
 
     clauses.toArray
   }

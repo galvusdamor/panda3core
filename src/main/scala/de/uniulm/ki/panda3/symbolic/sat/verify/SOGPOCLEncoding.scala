@@ -30,7 +30,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-abstract class SOGPOCLEncoding extends SOGPartialNoPath with NumberOfActionsRestrictionViaAutomaton[SOG, NonExpandedSOG]{
+abstract class SOGPOCLEncoding extends SOGPartialNoPath with NumberOfActionsRestrictionViaAutomaton[SOG, NonExpandedSOG] {
 
   protected def preconditionOfPath(path: Seq[Int], precondition: Predicate): String = "prec^" + path.mkString(";") + "_" + precondition.name
 
@@ -41,8 +41,8 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath with NumberOfActionsRest
   override lazy val stateTransitionFormula: Seq[Clause] = {
 
     val stringA = sog.dotString(options = DirectedGraphDotOptions(),
-                                        //nodeRenderer = {case (path, tasks) => tasks map { _.name } mkString ","})
-                                        nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + path})
+                                //nodeRenderer = {case (path, tasks) => tasks map { _.name } mkString ","})
+                                nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + path})
     Dot2PdfCompiler.writeDotToFile(stringA, "sogExt.pdf")
 
 
@@ -65,21 +65,23 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath with NumberOfActionsRest
     }
 
     val preconditionsMustBeSupported = preconditionsMustBeSupportedTemp map { _._1 }
-    println("Preconditions must supported: " + preconditionsMustBeSupported.length + " clauses")
     val preconditions = preconditionsMustBeSupportedTemp map { _._2 } distinct
+
+    println("Preconditions must be supported: " + preconditionsMustBeSupported.length + " clauses")
+    println("Number of distinct preconditions: " + preconditions.length)
 
     // if a precondition is supported it must be supported by some action that can actually support it ...
     val supportedPreconditionsMustHaveSupporterTemp = preconditions map { case (n@(path, _), prec) =>
       // go over all task that are potentially ordered before ..
       val excludedTasks = extendedSOG.reachable(n) + n
 
-      val potentialSupportingTasks = extendedSOG.vertices filterNot excludedTasks flatMap { case supporter@(sPath, sTasks) =>
+      val potentialSupportingTasks: Seq[((Seq[Int], Set[Task]), Task)] = extendedSOG.vertices filterNot excludedTasks flatMap { case supporter@(sPath, sTasks) =>
         sTasks filter { _.effectsAsPredicateBool exists { case (p, s) => s && p == prec } } map { t => (supporter, t) }
       }
-      val supporterLiterals = potentialSupportingTasks map { _._1._1 } map { p => (supporter(p, path, prec), p) }
+      val supporterLiterals: Seq[(String, Seq[Int])] = (potentialSupportingTasks map { _._1._1 } map { p => (supporter(p, path, prec), p) }).distinct
 
       val supportedPrecMustHaveSupporter = impliesRightOr(preconditionOfPath(path, prec) :: Nil, supporterLiterals.map(_._1).distinct)
-      val supportLeadsToProduction = supporterLiterals map { case (supportLiteral, path) => impliesSingle(supportLiteral, effectOfPath(path, prec)) }
+      val supportLeadsToProduction = supporterLiterals map { case (supportLiteral, p) => impliesSingle(supportLiteral, effectOfPath(p, prec)) }
 
       (supportLeadsToProduction :+ supportedPrecMustHaveSupporter, potentialSupportingTasks map { x => (x._1._1, path, prec) })
     }
@@ -95,7 +97,10 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath with NumberOfActionsRest
     //Dot2PdfCompiler.writeDotToFile(supporterGraph, "clgraph.pdf")
     //Dot2PdfCompiler.writeDotToFile(supporterGraph.condensation, "clgraph-condensation.pdf")
 
-    val supportImpliesOrder = supporterLiterals map { case (p1, p2, prec) => impliesSingle(supporter(p1, p2, prec), before(p1, p2)) }
+    val pathOnlyExtendedSOG = extendedSOG.map(_._1)
+
+    val supportImpliesOrder =
+      supporterLiterals filterNot { case (p1, p2, _) => pathOnlyExtendedSOG.reachable(p1) contains p2 } map { case (p1, p2, prec) => impliesSingle(supporter(p1, p2, prec), before(p1, p2)) }
     println("Support implies order: " + supportImpliesOrder.length + " clauses")
 
 
