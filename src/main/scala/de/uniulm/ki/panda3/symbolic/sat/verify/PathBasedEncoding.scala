@@ -262,7 +262,8 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     //dd(pathDecompositionTree)
 
     val mutexClauses = if (usePDTMutexes) {
-      print("Computed PDT mutexes ... ")
+      print("Computeing PDT mutexes ... ")
+      timeCapsule start GENERATE_MUTEXES
       val pdtMutextes: Seq[((Seq[Int], Task), (Seq[Int], Task))] = pathDecompositionTree.mutexes
       println(" found " + pdtMutextes.length + " mutexes ... generating formula ... ")
       val clauses = pdtMutextes map { case ((path1, task1), (path2, task2)) =>
@@ -271,6 +272,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
         Clause((atom1, false) :: (atom2, false) :: Nil)
       }
+      timeCapsule stop GENERATE_MUTEXES
       println("done")
 
       clauses

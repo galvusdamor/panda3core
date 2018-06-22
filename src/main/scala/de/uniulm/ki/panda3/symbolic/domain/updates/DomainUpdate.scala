@@ -84,4 +84,6 @@ case class SetExpandVariableConstraintsInPlans(dontExpand: Boolean) extends Doma
 
 object DeleteCausalLinks extends DomainUpdate
 
+object RemoveNoops extends DomainUpdate
+
 object NoUpdate extends DomainUpdate

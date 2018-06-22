@@ -68,7 +68,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   }
 
   planStepParentInDecompositionTree foreach { case (ps, (parent, inMethod)) => assert(planStepDecomposedByMethod(parent).subPlan.planSteps.contains(inMethod),
-                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)}
+                                                                                      "method " + planStepDecomposedByMethod(parent).name + " does not contain " + inMethod.shortInfo)
+  }
 
   planStepsWithoutInitGoal foreach {
     ps =>
@@ -337,7 +338,15 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     case DeleteCausalLinks =>
       // need to run noupdate to simplify tasks
       this.copy(causalLinksAndRemovedCausalLinks = Nil).update(NoUpdate)
-    case _                 =>
+
+
+    case RemoveNoops =>
+      val remainingPlanSteps = (planStepsWithoutInitGoal filter { ps => ps.schema.isAbstract || !ps.schema.isNoOp }) :+ init :+ goal
+      val newOrdering = orderingConstraints.removePlanSteps(planStepsWithoutInitGoal filter { ps => ps.schema.isPrimitive && ps.schema.isNoOp })
+
+      Plan(remainingPlanSteps, causalLinksAndRemovedCausalLinks, newOrdering, parameterVariableConstraints, init, goal, isModificationAllowed, isFlawAllowed, planStepDecomposedByMethod,
+           planStepParentInDecompositionTree, dontExpandVariableConstraints, ltlConstraint)
+    case _           =>
       val newInit = init update domainUpdate
       val newGoal = goal update domainUpdate
 

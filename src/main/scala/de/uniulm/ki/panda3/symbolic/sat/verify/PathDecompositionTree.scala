@@ -307,25 +307,30 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       taskPossible
     }
 
+    val possibleTasksPerMethodSet: Array[Array[Set[(Seq[Int], Task)]]] = possibleTasksPerMethod map { case indexArray =>
+      children.indices map { child =>
+        indexArray.find(_._1 == child) match {
+          case None                   => Set[(Seq[Int], Task)]()
+          case Some((_, assignments)) => assignments.toSet
+        }
+      } toArray
+    }
+
     val allLocalMutexes: Seq[((Seq[Int], Task), (Seq[Int], Task))] = children.indices flatMap { child1 =>
       val possibleChild1 = children(child1).possibleAssignments
 
-      val child2Mutexes = children.indices collect { case child2 if child1 != child2 =>
+      val child2Mutexes = children.indices collect { case child2 if child1 < child2 =>
         val possibleChild2 = children(child2).possibleAssignments
+
+        //println("Child " + child1 + "&" + child2 + ": " + possibleChild1.length + " and " + possibleChild2.length)
+        //println("Child " + child1 + "&" + child2 + ": " + possibleChild1.distinct.length + " and " + possibleChild2.distinct.length)
 
         val foundMutexes: Seq[((Seq[Int], Task), (Seq[Int], Task))] = possibleChild1 flatMap { ass1 =>
           possibleChild2 map { ass2 =>
             // check all methods if violating
-            val hasViolating = possibleTasksPerMethod exists { case methodPoss: Array[(Int, Seq[(Seq[Int], Task)])] =>
-              val can1 = methodPoss.find(_._1 == child1) match {
-                case None                   => false
-                case Some((_, assignments)) => assignments contains ass1
-              }
-
-              val can2 = methodPoss.find(_._1 == child2) match {
-                case None                   => false
-                case Some((_, assignments)) => assignments contains ass2
-              }
+            val hasViolating = possibleTasksPerMethodSet exists { case methodPoss: Array[Set[(Seq[Int], Task)]] =>
+              val can1 = methodPoss(child1) contains ass1
+              val can2 = methodPoss(child2) contains ass2
 
               can1 && can2
             }

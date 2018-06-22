@@ -326,8 +326,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         // generate appropriate formula
         val usedFormula = usedFormulaGeneral ++ encoder.planLengthDependentFormula(next)
 
-        val bMAp = Clause.atomIndices.map(_.swap)
-        writeStringToFile(usedFormula map { c => c.disjuncts map { case a => (if (a < 0) "not " else "") + bMAp(Math.abs(a) - 1) } mkString "\t" } mkString "\n", "formula.txt")
+        //val bMAp = Clause.atomIndices.map(_.swap)
+        //writeStringToFile(usedFormula map { c => c.disjuncts map { case a => (if (a < 0) "not " else "") + bMAp(Math.abs(a) - 1) } mkString "\t" } mkString "\n", "formula.txt")
 
         timeCapsule start Timings.TRANSFORM_DIMACS
         println("READY TO WRITE")
@@ -551,7 +551,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           if (solved) {
             println("")
             val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
-            writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+            //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
 
             //println((allTrueAtoms filter {_.startsWith("act_")}).toSeq.sorted mkString "\n")
             //println((allTrueAtoms filter {_.startsWith("auto_state")}).toSeq sortBy {case x => x.split('_').last.toInt}  mkString "\n")

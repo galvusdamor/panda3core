@@ -1253,6 +1253,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
         else Nil) ::
+        (if (true)
+          CompilerConfiguration(PruneNoops, (), "remove no-ops", REMOVE_NOOPS) :: Nil
+        else Nil) ::
         (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
           CompilerConfiguration(CompileGoalIntoAction, (), "goal", TOP_TASK) :: CompilerConfiguration(ForceGroundedInitTop, (), "force top", TOP_TASK) :: Nil
         else Nil) ::
@@ -1419,10 +1422,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val lastCompilersToBeApplied = (if (preprocessingConfiguration.ensureMethodsHaveAtMostTwoTasks)
         CompilerConfiguration(TwoTaskPerMethod, (), "force two tasks per method", TOP_TASK) :: Nil
       else Nil) ::
+        (if (true)
+          CompilerConfiguration(PruneNoops, (), "remove no-ops", REMOVE_NOOPS) :: Nil
+        else Nil) ::
         (if (preprocessingConfiguration.ensureMethodsHaveLastTask)
           CompilerConfiguration(EnsureEveryMethodHasLastTask, (), "ensure last task", LAST_TASK) :: Nil
         else Nil) ::
         Nil flatten
+
 
       // don't run compilation if we are still ground
       val compiledResult = lastCompilersToBeApplied.foldLeft(predicatedPruned)(
@@ -1435,6 +1442,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           timeCapsule stop timingString
           compiled
         })
+
+      val noopCount = compiledResult._1.primitiveTasks.count(_.isNoOp)
+      println("Tasks " + compiledResult._1.primitiveTasks.length + " - " + noopCount)
+
+
+      //System exit 0
 
 
       timeCapsule stop PREPROCESSING
@@ -2197,7 +2210,7 @@ case class SATSearch(solverType: Solvertype,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
                      encodingToUse: POEncoding = POCLDeleteEncoding,
-                     usePDTMutexes : Boolean = true,
+                     usePDTMutexes : Boolean = false,
                      threads: Int = 1
                     ) extends SearchConfiguration {
 

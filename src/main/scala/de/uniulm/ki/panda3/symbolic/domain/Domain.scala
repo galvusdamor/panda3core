@@ -256,6 +256,9 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                      decompositionAxioms = decompositionAxioms map { _.update(domainUpdate) },
                                                      sasPlusRepresentation = sasPlusRepresentation map { _ update domainUpdate }
                                                     )
+    case RemoveNoops                         =>
+      Domain(sorts, predicates, abstractTasks ++ primitiveTasks.filterNot(_.isNoOp), decompositionMethods map { _.update(RemoveNoops) }, decompositionAxioms,
+             mappingToOriginalGrounding, sasPlusRepresentation map { _ update RemoveNoops })
     case _                                   => Domain(sorts map { _.update(domainUpdate) }, predicates map { _.update(domainUpdate) }, tasks map { _.update(domainUpdate) },
                                                        decompositionMethods map { _.update(domainUpdate) },
                                                        decompositionAxioms, mappingToOriginalGrounding,
@@ -279,7 +282,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
 case class GroundedDomainToDomainMapping(taskMapping: Map[Task, GroundTask]) extends DomainUpdatable {
   override def update(domainUpdate: DomainUpdate): GroundedDomainToDomainMapping =
-    GroundedDomainToDomainMapping(taskMapping map {case (t,gt) => t.update(domainUpdate) -> gt.update(domainUpdate)})
+    GroundedDomainToDomainMapping(taskMapping map { case (t, gt) => t.update(domainUpdate) -> gt.update(domainUpdate) })
 
 }
 
@@ -291,6 +294,8 @@ case class SASPlusRepresentation(sasPlusProblem: SasPlusProblem, sasPlusIndexToT
   override def update(domainUpdate: DomainUpdate): SASPlusRepresentation = domainUpdate match {
     case RemovePredicate(predicatesToRemove) =>
       SASPlusRepresentation(sasPlusProblem, sasPlusIndexToTask map { case (i, t) => i -> t.update(domainUpdate) }, sasPlusIndexToPredicate filterNot { predicatesToRemove contains _._2 })
+    case RemoveNoops                         =>
+      SASPlusRepresentation(sasPlusProblem, sasPlusIndexToTask filterNot { _._2.isNoOp }, sasPlusIndexToPredicate)
     case _                                   => this.copy(sasPlusIndexToTask = sasPlusIndexToTask map { case (i, t) => (i, t update domainUpdate) })
   }
 }

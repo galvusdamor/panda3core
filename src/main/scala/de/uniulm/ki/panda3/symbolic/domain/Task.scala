@@ -156,6 +156,8 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
   override def longInfo: String = mediumInfo + "\npreconditions:\n" + precondition.shortInfo + "\n" +
     "\neffects:\n" + effect.shortInfo + "\n"
 
+  lazy val isNoOp : Boolean = precondition.isEmpty && effect.isEmpty
+
   val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)]
   val effectsAsPredicateBool      : Seq[(Predicate, Boolean)]
   lazy val addEffectsAsPredicate         = effectsAsPredicateBool collect { case (p, true) => p }
