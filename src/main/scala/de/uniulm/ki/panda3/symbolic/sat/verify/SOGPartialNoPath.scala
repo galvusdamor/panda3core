@@ -81,7 +81,8 @@ abstract class SOGPartialNoPath extends SOGEncoding {
     pathsWithInitAndGoal foreach { i => pathsWithInitAndGoal filter { _ != i } foreach { j => clauses append impliesNot(before(i, j), before(j, i)) } }
 
     //sogOrderMustBeRespected
-    //extendedSOG.vertices foreach { case p@(i, _) => extendedSOG.reachable(p).-(p) map { _._1 } foreach { j => clauses append Clause(before(i, j)) } }
+    // TODO: this only necessary for plan extraction. These decision variables will not occur in any other clause of the formula.
+    extendedSOG.vertices foreach { case p@(i, _) => extendedSOG.reachable(p).-(p) map { _._1 } foreach { j => clauses append Clause(before(i, j)) } }
 
     clauses.toArray
   }
