@@ -40,10 +40,10 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath with NumberOfActionsRest
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
 
-    val stringA = sog.dotString(options = DirectedGraphDotOptions(),
+    //val stringA = sog.dotString(options = DirectedGraphDotOptions(),
                                 //nodeRenderer = {case (path, tasks) => tasks map { _.name } mkString ","})
-                                nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + path})
-    Dot2PdfCompiler.writeDotToFile(stringA, "sogExt.pdf")
+    //                            nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + path})
+    //Dot2PdfCompiler.writeDotToFile(stringA, "sogExt.pdf")
 
 
     // init and goal must be contained in the final plan

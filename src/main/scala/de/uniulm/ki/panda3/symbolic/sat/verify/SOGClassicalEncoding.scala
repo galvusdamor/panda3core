@@ -77,8 +77,10 @@ trait SOGClassicalEncoding extends SOGEncoding with EncodingWithLinearPlan {
     val pathsPerPosition: Map[Int, Seq[(Int, Int, String)]] = pathAndPosition groupBy { _._2 }
 
     // each position can be mapped to at most one path and vice versa
-    val atMostOneConstraints = restrictionPathsPerPosition(pathsPerPosition) ++ (positionsPerPath.toSeq flatMap { case (a, s) => atMostOneOf(s map { _._3 }) })
-    println("A " + atMostOneConstraints.size)
+    val atMostOneConstraintsA = restrictionPathsPerPosition(pathsPerPosition)
+    val atMostOneConstraintsB = positionsPerPath.toSeq flatMap { case (a, s) => atMostOneOf(s map { _._3 }) }
+    val atMostOneConstraints = atMostOneConstraintsA ++ atMostOneConstraintsB
+    println("A " + atMostOneConstraintsA.size + " and " + atMostOneConstraintsB.size)
 
     // if the path is part of a solution, then it must contain a task
     val selected = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
@@ -191,10 +193,16 @@ case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Dom
                                            taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
                                            useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean) extends SOGClassicalForbiddenEncoding {
 
-  override def stateTransitionFormulaProvider(): Seq[Clause] = stateTransitionFormulaOfLength(taskSequenceLength)
+  override def stateTransitionFormulaProvider(): Seq[Clause] =  {
+    val invariantFormula = Range(0, taskSequenceLength + 1) flatMap { case position =>
+      intProblem.symbolicInvariantArray map { case ((ap, ab), (bp, bb)) => Clause((statePredicate(K - 1, position, ap), ab) :: (statePredicate(K - 1, position, bp), bb) :: Nil) }
+    }
+
+    invariantFormula ++ stateTransitionFormulaOfLength(taskSequenceLength)
+  }
 
 
-  lazy val taskSequenceLength: Int = primitivePaths.length
+  lazy val taskSequenceLength: Int = if (taskSequenceLengthQQ != -1) taskSequenceLengthQQ else primitivePaths.length
 
   override def restrictionPathsPerPosition(pathsPerPosition: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] =
     pathsPerPosition.toSeq flatMap { case (a, s) => atMostOneOf(s map { _._3 }) }
@@ -210,17 +218,31 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
   override def forbiddennessSubtractor: Int = 0
 
   // TODO: determine this size more intelligently
-  lazy val taskSequenceLength: Int = Math.max(if (primitivePaths.length == 0) 0 else 1, primitivePaths.length - 0)
+  lazy val taskSequenceLength: Int = if (taskSequenceLengthQQ != -1) taskSequenceLengthQQ else {
+    val pathNumToUse = if (expansionPossible) primitivePaths.length / 3 else primitivePaths.length
+
+    Math.max(if (pathNumToUse == 0) 0 else 1, pathNumToUse - 0)
+
+  }
 
   val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, intProblem, taskSequenceLength, Nil, Some(K))
+
+  lazy val taskOccurenceMap: Map[Int, Set[Task]] =
+    domain.primitiveTasks map { t => t -> primitivePaths.count(_._2.contains(t)) } groupBy { _._2 } map { case (a, bs) => a -> bs.map(_._1).toSet }
+
+  lazy val tasksWithOnePosition: Set[Task] = taskOccurenceMap.getOrElse(1, Set[Task]())
+  lazy val tasksOnePath : Map[Task, Seq[Int]] = tasksWithOnePosition map {t => t -> primitivePaths.find(_._2.contains(t)).get._1} toMap
 
   override def stateTransitionFormulaProvider(): Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
 
   override def restrictionPathsPerPosition(pathsPerPosition: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] = {
+
+    println(taskOccurenceMap map { case (a, bs) => "Occ: " + a + ": " + bs.size + " " + "actions" } mkString "\n")
+
     val taskToPosWithTask: Seq[Clause] = Range(0, taskSequenceLength) flatMap { case position =>
       pathsPerPosition(position) flatMap { case (pathIndex, _, connectionAtom) =>
         val path = primitivePaths(pathIndex)._1
-        primitivePaths(pathIndex)._2 flatMap { t =>
+        primitivePaths(pathIndex)._2 diff tasksWithOnePosition flatMap { t =>
           val actionAtom = pathAction(path.length, path, t)
 
           impliesSingle(pathToPosWithTask(path, position, t), actionAtom) ::
@@ -239,7 +261,9 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
         pathToPosWithTask(primitivePaths(pathIndex)._1, position, task)
       }
 
-      if (possibleAchievers.nonEmpty)
+      if (tasksWithOnePosition contains task) {
+        impliesSingle(atom, pathToPos(tasksOnePath(task),position)) :: Nil
+      } else if (possibleAchievers.nonEmpty)
         atMostOneOf(possibleAchievers) :+ impliesRightOr(atom :: Nil, possibleAchievers)
       else Clause((atom, false)) :: Nil // if there is no achiever, this position can not be made true
     }

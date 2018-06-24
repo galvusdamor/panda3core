@@ -1253,7 +1253,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
         else Nil) ::
-        (if (true)
+        (if (false)
           CompilerConfiguration(PruneNoops, (), "remove no-ops", REMOVE_NOOPS) :: Nil
         else Nil) ::
         (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
@@ -1422,7 +1422,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val lastCompilersToBeApplied = (if (preprocessingConfiguration.ensureMethodsHaveAtMostTwoTasks)
         CompilerConfiguration(TwoTaskPerMethod, (), "force two tasks per method", TOP_TASK) :: Nil
       else Nil) ::
-        (if (true)
+        (if (false)
           CompilerConfiguration(PruneNoops, (), "remove no-ops", REMOVE_NOOPS) :: Nil
         else Nil) ::
         (if (preprocessingConfiguration.ensureMethodsHaveLastTask)
