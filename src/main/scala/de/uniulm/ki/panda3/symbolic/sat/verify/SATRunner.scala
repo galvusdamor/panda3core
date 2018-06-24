@@ -780,6 +780,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         val allMethods = formulaVariables filter { _.startsWith("method^") } filter allTrueAtoms.contains
 
         //println(allMethods.sorted mkString "\n")
+        //println(allTrueAtoms.filter(_.startsWith("pathaction")).toSeq.sorted mkString "\n")
 
         // attach methods to respective tasks
         val planStepsMethodMap: Map[PlanStep, DecompositionMethod] = if (!extractSolutionWithHierarchy) Map() else
@@ -1018,7 +1019,6 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                     println(allTrueAtoms filter { _.startsWith("pathaction") } mkString "\n")
 
                     val taskSeq = actionSequence map { case solAction =>
-                      println("SOL AC")
                       val pos = solAction.split("_").last.split(",").head
                       val taskID = solAction.split("_").last.split(",").last
                       val pathToPosOption: Option[String] =

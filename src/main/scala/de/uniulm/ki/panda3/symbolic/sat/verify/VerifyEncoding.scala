@@ -45,7 +45,7 @@ trait VerifyEncoding {
 
   def domain: Domain
 
-  def intProblem : IntProblem
+  def intProblem: IntProblem
 
   def initialPlan: Plan
 
@@ -91,38 +91,78 @@ trait VerifyEncoding {
   // at most one of, but only if qualifier is true
   def atMostOneOf(atoms: Seq[String], qualifier: Option[String] = None): Seq[Clause] = {
     val buffer = new ArrayBuffer[Clause]()
-    val numberOfBits: Int = Math.ceil(Math.log(atoms.length) / Math.log(2)).toInt
-    val bits = Range(0, numberOfBits) map { b => ("atMost_" + atMostCounter + "_" + b, b) }
-
-    val qualifierList : Seq[(String,Boolean)] = qualifier match {
-      case None => Nil
-      case Some(q) => (q,false) :: Nil
-    }
-
-    atoms.zipWithIndex foreach { case (atom, index) =>
-      bits foreach { case (bitString, b) =>
-        if ((index & (1 << b)) == 0) buffer append Clause(((atom, false) :: (bitString, false) :: Nil) ++ qualifierList)
-        else buffer append Clause(((atom, false) :: (bitString, true) :: Nil) ++ qualifierList)
-      }
-    }
-
     atMostCounter += 1
-    buffer.toSeq
 
-    /*val atomArray = atoms.toArray
-    val buffer = new ArrayBuffer[Clause]()
+    AtMostOneType.chosenType match {
+      case BinaryEncoding =>
+        val numberOfBits: Int = Math.ceil(Math.log(atoms.length) / Math.log(2)).toInt
+        val bits = Range(0, numberOfBits) map { b => ("atMost_" + atMostCounter + "_" + b, b) }
 
-    var i = 0
-    while (i < atomArray.length) {
-      var j = i + 1
-      while (j < atomArray.length) {
-        buffer append Clause((atomArray(i), false) ::(atomArray(j), false) :: Nil)
-        j += 1
-      }
-      i += 1
+        val qualifierList: Seq[(String, Boolean)] = qualifier match {
+          case None    => Nil
+          case Some(q) => (q, false) :: Nil
+        }
+
+        atoms.zipWithIndex foreach { case (atom, index) =>
+          bits foreach { case (bitString, b) =>
+            if ((index & (1 << b)) == 0) buffer append Clause(((atom, false) :: (bitString, false) :: Nil) ++ qualifierList)
+            else buffer append Clause(((atom, false) :: (bitString, true) :: Nil) ++ qualifierList)
+          }
+        }
+
+      case BinomialEncoding =>
+        val atomArray = atoms.toArray
+        var i = 0
+        while (i < atomArray.length) {
+          var j = i + 1
+          while (j < atomArray.length) {
+            buffer append Clause((atomArray(i), false) :: (atomArray(j), false) :: Nil)
+            j += 1
+          }
+          i += 1
+        }
+
+      case CommanderEncoding =>
+        // group into lists of three
+        val groups = atoms.sliding(3, 3).toSeq
+
+        groups foreach { group => group foreach { a1 => group foreach { a2 => if (a1 != a2) buffer append Clause((a1, false) :: (a2, false) :: Nil) } } }
+
+        if (groups.length > 1) {
+          val groupAtoms: Seq[String] = groups.zipWithIndex map {
+            case (g, i) =>
+              val groupAtom = "atMost_" + atMostCounter + "_ g_" + i
+
+              buffer append impliesRightOr(groupAtom :: Nil, g)
+              buffer appendAll notImpliesAllNot(groupAtom :: Nil, g)
+
+              groupAtom
+          } toSeq
+
+          buffer appendAll atMostOneOf(groupAtoms)
+        }
+      case SequentialEncoding =>
+        buffer appendAll atMostKOf(atoms,1)
     }
-    println("AT MOST " + atoms.length)
-    buffer.toSeq*/
+
+    buffer.toSeq
+  }
+
+  def atMostKOf(atoms: Seq[String], K: Int): Seq[Clause] = {
+    val buffer = new ArrayBuffer[Clause]()
+    atMostCounter += 1
+    val N = atoms.length
+
+    val registers: Array[Array[String]] =
+      Range(0, N + 1) map { i => Range(0, K + 1) map { j => "atMost_" + atMostCounter + "_" + i + "_" + j } toArray } toArray
+
+    Range(1, N) foreach { i => buffer append Clause((atoms(i - 1), false) :: (registers(i)(1), true) :: Nil) }
+    Range(2, K + 1) foreach { j => buffer append Clause((registers(1)(j), false)) }
+    Range(2, N) foreach { i => Range(1, K + 1) foreach { j => buffer append Clause((registers(i - 1)(j), false) :: (registers(i)(j), true) :: Nil) } }
+    Range(2, N) foreach { i => Range(2, K + 1) foreach { j => buffer append Clause((atoms(i - 1), false) :: (registers(i - 1)(j - 1), false) :: (registers(i)(j), true) :: Nil) } }
+    Range(1, N + 1) foreach { i => buffer append Clause((atoms(i - 1), false) :: (registers(i - 1)(K), false) :: Nil) }
+
+    buffer.toSeq
   }
 
   def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms).+:(atLeastOneOf(atoms))
@@ -134,7 +174,6 @@ trait VerifyEncoding {
   def notImplies(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, true)))
 
   def notImpliesNot(left: Seq[String], right: String): Clause = Clause((left map { (_, true) }).+:((right, false)))
-
 
 
   def impliesTrueAntNotToNot(leftTrue: String, leftFalse: String, right: String): Seq[Clause] = Clause((leftTrue, false) :: (leftFalse, true) :: (right, false) :: Nil) :: Nil
@@ -207,7 +246,7 @@ trait VerifyEncoding {
 
   def goalState: Seq[Clause]
 
-  def planLengthDependentFormula(actualPlanLength : Int) : Seq[Clause] = Nil
+  def planLengthDependentFormula(actualPlanLength: Int): Seq[Clause] = Nil
 
   def miniSATString(formulas: Array[Clause], writer: BufferedWriter): scala.Predef.Map[String, Int] = {
 
@@ -369,7 +408,7 @@ case class Clause(disjuncts: Array[Int]) {
 object Clause {
   val atomIndices = new mutable.HashMap[String, Int]()
 
-  def clearCache() : Unit = atomIndices.clear()
+  def clearCache(): Unit = atomIndices.clear()
 
   def apply(disjuncts: Array[(String, Boolean)]): Clause = {
     val compressed = new Array[Int](disjuncts.length)
@@ -393,3 +432,21 @@ object Clause {
 
   def apply(literal: (String, Boolean)): Clause = Clause(literal :: Nil)
 }
+
+
+sealed trait AtMostOneType
+
+object AtMostOneType {
+  //val chosenType: AtMostOneType = BinomialEncoding
+  //val chosenType: AtMostOneType = BinaryEncoding
+  //val chosenType: AtMostOneType = CommanderEncoding
+  val chosenType: AtMostOneType = SequentialEncoding
+}
+
+object BinomialEncoding extends AtMostOneType
+
+object BinaryEncoding extends AtMostOneType
+
+object CommanderEncoding extends AtMostOneType
+
+object SequentialEncoding extends AtMostOneType
