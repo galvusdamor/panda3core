@@ -1669,8 +1669,7 @@ case class ParsingConfiguration(
          "-eliminateEquality" -> (NoParameter, { p: Option[String] => this.copy(eliminateEquality = true).asInstanceOf[this.type] }),
          "-dontEliminateEquality" -> (NoParameter, { p: Option[String] => this.copy(eliminateEquality = false).asInstanceOf[this.type] }),
 
-         "s" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = true).asInstanceOf[this.type] }),
-
+         "-stripHybrid" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = true).asInstanceOf[this.type] }),
          "-dontStripHybrid" -> (NoParameter, { p: Option[String] => this.copy(stripHybrid = false).asInstanceOf[this.type] })
        )
 }

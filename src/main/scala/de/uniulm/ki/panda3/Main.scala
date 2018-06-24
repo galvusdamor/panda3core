@@ -40,7 +40,7 @@ object Main {
   case class RunConfiguration(domFile: Option[String] = None, probFile: Option[String] = None, outputFile: Option[String] = None,
                               config: PlanningConfiguration = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                                                     randomSeed = 42, timeLimit = None,
-                                                                                    ParsingConfiguration(),
+                                                                                    ParsingConfiguration(stripHybrid = true),
                                                                                     PreprocessingConfiguration(compileNegativePreconditions = true,
                                                                                                                compileUnitMethods = false,
                                                                                                                compileInitialPlan = false,
