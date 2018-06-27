@@ -122,7 +122,7 @@ trait VerifyEncoding {
           i += 1
         }
 
-      case CommanderEncoding =>
+      case CommanderEncoding  =>
         // group into lists of three
         val groups = atoms.sliding(3, 3).toSeq
 
@@ -142,7 +142,7 @@ trait VerifyEncoding {
           buffer appendAll atMostOneOf(groupAtoms)
         }
       case SequentialEncoding =>
-        buffer appendAll atMostKOf(atoms,1)
+        buffer appendAll atMostKOf(atoms, 1)
     }
 
     buffer.toSeq
@@ -293,6 +293,32 @@ trait VerifyEncoding {
     //stringBuffer.toString
     Clause.atomIndices.toMap
   }
+
+  def smtString(formulas: Array[Clause], writer: BufferedWriter): scala.Predef.Map[String, Int] = {
+
+    writer write "(set-logic QF_RDL)\n(set-option :produce-models true)\n"
+
+    Clause.atomIndices foreach { case (_, idx) => writer write ("\t(declare-const v" + idx + " Bool)\n") }
+
+    var i = 0
+    while (i < formulas.length) {
+      val lits = formulas(i).disjuncts
+      var j = 0
+      writer write "\t(assert (or"
+      while (j < lits.length) {
+        if (lits(j) < 0) writer write (" (not v" + (-lits(j) - 1) + ")")
+        else writer write (" v" + (lits(j) - 1))
+        j += 1
+      }
+      writer write "))\n"
+      i += 1
+    }
+
+    writer write "(check-sat)\n(get-model)\n(exit)\n"
+
+    Clause.atomIndices.toMap
+  }
+
 }
 
 object VerifyEncoding {

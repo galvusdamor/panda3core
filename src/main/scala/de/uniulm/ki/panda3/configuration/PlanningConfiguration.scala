@@ -2411,3 +2411,5 @@ object CRYPTOMINISAT extends Solvertype {override val longInfo: String = "crypto
 object RISS6 extends Solvertype {override val longInfo: String = "riss6"}
 
 object MapleCOMSPS extends Solvertype {override val longInfo: String = "MapleCOMSPS"}
+
+object CVC4 extends Solvertype {override val longInfo: String = "cvc4"}

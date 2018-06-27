@@ -336,7 +336,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         val uniqFileIdentifier = UUID.randomUUID().toString
         println("UUID " + uniqFileIdentifier)
         val writer = new BufferedWriter(new FileWriter(new File(fileDir + "__cnfString" + uniqFileIdentifier)))
-        val atomMap: Map[String, Int] = encoder.miniSATString(usedFormula, writer)
+        val atomMap: Map[String, Int] = satSolver match {
+          case CVC4 => encoder.smtString(usedFormula, writer)
+          case _    => encoder.miniSATString(usedFormula, writer)
+        }
         println("FLUSH")
         writer.flush()
         writer.close()
@@ -425,6 +428,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
               case MapleCOMSPS   =>
                 println("Starting mapleCOMSPS")
                 solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+
+              case CVC4 =>
+                println("Starting CVC4")
+                solverPath.get + " --lang smt " + fileDir + "__cnfString" + uniqFileIdentifier
             }
             writeStringToFile(outerScriptString + solverCallString, scriptFileName)
 
@@ -441,11 +448,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             // wait for termination
             satProcess.get.exitValue()
             satSolver match {
-              case CRYPTOMINISAT | RISS6 | MapleCOMSPS =>
+              case CRYPTOMINISAT | RISS6 | MapleCOMSPS | CVC4 =>
                 val outString = stdout.toString()
                 //println("OUTSTRING " + outString)
                 writeStringToFile(outString, new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
-              case _                                   =>
+              case _                                          =>
             }
 
             // remove runscript
@@ -460,9 +467,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
               case osname if osname startsWith "mac os x" => 0
               case _                                      =>
                 val errString = removeCommentAtBeginning(stderr.toString())
-                //println(errString)
+                //println("====\n" + errString + "====\n")
 
-                (errString.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
+                (errString.split('\n').filterNot(_.isEmpty).filterNot(_.startsWith("Command")).head.split(' ') map { _.toDouble * 1000 } sum).toInt
             }
 
             println("Time command gave the following runtime for the solver: " + totalTime)
@@ -507,7 +514,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           //println("done  " + (t2 - t1) + " " + (t3 - t2))
           print("Preparing solver output ... ")
           val t4 = System.currentTimeMillis()
-          val (solveState, literals) = satSolver match {
+          val (solveState, literals): (String, Set[Int]) = satSolver match {
             case MINISAT                             =>
               val splitted = solverOutput.split("\n")
               if (splitted.length == 1) (splitted(0), Set[Int]()) else (splitted(0), (splitted(1).split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet)
@@ -525,6 +532,22 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                 val lits = stateSplit(1).split(" ").collect({ case s if s != "" && s != "\nv" && s != "v" && s != "0" && s != "0\n" => s.toInt }).toSet
 
                 (cleanState, lits)
+              }
+            case CVC4                                =>
+              if (solverOutput.startsWith("sat")) {
+                //println(solverOutput)
+                val extractedResult = solverOutput.split("\n").filter(_.contains("define-fun")).map(_.split(" ").filter(a => a.startsWith("v") || a == "true)" || a == "false)"))
+
+                //println(extractedResult.map(_.mkString(" ")).mkString("\n"))
+
+                val resultLiterals = extractedResult map { case l =>
+                  val atom = l.find(_.startsWith("v")).get.drop(1).toInt + 1
+                  if (l.contains("false)")) -atom else atom
+                } toSet
+
+                ("SAT", resultLiterals)
+              } else {
+                ("UNSAT", Set[Int]())
               }
           }
           val t5 = System.currentTimeMillis()
