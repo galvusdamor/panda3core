@@ -265,11 +265,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             case ClassicalN4Encoding           =>
               SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, usePDTMutexes, defineK)
             case POCLDirectEncoding            =>
-              SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes)
+              SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes, satSolver == CVC4)
             case POCLDeleteEncoding            =>
-              SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes)
+              SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes, satSolver == CVC4)
             case POCLForbidEncoding            =>
-              SOGPOCLForbidEffectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes)
+              SOGPOCLForbidEffectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes, satSolver == CVC4)
             case POStateEncoding               =>
               SOGPOREncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, usePDTMutexes, defineK)
           }
@@ -345,6 +345,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         writer.close()
         println("CLOSE")
         timeCapsule stop Timings.TRANSFORM_DIMACS
+
+        //System exit 0
 
         val tritivallUnsatisfiable = encoder match {
           case pathbased: PathBasedEncoding[_, _] =>
@@ -536,7 +538,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             case CVC4                                =>
               if (solverOutput.startsWith("sat")) {
                 //println(solverOutput)
-                val extractedResult = solverOutput.split("\n").filter(_.contains("define-fun")).map(_.split(" ").filter(a => a.startsWith("v") || a == "true)" || a == "false)"))
+                val extractedResult = solverOutput.split("\n").filter(_.contains("define-fun")).filterNot(_.contains("Real")).
+                  map(_.split(" ").filter(a => a.startsWith("v") || a == "true)" || a == "false)"))
 
                 //println(extractedResult.map(_.mkString(" ")).mkString("\n"))
 

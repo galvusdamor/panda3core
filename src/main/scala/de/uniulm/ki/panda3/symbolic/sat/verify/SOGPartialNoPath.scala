@@ -28,6 +28,8 @@ import scala.collection.mutable.ArrayBuffer
   */
 abstract class SOGPartialNoPath extends SOGEncoding {
 
+  val useSMT: Boolean
+
   protected val before: ((Seq[Int], Seq[Int])) => String =
     memoise[(Seq[Int], Seq[Int]), String]({ case (pathA: Seq[Int], pathB: Seq[Int]) => assert(pathA != pathB); "before_" + pathA.mkString(";") + "_" + pathB.mkString(";") })
 
@@ -47,35 +49,6 @@ abstract class SOGPartialNoPath extends SOGEncoding {
 
   lazy val transitiveOrderClauses: Array[Clause] = {
     val clauses = new ArrayBuffer[Clause]
-    var i = 0
-    while (i < pathsWithInitAndGoal.length) {
-      var k = 0
-      while (k < pathsWithInitAndGoal.length) {
-        if (i != k && !(onlyPathSOG.reachable(pathsWithInitAndGoal(i)) contains pathsWithInitAndGoal(k))) {
-          if (enforceTotalOrder) clauses append Clause(Array(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)), before(pathsWithInitAndGoal(k), pathsWithInitAndGoal(i))))
-
-          var j = 0
-          while (j < pathsWithInitAndGoal.length) {
-            if (j != i && j != k) {
-              // test whether one antecedant is already true
-              // note: both cannot be true, else i->k would already hold in the SOG
-              if (onlyPathSOG.reachable(pathsWithInitAndGoal(i)) contains pathsWithInitAndGoal(j))
-                clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(j), pathsWithInitAndGoal(k)) :: Nil,
-                                                     before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
-              else if (onlyPathSOG.reachable(pathsWithInitAndGoal(j)) contains pathsWithInitAndGoal(k))
-                clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(j)) :: Nil,
-                                                     before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
-              else
-                clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(j)) :: before(pathsWithInitAndGoal(j), pathsWithInitAndGoal(k)) :: Nil,
-                                                     before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
-            }
-            j += 1
-          }
-        }
-        k += 1
-      }
-      i += 1
-    }
 
     //orderMustBeConsistent
     pathsWithInitAndGoal foreach { i => pathsWithInitAndGoal filter { _ != i } foreach { j => clauses append impliesNot(before(i, j), before(j, i)) } }
@@ -83,6 +56,48 @@ abstract class SOGPartialNoPath extends SOGEncoding {
     //sogOrderMustBeRespected
     // TODO: this only necessary for plan extraction. These decision variables will not occur in any other clause of the formula.
     extendedSOG.vertices foreach { case p@(i, _) => extendedSOG.reachable(p).-(p) map { _._1 } foreach { j => clauses append Clause(before(i, j)) } }
+
+
+    if (!useSMT) {
+      var i = 0
+      while (i < pathsWithInitAndGoal.length) {
+        var k = 0
+        while (k < pathsWithInitAndGoal.length) {
+          if (i != k && !(onlyPathSOG.reachable(pathsWithInitAndGoal(i)) contains pathsWithInitAndGoal(k))) {
+            if (enforceTotalOrder) clauses append Clause(Array(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)), before(pathsWithInitAndGoal(k), pathsWithInitAndGoal(i))))
+
+            var j = 0
+            while (j < pathsWithInitAndGoal.length) {
+              if (j != i && j != k) {
+                // test whether one antecedant is already true
+                // note: both cannot be true, else i->k would already hold in the SOG
+                if (onlyPathSOG.reachable(pathsWithInitAndGoal(i)) contains pathsWithInitAndGoal(j))
+                  clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(j), pathsWithInitAndGoal(k)) :: Nil,
+                                                       before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
+                else if (onlyPathSOG.reachable(pathsWithInitAndGoal(j)) contains pathsWithInitAndGoal(k))
+                  clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(j)) :: Nil,
+                                                       before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
+                else
+                  clauses append impliesRightAndSingle(before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(j)) :: before(pathsWithInitAndGoal(j), pathsWithInitAndGoal(k)) :: Nil,
+                                                       before(pathsWithInitAndGoal(i), pathsWithInitAndGoal(k)))
+              }
+              j += 1
+            }
+          }
+          k += 1
+        }
+        i += 1
+      }
+    } else {
+      // smt encoding
+      pathsWithInitAndGoal.indices map { i => Clause.floatAtoms.add("pos_" + i) }
+
+      pathsWithInitAndGoal.zipWithIndex foreach { case (i,ii) =>
+        pathsWithInitAndGoal.zipWithIndex filter { _ != (i,ii) } foreach { case (j,jj) =>
+          clauses append Clause(Array(), "(not v" + Clause.atomIndices(before(i, j)) + ") (< pos_" + ii + " pos_" + jj + ")")
+        }
+      }
+    }
 
     clauses.toArray
   }

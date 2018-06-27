@@ -31,6 +31,8 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class SOGPOREncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
                           taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, usePDTMutexes: Boolean, overrideK: Option[Int] = None) extends SOGPartialNoPath {
+  val useSMT : Boolean = false
+
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected val directlyBefore: ((Seq[Int], Seq[Int])) => String =

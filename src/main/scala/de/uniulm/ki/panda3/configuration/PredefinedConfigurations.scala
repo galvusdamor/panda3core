@@ -283,6 +283,13 @@ object PredefinedConfigurations {
            (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding)),
 
 
+         "sat-pocl-delete(cvc4,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CVC4, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-pocl-direct(cvc4,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CVC4, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
+                                                       usePDTMutexes = false)),
+
          "sat-pocl-delete(cryptominisat,noMutex)" ->
            (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
                                                        usePDTMutexes = false)),

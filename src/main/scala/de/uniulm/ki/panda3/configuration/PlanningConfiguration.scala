@@ -429,7 +429,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           }
 
           val additionalEdgesInDisablingGraph: Seq[AdditionalEdgesInDisablingGraph] = (directLTLEncoding collect { case x: AdditionalEdgesInDisablingGraph => x }) ++
-            (automaton collect { case x: AlternatingAutomaton => AlternatingAutomatonFormulaEncoding(x,"none") })
+            (automaton collect { case x: AlternatingAutomaton => AlternatingAutomatonFormulaEncoding(x, "none") })
           val withRelevantPredicates: Seq[WithRelevantPredicates] = directLTLEncoding collect { case x: WithRelevantPredicates => x }
 
           val intProblem = IntProblem(domainAndPlan._1, domainAndPlan._2, additionalEdgesInDisablingGraph, withRelevantPredicates)
@@ -1253,7 +1253,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
         else Nil) ::
-        (if (false)
+        (if (true)
           CompilerConfiguration(PruneNoops, (), "remove no-ops", REMOVE_NOOPS) :: Nil
         else Nil) ::
         (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
@@ -1422,7 +1422,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val lastCompilersToBeApplied = (if (preprocessingConfiguration.ensureMethodsHaveAtMostTwoTasks)
         CompilerConfiguration(TwoTaskPerMethod, (), "force two tasks per method", TOP_TASK) :: Nil
       else Nil) ::
-        (if (false)
+        (if (true)
           CompilerConfiguration(PruneNoops, (), "remove no-ops", REMOVE_NOOPS) :: Nil
         else Nil) ::
         (if (preprocessingConfiguration.ensureMethodsHaveLastTask)
@@ -1509,6 +1509,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
              case "SHOP2"                                 => SHOP2
              case "minisat"                               => MINISAT
              case "cryptominisat"                         => CRYPTOMINISAT
+             case "cvc4"                                  => CVC4
            }
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
@@ -1573,11 +1574,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
 
-  def checkConfigurationIntegrity() : Boolean = {
+  def checkConfigurationIntegrity(): Boolean = {
     var configOk = true
-    if (!parsingConfiguration.stripHybrid){
+    if (!parsingConfiguration.stripHybrid) {
       // if you don't remove causal links, certain options may not be used
-      if (preprocessingConfiguration.splitIndependentParameters){
+      if (preprocessingConfiguration.splitIndependentParameters) {
         println("Not stripping hybridity (i.e. causal links in the model) disallows parameter splitting")
         configOk = false
       }
@@ -1594,7 +1595,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   private val protectedPredicatesFromConfiguration: Set[String] = searchConfiguration match {
     case SATSearch(_, _, Some(f), _, _, _, _, _, _, _, _) => f.nnf.allPredicatesNames
-    case _                                             => Set()
+    case _                                                => Set()
   }
 }
 
@@ -2209,7 +2210,7 @@ case class SATSearch(solverType: Solvertype,
                      checkResult: Boolean = false,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
                      encodingToUse: POEncoding = POCLDeleteEncoding,
-                     usePDTMutexes : Boolean = false,
+                     usePDTMutexes: Boolean = false,
                      threads: Int = 1
                     ) extends SearchConfiguration {
 

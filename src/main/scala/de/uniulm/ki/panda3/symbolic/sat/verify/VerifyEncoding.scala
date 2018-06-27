@@ -299,16 +299,21 @@ trait VerifyEncoding {
     writer write "(set-logic QF_RDL)\n(set-option :produce-models true)\n"
 
     Clause.atomIndices foreach { case (_, idx) => writer write ("\t(declare-const v" + idx + " Bool)\n") }
+    Clause.floatAtoms foreach { case a => writer write ("\t(declare-const " + a + " Real)\n") }
 
     var i = 0
     while (i < formulas.length) {
       val lits = formulas(i).disjuncts
       var j = 0
       writer write "\t(assert (or"
-      while (j < lits.length) {
-        if (lits(j) < 0) writer write (" (not v" + (-lits(j) - 1) + ")")
-        else writer write (" v" + (lits(j) - 1))
-        j += 1
+      if (lits.length == 0) {
+        writer write formulas(i).smtDifferenceClause
+      } else {
+        while (j < lits.length) {
+          if (lits(j) < 0) writer write (" (not v" + (-lits(j) - 1) + ")")
+          else writer write (" v" + (lits(j) - 1))
+          j += 1
+        }
       }
       writer write "))\n"
       i += 1
@@ -427,12 +432,13 @@ object VerifyEncoding {
   }
 }
 
-case class Clause(disjuncts: Array[Int]) {
+case class Clause(disjuncts: Array[Int], smtDifferenceClause: String = "") {
   override def toString: String = "Clause(" + disjuncts.mkString(",") + ")"
 }
 
 object Clause {
   val atomIndices = new mutable.HashMap[String, Int]()
+  val floatAtoms  = new mutable.HashSet[String]()
 
   def clearCache(): Unit = atomIndices.clear()
 

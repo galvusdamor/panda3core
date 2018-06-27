@@ -87,8 +87,8 @@ case class AlternatingAutomatonFormulaEncoding(automaton: AlternatingAutomaton, 
 
     val init = Clause(state(automaton.initialState, 0)) :: Nil
     val goal = automaton.vertices map {
-      case LTLTrue => Clause(state(LTLTrue, linearEncoding.linearPlan.length + 1), true)
-      case s       => Clause(state(s, linearEncoding.linearPlan.length + 1), false)
+      case LTLTrue => Clause((state(LTLTrue, linearEncoding.linearPlan.length + 1), true))
+      case s       => Clause((state(s, linearEncoding.linearPlan.length + 1), false))
     }
 
     maintainStateAtNoPresent(linearEncoding) ++ transitionRules ++ lastAutomationTransition ++ restrictionRules ++ init ++ goal
