@@ -100,7 +100,9 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   lazy val isAcyclic: Boolean = condensation.vertices.length == vertices.length
 
   /** Remove as many edges as possible as long as the transitive hull stays the same */
-  lazy val transitiveReduction: DirectedGraph[T] = {
+  lazy val transitiveReduction: DirectedGraph[T] = if (edgeList.exists({case (a,b) => a == b}))
+    SimpleDirectedGraph(vertices,edgeList filter {case (a,b) => a != b}).transitiveReduction
+  else {
     val changingEdgeMap = edges map { case (k, v) => val h = new mutable.HashSet[T](); h ++= v; (k, h) }
 
     //
@@ -141,7 +143,7 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   protected def dotEdgeStyleRenderer(from: T, to: T): String = ""
 
 
-  def map[U](f: T => U): DirectedGraph[U] = SimpleDirectedGraph(vertices map f, edgeList map { case (a, b) => (f(a), f(b)) })
+  def map[U](f: T => U): DirectedGraph[U] = SimpleDirectedGraph((vertices map f).distinct, (edgeList map { case (a, b) => (f(a), f(b)) }).distinct)
 
   lazy val decomposition: Option[GraphDecomposition[T]] = if (vertices.size == 1) Some(ElementaryDecomposition(vertices.head)) else {
     // find partitioning
