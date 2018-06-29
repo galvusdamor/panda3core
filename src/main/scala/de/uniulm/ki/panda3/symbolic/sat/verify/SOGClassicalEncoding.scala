@@ -219,7 +219,7 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
 
   // TODO: determine this size more intelligently
   lazy val taskSequenceLength: Int = if (taskSequenceLengthQQ != -1) taskSequenceLengthQQ else {
-    val pathNumToUse = if (expansionPossible) primitivePaths.length / 3 else primitivePaths.length
+    val pathNumToUse = if (expansionPossible) primitivePaths.length else primitivePaths.length
 
     Math.max(if (pathNumToUse == 0) 0 else 1, pathNumToUse - 0)
 

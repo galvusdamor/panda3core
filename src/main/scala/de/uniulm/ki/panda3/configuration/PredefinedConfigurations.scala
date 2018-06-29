@@ -313,6 +313,75 @@ object PredefinedConfigurations {
                                                        usePDTMutexes = false)),
 
 
+         "sat-pocl-delete(RISS6,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-pocl-direct(RISS6,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden(RISS6,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalForbiddenEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-implication(RISS6,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-existsstep(RISS6,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-implication-existsstep(RISS6,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-classical-n4(RISS6,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding,
+                                                       usePDTMutexes = false)),
+
+
+         "sat-pocl-delete(MAPLE,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-pocl-direct(MAPLE,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden(MAPLE,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalForbiddenEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-implication(MAPLE,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-existsstep(MAPLE,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-implication-existsstep(MAPLE,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-classical-n4(MAPLE,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding,
+                                                       usePDTMutexes = false)),
+
+
+         "sat-pocl-delete(cadical,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-pocl-direct(cadical,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden(cadical,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalForbiddenEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-implication(cadical,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-existsstep(cadical,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-forbidden-implication-existsstep(cadical,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding,
+                                                       usePDTMutexes = false)),
+         "sat-classical-n4(cadical,noMutex)" ->
+           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding,
+                                                       usePDTMutexes = false)),
+
+
          "sat-pocl-delete(cryptominisat,Mutex)" ->
            (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), checkResult = true, reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
                                                        usePDTMutexes = true)),

@@ -366,7 +366,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
         //println(timeCapsule.integralDataMap())
 
-        def removeCommentAtBeginning(s: String): String = {
+        def removeCommentAtBeginning(s: String): String = if (s.length == 0) s else {
           var i = 0
           while (s.charAt(i) == 'c') {
             while (s.length > i && s.charAt(i) != '\n')
@@ -426,10 +426,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
               case RISS6         =>
                 println("Starting riss6")
                 // -config=Riss6:-no-enabled_cp3
-                solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+                solverPath.get + " -config=Riss427 -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
               case MapleCOMSPS   =>
                 println("Starting mapleCOMSPS")
                 solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              case CADICAL       =>
+                println("Starting cadical")
+                solverPath.get + " --verbose=0 " + fileDir + "__cnfString" + uniqFileIdentifier
 
               case CVC4 =>
                 println("Starting CVC4")
@@ -450,11 +453,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             // wait for termination
             satProcess.get.exitValue()
             satSolver match {
-              case CRYPTOMINISAT | RISS6 | MapleCOMSPS | CVC4 =>
+              case CRYPTOMINISAT | RISS6 | MapleCOMSPS | CADICAL | CVC4 =>
                 val outString = stdout.toString()
                 //println("OUTSTRING " + outString)
                 writeStringToFile(outString, new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
-              case _                                          =>
+              case _                                                    =>
             }
 
             // remove runscript
@@ -517,25 +520,27 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           print("Preparing solver output ... ")
           val t4 = System.currentTimeMillis()
           val (solveState, literals): (String, Set[Int]) = satSolver match {
-            case MINISAT                             =>
+            case MINISAT                                       =>
               val splitted = solverOutput.split("\n")
               if (splitted.length == 1) (splitted(0), Set[Int]()) else (splitted(0), (splitted(1).split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet)
-            case CRYPTOMINISAT | RISS6 | MapleCOMSPS =>
+            case CRYPTOMINISAT | RISS6 | MapleCOMSPS | CADICAL =>
               //println(solverOutput)
               //System exit 0
 
               val nonCommentOutput = removeCommentAtBeginning(solverOutput)
+              if (nonCommentOutput.length < 100) println("STARTOUTPUT\n" + nonCommentOutput.replace(' ', '_') + "\nENDOUTPUT")
 
               val stateSplit = nonCommentOutput.split("\n", 2)
               val cleanState = stateSplit.head.replaceAll("s ", "")
 
               if (stateSplit.length == 1) (cleanState, Set[Int]())
               else {
-                val lits = stateSplit(1).split(" ").collect({ case s if s != "" && s != "\nv" && s != "v" && s != "0" && s != "0\n" => s.toInt }).toSet
+                val singleItems :Seq[String] = stateSplit(1).split("\n").filterNot(_.startsWith("c")).flatMap(_.split(" "))
+                val lits = singleItems.collect({ case s if s != "" && s != "\nv" && s != "v" && s != "0" && s != "0\n" => s.toInt }).toSet
 
                 (cleanState, lits)
               }
-            case CVC4                                =>
+            case CVC4                                          =>
               if (solverOutput.startsWith("sat")) {
                 //println(solverOutput)
                 val extractedResult = solverOutput.split("\n").filter(_.contains("define-fun")).filterNot(_.contains("Real")).
@@ -578,7 +583,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           if (solved) {
             println("")
             val allTrueAtoms: Set[String] = (atomMap filter { case (atom, index) => literals contains (index + 1) }).keys.toSet
+
             //writeStringToFile(allTrueAtoms mkString "\n", new File("true.txt"))
+            //System exit 0
 
             //println((allTrueAtoms filter {_.startsWith("act_")}).toSeq.sorted mkString "\n")
             //println((allTrueAtoms filter {_.startsWith("auto_state")}).toSeq sortBy {case x => x.split('_').last.toInt}  mkString "\n")
@@ -1042,7 +1049,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                       actionOrdering map { _._2 }
                     }
 
-                    println(allTrueAtoms filter { _.startsWith("pathaction") } mkString "\n")
+                    //println(allTrueAtoms filter { _.startsWith("pathaction") } mkString "\n")
 
                     val taskSeq = actionSequence map { case solAction =>
                       val pos = solAction.split("_").last.split(",").head
