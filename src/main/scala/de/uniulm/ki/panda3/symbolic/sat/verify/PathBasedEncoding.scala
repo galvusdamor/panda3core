@@ -270,6 +270,8 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
         val atom1 = pathAction(path1.length, path1, task1)
         val atom2 = pathAction(path2.length, path2, task2)
 
+        println("Mutex " + atom1 + " " + atom2)
+
         Clause((atom1, false) :: (atom2, false) :: Nil)
       }
       timeCapsule stop GENERATE_MUTEXES
@@ -278,8 +280,17 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       clauses
     } else Nil
 
-    //System exit 0
 
+    println("Assignment implications")
+    val uniqueMethodResult: Seq[Clause] = if (false) Nil else pathDecompositionTree.assignmentImplications map { case (path, ((task, childIndex), mindex)) =>
+      val childPath = path :+ childIndex
+
+      //println(path + " " + childPath)
+      val taskAtChild = pathAction(childPath.length, childPath,task)
+      val methodAtFather = method(path.length, path, mindex)
+
+      impliesSingle(taskAtChild, methodAtFather)
+    }
 
     timeCapsule start GENERATE_CLAUSES
     print("Generating clauses representing decomposition ... ")
@@ -302,10 +313,36 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
         pPaths map { _._1 } flatMap { p => Range(1, p.length) map { x => (p take x, p take x + 1) } } distinct
 
       val graph = SimpleDirectedGraph(treeNodes, edges)
-      Dot2PdfCompiler.writeDotToFile(graph, "dectree.pdf")
+      Dot2PdfCompiler.writeDotToFile(graph.dotString(DirectedGraphDotOptions(), { case n: Seq[Int] =>
+        val node: PathDecompositionTree[Payload] = pathDecompositionTree.walkToNode(n)
+        val tasks: Set[Task] = node.possibleTasks
+
+        node.payload match {
+          case sog: SOG =>
+            //Dot2PdfCompiler.writeDotToFile(sog.ordering map {case (p,_) => pathDecompositionTree.walkToNode(p).id},"payload" + node.id + ".pdf")
+            Dot2PdfCompiler.writeDotToFile(sog.ordering.transitiveReduction.map({ case (p, _) => p.take(n.length + 1) }).transitiveReduction, "payload" + node.id + ".pdf")
+          case _        =>
+        }
+
+        println("\n\n" + node.id + " " + node.path.mkString(";"))
+        node.possibleMethods.zipWithIndex foreach { case ((dm, mind), mi) =>
+          val planSteps = dm.subPlan.orderingConstraints.graph.topologicalOrdering.get
+          println("\tMind: " + mind)
+          planSteps foreach { ps =>
+            val pos = dm.subPlan.planStepSchemaArray.indexOf(ps.schema)
+
+            println("\t" + node.methodToPositions(mi)(pos) + " " + ps.schema.isAbstract + " (" + ps.schema.name + "," + taskIndex(ps.schema) + ")")
+          }
+          println()
+        }
+
+        tasks.count(_.isPrimitive) + " " + tasks.count(_.isAbstract) + " @ " + node.id + " " + n.last
+      }), "dectree.pdf")
+
+      //System exit 0
     }*/
 
-    val ret: (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean) = (mutexClauses ++ initialPlanClauses :+ assertedTask, pPaths, payload, expansion)
+    val ret: (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean) = (mutexClauses ++ initialPlanClauses ++ uniqueMethodResult :+ assertedTask, pPaths, payload, expansion)
     ret
   }
 
@@ -324,5 +361,4 @@ object PathBasedEncoding {
         case (Some(x), _)     => Some(x)
         case (None, (p1, p2)) => if (p1 < p2) Some(true) else if (p1 > p2) Some(false) else None
       }).getOrElse(false)
-
 }

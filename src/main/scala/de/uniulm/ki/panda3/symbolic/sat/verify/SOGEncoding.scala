@@ -40,7 +40,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
   //TODO: is this correct?
   override val numberOfChildrenClauses: Int = 0
 
-  // TODO: we don't support this (yet), maybe N. Dönhoff will do it
+  // TODO: we don't support this (yet)
   override def givenActionsFormula: Seq[Clause] = ???
 
   override protected def initialPayload(possibleTasks: Set[Task], path: Seq[Int]): SOG = SOG(SimpleDirectedGraph((path, possibleTasks) :: Nil, Nil))

@@ -1509,6 +1509,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
              case "SHOP2"                                 => SHOP2
              case "minisat"                               => MINISAT
              case "cryptominisat"                         => CRYPTOMINISAT
+             case "cadical"                               => CADICAL
            }
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
@@ -2411,3 +2412,7 @@ object CRYPTOMINISAT extends Solvertype {override val longInfo: String = "crypto
 object RISS6 extends Solvertype {override val longInfo: String = "riss6"}
 
 object MapleCOMSPS extends Solvertype {override val longInfo: String = "MapleCOMSPS"}
+
+object CADICAL extends Solvertype {override val longInfo: String = "Cadical"}
+
+object CVC4 extends Solvertype {override val longInfo: String = "cvc4"}

@@ -293,6 +293,15 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     subAssigments :+ (path, task)
   }
 
+  lazy val assignmentImplications: Seq[(Seq[Int], ((Task, Int), Int))] = {
+    val winrar: Map[(Task, Int), Int] = // number of methods for which a specific task is assigned to a position. If this 1, we can add an implication
+      possibleMethods.zipWithIndex flatMap { case ((dm, mGlobalID), mindex) =>
+        dm.subPlan.planStepSchemaArray.zip(methodToPositions(mindex)) map { x => (x, mGlobalID) }
+      } groupBy { _._1 } filter { _._2.length == 1 } filterNot {possiblePrimitives contains _._1._1} map { case (k, v) => k -> v.head._2 }
+
+    children.flatMap(_.assignmentImplications) ++ winrar.toSeq.map(a => path -> a)
+  }
+
   lazy val possibleAssignments: Seq[(Seq[Int], Task)] = possiblePrimitives.map(p => (path, p)) ++ children.flatMap(_.possibleAssignments)
 
   lazy val mutexes: Seq[((Seq[Int], Task), (Seq[Int], Task))] = {
@@ -364,9 +373,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
   //////////// INTERNAL HELPER METHODS
 
-  private def buildChildrenTaskTable(methods: Array[((DecompositionMethod, Int), Array[Int])], primitives: Array[(Task, Int)]): Array[Set[Task]]
-
-  = {
+  private def buildChildrenTaskTable(methods: Array[((DecompositionMethod, Int), Array[Int])], primitives: Array[(Task, Int)]): Array[Set[Task]] = {
     val childrenPossibleTasks: Array[mutable.HashSet[Task]] = children.indices map { _ => new mutable.HashSet[Task]() } toArray
 
     // add tasks from methods
@@ -384,8 +391,18 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
   }
 
 
-  /** returns a detailed information about the object */
-  override def longInfo: String
+  def walkToNode(path: Seq[Int]): PathDecompositionTree[Payload] = if (path.isEmpty) this else children(path.head).walkToNode(path.drop(1))
 
-  = "T:" + possibleTasks.size + " P:" + path.mkString(",")
+  /** returns a detailed information about the object */
+  override def longInfo: String = "T:" + possibleTasks.size + " P:" + path.mkString(",")
+
+  val id: Int = {
+    PathDecompositionTree.globalIDCounter += 1
+    PathDecompositionTree.globalIDCounter
+  }
+}
+
+
+object PathDecompositionTree {
+  var globalIDCounter: Int = 0
 }
