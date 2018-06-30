@@ -16,7 +16,7 @@
 
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import de.uniulm.ki.panda3.configuration.SATReductionMethod
+import de.uniulm.ki.panda3.configuration.{SATReductionMethod, Solvertype}
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -30,7 +30,7 @@ import scala.collection.Seq
   */
 case class SOGPOCLDeleteEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
                                  taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, overrideK: Option[Int] = None,
-                                 restrictionMethod: RestrictionMethod, usePDTMutexes: Boolean, useSMT: Boolean) extends SOGPOCLEncoding {
+                                 restrictionMethod: RestrictionMethod, usePDTMutexes: Boolean, useEncoder: Solvertype) extends SOGPOCLEncoding {
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 
   protected def deletes(path: Seq[Int], precondition: Predicate): String = "del^" + path.mkString(";") + "_" + precondition.name

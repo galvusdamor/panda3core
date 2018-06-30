@@ -293,11 +293,20 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     subAssigments :+ (path, task)
   }
 
-  lazy val assignmentImplications: Seq[(Seq[Int], ((Task, Int), Int))] = {
-    val winrar: Map[(Task, Int), Int] = // number of methods for which a specific task is assigned to a position. If this 1, we can add an implication
+  // (my_path,((task_of_child, number_of_child), possiblemethods_or_task))
+  lazy val assignmentImplications: Seq[(Seq[Int], ((Task, Int), Array[Either[Int, Task]]))] = {
+    val winrar: Map[(Task, Int), Array[Either[Int, Task]]] = // number of methods for which a specific task is assigned to a position. If this 1, we can add an implication
       possibleMethods.zipWithIndex flatMap { case ((dm, mGlobalID), mindex) =>
         dm.subPlan.planStepSchemaArray.zip(methodToPositions(mindex)) map { x => (x, mGlobalID) }
-      } groupBy { _._1 } filter { _._2.length == 1 } filterNot {possiblePrimitives contains _._1._1} map { case (k, v) => k -> v.head._2 }
+      } groupBy { _._1 } map { case (k, v) =>
+        val primitiveIndex = possiblePrimitives.indexOf(k._1)
+        val causingMethods : Array[Either[Int, Task]] = v.map(_._2).map(Left[Int,Task](_))
+
+        if (primitiveIndex != -1 && primitivePositions(primitiveIndex) == k._2)
+          k -> (causingMethods :+ Right[Int,Task](k._1))
+        else
+          k -> causingMethods
+      }
 
     children.flatMap(_.assignmentImplications) ++ winrar.toSeq.map(a => path -> a)
   }

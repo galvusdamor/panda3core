@@ -16,7 +16,7 @@
 
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import de.uniulm.ki.panda3.configuration.SATReductionMethod
+import de.uniulm.ki.panda3.configuration.{MINISAT, SATReductionMethod, Solvertype}
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -31,7 +31,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 case class SOGPOREncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem : IntProblem,
                           taskSequenceLengthQQ: Int, reductionMethod: SATReductionMethod, offsetToK: Int, usePDTMutexes: Boolean, overrideK: Option[Int] = None) extends SOGPartialNoPath {
-  val useSMT : Boolean = false
+  val useEncoder : Solvertype = MINISAT
 
   lazy val taskSequenceLength: Int = taskSequenceLengthQQ
 

@@ -2417,3 +2417,5 @@ object MapleCOMSPS extends Solvertype {override val longInfo: String = "MapleCOM
 object CADICAL extends Solvertype {override val longInfo: String = "Cadical"}
 
 object CVC4 extends Solvertype {override val longInfo: String = "cvc4"}
+
+object GraphSAT extends Solvertype {override val longInfo: String = "GraphSAT"}

@@ -294,6 +294,46 @@ trait VerifyEncoding {
     Clause.atomIndices.toMap
   }
 
+
+  def graphSATString(formulas: Array[Clause], writer: BufferedWriter): scala.Predef.Map[String, Int] = {
+    // generate the DIMACS string
+    val header = "p cnf " + Clause.atomIndices.size + " " + formulas.length + "\n"
+    writer write header
+
+    // write graph information
+    writer write ("c graph " + Clause.graphNumberOfNodes + "\n")
+    Range(0, Clause.graphNumberOfNodes) foreach { n => writer write ("c node " + n + " " + (Clause.graphNumberOfNodes - 1) + "\n") }
+    Clause.graphAtoms foreach { case (atom, (i, j)) => writer write ("c arc " + (Clause.atomIndices(atom) + 1) + " " + i + " " + j + "\n") }
+    writer write "c endgraph\nc acyc\n"
+    Clause.graphAtoms.groupBy(_._2._1) foreach { case (s, ts) =>
+      ts foreach { case (atom, (_, j)) => writer write ("c greachable " + s + " " + 1 + " " + j + " " + (Clause.atomIndices(atom) + 1) + "\n") }
+
+      ts foreach { case (atom, (_, j)) => writer write ("c gnonreach 1 " + s + " " + j + " -" + (Clause.atomIndices(atom) + 1) + "\n") }
+
+
+      //writer write ("c gnonreach " + s + " " + ts.size)
+      //ts foreach { case (atom, (_, j)) => writer write (" " + j + " -" + Clause.atomIndices(atom)) }
+      //writer write "\n"
+    }
+
+
+    var i = 0
+    while (i < formulas.length) {
+      val lits = formulas(i).disjuncts
+      var j = 0
+      while (j < lits.length) {
+        writer write ("" + lits(j))
+        writer write ' '
+        j += 1
+      }
+      writer write "0\n"
+      i += 1
+    }
+
+    Clause.atomIndices.toMap
+  }
+
+
   def smtString(formulas: Array[Clause], writer: BufferedWriter): scala.Predef.Map[String, Int] = {
 
     writer write "(set-logic QF_RDL)\n(set-option :produce-models true)\n"
@@ -437,10 +477,15 @@ case class Clause(disjuncts: Array[Int], smtDifferenceClause: String = "") {
 }
 
 object Clause {
-  val atomIndices = new mutable.HashMap[String, Int]()
-  val floatAtoms  = new mutable.HashSet[String]()
+  val atomIndices             = new mutable.HashMap[String, Int]()
+  val floatAtoms              = new mutable.HashSet[String]()
+  val graphAtoms              = new mutable.HashMap[String, (Int, Int)]()
+  var graphNumberOfNodes: Int = -1
 
-  def clearCache(): Unit = atomIndices.clear()
+  def clearCache(): Unit = {
+    atomIndices.clear()
+    graphAtoms.clear()
+  }
 
   def apply(disjuncts: Array[(String, Boolean)]): Clause = {
     val compressed = new Array[Int](disjuncts.length)

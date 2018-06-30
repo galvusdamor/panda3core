@@ -150,8 +150,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
     if (runner.result.isEmpty) {
       val errorState = System.currentTimeMillis() - startTime <= (if (expansionPossible) timelimit else timeLimitForLastRun)
       if (errorState) Thread.sleep(500)
-      (None, errorState, expansionPossible)
-    } else (runner.result.get, false, expansionPossible)
+      (None, errorState || informationCapsule.dataMap().contains(Information.ERROR), expansionPossible)
+    } else (runner.result.get, informationCapsule.dataMap().contains(Information.ERROR), expansionPossible)
   }
 
 
@@ -265,11 +265,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             case ClassicalN4Encoding           =>
               SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, usePDTMutexes, defineK)
             case POCLDirectEncoding            =>
-              SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes, satSolver == CVC4)
+              SOGPOCLDirectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes, satSolver)
             case POCLDeleteEncoding            =>
-              SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes, satSolver == CVC4)
+              SOGPOCLDeleteEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes, satSolver)
             case POCLForbidEncoding            =>
-              SOGPOCLForbidEffectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes, satSolver == CVC4)
+              SOGPOCLForbidEffectEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, defineK, restrictionMethod, usePDTMutexes, satSolver)
             case POStateEncoding               =>
               SOGPOREncoding(timeCapsule, domain, initialPlan, intProblem, planLength, reductionMethod, offSetToK, usePDTMutexes, defineK)
           }
@@ -337,8 +337,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         println("UUID " + uniqFileIdentifier)
         val writer = new BufferedWriter(new FileWriter(new File(fileDir + "__cnfString" + uniqFileIdentifier)))
         val atomMap: Map[String, Int] = satSolver match {
-          case CVC4 => encoder.smtString(usedFormula, writer)
-          case _    => encoder.miniSATString(usedFormula, writer)
+          case CVC4     => encoder.smtString(usedFormula, writer)
+          case GraphSAT => encoder.graphSATString(usedFormula,writer)
+          case _        => encoder.miniSATString(usedFormula, writer)
         }
         println("FLUSH")
         writer.flush()
@@ -437,6 +438,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
               case CVC4 =>
                 println("Starting CVC4")
                 solverPath.get + " --lang smt " + fileDir + "__cnfString" + uniqFileIdentifier
+
+              case GraphSAT =>
+                println("Starting GraphSAT")
+                solverPath.get + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
             }
             writeStringToFile(outerScriptString + solverCallString, scriptFileName)
 
@@ -453,11 +458,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             // wait for termination
             satProcess.get.exitValue()
             satSolver match {
-              case CRYPTOMINISAT | RISS6 | MapleCOMSPS | CADICAL | CVC4 =>
+              case CRYPTOMINISAT | RISS6 | MapleCOMSPS | CADICAL | CVC4 | GraphSAT =>
                 val outString = stdout.toString()
                 //println("OUTSTRING " + outString)
                 writeStringToFile(outString, new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
-              case _                                                    =>
+              case _                                                               =>
             }
 
             // remove runscript
@@ -474,7 +479,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                 val errString = removeCommentAtBeginning(stderr.toString())
                 //println("====\n" + errString + "====\n")
 
-                (errString.split('\n').filterNot(_.isEmpty).filterNot(_.startsWith("Command")).head.split(' ') map { _.toDouble * 1000 } sum).toInt
+                (errString.split('\n').filterNot(_.isEmpty).filterNot(_.startsWith("Command")).filterNot(_.startsWith("WARNING")).head.split(' ') map { _.toDouble * 1000 } sum).toInt
             }
 
             println("Time command gave the following runtime for the solver: " + totalTime)
@@ -523,7 +528,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             case MINISAT                                       =>
               val splitted = solverOutput.split("\n")
               if (splitted.length == 1) (splitted(0), Set[Int]()) else (splitted(0), (splitted(1).split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet)
-            case CRYPTOMINISAT | RISS6 | MapleCOMSPS | CADICAL =>
+            case CRYPTOMINISAT | RISS6 | MapleCOMSPS | CADICAL | GraphSAT =>
               //println(solverOutput)
               //System exit 0
 
@@ -535,7 +540,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
               if (stateSplit.length == 1) (cleanState, Set[Int]())
               else {
-                val singleItems :Seq[String] = stateSplit(1).split("\n").filterNot(_.startsWith("c")).flatMap(_.split(" "))
+                val singleItems: Seq[String] = stateSplit(1).split("\n").filterNot(_.startsWith("c")).flatMap(_.split(" "))
                 val lits = singleItems.collect({ case s if s != "" && s != "\nv" && s != "v" && s != "0" && s != "0\n" => s.toInt }).toSet
 
                 (cleanState, lits)
@@ -578,6 +583,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           // report on the result
           println("SAT-Solver says: " + solveState)
           val solved = solveState == "SAT" || solveState == "SATISFIABLE"
+
+          if (solveState.isEmpty) informationCapsule.set(Information.ERROR, "true")
 
           // postprocessing
           if (solved) {

@@ -282,14 +282,17 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
 
     println("Assignment implications")
-    val uniqueMethodResult: Seq[Clause] = if (false) Nil else pathDecompositionTree.assignmentImplications map { case (path, ((task, childIndex), mindex)) =>
+    val uniqueMethodResult: Seq[Clause] = if (false) Nil else pathDecompositionTree.assignmentImplications map { case (path, ((task, childIndex), methodsAndTasks)) =>
       val childPath = path :+ childIndex
 
       //println(path + " " + childPath)
-      val taskAtChild = pathAction(childPath.length, childPath,task)
-      val methodAtFather = method(path.length, path, mindex)
+      val taskAtChild = pathAction(childPath.length, childPath, task)
+      val causes = methodsAndTasks map {
+        case Left(mindex) => method(path.length, path, mindex)
+        case Right(_)     => pathAction(path.length, path, task)
+      }
 
-      impliesSingle(taskAtChild, methodAtFather)
+      impliesRightOr(taskAtChild :: Nil, causes)
     }
 
     timeCapsule start GENERATE_CLAUSES
