@@ -1110,7 +1110,7 @@ For configuration of external programs.
 
 Some of our programs, e.g. PANDA-totSAT (not yet delivered) or our plan verifyer base upon a SAT solver. Others (like PANDA3) depend on other external programs as well (not yet delivered). Using this option allows to specify the respective external program that is used as well as the position where it can be found on the local machine. This is the syntax:
 \n
-For specifying the SAT solver paths, use "-programPath SOLVER=PATH", where PATH is the external program file (including its absolute path) and SOLVER is the description of this solver, which is one of the following: minisat, cryptominisat, riss6, and mapleCOMSPS.
+For specifying the SAT solver paths, use "-programPath SOLVER=PATH", where PATH is the external program file (including its absolute path) and SOLVER is the description of this solver, which is one of the following: minisat, cryptominisat, riss6, mapleCOMSPS, and cadical.
 
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "-programPath" TAKES A STRING, NO KEYS.
 $
@@ -1365,7 +1365,7 @@ Both the verification tool ("Is the given plan a solution to the problem?" -- se
 See the respective help pages (using -help) for a description of the supported SAT solvers.
 
 Available SAT solvers:
-$ minisat cryptominisat riss6 mapleCOMSPS
+$ minisat cryptominisat riss6 mapleCOMSPS cadical
 
 
 
@@ -1440,6 +1440,18 @@ Choose mapleCOMSPS as SAT solver. Together with riss6 and cryptominisat, it was 
 Don't forget to specify the program path using "-programPath".
 
 THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "mapleCOMSPS" IS A KEY, NOT AN OPTION.
+$
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+cadical
+Choose the SAT solver cadical.
+
+Choose cadical as SAT solver. It was the winner of the agile track at the SAT-Race 2017.
+\n
+Don't forget to specify the program path using "-programPath".
+
+THIS LINE DOES CURRENTLY NOT SHOW BECAUSE "cadical" IS A KEY, NOT AN OPTION.
 $
 
 
