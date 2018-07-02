@@ -13,4 +13,4 @@ Kristof Mickeleit
 Our student assistant Kristof implemented the efficient version of the planning graph and a converter that adds type definitions into PDDL files, in which no types are in the model (which is, according the newer PDDL standards, not valid PDDL anymore). Such PDDL models are used in some of the very early IPCs, however.
 
 Mario Schmautz
-Our student assistant Mario implemented our current ADL support (by compilation into STRIPS) and found several bugs and interesting behaviour of the planner.
+Our student assistant Mario implemented our current ADL support (by compilation into STRIPS), the typeof predicate, and an ADL-safe equals. He also found several bugs and interesting behaviour of the planner.
