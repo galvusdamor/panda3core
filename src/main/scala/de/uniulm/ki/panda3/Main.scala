@@ -391,6 +391,7 @@ object Main {
       writeCapsulesToStdOut(Some(results(SearchStatistics)), Some(results(ProcessingTimings)))
     }
 
+    // if we have found some kind of a search result, try to output it.
     if (results.map.contains(SearchResult) && results(SearchResult).isDefined) {
 
       println("SOLUTION SEQUENCE")
@@ -402,20 +403,32 @@ object Main {
         val name = ps.schema.name
         val args = ps.arguments map plan.variableConstraints.getRepresentative map { _.shortInfo }
 
-        name + args.mkString("(", ",", ")")
+        if (args.isEmpty && name.count(_ == '[') == 1 && name.count(_ == ']') == 1 && name.indexOf('[') < name.indexOf(']'))
+          name.replace('[', '(').replace(']', ')')
+        else
+          name + args.mkString("(", ",", ")")
       }
 
-      println((plan.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive }).zipWithIndex map { case (ps, i) => i + ": " + psToString(ps) } mkString "\n")
+      val selectedSolution: Seq[PlanStep] = plan.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive }
 
+      println(selectedSolution.zipWithIndex map { case (ps, i) => i + ": " + psToString(ps) } mkString "\n")
 
-      if (results.map.contains(PreprocessedDomainAndPlan) && results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.nonEmpty) {
-        println("FIRST DECOMPOSITION")
-        val initSchema = results(PreprocessedDomainAndPlan)._2.planStepsWithoutInitGoal.head.schema
-        val initPS = plan.planStepsAndRemovedPlanSteps find { _.schema == initSchema } get
-        val realGoalSchema = plan.planStepDecomposedByMethod(initPS).subPlan.planStepsWithoutInitGoal.head.schema
-        val realGoal = plan.planStepsAndRemovedPlanSteps find { _.schema == realGoalSchema } get
+      // if we have also found a hierarchy, output that hierarchy
+      if (plannerConfiguration.config.postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree)) {
+        val planStepIndices: Map[PlanStep, Int] = selectedSolution.zipWithIndex.toMap ++
+          plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract).zipWithIndex.map({ case (ps, ind) => ps -> (ind + selectedSolution.length) })
 
-        println(plan.planStepDecomposedByMethod(initPS).name + " into " + psToString(realGoal))
+        val rootNodes = planStepIndices filterNot { case (ps, _) => plan.planStepParentInDecompositionTree.contains(ps) } keys
+
+        println("DECOMPOSITION HIERARCHY")
+        println("Root tasks: " + rootNodes.map(planStepIndices).mkString(" "))
+
+        plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract) foreach { case abstractPS =>
+          val children = plan.planStepParentInDecompositionTree.filter(_._2._1 == abstractPS)
+          val appliedMethod = plan.planStepDecomposedByMethod(abstractPS).name.replace('[', '(').replace(']', ')')
+
+          println(planStepIndices(abstractPS) + ": " + psToString(abstractPS) + " [" + appliedMethod + "] -> " + children.keys.map(planStepIndices).mkString(" "))
+        }
       }
     }
 
