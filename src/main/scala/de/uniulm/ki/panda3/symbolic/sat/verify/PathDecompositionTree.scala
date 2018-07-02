@@ -293,6 +293,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     subAssigments :+ (path, task)
   }
 
+
   // (my_path,((task_of_child, number_of_child), possiblemethods_or_task))
   lazy val assignmentImplications: Seq[(Seq[Int], ((Task, Int), Array[Either[Int, Task]]))] = {
     val winrar: Map[(Task, Int), Array[Either[Int, Task]]] = // number of methods for which a specific task is assigned to a position. If this 1, we can add an implication
@@ -310,6 +311,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
     children.flatMap(_.assignmentImplications) ++ winrar.toSeq.map(a => path -> a)
   }
+
 
   lazy val possibleAssignments: Seq[(Seq[Int], Task)] = possiblePrimitives.map(p => (path, p)) ++ children.flatMap(_.possibleAssignments)
 

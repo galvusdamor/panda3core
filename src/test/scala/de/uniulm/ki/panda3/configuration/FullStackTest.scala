@@ -31,7 +31,7 @@ class FullStackTest extends FlatSpec {
 
   val grounded = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                             compileOrderInMethods = None,
-                                            compileInitialPlan = false, removeUnnecessaryPredicates = false,
+                                            compileInitialPlan = false, removeUnnecessaryPredicates = false, removeNoOps = false,
                                             convertToSASP = false, allowSASPFromStrips = false, splitIndependentParameters = false,
                                             ensureMethodsHaveLastTask = false,
                                             ensureMethodsHaveAtMostTwoTasks = false,
@@ -42,7 +42,7 @@ class FullStackTest extends FlatSpec {
 
   val lifted = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                           compileOrderInMethods = None,
-                                          compileInitialPlan = false, removeUnnecessaryPredicates = false,
+                                          compileInitialPlan = false, removeUnnecessaryPredicates = false, removeNoOps = false,
                                           convertToSASP = false, allowSASPFromStrips = false, splitIndependentParameters = false,
                                           ensureMethodsHaveLastTask = false,
                                           ensureMethodsHaveAtMostTwoTasks = false,

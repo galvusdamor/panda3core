@@ -281,6 +281,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     } else Nil
 
 
+
     println("Assignment implications")
     val uniqueMethodResult: Seq[Clause] = if (false) Nil else pathDecompositionTree.assignmentImplications map { case (path, ((task, childIndex), methodsAndTasks)) =>
       val childPath = path :+ childIndex
@@ -294,6 +295,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
       impliesRightOr(taskAtChild :: Nil, causes)
     }
+
 
     timeCapsule start GENERATE_CLAUSES
     print("Generating clauses representing decomposition ... ")
@@ -329,6 +331,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
         println("\n\n" + node.id + " " + node.path.mkString(";"))
         node.possibleMethods.zipWithIndex foreach { case ((dm, mind), mi) =>
+
           val planSteps = dm.subPlan.orderingConstraints.graph.topologicalOrdering.get
           println("\tMind: " + mind)
           planSteps foreach { ps =>

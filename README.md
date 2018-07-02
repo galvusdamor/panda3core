@@ -26,6 +26,7 @@ Copyright (C) 2015 Kadir Dede
 Copyright (C) 2016-2018 Kristof Mickeleit  
 Copyright (C) 2016 Matthias Englert  
 Copyright (C) 2017-2018 Pascal Bercher (pascal.bercher@uni-ulm.de)
+Copyright (C) 2017-2018 Mario Schmautz
 
 
 it under the terms of the GNU General Public License as published by

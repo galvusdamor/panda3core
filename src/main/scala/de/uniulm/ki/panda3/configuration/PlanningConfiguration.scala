@@ -358,8 +358,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         })
 
       case satSearch: SATSearch                          =>
-        // create the partial int-representation that might be needed by an exists-step based encoding
+        // set the at-most-one encoding to the one chosen in the input
+        AtMostOneType.chosenType = satSearch.atMostOneEncodingMethod
 
+        // create the partial int-representation that might be needed by an exists-step based encoding
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
 
           val combinedFormula = (satSearch.ltlFormula, domainAndPlan._2.ltlConstraint) match {
@@ -1253,7 +1255,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil
         else Nil) ::
-        (if (true)
+        (if (preprocessingConfiguration.removeNoOps)
           CompilerConfiguration(PruneNoops, (), "remove no-ops", REMOVE_NOOPS) :: Nil
         else Nil) ::
         (if (searchConfiguration match {case SHOP2Search => true; case _ => false})
@@ -1422,7 +1424,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val lastCompilersToBeApplied = (if (preprocessingConfiguration.ensureMethodsHaveAtMostTwoTasks)
         CompilerConfiguration(TwoTaskPerMethod, (), "force two tasks per method", TOP_TASK) :: Nil
       else Nil) ::
-        (if (true)
+        (if (preprocessingConfiguration.removeNoOps)
           CompilerConfiguration(PruneNoops, (), "remove no-ops", REMOVE_NOOPS) :: Nil
         else Nil) ::
         (if (preprocessingConfiguration.ensureMethodsHaveLastTask)
@@ -1485,12 +1487,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
          "-noDomainInfo" -> (NoParameter, { l: Option[String] => this.copy(printAdditionalData = false).asInstanceOf[this.type] }),
 
          "-noProblemSolving" -> (NoParameter, { l: Option[String] => this.copy(searchConfiguration = NoSearch).asInstanceOf[this.type] }),
-         "-planningProcedure" -> (NoParameter, { l: Option[String] =>
+         "-planningProcedure" -> (NecessaryParameter, { l: Option[String] =>
            l.get.toLowerCase match {
-             case "panda3" => this.copy(searchConfiguration = defaultPlanSearchConfiguration).asInstanceOf[this.type]
-             // TODO: give parameters
-             //case "progression" => this.copy(searchConfiguration = default).asInstanceOf[this.type]
-             //case "sat" => this.copy(searchConfiguration = defaultPlanSearchConfiguration).asInstanceOf[this.type]
+             case "panda3"      => this.copy(searchConfiguration = defaultPlanSearchConfiguration).asInstanceOf[this.type]
+             case "progression" => this.copy(searchConfiguration = defaultProgressionConfiguration).asInstanceOf[this.type]
+             case "sat"         => this.copy(searchConfiguration = defaultPlanSearchConfiguration).asInstanceOf[this.type]
            }
          }),
 
@@ -1595,15 +1596,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   }
 
   private val protectedPredicatesFromConfiguration: Set[String] = searchConfiguration match {
-    case SATSearch(_, _, Some(f), _, _, _, _, _, _, _, _) => f.nnf.allPredicatesNames
-    case _                                                => Set()
+    case SATSearch(_, _, Some(f), _, _, _, _, _, _, _, _, _) => f.nnf.allPredicatesNames
+    case _                                                   => Set()
   }
 }
 
 object PlanningConfiguration {
   val defaultPlanSearchConfiguration = PlanBasedSearch(None, DFSType, Nil, Nil, LCFR)
   private val defaultProgressionConfiguration = ProgressionSearch(BFSType, None, PriorityQueueSearch.abstractTaskSelection.random)
-  private val defaultSATConfiguration         = SATSearch(MINISAT, SingleSATRun())
+  private val defaultSATConfiguration         = SATSearch(MINISAT, SingleSATRun(), atMostOneEncodingMethod = SequentialEncoding)
   val defaultVerifyConfiguration = SATPlanVerification(MINISAT, "")
 }
 
@@ -1704,6 +1705,7 @@ case class PreprocessingConfiguration(
                                        ensureMethodsHaveAtMostTwoTasks: Boolean,
                                        ensureMethodsHaveLastTask: Boolean,
                                        removeUnnecessaryPredicates: Boolean,
+                                       removeNoOps: Boolean,
                                        convertToSASP: Boolean,
                                        allowSASPFromStrips: Boolean,
                                        splitIndependentParameters: Boolean,
@@ -1748,6 +1750,9 @@ case class PreprocessingConfiguration(
 
          "-removeUnnecessaryPredicates" -> (NoParameter, { p: Option[String] => this.copy(removeUnnecessaryPredicates = true).asInstanceOf[this.type] }),
          "-dontRemoveUnnecessaryPredicates" -> (NoParameter, { p: Option[String] => this.copy(removeUnnecessaryPredicates = false).asInstanceOf[this.type] }),
+
+         "-removeNoOps" -> (NoParameter, { p: Option[String] => this.copy(removeNoOps = true).asInstanceOf[this.type] }),
+         "-dontRemoveNoOps" -> (NoParameter, { p: Option[String] => this.copy(removeNoOps = false).asInstanceOf[this.type] }),
 
          "-ensureLastTaskInMethods" -> (NoParameter, { p: Option[String] => this.copy(ensureMethodsHaveLastTask = true).asInstanceOf[this.type] }),
          "-dontEnsureLastTaskInMethods" -> (NoParameter, { p: Option[String] => this.copy(ensureMethodsHaveLastTask = false).asInstanceOf[this.type] }),
@@ -2208,9 +2213,10 @@ case class SATSearch(solverType: Solvertype,
                      formulaEncoding: LTLEncodingMethod = MattmüllerEncoding,
                      planToMinimiseDistanceTo: Option[Seq[String]] = None,
                      planDistanceMetric: Seq[PlanDistanceMetric] = Nil,
-                     checkResult: Boolean = false,
+                     checkResult: Boolean = true,
                      reductionMethod: SATReductionMethod = OnlyNormalise,
                      encodingToUse: POEncoding = POCLDeleteEncoding,
+                     atMostOneEncodingMethod: AtMostOneType,
                      usePDTMutexes: Boolean = false,
                      threads: Int = 1
                     ) extends SearchConfiguration {
@@ -2257,7 +2263,6 @@ case class SATSearch(solverType: Solvertype,
            this.copy(runConfiguration = newRunType.head).asInstanceOf[this.type]
          }),
 
-
          "-reduction" -> (NecessaryParameter, { l: Option[String] =>
            val reduction = l.get.toLowerCase match {
              case "normalise" => OnlyNormalise
@@ -2266,7 +2271,18 @@ case class SATSearch(solverType: Solvertype,
              case "ff-full"   => FFReductionWithFullTest
            }
            this.copy(reductionMethod = reduction).asInstanceOf[this.type]
+         }),
+
+         "-atMostOneEncoding" -> (NecessaryParameter, { l: Option[String] =>
+           val encoding = l.get.toLowerCase match {
+             case "binomial"   => BinomialEncoding
+             case "binary"     => BinaryEncoding
+             case "commander"  => CommanderEncoding
+             case "sequential" => SequentialEncoding
+           }
+           this.copy(atMostOneEncodingMethod = encoding).asInstanceOf[this.type]
          })
+
        )
 
   /** returns a detailed information about the object */
