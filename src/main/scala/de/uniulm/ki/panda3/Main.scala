@@ -40,8 +40,9 @@ object Main {
   case class RunConfiguration(domFile: Option[String] = None, probFile: Option[String] = None, outputFile: Option[String] = None,
                               config: PlanningConfiguration = PlanningConfiguration(printGeneralInformation = true, printAdditionalData = true,
                                                                                     randomSeed = 42, timeLimit = None,
-                                                                                    ParsingConfiguration(stripHybrid = true),
-                                                                                    PreprocessingConfiguration(compileNegativePreconditions = true,
+                                                                                    PredefinedConfigurations.defaultConfigurations("ICAPS-2018-RC(FF,gastar)")._1,
+                                                                                    //ParsingConfiguration(stripHybrid = true),
+                                                                                    /*PreprocessingConfiguration(compileNegativePreconditions = true,
                                                                                                                compileUnitMethods = false,
                                                                                                                compileInitialPlan = false,
                                                                                                                ensureMethodsHaveAtMostTwoTasks = false,
@@ -57,8 +58,10 @@ object Main {
                                                                                                                groundedTaskDecompositionGraph = Some(TwoWayTDG),
                                                                                                                iterateReachabilityAnalysis = true,
                                                                                                                groundDomain = true,
-                                                                                                               stopDirectlyAfterGrounding = false),
-                                                                                    PlanningConfiguration.defaultPlanSearchConfiguration,
+                                                                                                               stopDirectlyAfterGrounding = false),*/
+                                                                                    PredefinedConfigurations.defaultConfigurations("ICAPS-2018-RC(FF,gastar)")._2,
+                                                                                    //PlanningConfiguration.defaultPlanSearchConfiguration,
+                                                                                    PredefinedConfigurations.defaultConfigurations("ICAPS-2018-RC(FF,gastar)")._3,
                                                                                     PostprocessingConfiguration(Set(SearchStatus, SearchResult,
                                                                                                                     ProcessingTimings,
                                                                                                                     SearchStatistics)))) extends PrettyPrintable {
@@ -116,7 +119,7 @@ object Main {
                 else {
                   val text = "Unknown option \"" + key + "\"; maybe a typeO? In case it is not, please consult the following help:"
                   println(text)
-                  println(text.indices map { _ => "="} mkString "")
+                  println(text.indices map { _ => "=" } mkString "")
                   //println(conf.config.modifyOnOptionString.keySet.toSeq.filter(helpDB.contains).sorted map { x => "\t" + x } mkString "\n")
                   println()
                   println(transformTo80Chars(getHelpTextFor("main")))
@@ -172,7 +175,7 @@ object Main {
       val indentLength = line.trim.lastIndexOf("  ") + initialIndent.length + 2
       val indent = new String(Array.fill[Char](indentLength)(' '))
       val noIndent: Seq[String] = line.drop(initialIndent.length).split(" ")
-      if (helpDB.keys exists {k => noIndent.head.startsWith(k)}) {
+      if (helpDB.keys exists { k => noIndent.head.startsWith(k) }) {
         indentMode = true
       }
       val (lines, lastLine) = noIndent.drop(1).foldLeft[(Seq[String], String)]((Nil, initialIndent + noIndent.head))(
@@ -180,7 +183,7 @@ object Main {
           case ((list, buf), c) =>
             val newBuf = buf + " " + c
             if (newBuf.length > lineWidth) {
-              if(indentMode) {
+              if (indentMode) {
                 multiLine = true
                 (list :+ buf, indent + c)
               } else {
@@ -190,9 +193,9 @@ object Main {
               (list, newBuf)
             }
         }
-      )
-      if(multiLine && !lastLine.startsWith(indent)) {
-          lines :+ indent ++ lastLine
+                                                                                                                    )
+      if (multiLine && !lastLine.startsWith(indent)) {
+        lines :+ indent ++ lastLine
       } else {
         lines :+ lastLine
       }
@@ -202,7 +205,7 @@ object Main {
   }
 
   val helpDB: Map[String, (String, String, Seq[String], String, Seq[String], String)] = {
-    val dbLines: Seq[String] = Source.fromInputStream(getClass.getResourceAsStream("helpdb.txt"),"UTF-8").getLines().toSeq
+    val dbLines: Seq[String] = Source.fromInputStream(getClass.getResourceAsStream("helpdb.txt"), "UTF-8").getLines().toSeq
 
     val parsed: Seq[Seq[String]] = dbLines.foldLeft[(Seq[Seq[String]], Seq[String])]((Nil, Nil))(
       {
@@ -215,8 +218,8 @@ object Main {
 
     val entries: Seq[(String, (String, String, Seq[String], String, Seq[String], String))] = parsed map { entry =>
       val keys: Seq[String] = entry.head split " "
-      val offset: Int = if(entry(1).startsWith("!")) 1 else 0
-      val options: String = if(offset == 1) entry(1).drop(1) else ""
+      val offset: Int = if (entry(1).startsWith("!")) 1 else 0
+      val options: String = if (offset == 1) entry(1).drop(1) else ""
       val short: String = entry(1 + offset)
       val optionsHeader: String = entry(entry.length - 2)
       val long: String = entry.drop(2 + offset).dropRight(2).mkString("\n")
@@ -241,9 +244,9 @@ object Main {
     }
 
     entries foreach {
-      case ("main", _)                => // it's ok
+      case ("main", _)                   => // it's ok
       case (key, (_, _, alter, _, _, _)) =>
-      assert(alter :+ key exists { k => entries exists(_._2._5 contains k)}, "Key \"" + key + "\" does not occur as part of the explanation tree.")
+        assert(alter :+ key exists { k => entries exists (_._2._5 contains k) }, "Key \"" + key + "\" does not occur as part of the explanation tree.")
     }
 
     entryMap
@@ -333,7 +336,7 @@ object Main {
     println(longTitle)
     println()
     println()
-    println("PANDA was called with: " + args.mkString("\""," ","\""))
+    println("PANDA was called with: " + args.mkString("\"", " ", "\""))
     println()
     println()
 
@@ -342,7 +345,7 @@ object Main {
 
     println(plannerConfiguration.longInfo)
 
-    if (!plannerConfiguration.config.checkConfigurationIntegrity()){
+    if (!plannerConfiguration.config.checkConfigurationIntegrity()) {
       System exit 0
     }
 

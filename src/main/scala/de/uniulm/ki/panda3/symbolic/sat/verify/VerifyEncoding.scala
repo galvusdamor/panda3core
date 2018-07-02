@@ -440,7 +440,7 @@ object AtMostOneType {
   //val chosenType: AtMostOneType = BinomialEncoding
   //val chosenType: AtMostOneType = BinaryEncoding
   //val chosenType: AtMostOneType = CommanderEncoding
-  val chosenType: AtMostOneType = SequentialEncoding
+  var chosenType: AtMostOneType = SequentialEncoding
 }
 
 object BinomialEncoding extends AtMostOneType
