@@ -1057,6 +1057,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                     }
 
                     //println(allTrueAtoms filter { _.startsWith("pathaction") } mkString "\n")
+                    //println(pathToPos  mkString "\n")
 
                     val taskSeq = actionSequence map { case solAction =>
                       val pos = solAction.split("_").last.split(",").head
