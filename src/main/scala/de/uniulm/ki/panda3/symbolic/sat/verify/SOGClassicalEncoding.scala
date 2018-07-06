@@ -193,7 +193,7 @@ case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Dom
                                            taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
                                            useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean) extends SOGClassicalForbiddenEncoding {
 
-  override def stateTransitionFormulaProvider(): Seq[Clause] =  {
+  override def stateTransitionFormulaProvider(): Seq[Clause] = {
     val invariantFormula = Range(0, taskSequenceLength + 1) flatMap { case position =>
       intProblem.symbolicInvariantArray map { case ((ap, ab), (bp, bb)) => Clause((statePredicate(K - 1, position, ap), ab) :: (statePredicate(K - 1, position, bp), bb) :: Nil) }
     }
@@ -230,8 +230,8 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
   lazy val taskOccurenceMap: Map[Int, Set[Task]] =
     domain.primitiveTasks map { t => t -> primitivePaths.count(_._2.contains(t)) } groupBy { _._2 } map { case (a, bs) => a -> bs.map(_._1).toSet }
 
-  lazy val tasksWithOnePosition: Set[Task] = taskOccurenceMap.getOrElse(1, Set[Task]())
-  lazy val tasksOnePath : Map[Task, Seq[Int]] = tasksWithOnePosition map {t => t -> primitivePaths.find(_._2.contains(t)).get._1} toMap
+  lazy val tasksWithOnePosition: Set[Task]           = taskOccurenceMap.getOrElse(1, Set[Task]())
+  lazy val tasksOnePath        : Map[Task, Seq[Int]] = tasksWithOnePosition map { t => t -> primitivePaths.find(_._2.contains(t)).get._1 } toMap
 
   override def stateTransitionFormulaProvider(): Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
 
@@ -262,7 +262,9 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
       }
 
       if (tasksWithOnePosition contains task) {
-        impliesSingle(atom, pathToPos(tasksOnePath(task),position)) :: Nil
+        assert(possibleAchievers.length == 1)
+        val achieverPath = tasksOnePath(task)
+        impliesSingle(atom, pathToPos(tasksOnePath(task), position)) :: impliesSingle(atom, pathAction(achieverPath.length, achieverPath, task)) :: Nil
       } else if (possibleAchievers.nonEmpty)
         atMostOneOf(possibleAchievers) :+ impliesRightOr(atom :: Nil, possibleAchievers)
       else Clause((atom, false)) :: Nil // if there is no achiever, this position can not be made true
