@@ -322,7 +322,7 @@ object Main {
       println(shortTitle)
       println(transformTo80Chars(Source.fromInputStream(getClass.getResourceAsStream("contributors.txt")).getLines().mkString("\n")))
       System exit 0
-    } else if (args.length > 0 && (args(0) == "-licence" || args(0) == "--licence")) {
+    } else if (args.length > 0 && (args(0) == "-licence" || args(0) == "--licence" || args(0) == "-license" || args(0) == "--license")) {
       println(shortTitle)
       if (args.length == 1)
         println(transformTo80Chars(Source.fromInputStream(getClass.getResourceAsStream("licences.txt")).getLines().mkString("\n")))
