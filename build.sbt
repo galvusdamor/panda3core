@@ -35,6 +35,20 @@ lazy val main = (project in (file("assembly") / "main")).settings(assemblySettin
             mainClass in assembly := Some("de.uniulm.ki.panda3.Main")
           )
 
+lazy val PANDAaddPrefix = (project in (file("assembly") / "PANDAaddPrefix")).settings(assemblySettings: _*).
+  settings(
+            target := file("assembly") / "PANDAaddPrefix",
+            assemblyJarName in assembly := "PANDAaddPrefix.jar",
+            mainClass in assembly := Some("de.uniulm.ki.panda3.symbolic.compiler.prefix.PANDAaddPrefix")
+          )
+
+lazy val tlt = (project in (file("assembly") / "tlt")).settings(assemblySettings: _*).
+  settings(
+            target := file("assembly") / "tlt",
+            assemblyJarName in assembly := "tlt.jar",
+            mainClass in assembly := Some("de.uniulm.ki.panda3.planRecognition.switchTLT")
+          )
+
 /*lazy val csvExtractor = (project in (file("assembly") / "csvExtractor")).settings(assemblySettings: _*).
   settings(
             target := file("assembly") / "csvExtractor",
