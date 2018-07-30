@@ -97,14 +97,12 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     builder append "\n"
 
     val planStepToID: Map[PlanStep, Int] = plan.planStepsWithoutInitGoal.zipWithIndex.toMap
-    planStepToID.toSeq sortBy {
-      _._1.id
-    } foreach { case (ps, tIdx) =>
+    planStepToID.toSeq sortBy { _._1.id } foreach { case (ps, tIdx) =>
       builder.append("\t" + (if (indentation) "\t" else "") + (if (problemMode) "(" else "") + " (task" + tIdx + " (" + toPDDLIdentifier(ps.schema.name))
-      val taskUF = SymbolicUnionFind.constructVariableUnionFind(ps)
-      val arguments = ps.arguments filter {
-        taskUF.getRepresentative(_).isInstanceOf[Variable]
-      } map unionFind.getRepresentative
+      val taskUF = SymbolicUnionFind.constructVariableUnionFind(ps.schema)
+      val arguments = ps.arguments.zip(ps.schema.parameters) filter { case (_, schemaVar) =>
+        taskUF.getRepresentative(schemaVar).isInstanceOf[Variable] || noConstantReplacement // if we don't replace constants, we have to keep all arguments
+      } map { case (x, _) => if (noConstantReplacement) x else unionFind.getRepresentative(x) }
       builder.append(writeVariableList(arguments, NoConstraintsCSP))
       builder.append("))" + (if (problemMode) ")" else "") + "\n")
     }
@@ -128,10 +126,16 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
 
     // write down the constraints
     val constraintConditions = plan.variableConstraints.constraints collect {
-      case NotEqual(v1, v2) => "(not (= " + getRepresentative(v1, unionFind) + " " + getRepresentative(v2, unionFind) + "))"
-      case OfSort(v, s)     => "(sortof " + getRepresentative(v, unionFind) + " - " + toPDDLIdentifier(s.name) + ")"
-      case NotOfSort(v, s)  => "(not (sortof " + getRepresentative(v, unionFind) + " - " + toPDDLIdentifier(s.name) + "))"
-    }
+      case Equal(v1, v2) if getRepresentative(v1, unionFind, noConstantReplacement) != getRepresentative(v2, unionFind, noConstantReplacement)                  =>
+        "\t\t\t\t(= " + getRepresentative(v1, unionFind, noConstantReplacement) + " " + getRepresentative(v2, unionFind, noConstantReplacement) + ")"
+      case NotEqual(v1, v2) if getRepresentative(v1, unionFind, noConstantReplacement) != getRepresentative(v2, unionFind, noConstantReplacement)
+        && getRepresentative(v1, unionFind, noConstantReplacement).charAt(0) != '?' && getRepresentative(v2, unionFind, noConstantReplacement).charAt(0) != '?' =>
+        "\t\t\t\t(not (= " + getRepresentative(v1, unionFind, noConstantReplacement) + " " + getRepresentative(v2, unionFind, noConstantReplacement) + "))"
+      case OfSort(v, s)                                                                                                                                         =>
+        "\t\t\t\t(sortof " + getRepresentative(v, unionFind, noConstantReplacement) + " - " + toPDDLIdentifier(s.name) + ")"
+      case NotOfSort(v, s)                                                                                                                                      =>
+        "\t\t\t\t(not (sortof " + getRepresentative(v, unionFind, noConstantReplacement) + " - " + toPDDLIdentifier(s.name) + "))"
+    } distinct
 
     if (constraintConditions.nonEmpty) {
       builder.append("\t" + (if (indentation) "\t" else "") + (if (problemMode) "(" else "") + ":constraints (and\n")
@@ -161,12 +165,14 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     builder.toString()
   }
 
-  def getRepresentative(v: Value, uf: SymbolicUnionFind): String = v match {
+  def getRepresentative(v: Value, uf: SymbolicUnionFind, noConstantReplacement: Boolean = false): String = v match {
     case Constant(c)            => toPDDLIdentifier(c)
-    case vari@Variable(_, _, _) => uf.getRepresentative(vari) match {
-      case Constant(c)          => toPDDLIdentifier(c)
-      case Variable(_, name, _) => toHPDDLVariableName(name)
-    }
+    case vari@Variable(_, _, _) =>
+      if (noConstantReplacement) toHPDDLVariableName(vari.name)
+      else uf.getRepresentative(vari) match {
+        case Constant(c)          => toPDDLIdentifier(c)
+        case Variable(_, name, _) => toHPDDLVariableName(name)
+      }
   }
 
 
@@ -188,7 +194,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
       }
       builder.append(indent + ")\n")
     case l: Literal               =>
-      builder.append(writeLiteral(l, taskUF, indent, noConstantReplacement, noConstantReplacement))
+      builder.append(writeLiteral(l, taskUF, indent, true, noConstantReplacement))
     case Not(form)                => builder.append(indent + "(not\n")
       writeFormula(builder, form, indent + "\t", taskUF, noConstantReplacement)
       builder.append(indent + ")\n")
@@ -213,7 +219,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
 
   private def writeTask(builder: StringBuilder, task: Task, encodeTypesWithPredicates: Boolean, noConstantReplacement: Boolean): Unit = {
     val taskUF = SymbolicUnionFind.constructVariableUnionFind(task)
-    val parameters = if (noConstantReplacement) task.parameters else (task.parameters filter { taskUF.getRepresentative(_).isInstanceOf[Variable] })
+    val parameters = if (noConstantReplacement) task.parameters else task.parameters filter { taskUF.getRepresentative(_).isInstanceOf[Variable] }
 
     builder.append("\n\t(:" + (if (task.isPrimitive) "action" else "task") + " " + toPDDLIdentifier(task.name) + "\n")
     //if (task.parameters.nonEmpty) {
@@ -226,14 +232,35 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     //builder.append(")\n")
 
     // preconditions
-    if (!task.precondition.isEmpty || encodeTypesWithPredicates) {
+    if (!task.precondition.isEmpty || encodeTypesWithPredicates || task.parameterConstraints.nonEmpty) {
       builder.append("\t\t:precondition \n")
-      if (encodeTypesWithPredicates) builder.append("\t\t\t(and\n")
-      writeFormula(builder, task.precondition, "\t\t\t" + (if (encodeTypesWithPredicates) "\t" else ""), taskUF, noConstantReplacement)
-      if (encodeTypesWithPredicates) {
+      if (encodeTypesWithPredicates || task.parameterConstraints.nonEmpty) builder.append("\t\t\t(and\n")
+      writeFormula(builder, task.precondition, "\t\t\t" + (if (encodeTypesWithPredicates || task.parameterConstraints.nonEmpty) "\t" else ""), taskUF, noConstantReplacement)
+
+      val constraintConditions = task.parameterConstraints collect {
+        case Equal(v1, v2) if getRepresentative(v1, taskUF, noConstantReplacement) != getRepresentative(v2, taskUF, noConstantReplacement)                  =>
+          "\t\t\t\t(= " + getRepresentative(v1, taskUF, noConstantReplacement) + " " + getRepresentative(v2, taskUF, noConstantReplacement) + ")"
+        case NotEqual(v1, v2) if getRepresentative(v1, taskUF, noConstantReplacement) != getRepresentative(v2, taskUF, noConstantReplacement)
+          && getRepresentative(v1, taskUF, noConstantReplacement).charAt(0) != '?' && getRepresentative(v2, taskUF, noConstantReplacement).charAt(0) != '?' =>
+          "\t\t\t\t(not (= " + getRepresentative(v1, taskUF, noConstantReplacement) + " " + getRepresentative(v2, taskUF, noConstantReplacement) + "))"
+        case OfSort(v, s)                                                                                                                                   =>
+          "\t\t\t\t(sortof " + getRepresentative(v, taskUF, noConstantReplacement) + " - " + toPDDLIdentifier(s.name) + ")"
+        case NotOfSort(v, s)                                                                                                                                =>
+          "\t\t\t\t(not (sortof " + getRepresentative(v, taskUF, noConstantReplacement) + " - " + toPDDLIdentifier(s.name) + "))"
+      } distinct
+
+      if (constraintConditions.nonEmpty)
+        constraintConditions foreach { condition =>
+          builder append condition
+          builder append "\n"
+        }
+
+
+      if (encodeTypesWithPredicates)
         parameters foreach { case p => builder.append("\t\t\t\t(sort_" + toPDDLIdentifier(p.sort.name) + " " + toHPDDLVariableName(p.name) + ")\n") }
+
+      if (encodeTypesWithPredicates || task.parameterConstraints.nonEmpty)
         builder.append("\t\t\t)\n")
-      }
     } else builder.append("\t\t:precondition ()\n")
     // effects
     if (!task.effect.isEmpty) {
@@ -331,6 +358,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         val taskUF = SymbolicUnionFind.constructVariableUnionFind(m.abstractTask)
         val abstractTaskParameters = if (noConstantReplacement) m.abstractTask.parameters else (m.abstractTask.parameters filter { taskUF.getRepresentative(_).isInstanceOf[Variable] })
         val mappedParameters = abstractTaskParameters map {
+          case v if noConstantReplacement                              => v
           case v if planUF.getRepresentative(v).isInstanceOf[Variable] => planUF getRepresentative v
           case v                                                       => taskUF getRepresentative v
         }
@@ -340,9 +368,9 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         //if (m.subPlan.variableConstraints.variables.nonEmpty) {
         builder.append("\t\t:parameters (")
         val methodParameters: Seq[Variable] = {
-          ((m.subPlan.variableConstraints.variables.toSeq map planUF.getRepresentative collect {
+          ((if (noConstantReplacement) m.subPlan.variableConstraints.variables.toSeq else (m.subPlan.variableConstraints.variables.toSeq map planUF.getRepresentative collect {
             case v@Variable(_, _, _) => v
-          }) ++ mappedVariables).distinct.sortWith({ _.name < _.name })
+          })) ++ mappedVariables).distinct.sortWith({ _.name < _.name })
         }
 
         builder.append(writeParameters(methodParameters, writeTypesWithPredicates = willContainEither))
@@ -366,8 +394,9 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
           if (neededVariableConstraints.nonEmpty)
             neededVariableConstraints foreach {
               case (v, c) => builder.append("\t\t\t(= " +
-                                              (if (noConstantReplacement) toHPDDLVariableName(v.name) else toHPDDLVariableName(taskUF.getRepresentative(v).asInstanceOf[Variable].name)) + " " +
-                                                toPDDLIdentifier(c.name) + ")\n")
+                                              (if (noConstantReplacement) toHPDDLVariableName(v.name) else toHPDDLVariableName(taskUF.getRepresentative(v).asInstanceOf[Variable]
+                                                                                                                                 .name)) + " " +
+                                              toPDDLIdentifier(c.name) + ")\n")
             }
           if (!methodPrecondition.isEmpty) writeFormula(builder, methodPrecondition, "\t\t\t", planUF, noConstantReplacement)
           builder.append("\t\t)\n")
