@@ -17,6 +17,7 @@
 package de.uniulm.ki.panda3.symbolic.compiler.prefix;
 
 
+import de.uniulm.ki.panda3.symbolic.compiler.ExpandSortHierarchy;
 import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler;
 import de.uniulm.ki.panda3.symbolic.compiler.ToPlainFormulaRepresentation;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
@@ -62,6 +63,7 @@ public class PANDAaddPrefix {
                 return;
             }
             Tuple2<Domain, Plan> domPlan = parseCallArguments(args);
+            domPlan = ExpandSortHierarchy.apply(domPlan);
 
             if (prefix.length > 0) {
                 PrefixTransformer prefixTransformer;

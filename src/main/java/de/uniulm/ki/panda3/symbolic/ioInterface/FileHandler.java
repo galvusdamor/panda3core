@@ -85,7 +85,7 @@ public class FileHandler {
         BufferedWriter bwDomain = new BufferedWriter(new FileWriter(domainFileName));
         BufferedWriter bwProblem = new BufferedWriter(new FileWriter(problemFileName));
 
-        bwDomain.write(writer.writeDomain(planningInstance._1()));
+        bwDomain.write(writer.writeDomain(planningInstance._1(),false,false,false));
         bwProblem.write(writer.writeProblem(planningInstance._1(), planningInstance._2()));
 
         bwDomain.close();
