@@ -126,14 +126,14 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
 
     // write down the constraints
     val constraintConditions = plan.variableConstraints.constraints collect {
-      case Equal(v1, v2) if getRepresentative(v1, unionFind, noConstantReplacement) != getRepresentative(v2, unionFind, noConstantReplacement)                  =>
+      case Equal(v1, v2) if getRepresentative(v1, unionFind, noConstantReplacement) != getRepresentative(v2, unionFind, noConstantReplacement)                   =>
         "\t\t\t\t(= " + getRepresentative(v1, unionFind, noConstantReplacement) + " " + getRepresentative(v2, unionFind, noConstantReplacement) + ")"
-      case NotEqual(v1, v2) if getRepresentative(v1, unionFind, noConstantReplacement) != getRepresentative(v2, unionFind, noConstantReplacement)
-        && getRepresentative(v1, unionFind, noConstantReplacement).charAt(0) != '?' && getRepresentative(v2, unionFind, noConstantReplacement).charAt(0) != '?' =>
+      case NotEqual(v1, v2) if !(getRepresentative(v1, unionFind, noConstantReplacement) != getRepresentative(v2, unionFind, noConstantReplacement)
+        && getRepresentative(v1, unionFind, noConstantReplacement).charAt(0) != '?' && getRepresentative(v2, unionFind, noConstantReplacement).charAt(0) != '?') =>
         "\t\t\t\t(not (= " + getRepresentative(v1, unionFind, noConstantReplacement) + " " + getRepresentative(v2, unionFind, noConstantReplacement) + "))"
-      case OfSort(v, s)                                                                                                                                         =>
+      case OfSort(v, s)                                                                                                                                          =>
         "\t\t\t\t(sortof " + getRepresentative(v, unionFind, noConstantReplacement) + " - " + toPDDLIdentifier(s.name) + ")"
-      case NotOfSort(v, s)                                                                                                                                      =>
+      case NotOfSort(v, s)                                                                                                                                       =>
         "\t\t\t\t(not (sortof " + getRepresentative(v, unionFind, noConstantReplacement) + " - " + toPDDLIdentifier(s.name) + "))"
     } distinct
 
@@ -240,8 +240,8 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
       val constraintConditions = task.parameterConstraints collect {
         case Equal(v1, v2) if getRepresentative(v1, taskUF, noConstantReplacement) != getRepresentative(v2, taskUF, noConstantReplacement)                  =>
           "\t\t\t\t(= " + getRepresentative(v1, taskUF, noConstantReplacement) + " " + getRepresentative(v2, taskUF, noConstantReplacement) + ")"
-        case NotEqual(v1, v2) if getRepresentative(v1, taskUF, noConstantReplacement) != getRepresentative(v2, taskUF, noConstantReplacement)
-          && getRepresentative(v1, taskUF, noConstantReplacement).charAt(0) != '?' && getRepresentative(v2, taskUF, noConstantReplacement).charAt(0) != '?' =>
+        case NotEqual(v1, v2) if !(getRepresentative(v1, taskUF, noConstantReplacement) != getRepresentative(v2, taskUF, noConstantReplacement)
+          && getRepresentative(v1, taskUF, noConstantReplacement).charAt(0) != '?' && getRepresentative(v2, taskUF, noConstantReplacement).charAt(0) != '?') =>
           "\t\t\t\t(not (= " + getRepresentative(v1, taskUF, noConstantReplacement) + " " + getRepresentative(v2, taskUF, noConstantReplacement) + "))"
         case OfSort(v, s)                                                                                                                                   =>
           "\t\t\t\t(sortof " + getRepresentative(v, taskUF, noConstantReplacement) + " - " + toPDDLIdentifier(s.name) + ")"
