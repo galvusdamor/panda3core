@@ -626,7 +626,7 @@ object SimpleDirectedGraph {
     //edges flatMap { case (a, b) => a :: b :: Nil } foreach { n => assert(nodes contains n) }
     //println("SDG " + nodes.length + " " + edges.length)
     val baseEdgeMap: Map[T, Seq[T]] = edges.groupBy(_._1) map { case (a, b) => a -> (b map { _._2 }) }
-    val edgeMap: Map[T, Seq[T]] = nodes map { n => n -> baseEdgeMap.getOrElse(n, Nil) } toMap
+    val edgeMap: Map[T, Seq[T]] = nodes map { n => n -> baseEdgeMap.getOrElse(n, Nil).distinct } toMap
 
     //SimpleDirectedGraph(nodes, (nodes zip (nodes map { n => edges.filter({ _._1 == n }).map({ _._2 }) })).toMap)
     SimpleDirectedGraph(nodes, edgeMap)
