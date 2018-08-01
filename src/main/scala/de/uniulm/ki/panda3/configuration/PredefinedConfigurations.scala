@@ -213,7 +213,8 @@ object PredefinedConfigurations {
          "AAAI-2018-totSAT(minisat)" ->
            (htnParsing, groundingPreprocess, SATSearch(MINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding, atMostOneEncodingMethod = BinaryEncoding)),
          "AAAI-2018-totSAT(cryptominisat)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding, atMostOneEncodingMethod = BinaryEncoding)),
+           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding,
+                                                       atMostOneEncodingMethod = BinaryEncoding)),
          "AAAI-2018-totSAT(RISS6)" ->
            (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = TotSATEncoding, atMostOneEncodingMethod = BinaryEncoding)),
          "AAAI-2018-totSAT(MapleCOMSPS)" ->
@@ -247,134 +248,6 @@ object PredefinedConfigurations {
            (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), reductionMethod = OnlyNormalise,
                                                        encodingToUse = TreeBeforeEncoding, atMostOneEncodingMethod = BinaryEncoding)),
 
-
-         "sat-pocl(minisat)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding, atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-pocl(cryptominisat)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-pocl(RISS6)" ->
-           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding, atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-pocl(MapleCOMSPS)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-
-
-         "sat-pocl-delete(cryptominisat,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-pocl-direct(cryptominisat,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden(cryptominisat,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalForbiddenEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-implication(cryptominisat,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-existsstep(cryptominisat,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-implication-existsstep(cryptominisat,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-classical-n4(cryptominisat,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-
-
-         "sat-pocl-delete(RISS6,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-pocl-direct(RISS6,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden(RISS6,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalForbiddenEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-implication(RISS6,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-existsstep(RISS6,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-implication-existsstep(RISS6,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-classical-n4(RISS6,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-
-
-         "sat-pocl-delete(MAPLE,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-pocl-direct(MAPLE,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden(MAPLE,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalForbiddenEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-implication(MAPLE,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-existsstep(MAPLE,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-implication-existsstep(MAPLE,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-classical-n4(MAPLE,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-
-
-         "sat-pocl-delete(cadical,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-pocl-direct(cadical,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden(cadical,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalForbiddenEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-implication(cadical,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-existsstep(cadical,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-implication-existsstep(cadical,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-classical-n4(cadical,noMutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CADICAL, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding,
-                                                       atMostOneEncodingMethod = BinaryEncoding)),
-
-
-         "sat-pocl-delete(cryptominisat,Mutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDeleteEncoding,
-                                                       usePDTMutexes = true, atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-pocl-direct(cryptominisat,Mutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = POCLDirectEncoding,
-                                                       usePDTMutexes = true, atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden(cryptominisat,Mutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalForbiddenEncoding,
-                                                       usePDTMutexes = true, atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-implication(cryptominisat,Mutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalImplicationEncoding,
-                                                       usePDTMutexes = true, atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-existsstep(cryptominisat,Mutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ExistsStepForbiddenEncoding,
-                                                       usePDTMutexes = true, atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-forbidden-implication-existsstep(cryptominisat,Mutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ExistsStepImplicationEncoding,
-                                                       usePDTMutexes = true, atMostOneEncodingMethod = BinaryEncoding)),
-         "sat-classical-n4(cryptominisat,Mutex)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = ClassicalN4Encoding,
-                                                       usePDTMutexes = true, atMostOneEncodingMethod = BinaryEncoding)),
-
-
          "sas-ICAPS-2018-RC(filter,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFilter)),
          "sas-ICAPS-2018-RC(FF,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFF)),
          "sas-ICAPS-2018-RC(lmcut,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hLmCut)),
@@ -385,6 +258,21 @@ object PredefinedConfigurations {
          "sas-ICAPS-2018-RC(FF,greedy)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hFF)),
          "sas-ICAPS-2018-RC(lmcut,greedy)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hLmCut)),
          "sas-ICAPS-2018-RC(add,greedy)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd))
-       )
+       ) ++ {
+      val x: Seq[(String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration))] =
+        for ((solver, solverString) <- (MapleCOMSPS, "MapleCOMSPS") :: (MapleLCMDistChronoBT, "MapleLCMDistChronoBT") :: (Maple_LCM_Scavel, "Maple_LCM_Scavel") ::
+          (CADICAL, "CaDiCaL") :: (RISS6, "riss6") :: (CRYPTOMINISAT, "cms5") :: (CRYPTOMINISAT55, "cms55") :: (expMC_LRB_VSIDS_Switch_2500, "expMC_LRB_VSIDS_Switch_2500") ::
+          (ReasonLS,"ReasonLS") ::
+
+          Nil;
+             (encoding, encodingString) <- (ClassicalForbiddenEncoding, "classical-forbidden") :: (ClassicalImplicationEncoding, "classical-forbidden-implication") ::
+               (ExistsStepForbiddenEncoding, "exists-forbidden") :: (ExistsStepImplicationEncoding, "exists-forbidden-implication") ::
+               Nil
+        ) yield
+          "sat-" + encodingString + "(" + solverString + ")" -> (htnParsing, groundingPreprocess,
+            SATSearch(solver, FullSATRun(), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = BinaryEncoding, encodingToUse = encoding))
+
+      x.toMap
+    }
 
 }

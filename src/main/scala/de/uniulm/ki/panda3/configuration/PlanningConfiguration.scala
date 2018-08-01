@@ -1510,7 +1510,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
              case "SHOP2"                                 => SHOP2
              case "minisat"                               => MINISAT
              case "cryptominisat"                         => CRYPTOMINISAT
-             case "cadical"                               => CADICAL
+             case "cryptominisat55"                       => CRYPTOMINISAT55
+             case "MapleLCMDistChronoBT"                  => MapleLCMDistChronoBT
+             case "Maple_LCM_Scavel"                      => Maple_LCM_Scavel
+             case "expMC_LRB_VSIDS_Switch_2500"           => expMC_LRB_VSIDS_Switch_2500
+             case "ReasonLS"                              => ReasonLS
+             case "CaDiCaL"                               => CADICAL
            }
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
@@ -2421,12 +2426,28 @@ object SHOP2 extends ExternalProgram
 
 sealed trait Solvertype extends DefaultLongInfo with ExternalProgram
 
+
 object MINISAT extends Solvertype {override val longInfo: String = "minisat"}
 
 object CRYPTOMINISAT extends Solvertype {override val longInfo: String = "cryptominisat"}
 
 object RISS6 extends Solvertype {override val longInfo: String = "riss6"}
 
-object MapleCOMSPS extends Solvertype {override val longInfo: String = "MapleCOMSPS"}
-
 object CADICAL extends Solvertype {override val longInfo: String = "Cadical"}
+
+
+sealed trait DefaultDIMACSSolver extends Solvertype
+
+object MapleCOMSPS extends DefaultDIMACSSolver {override val longInfo: String = "MapleCOMSPS"}
+
+object MapleLCMDistChronoBT extends DefaultDIMACSSolver {override val longInfo: String = "MapleLCMDistChronoBT"}
+
+object Maple_LCM_Scavel extends DefaultDIMACSSolver {override val longInfo: String = "Maple_LCM_Scavel"}
+
+object expMC_LRB_VSIDS_Switch_2500 extends DefaultDIMACSSolver {override val longInfo: String = "expMC_LRB_VSIDS_Switch_2500"}
+
+object ReasonLS extends DefaultDIMACSSolver {override val longInfo: String = "ReasonLS"}
+
+object RISS7 extends DefaultDIMACSSolver {override val longInfo: String = "RISS7"}
+
+object CRYPTOMINISAT55 extends DefaultDIMACSSolver {override val longInfo: String = "cryptominisat5.5"}

@@ -412,20 +412,20 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             val scriptFileName = fileDir + "__run" + uniqFileIdentifier + ".bat"
 
             val solverCallString = satSolver match {
-              case MINISAT       =>
+              case MINISAT                =>
                 println("Starting minisat")
                 solverPath.get + " -rnd-seed=" + randomSeed + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
-              case CRYPTOMINISAT =>
-                println("Starting cryptominisat5")
-                solverPath.get + " -t " + solverThreads + " -r " + randomSeed + " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-              case RISS6         =>
+              case CRYPTOMINISAT        | CRYPTOMINISAT55  =>
+                println("Starting " + satSolver.longInfo)
+                solverPath.get + /*" -t " + solverThreads + " -r " + randomSeed + */ " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              case RISS6                  =>
                 println("Starting riss6")
                 // -config=Riss6:-no-enabled_cp3
                 solverPath.get + " -config=Riss427 -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-              case MapleCOMSPS   =>
-                println("Starting mapleCOMSPS")
+              case _: DefaultDIMACSSolver =>
+                println("Starting " + satSolver.longInfo)
                 solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-              case CADICAL       =>
+              case CADICAL                =>
                 println("Starting cadical")
                 solverPath.get + " --verbose=0 " + fileDir + "__cnfString" + uniqFileIdentifier
             }
@@ -444,11 +444,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             // wait for termination
             satProcess.get.exitValue()
             satSolver match {
-              case CRYPTOMINISAT | RISS6 | MapleCOMSPS | CADICAL =>
-                val outString = stdout.toString()
-                //println("OUTSTRING " + outString)
-                writeStringToFile(outString, new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
-              case _                                                    =>
+              case CRYPTOMINISAT | RISS6 | CADICAL | _: DefaultDIMACSSolver => writeStringToFile(stdout.toString(), new File(fileDir + "__res" + uniqFileIdentifier + ".txt"))
+              case _                                                        =>
             }
 
             // remove runscript
@@ -463,9 +460,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
               case osname if osname startsWith "mac os x" => 0
               case _                                      =>
                 val errString = removeCommentAtBeginning(stderr.toString())
-                //println(errString)
+                println(errString)
+                //println(errString.split('\n').map(x => "Line: " + x).mkString("\n"))
 
-                (errString.split('\n')(1).split(' ') map { _.toDouble * 1000 } sum).toInt
+                val lines = errString.split('\n')
+                val lineToTake = lines.find(x => '0' <= x.head && x.head <= '9').get
+
+                (lineToTake.split(' ') map { _.toDouble * 1000 } sum).toInt
             }
 
             println("Time command gave the following runtime for the solver: " + totalTime)
@@ -511,12 +512,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           print("Preparing solver output ... ")
           val t4 = System.currentTimeMillis()
           val (solveState, literals): (String, Set[Int]) = satSolver match {
-            case MINISAT                             =>
+            case MINISAT                                                  =>
               val splitted = solverOutput.split("\n")
               if (splitted.length == 1) (splitted(0), Set[Int]()) else (splitted(0), (splitted(1).split(" ") filter { _ != "" } map { _.toInt } filter { _ != 0 }).toSet)
-            case CRYPTOMINISAT | RISS6 | MapleCOMSPS | CADICAL =>
-              //println(solverOutput)
-              //System exit 0
+            case CRYPTOMINISAT | RISS6 | CADICAL | _: DefaultDIMACSSolver =>
 
               val nonCommentOutput = removeCommentAtBeginning(solverOutput)
               if (nonCommentOutput.length < 100) println("STARTOUTPUT\n" + nonCommentOutput.replace(' ', '_') + "\nENDOUTPUT")
@@ -526,7 +525,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
               if (stateSplit.length == 1) (cleanState, Set[Int]())
               else {
-                val singleItems :Seq[String] = stateSplit(1).split("\n").filterNot(_.startsWith("c")).flatMap(_.split(" "))
+                val singleItems: Seq[String] = stateSplit(1).split("\n").filterNot(_.startsWith("c")).flatMap(_.split(" "))
                 val lits = singleItems.collect({ case s if s != "" && s != "\nv" && s != "v" && s != "0" && s != "0\n" => s.toInt }).toSet
 
                 (cleanState, lits)
