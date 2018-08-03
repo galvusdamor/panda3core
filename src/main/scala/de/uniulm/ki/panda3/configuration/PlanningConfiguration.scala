@@ -1513,7 +1513,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
              case "cryptominisat55"                       => CRYPTOMINISAT55
              case "MapleLCMDistChronoBT"                  => MapleLCMDistChronoBT
              case "Maple_LCM_Scavel"                      => Maple_LCM_Scavel
-             case "expMC_LRB_VSIDS_Switch_2500"           => expMC_LRB_VSIDS_Switch_2500
+             case "expMC_LRB_VSIDS_Switch_2500"           => ExpMC_LRB_VSIDS_Switch_2500
              case "ReasonLS"                              => ReasonLS
              case "CaDiCaL"                               => CADICAL
            }
@@ -2444,7 +2444,7 @@ object MapleLCMDistChronoBT extends DefaultDIMACSSolver {override val longInfo: 
 
 object Maple_LCM_Scavel extends DefaultDIMACSSolver {override val longInfo: String = "Maple_LCM_Scavel"}
 
-object expMC_LRB_VSIDS_Switch_2500 extends DefaultDIMACSSolver {override val longInfo: String = "expMC_LRB_VSIDS_Switch_2500"}
+object ExpMC_LRB_VSIDS_Switch_2500 extends DefaultDIMACSSolver {override val longInfo: String = "expMC_LRB_VSIDS_Switch_2500"}
 
 object ReasonLS extends DefaultDIMACSSolver {override val longInfo: String = "ReasonLS"}
 

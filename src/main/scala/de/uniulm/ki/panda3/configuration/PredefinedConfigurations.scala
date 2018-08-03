@@ -261,7 +261,7 @@ object PredefinedConfigurations {
        ) ++ {
       val x: Seq[(String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration))] =
         for ((solver, solverString) <- (MapleCOMSPS, "MapleCOMSPS") :: (MapleLCMDistChronoBT, "MapleLCMDistChronoBT") :: (Maple_LCM_Scavel, "Maple_LCM_Scavel") ::
-          (CADICAL, "CaDiCaL") :: (RISS6, "riss6") :: (CRYPTOMINISAT, "cms5") :: (CRYPTOMINISAT55, "cms55") :: (expMC_LRB_VSIDS_Switch_2500, "expMC_LRB_VSIDS_Switch_2500") ::
+          (CADICAL, "CaDiCaL") :: (RISS6, "riss6") :: (CRYPTOMINISAT, "cms5") :: (CRYPTOMINISAT55, "cms55") :: (ExpMC_LRB_VSIDS_Switch_2500, "expMC_LRB_VSIDS_Switch_2500") ::
           (ReasonLS,"ReasonLS") ::
 
           Nil;
@@ -269,7 +269,7 @@ object PredefinedConfigurations {
                (ExistsStepForbiddenEncoding, "exists-forbidden") :: (ExistsStepImplicationEncoding, "exists-forbidden-implication") ::
                Nil
         ) yield
-          "sat-" + encodingString + "(" + solverString + ")" -> (htnParsing, groundingPreprocess,
+          "sat-" + encodingString + "(" + solverString + ")" -> (htnParsing, groundingPreprocess.copy(removeNoOps = true),
             SATSearch(solver, FullSATRun(), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = BinaryEncoding, encodingToUse = encoding))
 
       x.toMap

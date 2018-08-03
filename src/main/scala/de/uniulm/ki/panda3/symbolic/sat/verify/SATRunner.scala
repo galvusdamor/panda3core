@@ -411,23 +411,19 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
             val scriptFileName = fileDir + "__run" + uniqFileIdentifier + ".bat"
 
+            println("Starting " + satSolver.longInfo)
+
             val solverCallString = satSolver match {
               case MINISAT                =>
-                println("Starting minisat")
                 solverPath.get + " -rnd-seed=" + randomSeed + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
               case CRYPTOMINISAT        | CRYPTOMINISAT55  =>
-                println("Starting " + satSolver.longInfo)
                 solverPath.get + /*" -t " + solverThreads + " -r " + randomSeed + */ " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
               case RISS6                  =>
-                println("Starting riss6")
-                // -config=Riss6:-no-enabled_cp3
                 solverPath.get + " -config=Riss427 -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-              case _: DefaultDIMACSSolver =>
-                println("Starting " + satSolver.longInfo)
-                solverPath.get + " -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
               case CADICAL                =>
-                println("Starting cadical")
                 solverPath.get + " --verbose=0 " + fileDir + "__cnfString" + uniqFileIdentifier
+              case _: DefaultDIMACSSolver =>
+                solverPath.get + " -no-drup -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
             }
             writeStringToFile(outerScriptString + solverCallString, scriptFileName)
 
