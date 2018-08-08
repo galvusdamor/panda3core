@@ -1005,6 +1005,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     })
 
 
+    timeCapsule start REMOVING_UNNECESSARY_PREDICATES
     val predicatesRemoved = if (domain.isGround && preprocessingConfiguration.removeUnnecessaryPredicates) {
       info("Removing unnecessary predicates ... ")
       val compiled = PrunePredicates.transform(domain, problem, protectedPredicatesFromConfiguration ++ problem.ltlConstraint.allPredicatesNames)
@@ -1012,13 +1013,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       extra(compiled._1.statisticsString + "\n")
       compiled
     } else (domain, problem)
+    timeCapsule stop REMOVING_UNNECESSARY_PREDICATES
 
     assert(predicatesRemoved._2.planStepsAndRemovedPlanStepsWithoutInitGoal forall { predicatesRemoved._1.tasks contains _.schema })
 
     // lifted reachability analysis
     timeCapsule start LIFTED_REACHABILITY_ANALYSIS
-    val liftedResult = if (preprocessingConfiguration.liftedReachability) {
-      info("Lifted reachability analysis and Domain cleanup ... ")
+    // only run lifted reachability if domain is actually lifted ...
+    if (preprocessingConfiguration.liftedReachability && predicatesRemoved._1.isGround) info("Omitting lifted reachability analysis ... \n")
+    val liftedResult = if (preprocessingConfiguration.liftedReachability && !predicatesRemoved._1.isGround) {
+      info("Lifted reachability analysis and domain cleanup ... ")
       val newAnalysisMap = runLiftedForwardSearchReachabilityAnalysis(predicatesRemoved._1, predicatesRemoved._2, emptyAnalysis)
       val reachable = newAnalysisMap(SymbolicLiftedReachability).reachableLiftedPrimitiveActions.toSet
       val disallowedTasks = domain.primitiveTasks filterNot reachable.contains
@@ -1139,7 +1143,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val pruned = PruneEffects.transform(hierarchyPruned, (domain.primitiveTasks.toSet, protectedPredicatesFromConfiguration ++ problem.ltlConstraint.allPredicatesNames))
 
       info("done (" + (System.currentTimeMillis() - sasStart) + " ms).\n")
-      info("Number of Grounded Actions " + sasPlusParser.reachableGroundPrimitiveActions.length + "\n")
+      info("\tNumber of Grounded Actions " + sasPlusParser.reachableGroundPrimitiveActions.length + "\n")
       extra(pruned._1.statisticsString + "\n")
 
       // for now
@@ -1210,8 +1214,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val pruned = PruneHierarchy.transform(sasPlusResult._1._1, sasPlusResult._1._2, disallowedTasks.toSet)
       val time1 = System.currentTimeMillis()
       info("done.\n")
-      info("Number of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
-      info("Number of Grounded Literals " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.length + "\n")
+      info("\tNumber of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
+      info("\tNumber of Grounded Literals " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.length + "\n")
 
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
@@ -1248,7 +1252,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     val groundedCompilersToBeApplied: Seq[CompilerConfiguration[_]] =
       if (!runForGrounder || !preprocessingConfiguration.groundDomain) (if (preprocessingConfiguration.compileUselessAbstractTasks)
-        CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand useless abstract tasks", USELESS_ABSTRACT_TASKS) :: Nil
+        CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand choiceless abstract tasks", USELESS_CHOICELESS_TASKS) :: Nil
       else Nil) ::
         (CompilerConfiguration(PruneUselessAbstractTasks, (), "abstract tasks without methods", USELESS_ABSTRACT_TASKS) :: Nil) ::
         // this one has to be the last
@@ -1277,7 +1281,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                              })
 
     if (!preprocessingConfiguration.iterateReachabilityAnalysis || compiledResult._1.tasks.length == domain.tasks.length ||
-      (compiledResult._1.abstractTasks.nonEmpty && compiledResult._1.decompositionMethods.isEmpty)) ((compiledResult, tdgResult._2), timeCapsule)
+      (compiledResult._1.abstractTasks.nonEmpty && compiledResult._1.decompositionMethods.isEmpty) || !compiledResult._1.isGround) // if we are still lifted, don't iterate the reachability
+      ((compiledResult, tdgResult._2), timeCapsule)
     else runReachabilityAnalyses(compiledResult._1, compiledResult._2, runForGrounder, timeCapsule, firstAnalysis = false,
                                  savedSASPlusParser = tdgResult._2.getOrElse(SASPInput) map { _.sasPlusProblem })
   }
@@ -1401,7 +1406,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         if (!preprocessingConfiguration.stopDirectlyAfterGrounding) runReachabilityAnalyses(unitMethodsCompiled._1, unitMethodsCompiled._2, runForGrounder = false, timeCapsule)
         else ((unitMethodsCompiled, AnalysisMap(Map())), null)
 
-      timeCapsule start COMPILE_UNIT_METHODS
+      timeCapsule start COMPILE_METHODS_WITH_IDENTICAL_TASKS
       val methodsWithIdenticalTasks = if (
         searchConfiguration.isInstanceOf[SATSearch] && postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree) && !groundedDomainAndPlan._1.isClassical) {
         info("Compiling methods with identical tasks ... ")
@@ -1410,8 +1415,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         extra(compiled._1.statisticsString + "\n")
         compiled
       } else groundedDomainAndPlan
-      timeCapsule stop COMPILE_UNIT_METHODS
+      timeCapsule stop COMPILE_METHODS_WITH_IDENTICAL_TASKS
 
+      timeCapsule start REMOVING_UNNECESSARY_PREDICATES
       val predicatedPruned = if (preprocessingConfiguration.removeUnnecessaryPredicates) {
         info("Removing unnecessary predicates ... ")
         val compiled = PrunePredicates.transform(methodsWithIdenticalTasks._1, methodsWithIdenticalTasks._2,
@@ -1420,6 +1426,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         extra(compiled._1.statisticsString + "\n")
         compiled
       } else methodsWithIdenticalTasks
+      timeCapsule stop REMOVING_UNNECESSARY_PREDICATES
 
       val lastCompilersToBeApplied = (if (preprocessingConfiguration.ensureMethodsHaveAtMostTwoTasks)
         CompilerConfiguration(TwoTaskPerMethod, (), "force two tasks per method", TOP_TASK) :: Nil
