@@ -37,6 +37,9 @@ object PrunePredicates extends DomainTransformer[Set[String]] {
         false
     } filterNot { p => predicatesToKeep contains p.name.split("\\[").head }
 
-    (domain update RemovePredicate(unnecessaryPredicates.toSet), plan update RemovePredicate(unnecessaryPredicates.toSet))
+    if (unnecessaryPredicates.isEmpty) (domain, plan)
+    else {
+      (domain update RemovePredicate(unnecessaryPredicates.toSet), plan update RemovePredicate(unnecessaryPredicates.toSet))
+    }
   }
 }
