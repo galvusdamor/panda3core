@@ -116,13 +116,12 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     }
   } toMap
 
-  lazy val consumersOf: Map[Predicate, Seq[ReducedTask]] = (predicates map { pred =>
-    (pred, tasks collect { case t: ReducedTask => t } filter {
-      _.precondition.conjuncts exists { _.predicate == pred }
-    })
-  }).toMap
+  lazy val consumersOf: Map[Predicate, Seq[ReducedTask]] = {
+    val groupedList = tasks collect { case t: ReducedTask => t } flatMap { t => t.precondition.conjuncts map { c => (t, c.predicate) } } groupBy (_._2)
+    groupedList map { case (k, vs) => k -> (vs map { _._1 }) } withDefaultValue Nil
+  }
 
-  lazy val primitiveConsumerOf: Map[Predicate, Seq[ReducedTask]] = consumersOf map { case (pred, cons) => pred -> cons.filter { _.isPrimitive } }
+  lazy val primitiveConsumerOf: Map[Predicate, Seq[ReducedTask]] = consumersOf map { case (pred, cons) => pred -> cons.filter { _.isPrimitive } } withDefaultValue Nil
 
   lazy val primitiveTasks         : Seq[Task] = tasks filter { _.isPrimitive }
   lazy val abstractTasks          : Seq[Task] = tasks filterNot { _.isPrimitive }
@@ -275,9 +274,10 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                      "number of abstract tasks" -> abstractTasks.size,
                                                      "number of primitive tasks" -> primitiveTasks.size,
                                                      "number of decomposition methods" -> decompositionMethods.size,
-                                                     "number of tasks in largest method" -> maximumMethodSize
+                                                     "number of tasks in largest method" -> maximumMethodSize,
+                                                     "number of epsilon methods" -> decompositionMethods.count(_.subPlan.planStepsWithoutInitGoal.isEmpty)
                                                    )
-  lazy val statisticsString: String           = statistics.mkString("\n")
+  lazy val statisticsString: String           = statistics.map({ case (k, v) => "\t" + k + " = " + v }).mkString("\n")
 }
 
 case class GroundedDomainToDomainMapping(taskMapping: Map[Task, GroundTask]) extends DomainUpdatable {
