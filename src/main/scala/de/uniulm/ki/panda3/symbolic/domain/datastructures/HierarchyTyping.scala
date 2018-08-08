@@ -31,7 +31,7 @@ import scala.collection.mutable
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class HierarchyTyping(domain: Domain, initialPlan: Plan) extends WithHierarchyTyping {
-  val omitTopDownStep : Boolean = false
+  val omitTopDownStep: Boolean = false
 }
 
 trait WithHierarchyTyping extends WithTopMethod {
@@ -106,7 +106,7 @@ trait WithHierarchyTyping extends WithTopMethod {
   // start the cartesian process from the artificial grounding top task
   lazy val cartesianTop = CartesianGroundTask(groundedTopTask.task.asInstanceOf[ReducedTask], groundedTopTask.arguments map { x => Set(x) })
 
-  def initialise() : Unit = if (!omitTopDownStep) {
+  def initialise(): Unit = if (!omitTopDownStep) {
     dfs(cartesianTop)
   } else {
     // don't use top-down analysis, just fill the carthesian maps naively
@@ -118,9 +118,9 @@ trait WithHierarchyTyping extends WithTopMethod {
     (domain.decompositionMethods :+ topMethod) foreach { case m =>
       val cartTask = cartTasksMap(m.abstractTask).head
       val cartMethod = CartesianGroundMethod(m, m.subPlan.variableConstraints.variables map { v =>
-        m.subPlan.variableConstraints.constraints find { case Equal(`v`,c : Constant) => true; case _ => false } match {
-          case Some(Equal(_,c : Constant)) => v -> Set(c)
-          case None => v -> m.subPlan.variableConstraints.reducedDomainOf (v).toSet.filterNot (c => m.subPlan.variableConstraints.constraints.contains (NotEqual (v, c) ) )
+        m.subPlan.variableConstraints.constraints find { case Equal(`v`, c: Constant) => true; case _ => false } match {
+          case Some(Equal(_, c: Constant)) => v -> Set(c)
+          case None                        => v -> m.subPlan.variableConstraints.reducedDomainOf(v).toSet.filterNot(c => m.subPlan.variableConstraints.constraints.contains(NotEqual(v, c)))
         }
         /*v.sort.elements.toSet*/
       } toMap, omitTopDownStep = true)
@@ -241,27 +241,28 @@ trait WithHierarchyTyping extends WithTopMethod {
 
 */
   def checkPartialAssignment(task: Task, assignment: Map[Variable, Constant]): Boolean =
-    if (initialPlan.isModificationAllowed(InsertPlanStepWithLink(null,null,null,null)) && task.isPrimitive) true
+    if (initialPlan.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null)) && task.isPrimitive) true
     else cartTasksMap(task) exists { ct => ct.isCompatible(assignment) }
 
 
   def checkGrounding(groundAction: GroundTask): Boolean =
-    if (initialPlan.isModificationAllowed(InsertPlanStepWithLink(null,null,null,null)) && groundAction.task.isPrimitive) true else {
+    if (initialPlan.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null)) && groundAction.task.isPrimitive) true else {
       cartTasksMap(groundAction.task) exists { ct => ct.isCompatible(groundAction) }
-    /*(groundAction.arguments.zip(groundAction.task.parameters) forall { case (c1, v1) =>
-      groundAction.arguments.zip(groundAction.task.parameters) forall { case (c2, v2) =>
-        v1.id >= v2.id || allowedParameterCombinations(groundAction.task).contains(PossibleArgumentPair(v1, c1, v2, c2))
-      }
-    })*/
-  }
+      /*(groundAction.arguments.zip(groundAction.task.parameters) forall { case (c1, v1) =>
+        groundAction.arguments.zip(groundAction.task.parameters) forall { case (c2, v2) =>
+          v1.id >= v2.id || allowedParameterCombinations(groundAction.task).contains(PossibleArgumentPair(v1, c1, v2, c2))
+        }
+      })*/
+    }
 }
 
+// scalastyle:off
 
-case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Variable, Set[Constant]], omitTopDownStep : Boolean = false) {
+case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Variable, Set[Constant]], omitTopDownStep: Boolean = false) {
   lazy val subTasks  : Seq[CartesianGroundTask]           = subTaskMap.values.toSeq
   lazy val subTaskMap: Map[PlanStep, CartesianGroundTask] = method.subPlan.planStepsWithoutInitGoal map { case ps@PlanStep(_, schema: ReducedTask, arguments) =>
     ps -> CartesianGroundTask(schema,
-                              if (!omitTopDownStep) arguments map parameter else  ps.schema.parameters map { _.sort.elements.toSet })
+                              if (!omitTopDownStep) arguments map parameter else ps.schema.parameters map { _.sort.elements.toSet })
   } toMap
 
   lazy val subCartesianToPlanSteps: Map[CartesianGroundTask, Seq[PlanStep]] = subTaskMap.toSeq groupBy { _._2 } map { case (cart, seq) => cart -> seq.map(_._1) }
@@ -295,10 +296,22 @@ case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Var
     (nonBindable map { case (v, _) => (v, parameter(v).toSeq) } toSeq, bindByEquality map { case (v1, Some(v2)) => (v1, v2) })
   }
 
-  def groundWithPossibleTasks(possibleTasks: mutable.Map[CartesianGroundTask, Set[GroundTask]]): Seq[GroundedDecompositionMethod] = {
-    // treat plansteps in increasing order of groundings
-    val planStepsSortedByDifficulty = method.subPlan.planStepsWithoutInitGoal sortBy { ps => possibleTasks(subTaskMap(ps)).size }
+  def groundWithPossibleTasks(possibleTasks: mutable.Map[CartesianGroundTask, Set[GroundTask]], causingTask: Option[Seq[GroundTask]]): Seq[GroundedDecompositionMethod] =
+    causingTask match {
+      case None        => groundWithPossibleTasks(possibleTasks, None, None)
+      case Some(tasks) =>
+        val matchingPlanSteps = method.subPlan.planStepsWithoutInitGoal.filter(_.schema == tasks.head.task)
+        matchingPlanSteps flatMap { ps => groundWithPossibleTasks(possibleTasks, Some(tasks.toSet), Some(ps)) } distinct
+    }
 
+  def groundWithPossibleTasks(possibleTasks: mutable.Map[CartesianGroundTask, Set[GroundTask]],
+                              causingTask: Option[Set[GroundTask]], planStep: Option[PlanStep]): Seq[GroundedDecompositionMethod] = {
+    // treat plansteps in increasing order of groundings
+    val planStepsSortedByDifficulty = planStep match {
+      case None     => method.subPlan.planStepsWithoutInitGoal sortBy { ps => possibleTasks(subTaskMap(ps)).size }
+      case Some(ps) =>
+        (ps :: Nil) ++ (method.subPlan.planStepsWithoutInitGoal.filter(_ != ps) sortBy { ps => possibleTasks(subTaskMap(ps)).size })
+    }
 
     val (_, possibleTasksMapsSeq) = planStepsSortedByDifficulty.foldLeft[(Set[Variable], Seq[(PlanStep, Seq[Variable], Map[Seq[Constant], Seq[GroundTask]])])]((Set(), Nil))(
       { case ((boundVariables, mapsSoFar), nextPlanStep) =>
@@ -314,7 +327,6 @@ case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Var
 
 
     val possibleTasksMaps: Array[(PlanStep, Seq[Variable], Map[Seq[Constant], Seq[GroundTask]])] = possibleTasksMapsSeq.toArray
-
 
     // recursively match the tasks
     def matchRecursively(position: Int, variableBinding: Map[Variable, Constant]): Seq[GroundedDecompositionMethod] = {
@@ -332,7 +344,9 @@ case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Var
         val (nextPlanStep, commonVariables, groundAccessMap) = possibleTasksMaps(position)
         val commonVariablesValues = commonVariables map variableBinding
 
-        val possibleGroundings: Seq[GroundTask] = groundAccessMap(commonVariablesValues)
+        val allPossibleGroundings: Seq[GroundTask] = groundAccessMap(commonVariablesValues)
+        val possibleGroundings: Seq[GroundTask] = if (position == 0 && causingTask.isDefined) allPossibleGroundings.filter(causingTask.get.contains) else allPossibleGroundings
+
 
         //println("POSS groundings " + possibleGroundings.size)
 
@@ -353,11 +367,7 @@ case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Var
       }
     }
 
-    val res = matchRecursively(0, Map())
-
-
-    //println("RESULT " + res.length)
-    res
+    matchRecursively(0, Map())
   }
 
   override def equals(o: scala.Any): Boolean =

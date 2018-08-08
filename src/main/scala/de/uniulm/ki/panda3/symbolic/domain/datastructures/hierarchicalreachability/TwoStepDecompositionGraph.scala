@@ -61,14 +61,14 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
         if (scc.size != 1 || scc.head.isAbstract) {
           //println("\n\n\n\n\nSCC " + (scc map { _.name }))
 
-          def groundNew(cartesianGroundMethod: CartesianGroundMethod): Seq[(Task, GroundTask)] = {
+          def groundNew(cartesianGroundMethod: CartesianGroundMethod, causingTask : Option[Seq[GroundTask]]): Seq[(Task, GroundTask)] = {
             //println("GROUND A NEW " + cartesianGroundMethod.method.name + " " + (cartesianGroundMethod.subTasks map { gt => gt.shortInfo + " " + possibleGroundInstances(gt).size })
             //  .mkString("  "))
             //println("RESTRICT " + (cartesianGroundMethod.parameter map { case (v, c) => v.name + " -> " + c.size }).mkString(" "))
 
             var nc = 0
 
-            val newMethods = cartesianGroundMethod.groundWithPossibleTasks(possibleGroundInstances)
+            val newMethods = cartesianGroundMethod.groundWithPossibleTasks(possibleGroundInstances, causingTask)
             //println("DONE " + newMethods.size)
             var actuallyNew = 0
             val r = newMethods flatMap {
@@ -100,17 +100,17 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
           }
 
           var untreatedTaskGroundings: Set[(Task, GroundTask)] =
-            scc flatMap { task => cartTasksMap(task) flatMap { cartTask => cartMethodsMap(cartTask) } } flatMap { cartMethod => groundNew(cartMethod) }
+            scc flatMap { task => cartTasksMap(task) flatMap { cartTask => cartMethodsMap(cartTask) } } flatMap { cartMethod => groundNew(cartMethod, None) }
 
           while (untreatedTaskGroundings.nonEmpty) {
-            //println("ITERATE")
+            //println("=================== ITERATE ===================")
             val triggers: Set[(Task, Seq[GroundTask])] =
               untreatedTaskGroundings groupBy { _._1 } map { case (task, taskAndGroundTasks) => (task, taskAndGroundTasks map { _._2 } toSeq) } toSet
 
             untreatedTaskGroundings = triggers flatMap {
               case (task, groundTasks) =>
                 //println("ONE TRIGGER " + groundTasks.length)
-                cartTasksMap(task) flatMap { cartTask => cartTaskInMethodsMap(cartTask) } flatMap groundNew
+                cartTasksMap(task) flatMap { cartTask => cartTaskInMethodsMap(cartTask) } flatMap {cartMethod => groundNew(cartMethod, Some(groundTasks))}
             } filter { case (t, _) => scc contains t }
           }
         }
