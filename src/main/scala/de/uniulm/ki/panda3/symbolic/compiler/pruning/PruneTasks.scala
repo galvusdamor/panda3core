@@ -53,7 +53,9 @@ object PruneUselessAbstractTasks extends DomainTransformer[Unit] {
     val uselessAbstractTasks = (uselessAbstractTasksNoDecomposition ++ uselessAbstractTasksNeverOccurring) filterNot plan.planStepSchemaArray.contains
 
     val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks filterNot uselessAbstractTasks.contains,
-                               domain.decompositionMethods filterNot { m => uselessAbstractTasks exists { rt => m containsTask rt } }, domain.decompositionAxioms,
+                               domain.decompositionMethods filter { m => !uselessAbstractTasks.contains(m.abstractTask) &&
+                                 m.subPlan.planStepTasksSet.forall{ rt => !uselessAbstractTasks.contains(rt) } },
+                               domain.decompositionAxioms,
                                domain.mappingToOriginalGrounding, domain.sasPlusRepresentation)
     (reducedDomain, plan)
   }
