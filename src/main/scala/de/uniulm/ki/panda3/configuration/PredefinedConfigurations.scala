@@ -262,7 +262,7 @@ object PredefinedConfigurations {
       val x: Seq[(String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration))] =
         for ((solver, solverString) <- (MapleCOMSPS, "MapleCOMSPS") :: (MapleLCMDistChronoBT, "MapleLCMDistChronoBT") :: (Maple_LCM_Scavel, "Maple_LCM_Scavel") ::
           (CADICAL, "CaDiCaL") :: (RISS6, "riss6") :: (CRYPTOMINISAT, "cms5") :: (CRYPTOMINISAT55, "cms55") :: (ExpMC_LRB_VSIDS_Switch_2500, "expMC_LRB_VSIDS_Switch_2500") ::
-          (ReasonLS,"ReasonLS") ::
+          (ReasonLS,"ReasonLS") :: (MINISAT,"minisat") ::
 
           Nil;
              (encoding, encodingString) <- (ClassicalForbiddenEncoding, "classical-forbidden") :: (ClassicalImplicationEncoding, "classical-forbidden-implication") ::

@@ -1825,15 +1825,16 @@ case class PreprocessingConfiguration(
                   ("Compile order in methods", if (compileOrderInMethods.isEmpty) "false" else compileOrderInMethods.get) ::
                   ("Compile initial plan", compileInitialPlan) ::
                   ("Ensure Methods Have Last Task", ensureMethodsHaveLastTask) ::
-                  ("Remove unnecessary predicates", removeUnnecessaryPredicates) ::
-                  ("Convert to SAS+", convertToSASP) ::
-                  ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
                   ("Split independent parameters", splitIndependentParameters) ::
+                  ("Remove unnecessary predicates", removeUnnecessaryPredicates) ::
+                  ("Expand choiceless abstract tasks", compileUselessAbstractTasks) ::
                   ("Domain Cleanup", liftedReachability) ::
+                  ("Convert to SAS+", convertToSASP) ::
                   ("Grounded Reachability Analysis", if (groundedReachability.isEmpty) "false" else groundedReachability.get.longInfo) ::
                   ("Grounded Task Decomposition Graph", if (groundedTaskDecompositionGraph.isEmpty) "false" else groundedTaskDecompositionGraph.get) ::
                   ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
                   ("Ground domain", groundDomain) ::
+                  ("Iterate reachability analysis", iterateReachabilityAnalysis) ::
                   ("Stop directly after grounding", stopDirectlyAfterGrounding) ::
                   Nil)
 
