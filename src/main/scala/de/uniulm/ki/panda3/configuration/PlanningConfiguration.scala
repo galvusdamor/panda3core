@@ -457,7 +457,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               var error: Boolean = false
               var currentK = 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-              var usedTime: Long = (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
+              var usedTime: Long = remainingTime //(remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
               var expansion: Boolean = true
               while (solution.isEmpty && !error && expansion && usedTime > 0) {
                 println("\nRunning SAT search with K = " + currentK)
@@ -475,7 +475,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 else currentK += 1
 
                 remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-                usedTime = (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
+                usedTime = remainingTime // (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
               }
 
               (solution, false)

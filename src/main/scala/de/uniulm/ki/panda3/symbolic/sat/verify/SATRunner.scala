@@ -468,6 +468,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             println("Time command gave the following runtime for the solver: " + totalTime)
 
             timeCapsule.addTo(SAT_SOLVER, totalTime)
+            timeCapsule.set(SAT_SOLVER_K + encoder.K, totalTime)
             //timeCapsule.addTo(TOTAL_TIME, totalTime)
             //timeCapsule.addTo(VERIFY_TOTAL, totalTime)
 

@@ -236,18 +236,6 @@ object PredefinedConfigurations {
          "ICAPS-2018-RC(add,greedy)" -> (htnParsing, groundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd)),
 
 
-         // HTN-WS partsat
-         "HTN-WS-2018-treeBefore(minisat)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MINISAT, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding, atMostOneEncodingMethod = BinaryEncoding)),
-         "HTN-WS-2018-treeBefore(cryptominisat)" ->
-           (htnParsing, groundingPreprocess, SATSearch(CRYPTOMINISAT, FullSATRun(), reductionMethod = OnlyNormalise,
-                                                       encodingToUse = TreeBeforeEncoding, atMostOneEncodingMethod = BinaryEncoding)),
-         "HTN-WS-2018-treeBefore(RISS6)" ->
-           (htnParsing, groundingPreprocess, SATSearch(RISS6, FullSATRun(), reductionMethod = OnlyNormalise, encodingToUse = TreeBeforeEncoding, atMostOneEncodingMethod = BinaryEncoding)),
-         "HTN-WS-2018-treeBefore(MapleCOMSPS)" ->
-           (htnParsing, groundingPreprocess, SATSearch(MapleCOMSPS, FullSATRun(), reductionMethod = OnlyNormalise,
-                                                       encodingToUse = TreeBeforeEncoding, atMostOneEncodingMethod = BinaryEncoding)),
-
          "sas-ICAPS-2018-RC(filter,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFilter)),
          "sas-ICAPS-2018-RC(FF,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hFF)),
          "sas-ICAPS-2018-RC(lmcut,astar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(1), SasHeuristics.hLmCut)),
@@ -265,12 +253,14 @@ object PredefinedConfigurations {
           (ReasonLS,"ReasonLS") :: (MINISAT,"minisat") ::
 
           Nil;
-             (encoding, encodingString) <- (ClassicalForbiddenEncoding, "classical-forbidden") :: (ClassicalImplicationEncoding, "classical-forbidden-implication") ::
-               (ExistsStepForbiddenEncoding, "exists-forbidden") :: (ExistsStepImplicationEncoding, "exists-forbidden-implication") ::
+             (encoding, encodingString) <-
+             (TreeBeforeEncoding, "ICTAI-2018-treeBefore") ::
+             (ClassicalForbiddenEncoding, "sat-classical-forbidden") :: (ClassicalImplicationEncoding, "sat-classical-forbidden-implication") ::
+               (ExistsStepForbiddenEncoding, "sat-exists-forbidden") :: (ExistsStepImplicationEncoding, "sat-exists-forbidden-implication") ::
                Nil
         ) yield
-          "sat-" + encodingString + "(" + solverString + ")" -> (htnParsing, groundingPreprocess.copy(removeNoOps = true),
-            SATSearch(solver, FullSATRun(), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = BinaryEncoding, encodingToUse = encoding))
+          encodingString + "(" + solverString + ")" -> (htnParsing, groundingPreprocess.copy(removeNoOps = true),
+            SATSearch(solver, FullSATRun(), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
 
       x.toMap
     }

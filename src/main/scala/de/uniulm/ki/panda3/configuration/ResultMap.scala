@@ -186,6 +186,7 @@ object Timings {
   val TRANSFORM_DIMACS = "40 sat:20:transform to DIMACS"
   val WRITE_FORMULA    = "40 sat:30:write formula"
   val SAT_SOLVER       = "40 sat:40:SAT solver"
+  val SAT_SOLVER_K       = "40 sat:41:SAT solver for K="
 }
 
 object Information {
