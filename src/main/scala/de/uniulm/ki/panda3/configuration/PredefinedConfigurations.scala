@@ -254,7 +254,7 @@ object PredefinedConfigurations {
 
           Nil;
              (encoding, encodingString) <-
-             (TreeBeforeEncoding, "ICTAI-2018-treeBefore") ::
+             (TreeBeforeEncoding, "ICTAI-2018-treeBefore") :: (TreeBeforeExistsStepEncoding, "ICTAI-2018-treeBefore-exists") ::
              (ClassicalForbiddenEncoding, "sat-classical-forbidden") :: (ClassicalImplicationEncoding, "sat-classical-forbidden-implication") ::
                (ExistsStepForbiddenEncoding, "sat-exists-forbidden") :: (ExistsStepImplicationEncoding, "sat-exists-forbidden-implication") ::
                Nil

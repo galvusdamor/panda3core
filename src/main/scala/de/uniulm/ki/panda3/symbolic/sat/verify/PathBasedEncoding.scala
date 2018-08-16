@@ -286,7 +286,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       val childPath = path :+ childIndex
 
       //println(path + " " + childPath)
-      val taskAtChild = pathAction(childPath.length, childPath,task)
+      val taskAtChild = pathAction(childPath.length, childPath, task)
       val methodAtFather = method(path.length, path, mindex)
 
       impliesSingle(taskAtChild, methodAtFather)
@@ -331,11 +331,13 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
           planSteps foreach { ps =>
             val pos = dm.subPlan.planStepSchemaArray.indexOf(ps.schema)
 
-            println("\t" + node.methodToPositions(mi)(pos) + " " + ps.schema.isAbstract + " (" + ps.schema.name + "," + taskIndex(ps.schema) + ")")
+            println("\t" + node.methodToPositions(mi)(pos) + "@" + node.children(node.methodToPositions(mi)(pos)).id + " " + ps.schema.isAbstract +
+                      " (" + ps.schema.name + "," + taskIndex(ps.schema) + ")")
           }
           println()
         }
 
+        println("Node " + node.id + ": " + tasks.filter(_.isAbstract).map(_.name).mkString(" "))
         tasks.count(_.isPrimitive) + " " + tasks.count(_.isAbstract) + " @ " + node.id + " " + n.last
       }), "dectree.pdf")
 

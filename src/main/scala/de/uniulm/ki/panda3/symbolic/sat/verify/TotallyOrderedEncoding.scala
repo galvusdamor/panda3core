@@ -91,9 +91,14 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
       }
   }
 
+  lazy val invariantFormula = Range(0, taskSequenceLength + 1) flatMap { case position =>
+    intProblem.symbolicInvariantArray map { case ((ap, ab), (bp, bb)) => Clause((statePredicate(K - 1, position, ap), ab) :: (statePredicate(K - 1, position, bp), bb) :: Nil) }
+  }
+
+
   override lazy val stateTransitionFormula: Seq[Clause] = {primitivePaths.indices flatMap { position =>
     primitivesApplicable(K, position) ++ stateChange(K, position) ++ maintainState(K, position)
-  }} ++ numberOfActionsFormula(primitivePaths)
+  }} ++ numberOfActionsFormula(primitivePaths) ++ invariantFormula
 
   override lazy val noAbstractsFormula: Seq[Clause] =
     primitivePaths flatMap { case (position, tasks) => tasks filter { _.isAbstract } map { task => Clause((pathAction(position.length, position, task), false)) } }

@@ -198,8 +198,8 @@ object GreedyNumberOfChildrenFromTotallyOrderedOptimiser extends SOGOptimiser {
 
 
 object NativeOptimiser extends SOGOptimiser {
-  override def minimalSOG(graphs: Seq[DirectedGraph[PlanStep]]): (DirectedGraph[Int], Seq[Map[PlanStep, Int]]) = {
-    assert(graphs forall { _.allTotalOrderings.get.length == 1 })
+  override def minimalSOG(graphs: Seq[DirectedGraph[PlanStep]]): (DirectedGraph[Int], Seq[Map[PlanStep, Int]]) = if (graphs.isEmpty) (SimpleDirectedGraph(Nil, Nil), Nil) else {
+    //assert(graphs forall { _.allTotalOrderings.get.length == 1 })
 
     // take the longest ones first
     val sorted = graphs.zipWithIndex.sortBy(-_._1.vertices.length)

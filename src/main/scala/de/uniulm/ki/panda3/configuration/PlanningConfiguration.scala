@@ -454,12 +454,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case FullSATRun()                               =>
               // start with K = 0 and loop
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
+              var solutionK : Int = -1
               var error: Boolean = false
               var currentK = 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
               var usedTime: Long = remainingTime //(remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
               var expansion: Boolean = true
-              while (solution.isEmpty && !error && expansion && usedTime > 0) {
+              while (/*(*/solution.isEmpty /*|| (solution.isDefined && currentK < solutionK + 6))*/ && !error && expansion && usedTime > 0) {
                 println("\nRunning SAT search with K = " + currentK)
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
@@ -468,6 +469,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                                                        0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
                 println("ERROR " + satError)
                 error |= satError
+                if (solution.isEmpty && satResult.isDefined) solutionK = currentK
                 solution = satResult
                 expansion = expansionPossible
 
@@ -477,6 +479,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
                 usedTime = remainingTime // (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
               }
+
+              informationCapsule.set(Information.ACTUAL_K,solutionK)
 
               (solution, false)
 

@@ -468,7 +468,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             println("Time command gave the following runtime for the solver: " + totalTime)
 
             timeCapsule.addTo(SAT_SOLVER, totalTime)
-            timeCapsule.set(SAT_SOLVER_K + encoder.K, totalTime)
+            timeCapsule.set(SAT_SOLVER_K + "%04d".format(encoder.K), totalTime)
             //timeCapsule.addTo(TOTAL_TIME, totalTime)
             //timeCapsule.addTo(VERIFY_TOTAL, totalTime)
 
@@ -857,12 +857,23 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             val taskSequence = actionSequence map { case solAction =>
               val pos = solAction.split("_").last.split(",").head
               val taskID = solAction.split("_").last.split(",").last
-              val path = (pathToPosWithTask find { _.endsWith("-" + pos + ":" + taskID) }).get.split("_").last.split("-").head
-
+              val pathToPosOption: Option[String] =
+                if (tree.tasksWithOnePosition exists { tt => tree.taskIndex(tt) == taskID.toInt }) {
+                  val allP2P = pathToPos filter { _.endsWith("-" + pos) }
+                  // find the one whose path action is correct
+                  allP2P find { p2p =>
+                    val path = p2p.split("_").last.split("-").head
+                    allTrueAtoms.contains("pathaction!" + (path.count(_ == ';') + 1) + "_" + path + "," + taskID)
+                  }
+                }
+                else pathToPosWithTask find { _.endsWith("-" + pos + ":" + taskID) }
+              val path = pathToPosOption match {
+                case Some(s) => s.split("_").last.split("-").head
+                case None    => exitIfNot(false, "action " + solAction + " has no connected path"); null
+              }
               // find matching atom
               nodes find { _ contains ("_" + path + ",") } get
             } map actionStringToTask
-
 
             taskSequence
           case tree: TreeVariableOrderEncoding           =>
