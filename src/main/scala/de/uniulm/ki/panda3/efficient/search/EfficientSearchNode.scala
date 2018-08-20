@@ -32,7 +32,7 @@ class EfficientSearchNode[Payload](nodeID: Int, nodePlan: EfficientPlan, nodePar
   val parent       : EfficientSearchNode[Payload] = nodeParent
   /** the computed heuristic of this node. This might be -1 if the search procedure does not use a heuristic */
   val heuristic    : Array[Double]                = nodeHeuristic
-  /** the distane part of the nodes heuristic */
+  /** the distance part of the nodes heuristic */
   val distanceValue: Double                       = nodeDistance
   /** a unique ID for this search node */
   val id           : Int                          = nodeID
