@@ -36,7 +36,6 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
                                   restrictionMethod: RestrictionMethod, usePDTMutexes: Boolean)
   extends TreeEncoding with EncodingWithLinearPlan with NumberOfActionsRestrictionViaAutomaton[Unit,Unit]{
 
-
   assert(domain.decompositionMethods forall { _.subPlan.orderingConstraints.fullGraph.allTotalOrderings.get.length == 1 })
 
   override val optimiser = GreedyNumberOfChildrenFromTotallyOrderedOptimiser
@@ -99,6 +98,8 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
   override lazy val stateTransitionFormula: Seq[Clause] = {primitivePaths.indices flatMap { position =>
     primitivesApplicable(K, position) ++ stateChange(K, position) ++ maintainState(K, position)
   }} ++ numberOfActionsFormula(primitivePaths) ++ invariantFormula
+
+  override lazy val numberOfPrimitiveTransitionSystemClauses = stateTransitionFormula.length
 
   override lazy val noAbstractsFormula: Seq[Clause] =
     primitivePaths flatMap { case (position, tasks) => tasks filter { _.isAbstract } map { task => Clause((pathAction(position.length, position, task), false)) } }

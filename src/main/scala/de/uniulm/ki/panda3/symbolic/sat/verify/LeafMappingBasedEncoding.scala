@@ -34,6 +34,7 @@ trait LeafMappingBasedEncoding extends VerifyEncoding{
 }
 
 trait KautzSelmanMappingEncoding[Payload, IntermediatePayload] extends PathBasedEncoding[Payload, IntermediatePayload] with LeafMappingBasedEncoding with LinearPrimitivePlanEncoding{
+
   def stateTransitionFormulaProvider(): Seq[Clause] = {
     val invariantFormula = Range(0, taskSequenceLength + 1) flatMap { case position =>
       intProblem.symbolicInvariantArray map { case ((ap, ab), (bp, bb)) => Clause((statePredicate(K - 1, position, ap), ab) :: (statePredicate(K - 1, position, bp), bb) :: Nil) }
@@ -59,7 +60,7 @@ trait ExsitsStepMappingEncoding[Payload, IntermediatePayload] extends PathBasedE
   lazy val tasksWithOnePosition: Set[Task]           = taskOccurenceMap.getOrElse(1, Set[Task]())
   lazy val tasksOnePath        : Map[Task, Seq[Int]] = tasksWithOnePosition map { t => t -> primitivePaths.find(_._2.contains(t)).get._1 } toMap
 
-  def stateTransitionFormulaProvider(): Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
+  lazy val stateTransitionFormulaProvider: Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
 
   def restrictionPathsPerPosition(pathsPerPosition: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] = {
 

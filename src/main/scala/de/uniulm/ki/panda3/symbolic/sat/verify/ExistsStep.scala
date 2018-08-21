@@ -30,6 +30,7 @@ import scala.collection.Seq
   */
 case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem, taskSequenceLengthQQ: Int,
                       ltlEncodings: Seq[AdditionalEdgesInDisablingGraph], overrideOverrideK : Option[Int] = None) extends LinearPrimitivePlanEncoding {
+
   override lazy val offsetToK = 0
 
   override lazy val overrideK = if (overrideOverrideK.isDefined) overrideOverrideK else Some(0)
@@ -126,6 +127,8 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     goalStateOfLength(taskSequenceLength)
 
   println("Exists-Step, plan length: " + taskSequenceLength)
+
+  override lazy val numberOfPrimitiveTransitionSystemClauses = stateTransitionFormula.length
 }
 
 

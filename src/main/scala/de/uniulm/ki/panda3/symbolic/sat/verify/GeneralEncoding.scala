@@ -261,6 +261,8 @@ case class GeneralEncoding(timeCapsule: TimeCapsule,
 
   lazy val stateTransitionFormula: Seq[Clause] = stateTransitionFormulaOfLength(numberOfActionsPerLayer)
 
+  override lazy val numberOfPrimitiveTransitionSystemClauses = stateTransitionFormula.length
+
   lazy val goalState: Seq[Clause] = goalStateOfLength(numberOfActionsPerLayer)
 
 }

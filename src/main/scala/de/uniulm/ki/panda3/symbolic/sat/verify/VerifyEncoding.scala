@@ -59,6 +59,8 @@ trait VerifyEncoding {
 
   def numberOfChildrenClauses: Int
 
+  def numberOfPrimitiveTransitionSystemClauses: Int
+
   def expansionPossible: Boolean
 
   domain.tasks foreach { t => assert(t.parameters.isEmpty) }

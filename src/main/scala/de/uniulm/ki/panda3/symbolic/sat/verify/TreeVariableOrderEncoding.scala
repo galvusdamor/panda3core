@@ -128,10 +128,12 @@ trait TreeVariableOrderEncoding extends TreeEncoding with LinearPrimitivePlanEnc
 
     //orderingKept
 
-    stateTransitionFormulaProvider() ++ atMostOneConstraints ++ selected ++ onlySelectableIfChosen ++ onlyPrimitiveIfChosen ++ sameAction ++ orderingKept
+    stateTransitionFormulaProvider ++ atMostOneConstraints ++ selected ++ onlySelectableIfChosen ++ onlyPrimitiveIfChosen ++ sameAction ++ orderingKept
   }
 
-  def stateTransitionFormulaProvider(): Seq[Clause]
+  def stateTransitionFormulaProvider: Seq[Clause]
+
+  override lazy val numberOfPrimitiveTransitionSystemClauses = stateTransitionFormulaProvider.length
 
   override def noAbstractsFormula: Seq[Clause] = noAbstractsFormulaOfLength(taskSequenceLength)
 

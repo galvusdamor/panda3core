@@ -304,9 +304,22 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
       val usedFormulaGeneral = planningFormula ++ additionalConstraintsFormula
       println("NUMBER OF CLAUSES " + usedFormulaGeneral.length)
-      println("NUMBER OF STATE CLAUSES " + stateFormula.length)
+      val primitiveClauses: Int =
+        encoder.numberOfPrimitiveTransitionSystemClauses + encoder.initialState.length + (if (includeGoal) encoder.goalState.length else 0) + encoder.noAbstractsFormula.length
+      println("NUMBER OF STATE CLAUSES " + primitiveClauses)
       println("NUMBER OF DECOMPOSITION CLAUSES " + encoder.decompositionFormula.length)
-      println("NUMBER OF ADDITIONAL CONSTRAINT CLAUSES " + additionalConstraintsFormula.length)
+      val ordermappingClauses = usedFormulaGeneral.length - primitiveClauses - encoder.decompositionFormula.length
+      println("NUMBER OF ORDER CLAUSES " + ordermappingClauses)
+      println("PERCENTAGES " + (primitiveClauses.toDouble / usedFormulaGeneral.length) * 100 + "% " +
+                (encoder.decompositionFormula.length.toDouble / usedFormulaGeneral.length) * 100 + "% " +
+                (ordermappingClauses.toDouble / usedFormulaGeneral.length) * 100 + "% ")
+
+
+      informationCapsule.set(Information.NUMBER_OF_STATE, primitiveClauses)
+      informationCapsule.set(Information.NUMBER_OF_DECOMPOSITION, encoder.decompositionFormula.length)
+      informationCapsule.set(Information.NUMBER_OF_ORDERING, ordermappingClauses)
+
+      //println("NUMBER OF ADDITIONAL CONSTRAINT CLAUSES " + additionalConstraintsFormula.length)
 
       expansionPossible = encoder.expansionPossible
       //println("Done")
@@ -414,15 +427,15 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             println("Starting " + satSolver.longInfo)
 
             val solverCallString = satSolver match {
-              case MINISAT                =>
+              case MINISAT                         =>
                 solverPath.get + " -rnd-seed=" + randomSeed + " " + fileDir + "__cnfString" + uniqFileIdentifier + " " + fileDir + "__res" + uniqFileIdentifier + ".txt"
-              case CRYPTOMINISAT        | CRYPTOMINISAT55  =>
+              case CRYPTOMINISAT | CRYPTOMINISAT55 =>
                 solverPath.get + /*" -t " + solverThreads + " -r " + randomSeed + */ " --verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-              case RISS6                  =>
+              case RISS6                           =>
                 solverPath.get + " -config=Riss427 -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-              case CADICAL                =>
+              case CADICAL                         =>
                 solverPath.get + " --verbose=0 " + fileDir + "__cnfString" + uniqFileIdentifier
-              case _: DefaultDIMACSSolver =>
+              case _: DefaultDIMACSSolver          =>
                 solverPath.get + " -no-drup -rnd-seed=" + randomSeed + " -verb=0 " + fileDir + "__cnfString" + uniqFileIdentifier
             }
             writeStringToFile(outerScriptString + solverCallString, scriptFileName)

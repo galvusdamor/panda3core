@@ -48,7 +48,9 @@ case class KautzSelman(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pl
   override lazy val stateTransitionFormula: Seq[Clause] = stateTransitionFormulaOfLength(taskSequenceLength) ++
     Range(0, taskSequenceLength).flatMap(position => atMostOneOf(domain.primitiveTasks map { action(K - 1, position, _) }))
 
-  override lazy val goalState: Seq[Clause] = goalStateOfLength(taskSequenceLength)
+  override lazy val numberOfPrimitiveTransitionSystemClauses = stateTransitionFormula.length
+
+    override lazy val goalState: Seq[Clause] = goalStateOfLength(taskSequenceLength)
 
   println("Kautz-Selman, plan length: " + taskSequenceLength)
 }

@@ -156,4 +156,6 @@ case class SOGPOREncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan:
 
     initAndGoalMustBePresent ++ orderMustBeTransitive ++ directPredecessors ++ trueIfPrecondition ++ trueMustBeSupported ++ supportImplies ++ threaterOrdered
   }
+
+  override lazy val numberOfPrimitiveTransitionSystemClauses = stateTransitionFormula.length
 }

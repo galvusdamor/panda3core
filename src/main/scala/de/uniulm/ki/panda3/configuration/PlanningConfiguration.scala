@@ -454,13 +454,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             case FullSATRun()                               =>
               // start with K = 0 and loop
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
-              var solutionK : Int = -1
+              var solutionK: Int = -1
               var error: Boolean = false
               var currentK = 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
               var usedTime: Long = remainingTime //(remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
-              var expansion: Boolean = true
-              while (/*(*/solution.isEmpty /*|| (solution.isDefined && currentK < solutionK + 6))*/ && !error && expansion && usedTime > 0) {
+            var expansion: Boolean = true
+              while ( /*(*/ solution.isEmpty /*|| (solution.isDefined && currentK < solutionK + 6))*/ && !error && expansion && usedTime > 0) {
                 println("\nRunning SAT search with K = " + currentK)
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
@@ -480,7 +480,47 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 usedTime = remainingTime // (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
               }
 
-              informationCapsule.set(Information.ACTUAL_K,solutionK)
+              informationCapsule.set(Information.ACTUAL_K, solutionK)
+
+              (solution, false)
+
+            case FullLengthSATRun(optimise) =>
+              // start with K = 0 and loop
+              var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
+              var error: Boolean = false
+              var currentLength = 1
+              var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+              var usedTime: Long = remainingTime //(remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
+            var expansion: Boolean = true
+              while (solution.isEmpty && !error && expansion && usedTime > 0) {
+                val nextK = VerifyEncoding.computeTheoreticalK(domainAndPlan._1, domainAndPlan._2, currentLength)
+                println("\nRunning SAT search with Length = " + currentLength + " and K = " + nextK)
+                println("Time remaining for SAT search " + remainingTime + "ms")
+                println("Time used for this run " + usedTime + "ms\n\n")
+
+                if (nextK > 0) {
+                  val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, currentLength, 0, defineK = Some(nextK),
+                                                                                         checkSolution = satSearch.checkResult)
+                  error |= satError
+                  solution = satResult
+                  expansion = expansionPossible
+
+
+                  remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+                  usedTime = remainingTime // (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
+                }
+                currentLength *= 2
+              }
+
+              // if the expansion is acyclic, we have to try it with its maximum length
+              if (!expansion && solution.isEmpty) {
+                val nextK = VerifyEncoding.computeTheoreticalK(domainAndPlan._1, domainAndPlan._2, currentLength)
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, -1,
+                                                                                       0, defineK = Some(nextK), checkSolution = satSearch.checkResult)
+                error |= satError
+                solution = satResult
+                expansion = expansionPossible
+              }
 
               (solution, false)
 
@@ -1480,7 +1520,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   override def longInfo: String = "Planning Configuration\n======================\n" +
     alignConfig(("\tprintGeneralInformation", printGeneralInformation) :: ("\tprintAdditionalData", printAdditionalData) ::
                   ("\trandom seed", randomSeed) :: ("\ttime limit (in seconds)", timeLimit.getOrElse("none")) :: Nil) + "\n\n" +
-    "\texternal programs" + (externalProgramPaths map { case (prog, path) => "\t\t" + prog + " at " + path } mkString "\n") + "\n\n" + {
+    "\texternal programs:\n" + alignConfig(externalProgramPaths.toSeq map { case (prog, path) => ("\t\t" + prog.longInfo,path) }) + "\n\n" + {
     parsingConfiguration.longInfo + "\n\n" + preprocessingConfiguration.longInfo + "\n\n" + searchConfiguration.longInfo + "\n\n" + postprocessingConfiguration.longInfo
   }.split("\n").map(x => "\t" + x).mkString("\n")
 
@@ -2200,6 +2240,8 @@ case class SingleSATRun(maximumPlanLength: Int = 1, overrideK: Option[Int] = Non
 
 case class FullSATRun() extends SATRunConfiguration {override def longInfo: String = "full run"}
 
+case class FullLengthSATRun(optimise: Boolean) extends SATRunConfiguration {override def longInfo: String = "full length run"}
+
 case class OptimalSATRun(overrideK: Option[Int]) extends SATRunConfiguration {override def longInfo: String = "optimal run"}
 
 
@@ -2305,12 +2347,14 @@ case class SATSearch(solverType: Solvertype,
   override def longInfo: String = "SAT-Planning Configuration\n--------------------------\n" +
     alignConfig((("solver", solverType.longInfo) :: Nil) ++
                   (runConfiguration match {
-                    case single: SingleSATRun   =>
+                    case single: SingleSATRun            =>
                       ("maximum plan length", single.maximumPlanLength) ::
                         ("override K", single.overrideK.getOrElse("false")) :: Nil
-                    case fullRun: FullSATRun    =>
+                    case fullRun: FullSATRun             =>
                       ("full planner run", "true") :: Nil
-                    case optimal: OptimalSATRun =>
+                    case fullLengthRun: FullLengthSATRun =>
+                      ("full planner run", "true") :: ("optimise", fullLengthRun.optimise.toString) :: Nil
+                    case optimal: OptimalSATRun          =>
                       ("optimal planner run", "true") ::
                         ("override K", optimal.overrideK.getOrElse("false")) :: Nil
                   }
@@ -2428,13 +2472,13 @@ trait Configuration extends DefaultLongInfo {
   }
 }
 
-sealed trait ExternalProgram
+sealed trait ExternalProgram extends DefaultLongInfo
 
-object FastDownward extends ExternalProgram
+object FastDownward extends ExternalProgram {override val longInfo: String = "Fast Downward"}
 
-object FAPE extends ExternalProgram
+object FAPE extends ExternalProgram {override val longInfo: String = "FAPE"}
 
-object SHOP2 extends ExternalProgram
+object SHOP2 extends ExternalProgram {override val longInfo: String = "J-SHOP2"}
 
 sealed trait Solvertype extends DefaultLongInfo with ExternalProgram
 

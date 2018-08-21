@@ -149,7 +149,7 @@ object Timings {
   val COMPILE_UNIT_METHODS                 = "02 preprocessing:02:compile unit methods"
   val COMPILE_ORDER_IN_METHODS             = "02 preprocessing:03:compile order in methods"
   val SPLIT_PARAMETERS                     = "02 preprocessing:04:split parameter"
-  val USELESS_CHOICELESS_TASKS               = "02 preprocessing:05:expand choiceless abstract tasks"
+  val USELESS_CHOICELESS_TASKS             = "02 preprocessing:05:expand choiceless abstract tasks"
   val USELESS_ABSTRACT_TASKS               = "02 preprocessing:06:expand choiceless abstract tasks"
   val COMPILE_METHODS_WITH_IDENTICAL_TASKS = "02 preprocessing:07:compile methods with identical tasks"
   val REMOVING_UNNECESSARY_PREDICATES      = "02 preprocessing:08:removing unnecessary predicates"
@@ -186,7 +186,7 @@ object Timings {
   val TRANSFORM_DIMACS = "40 sat:20:transform to DIMACS"
   val WRITE_FORMULA    = "40 sat:30:write formula"
   val SAT_SOLVER       = "40 sat:40:SAT solver"
-  val SAT_SOLVER_K       = "40 sat:41:SAT solver for K="
+  val SAT_SOLVER_K     = "40 sat:41:SAT solver for K="
 }
 
 object Information {
@@ -251,6 +251,9 @@ object Information {
   val NUMBER_OF_PATHS         = "40 sat:30:number of paths"
   val MAX_PLAN_LENGTH         = "40 sat:31:maximum plan length"
   val PDT_MUTEXES             = "40 sat:40:number of global PDT mutexes"
+  val NUMBER_OF_STATE         = "40 sat:50:number of state clauses"
+  val NUMBER_OF_DECOMPOSITION = "40 sat:50:number of decomposition clauses"
+  val NUMBER_OF_ORDERING      = "40 sat:50:number of ordering clauses"
   val SOLVED                  = "40 sat:90:solved"
   val TIMEOUT                 = "40 sat:91:timeout"
 

@@ -116,6 +116,7 @@ abstract class SOGPOCLEncoding extends SOGPartialNoPath with NumberOfActionsRest
       supportImpliesOrder ++ ifEffectThenPresent ++ orderMustBeTransitive ++ noCausalThreat ++ restrictNumberOfActions
   }
 
+  override lazy val numberOfPrimitiveTransitionSystemClauses = stateTransitionFormula.length
 
 
   def causalThreatsFormula(supporterLiterals: Seq[(Seq[Int], Seq[Int], Predicate)]): Seq[Clause]

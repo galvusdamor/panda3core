@@ -171,13 +171,14 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
     //System exit 0
 
     // this generates the actual state transition formula
-    val primitiveSequence = stateTransitionFormulaProvider()
+    val primitiveSequence = stateTransitionFormulaProvider
 
     primitiveSequence ++ connectionFormula ++ forbiddenness
   }
 
-  def stateTransitionFormulaProvider(): Seq[Clause]
+  def stateTransitionFormulaProvider: Seq[Clause]
 
+  override lazy val numberOfPrimitiveTransitionSystemClauses = stateTransitionFormulaProvider.length
 }
 
 case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
@@ -219,6 +220,9 @@ case class SOGClassicalN4Encoding(timeCapsule: TimeCapsule,
   def ifActionAtPositionThenConnected(actionAtoms: Seq[(String, Task)], pathsPerPosition: Map[Int, Seq[(Int, Int, String)]], position: Int): Seq[Clause] =
     atMostOneOf(actionAtoms map { _._1 })
 
+  // this generates the actual state transition formula
+  lazy val primitiveSequence = stateTransitionFormulaOfLength(taskSequenceLength)
+
   override lazy val stateTransitionFormula: Seq[Clause] = {
     // force computation of SOG
     sog
@@ -246,12 +250,9 @@ case class SOGClassicalN4Encoding(timeCapsule: TimeCapsule,
 
 
     //System exit 0
-
-    // this generates the actual state transition formula
-    val primitiveSequence = stateTransitionFormulaOfLength(taskSequenceLength)
-
     primitiveSequence ++ connectionFormula ++ forbiddenness
   }
 
+  override lazy val numberOfPrimitiveTransitionSystemClauses = primitiveSequence.length
 }
 
