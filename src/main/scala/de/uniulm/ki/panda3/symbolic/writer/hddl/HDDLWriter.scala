@@ -293,7 +293,10 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     // ATTENTION: we cannot use any CSP in here, since the domain may lack constants, i.e., probably any CSP will be unsolvable causing problems
     val builder: StringBuilder = new StringBuilder()
 
-    builder.append("(define (domain " + toPDDLIdentifier(domainName) + ")\n\t(:requirements :typing " + (if (dom.decompositionMethods.nonEmpty) ":hierachie" else "") + ")\n")
+    builder.append("(define (domain " + toPDDLIdentifier(domainName) + ")\n\t(:requirements :typing " +
+      (if (dom.decompositionMethods.nonEmpty) ":hierachie " else "") +
+      (if (dom.predicates exists {p => p.name == "typeOf"}) ":typeof-predicate " else "") +
+      ")\n")
 
     // add all sorts
     if (dom.sorts.nonEmpty) {

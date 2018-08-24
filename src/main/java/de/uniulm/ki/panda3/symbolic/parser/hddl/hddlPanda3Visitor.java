@@ -1192,7 +1192,7 @@ public class hddlPanda3Visitor {
         }
     }
 
-    private static final String ARTIFICIAL_ROOT_SORT = "__Object";
+    private static final String ARTIFICIAL_ROOT_SORT = "Object__";
 
     public Seq<Sort> visitTypeAndObjDef(@NotNull antlrHDDLParser.DomainContext ctxDomain, antlrHDDLParser.ProblemContext ctxProblem) {
         // Extract type hierarchy from domain file
