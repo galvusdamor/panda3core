@@ -110,7 +110,9 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   val variableConstraints = if (dontExpandVariableConstraints) parameterVariableConstraints
   else
     planSteps.foldLeft(parameterVariableConstraints)(
-      { case (csp, ps) => ps.schema.parameterConstraints.foldLeft(csp)({ case (csp2, c) => csp2.addConstraint(c.substitute(ps.schemaParameterSubstitution)) }) })
+      { case (csp, ps) => ps.schema.parameterConstraints.foldLeft(csp)({ case (csp2, c) => val newConstraint = c.substitute(ps.schemaParameterSubstitution)
+        if (!newConstraint.isTautologic)        csp2.addConstraint(newConstraint) else csp2
+      }) })
 
 
   /** all causal threads in this plan */
@@ -331,7 +333,10 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       val newPlan = this update ExchangeVariables(replacement.toMap)
 
-      newPlan.variableConstraints.constraints foreach { case Equal(_, vari: Variable) => assert(protectedVariables contains vari, protectedVariables + " " + vari); case _ => () }
+      newPlan.variableConstraints.constraints foreach { case Equal(var1: Variable, var2: Variable) =>
+        assert((protectedVariables contains var1) || (protectedVariables contains var2),
+          (protectedVariables map {_.name}).mkString(" ") + " : " + var1.name + " " + var2.name); case _ => ()
+      }
 
       newPlan.copy(parameterVariableConstraints = newPlan.parameterVariableConstraints.addConstraints(newConstraints.toSeq))
 

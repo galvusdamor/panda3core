@@ -78,7 +78,7 @@ case class Equal(left: Variable, right: Value) extends VariableConstraint {
 
   override def update(domainUpdate: DomainUpdate): Equal = Equal(left.update(domainUpdate), right.update(domainUpdate))
 
-  lazy val isTautologic: Boolean = left == right
+   val isTautologic: Boolean = left == right
 }
 
 
