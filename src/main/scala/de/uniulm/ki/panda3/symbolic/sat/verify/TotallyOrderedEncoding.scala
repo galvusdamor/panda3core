@@ -36,14 +36,13 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
                                   restrictionMethod: RestrictionMethod, usePDTMutexes: Boolean)
   extends TreeEncoding with EncodingWithLinearPlan with NumberOfActionsRestrictionViaAutomaton[Unit,Unit]{
 
-  assert(domain.decompositionMethods forall { _.subPlan.orderingConstraints.fullGraph.allTotalOrderings.get.length == 1 })
+  assert(domain.isTotallyOrdered, "The domain is not totally ordered. The totSAT encoding can only be applied to a totally ordered domain.")
+  assert(initialPlan.orderingConstraints.isTotalOrder(), "The initial plan is not totally ordered. The totSAT encoding can only be applied to a totally ordered planning problem.")
 
   override val optimiser = GreedyNumberOfChildrenFromTotallyOrderedOptimiser
 
   val numberOfChildrenClauses: Int = 0
 
-  assert(domain.isTotallyOrdered)
-  assert(initialPlan.orderingConstraints.isTotalOrder())
 
   protected val statePredicate: ((Int, Int, Predicate)) => String =
     memoise[(Int, Int, Predicate), String]({ case (l, pos, pred) => "predicate^" + l + "_" + pos + "," + predicateIndex(pred) })

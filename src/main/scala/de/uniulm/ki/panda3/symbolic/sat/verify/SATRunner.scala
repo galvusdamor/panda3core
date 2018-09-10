@@ -249,6 +249,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         else {
           encodingToUse match {
             case TotSATEncoding                =>
+              exitIfNot(domain.isTotallyOrdered, "The domain is not totally ordered. The totSAT encoding can only be applied to a totally ordered domain.", noStack = true)
+              exitIfNot(initialPlan.orderingConstraints.isTotalOrder(),
+                        "The initial plan is not totally ordered. The totSAT encoding can only be applied to a totally ordered planning problem.", noStack = true)
               TotallyOrderedEncoding(timeCapsule, domain, initialPlan, intProblem, reductionMethod, planLength, offSetToK, defineK, restrictionMethod, usePDTMutexes)
             case TreeBeforeEncoding            =>
               TreeVariableOrderEncodingKautzSelman(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, usePDTMutexes, defineK)
@@ -310,9 +313,12 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
       println("NUMBER OF DECOMPOSITION CLAUSES " + encoder.decompositionFormula.length)
       val ordermappingClauses = usedFormulaGeneral.length - primitiveClauses - encoder.decompositionFormula.length
       println("NUMBER OF ORDER CLAUSES " + ordermappingClauses)
-      println("PERCENTAGES " + (primitiveClauses.toDouble / usedFormulaGeneral.length) * 100 + "% " +
-                (encoder.decompositionFormula.length.toDouble / usedFormulaGeneral.length) * 100 + "% " +
-                (ordermappingClauses.toDouble / usedFormulaGeneral.length) * 100 + "% ")
+      val percentPrimitiveClauses = (primitiveClauses.toDouble / usedFormulaGeneral.length) * 100 + 0.005
+      val percentDecomposition = (encoder.decompositionFormula.length.toDouble / usedFormulaGeneral.length) * 100 + 0.005
+      val percentOrderMapping = (ordermappingClauses.toDouble / usedFormulaGeneral.length) * 100 + 0.005
+      println("PERCENTAGES " + (percentPrimitiveClauses - (percentPrimitiveClauses % 0.01)) + "% " +
+                (percentDecomposition - (percentDecomposition % 0.01)) + "% " +
+                (percentOrderMapping - (percentOrderMapping % 0.01)) + "% ")
 
 
       informationCapsule.set(Information.NUMBER_OF_STATE, primitiveClauses)
@@ -1205,18 +1211,13 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
     }
   }
 
-  def exitIfNot(f: Boolean, mess: String = ""): Unit = {
+  def exitIfNot(f: Boolean, mess: String = "", noStack : Boolean = false): Unit = {
     if (!f) {
-      println("ATTENTION! AN ERROR OCCURRED")
-      if (mess != "") println(mess)
-      println(Thread.currentThread().getStackTrace() map { _.toString } mkString "\n")
+      if (mess != "") println(mess) else println("ATTENTION! AN ERROR OCCURRED")
+      if (!noStack) println(Thread.currentThread().getStackTrace() map { _.toString } mkString "\n")
       System exit 0
     }
     assert(f)
-    if (!f) {
-      println(Thread.currentThread().getStackTrace() map { _.toString } mkString "\n")
-      System exit 0
-    }
   }
 
 }
