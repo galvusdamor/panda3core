@@ -72,7 +72,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     builder.toString()
   }
 
-  def writeLiteral(literal: Literal, uf: SymbolicUnionFind, indentation: String, appendNewLine: Boolean = true, noConstantReplacement: Boolean, variablesWithIdenticalName : Set[String]):
+  def writeLiteral(literal: Literal, uf: SymbolicUnionFind, indentation: String, appendNewLine: Boolean = true, noConstantReplacement: Boolean, variablesWithIdenticalName: Set[String]):
   String = {
     val builder: StringBuilder = new StringBuilder()
 
@@ -224,7 +224,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
         builder.append(indent + ")\n")
     }
 
-  private def writeTask(builder: StringBuilder, task: Task, encodeTypesWithPredicates: Boolean, noConstantReplacement: Boolean, variablesWithIdenticalName : Set[String]): Unit = {
+  private def writeTask(builder: StringBuilder, task: Task, encodeTypesWithPredicates: Boolean, noConstantReplacement: Boolean, variablesWithIdenticalName: Set[String]): Unit = {
     val taskUF = SymbolicUnionFind.constructVariableUnionFind(task)
     val parameters = if (noConstantReplacement) task.parameters else task.parameters filter { taskUF.getRepresentative(_).isInstanceOf[Variable] }
 
@@ -242,7 +242,8 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     if (!task.precondition.isEmpty || encodeTypesWithPredicates || task.parameterConstraints.nonEmpty) {
       builder.append("\t\t:precondition \n")
       if (encodeTypesWithPredicates || task.parameterConstraints.nonEmpty) builder.append("\t\t\t(and\n")
-      writeFormula(builder, task.precondition, "\t\t\t" + (if (encodeTypesWithPredicates || task.parameterConstraints.nonEmpty) "\t" else ""), taskUF, noConstantReplacement, variablesWithIdenticalName)
+      writeFormula(builder, task.precondition, "\t\t\t" + (if (encodeTypesWithPredicates || task.parameterConstraints.nonEmpty) "\t" else ""), taskUF, noConstantReplacement,
+                   variablesWithIdenticalName)
 
       val constraintConditions = task.parameterConstraints collect {
         case Equal(v1, v2) if getRepresentative(v1, taskUF, noConstantReplacement, variablesWithIdenticalName) !=
@@ -255,9 +256,9 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
           getRepresentative(v2, taskUF, noConstantReplacement, variablesWithIdenticalName).charAt(0) != '?') =>
           "\t\t\t\t(not (= " + getRepresentative(v1, taskUF, noConstantReplacement, variablesWithIdenticalName) + " " +
             getRepresentative(v2, taskUF, noConstantReplacement, variablesWithIdenticalName) + "))"
-        case OfSort(v, s)                                                                                                                                    =>
+        case OfSort(v, s)                                                                                    =>
           "\t\t\t\t(sortof " + getRepresentative(v, taskUF, noConstantReplacement, variablesWithIdenticalName) + " - " + toPDDLIdentifier(s.name) + ")"
-        case NotOfSort(v, s)                                                                                                                                 =>
+        case NotOfSort(v, s)                                                                                 =>
           "\t\t\t\t(not (sortof " + getRepresentative(v, taskUF, noConstantReplacement, variablesWithIdenticalName) + " - " + toPDDLIdentifier(s.name) + "))"
       } distinct
 
@@ -283,7 +284,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     builder.append("\t)\n")
   }
 
-  private def writeConstants(builder: StringBuilder, constants: Seq[Constant], dom: Domain, isInDomain: Boolean, encodeSortsWithPredicates: Boolean): Unit = if (constants.nonEmpty) {
+  def writeConstants(builder: StringBuilder, constants: Seq[Constant], dom: Domain, isInDomain: Boolean, encodeSortsWithPredicates: Boolean): Unit = if (constants.nonEmpty) {
     builder.append("\t(:" + (if (isInDomain) "constants" else "objects") + "\n")
     constants foreach { c =>
       builder.append("\t\t" + toPDDLIdentifier(c.name) + " - ")
@@ -296,21 +297,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     builder.append("\t)\n")
   }
 
-  override def writeDomain(dom: Domain): String = writeDomain(dom, includeAllConstants = false, noConstantReplacement = true, writeEitherWithPredicates = true)
-
-  def writeDomain(dom: Domain, includeAllConstants: Boolean, noConstantReplacement: Boolean, writeEitherWithPredicates: Boolean): String = {
-    // determine whether we would have to use either types
-    val willContainEither = writeEitherWithPredicates && dom.containEitherType
-
-    // ATTENTION: we cannot use any CSP in here, since the domain may lack constants, i.e., probably any CSP will be unsolvable causing problems
-    val builder: StringBuilder = new StringBuilder()
-
-    builder.append("(define (domain " + toPDDLIdentifier(domainName) + ")\n\t(:requirements :typing " +
-                     (if (dom.decompositionMethods.nonEmpty) ":hierachie " else "") +
-                     (if (dom.predicates exists { p => p.name == "typeOf" }) ":typeof-predicate " else "") +
-                     ")\n")
-
-    // add all sorts
+  def writeTypeHierarchy(builder: StringBuilder, dom: Domain, willContainEither: Boolean): Unit =
     if (dom.sorts.nonEmpty) {
       builder.append("\t(:types\n")
       if (willContainEither) builder.append("\t\tobject\n")
@@ -336,9 +323,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
       builder.append("\t)\n")
     }
 
-    if (includeAllConstants) writeConstants(builder, dom.constants, dom, isInDomain = true, encodeSortsWithPredicates = willContainEither)
-
-    // add all predicates
+  def writePredicates(builder: StringBuilder, dom: Domain, willContainEither: Boolean): Unit =
     if (dom.predicates.nonEmpty) {
       builder.append("\t(:predicates\n")
 
@@ -356,11 +341,42 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
       builder.append("\t)\n")
     }
 
+  def writePrimitiveActions(builder : StringBuilder, dom : Domain, willContainEither: Boolean, noConstantReplacement : Boolean) : Unit =
+    dom.tasks filter { _.isPrimitive } foreach { t =>
+      writeTask(builder, t, encodeTypesWithPredicates = willContainEither, noConstantReplacement = noConstantReplacement,
+                t.parameters.groupBy(_.name).filter(_._2.size > 1).keySet)
+    }
+
+
+  override def writeDomain(dom: Domain): String = writeDomain(dom, includeAllConstants = false, noConstantReplacement = true, writeEitherWithPredicates = true)
+
+  def writeDomain(dom: Domain, includeAllConstants: Boolean, noConstantReplacement: Boolean, writeEitherWithPredicates: Boolean): String = {
+    // determine whether we would have to use either types
+    val willContainEither = writeEitherWithPredicates && dom.containEitherType
+
+    // ATTENTION: we cannot use any CSP in here, since the domain may lack constants, i.e., probably any CSP will be unsolvable causing problems
+    val builder: StringBuilder = new StringBuilder()
+
+    builder.append("(define (domain " + toPDDLIdentifier(domainName) + ")\n\t(:requirements :typing " +
+                     (if (dom.decompositionMethods.nonEmpty) ":hierachie " else "") +
+                     (if (dom.predicates exists { p => p.name == "typeOf" }) ":typeof-predicate " else "") +
+                     ")\n")
+
+    // add all sorts
+    writeTypeHierarchy(builder, dom, willContainEither)
+
+    if (includeAllConstants) writeConstants(builder, dom.constants, dom, isInDomain = true, encodeSortsWithPredicates = willContainEither)
+
+    // add all predicates
+    writePredicates(builder, dom, willContainEither)
+
 
     // write all abstract tasks
     // add the actual primitive actions
-    dom.tasks filterNot { _.isPrimitive } foreach { t => writeTask(builder, t, encodeTypesWithPredicates = willContainEither, noConstantReplacement = noConstantReplacement,
-                                                              t.parameters.groupBy(_.name).filter(_._2.size > 1).keySet) }
+    dom.tasks filterNot { _.isPrimitive } foreach { t =>
+      writeTask(builder, t, encodeTypesWithPredicates = willContainEither, noConstantReplacement = noConstantReplacement,
+                t.parameters.groupBy(_.name).filter(_._2.size > 1).keySet)
+    }
 
 
     // write the decomposition methods
@@ -424,10 +440,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     }
 
     // add the actual primitive actions
-    dom.tasks filter { _.isPrimitive } foreach { t => writeTask(builder, t, encodeTypesWithPredicates = willContainEither, noConstantReplacement = noConstantReplacement,
-                                                                t.parameters.groupBy(_.name).filter(_._2.size > 1).keySet)
-    }
-
+    writePrimitiveActions(builder,dom, willContainEither,noConstantReplacement)
 
     builder.append(")")
     // return the domain we build
