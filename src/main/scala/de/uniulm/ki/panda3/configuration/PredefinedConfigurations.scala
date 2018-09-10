@@ -100,6 +100,21 @@ object PredefinedConfigurations {
                                                     iterateReachabilityAnalysis = false, groundDomain = false,
                                                     stopDirectlyAfterGrounding = false)
 
+  val noPreprocess = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
+                                                    compileOrderInMethods = None,
+                                                    compileInitialPlan = false, splitIndependentParameters = false,
+                                                    convertToSASP = false,
+                                                    allowSASPFromStrips = false,
+                                                    removeUnnecessaryPredicates = false,
+                                                    removeNoOps = false,
+                                                    ensureMethodsHaveLastTask = false,
+                                                    ensureMethodsHaveAtMostTwoTasks = false,
+                                                    compileUselessAbstractTasks = false,
+                                                    liftedReachability = false, groundedReachability = None,
+                                                    groundedTaskDecompositionGraph = None,
+                                                    iterateReachabilityAnalysis = false, groundDomain = false,
+                                                    stopDirectlyAfterGrounding = false)
+
   val preprocessConfigs = Map(
                                "ordering" -> orderingGroundingPreprocess,
                                "ground" -> groundingPreprocess,

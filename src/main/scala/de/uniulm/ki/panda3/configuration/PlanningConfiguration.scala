@@ -55,6 +55,7 @@ import de.uniulm.ki.panda3.symbolic.plan.modification.InsertPlanStepWithLink
 import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.panda3.symbolic.search.{SearchNode, SearchState}
 import de.uniulm.ki.panda3.symbolic.writer.anml.ANMLWriter
+import de.uniulm.ki.panda3.symbolic.writer.gtohp.GTOHPWriter
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.symbolic.writer.shop2.SHOP2Writer
 import de.uniulm.ki.panda3.{efficient, symbolic}
@@ -147,13 +148,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
     // write domain statistics into the information capsule
-    informationCapsule.set(Information.NUMBER_OF_CONSTANTS, domain.constants.length)
-    informationCapsule.set(Information.NUMBER_OF_PREDICATES, domain.predicates.length)
-    informationCapsule.set(Information.NUMBER_OF_ACTIONS, domain.tasks.length)
-    informationCapsule.set(Information.NUMBER_OF_ABSTRACT_ACTIONS, domain.abstractTasks.length)
-    informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domain.primitiveTasks.length)
-    informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_SHOP_ACTIONS, domain.primitiveTasks.count(_.name.startsWith("SHOP_method")))
-    informationCapsule.set(Information.NUMBER_OF_METHODS, domain.decompositionMethods.length)
+    informationCapsule.set(Information.NUMBER_OF_CONSTANTS, domainAndPlan._1.constants.length)
+    informationCapsule.set(Information.NUMBER_OF_PREDICATES, domainAndPlan._1.predicates.length)
+    informationCapsule.set(Information.NUMBER_OF_ACTIONS, domainAndPlan._1.tasks.length)
+    informationCapsule.set(Information.NUMBER_OF_ABSTRACT_ACTIONS, domainAndPlan._1.abstractTasks.length)
+    informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domainAndPlan._1.primitiveTasks.length)
+    informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_SHOP_ACTIONS, domainAndPlan._1.numberOfPrimitiveSHOPTasks)
+    informationCapsule.set(Information.NUMBER_OF_METHODS, domainAndPlan._1.decompositionMethods.length)
 
     // write randomseed into the info capsule
     informationCapsule.set(Information.RANDOM_SEED, randomSeed.toString)
@@ -737,6 +738,58 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           })
 
         }
+
+
+      case GTOHPSearch =>
+        val gtohpWriter = GTOHPWriter("dom", "prob")
+        val domainString = gtohpWriter.writeDomain(domainAndPlan._1)
+        val problemString = gtohpWriter.writeProblem(domainAndPlan._1, domainAndPlan._2)
+
+
+        println(domainString)
+        println(problemString)
+
+        val uuid = UUID.randomUUID().toString
+        val domFile = "fooD" + uuid + ".pddl"
+        val probFile = "fooP" + uuid + ".pddl"
+        writeStringToFile(domainString, domFile)
+        writeStringToFile(problemString, probFile)
+
+        val result = {
+          import sys.process._
+          // run SHOP2
+          var output: String = ""
+
+          timeCapsule start SEARCH_SHOP
+
+          ("timeout " + remainingTime / 1000 + "s java -jar " + externalProgramPaths(GTOHP) + " -e gtohp -d " + domFile + " -p " + probFile) ! new ProcessLogger {
+            override def err(s: => String): Unit = output = output + s + "\n"
+
+            override def out(s: => String): Unit = output = output + s + "\n"
+
+            override def buffer[T](f: => T): T = f
+          }
+
+          ("rm " + domFile) !
+
+          ("rm " + probFile) !
+
+          timeCapsule stop SEARCH_SHOP
+
+          output
+        }
+
+        println(result)
+
+        System exit 0
+
+
+
+        // TODO return result
+        (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+          timeCapsule stop TOTAL_TIME
+          runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
+        })
       case NoSearch    => (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
         timeCapsule stop TOTAL_TIME
         runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
@@ -2391,6 +2444,11 @@ object SHOP2Search extends SearchConfiguration {
   override def longInfo: String = "Use JSHOP2 for the search"
 }
 
+object GTOHPSearch extends SearchConfiguration {
+  /** returns a detailed information about the object */
+  override def longInfo: String = "Use JSHOP2 for the search"
+}
+
 object NoSearch extends SearchConfiguration {
   /** returns a detailed information about the object */
   override def longInfo: String = "No Search"
@@ -2471,6 +2529,8 @@ object FastDownward extends ExternalProgram {override val longInfo: String = "Fa
 object FAPE extends ExternalProgram {override val longInfo: String = "FAPE"}
 
 object SHOP2 extends ExternalProgram {override val longInfo: String = "J-SHOP2"}
+
+object GTOHP extends ExternalProgram {override val longInfo: String = "GTOHP"}
 
 sealed trait Solvertype extends DefaultLongInfo with ExternalProgram
 
