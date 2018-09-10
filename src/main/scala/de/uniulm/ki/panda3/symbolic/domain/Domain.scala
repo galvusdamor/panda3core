@@ -136,6 +136,8 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
   lazy val minimumMethodSize: Int = if (decompositionMethods.nonEmpty) decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min else -1
   lazy val maximumMethodSize: Int = if (decompositionMethods.nonEmpty) decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max else -1
 
+  lazy val numberOfPrimitiveSHOPTasks : Int = primitiveTasks.count(_.name.startsWith("SHOP_method"))
+
   lazy val isClassical             : Boolean = decompositionMethods.isEmpty && abstractTasks.isEmpty
   lazy val isGround                : Boolean = predicates forall { _.argumentSorts.isEmpty }
   lazy val isTotallyOrdered        : Boolean = decompositionMethods forall { _.subPlan.orderingConstraints.isTotalOrder() }
@@ -275,7 +277,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                      "number of primitive tasks" -> primitiveTasks.size,
                                                      "number of decomposition methods" -> decompositionMethods.size,
                                                      "number of tasks in largest method" -> maximumMethodSize,
-                                                     "number of primitive SHOP tasks" -> primitiveTasks.count(_.name.startsWith("SHOP_method")),
+                                                     "number of primitive SHOP tasks" -> numberOfPrimitiveSHOPTasks,
                                                      "number of epsilon methods" -> decompositionMethods.count(_.subPlan.planStepsWithoutInitGoal.isEmpty)
                                                    )
   lazy val statisticsString: String           = statistics.map({ case (k, v) => "\t" + k + " = " + v }).mkString("\n")

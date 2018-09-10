@@ -207,12 +207,6 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
   Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] =
     try {
       informationCapsule.set(Information.PLAN_LENGTH, planLength)
-      informationCapsule.set(Information.NUMBER_OF_CONSTANTS, domain.constants.length)
-      informationCapsule.set(Information.NUMBER_OF_PREDICATES, domain.predicates.length)
-      informationCapsule.set(Information.NUMBER_OF_ACTIONS, domain.tasks.length)
-      informationCapsule.set(Information.NUMBER_OF_ABSTRACT_ACTIONS, domain.abstractTasks.length)
-      informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domain.primitiveTasks.length)
-      informationCapsule.set(Information.NUMBER_OF_METHODS, domain.decompositionMethods.length)
 
       // clear index cache of clause class
       Clause.clearCache()
