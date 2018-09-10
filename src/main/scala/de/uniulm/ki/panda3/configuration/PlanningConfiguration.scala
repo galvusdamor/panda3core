@@ -152,6 +152,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     informationCapsule.set(Information.NUMBER_OF_ACTIONS, domain.tasks.length)
     informationCapsule.set(Information.NUMBER_OF_ABSTRACT_ACTIONS, domain.abstractTasks.length)
     informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domain.primitiveTasks.length)
+    informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_SHOP_ACTIONS, domain.primitiveTasks.count(_.name.startsWith("SHOP_method")))
     informationCapsule.set(Information.NUMBER_OF_METHODS, domain.decompositionMethods.length)
 
     // write randomseed into the info capsule

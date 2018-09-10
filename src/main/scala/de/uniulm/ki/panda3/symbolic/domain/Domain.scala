@@ -275,6 +275,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                      "number of primitive tasks" -> primitiveTasks.size,
                                                      "number of decomposition methods" -> decompositionMethods.size,
                                                      "number of tasks in largest method" -> maximumMethodSize,
+                                                     "number of primitive SHOP tasks" -> primitiveTasks.count(_.name.startsWith("SHOP_method")),
                                                      "number of epsilon methods" -> decompositionMethods.count(_.subPlan.planStepsWithoutInitGoal.isEmpty)
                                                    )
   lazy val statisticsString: String           = statistics.map({ case (k, v) => "\t" + k + " = " + v }).mkString("\n")
