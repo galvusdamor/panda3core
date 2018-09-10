@@ -561,17 +561,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           timeCapsule stop TOTAL_TIME
           val potentialPlan = solution match {
             case Some((planSteps, appliedDecompositions, parentsInDecompositionTree)) =>
-              val allPlanSteps = planSteps ++ parentsInDecompositionTree.flatMap({ case (a, (b, _)) =>
-                if ((appliedDecompositions contains a) && appliedDecompositions(a).subPlan.planStepsWithoutInitGoal.isEmpty)
-                  a :: b :: Nil
-                else b :: Nil
-                                                                                 })
 
-              val initialPlan = Plan(planSteps, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema, appliedDecompositions, parentsInDecompositionTree)
-              if (postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree))
-                initialPlan.maximalDeordering :: Nil
-              else
-                initialPlan :: Nil
+              Plan(planSteps, domainAndPlan._2.init.schema, domainAndPlan._2.goal.schema, appliedDecompositions, parentsInDecompositionTree) :: Nil
 
             case None => Nil
           }
@@ -1520,7 +1511,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
   override def longInfo: String = "Planning Configuration\n======================\n" +
     alignConfig(("\tprintGeneralInformation", printGeneralInformation) :: ("\tprintAdditionalData", printAdditionalData) ::
                   ("\trandom seed", randomSeed) :: ("\ttime limit (in seconds)", timeLimit.getOrElse("none")) :: Nil) + "\n\n" +
-    "\texternal programs:\n" + alignConfig(externalProgramPaths.toSeq map { case (prog, path) => ("\t\t" + prog.longInfo,path) }) + "\n\n" + {
+    "\texternal programs:\n" + alignConfig(externalProgramPaths.toSeq map { case (prog, path) => ("\t\t" + prog.longInfo, path) }) + "\n\n" + {
     parsingConfiguration.longInfo + "\n\n" + preprocessingConfiguration.longInfo + "\n\n" + searchConfiguration.longInfo + "\n\n" + postprocessingConfiguration.longInfo
   }.split("\n").map(x => "\t" + x).mkString("\n")
 

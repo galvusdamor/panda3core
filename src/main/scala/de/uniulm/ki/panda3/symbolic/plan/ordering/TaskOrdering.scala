@@ -351,8 +351,10 @@ object TaskOrdering {
   val DONTKNOW: Byte = 2
 
   def totalOrdering(tasks: Seq[PlanStep]): TaskOrdering = {
-    val contraints = tasks.zipWithIndex flatMap { case (ps, i) => tasks.take(i) map { before => OrderingConstraint(before, ps) } }
+    val constraints = tasks.zip(tasks.drop(1)) map { case (before,after) => OrderingConstraint(before, after) }
 
-    TaskOrdering(contraints,tasks)
+    //constraints foreach {case OrderingConstraint(before, after) => println(before.schema.name + " \n\t> " + after.schema.name)}
+
+    TaskOrdering(constraints,tasks)
   }
 }

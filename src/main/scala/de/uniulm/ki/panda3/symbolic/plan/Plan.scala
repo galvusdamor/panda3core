@@ -785,7 +785,8 @@ object Plan {
     val planStepSequence = ((init :: goal :: Nil).zipWithIndex map { case (t, i) => PlanStep(-i - 1, t, Nil) }) ++ taskSequence
     val removedPlanSteps = planStepDecomposedByMethod.keys.toSeq
     val orderedPSSequence = ((planStepSequence.head :: Nil) ++ planStepSequence.drop(2)) :+ planStepSequence(1)
-    val totalOrdering = TaskOrdering.totalOrdering(orderedPSSequence)
+    val decomposedPlanSteps = removedPlanSteps flatMap {ps => OrderingConstraint(planStepSequence.head, ps) :: OrderingConstraint(ps, planStepSequence(1)) :: Nil}
+    val totalOrdering = TaskOrdering.totalOrdering(orderedPSSequence).addOrderings(decomposedPlanSteps)
 
 
     Plan(planStepSequence ++ removedPlanSteps, Nil, totalOrdering.addPlanSteps(removedPlanSteps), CSP(Set(), Nil), planStepSequence.head, planStepSequence(1), NoModifications, NoFlaws,
