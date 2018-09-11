@@ -26,6 +26,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.modification.InsertPlanStepWithLink
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -269,19 +270,10 @@ case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Var
 
   lazy val abstractTask: CartesianGroundTask = CartesianGroundTask(method.abstractTask, method.abstractTask.parameters map parameter)
 
-  private val constraintsPerVariable: Map[Variable, Seq[VariableConstraint]] = method.subPlan.variableConstraints.variables.toSeq map { v =>
-    v -> (method.subPlan.variableConstraints.constraints filter { _ containsVariable v })
+  private val constraintsPerVariable: Map[Variable, Array[VariableConstraint]] = method.subPlan.variableConstraints.variables.toSeq map { v =>
+    v -> (method.subPlan.variableConstraints.constraints filter { _ containsVariable v } toArray)
   } toMap
 
-  private def areParametersAllowed(newBindings: Seq[(Variable, Constant)], instantiation: Map[Variable, Constant]): Boolean =
-    newBindings flatMap { case (v, _) => constraintsPerVariable(v) } forall {
-      case Equal(var1, var2: Variable)     => if (instantiation.contains(var1) && instantiation.contains(var2)) instantiation(var1) == instantiation(var2) else true
-      case Equal(vari, const: Constant)    => instantiation(vari) == const
-      case NotEqual(var1, var2: Variable)  => if (instantiation.contains(var1) && instantiation.contains(var2)) instantiation(var1) != instantiation(var2) else true
-      case NotEqual(vari, const: Constant) => instantiation(vari) != const
-      case OfSort(vari, sort)              => sort.elements contains instantiation(vari)
-      case NotOfSort(vari, sort)           => !(sort.elements contains instantiation(vari))
-    }
 
   // : Seq[(Variable, Seq[Constant])]
   private val (nonBindableVariables, boundByEquality) = {
@@ -304,70 +296,102 @@ case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Var
         matchingPlanSteps flatMap { ps => groundWithPossibleTasks(possibleTasks, Some(tasks.toSet), Some(ps)) } distinct
     }
 
+  def planStepDifficulty(possibleTasks: mutable.Map[CartesianGroundTask, Set[GroundTask]], ps: PlanStep): Int =
+  //possibleTasks(subTaskMap(ps)).size
+    -ps.arguments.length
+
   def groundWithPossibleTasks(possibleTasks: mutable.Map[CartesianGroundTask, Set[GroundTask]],
                               causingTask: Option[Set[GroundTask]], planStep: Option[PlanStep]): Seq[GroundedDecompositionMethod] = {
     // treat plansteps in increasing order of groundings
     val planStepsSortedByDifficulty = planStep match {
-      case None     => method.subPlan.planStepsWithoutInitGoal sortBy { ps => possibleTasks(subTaskMap(ps)).size }
+      case None     => method.subPlan.planStepsWithoutInitGoal sortBy { ps => planStepDifficulty(possibleTasks, ps) }
       case Some(ps) =>
-        (ps :: Nil) ++ (method.subPlan.planStepsWithoutInitGoal.filter(_ != ps) sortBy { ps => possibleTasks(subTaskMap(ps)).size })
+        (ps :: Nil) ++ (method.subPlan.planStepsWithoutInitGoal.filter(_ != ps) sortBy { ps => planStepDifficulty(possibleTasks, ps) })
     }
+    //println(planStepsSortedByDifficulty map { _.schema.name } mkString " ")
 
-    val (_, possibleTasksMapsSeq) = planStepsSortedByDifficulty.foldLeft[(Set[Variable], Seq[(PlanStep, Seq[Variable], Map[Seq[Constant], Seq[GroundTask]])])]((Set(), Nil))(
+    val time000 = System.currentTimeMillis()
+    val (_, possibleTasksMapsSeq) = planStepsSortedByDifficulty.foldLeft[(Set[Variable], Seq[(PlanStep, Seq[Variable], Array[Int], Map[Seq[Constant], Array[GroundTask]])])]((Set(), Nil))(
       { case ((boundVariables, mapsSoFar), nextPlanStep) =>
-        val commonVariables = nextPlanStep.arguments.zipWithIndex filter { case (v, _) => boundVariables contains v }
+        val (commonVariables, newVariables) = nextPlanStep.arguments.zipWithIndex partition { case (v, _) => boundVariables contains v }
         val commonVariablesIndex = commonVariables map { _._2 }
-        val groundingsPerInstantiation =
-          possibleTasks(subTaskMap(nextPlanStep)) groupBy { groundTask => commonVariablesIndex map groundTask.argumentArray } map { case (a, b) => (a, b.toSeq) } withDefaultValue Nil
+        val groundingsPerInstantiation: Map[Seq[Constant], Array[GroundTask]] =
+          possibleTasks(subTaskMap(nextPlanStep)) groupBy { groundTask => commonVariablesIndex map groundTask.argumentArray } map { case (a, b) => (a, b.toArray)
+          } withDefaultValue new Array[GroundTask](0)
 
-        val nextEntry = (nextPlanStep, commonVariables map { _._1 }, groundingsPerInstantiation)
+        val nextEntry = (nextPlanStep, commonVariables map { _._1 }, newVariables map { _._2 } toArray, groundingsPerInstantiation)
 
         (boundVariables ++ nextPlanStep.arguments, mapsSoFar :+ nextEntry)
       })
 
+    val possibleTasksMaps: Array[(PlanStep, Seq[Variable], Array[Int], Map[Seq[Constant], Array[GroundTask]])] = possibleTasksMapsSeq.toArray
+    val time001 = System.currentTimeMillis()
 
-    val possibleTasksMaps: Array[(PlanStep, Seq[Variable], Map[Seq[Constant], Seq[GroundTask]])] = possibleTasksMapsSeq.toArray
+    val groundigs = new ArrayBuffer[GroundedDecompositionMethod]()
+
+    val variableBinding: mutable.Map[Variable, Constant] = new mutable.HashMap[Variable, Constant]()
+    val planStepBinding: mutable.Map[PlanStep, GroundTask] = new mutable.HashMap[PlanStep, GroundTask]()
 
     // recursively match the tasks
-    def matchRecursively(position: Int, variableBinding: Map[Variable, Constant]): Seq[GroundedDecompositionMethod] = {
-      //println("RECURSION")
+    def matchRecursively(position: Int): Unit = {
       if (position == possibleTasksMaps.length) {
-        //println("NON BIND " + nonBindableVariables.size + (nonBindableVariables map { _._2.size }))
-        val equalityBindable = variableBinding ++ (boundByEquality map { case (v, eqV) => (v, variableBinding(eqV)) })
+        val equalityBindable = variableBinding.toMap ++ (boundByEquality map { case (v, eqV) => (v, variableBinding(eqV)) })
 
-        // instantiate all variables that do not occur in the methods subplan (usually some rough arguments of the abtract task)
-        Sort.allPossibleInstantiationsWithVariables(nonBindableVariables) map { b => (b, b ++ equalityBindable toMap) } collect {
+        // instantiate all variables that do not occur in the methods subplan (usually some rough arguments of the abstract task)
+        Sort.allPossibleInstantiationsWithVariables(nonBindableVariables) map { b => (b, equalityBindable ++ b) } foreach {
           case (binding, fullBinding) if !(binding exists { case (nv, c) => if (equalityBindable.contains(nv)) c != equalityBindable(nv) else false }) &&
-            method.areParametersAllowed(fullBinding) => GroundedDecompositionMethod(method, fullBinding)
-        } filter { _.isCorrentlyInheriting }
+            method.areParametersAllowed(fullBinding) =>
+            val groundMethod = GroundedDecompositionMethod(method, fullBinding, Some(planStepBinding.toMap))
+            if (groundMethod.isCorrentlyInheriting) groundigs.append(groundMethod)
+          case _                                     =>
+        }
       } else {
-        val (nextPlanStep, commonVariables, groundAccessMap) = possibleTasksMaps(position)
+        val (nextPlanStep, commonVariables, newVariableIndices, groundAccessMap) = possibleTasksMaps(position)
         val commonVariablesValues = commonVariables map variableBinding
 
-        val allPossibleGroundings: Seq[GroundTask] = groundAccessMap(commonVariablesValues)
-        val possibleGroundings: Seq[GroundTask] = if (position == 0 && causingTask.isDefined) allPossibleGroundings.filter(causingTask.get.contains) else allPossibleGroundings
+        val allPossibleGroundings: Array[GroundTask] = groundAccessMap(commonVariablesValues)
+        val possibleGroundings: Array[GroundTask] = if (position == 0 && causingTask.isDefined) allPossibleGroundings.filter(causingTask.get.contains) else allPossibleGroundings
 
+        var i = 0
+        while (i < possibleGroundings.length) {
+          val groundTask = possibleGroundings(i)
+          planStepBinding(nextPlanStep) = groundTask
 
-        //println("POSS groundings " + possibleGroundings.size)
-
-        possibleGroundings flatMap { groundTask =>
-          val newVariableBindingList = nextPlanStep.arguments zip groundTask.arguments
-          val newVariableBinding = newVariableBindingList.toMap
-
-          if (newVariableBinding exists { case (v, c) => !parameter(v).contains(c) })
-            Nil
-          else if (nextPlanStep.arguments exists { nv => if (newVariableBinding.contains(nv) && variableBinding.contains(nv)) newVariableBinding(nv) != variableBinding(nv) else false })
-            Nil
-          else {
-            val newBinding = variableBinding ++ newVariableBinding
-            // inefficient, actually we only have to check the constraints pertaining to newly added variables
-            if (areParametersAllowed(newVariableBindingList, newBinding)) matchRecursively(position + 1, newBinding) else Nil
+          var groundingConsistent = true
+          var j = 0
+          while (j < newVariableIndices.length && groundingConsistent) {
+            val newVariable = nextPlanStep.arguments(newVariableIndices(j))
+            val newValue = groundTask.argumentArray(newVariableIndices(j))
+            variableBinding(newVariable) = newValue
+            // check variableConstraints
+            val constraintsOfSetVariable = constraintsPerVariable(newVariable)
+            var c = 0
+            while (c < constraintsOfSetVariable.length && groundingConsistent) {
+              groundingConsistent = constraintsOfSetVariable(c) match {
+                case Equal(var1, var2: Variable)     => if (variableBinding.contains(var1) && variableBinding.contains(var2)) variableBinding(var1) == variableBinding(var2) else true
+                case Equal(vari, const: Constant)    => variableBinding(vari) == const
+                case NotEqual(var1, var2: Variable)  => if (variableBinding.contains(var1) && variableBinding.contains(var2)) variableBinding(var1) != variableBinding(var2) else true
+                case NotEqual(vari, const: Constant) => variableBinding(vari) != const
+                case OfSort(vari, sort)              => sort.elements contains variableBinding(vari)
+                case NotOfSort(vari, sort)           => !(sort.elements contains variableBinding(vari))
+              }
+              c += 1
+            }
+            j += 1
           }
-        } toSeq
+
+          // inefficient, actually we only have to check the constraints pertaining to newly added variables
+          if (groundingConsistent) matchRecursively(position + 1)
+          i += 1
+        }
       }
     }
 
-    matchRecursively(0, Map())
+    matchRecursively(0)
+    val time002 = System.currentTimeMillis()
+    //println("Matching: " + (time001 - time000) + " + " + (time002 - time001) + " = " + (time002 - time000))
+
+    groundigs
   }
 
   override def equals(o: scala.Any): Boolean =
@@ -380,13 +404,23 @@ case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Var
 case class CartesianGroundTask(task: Task, parameter: Seq[Set[Constant]]) extends PrettyPrintable {
   val argumentMap: Map[Variable, Seq[Constant]] = task.parameters zip (parameter map { _.toSeq }) toMap
 
-  override def shortInfo: String = task.name + (parameter map { l => l.map(_.name).mkString("(", ",", ")") }).mkString(";")
+  override def shortInfo: String = task.name + (parameter.zip(task.parameters) map { case (l, p) => p.name + ":" + l.size }).mkString("(", "; ", ")")
 
-  override def mediumInfo: String = shortInfo
+  override def mediumInfo: String = task.name + (parameter map { l => l.map(_.name).mkString("(", ",", ")") }).mkString(";")
 
   override def longInfo: String = mediumInfo
 
-  def isCompatible(groundTask: GroundTask): Boolean = this.parameter zip groundTask.arguments forall { case (allowed, param) => allowed contains param }
+  lazy val parameterArray: Array[Set[Constant]] = parameter.toArray
+
+  def isCompatible(groundTask: GroundTask): Boolean = {
+    var compatible = true
+    var i = 0
+    while (i < parameterArray.length && compatible) {
+      compatible = parameterArray(i) contains groundTask.argumentArray(i)
+      i += 1
+    }
+    compatible
+  }
 
   def isCompatible(partialAssignment: Map[Variable, Constant]): Boolean =
     partialAssignment forall { case (v, c) =>

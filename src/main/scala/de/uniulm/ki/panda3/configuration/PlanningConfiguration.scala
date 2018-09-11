@@ -1076,6 +1076,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       case BottomUpTDG => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = true, messageFunction)
       case TwoWayTDG   => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = false, messageFunction)
     }
+    //System exit 0
 
     (analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg), if (message != "") Some(message) else None)
   }
@@ -1267,6 +1268,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         case None                            => ("SAS+ fall-back: Grounded planning graph", PlanningGraph)
       }
       info(infoText + " ... ")
+      //System.in.read()
 
       // run typing
       val typing = HierarchyTyping(sasPlusResult._1._1, sasPlusResult._1._2)

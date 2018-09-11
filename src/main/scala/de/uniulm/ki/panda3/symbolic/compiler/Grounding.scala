@@ -165,7 +165,7 @@ object Grounding extends DomainTransformer[(GroundedReachabilityAnalysis, Map[Gr
 
     // ----- Decomposition methods
     val groundedDecompositionMethods: Seq[DecompositionMethod] = (reachabilityAnalysis.reachableGroundMethods ++ reachabilityAnalysis.additionalMethodsNeededToGround map {
-      case GroundedDecompositionMethod(liftedMethod, variableBinding) =>
+      case GroundedDecompositionMethod(liftedMethod, variableBinding, _) =>
         // ground the abstract actions
         val groundedAbstractTask = groundTaskToGroundedTask(GroundTask(liftedMethod.abstractTask, liftedMethod.abstractTask.parameters map variableBinding))
         SimpleDecompositionMethod(groundedAbstractTask, groundPlan(liftedMethod.subPlan, variableBinding), liftedMethod.name + (

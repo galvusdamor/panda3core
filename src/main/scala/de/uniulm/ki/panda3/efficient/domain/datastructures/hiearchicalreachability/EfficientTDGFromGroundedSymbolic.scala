@@ -32,7 +32,7 @@ case class EfficientTDGFromGroundedSymbolic(symbolicTDG: TaskDecompositionGraph,
     val symbolicGraph = symbolicTDG.taskDecompositionGraph._1
 
     val efficientTasks = symbolicGraph.andVertices map { case gt@GroundTask(task, args) => gt -> EfficientGroundTask(wrapping.unwrap(task), (args map wrapping.unwrap).toArray) } toMap
-    val efficientMethods = symbolicGraph.orVertices map { case gdm@GroundedDecompositionMethod(method, args) =>
+    val efficientMethods = symbolicGraph.orVertices map { case gdm@GroundedDecompositionMethod(method, args, _) =>
       val efficientMethod = wrapping.unwrap(method)
       val subPlan = wrapping.efficientDomain.decompositionMethods(efficientMethod).subPlan
       val constants = Range(0, subPlan.variableConstraints.numberOfVariables) map { wrapping.wrapVariable(_, method) } map args map wrapping.unwrap

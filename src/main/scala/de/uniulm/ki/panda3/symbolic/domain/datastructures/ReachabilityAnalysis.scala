@@ -49,7 +49,7 @@ trait GroundedReachabilityAnalysis extends ReachabilityAnalysis with GroundedPri
   val reachableGroundedTasks: Seq[GroundTask]
   val reachableGroundMethods: Seq[GroundedDecompositionMethod]
 
-  lazy val reachableGroundMethodInitAndGoalActions: Seq[GroundTask] = reachableGroundMethods flatMap { case GroundedDecompositionMethod(liftedMethod, binding) =>
+  lazy val reachableGroundMethodInitAndGoalActions: Seq[GroundTask] = reachableGroundMethods flatMap { case GroundedDecompositionMethod(liftedMethod, binding, _) =>
     liftedMethod.subPlan.initAndGoal map { case PlanStep(_, schema, args) => GroundTask(schema, args map binding) }
   }
 

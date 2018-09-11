@@ -22,8 +22,10 @@ import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, DomainUpdatable, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
-import de.uniulm.ki.util.{Internable, HashMemo}
+import de.uniulm.ki.util.{HashMemo, Internable}
 
+import scala.annotation.elidable
+import scala.annotation.elidable.ASSERTION
 import scala.collection.mutable
 
 /**
@@ -50,6 +52,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends Dom
   override val hashCode: Int = id + 31 * schema.hashCode()
 
   lazy val argumentSet = arguments.toSet
+  lazy val argumentArray = arguments.toArray
 
   if (arguments.size != schema.parameters.size) {
     System.out.println("The number of parameters given in a plan step definition does not match the number that was given in the definition of the task schema.")
@@ -123,20 +126,24 @@ object PlanStep extends Internable[(Int, Task, Seq[Variable]), PlanStep] {
   * A ground task is basically a planstep without an id.
   */
 case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo with Ordered[GroundTask] with PrettyPrintable with DomainUpdatable {
-  task.parameters.size
-  arguments.size
-  assert(task.parameters.size == arguments.size, "Incorrect argument number " + task.name + " " + task.parameters.size + " != " + arguments.size)
-  task.parameters.zipWithIndex foreach { case (p, i) =>
-    if (!p.sort.elements.contains(arguments(i))) {
-      println(p.sort.elements)
-      println(arguments(i))
-    }
-    assert(p.sort.elements.contains(arguments(i)), "Task " + task.name + "Argument " + i + " asserted to " + arguments(i) + " but not allowed in sort " + p.sort.name +
-      p.sort.elements.map(_.name).mkString("(", ",", ")"))
-  }
 
-  // the arguments must be allowed
-  assert(task.areParametersAllowed(arguments))
+  /*@elidable(ASSERTION)
+  def assertion(): Boolean = {
+    assert(task.parameters.size == arguments.size, "Incorrect argument number " + task.name + " " + task.parameters.size + " != " + arguments.size)
+    task.parameters.zipWithIndex foreach { case (p, i) =>
+      if (!p.sort.elements.contains(arguments(i))) {
+        println(p.sort.elements)
+        println(arguments(i))
+      }
+      assert(p.sort.elements.contains(arguments(i)), "Task " + task.name + "Argument " + i + " asserted to " + arguments(i) + " but not allowed in sort " + p.sort.name +
+        p.sort.elements.map(_.name).mkString("(", ",", ")"))
+    }
+
+    // the arguments must be allowed
+    assert(task.areParametersAllowed(arguments))
+    true
+  }
+  assert(assertion())*/
 
   lazy val argumentArray = arguments.toArray
 

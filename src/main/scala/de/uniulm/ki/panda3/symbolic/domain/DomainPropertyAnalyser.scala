@@ -37,7 +37,7 @@ case class DomainPropertyAnalyser(domain: Domain, tdg: TaskDecompositionGraph) {
   }
 
   // is a method contains an abstract task it must be the last task
-  val isRegular = tdg.reachableGroundMethods forall { case GroundedDecompositionMethod(method, _) =>
+  val isRegular = tdg.reachableGroundMethods forall { case GroundedDecompositionMethod(method, _, _) =>
     val numberOfAbstracts = method.subPlan.planSteps count { _.schema.isAbstract }
     val isAbstractPlanStepLast = if (numberOfAbstracts == 0) true
     else {
@@ -51,7 +51,7 @@ case class DomainPropertyAnalyser(domain: Domain, tdg: TaskDecompositionGraph) {
 
 
   // recursion is allowed, but every non-last task must be in a strictly lower strata
-  val isTailRecursive = tdg.reachableGroundMethods forall { case groundMethod@GroundedDecompositionMethod(method, _) =>
+  val isTailRecursive = tdg.reachableGroundMethods forall { case groundMethod@GroundedDecompositionMethod(method, _, _) =>
     val plan = method.subPlan
     val nonLastPlanSteps = plan.planStepsWithoutInitGoal filterNot plan.isLastPlanStep
 

@@ -155,7 +155,6 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
         val allInstantiations = Sort allPossibleInstantiationsWithVariables (unboundVariables map { v => (v, v.sort.elements) })
 
 
-
         val methodInstantiations: Seq[Map[Variable, Constant]] = allInstantiations map { instantiation => expandedMapping ++ instantiation } filter areParametersAllowed
 
         // only take those methods that inherit correctly
@@ -199,18 +198,20 @@ case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrec
 
 }
 
-case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant]) extends PrettyPrintable {
+case class GroundedDecompositionMethod(decompositionMethod: DecompositionMethod, variableBinding: Map[Variable, Constant],
+                                       subplanGroundedPlanStepsGiven: Option[Map[PlanStep, GroundTask]] = None) extends PrettyPrintable {
   assert(decompositionMethod.areParametersAllowed(variableBinding))
 
-  val groundAbstractTask: GroundTask = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
+  lazy val groundAbstractTask: GroundTask = GroundTask(decompositionMethod.abstractTask, decompositionMethod.abstractTask.parameters map variableBinding)
 
-  val subPlanPlanStepsToGrounded: Map[PlanStep, GroundTask] = decompositionMethod.subPlan.planSteps map { case ps@PlanStep(_, schema, arguments) =>
-    ps -> GroundTask(schema, arguments map variableBinding)
-  } toMap
+  lazy val subPlanPlanStepsToGrounded: Map[PlanStep, GroundTask] = if (subplanGroundedPlanStepsGiven.isDefined) subplanGroundedPlanStepsGiven.get else
+    decompositionMethod.subPlan.planSteps map { case ps@PlanStep(_, schema, arguments) =>
+      ps -> GroundTask(schema, arguments map variableBinding)
+    } toMap
 
-  val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map subPlanPlanStepsToGrounded
+  lazy val subPlanGroundedTasksWithoutInitAndGoal: Seq[GroundTask] = decompositionMethod.subPlan.planStepsWithoutInitGoal map subPlanPlanStepsToGrounded
 
-  val isCorrentlyInheriting = {
+  lazy val isCorrentlyInheriting = {
     val groundedAbstractTask = groundAbstractTask
     val groundedSubtasks = subPlanGroundedTasksWithoutInitAndGoal
 

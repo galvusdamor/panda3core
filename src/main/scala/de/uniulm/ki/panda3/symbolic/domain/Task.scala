@@ -42,6 +42,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
   val parameterConstraints                     : Seq[VariableConstraint]
   val precondition                             : Formula
   val effect                                   : Formula
+  lazy val parameterArray: Array[Variable] = parameters.toArray
 
   lazy val isAbstract: Boolean = !isPrimitive
   lazy val taskCSP   : CSP     = CSP(parameters.toSet, parameterConstraints)
@@ -156,7 +157,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
   override def longInfo: String = mediumInfo + "\npreconditions:\n" + precondition.shortInfo + "\n" +
     "\neffects:\n" + effect.shortInfo + "\n"
 
-  lazy val isNoOp : Boolean = precondition.isEmpty && effect.isEmpty
+  lazy val isNoOp: Boolean = precondition.isEmpty && effect.isEmpty
 
   val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)]
   val effectsAsPredicateBool      : Seq[(Predicate, Boolean)]
@@ -224,7 +225,8 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
   lazy val effectsAsPredicateBoolSet   : Set[(Predicate, Boolean)] = effectsAsPredicateBool.toSet
 
   override def equals(o: scala.Any): Boolean =
-    if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[ReducedTask].productIterator) } else false
+    if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) this.name == o.asInstanceOf[ReducedTask].name else false
+    //if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[ReducedTask].productIterator) } else false
 
   lazy val preconditionPerPredicate: Map[Predicate, Seq[Literal]] = precondition.conjuncts.groupBy(_.predicate).map({ case (p, ls) => p -> ls }).withDefaultValue(Nil)
 
@@ -234,22 +236,24 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
         case Equal(_, c: Constant) => c :: Nil
       }
     } else {
-      val allConst = v.sort.elements filterNot {c => parameterConstraints.contains(NotEqual(v,c))}
+      val allConst = v.sort.elements filterNot { c => parameterConstraints.contains(NotEqual(v, c)) }
 
       // check that the instantiation is also allowed for all involved predicates
-      allConst filter {c => (precondition.conjuncts ++ effect.conjuncts) forall {case Literal(pred,_,args) =>
-        args.zipWithIndex forall {
-          case (`v`,argI) => pred.argumentSorts(argI).elements contains c
-          case _ => true
+      allConst filter { c =>
+        (precondition.conjuncts ++ effect.conjuncts) forall { case Literal(pred, _, args) =>
+          args.zipWithIndex forall {
+            case (`v`, argI) => pred.argumentSorts(argI).elements contains c
+            case _           => true
+          }
         }
-      }}
+      }
     }
 
     v -> vals
   } toMap
 
   lazy val possibleValuesForPreconditionLiteralPosition: Map[Predicate, Seq[Set[Constant]]] = precondition.conjuncts.groupBy(_.predicate) map { case (p, ls) =>
-    val possibleValues : Seq[Set[Constant]] = p.argumentSorts.indices map {pi => ls map {_.parameterVariables(pi)} flatMap possibleVariableValues toSet }
+    val possibleValues: Seq[Set[Constant]] = p.argumentSorts.indices map { pi => ls map { _.parameterVariables(pi) } flatMap possibleVariableValues toSet }
     p -> possibleValues
   }
 

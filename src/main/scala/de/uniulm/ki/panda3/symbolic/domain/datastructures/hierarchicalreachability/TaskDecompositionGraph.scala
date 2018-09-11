@@ -122,7 +122,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
       val allReachable = if (nonEmptyTDG) firstAndOrGraph.reachableFrom(topGrounded) ++ alwaysNecessaryPrimitiveTasks else Set[AnyRef](topGrounded)
 
       val reachableWithoutTop = allReachable partition {
-        case GroundedDecompositionMethod(m, _) => m.abstractTask == topTask
+        case GroundedDecompositionMethod(m, _, _) => m.abstractTask == topTask
         case GroundTask(task, _)               => task == topTask
       }
 

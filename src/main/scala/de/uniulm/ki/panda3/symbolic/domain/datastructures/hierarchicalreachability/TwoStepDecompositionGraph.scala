@@ -31,6 +31,7 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
   extends TaskDecompositionGraph with WithHierarchyTyping {
 
   lazy val (abstractTaskGroundings, groundedDecompositionMethods) = {
+    val time000 = System.currentTimeMillis()
     initialise()
 
     // 2. build the groundings in a bottom up fashion
@@ -55,9 +56,10 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
         }
     }
 
+    //System.in.read()
     // run the actual grounding procedure
     taskOrdering foreach {
-      scc =>
+      case scc : Set[Task] =>
         if (scc.size != 1 || scc.head.isAbstract) {
           //println("\n\n\n\n\nSCC " + (scc map { _.name }))
 
@@ -100,21 +102,41 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
           }
 
           var untreatedTaskGroundings: Set[(Task, GroundTask)] =
-            scc flatMap { task => cartTasksMap(task) flatMap { cartTask => cartMethodsMap(cartTask) } } flatMap { cartMethod => groundNew(cartMethod, None) }
+            scc.toSeq flatMap { task => cartTasksMap(task) flatMap { cartTask => cartMethodsMap(cartTask) } } flatMap { cartMethod =>
+              //System.in.read()
+
+              val time0 = System.currentTimeMillis()
+              val r = groundNew(cartMethod, None)
+              val time1 = System.currentTimeMillis()
+              //println("time " + (time1 - time0))
+              r
+            } toSet
 
           while (untreatedTaskGroundings.nonEmpty) {
             //println("=================== ITERATE ===================")
+            //println("SIZE: " + untreatedTaskGroundings.size)
             val triggers: Set[(Task, Seq[GroundTask])] =
               untreatedTaskGroundings groupBy { _._1 } map { case (task, taskAndGroundTasks) => (task, taskAndGroundTasks map { _._2 } toSeq) } toSet
 
             untreatedTaskGroundings = triggers flatMap {
               case (task, groundTasks) =>
                 //println("ONE TRIGGER " + groundTasks.length)
-                cartTasksMap(task) flatMap { cartTask => cartTaskInMethodsMap(cartTask) } flatMap {cartMethod => groundNew(cartMethod, Some(groundTasks))}
+                cartTasksMap(task) flatMap { cartTask => cartTaskInMethodsMap(cartTask) } flatMap {cartMethod =>
+                  val time0 = System.currentTimeMillis()
+                  val r = groundNew(cartMethod, Some(groundTasks))
+                  val time1 = System.currentTimeMillis()
+                  //println("time " + (time1 - time0))
+
+                  r
+                }
             } filter { case (t, _) => scc contains t }
           }
         }
     }
+
+    val time001 = System.currentTimeMillis()
+    //println("total: " + (time001 - time000))
+    //System exit 0
 
     val taskGroundingMap: Map[Task, Set[GroundTask]] = methodsMap.keys groupBy { _.task } map { case (a, b) => (a, b.toSet) }
     (taskGroundingMap, methodsMap.toMap)
