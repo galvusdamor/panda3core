@@ -87,12 +87,9 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
 
 
         builder.append("\t\t:constraints (and\n")
-        if (!methodPrecondition.isEmpty) {
-          // method precondition
-          builder.append("\t\t\t(before")
-          hddlWriter.writeFormula(builder, methodPrecondition, "\t\t\t", planUF, noConstantReplacement = true, variablesWithIdenticalName)
-          builder.append("\t\t\tt" + (taskSequence.head.id - 1) + " )")
-        }
+        builder.append("\t\t\t(before (and\n")
+        // method precondition
+        hddlWriter.writeFormula(builder, methodPrecondition, "\t\t\t", planUF, noConstantReplacement = true, variablesWithIdenticalName)
 
         // constraints mapping abstract task parameters to inner parameters
         neededVariableConstraints foreach {
@@ -109,11 +106,13 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
           case Equal(l, r: Variable) if getUnionVariable(l) == getUnionVariable(r) => // nothing to do
           //case NotEqual(l, c: Constant)                                               =>
           //  builder.append("\t\t\t(not (= " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " + toPDDLIdentifier(c.name) + "))\n")
-          case NotEqual(l, r : Variable)                                                      =>
+          case NotEqual(l, r: Variable) =>
             builder.append("\t\t\t(not (= " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " +
                              toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(r), variablesWithIdenticalName)) + "))\n")
-          case _ =>
+          case _                        =>
         }
+        builder.append("\t\t\t) t" + (taskSequence.head.id - 1) + ")\n")
+
         builder.append("\t\t)\n")
 
         builder.append("\t)\n")
