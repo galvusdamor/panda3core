@@ -16,6 +16,7 @@
 
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
+import de.uniulm.ki.panda3.configuration.Timings
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Task}
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.{GreedyNumberOfChildrenFromTotallyOrderedOptimiser, SOGOptimiser}
@@ -39,11 +40,13 @@ trait TreeEncoding extends PathBasedEncoding[Unit, Unit]{
     //println("MINI " + possibleMethods.length + " " + possiblePrimitives.length)
     val lb = if (methodTaskGraphs.nonEmpty) methodTaskGraphs map { _.vertices count { _.schema.isAbstract } } max else 0
     // TODO what to do?
+    timeCapsule start Timings.SOG_OPTIMISATION
     //val g = DirectedGraph.minimalInducedSuperGraph[PlanStep](methodTaskGraphs) //, minimiseAbstractTaskOccurencesMetric)
     //val g = GreedyNumberOfAbstractChildrenOptimiser.minimalSOG(methodTaskGraphs)
     val g = optimiser.minimalSOG(methodTaskGraphs)
     //val g = NativeOptimiser.minimalSOG(methodTaskGraphs)
     //println("done")
+    timeCapsule stop Timings.SOG_OPTIMISATION
     val minimalSuperGraph = g._1
     val planStepToIndexMappings: Seq[Map[PlanStep, Int]] = g._2
     val topologicalOrdering = minimalSuperGraph.topologicalOrdering.get

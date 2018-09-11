@@ -154,7 +154,10 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     informationCapsule.set(Information.NUMBER_OF_ABSTRACT_ACTIONS, domainAndPlan._1.abstractTasks.length)
     informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_ACTIONS, domainAndPlan._1.primitiveTasks.length)
     informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_SHOP_ACTIONS, domainAndPlan._1.numberOfPrimitiveSHOPTasks)
+    informationCapsule.set(Information.NUMBER_OF_PRIMITIVE_NON_SHOP_ACTIONS, domainAndPlan._1.primitiveTasks.length - domainAndPlan._1.numberOfPrimitiveSHOPTasks)
     informationCapsule.set(Information.NUMBER_OF_METHODS, domainAndPlan._1.decompositionMethods.length)
+    informationCapsule.set(Information.SIZE_OF_LARGEST_METHOD, domainAndPlan._1.maximumMethodSize)
+    informationCapsule.set(Information.AVERAGE_METHOD_SIZE, domainAndPlan._1.averageMethodSize)
 
     // write randomseed into the info capsule
     informationCapsule.set(Information.RANDOM_SEED, randomSeed.toString)
@@ -746,8 +749,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         val problemString = gtohpWriter.writeProblem(domainAndPlan._1, domainAndPlan._2)
 
 
-        println(domainString)
         println(problemString)
+        println(domainString)
 
         val uuid = UUID.randomUUID().toString
         val domFile = "fooD" + uuid + ".pddl"
@@ -770,9 +773,9 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             override def buffer[T](f: => T): T = f
           }
 
-          ("rm " + domFile) !
+          //("rm " + domFile) !
 
-          ("rm " + probFile) !
+          //("rm " + probFile) !
 
           timeCapsule stop SEARCH_SHOP
 

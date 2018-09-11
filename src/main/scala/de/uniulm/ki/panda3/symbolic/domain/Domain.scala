@@ -135,8 +135,9 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   lazy val minimumMethodSize: Int = if (decompositionMethods.nonEmpty) decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } min else -1
   lazy val maximumMethodSize: Int = if (decompositionMethods.nonEmpty) decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } max else -1
+  lazy val averageMethodSize: Int = if (decompositionMethods.nonEmpty) ((decompositionMethods map { _.subPlan.planStepsWithoutInitGoal.length } sum) / decompositionMethods.length) else -1
 
-  lazy val numberOfPrimitiveSHOPTasks : Int = primitiveTasks.count(_.name.startsWith("SHOP_method"))
+  lazy val numberOfPrimitiveSHOPTasks: Int = primitiveTasks.count(_.name.startsWith("SHOP_method"))
 
   lazy val isClassical             : Boolean = decompositionMethods.isEmpty && abstractTasks.isEmpty
   lazy val isGround                : Boolean = predicates forall { _.argumentSorts.isEmpty }
