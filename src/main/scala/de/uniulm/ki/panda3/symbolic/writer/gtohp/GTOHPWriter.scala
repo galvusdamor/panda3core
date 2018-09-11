@@ -51,10 +51,17 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
         builder.append("\n")
         builder.append("\t(:method " + toPDDLIdentifier(m.abstractTask.name) + "\n")
         val planUF = SymbolicUnionFind.constructVariableUnionFind(m.subPlan)
-
-        // we can't throw parameters of abstract tasks away
-        val taskUF = SymbolicUnionFind.constructVariableUnionFind(m.abstractTask)
         val abstractTaskParameters = m.abstractTask.parameters
+
+        def getUnionVariable(v: Variable): Variable = {
+          // we can't throw parameters of abstract tasks away
+          abstractTaskParameters find { atp => planUF.getRepresentative(atp) == planUF.getRepresentative(v) } match {
+            case Some(atp) => atp
+            case None      => planUF.getRepresentative(v) match {case vari: Variable => vari}
+          }
+
+        }
+
         val variablesWithIdenticalName = abstractTaskParameters.groupBy(_.name).filter(_._2.size > 1).keySet
 
         //if (m.subPlan.variableConstraints.variables.nonEmpty) {
@@ -65,8 +72,8 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
         val taskSequence = m.subPlan.orderingConstraints.graph.topologicalOrdering.get
         builder.append("\t\t:expansion (\n")
         taskSequence foreach { ps =>
-          builder.append("\t\t\t(tag t" + (ps.id-1) + " (" + toPDDLIdentifier(ps.schema.name))
-          ps.arguments foreach { v => builder.append(" " + toHPDDLVariableName(hddlWriter.getVariableName(v, variablesWithIdenticalName))) }
+          builder.append("\t\t\t(tag t" + (ps.id - 1) + " (" + toPDDLIdentifier(ps.schema.name))
+          ps.arguments foreach { v => builder.append(" " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(v), variablesWithIdenticalName))) }
           builder.append("))\n")
         }
         builder.append("\t\t)\n")
@@ -84,28 +91,33 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
           // method precondition
           builder.append("\t\t\t(before")
           hddlWriter.writeFormula(builder, methodPrecondition, "\t\t\t", planUF, noConstantReplacement = true, variablesWithIdenticalName)
-          builder.append("\t\t\tt" + (taskSequence.head.id-1) + " )")
+          builder.append("\t\t\tt" + (taskSequence.head.id - 1) + " )")
         }
 
         // constraints mapping abstract task parameters to inner parameters
         neededVariableConstraints foreach {
-          case (v, c) => builder.append("\t\t\t(= " +
-                                          toHPDDLVariableName(hddlWriter.getVariableName(v, variablesWithIdenticalName)) + " " + toPDDLIdentifier(c.name) + ")\n")
+          case (v, c) => builder.append("\t\t\t(= " + toHPDDLVariableName(hddlWriter.getVariableName(v, variablesWithIdenticalName)) + " " + toPDDLIdentifier(c.name) + ")\n")
         }
 
         m.subPlan.variableConstraints.constraints.filter({ case _: Equal => true; case _: NotEqual => true; case _ => false }) foreach {
-          case Equal(l, r)    => builder.append("\t\t\t(= " + hddlWriter.getRepresentative(l, taskUF, true, variablesWithIdenticalName) + " " +
-                                                  hddlWriter.getRepresentative(r, taskUF, true, variablesWithIdenticalName) + ")\n"
-                                               )
-          case NotEqual(l, r) => builder.append("\t\t\t(not (= " + hddlWriter.getRepresentative(l, taskUF, true, variablesWithIdenticalName) + " " +
-                                                  hddlWriter.getRepresentative(r, taskUF, true, variablesWithIdenticalName) + "))\n"
-                                               )
+          case Equal(l, c: Constant)                                               =>
+            builder.append("\t\t\t(= " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " + toPDDLIdentifier(c.name) + ")\n")
+          case Equal(l, r: Variable) if getUnionVariable(l) != getUnionVariable(r) =>
+            builder.append("\t\t\t(= " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " +
+                             toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(r), variablesWithIdenticalName)) + ")\n")
+
+          case Equal(l, r: Variable) if getUnionVariable(l) == getUnionVariable(r) => // nothing to do
+          //case NotEqual(l, c: Constant)                                               =>
+          //  builder.append("\t\t\t(not (= " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " + toPDDLIdentifier(c.name) + "))\n")
+          case NotEqual(l, r : Variable)                                                      =>
+            builder.append("\t\t\t(not (= " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " +
+                             toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(r), variablesWithIdenticalName)) + "))\n")
+          case _ =>
         }
         builder.append("\t\t)\n")
 
         builder.append("\t)\n")
     }
-
 
     builder.append(")")
 
@@ -142,8 +154,8 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
 
     builder append "\t\t:tasks (\n"
     taskSequence foreach { ps =>
-      builder.append("\t\t\t(tag t" + (ps.id-1) + " (" + toPDDLIdentifier(ps.schema.name))
-      ps.arguments map planUF.getRepresentative foreach { case c : Constant => builder.append(" " + toPDDLIdentifier(c.name)) }
+      builder.append("\t\t\t(tag t" + (ps.id - 1) + " (" + toPDDLIdentifier(ps.schema.name))
+      ps.arguments map planUF.getRepresentative foreach { case c: Constant => builder.append(" " + toPDDLIdentifier(c.name)) }
       builder.append("))\n")
     }
     builder append "\t\t)\n"
@@ -154,7 +166,7 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
     if (!plan.goal.schema.precondition.isEmpty) {
       builder.append(hddlWriter.writeLiteralList(plan.goal.substitutedPreconditions, plan.variableConstraints, indentation = true))
     }
-    builder.append("\t\t)\n\t\tt" + (taskSequence.last.id-1) + "))\n")
+    builder.append("\t\t)\n\t\tt" + (taskSequence.last.id - 1) + "))\n")
 
     builder.append("\t)\n")
 
