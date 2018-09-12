@@ -382,6 +382,15 @@ case class CartesianGroundMethod(method: DecompositionMethod, parameter: Map[Var
 
           // inefficient, actually we only have to check the constraints pertaining to newly added variables
           if (groundingConsistent) matchRecursively(position + 1)
+
+          // clear variables again
+          j = 0
+          while (j < newVariableIndices.length) {
+            val newVariable = nextPlanStep.arguments(newVariableIndices(j))
+            variableBinding.remove(newVariable)
+            j += 1
+          }
+
           i += 1
         }
       }
