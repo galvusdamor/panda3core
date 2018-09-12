@@ -285,11 +285,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
       timeCapsule start Timings.VERIFY_TOTAL
       timeCapsule start Timings.GENERATE_FORMULA
-      println("READY")
-      //:q
-      // System.in.read()
 
+      timeCapsule start GENERATE_STATE_FORMULA
       val stateFormula = encoder.stateTransitionFormula ++ encoder.initialState ++ (if (includeGoal) encoder.goalState else Nil) ++ encoder.noAbstractsFormula
+      timeCapsule stop GENERATE_STATE_FORMULA
+
       val planningFormula = (encoder.decompositionFormula ++ stateFormula).toArray
 
       val additionalConstraintsFormula = additionalConstraintsGenerators flatMap { constraint =>
@@ -301,6 +301,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
       }
 
       val usedFormulaGeneral = planningFormula ++ additionalConstraintsFormula
+
       println("NUMBER OF CLAUSES " + usedFormulaGeneral.length)
       val primitiveClauses: Int =
         encoder.numberOfPrimitiveTransitionSystemClauses + encoder.initialState.length + (if (includeGoal) encoder.goalState.length else 0) + encoder.noAbstractsFormula.length

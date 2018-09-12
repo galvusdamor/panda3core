@@ -58,7 +58,7 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
         }
     }
     val time001 = System.currentTimeMillis()
-    println("total: " + (time001 - time000))
+    //println("total: " + (time001 - time000))
 
     //System.in.read()
     // run the actual grounding procedure
@@ -139,7 +139,7 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
     }
 
     val time002 = System.currentTimeMillis()
-    println("total: " + (time002 - time001))
+    //println("total: " + (time002 - time001))
     //System exit 0
 
     val taskGroundingMap: Map[Task, Set[GroundTask]] = methodsMap.keys groupBy { _.task } map { case (a, b) => (a, b.toSet) }

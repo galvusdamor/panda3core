@@ -42,7 +42,7 @@ object PredefinedConfigurations {
                                                        convertToSASP = false,
                                                        allowSASPFromStrips = false,
                                                        removeUnnecessaryPredicates = false,
-                                                       removeNoOps = false,
+                                                       removeNoOps = true,
                                                        ensureMethodsHaveLastTask = false,
                                                        ensureMethodsHaveAtMostTwoTasks = false,
                                                        compileOrderInMethods = None,

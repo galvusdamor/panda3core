@@ -24,6 +24,7 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.sat.IntProblem
 import de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser.GreedyNumberOfChildrenFromTotallyOrderedOptimiser
 import de.uniulm.ki.util._
+import de.uniulm.ki.panda3.configuration.Timings._
 
 import scala.collection.Seq
 
@@ -31,10 +32,10 @@ import scala.collection.Seq
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
-                                   domain: Domain, initialPlan: Plan, intProblem : IntProblem,
+                                  domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                                   reductionMethod: SATReductionMethod, taskSequenceLength: Int, offsetToK: Int, overrideK: Option[Int] = None,
                                   restrictionMethod: RestrictionMethod, usePDTMutexes: Boolean)
-  extends TreeEncoding with EncodingWithLinearPlan with NumberOfActionsRestrictionViaAutomaton[Unit,Unit]{
+  extends TreeEncoding with EncodingWithLinearPlan with NumberOfActionsRestrictionViaAutomaton[Unit, Unit] {
 
   assert(domain.isTotallyOrdered, "The domain is not totally ordered. The totSAT encoding can only be applied to a totally ordered domain.")
   assert(initialPlan.orderingConstraints.isTotalOrder(), "The initial plan is not totally ordered. The totSAT encoding can only be applied to a totally ordered planning problem.")
@@ -48,7 +49,7 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
     memoise[(Int, Int, Predicate), String]({ case (l, pos, pred) => "predicate^" + l + "_" + pos + "," + predicateIndex(pred) })
 
 
-  override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions : Map[Int,Int]): Seq[Clause] = Nil
+  override protected def additionalClausesForMethod(layer: Int, path: Seq[Int], method: DecompositionMethod, methodString: String, methodChildrenPositions: Map[Int, Int]): Seq[Clause] = Nil
 
   private def primitivesApplicable(layer: Int, position: Int): Seq[Clause] = primitivePaths(position)._2.toSeq filter { _.isPrimitive } flatMap {
     case task: ReducedTask =>
@@ -89,14 +90,28 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
       }
   }
 
-  lazy val invariantFormula = Range(0, taskSequenceLength + 1) flatMap { case position =>
-    intProblem.symbolicInvariantArray map { case ((ap, ab), (bp, bb)) => Clause((statePredicate(K - 1, position, ap), ab) :: (statePredicate(K - 1, position, bp), bb) :: Nil) }
+  lazy val invariantFormula : Seq[Clause] = {
+    // explicitly compute invariants to get correct timings
+    timeCapsule start COMPUTE_STATE_INVARIANTS
+    intProblem.symbolicInvariantArray
+    timeCapsule stop COMPUTE_STATE_INVARIANTS
+
+    timeCapsule start GENERATE_INVARIANT_FORMULA
+    val invariant = Range(0, primitivePaths.length + 1) flatMap { case position =>
+      intProblem.symbolicInvariantArray map { case ((ap, ab), (bp, bb)) => Clause((statePredicate(K - 1, position, ap), ab) :: (statePredicate(K - 1, position, bp), bb) :: Nil) }
+    }
+    timeCapsule stop GENERATE_INVARIANT_FORMULA
+
+    println("Invariant Clauses " + invariant.length)
+    invariant
   }
 
 
-  override lazy val stateTransitionFormula: Seq[Clause] = {primitivePaths.indices flatMap { position =>
-    primitivesApplicable(K, position) ++ stateChange(K, position) ++ maintainState(K, position)
-  }} ++ numberOfActionsFormula(primitivePaths) ++ invariantFormula
+  override lazy val stateTransitionFormula: Seq[Clause] = {
+    primitivePaths.indices flatMap { position =>
+      primitivesApplicable(K, position) ++ stateChange(K, position) ++ maintainState(K, position)
+    }
+  } ++ numberOfActionsFormula(primitivePaths) ++ invariantFormula
 
   override lazy val numberOfPrimitiveTransitionSystemClauses = stateTransitionFormula.length
 
@@ -118,7 +133,7 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
 
   override def linearPlan: scala.Seq[Map[Task, String]] = primitivePaths map { case (path, tasks) => tasks map { t => t -> pathAction(path.length, path, t) } toMap }
 
-  override def linearStateFeatures = {
+  override def linearStateFeatures: Seq[Map[Predicate, String]] = {
     // there is one more state
     Range(0, primitivePaths.length + 1) map { case i => domain.predicates map { p => p -> { statePredicate(K, i, p) } } toMap }
   }
@@ -149,19 +164,20 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
     val (finalState, tasksToRemoveFromPaths) = sortedPaths.zipWithIndex.foldLeft[((Set[Predicate], Map[Predicate, Seq[(Int, Task)]]), Seq[Set[Task]])]((initialState, Nil))(
       {
         case (((state, predicateLayers), toRemove), ((path, tasks), layer)) =>
-          val (applicable, nonApplicable) = tasks partition { t => t.isPrimitive && (t.preconditionsAsPredicateBool forall { case (p, true) => state contains p }) && {
-            if (fullTest) {
-              // run full NP matching test
-              val possibleAchievers: Seq[Seq[(Int, Task)]] = t.preconditionsAsPredicateBool.collect({ case (a, true) => a }) map predicateLayers
-              canBeAchieved(possibleAchievers)
-            } else true
-          }
+          val (applicable, nonApplicable) = tasks partition { t =>
+            t.isPrimitive && (t.preconditionsAsPredicateBool forall { case (p, true) => state contains p }) && {
+              if (fullTest) {
+                // run full NP matching test
+                val possibleAchievers: Seq[Seq[(Int, Task)]] = t.preconditionsAsPredicateBool.collect({ case (a, true) => a }) map predicateLayers
+                canBeAchieved(possibleAchievers)
+              } else true
+            }
           }
 
           if (nonApplicable.nonEmpty)
             println("Found " + nonApplicable.size + " non applicable tasks at " + path + ". Still applicable " + applicable.size)
 
-          val actionEffects = applicable flatMap { case task => task.effectsAsPredicateBool collect { case (predicate, true) => predicate ->(layer, task) } }
+          val actionEffects = applicable flatMap { case task => task.effectsAsPredicateBool collect { case (predicate, true) => predicate -> (layer, task) } }
 
           // apply tasks
           val reachableState = state ++ actionEffects.map(_._1)
@@ -230,7 +246,7 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
                 // if a predicate could be achieved on its one, then it can now together with all non-deleted things
                 val byNonDel: Seq[(Predicate, Predicate)] = h1State.toSeq collect { case nondel if !(delSet contains nondel) &&
                   (positivePreconditions forall { prec => h2State contains(prec, nondel) })
-                => (add, nondel) ::(nondel, add) :: Nil
+                => (add, nondel) :: (nondel, add) :: Nil
                 } flatten
 
                 byAdd ++ byNonDel

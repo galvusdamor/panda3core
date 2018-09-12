@@ -165,6 +165,7 @@ object Timings {
 
   val SEARCH_PREPARATION               = "10 search preparation:00:total"
   val COMPUTE_EFFICIENT_REPRESENTATION = "10 search preparation:01:compute efficient representation"
+  val COMPUTE_STATE_INVARIANTS         = "10 search preparation:02:compute state invariants"
 
   val SEARCH                          = "20 search:00:total"
   val SEARCH_FLAW_RESOLVER_ESTIMATION = "20 search:01:flaw estimation"
@@ -177,17 +178,19 @@ object Timings {
   val SEARCH_FAPE                     = "20 search:99:FAPE"
   val SEARCH_SHOP                     = "20 search:98:SHOP"
 
-  val VERIFY_TOTAL     = "40 sat:00:total"
-  val GENERATE_FORMULA = "40 sat:10:generate formula"
-  val GENERATE_PDT     = "40 sat:11:generate path decomposition tree"
-  val NORMALISE_PDT    = "40 sat:12:normalise path decomposition tree"
-  val GENERATE_CLAUSES = "40 sat:13:translate path decomposition tree to clauses"
-  val GENERATE_MUTEXES = "40 sat:14:computing PDT mutexes"
-  val SOG_OPTIMISATION = "40 sat:15:sog optimisation"
-  val TRANSFORM_DIMACS = "40 sat:20:transform to DIMACS"
-  val WRITE_FORMULA    = "40 sat:30:write formula"
-  val SAT_SOLVER       = "40 sat:40:SAT solver"
-  val SAT_SOLVER_K     = "40 sat:41:SAT solver for K="
+  val VERIFY_TOTAL               = "40 sat:00:total"
+  val GENERATE_FORMULA           = "40 sat:10:generate formula"
+  val GENERATE_PDT               = "40 sat:11:generate path decomposition tree"
+  val NORMALISE_PDT              = "40 sat:12:normalise path decomposition tree"
+  val SOG_OPTIMISATION           = "40 sat:13:sog optimisation"
+  val GENERATE_MUTEXES           = "40 sat:14:computing PDT mutexes"
+  val GENERATE_CLAUSES           = "40 sat:15:translate path decomposition tree to clauses"
+  val GENERATE_STATE_FORMULA     = "40 sat:16:generate state formula"
+  val GENERATE_INVARIANT_FORMULA = "40 sat:17:generate state invariant formula"
+  val TRANSFORM_DIMACS           = "40 sat:20:transform to DIMACS"
+  val WRITE_FORMULA              = "40 sat:30:write formula"
+  val SAT_SOLVER                 = "40 sat:40:SAT solver"
+  val SAT_SOLVER_K               = "40 sat:41:SAT solver for K="
 }
 
 object Information {

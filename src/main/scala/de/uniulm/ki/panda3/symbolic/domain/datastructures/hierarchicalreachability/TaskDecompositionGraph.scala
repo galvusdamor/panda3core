@@ -109,7 +109,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
         if (pruningFromPrimitiveNecessary) pruneMethodsAndTasksIfPossible(allGroundedActions, groundedDecompositionMethods.values.flatten.toSeq, firstRound = true)
         else (allGroundedActions, groundedDecompositionMethods.values.flatten.toSet)
       val time001 = System.currentTimeMillis()
-      println("Time: " + (time001 - time000))
+      //println("Time: " + (time001 - time000))
 
       val alwaysNecessaryPrimitiveTasks =
         if (initialPlan.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) groundedReachabilityAnalysis.reachableGroundPrimitiveActions else Nil
@@ -123,7 +123,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
       val firstAndOrGraph = SimpleAndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod](remainingGroundTasks ++ alwaysNecessaryPrimitiveTasks, remainingGroundMethods,
                                                                                               prunedTaskToMethodEdges, prunedMethodToTaskEdges.toMap)
       val time002 = System.currentTimeMillis()
-      println("Time: " + (time002 - time001))
+      //println("Time: " + (time002 - time001))
       // reachability analysis
       //System.in.read()
       val nonEmptyTDG = firstAndOrGraph.andVertices contains topGrounded
@@ -137,7 +137,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
       val topMethods = reachableWithoutTop._1 collect { case x: GroundedDecompositionMethod => x }
 
       val time003 = System.currentTimeMillis()
-      println("Time: " + (time003 - time002))
+      //println("Time: " + (time003 - time002))
       val prunedTDG = firstAndOrGraph pruneToEntities reachableWithoutTop._2
 
       //Dot2PdfCompiler.writeDotToFile(prunedTDG,"tdg.pdf")
@@ -145,7 +145,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
       if (!nonEmptyTDG) messageFunction("TDG contains no tasks after pruning ... problem is trivially unsolvable")
 
       val time004 = System.currentTimeMillis()
-      println("Time: " + (time004 - time003))
+      //println("Time: " + (time004 - time003))
       //System exit 0
       (prunedTDG, if (isInitialPlanGround && nonEmptyTDG) Nil else topGrounded :: GroundTask(initAndGoalNOOP, Nil) :: Nil, if (isInitialPlanGround || !nonEmptyTDG) Nil else topMethods.toSeq)
     }

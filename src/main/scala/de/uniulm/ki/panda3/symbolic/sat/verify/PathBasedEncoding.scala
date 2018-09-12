@@ -245,8 +245,10 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     print("Normalising and optimising PDT ... ")
     timeCapsule start NORMALISE_PDT
     val pathDecompositionTree = minimisePathDecompositionTree(initialPathDecompositionTree)
+    val paths = pathDecompositionTree.primitivePaths
     timeCapsule stop NORMALISE_PDT
     println("done")
+    println("PDT has " + paths.length + " leafs")
     assert(pathDecompositionTree.isNormalised)
 
     /* def dd(pdt: PathDecompositionTree[Payload]): Unit = {
@@ -295,7 +297,6 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     timeCapsule start GENERATE_CLAUSES
     print("Generating clauses representing decomposition ... ")
     val initialPlanClauses = generateDecompositionFormula(pathDecompositionTree)
-    val paths = pathDecompositionTree.primitivePaths
     val assertedTask: Clause = Clause(pathAction(0, Nil, initialPlanOrdering.head.schema))
     println("done")
     timeCapsule stop GENERATE_CLAUSES
