@@ -150,7 +150,7 @@ object Timings {
   val COMPILE_ORDER_IN_METHODS             = "02 preprocessing:03:compile order in methods"
   val SPLIT_PARAMETERS                     = "02 preprocessing:04:split parameter"
   val USELESS_CHOICELESS_TASKS             = "02 preprocessing:05:expand choiceless abstract tasks"
-  val USELESS_ABSTRACT_TASKS               = "02 preprocessing:06:expand choiceless abstract tasks"
+  val USELESS_ABSTRACT_TASKS               = "02 preprocessing:06:remove abstract tasks without methods"
   val COMPILE_METHODS_WITH_IDENTICAL_TASKS = "02 preprocessing:07:compile methods with identical tasks"
   val REMOVING_UNNECESSARY_PREDICATES      = "02 preprocessing:08:removing unnecessary predicates"
   val TOP_TASK                             = "02 preprocessing:99:create artificial top task"
