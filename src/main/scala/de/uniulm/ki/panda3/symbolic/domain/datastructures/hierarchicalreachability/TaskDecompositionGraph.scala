@@ -28,6 +28,7 @@ import de.uniulm.ki.util._
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
+import scala.collection.mutable
 
 
 /**
@@ -46,6 +47,8 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
   def abstractTaskGroundings: Map[Task, Set[GroundTask]]
 
   def groundedDecompositionMethods: Map[GroundTask, Set[GroundedDecompositionMethod]]
+
+  val pruningFromPrimitiveNecessary: Boolean = true
 
   val isInitialPlanGround = initialPlan.variableConstraints.variables forall { v => initialPlan.variableConstraints.getRepresentative(v).isInstanceOf[Constant] }
 
@@ -77,45 +80,50 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
       /**
         * @return abstract tasks and methods that remain in the pruning
         */
-      def pruneMethodsAndTasksIfPossible(remainingGroundTasks: Set[GroundTask], remainingGroundMethods: Set[GroundedDecompositionMethod], firstRound: Boolean = false):
+      def pruneMethodsAndTasksIfPossible(remainingGroundTasks: Set[GroundTask], remainingGroundMethods: Seq[GroundedDecompositionMethod], firstRound: Boolean = false):
       (Set[GroundTask], Set[GroundedDecompositionMethod]) = {
         // test all decomposition methods
-        val stillSupportedMethods: Set[GroundedDecompositionMethod] = remainingGroundMethods filter { _.subPlanGroundedTasksWithoutInitAndGoal forall { remainingGroundTasks.contains } }
+        val stillSupportedMethods: Seq[GroundedDecompositionMethod] = remainingGroundMethods filter { _.subPlanGroundedTasksWithoutInitAndGoal forall { remainingGroundTasks.contains } }
 
         // in the first round we might also have to prune abstract tasks without methods being unsupported
         if (!firstRound && stillSupportedMethods.size == remainingGroundMethods.size) {
           // nothing to prune
-          (remainingGroundTasks, remainingGroundMethods)
+          (remainingGroundTasks, remainingGroundMethods.toSet)
         } else {
           // find all supported abstract tasks
-          val stillSupportedAbstractGroundTasks: Set[GroundTask] = stillSupportedMethods map { _.groundAbstractTask }
+          val stillSupportedAbstractGroundTasks: Seq[GroundTask] = stillSupportedMethods map { _.groundAbstractTask } distinct
           val stillSupportedPrimitiveGroundTasks: Set[GroundTask] =
-            if (prunePrimitive) stillSupportedMethods flatMap { _.subPlanGroundedTasksWithoutInitAndGoal filter { _.task.isPrimitive } } else remainingGroundTasks filter { _.task
-              .isPrimitive
-            }
+            if (prunePrimitive) stillSupportedMethods flatMap { _.subPlanGroundedTasksWithoutInitAndGoal filter { _.task.isPrimitive } } toSet
+            else remainingGroundTasks filter { _.task.isPrimitive }
 
-          val stillSupportedTasks = stillSupportedAbstractGroundTasks ++ stillSupportedPrimitiveGroundTasks
+          val stillSupportedTasks: Set[GroundTask] = stillSupportedPrimitiveGroundTasks ++ stillSupportedAbstractGroundTasks
 
-          if (stillSupportedTasks.size == remainingGroundTasks.size)
-            (remainingGroundTasks, stillSupportedMethods) // no tasks have been pruned so stop
+          if (stillSupportedTasks.size == remainingGroundTasks.size) (remainingGroundTasks, stillSupportedMethods.toSet) // no tasks have been pruned so stop
           else pruneMethodsAndTasksIfPossible(stillSupportedTasks, stillSupportedMethods)
         }
       }
 
+      val time000 = System.currentTimeMillis()
       val allGroundedActions: Set[GroundTask] = (abstractTaskGroundings.values.flatten ++ groundedReachabilityAnalysis.reachableGroundPrimitiveActions).toSet
-      val (remainingGroundTasks, remainingGroundMethods) = pruneMethodsAndTasksIfPossible(allGroundedActions, groundedDecompositionMethods.values.flatten.toSet, firstRound = true)
+      val (remainingGroundTasks, remainingGroundMethods) =
+        if (pruningFromPrimitiveNecessary) pruneMethodsAndTasksIfPossible(allGroundedActions, groundedDecompositionMethods.values.flatten.toSeq, firstRound = true)
+        else (allGroundedActions, groundedDecompositionMethods.values.flatten.toSet)
+      val time001 = System.currentTimeMillis()
+      println("Time: " + (time001 - time000))
 
       val alwaysNecessaryPrimitiveTasks =
         if (initialPlan.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) groundedReachabilityAnalysis.reachableGroundPrimitiveActions else Nil
 
       //println((remainingGroundTasks groupBy { _.task } map { case (t, gts) => t.name + ": " + gts.size }).toSeq.sorted mkString "\n")
 
-      val prunedTaskToMethodEdgesMaybeIncomplete = groundedDecompositionMethods collect { case (a, b) if remainingGroundTasks contains a => (a, b.toSet intersect remainingGroundMethods) }
+      val prunedTaskToMethodEdgesMaybeIncomplete = groundedDecompositionMethods collect { case (a, b) if remainingGroundTasks contains a => (a, b intersect remainingGroundMethods) }
       val notMappedTasks = (remainingGroundTasks ++ alwaysNecessaryPrimitiveTasks) diff prunedTaskToMethodEdgesMaybeIncomplete.keySet
       val prunedTaskToMethodEdges = (prunedTaskToMethodEdgesMaybeIncomplete) ++ (notMappedTasks map { _ -> Set[GroundedDecompositionMethod]() })
       val prunedMethodToTaskEdges = remainingGroundMethods map { case m => (m, m.subPlanGroundedTasksWithoutInitAndGoal.toSet) }
       val firstAndOrGraph = SimpleAndOrGraph[AnyRef, GroundTask, GroundedDecompositionMethod](remainingGroundTasks ++ alwaysNecessaryPrimitiveTasks, remainingGroundMethods,
                                                                                               prunedTaskToMethodEdges, prunedMethodToTaskEdges.toMap)
+      val time002 = System.currentTimeMillis()
+      println("Time: " + (time002 - time001))
       // reachability analysis
       //System.in.read()
       val nonEmptyTDG = firstAndOrGraph.andVertices contains topGrounded
@@ -123,17 +131,22 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
 
       val reachableWithoutTop = allReachable partition {
         case GroundedDecompositionMethod(m, _, _) => m.abstractTask == topTask
-        case GroundTask(task, _)               => task == topTask
+        case GroundTask(task, _)                  => task == topTask
       }
 
       val topMethods = reachableWithoutTop._1 collect { case x: GroundedDecompositionMethod => x }
 
+      val time003 = System.currentTimeMillis()
+      println("Time: " + (time003 - time002))
       val prunedTDG = firstAndOrGraph pruneToEntities reachableWithoutTop._2
 
       //Dot2PdfCompiler.writeDotToFile(prunedTDG,"tdg.pdf")
 
       if (!nonEmptyTDG) messageFunction("TDG contains no tasks after pruning ... problem is trivially unsolvable")
 
+      val time004 = System.currentTimeMillis()
+      println("Time: " + (time004 - time003))
+      //System exit 0
       (prunedTDG, if (isInitialPlanGround && nonEmptyTDG) Nil else topGrounded :: GroundTask(initAndGoalNOOP, Nil) :: Nil, if (isInitialPlanGround || !nonEmptyTDG) Nil else topMethods.toSeq)
     }
 
@@ -143,7 +156,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
   override      val additionalTaskNeededToGround   : Seq[GroundTask]                  = taskDecompositionGraph._2 :+ initialPlan.groundedGoalTask
   override      val additionalMethodsNeededToGround: Seq[GroundedDecompositionMethod] = taskDecompositionGraph._3
 
-  @elidable(ASSERTION)
+  /*@elidable(ASSERTION)
   val assertion = {
     reachableGroundPrimitiveActions foreach { gt =>
       gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
@@ -153,7 +166,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
       gt.substitutedEffects foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable effect " + e.longInfo) }
       gt.substitutedPreconditions foreach { e => assert(reachableGroundLiterals contains e, "action " + gt.longInfo + " has the non reachable precondition " + e.longInfo) }
     }
-  }
+  }*/
 
   override lazy val dotString: String = dotString(DirectedGraphDotOptions())
 
@@ -167,7 +180,7 @@ trait WithTopMethod {
 
   def initialPlan: Plan
 
-  lazy val (topTask,topMethod,initAndGoalNOOP,groundedTopTask) = {
+  lazy val (topTask, topMethod, initAndGoalNOOP, groundedTopTask) = {
     val initialPlanAlreadyGroundedVariableMapping = initialPlan.variableConstraints.variables map { vari => (vari, initialPlan.variableConstraints.getRepresentative(vari)) } collect {
       case (v, c: Constant) => (v, c)
     } toMap

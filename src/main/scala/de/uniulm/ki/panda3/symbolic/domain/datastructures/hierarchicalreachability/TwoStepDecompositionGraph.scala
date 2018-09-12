@@ -30,6 +30,8 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
                                      omitTopDownStep: Boolean, messageFunction: String => Unit)
   extends TaskDecompositionGraph with WithHierarchyTyping {
 
+  override val pruningFromPrimitiveNecessary : Boolean = false
+
   lazy val (abstractTaskGroundings, groundedDecompositionMethods) = {
     val time000 = System.currentTimeMillis()
     initialise()
@@ -55,6 +57,8 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
             }
         }
     }
+    val time001 = System.currentTimeMillis()
+    println("total: " + (time001 - time000))
 
     //System.in.read()
     // run the actual grounding procedure
@@ -134,8 +138,8 @@ case class TwoStepDecompositionGraph(domain: Domain, initialPlan: Plan, grounded
         }
     }
 
-    val time001 = System.currentTimeMillis()
-    //println("total: " + (time001 - time000))
+    val time002 = System.currentTimeMillis()
+    println("total: " + (time002 - time001))
     //System exit 0
 
     val taskGroundingMap: Map[Task, Set[GroundTask]] = methodsMap.keys groupBy { _.task } map { case (a, b) => (a, b.toSet) }

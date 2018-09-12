@@ -285,8 +285,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
       timeCapsule start Timings.VERIFY_TOTAL
       timeCapsule start Timings.GENERATE_FORMULA
-      //println("READY")
-      //System.in.read()
+      println("READY")
+      //:q
+      // System.in.read()
 
       val stateFormula = encoder.stateTransitionFormula ++ encoder.initialState ++ (if (includeGoal) encoder.goalState else Nil) ++ encoder.noAbstractsFormula
       val planningFormula = (encoder.decompositionFormula ++ stateFormula).toArray

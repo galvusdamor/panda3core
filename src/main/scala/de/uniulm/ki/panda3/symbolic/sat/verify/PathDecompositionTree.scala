@@ -36,8 +36,8 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
                                           children: Array[PathDecompositionTree[Payload]],
                                           localExpansionPossible: Boolean,
                                           isNormalised: Boolean = false) extends DefaultLongInfo {
-  @elidable(ASSERTION)
-  val assertion = {
+  /*@elidable(ASSERTION)
+  def assertion() : Boolean= {
     if (children.isEmpty) assert(possibleMethods.forall(_._1.subPlan.planStepsWithoutInitGoal.isEmpty))
     children.zipWithIndex foreach { case (child, i) => assert(child.path == path :+ i) }
     assert(possibleMethods.length == methodToPositions.length)
@@ -67,7 +67,9 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
     if (isNormalised)
       assert(deepNormalised)
+    true
   }
+  assert(assertion())*/
 
   def deepNormalised: Boolean = isNormalised && children.forall(_.deepNormalised)
 

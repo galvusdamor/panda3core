@@ -787,7 +787,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         System exit 0
 
 
-
         // TODO return result
         (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
           timeCapsule stop TOTAL_TIME
@@ -1070,12 +1069,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
     def messageFunction(mess: String): Unit = message = mess
 
-    val tdg = tdgType match {
-      case NaiveTDG    => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, messageFunction)
-      case TopDownTDG  => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, messageFunction)
-      case BottomUpTDG => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = true, messageFunction)
-      case TwoWayTDG   => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = false, messageFunction)
-    }
+    // on a grounded domain, always use the top down TDG
+    val tdg =
+      if (domain.isGround) TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, messageFunction)
+      else tdgType match {
+        case NaiveTDG    => NaiveGroundedTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, messageFunction)
+        case TopDownTDG  => TopDownTaskDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, messageFunction)
+        case BottomUpTDG => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = true, messageFunction)
+        case TwoWayTDG   => TwoStepDecompositionGraph(domain, problem, groundedReachabilityAnalysis, prunePrimitive = true, omitTopDownStep = false, messageFunction)
+      }
     //System exit 0
 
     (analysisMap + (SymbolicGroundedTaskDecompositionGraph -> tdg), if (message != "") Some(message) else None)
@@ -1348,7 +1350,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       if (!runForGrounder || !preprocessingConfiguration.groundDomain) (if (preprocessingConfiguration.compileUselessAbstractTasks)
         CompilerConfiguration(RemoveChoicelessAbstractTasks, (), "expand choiceless abstract tasks", USELESS_CHOICELESS_TASKS) :: Nil
       else Nil) ::
-        (CompilerConfiguration(PruneUselessAbstractTasks, (), "abstract tasks without methods", USELESS_ABSTRACT_TASKS) :: Nil) ::
+        //(CompilerConfiguration(PruneUselessAbstractTasks, (), "abstract tasks without methods", USELESS_ABSTRACT_TASKS) :: Nil) ::
         // this one has to be the last
         (if (preprocessingConfiguration.compileInitialPlan)
           CompilerConfiguration(ReplaceInitialPlanByTop, (), "initial plan", TOP_TASK) :: Nil

@@ -64,8 +64,10 @@ case class TopDownTaskDecompositionGraph(domain: Domain, initialPlan: Plan, grou
       flattenedPossibleMethods flatMap { _.subPlanPlanStepsToGrounded.values } foreach dfs
     }
 
+    val time000 = System.currentTimeMillis()
     dfs(groundedTopTask)
-
+    val time001 = System.currentTimeMillis()
+    println("Time: " + (time001 - time000))
 
     (abstractTasksMap.toMap, methodsMap.toMap)
   }

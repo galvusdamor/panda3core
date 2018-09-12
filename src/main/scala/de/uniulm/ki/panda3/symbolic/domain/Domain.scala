@@ -53,7 +53,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                   sasPlusRepresentation: Option[SASPlusRepresentation] = None) extends DomainUpdatable {
 
   // sanity check for the sorts
-  @elidable(ASSERTION)
+  /*@elidable(ASSERTION)
   def assertion(): Boolean = {
     assert(taskSet.size == tasks.size)
     //
@@ -92,7 +92,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
     true
   }
 
-  assert(assertion())
+  assert(assertion())*/
 
   lazy val taskSchemaTransitionGraph: TaskSchemaTransitionGraph = TaskSchemaTransitionGraph(this)
   lazy val constants                : Seq[Constant]             = (sorts flatMap { _.elements }).distinct
