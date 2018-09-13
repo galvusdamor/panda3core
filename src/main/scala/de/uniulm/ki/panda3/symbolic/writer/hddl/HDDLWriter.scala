@@ -279,7 +279,7 @@ case class HDDLWriter(domainName: String, problemName: String) extends Writer {
     if (!task.effect.isEmpty) {
       builder.append("\t\t:effect\n")
       writeFormula(builder, task.effect, "\t\t\t", taskUF, noConstantReplacement, variablesWithIdenticalName)
-    } else builder.append("\t\t:effect ()\n")
+    } else builder.append("\t\t:effect (and )\n")
 
     builder.append("\t)\n")
   }

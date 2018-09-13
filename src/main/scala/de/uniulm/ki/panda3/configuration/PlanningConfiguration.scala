@@ -749,14 +749,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         val problemString = gtohpWriter.writeProblem(domainAndPlan._1, domainAndPlan._2)
 
 
-        println(problemString)
-        println(domainString)
+        println(problemString.split("\n").zipWithIndex.map({case (s,i) => i + ": " + s}).mkString("\n"))
+        println(domainString.split("\n").zipWithIndex.map({case (s,i) => i + ": " + s}).mkString("\n"))
 
         val uuid = UUID.randomUUID().toString
         val domFile = "fooD" + uuid + ".pddl"
         val probFile = "fooP" + uuid + ".pddl"
         writeStringToFile(domainString, domFile)
         writeStringToFile(problemString, probFile)
+
+        System exit 0
 
         val result = {
           import sys.process._

@@ -18,7 +18,7 @@ package de.uniulm.ki.panda3.symbolic.writer.gtohp
 
 import de.uniulm.ki.panda3.symbolic.csp.{Equal, NoConstraintsCSP, NotEqual, SymbolicUnionFind}
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, SHOPDecompositionMethod}
-import de.uniulm.ki.panda3.symbolic.logic.{And, Constant, Formula, Variable}
+import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.writer.{Writer, toPDDLIdentifier}
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
@@ -30,14 +30,22 @@ import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter.toHPDDLVariableName
 case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
   private val hddlWriter = HDDLWriter(domainName, problemName)
 
+  def toGTOHPIdentifier(string: String): String = toPDDLIdentifier(string)
+
+  //.replaceAll("_","underscore").replaceAll("-","minus")
+  def toGTOHPVariableName(string: String): String = toHPDDLVariableName(toGTOHPIdentifier(string))
+
   override def writeDomain(dom: Domain): String = {
     assert(dom.isTotallyOrdered)
     val builder: StringBuilder = new StringBuilder()
+    val willContainEither = dom.containEitherType
 
-    builder.append("(define (domain " + toPDDLIdentifier(domainName) + ")\n\t(:requirements :strips :typing :htn :negative-preconditions :equality)\n")
+    builder.append("(define (domain " + toGTOHPIdentifier(domainName) + ")\n\t(:requirements :strips :typing :htn :negative-preconditions :equality)\n")
 
     // add all sorts
     hddlWriter.writeTypeHierarchy(builder, dom, willContainEither = false)
+
+    hddlWriter.writeConstants(builder, dom.constants, dom, isInDomain = true, encodeSortsWithPredicates = false)
 
     // add all predicates
     hddlWriter.writePredicates(builder, dom, willContainEither = false)
@@ -49,20 +57,25 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
     dom.decompositionMethods.zipWithIndex foreach {
       case (m, idx) =>
         builder.append("\n")
-        builder.append("\t(:method " + toPDDLIdentifier(m.abstractTask.name) + "\n")
+        builder.append("\t(:method " + toGTOHPIdentifier(m.abstractTask.name) + "\n")
         val planUF = SymbolicUnionFind.constructVariableUnionFind(m.subPlan)
         val abstractTaskParameters = m.abstractTask.parameters
 
-        def getUnionVariable(v: Variable): Variable = {
+        def getUnionValue(v: Variable): Value = {
           // we can't throw parameters of abstract tasks away
           abstractTaskParameters find { atp => planUF.getRepresentative(atp) == planUF.getRepresentative(v) } match {
             case Some(atp) => atp
-            case None      => planUF.getRepresentative(v) match {case vari: Variable => vari}
+            case None      => planUF.getRepresentative(v)
           }
-
         }
 
         val variablesWithIdenticalName = abstractTaskParameters.groupBy(_.name).filter(_._2.size > 1).keySet
+
+        def getUnionValueString(v: Variable): String = getUnionValue(v) match {
+          case vv: Variable => toGTOHPVariableName(hddlWriter.getVariableName(vv, variablesWithIdenticalName))
+          case c: Constant  => toGTOHPIdentifier(c.name)
+        }
+
 
         //if (m.subPlan.variableConstraints.variables.nonEmpty) {
         builder.append("\t\t:parameters (")
@@ -72,8 +85,9 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
         val taskSequence = m.subPlan.orderingConstraints.graph.topologicalOrdering.get
         builder.append("\t\t:expansion (\n")
         taskSequence foreach { ps =>
-          builder.append("\t\t\t(tag t" + (ps.id - 1) + " (" + toPDDLIdentifier(ps.schema.name))
-          ps.arguments foreach { v => builder.append(" " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(v), variablesWithIdenticalName))) }
+          builder.append("\t\t\t(tag t" + (ps.id - 1) + " (" + toGTOHPIdentifier(ps.schema.name))
+          ps.arguments foreach { v => builder.append(" " + getUnionValueString(v)) }
+
           builder.append("))\n")
         }
         builder.append("\t\t)\n")
@@ -93,22 +107,18 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
 
         // constraints mapping abstract task parameters to inner parameters
         neededVariableConstraints foreach {
-          case (v, c) => builder.append("\t\t\t(= " + toHPDDLVariableName(hddlWriter.getVariableName(v, variablesWithIdenticalName)) + " " + toPDDLIdentifier(c.name) + ")\n")
+          case (v, c) => builder.append("\t\t\t(= " + toGTOHPVariableName((hddlWriter.getVariableName(v, variablesWithIdenticalName))) + " " + toGTOHPIdentifier(c.name) + ")\n")
         }
 
-        m.subPlan.variableConstraints.constraints.filter({ case _: Equal => true; case _: NotEqual => true; case _ => false }) foreach {
-          case Equal(l, c: Constant)                                               =>
-            builder.append("\t\t\t(= " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " + toPDDLIdentifier(c.name) + ")\n")
-          case Equal(l, r: Variable) if getUnionVariable(l) != getUnionVariable(r) =>
-            builder.append("\t\t\t(= " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " +
-                             toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(r), variablesWithIdenticalName)) + ")\n")
 
-          case Equal(l, r: Variable) if getUnionVariable(l) == getUnionVariable(r) => // nothing to do
+        m.subPlan.variableConstraints.constraints.filter({ case _: Equal => true; case _: NotEqual => true; case _ => false }) foreach {
+          case Equal(l, c: Constant)                                         => builder.append("\t\t\t(= " + getUnionValueString(l) + " " + toGTOHPIdentifier(c.name) + ")\n")
+          case Equal(l, r: Variable) if getUnionValue(l) != getUnionValue(r) => builder.append("\t\t\t(= " + getUnionValueString(l) + " " + getUnionValueString(r) + ")\n")
+
+          case Equal(l, r: Variable) if getUnionValue(l) == getUnionValue(r) => // nothing to do
           //case NotEqual(l, c: Constant)                                               =>
-          //  builder.append("\t\t\t(not (= " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " + toPDDLIdentifier(c.name) + "))\n")
-          case NotEqual(l, r: Variable) =>
-            builder.append("\t\t\t(not (= " + toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " +
-                             toHPDDLVariableName(hddlWriter.getVariableName(getUnionVariable(r), variablesWithIdenticalName)) + "))\n")
+          //  builder.append("\t\t\t(not (= " + toGTOHPVariableName(hddlWriter.getVariableName(getUnionVariable(l), variablesWithIdenticalName)) + " " + toGTOHPIdentifier(c.name) + "))\n")
+          case NotEqual(l, r: Variable) => builder.append("\t\t\t(not (= " + getUnionValueString(l) + " " + getUnionValueString(r) + "))\n")
           case _                        =>
         }
         builder.append("\t\t\t) t" + (taskSequence.head.id - 1) + ")\n")
@@ -127,11 +137,9 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
   override def writeProblem(dom: Domain, plan: Plan): String = {
     val builder: StringBuilder = new StringBuilder()
     builder.append("(define\n")
-    builder.append("\t(problem " + toPDDLIdentifier(problemName) + ")\n")
-    builder.append("\t(:domain " + toPDDLIdentifier(domainName) + ")\n")
+    builder.append("\t(problem " + toGTOHPIdentifier(problemName) + ")\n")
+    builder.append("\t(:domain " + toGTOHPIdentifier(domainName) + ")\n")
     builder.append("\t(:requirements :strips :typing :htn :negative-preconditions :equality)\n")
-
-    hddlWriter.writeConstants(builder, dom.constants, dom, isInDomain = false, encodeSortsWithPredicates = false)
 
     // initial state
     if (!plan.init.schema.effect.isEmpty) {
@@ -153,8 +161,8 @@ case class GTOHPWriter(domainName: String, problemName: String) extends Writer {
 
     builder append "\t\t:tasks (\n"
     taskSequence foreach { ps =>
-      builder.append("\t\t\t(tag t" + (ps.id - 1) + " (" + toPDDLIdentifier(ps.schema.name))
-      ps.arguments map planUF.getRepresentative foreach { case c: Constant => builder.append(" " + toPDDLIdentifier(c.name)) }
+      builder.append("\t\t\t(tag t" + (ps.id - 1) + " (" + toGTOHPIdentifier(ps.schema.name))
+      ps.arguments map planUF.getRepresentative foreach { case c: Constant => builder.append(" " + toGTOHPIdentifier(c.name)) }
       builder.append("))\n")
     }
     builder append "\t\t)\n"
