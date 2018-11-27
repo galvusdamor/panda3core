@@ -109,12 +109,16 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     val t0002 = System.currentTimeMillis()
     println("Chains: " + (t0002 - t0001) + "ms")
 
+    intProblem.symbolicInvariantArray
+    val t00025 = System.currentTimeMillis()
+    println("Invariants: " + (t0002 - t00025) + "ms")
+
     val invariantFormula = Range(0, taskSequenceLength + 1) flatMap { case position =>
       intProblem.symbolicInvariantArray map { case ((ap, ab), (bp, bb)) => Clause((statePredicate(K - 1, position, ap), ab) :: (statePredicate(K - 1, position, bp), bb) :: Nil) }
     }
 
     val t0003 = System.currentTimeMillis()
-    println("ExistsStep Formula: " + (t0003 - t0002) + "ms")
+    println("ExistsStep Formula: " + (t0003 - t00025) + "ms")
 
     val transitionFormula = stateTransitionFormulaOfLength(taskSequenceLength)
     val t0004 = System.currentTimeMillis()

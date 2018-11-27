@@ -41,7 +41,7 @@ object PredefinedConfigurations {
                                                        compileInitialPlan = true,
                                                        convertToSASP = false,
                                                        allowSASPFromStrips = false,
-                                                       removeUnnecessaryPredicates = false,
+                                                       removeUnnecessaryPredicates = true,
                                                        removeNoOps = false,
                                                        ensureMethodsHaveLastTask = false,
                                                        ensureMethodsHaveAtMostTwoTasks = false,
