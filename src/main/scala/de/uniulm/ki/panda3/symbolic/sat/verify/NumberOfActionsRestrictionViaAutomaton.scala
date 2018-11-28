@@ -16,7 +16,7 @@
 
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
-import de.uniulm.ki.panda3.symbolic.domain.Task
+import de.uniulm.ki.panda3.symbolic.domain.{ActionCost, Task}
 
 import scala.collection.Seq
 
@@ -82,12 +82,12 @@ trait NumberOfActionsRestrictionViaAutomaton[P, I] extends PathBasedEncoding[P, 
   def numberOfActionsFormula2(vertexOrder: Seq[(Seq[Int], Set[Task])]): Seq[Clause] = if (taskSequenceLength == -1) Nil else {
     val actionAtClauses = vertexOrder flatMap { case (path, ts) =>
       val ifPresent = ts map { t =>
-        if (hasCost(t))
+        if (ActionCost.hasCost(t))
           impliesSingle(pathAction(path.length, path, t), actionAt(path))
         else
           impliesNot(pathAction(path.length, path, t), actionAt(path))
       }
-      val ifNotPresent = notImpliesAllNot(actionAt(path) :: Nil, ts.toSeq filter hasCost map { pathAction(path.length, path, _) })
+      val ifNotPresent = notImpliesAllNot(actionAt(path) :: Nil, ts.toSeq filter ActionCost.hasCost map { pathAction(path.length, path, _) })
       ifPresent ++ ifNotPresent
     }
 
@@ -169,8 +169,6 @@ trait NumberOfActionsRestrictionViaAutomaton[P, I] extends PathBasedEncoding[P, 
         selectSlot ++ currentPossible
     }
   }
-
-  private def hasCost(task: Task): Boolean = !task.name.contains("SHOP") && !task.name.contains("SelectConGroupCfg")
 
   override def planLengthDependentFormula(actualPlanLength: Int): Seq[Clause] = if (actualPlanLength == -1) Nil else
     Range(actualPlanLength + 1, primitivePaths.length + 1) map { l => Clause((numberOfActionsBetween(0, primitivePaths.length - 1, l), false)) }

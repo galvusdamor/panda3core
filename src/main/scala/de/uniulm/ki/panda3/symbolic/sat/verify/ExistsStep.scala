@@ -17,7 +17,7 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
 
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{ActionCost, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.sat.IntProblem
@@ -28,8 +28,9 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem, taskSequenceLengthQQ: Int,
-                      ltlEncodings: Seq[AdditionalEdgesInDisablingGraph], overrideOverrideK : Option[Int] = None) extends LinearPrimitivePlanEncoding {
+case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
+                      taskSequenceLengthQQ: Int, maxNumberOfActions: Int,
+                      ltlEncodings: Seq[AdditionalEdgesInDisablingGraph], overrideOverrideK: Option[Int] = None) extends LinearPrimitivePlanEncoding {
 
   override lazy val offsetToK = 0
 
@@ -124,7 +125,14 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     val t0004 = System.currentTimeMillis()
     println("State Transition Formula: " + (t0004 - t0003) + "ms")
 
-    transitionFormula ++ parallelismFormula ++ invariantFormula
+    val numberOfActionsRestriction = if (maxNumberOfActions == -1) Nil else {
+      val allActionsAtoms = domain.primitiveTasks filter ActionCost.hasCost flatMap { task => Range(0, taskSequenceLength + 1) map { case position => action(K - 1, position, task) } }
+      atMostKOf(allActionsAtoms, maxNumberOfActions)
+    }
+    val t0005 = System.currentTimeMillis()
+    println("Number of actions Formula: " + (t0005 - t0004) + "ms")
+
+    transitionFormula ++ parallelismFormula ++ invariantFormula ++ numberOfActionsRestriction
   }
 
   override lazy val goalState: Seq[Clause] =

@@ -263,3 +263,8 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 object ReducedTask extends Internable[(String, Boolean, Seq[Variable], Seq[Variable], Seq[VariableConstraint], And[Literal], And[Literal]), ReducedTask] {
   override protected val applyTuple = (ReducedTask.apply _).tupled
 }
+
+
+object ActionCost {
+  def hasCost(task: Task): Boolean = !task.name.contains("SHOP") && !task.name.contains("SelectConGroupCfg")
+}

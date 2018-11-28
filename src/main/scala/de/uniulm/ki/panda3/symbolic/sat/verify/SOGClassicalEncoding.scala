@@ -191,18 +191,18 @@ case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Dom
 
 
 case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
-                                          taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
+                                          numberOfTimesteps: Int, maxNumberOfActions : Int,
+                                          offsetToK: Int, overrideK: Option[Int] = None,
                                           useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean)
   extends SOGClassicalForbiddenEncoding with ExsitsStepMappingEncoding[SOG, NonExpandedSOG] {
 
   override def forbiddennessSubtractor: Int = 0
 
   // TODO: determine this size more intelligently
-  lazy val taskSequenceLength: Int = if (taskSequenceLengthQQ != -1) taskSequenceLengthQQ else {
+  lazy val taskSequenceLength: Int = if (numberOfTimesteps != -1) numberOfTimesteps else {
     val pathNumToUse = if (expansionPossible) primitivePaths.length else primitivePaths.length
 
     Math.max(if (pathNumToUse == 0) 0 else 1, pathNumToUse - 0)
-
   }
 
 }

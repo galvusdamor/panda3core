@@ -52,7 +52,9 @@ trait KautzSelmanMappingEncoding[Payload, IntermediatePayload] extends PathBased
 
 
 trait ExsitsStepMappingEncoding[Payload, IntermediatePayload] extends PathBasedEncoding[Payload, IntermediatePayload] with LeafMappingBasedEncoding {
-  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, intProblem, taskSequenceLength, Nil, Some(K))
+  def maxNumberOfActions : Int
+
+  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, intProblem, taskSequenceLength, maxNumberOfActions, Nil, Some(K))
 
   lazy val taskOccurenceMap: Map[Int, Set[Task]] =
     domain.primitiveTasks map { t => t -> primitivePaths.count(_._2.contains(t)) } groupBy { _._2 } map { case (a, bs) => a -> bs.map(_._1).toSet }

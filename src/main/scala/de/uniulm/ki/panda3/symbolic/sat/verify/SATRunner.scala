@@ -233,7 +233,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         if (domain.isClassical) {
           encodingToUse match {
             case KautzSelmanEncoding => KautzSelman(timeCapsule, domain, initialPlan, intProblem, planLength)
-            case ExistsStepEncoding  => ExistsStep(timeCapsule, domain, initialPlan, intProblem, planLength,
+            case ExistsStepEncoding  => ExistsStep(timeCapsule, domain, initialPlan, intProblem, planLength, -1,
                                                    additionalConstraintsGenerators collect { case e: AdditionalEdgesInDisablingGraph => e })
           }
         }
@@ -250,15 +250,15 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             case TreeBeforeEncoding            =>
               TreeVariableOrderEncodingKautzSelman(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, usePDTMutexes, defineK)
             case TreeBeforeExistsStepEncoding  =>
-              TreeVariableOrderEncodingExistsStep(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, usePDTMutexes, defineK)
+              TreeVariableOrderEncodingExistsStep(timeCapsule, domain, initialPlan, intProblem, planLength, planLength, offSetToK, usePDTMutexes, defineK)
             case ClassicalForbiddenEncoding    =>
               SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, false, usePDTMutexes)
             case ExistsStepForbiddenEncoding   =>
-              SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, false, usePDTMutexes)
+              SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, planLength, offSetToK, defineK, false, usePDTMutexes)
             case ClassicalImplicationEncoding  =>
               SOGKautzSelmanForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, true, usePDTMutexes)
             case ExistsStepImplicationEncoding =>
-              SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, defineK, true, usePDTMutexes)
+              SOGExistsStepForbiddenEncoding(timeCapsule, domain, initialPlan, intProblem, planLength, planLength, offSetToK, defineK, true, usePDTMutexes)
             case ClassicalN4Encoding           =>
               SOGClassicalN4Encoding(timeCapsule, domain, initialPlan, intProblem, planLength, offSetToK, usePDTMutexes, defineK)
             case POCLDirectEncoding            =>

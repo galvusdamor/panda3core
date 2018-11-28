@@ -159,7 +159,8 @@ case class TreeVariableOrderEncodingKautzSelman(timeCapsule: TimeCapsule, domain
   lazy val taskSequenceLength: Int = primitivePaths.length
 }
 
-case class TreeVariableOrderEncodingExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem, taskSequenceLengthQQ: Int, offsetToK: Int,
+case class TreeVariableOrderEncodingExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
+                                               numberOfTimesteps: Int, maxNumberOfActions : Int, offsetToK: Int,
                                                usePDTMutexes: Boolean, overrideK: Option[Int] = None)
   extends TreeVariableOrderEncoding with ExsitsStepMappingEncoding[Unit, Unit] {
 
