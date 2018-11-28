@@ -466,10 +466,9 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
      */
     if (configuration.debuggingMode.id > 0) println("STEP 1")
     val time0 = System.currentTimeMillis()
-    val tasksFromAddedPropositions: Set[(Set[GroundLiteral], Seq[ReducedTask])] =
-      addedPropositions map { proposition => (Set(proposition), domain.primitiveConsumerOf(proposition.predicate)) }
+    val tasksFromAddedPropositions: Set[(Set[GroundLiteral], Seq[ReducedTask])] = computeNecessaryNewGroundings(addedPropositions)
     val time1 = System.currentTimeMillis()
-    if (configuration.debuggingMode.id > 0) println("STEP 2: " + (time1 - time0))
+    if (configuration.debuggingMode.id > 0) println("STEP 2: " + (time1 - time0) + " " + tasksFromAddedPropositions.size)
     val tasksFromDeletedMutexes: Set[(Set[GroundLiteral], Seq[ReducedTask])] =
       deletedMutexes map { case (proposition1, proposition2) =>
         (Set(proposition1, proposition2), domain.primitiveConsumerOf(proposition1.predicate) intersect domain.primitiveConsumerOf(proposition2.predicate))
@@ -517,6 +516,37 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     val time7 = System.currentTimeMillis()
     if (configuration.debuggingMode.id > 0) println("STEP 8: " + (time7 - time6))
     newActions ++ newActionsFromParameters ++ newNoOps
+  }
+
+
+  private def computeNecessaryNewGroundings(addedPropositions: Set[GroundLiteral]): Set[(Set[GroundLiteral], Seq[ReducedTask])] = {
+    val literalsPerPredicate: Map[Predicate, Set[GroundLiteral]] = addedPropositions.groupBy(_.predicate).withDefaultValue(Set[GroundLiteral]())
+
+    // do this task by task
+    domain.primitiveTasks flatMap { case task: ReducedTask =>
+      val preconditionPredicates = task.preconditionPerPredicate.keys
+
+      val (predicatesNotNeededToGround, _) = preconditionPredicates.foldLeft((Set[Predicate](), preconditionPredicates.toSet))(
+        {
+          case ((necessaryPredicates, possiblyNecessaryPredicates), nextPredicate) =>
+            if (!(literalsPerPredicate contains nextPredicate))
+              (necessaryPredicates, possiblyNecessaryPredicates)
+            else if (!(possiblyNecessaryPredicates contains nextPredicate))
+              (necessaryPredicates, possiblyNecessaryPredicates)
+            else {
+              val nextVariables: Set[Variable] = task.preconditionPerPredicate(nextPredicate).flatMap(_.parameterVariables).toSet
+              val remainingPossiblyNecessaryPredicates = possiblyNecessaryPredicates filterNot { otherPredicate =>
+                val otherVariables: Seq[Variable] = task.preconditionPerPredicate(otherPredicate).flatMap(_.parameterVariables).distinct
+                otherVariables exists nextVariables.contains
+              }
+
+              (necessaryPredicates + nextPredicate, remainingPossiblyNecessaryPredicates)
+            }
+
+        })
+
+      predicatesNotNeededToGround flatMap literalsPerPredicate map {l => (Set(l),task :: Nil)}
+    } toSet
   }
 
   /**
