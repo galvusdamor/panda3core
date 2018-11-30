@@ -466,7 +466,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
      */
     if (configuration.debuggingMode.id > 0) println("STEP 1")
     val time0 = System.currentTimeMillis()
-    val tasksFromAddedPropositions: Set[(Set[GroundLiteral], Seq[ReducedTask])] = computeNecessaryNewGroundings(addedPropositions)
+    val tasksFromAddedPropositions: Set[(Set[GroundLiteral], Seq[ReducedTask])] = if (firstLayer) computeNecessaryNewGroundings(addedPropositions, firstLayer)
+      else addedPropositions map { proposition => (Set(proposition), domain.primitiveConsumerOf(proposition.predicate)) }
     val time1 = System.currentTimeMillis()
     if (configuration.debuggingMode.id > 0) println("STEP 2: " + (time1 - time0) + " " + tasksFromAddedPropositions.size)
     val tasksFromDeletedMutexes: Set[(Set[GroundLiteral], Seq[ReducedTask])] =
@@ -519,7 +520,7 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
   }
 
 
-  private def computeNecessaryNewGroundings(addedPropositions: Set[GroundLiteral]): Set[(Set[GroundLiteral], Seq[ReducedTask])] = {
+  private def computeNecessaryNewGroundings(addedPropositions: Set[GroundLiteral], firstLayer: Boolean): Set[(Set[GroundLiteral], Seq[ReducedTask])] = if (firstLayer) {
     val literalsPerPredicate: Map[Predicate, Set[GroundLiteral]] = addedPropositions.groupBy(_.predicate).withDefaultValue(Set[GroundLiteral]())
 
     // do this task by task
@@ -535,19 +536,20 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
               (necessaryPredicates, possiblyNecessaryPredicates)
             else {
               val nextVariables: Set[Variable] = task.preconditionPerPredicate(nextPredicate).flatMap(_.parameterVariables).toSet
-              val remainingPossiblyNecessaryPredicates = possiblyNecessaryPredicates filterNot { otherPredicate =>
-                val otherVariables: Seq[Variable] = task.preconditionPerPredicate(otherPredicate).flatMap(_.parameterVariables).distinct
-                otherVariables exists nextVariables.contains
-              }
+              val remainingPossiblyNecessaryPredicates =
+                possiblyNecessaryPredicates filterNot { otherPredicate =>
+                  val otherVariables: Seq[Variable] = task.preconditionPerPredicate(otherPredicate).flatMap(_.parameterVariables).distinct
+                  otherVariables exists nextVariables.contains
+                }
 
               (necessaryPredicates + nextPredicate, remainingPossiblyNecessaryPredicates)
             }
 
         })
 
-      predicatesNotNeededToGround flatMap literalsPerPredicate map {l => (Set(l),task :: Nil)}
+      predicatesNotNeededToGround flatMap literalsPerPredicate map { l => (Set(l), task :: Nil) }
     } toSet
-  }
+  } else addedPropositions map { proposition => (Set(proposition), domain.primitiveConsumerOf(proposition.predicate)) }
 
   /**
     * Finds all combinations of valid proposition and lifted literal pairs given the task and propositions parameter.
