@@ -27,7 +27,7 @@ import de.uniulm.ki.panda3.symbolic.plan.Plan
 object StripHybrid extends DomainTransformer[Unit] {
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
-  override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
+  override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = if (domain.isHybrid) {
     // remove all causal links
     val noLinksDomain = domain update DeleteCausalLinks
     val noLinksProblem = plan update DeleteCausalLinks
@@ -38,6 +38,6 @@ object StripHybrid extends DomainTransformer[Unit] {
       } toMap
 
     (noLinksDomain update ExchangeTask(replacementMap), noLinksProblem update ExchangeTask(replacementMap))
-  }
+  } else (domain,plan)
 
 }
