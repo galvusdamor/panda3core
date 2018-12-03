@@ -112,7 +112,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
 
     intProblem.symbolicInvariantArray
     val t00025 = System.currentTimeMillis()
-    println("Invariants: " + (t0002 - t00025) + "ms")
+    println("Invariants: " + (t00025 - t0002) + "ms")
 
     val invariantFormula = Range(0, taskSequenceLength + 1) flatMap { case position =>
       intProblem.symbolicInvariantArray map { case ((ap, ab), (bp, bb)) => Clause((statePredicate(K - 1, position, ap), ab) :: (statePredicate(K - 1, position, bp), bb) :: Nil) }

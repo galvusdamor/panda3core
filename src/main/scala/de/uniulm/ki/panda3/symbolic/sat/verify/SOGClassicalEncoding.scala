@@ -193,7 +193,7 @@ case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Dom
 case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                                           numberOfTimesteps: Int, maxNumberOfActions : Int,
                                           offsetToK: Int, overrideK: Option[Int] = None,
-                                          useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean)
+                                          useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean, additionalDisablingGraphEdges : Seq[AdditionalEdgesInDisablingGraph])
   extends SOGClassicalForbiddenEncoding with ExsitsStepMappingEncoding[SOG, NonExpandedSOG] {
 
   override def forbiddennessSubtractor: Int = 0

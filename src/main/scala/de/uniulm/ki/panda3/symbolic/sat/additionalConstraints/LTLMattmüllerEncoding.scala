@@ -28,7 +28,7 @@ import scala.collection.Seq
   */
 case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedChains: Boolean) extends AdditionalSATConstraint with MattmüllerDisablingGraphExtension {
 
-  private val allSubformulae : Seq[LTLFormula] = lTLFormula.allSubformulae.toSeq
+  private val allSubformulae: Seq[LTLFormula] = lTLFormula.allSubformulae.toSeq
 
   val formulaIDMap: Map[LTLFormula, Int] = allSubformulae.zipWithIndex toMap
   val idFormulaMap: Map[Int, LTLFormula] = formulaIDMap map { _.swap }
@@ -44,8 +44,14 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedCh
   // time of an LTL formula is the time *before* actions are executed
   // LTL_0, A_0, LTL_1 , ... , A_N, LTL_(N+1)
   // Attention: N+1 == linearEncoding.taskSequenceLength
-  def apply(linearEncoding: LinearPrimitivePlanEncoding): Seq[Clause] = {
+  def apply(inputLinearEncoding: LinearPrimitivePlanEncoding): Seq[Clause] = {
     val time0 = System.currentTimeMillis()
+    val linearEncoding = inputLinearEncoding match {
+      case ex: ExistsStep                      => ex
+      case ex: ExsitsStepMappingEncoding[_, _] => ex.exsitsStepEncoding
+      case x                                   => x
+    }
+
     val x = linearEncoding match {
       case ex: ExistsStep =>
         // write for every timestep the rules
@@ -53,11 +59,17 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedCh
         val formulaTruth = Range(0, linearEncoding.taskSequenceLength + 1) flatMap { time =>
           val ltlPart = allSubformulae flatMap { sub =>
             sub match {
-              case PredicateAtom(p) => linearEncoding.impliesSingle(formulaHoldsAtTime(sub, time), linearEncoding.statePredicate(linearEncoding.K - 1, time, p)) :: Nil
-              case TaskAtom(t)      => assert(false, "can't handle yet"); Nil
-              case LTLNot(f)        => linearEncoding.impliesNot(formulaHoldsAtTime(sub, time), formulaHoldsAtTime(f, time)) :: Nil
-              case LTLAnd(l)        => linearEncoding.impliesRightAnd(formulaHoldsAtTime(sub, time) :: Nil, l.map(formulaHoldsAtTime(_, time)))
-              case LTLOr(l)         => linearEncoding.impliesRightOr(formulaHoldsAtTime(sub, time) :: Nil, l.map(formulaHoldsAtTime(_, time))) :: Nil
+              case PredicateAtom(p)                                         =>
+                linearEncoding.impliesSingle(formulaHoldsAtTime(sub, time), linearEncoding.statePredicate(linearEncoding.K - 1, time, p)) ::
+                  linearEncoding.impliesSingle(linearEncoding.statePredicate(linearEncoding.K - 1, time, p), formulaHoldsAtTime(sub, time)) :: Nil
+              case TaskAtom(t) if time == linearEncoding.taskSequenceLength =>
+                Clause((formulaHoldsAtTime(sub, time), false)) :: Nil
+              case TaskAtom(t)                                              =>
+                linearEncoding.impliesSingle(formulaHoldsAtTime(sub, time), linearEncoding.action(linearEncoding.K - 1, time, t)) ::
+                  linearEncoding.impliesSingle(linearEncoding.action(linearEncoding.K - 1, time, t), formulaHoldsAtTime(sub, time)) :: Nil
+              case LTLNot(f)                                                => linearEncoding.impliesNot(formulaHoldsAtTime(sub, time), formulaHoldsAtTime(f, time)) :: Nil
+              case LTLAnd(l)                                                => linearEncoding.impliesRightAnd(formulaHoldsAtTime(sub, time) :: Nil, l.map(formulaHoldsAtTime(_, time)))
+              case LTLOr(l)                                                 => linearEncoding.impliesRightOr(formulaHoldsAtTime(sub, time) :: Nil, l.map(formulaHoldsAtTime(_, time))) :: Nil
 
               case LTLAlways(f) if time != linearEncoding.taskSequenceLength =>
                 linearEncoding.impliesRightAnd(formulaHoldsAtTime(sub, time) :: Nil, formulaHoldsAtTime(f, time) :: formulaHoldsAtTime(sub, time + 1) :: Nil)
@@ -125,12 +137,12 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedCh
                                                                             .action(linearEncoding.K - 1, position, _)
                                                                         }))*/
 
-      val holeFormulaHolds = Clause(formulaHoldsAtTime(lTLFormula, 0)) :: Nil
+        val holeFormulaHolds = Clause(formulaHoldsAtTime(lTLFormula, 0)) :: Nil
 
         // add the chains necessary for the formulae
         val chainClauses = {
           lTLFormula.allPredicates.toSeq flatMap { m =>
-            ex.intProblem.mattmüllerLTLERPerPredicates(m) flatMap { case (e,r,chainID) =>
+            ex.intProblem.mattmüllerLTLERPerPredicates(m) flatMap { case (e, r, chainID) =>
               if (!improvedChains) ex.generateChainFor(e, r, chainID) else {
                 // improved chain generation: we can disable a chain if we don't have to check a property that is related to that predicate at the moment
                 // Thesis: it is only relevant, it we have to check an atomic proposition (wide speculation, but should be true)
@@ -145,7 +157,7 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedCh
 
         //println("TOTAL " + " " + formulaTruth.length + " " + holeFormulaHolds.length + " " + chainClauses.length)
         formulaTruth ++ holeFormulaHolds ++ chainClauses //++ amo
-      case _             => assert(false, "Mattmüller-Encoding is only compatible with existsstep"); Nil
+      case _              => assert(false, "Mattmüller-Encoding is only compatible with existsstep"); Nil
     }
     val time1 = System.currentTimeMillis()
     println("Mattmüller Time: " + (time1 - time0) + "ms for " + x.length)
@@ -156,9 +168,9 @@ case class LTLMattmüllerEncoding(lTLFormula: LTLFormula, id: String, improvedCh
 
 
 trait MattmüllerDisablingGraphExtension extends AdditionalEdgesInDisablingGraph {
-  def lTLFormula : LTLFormula
+  def lTLFormula: LTLFormula
 
-   override def additionalEdges(intProblem : IntProblem)(
+  override def additionalEdges(intProblem: IntProblem)(
     predicateToAdding: Map[Predicate, Array[intProblem.IntTask]], predicateToDeleting: Map[Predicate, Array[intProblem.IntTask]],
     predicateToNeeding: Map[Predicate, Array[intProblem.IntTask]]): Seq[(intProblem.IntTask, intProblem.IntTask)] = {
     // first get relevant predicates

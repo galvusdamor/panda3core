@@ -379,7 +379,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val separatedFormulaeBeforeRandomSelection = combinedFormula match {
             case None          => Nil
             case Some(formula) =>
-              val formulaInNNF = formula.nnf.parseAndGround(domainAndPlan._1, domainAndPlanFullyParsed._1, Map()).simplify
+              val formulaInNNF = formula.nnf.parseAndGround(domainAndPlan._1, domainAndPlanFullyParsed._1, Map()).nnf.simplify
               formulaInNNF match {
                 case LTLAnd(conj) => conj
                 case x            => x :: Nil
@@ -388,15 +388,15 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
           val rand = new Random(randomSeed)
 
-          val separatedFormulae: Seq[LTLFormula] = //separatedFormulaeBeforeRandomSelection
-            if (separatedFormulaeBeforeRandomSelection.length <= 3) separatedFormulaeBeforeRandomSelection else {
+          val separatedFormulae: Seq[LTLFormula] = separatedFormulaeBeforeRandomSelection
+            /*if (separatedFormulaeBeforeRandomSelection.length <= 3) separatedFormulaeBeforeRandomSelection else {
               Range(0, 3).foldLeft[(Seq[LTLFormula], Seq[LTLFormula])]((separatedFormulaeBeforeRandomSelection, Nil))(
                 { case ((l, sel), _) =>
                   val r = rand.nextInt(l.length)
                   (l.patch(r, Nil, 1), sel :+ l(r))
                 }
                                                                                                                      )._2
-            }
+            }*/
 
 
           if (separatedFormulae.nonEmpty) {

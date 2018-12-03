@@ -95,15 +95,15 @@ trait VerifyEncoding {
     val buffer = new ArrayBuffer[Clause]()
     atMostCounter += 1
 
+    val qualifierList: Seq[(String, Boolean)] = qualifier match {
+      case None    => Nil
+      case Some(q) => (q, false) :: Nil
+    }
+
     AtMostOneType.chosenType match {
       case BinaryEncoding =>
         val numberOfBits: Int = Math.ceil(Math.log(atoms.length) / Math.log(2)).toInt
         val bits = Range(0, numberOfBits) map { b => ("atMost_" + atMostCounter + "_" + b, b) }
-
-        val qualifierList: Seq[(String, Boolean)] = qualifier match {
-          case None    => Nil
-          case Some(q) => (q, false) :: Nil
-        }
 
         atoms.zipWithIndex foreach { case (atom, index) =>
           bits foreach { case (bitString, b) =>
@@ -118,25 +118,25 @@ trait VerifyEncoding {
         while (i < atomArray.length) {
           var j = i + 1
           while (j < atomArray.length) {
-            buffer append Clause((atomArray(i), false) :: (atomArray(j), false) :: Nil)
+            buffer append Clause((atomArray(i), false) :: (atomArray(j), false) :: Nil ++ qualifierList)
             j += 1
           }
           i += 1
         }
 
-      case CommanderEncoding =>
+      case CommanderEncoding  =>
         // group into lists of three
         val groups = atoms.sliding(3, 3).toSeq
 
-        groups foreach { group => group foreach { a1 => group foreach { a2 => if (a1 != a2) buffer append Clause((a1, false) :: (a2, false) :: Nil) } } }
+        groups foreach { group => group foreach { a1 => group foreach { a2 => if (a1 != a2) buffer append Clause((a1, false) :: (a2, false) :: Nil ++ qualifierList) } } }
 
         if (groups.length > 1) {
           val groupAtoms: Seq[String] = groups.zipWithIndex map {
             case (g, i) =>
               val groupAtom = "atMost_" + atMostCounter + "_ g_" + i
 
-              buffer append impliesRightOr(groupAtom :: Nil, g)
-              buffer appendAll notImpliesAllNot(groupAtom :: Nil, g)
+              buffer append impliesRightOr(groupAtom :: Nil ++ qualifierList.map(_._1), g)
+              buffer appendAll notImpliesAllNot(groupAtom :: Nil, g, qualifierList.map(_._1))
 
               groupAtom
           } toSeq
@@ -144,7 +144,8 @@ trait VerifyEncoding {
           buffer appendAll atMostOneOf(groupAtoms)
         }
       case SequentialEncoding =>
-        buffer appendAll atMostKOf(atoms,1)
+        assert(qualifierList.isEmpty)
+        buffer appendAll atMostKOf(atoms, 1)
     }
 
     buffer.toSeq
@@ -187,8 +188,8 @@ trait VerifyEncoding {
 
   def impliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = right map { impliesNot(left, _) }
 
-  def notImpliesAllNot(left: Seq[String], right: Seq[String]): Seq[Clause] = {
-    val leftList = left map { (_, true) }
+  def notImpliesAllNot(left: Seq[String], right: Seq[String], qualifier: Seq[String] = Nil): Seq[Clause] = {
+    val leftList = left.map((_, true)) ++ qualifier.map((_, false))
 
     right map { r => Clause(leftList.:+((r, false))) }
   }
