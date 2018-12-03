@@ -175,13 +175,16 @@ trait MattmüllerDisablingGraphExtension extends AdditionalEdgesInDisablingGraph
     predicateToNeeding: Map[Predicate, Array[intProblem.IntTask]]): Seq[(intProblem.IntTask, intProblem.IntTask)] = {
     // first get relevant predicates
     val relevantPredicates = lTLFormula.allPredicates
-    // TODO: so something with actions
+    val relevantTasks = lTLFormula.allTasks
 
-    val affectedActions: Array[intProblem.IntTask] = relevantPredicates flatMap { p => predicateToAdding.getOrElse(p, Array()) ++ predicateToDeleting.getOrElse(p, Array()) } toArray
+    val affectedActions: Array[intProblem.IntTask] =
+      ((relevantPredicates flatMap { p => predicateToAdding.getOrElse(p, Array()) ++ predicateToDeleting.getOrElse(p, Array()) }) ++
+        (relevantTasks map { intProblem.IntTask })).toArray.distinct
 
     val edgesFromStatePredicates = affectedActions flatMap { a1 =>
       affectedActions collect {
-        case a2 if a1 != a2 && a1.hasMoreEffectsRelativeToPredicates(a2, relevantPredicates) => (a1, a2)
+        case a2 if a1 != a2 &&
+          (a1.hasMoreEffectsRelativeToPredicates(a2, relevantPredicates) || relevantTasks.contains(a1.task) || relevantTasks.contains(a2.task)) => (a1, a2)
       }
     }
 
