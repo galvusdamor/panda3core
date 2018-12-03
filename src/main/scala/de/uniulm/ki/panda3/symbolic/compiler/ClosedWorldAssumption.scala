@@ -60,7 +60,7 @@ object ClosedWorldAssumption extends DomainTransformer[(Boolean, Set[String])] {
     val occurringNegativePredicatesWithArgumentVariables = ((domain.tasks ++ domain.hiddenTasks) flatMap { _.precondition.containedPredicatesWithSign }) ++ (domain.decompositionMethods
       collect {
       case SHOPDecompositionMethod(_, _, precondition, _, _) => precondition.containedPredicatesWithSign
-    } flatten)
+    } flatten) ++ (predicateToKeep map {keep => val p = domain.predicates.find(_.name == keep.drop(1)).get; (p, p.argumentSorts map {s => Variable(-1,"temp",s)}, false)})
 
     val occurringNegativePredicates = occurringNegativePredicatesWithArgumentVariables map { case (p, _, s) => (p, s) } distinct
     val negativePredicatesWithPossibleArguments: Map[Predicate, Seq[Seq[Variable]]] =
