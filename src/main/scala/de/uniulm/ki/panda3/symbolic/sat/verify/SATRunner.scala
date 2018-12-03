@@ -176,7 +176,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         else if (evaluateLTLFormulaOnStates(g, states, actions)) true
         else evaluateLTLFormulaOnStates(f, states, actions) && evaluateLTLFormulaOnStates(LTLUntil(f, g), states.drop(1), actions.drop(1))
     }
-    println("Checking result " + rr + " of " + formula)
+    //println("Checking result " + rr + " of " + formula)
     rr
   }
 
