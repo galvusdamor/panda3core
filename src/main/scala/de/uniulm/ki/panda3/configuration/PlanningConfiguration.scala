@@ -2568,7 +2568,7 @@ trait Configuration extends DefaultLongInfo {
   override def longInfo: String = "-- literally nothing --"
 
   protected def alignConfig(configs: Seq[(String, Any)]): String = {
-    val keyMaxLength = configs map { _._1.length } max
+    val keyMaxLength = if (configs.isEmpty) 0 else configs map { _._1.length } max
 
     configs map { case (k, v) => k + (Range(0, 1 + keyMaxLength - k.length) map { _ => " " }).mkString("") + ": " + v.toString } mkString "\n"
   }
