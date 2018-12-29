@@ -48,7 +48,7 @@ import de.uniulm.ki.panda3.symbolic.parser.hpddl.HPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.oldpddl.OldPDDLParser
 import de.uniulm.ki.panda3.symbolic.parser.xml.XMLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.sat.verify._
 import de.uniulm.ki.panda3.symbolic.plan.modification.InsertPlanStepWithLink
@@ -58,6 +58,7 @@ import de.uniulm.ki.panda3.symbolic.writer.anml.ANMLWriter
 import de.uniulm.ki.panda3.symbolic.writer.gtohp.GTOHPWriter
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.symbolic.writer.shop2.SHOP2Writer
+import de.uniulm.ki.panda3.symbolic.writer.simplehddl.SimpleHDDLWriter
 import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 import de.uniulm.ki.util._
@@ -389,14 +390,14 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
           val rand = new Random(randomSeed)
 
           val separatedFormulae: Seq[LTLFormula] = separatedFormulaeBeforeRandomSelection
-            /*if (separatedFormulaeBeforeRandomSelection.length <= 3) separatedFormulaeBeforeRandomSelection else {
-              Range(0, 3).foldLeft[(Seq[LTLFormula], Seq[LTLFormula])]((separatedFormulaeBeforeRandomSelection, Nil))(
-                { case ((l, sel), _) =>
-                  val r = rand.nextInt(l.length)
-                  (l.patch(r, Nil, 1), sel :+ l(r))
-                }
-                                                                                                                     )._2
-            }*/
+          /*if (separatedFormulaeBeforeRandomSelection.length <= 3) separatedFormulaeBeforeRandomSelection else {
+            Range(0, 3).foldLeft[(Seq[LTLFormula], Seq[LTLFormula])]((separatedFormulaeBeforeRandomSelection, Nil))(
+              { case ((l, sel), _) =>
+                val r = rand.nextInt(l.length)
+                (l.patch(r, Nil, 1), sel :+ l(r))
+              }
+                                                                                                                   )._2
+          }*/
 
 
           if (separatedFormulae.nonEmpty) {
@@ -749,8 +750,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         val problemString = gtohpWriter.writeProblem(domainAndPlan._1, domainAndPlan._2)
 
 
-        println(problemString.split("\n").zipWithIndex.map({case (s,i) => i + ": " + s}).mkString("\n"))
-        println(domainString.split("\n").zipWithIndex.map({case (s,i) => i + ": " + s}).mkString("\n"))
+        println(problemString.split("\n").zipWithIndex.map({ case (s, i) => i + ": " + s }).mkString("\n"))
+        println(domainString.split("\n").zipWithIndex.map({ case (s, i) => i + ": " + s }).mkString("\n"))
 
         val uuid = UUID.randomUUID().toString
         val domFile = "fooD" + uuid + ".pddl"
@@ -1055,7 +1056,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap, typing: HierarchyTyping): AnalysisMap = {
     val groundedInitialState = problem.groundedInitialStateOnlyPositive filter { _.isPositive }
-    val chosenTyping = if (problem.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) None else Some(typing)
+    val chosenTyping = None //if (problem.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) None else Some(typing)
     val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = chosenTyping, debuggingMode = DebuggingMode.Disabled)
     val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, config)
     // add analysis to map
@@ -1097,9 +1098,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                       firstAnalysis: Boolean = false, savedSASPlusParser: Option[SasPlusProblem] = None): (((Domain, Plan), AnalysisMap), TimeCapsule) = {
     val emptyAnalysis = AnalysisMap(Map())
 
-    assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall {
-      domain.tasks contains _.schema
-    })
+    assert(problem.planStepsAndRemovedPlanStepsWithoutInitGoal forall { domain.tasks contains _.schema })
 
 
     timeCapsule start REMOVING_UNNECESSARY_PREDICATES
@@ -1265,11 +1264,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       // output info text
       val (infoText, actualType) = preprocessingConfiguration.groundedReachability match {
-        case Some(NaiveGroundedReachability) => ("Naive grounded reachability analysis", NaiveGroundedReachability)
-        case Some(PlanningGraph)             => ("Grounded planning graph", PlanningGraph)
-        case Some(PlanningGraphWithMutexes)  => ("Grounded planning graph with mutexes", PlanningGraphWithMutexes)
-        case Some(IntegerPlanningGraph)      => ("Planning graph with integer representation", IntegerPlanningGraph)
-        case None                            => ("SAS+ fall-back: Grounded planning graph", PlanningGraph)
+        case Some(NaiveGroundedReachability)     => ("Naive grounded reachability analysis", NaiveGroundedReachability)
+        case Some(PlanningGraph)                 => ("Grounded planning graph", PlanningGraph)
+        case Some(PlanningGraphWithMutexes)      => ("Grounded planning graph with mutexes", PlanningGraphWithMutexes)
+        case Some(IntegerPlanningGraph)          => ("Planning graph with integer representation", IntegerPlanningGraph)
+        case Some(NativeGroundingImplementation) => ("Native planning graph", NativeGroundingImplementation)
+        case None                                => ("SAS+ fall-back: Grounded planning graph", PlanningGraph)
       }
       info(infoText + " ... ")
       //System.in.read()
@@ -1293,6 +1293,35 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               writeStringToFile(x(SymbolicGroundedReachability).reachableGroundPrimitiveActions.map(_.shortInfo).mkString("\n"), "allPrimAct.txt")
               println("File written")
             }*/
+
+            val compiledDomain = ReplaceInitialPlanByTop(sasPlusResult._1._1, sasPlusResult._1._2, ())
+
+            // interface for the C++ implementation of PG and TDG
+            val string = SimpleHDDLWriter.writeProblem(compiledDomain._1, compiledDomain._2)
+
+            println("\n========================\n")
+            //println(string)
+            val actions = x(SymbolicGroundedReachability).reachableGroundPrimitiveActions.distinct
+            val literals = x(SymbolicGroundedReachability).reachableGroundLiterals.filter(_.isPositive).distinct
+
+            val stringBuilder = new StringBuilder
+            stringBuilder.append(actions.length + " " + literals.length + "\n")
+            actions.map({ case GroundTask(t, args) => t.name + " " + args.map(_.name).mkString(" ") + "\n" }).sorted.foreach(stringBuilder.append)
+            literals.map({ case GroundLiteral(l, s, args) => l.name + " " + args.map(_.name).mkString(" ") + "\n"}).sorted.foreach(stringBuilder.append)
+
+            //println(string)
+            //println(stringBuilder.toString())
+
+            val uuid = UUID.randomUUID().toString
+            writeStringToFile(string, "instance_" + uuid + ".in")
+            writeStringToFile(stringBuilder.toString(), "instance_" + uuid + ".ans")
+
+            println("UUID: " + uuid)
+
+
+
+            System exit 0
+
             x
           case IntegerPlanningGraph                     =>
             /*val wrapper = Wrapping(sasPlusResult._1)
@@ -1302,6 +1331,18 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             val pg = EfficientGroundedPlanningGraphImplementation(wrapper.efficientDomain, initialState, pgConfig)
             println("Done")
             println(pg.factSpikeIDs mkString "\n")*/
+            System exit 0
+            null
+
+          case NativeGroundingImplementation =>
+            val compiledDomain = ReplaceInitialPlanByTop(sasPlusResult._1._1, sasPlusResult._1._2, ())
+
+            // interface for the C++ implementation of PG and TDG
+            val string = SimpleHDDLWriter.writeProblem(compiledDomain._1, compiledDomain._2)
+
+            println("\n========================\n")
+            println(string)
+
             System exit 0
             null
         }
@@ -1805,6 +1846,8 @@ object PlanningGraph extends GroundedReachabilityMode {override def longInfo: St
 object PlanningGraphWithMutexes extends GroundedReachabilityMode {override def longInfo: String = "Planning Graph (with mutexes)"}
 
 object IntegerPlanningGraph extends GroundedReachabilityMode {override def longInfo: String = "Integer Planning Graph"}
+
+object NativeGroundingImplementation extends GroundedReachabilityMode {override def longInfo: String = "Integer Planning Graph"}
 
 case class PreprocessingConfiguration(
                                        compileNegativePreconditions: Boolean,
