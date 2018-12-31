@@ -1294,7 +1294,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               println("File written")
             }*/
 
-            val compiledDomain = ReplaceInitialPlanByTop(sasPlusResult._1._1, sasPlusResult._1._2, ())
+            /*val compiledDomain = ReplaceInitialPlanByTop(sasPlusResult._1._1, sasPlusResult._1._2, ())
 
             // interface for the C++ implementation of PG and TDG
             val string = SimpleHDDLWriter.writeProblem(compiledDomain._1, compiledDomain._2)
@@ -1321,7 +1321,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
             System exit 0
-
+*/
             x
           case IntegerPlanningGraph                     =>
             /*val wrapper = Wrapping(sasPlusResult._1)
