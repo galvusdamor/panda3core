@@ -100,11 +100,12 @@ object SimpleHDDLWriter extends Writer {
 
     // find additionally needed sorts
     val tasksAndMethodsWithVariablesAndConstraints: Seq[(Any, Seq[VariableConstraint], Variable)] =
-      dom.primitiveTasks.flatMap(t => t.parameters.map(v => (t, t.parameterConstraints, v)))
+      dom.primitiveTasks.flatMap(t => t.parameters.map(v => (t, t.parameterConstraints, v))) ++
     dom.decompositionMethods.flatMap(m => m.subPlan.variableConstraints.variables.map(v => (m, m.subPlan.variableConstraints.constraints ++ m.abstractTask.parameterConstraints, v)))
 
     val variableReplacementMap: Map[(Any, Variable), Sort] = tasksAndMethodsWithVariablesAndConstraints map { case (t, constraints, v) =>
       val pertainingConstraints = constraints.filter(_.getVariables.contains(v))
+      println(v.name + " " + pertainingConstraints.length)
       if (pertainingConstraints.isEmpty) None else {
         val sort = reduceConstraints(v, pertainingConstraints)
         // detect sort
@@ -115,6 +116,7 @@ object SimpleHDDLWriter extends Writer {
         }
       }
     } collect { case Some(x) => x } toMap
+
 
     // number of constants and number of sorts
     builder.append("#number_constants_number_sorts\n")
