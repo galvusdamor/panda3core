@@ -145,6 +145,8 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
 
   def map[U](f: T => U): DirectedGraph[U] = SimpleDirectedGraph((vertices map f).distinct, (edgeList map { case (a, b) => (f(a), f(b)) }).distinct)
 
+  def filter(f: T => Boolean): DirectedGraph[T] = SimpleDirectedGraph(vertices filter f, edgeList filter { case (a, b) => f(a) && f(b) })
+
   lazy val decomposition: Option[GraphDecomposition[T]] = if (vertices.size == 1) Some(ElementaryDecomposition(vertices.head)) else {
     // find partitioning
     val partitionA: Option[(Set[T], Set[T], Boolean)] = vertices.toSet.subsets() collect {
