@@ -30,8 +30,10 @@ import scala.collection.Seq
   */
 case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                       taskSequenceLengthQQ: Int, maxNumberOfActions: Int,
-                      ltlEncodings: Seq[AdditionalEdgesInDisablingGraph], overrideOverrideK: Option[Int] = None) extends LinearPrimitivePlanEncoding {
+                      ltlEncodings: Seq[AdditionalEdgesInDisablingGraph], overrideOverrideK: Option[Int] = None,
+                      tasksToIgnore : Set[Task] = Set()) extends LinearPrimitivePlanEncoding {
 
+  override def ignoreActionInStateTransition(task: Task): Boolean = tasksToIgnore(task)
   override lazy val offsetToK = 0
 
   override lazy val overrideK = if (overrideOverrideK.isDefined) overrideOverrideK else Some(0)

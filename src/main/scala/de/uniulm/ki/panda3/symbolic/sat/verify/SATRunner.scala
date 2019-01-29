@@ -729,7 +729,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           val x: Seq[PlanStep] = actionOrdering map { case a => c += 1; PlanStep(c, a, Nil) }
 
           println("Time " + p)
-          println(stateAtTime(p))
+          //println(stateAtTime(p))
           println(actionOrdering map { "\t" + _.name } mkString ("\n"))
 
           x
@@ -874,7 +874,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                 })
 
               println("Time " + p)
-              println(stateAtTime(p))
+              //println(stateAtTime(p))
               println(actionOrdering map { "\t" + _._1.name } mkString ("\n"))
 
               actionOrdering map { _._2 }
@@ -1055,7 +1055,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                         })
 
                       println("Time " + p)
-                      println(stateAtTime(p))
+                      //println(stateAtTime(p))
                       println(actionOrdering map { "\t" + _._1.name } mkString "\n")
 
                       actionOrdering map { _._2 }
@@ -1186,7 +1186,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         } else {
           val subTasks: Seq[Task] = nei map { n => n.id.split(",").last.toInt } collect { case i if domain.tasks.length > i => domain.tasks(i) }
           val tasksSchemaCount = subTasks groupBy { p => p }
-          val possibleMethods = domain.methodsForAbstractTasks(myAction) map { _.subPlan.planStepsWithoutInitGoal } filter { planSteps =>
+          val possibleMethods = domain.methodsForAbstractTasks(myAction) map { m =>
+            // only require the non-method preconditions to be present
+            m.subPlan.planStepsWithoutInitGoal filter { ps => ps.schema.isAbstract || !ps.schema.effect.isEmpty || !m.subPlan.orderingConstraints.fullGraph.sources.contains(ps)}
+          } filter { planSteps =>
             val sameSize = planSteps.length == subTasks.length
             val planSchemaCount = planSteps groupBy { _.schema }
             val sameTasks = tasksSchemaCount.size == planSchemaCount.size && (tasksSchemaCount.keys forall planSchemaCount.contains)

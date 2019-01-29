@@ -94,8 +94,11 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
     if (hardFlaws.isEmpty) unboundVariables else hardFlaws
   } filter isFlawAllowed
 
-  lazy val planStepsWithoutInitGoal: Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
-  lazy val planStepSchemaArray     : Array[Task]   = planStepsWithoutInitGoal map { _.schema } toArray
+  lazy val planStepsWithoutInitGoal                     : Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
+  lazy val planStepSchemaArray                          : Array[Task]   = planStepsWithoutInitGoal map { _.schema } toArray
+  lazy val planStepSchemaArrayWithoutMethodPreconditions: Array[Task]   = planStepsWithoutInitGoal collect {
+    case ps if ps.schema.isAbstract || !ps.schema.effect.isEmpty || !orderingConstraints.fullGraph.sources.contains(ps) => ps.schema
+  } toArray
 
   lazy val planStepsAndRemovedPlanStepsWithoutInitGoal: Seq[PlanStep] = planStepsAndRemovedPlanSteps filter { ps => ps != init && ps != goal }
 
@@ -111,8 +114,9 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   else
     planSteps.foldLeft(parameterVariableConstraints)(
       { case (csp, ps) => ps.schema.parameterConstraints.foldLeft(csp)({ case (csp2, c) => val newConstraint = c.substitute(ps.schemaParameterSubstitution)
-        if (!newConstraint.isTautologic)        csp2.addConstraint(newConstraint) else csp2
-      }) })
+        if (!newConstraint.isTautologic) csp2.addConstraint(newConstraint) else csp2
+                                                                       })
+      })
 
 
   /** all causal threads in this plan */
@@ -335,7 +339,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
 
       newPlan.variableConstraints.constraints foreach { case Equal(var1: Variable, var2: Variable) =>
         assert((protectedVariables contains var1) || (protectedVariables contains var2),
-          (protectedVariables map {_.name}).mkString(" ") + " : " + var1.name + " " + var2.name); case _ => ()
+               (protectedVariables map { _.name }).mkString(" ") + " : " + var1.name + " " + var2.name);
+      case _                                                                                       => ()
       }
 
       newPlan.copy(parameterVariableConstraints = newPlan.parameterVariableConstraints.addConstraints(newConstraints.toSeq))
@@ -785,7 +790,7 @@ object Plan {
     val planStepSequence = ((init :: goal :: Nil).zipWithIndex map { case (t, i) => PlanStep(-i - 1, t, Nil) }) ++ taskSequence
     val removedPlanSteps = planStepDecomposedByMethod.keys.toSeq
     val orderedPSSequence = ((planStepSequence.head :: Nil) ++ planStepSequence.drop(2)) :+ planStepSequence(1)
-    val decomposedPlanSteps = removedPlanSteps flatMap {ps => OrderingConstraint(planStepSequence.head, ps) :: OrderingConstraint(ps, planStepSequence(1)) :: Nil}
+    val decomposedPlanSteps = removedPlanSteps flatMap { ps => OrderingConstraint(planStepSequence.head, ps) :: OrderingConstraint(ps, planStepSequence(1)) :: Nil }
     val totalOrdering = TaskOrdering.totalOrdering(orderedPSSequence).addOrderings(decomposedPlanSteps)
 
 

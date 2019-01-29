@@ -164,6 +164,8 @@ case class TreeVariableOrderEncodingExistsStep(timeCapsule: TimeCapsule, domain:
                                                usePDTMutexes: Boolean, overrideK: Option[Int] = None, additionalDisablingGraphEdges : Seq[AdditionalEdgesInDisablingGraph])
   extends TreeVariableOrderEncoding with ExsitsStepMappingEncoding[Unit, Unit] {
 
+  val sog = ???
+
   // TODO: determine this size more intelligently
   lazy val taskSequenceLength: Int = Math.max(if (primitivePaths.length == 0) 0 else 1, primitivePaths.length - 0)
 }

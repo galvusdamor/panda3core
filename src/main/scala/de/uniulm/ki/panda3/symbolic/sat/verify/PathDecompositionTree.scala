@@ -177,7 +177,8 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
   }
 
   def checkMethodPossibility(method: DecompositionMethod, childrenAssignment: Array[Int], reducedChildren: Array[PathDecompositionTree[Payload]]): Boolean = {
-    val ordering: Seq[Task] = method.subPlan.planStepSchemaArray
+    // HACK!!!
+    val ordering: Seq[Task] = method.subPlan.planStepSchemaArrayWithoutMethodPreconditions
     val methodPossible = ordering.zip(childrenAssignment) forall { case (task, position) => reducedChildren(position).possibleTasks contains task }
     //if (!methodPossible) println("Excluded method.") else println("Acceptable method.")
     methodPossible
@@ -380,7 +381,8 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
     // add tasks from methods
     methods foreach { case (method, childrenPositions) =>
-      method._1.subPlan.planStepSchemaArray zip childrenPositions foreach { case (task, child) =>
+      // TODO: Hack
+      method._1.subPlan.planStepSchemaArrayWithoutMethodPreconditions zip childrenPositions foreach { case (task, child) =>
         assert(children(child).possibleTasks.contains(task) || (!isNormalised && children(child).children.isEmpty && children(child).possibleAbstracts.isEmpty))
         if (children(child).possibleTasks contains task) // if not, this is an abstract task at the end of the hierarchy .. or something strange with empty methods ..
           childrenPossibleTasks(child) add task

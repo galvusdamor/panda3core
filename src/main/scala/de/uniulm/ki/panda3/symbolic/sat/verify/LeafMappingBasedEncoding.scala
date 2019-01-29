@@ -17,6 +17,7 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.symbolic.domain.Task
+import de.uniulm.ki.util.{DirectedGraph, DirectedGraphDotOptions, Dot2PdfCompiler, SimpleDirectedGraph}
 
 import scala.collection.Seq
 
@@ -55,7 +56,7 @@ trait ExsitsStepMappingEncoding[Payload, IntermediatePayload] extends PathBasedE
   def maxNumberOfActions : Int
   def additionalDisablingGraphEdges : Seq[AdditionalEdgesInDisablingGraph]
 
-  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, intProblem, taskSequenceLength, maxNumberOfActions, additionalDisablingGraphEdges, Some(K))
+  def sog: DirectedGraph[(Seq[Int], Set[Task])]
 
   lazy val taskOccurenceMap: Map[Int, Set[Task]] =
     domain.primitiveTasks map { t => t -> primitivePaths.count(_._2.contains(t)) } groupBy { _._2 } map { case (a, bs) => a -> bs.map(_._1).toSet }
@@ -63,16 +64,33 @@ trait ExsitsStepMappingEncoding[Payload, IntermediatePayload] extends PathBasedE
   lazy val tasksWithOnePosition: Set[Task]           = taskOccurenceMap.getOrElse(1, Set[Task]())
   lazy val tasksOnePath        : Map[Task, Seq[Int]] = tasksWithOnePosition map { t => t -> primitivePaths.find(_._2.contains(t)).get._1 } toMap
 
+  val exsitsStepEncoding = ExistsStep(timeCapsule, domain, initialPlan, intProblem, taskSequenceLength, maxNumberOfActions, additionalDisablingGraphEdges, Some(K),
+                                      taskOccurenceMap.getOrElse(0,Set()))
+
   lazy val stateTransitionFormulaProvider: Seq[Clause] = exsitsStepEncoding.stateTransitionFormula
 
   def restrictionPathsPerPosition(pathsPerPosition: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] = {
+    println(taskOccurenceMap.toSeq.sortBy(_._1) map { case (a, bs) => "Occ: " + a + ": " + bs.size + " " + "actions" } mkString "\n")
+    //println(taskOccurenceMap.toSeq.sortBy(_._1) map { case (a, bs) => "Occ: " + a + ": " + bs.map(_.name) } mkString "\n")
 
-    println(taskOccurenceMap map { case (a, bs) => "Occ: " + a + ": " + bs.size + " " + "actions" } mkString "\n")
+    /*val remainingTasks = domain.primitiveTasks.toSet -- taskOccurenceMap.getOrElse(0,Set()) -- taskOccurenceMap.getOrElse(1,Set())
+
+    for (t <- remainingTasks){
+      val ps = primitivePaths.filter(_._2.contains(t))
+      val edges = for (p1 <- ps; p2 <- ps; if p1 != p2 && sog.reachable(p1).contains(p2)) yield (p1,p2)
+      val g = SimpleDirectedGraph(ps,edges)
+
+      println("computed sccs " + g.stronglyConnectedComponents.size + " edges " + edges.size + " " + t.name + " SCCs: " + g.stronglyConnectedComponents.map(_.size).mkString(" "))
+      Dot2PdfCompiler.writeDotToFile(g.dotString(DirectedGraphDotOptions(), {_ => ""}), s"tasks/task_${t.name}.pdf")
+      println("plotted")
+    }*/
+
+    //System exit 0
 
     val taskToPosWithTask: Seq[Clause] = Range(0, taskSequenceLength) flatMap { case position =>
       pathsPerPosition(position) flatMap { case (pathIndex, _, connectionAtom) =>
         val path = primitivePaths(pathIndex)._1
-        primitivePaths(pathIndex)._2 diff tasksWithOnePosition flatMap { t =>
+        primitivePaths(pathIndex)._2 diff tasksWithOnePosition filterNot {_.effect.isEmpty } flatMap { t => // effectless actions can be merged!
           val actionAtom = pathAction(path.length, path, t)
 
           impliesSingle(pathToPosWithTask(path, position, t), actionAtom) ::

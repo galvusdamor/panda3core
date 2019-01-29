@@ -68,7 +68,13 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
 
   protected def computeTaskSequenceArrangement(possibleMethods: Array[DecompositionMethod], possiblePrimitives: Seq[Task]):
   (Array[Array[Int]], Array[Int], Array[Set[Task]], NonExpandedSOG) = {
-    val methodTaskGraphs = (possibleMethods map { _.subPlan.orderingConstraints.fullGraph }) ++ (
+    val methodTaskGraphs = (possibleMethods map { m =>
+      val baseGraph = m.subPlan.orderingConstraints.fullGraph
+      // TODO: hack!!
+      val methodPrecs = baseGraph.sources filter {_.schema.effect.isEmpty} filter {_.schema.isPrimitive}
+
+      baseGraph.filter(ps => !methodPrecs.contains(ps))
+    }) ++ (
       possiblePrimitives map { t => SimpleDirectedGraph(PlanStep(-1, t, Nil) :: Nil, Nil) })
 
     // TODO we are currently mapping plansteps, maybe we should prefer plansteps with identical tasks to be mapped together
@@ -90,7 +96,8 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     //println("OP " + met + " of " + metOp)
     val minimalSuperGraph = g._1
     val planStepToIndexMappings: Seq[Map[PlanStep, Int]] = g._2
-    possibleMethods zip planStepToIndexMappings foreach { case (m, map) => m.subPlan.planStepsWithoutInitGoal foreach { ps => assert(map contains ps) } }
+    // TODO: hack!
+    possibleMethods zip planStepToIndexMappings foreach { case (m, map) => m.subPlan.planStepsWithoutInitGoal foreach { ps => if (!ps.schema.effect.isEmpty) assert(map contains ps) } }
 
     val (methodMappings, primitiveMappings) = planStepToIndexMappings.splitAt(possibleMethods.length)
 
@@ -98,7 +105,9 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
 
     val tasksPerMethodToChildrenMapping: Array[Array[Int]] = methodMappings.zipWithIndex map { case (mapping, methodIndex) =>
       val methodPlanSteps = possibleMethods(methodIndex).subPlan.planStepsWithoutInitGoal
-      (methodPlanSteps map { ps =>
+      (methodPlanSteps collect {
+        case ps if (ps.schema.isAbstract || !ps.schema.effect.isEmpty || !possibleMethods(methodIndex).subPlan.orderingConstraints.fullGraph.sources.contains(ps))=>
+        // TODO: hack
         childrenIndicesToPossibleTasks(mapping(ps)) add ps.schema
         mapping(ps)
       }).toArray
@@ -175,10 +184,10 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     println("done")
 
 
-    /*val string = finalSOG.dotString(options = DirectedGraphDotOptions(),
+    val string = finalSOG.dotString(options = DirectedGraphDotOptions(),
                                     //nodeRenderer = {case (path, tasks) => tasks map { _.name } mkString ","})
                                     nodeRenderer = {case (path, tasks) => tasks.count(_.isPrimitive) + " " + tasks.size + " " + path})
-    Dot2PdfCompiler.writeDotToFile(string, "sog.pdf")*/
+    Dot2PdfCompiler.writeDotToFile(string, "sog.pdf")
 
     println("TREE P: " + primitivePaths.length + " S: " + taskSequenceLength)
 

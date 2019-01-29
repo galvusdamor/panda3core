@@ -73,6 +73,7 @@ trait SOGClassicalEncoding extends SOGEncoding with EncodingWithLinearPlan with 
     val atMostOneConstraints = atMostOneConstraintsA ++ atMostOneConstraintsB
     println("A " + atMostOneConstraintsA.size + " and " + atMostOneConstraintsB.size)
 
+
     // if the path is part of a solution, then it must contain a task
     val selected = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
       val actionAtoms = tasks.toSeq map { pathAction(path.length, path, _) }
@@ -90,7 +91,7 @@ trait SOGClassicalEncoding extends SOGEncoding with EncodingWithLinearPlan with 
 
     // positions may only contain primitive tasks if mapped to a path
     val onlyPrimitiveIfChosen = Range(0, taskSequenceLength) flatMap { case position =>
-      val actionAtoms = domain.primitiveTasks map { t => (action(K - 1, position, t), t) }
+      val actionAtoms = domain.primitiveTasks filterNot ignoreActionInStateTransition map { t => (action(K - 1, position, t), t) }
       val ifPresentConnected = ifActionAtPositionThenConnected(actionAtoms, pathsPerPosition, position)
       val onlyIfConnected = notImpliesAllNot(pathsPerPosition(position) map { _._3 }, actionAtoms map { _._1 })
 
@@ -121,14 +122,22 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
 
   def useImplicationForbiddenness: Boolean
 
+  protected override val omitMethodPreconditionActions = true
 
   protected def pathPosForbidden(path: Seq[Int], position: Int): String = "forbidden_" + path.mkString(";") + "-" + position
+
+  protected def pathToPosMethod(path: Seq[Int], position: Int): String = "method_path_to_pos_" + path.mkString(";") + "-" + position
+
+  protected def pathToPosMethodForbidden(path: Seq[Int], position: Int): String = "forbidden_method_path_to_pos_" + path.mkString(";") + "-" + position
 
   def forbiddennessSubtractor: Int = 1
 
   override lazy val stateTransitionFormula: Seq[Clause] = {
     // force computation of SOG
     sog
+
+    //////
+    val connFormula = connectionFormula
 
     /////////////////
     // forbid certain connections if disallowed by the SOG
@@ -168,12 +177,76 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
     val forbiddenness = forbiddenConnections ++ forbiddennessImplications ++ forbiddennessGetsInherited ++ forbiddenActuallyDoesSomething
 
 
-    //System exit 0
+    //// TODO: method preconditions
+    val methodPrecs = if (omitMethodPreconditionActions) {
+      def methodPrecDFS(node: PathDecompositionTree[SOG]): Seq[Clause] = if (node.possibleMethods.isEmpty) Nil else {
+        // matchable positions
+        val allMatchings = Range(0, taskSequenceLength) map { pos => pathToPosMethod(node.path, pos) }
+        val atLeastOneAssignment = node.possibleMethods map { case (m, mid) =>
+          val methodAtom = method(node.layer, node.path, mid)
+          impliesRightOr(methodAtom :: Nil, allMatchings)
+        }
+
+        // some matches are forbidden
+        val notToEarly = node.primitivePaths flatMap { case (path, _) =>
+          Range(0, taskSequenceLength) map { pos =>
+            impliesSingle(pathPosForbidden(path, pos - (1 - forbiddennessSubtractor)), pathToPosMethodForbidden(node.path, pos))
+          }
+        }
+
+
+        val notToLate = node.primitivePaths flatMap { case (path, _) =>
+          Range(0, taskSequenceLength) flatMap  { pos =>
+            //Range(pos + 1, taskSequenceLength) map { laterPos =>
+            impliesSingle(pathToPos(path, pos), pathToPosMethodForbidden(node.path, pos + 1)) ::
+            impliesSingle(pathToPosMethodForbidden(node.path, pos), pathToPosMethodForbidden(node.path, pos + 1)) :: Nil
+            //}
+          }
+        }
+
+
+        val forbiddenIsForbidden = node.primitivePaths flatMap { case (path, _) =>
+          Range(0, taskSequenceLength) map { pos =>
+            impliesNot(pathToPosMethodForbidden(path, pos), pathToPosMethod(node.path, pos))
+          }
+        }
+
+
+        // if assigned and method, prec is true
+        val methodPrecsAreTrue = node.possibleMethods flatMap { case (m, mid) =>
+          val methodAtom = method(node.layer, node.path, mid)
+
+          val prec = m.subPlan.orderingConstraints.fullGraph.sources.filter(ps => ps.schema.isPrimitive && ps.schema.effect.isEmpty).flatMap(_.schema.posPreconditionAsPredicate)
+
+          prec flatMap { p =>
+            Range(0, taskSequenceLength) map { pos =>
+              val pathPosAtom = pathToPosMethod(node.path, pos)
+              val stateAtom = statePredicate(K - 1, pos, p)
+
+              val condition = methodAtom :: pathPosAtom :: Nil
+              impliesRightAndSingle(condition, stateAtom)
+            }
+          }
+        }
+
+        val recursiveCalls = node.children flatMap methodPrecDFS
+
+
+        if (methodPrecsAreTrue.isEmpty)
+          recursiveCalls
+        else
+          recursiveCalls ++ notToEarly ++ notToLate ++ forbiddenIsForbidden ++ atLeastOneAssignment ++ methodPrecsAreTrue
+      }
+
+      methodPrecDFS(pdt)
+    } else Nil
+
+    println("J " + methodPrecs.size)
 
     // this generates the actual state transition formula
     val primitiveSequence = stateTransitionFormulaProvider
 
-    primitiveSequence ++ connectionFormula ++ forbiddenness
+    primitiveSequence ++ connFormula ++ forbiddenness ++ methodPrecs
   }
 
   def stateTransitionFormulaProvider: Seq[Clause]
@@ -184,16 +257,16 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
 case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                                            taskSequenceLengthQQ: Int, offsetToK: Int, overrideK: Option[Int] = None,
                                            useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean)
-  extends SOGClassicalForbiddenEncoding with KautzSelmanMappingEncoding[SOG,  NonExpandedSOG] {
+  extends SOGClassicalForbiddenEncoding with KautzSelmanMappingEncoding[SOG, NonExpandedSOG] {
 
   lazy val taskSequenceLength: Int = if (taskSequenceLengthQQ != -1) taskSequenceLengthQQ else primitivePaths.length
 }
 
 
 case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
-                                          numberOfTimesteps: Int, maxNumberOfActions : Int,
+                                          numberOfTimesteps: Int, maxNumberOfActions: Int,
                                           offsetToK: Int, overrideK: Option[Int] = None,
-                                          useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean, additionalDisablingGraphEdges : Seq[AdditionalEdgesInDisablingGraph])
+                                          useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean, additionalDisablingGraphEdges: Seq[AdditionalEdgesInDisablingGraph])
   extends SOGClassicalForbiddenEncoding with ExsitsStepMappingEncoding[SOG, NonExpandedSOG] {
 
   override def forbiddennessSubtractor: Int = 0
@@ -204,6 +277,8 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
 
     Math.max(if (pathNumToUse == 0) 0 else 1, pathNumToUse - 0)
   }
+
+  override def ignoreActionInStateTransition(task: Task): Boolean = taskOccurenceMap.getOrElse(0,Set()).contains(task)
 
 }
 

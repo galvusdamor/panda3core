@@ -26,7 +26,9 @@ import scala.collection.Seq
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait LinearPrimitivePlanEncoding extends VerifyEncoding with EncodingWithLinearPlan{
+trait LinearPrimitivePlanEncoding extends VerifyEncoding with EncodingWithLinearPlan {
+
+  def ignoreActionInStateTransition(task: Task): Boolean = false
 
   val action: ((Int, Int, Task)) => String = memoise[(Int, Int, Task), String]({ case (l, p, t) => "action^" + l + "_" + p + "," + taskIndex(t) })
 
@@ -36,27 +38,29 @@ trait LinearPrimitivePlanEncoding extends VerifyEncoding with EncodingWithLinear
 
   protected final def primitivesApplicable(layer: Int, position: Int): Seq[Clause] = domain.primitiveTasks flatMap {
     case task: ReducedTask =>
-      task.precondition.conjuncts map {
-        case Literal(pred, isPositive, _) => // there won't be any parameters
-          if (isPositive)
-            impliesSingle(action(layer, position, task), statePredicate(layer, position, pred))
-          else
-            impliesNot(action(layer, position, task), statePredicate(layer, position, pred))
-      }
+      if (ignoreActionInStateTransition(task)) Nil else
+        task.precondition.conjuncts map {
+          case Literal(pred, isPositive, _) => // there won't be any parameters
+            if (isPositive)
+              impliesSingle(action(layer, position, task), statePredicate(layer, position, pred))
+            else
+              impliesNot(action(layer, position, task), statePredicate(layer, position, pred))
+        }
     case _                 => noSupport(FORUMLASNOTSUPPORTED)
   }
 
   protected final def stateChange(layer: Int, position: Int): Seq[Clause] = domain.primitiveTasks flatMap {
     case task: ReducedTask =>
-      task.effect.conjuncts collect {
-        // negated effect is also contained, ignore this one if it is negative
-        case Literal(pred, isPositive, _) if !((task.effect.conjuncts exists { l => l.predicate == pred && l.isNegative == isPositive }) && !isPositive) =>
-          // there won't be any parameters
-          if (isPositive)
-            impliesSingle(action(layer, position, task), statePredicate(layer, position + 1, pred))
-          else
-            impliesNot(action(layer, position, task), statePredicate(layer, position + 1, pred))
-      }
+      if (ignoreActionInStateTransition(task)) Nil else
+        task.effect.conjuncts collect {
+          // negated effect is also contained, ignore this one if it is negative
+          case Literal(pred, isPositive, _) if !((task.effect.conjuncts exists { l => l.predicate == pred && l.isNegative == isPositive }) && !isPositive) =>
+            // there won't be any parameters
+            if (isPositive)
+              impliesSingle(action(layer, position, task), statePredicate(layer, position + 1, pred))
+            else
+              impliesNot(action(layer, position, task), statePredicate(layer, position + 1, pred))
+        }
     case _                 => noSupport(FORUMLASNOTSUPPORTED)
   }
 
@@ -66,9 +70,10 @@ trait LinearPrimitivePlanEncoding extends VerifyEncoding with EncodingWithLinear
       predicate =>
         true :: false :: Nil map {
           makeItPositive =>
-            val changingActions: Seq[Task] = if (makeItPositive) domain.primitiveChangingPredicate(predicate)._1 else domain.primitiveChangingPredicate(predicate)._2
+            val changingActions: Seq[Task] =
+              (if (makeItPositive) domain.primitiveChangingPredicate(predicate)._1 else domain.primitiveChangingPredicate(predicate)._2) filterNot ignoreActionInStateTransition
             val taskLiterals = changingActions map { action(layer, position, _) } map { (_, true) }
-            Clause(taskLiterals :+(statePredicate(layer, position, predicate), makeItPositive) :+(statePredicate(layer, position + 1, predicate), !makeItPositive))
+            Clause(taskLiterals :+ (statePredicate(layer, position, predicate), makeItPositive) :+ (statePredicate(layer, position + 1, predicate), !makeItPositive))
         }
     }
   }
@@ -90,10 +95,12 @@ trait LinearPrimitivePlanEncoding extends VerifyEncoding with EncodingWithLinear
   }
 
   def goalStateOfLength(length: Int): Seq[Clause] =
-    initialPlan.goal.substitutedPreconditions map { case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, length, pred), isPos))    }
+    initialPlan.goal.substitutedPreconditions map { case Literal(pred, isPos, _) => Clause((statePredicate(K - 1, length, pred), isPos)) }
 
 
-  override lazy val linearPlan: scala.Seq[Map[Task, String]] = Range(0, taskSequenceLength) map { case i => domain.primitiveTasks map { t => t -> { action(K - 1, i, t) } } toMap }
+  override lazy val linearPlan: scala.Seq[Map[Task, String]] = Range(0, taskSequenceLength) map { case i =>
+    domain.primitiveTasks filterNot ignoreActionInStateTransition map { t => t -> { action(K - 1, i, t) } } toMap
+  }
 
 
   override lazy val linearStateFeatures: scala.Seq[Map[Predicate, String]] =
