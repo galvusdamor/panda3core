@@ -178,6 +178,9 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
         }
     }
   }
+
+  // very slow, but it works
+  def isPath(vertices : Seq[T]) : Boolean = vertices.forall(v => vertices.forall(w => v == w || reachable(v).contains(w) || reachable(w).contains(v)))
 }
 
 

@@ -72,6 +72,7 @@ trait VerifyEncoding {
 
 
   protected val taskIndices          : Map[Task, Int]                = (domain.tasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).zipWithIndex.toMap.withDefaultValue(-1)
+  //println(taskIndices.toSeq.sortBy(_._2) map {case (t,i) => i + " " + t.name} mkString "\n")
   protected val predicateIndices     : Map[Predicate, Int]           = domain.predicates.zipWithIndex.toMap
   protected val methodIndices        : Map[DecompositionMethod, Int] = domain.decompositionMethods.zipWithIndex.toMap
   protected val methodPlanStepIndices: Map[Int, Map[PlanStep, Int]]  = (domain.decompositionMethods map { method =>

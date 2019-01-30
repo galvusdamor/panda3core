@@ -191,6 +191,8 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
 
     println("TREE P: " + primitivePaths.length + " S: " + taskSequenceLength)
 
+    //System exit 0
+
     assert(primitivePaths forall { p => finalSOG.vertices contains p })
 
     finalSOG

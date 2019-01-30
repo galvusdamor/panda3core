@@ -55,6 +55,7 @@ trait SOGClassicalEncoding extends SOGEncoding with EncodingWithLinearPlan with 
 
     //Dot2PdfCompiler.writeDotToFile(sog.dotString(DirectedGraphDotOptions(), { case (p, t) => t map { _.name } mkString ";" }), "sog.pdf")
 
+
     //////
     // select mapping
     /////
@@ -93,7 +94,7 @@ trait SOGClassicalEncoding extends SOGEncoding with EncodingWithLinearPlan with 
     val onlyPrimitiveIfChosen = Range(0, taskSequenceLength) flatMap { case position =>
       val actionAtoms = domain.primitiveTasks filterNot ignoreActionInStateTransition map { t => (action(K - 1, position, t), t) }
       val ifPresentConnected = ifActionAtPositionThenConnected(actionAtoms, pathsPerPosition, position)
-      val onlyIfConnected = notImpliesAllNot(pathsPerPosition(position) map { _._3 }, actionAtoms map { _._1 })
+      val onlyIfConnected = notImpliesAllNot(pathsPerPosition(position) map { _._3 }, actionAtoms map { _._1 }) // TODO can be better
 
       ifPresentConnected ++ onlyIfConnected
     }
@@ -196,10 +197,10 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
 
 
         val notToLate = node.primitivePaths flatMap { case (path, _) =>
-          Range(0, taskSequenceLength) flatMap  { pos =>
+          Range(0, taskSequenceLength) flatMap { pos =>
             //Range(pos + 1, taskSequenceLength) map { laterPos =>
             impliesSingle(pathToPos(path, pos), pathToPosMethodForbidden(node.path, pos + 1)) ::
-            impliesSingle(pathToPosMethodForbidden(node.path, pos), pathToPosMethodForbidden(node.path, pos + 1)) :: Nil
+              impliesSingle(pathToPosMethodForbidden(node.path, pos), pathToPosMethodForbidden(node.path, pos + 1)) :: Nil
             //}
           }
         }
@@ -273,12 +274,12 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
 
   // TODO: determine this size more intelligently
   lazy val taskSequenceLength: Int = if (numberOfTimesteps != -1) numberOfTimesteps else {
-    val pathNumToUse = if (expansionPossible) primitivePaths.length else primitivePaths.length
+    val pathNumToUse = ((if (expansionPossible) primitivePaths.length else primitivePaths.length) * 0.66 + 0.5).toInt
 
     Math.max(if (pathNumToUse == 0) 0 else 1, pathNumToUse - 0)
   }
 
-  override def ignoreActionInStateTransition(task: Task): Boolean = taskOccurenceMap.getOrElse(0,Set()).contains(task)
+  override def ignoreActionInStateTransition(task: Task): Boolean = taskOccurenceMap.getOrElse(0, Set()).contains(task)
 
 }
 

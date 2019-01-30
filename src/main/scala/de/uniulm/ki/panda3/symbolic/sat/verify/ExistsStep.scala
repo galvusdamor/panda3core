@@ -31,9 +31,10 @@ import scala.collection.Seq
 case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                       taskSequenceLengthQQ: Int, maxNumberOfActions: Int,
                       ltlEncodings: Seq[AdditionalEdgesInDisablingGraph], overrideOverrideK: Option[Int] = None,
-                      tasksToIgnore : Set[Task] = Set()) extends LinearPrimitivePlanEncoding {
+                      tasksToIgnore: Set[Task] = Set()) extends LinearPrimitivePlanEncoding {
 
   override def ignoreActionInStateTransition(task: Task): Boolean = tasksToIgnore(task)
+
   override lazy val offsetToK = 0
 
   override lazy val overrideK = if (overrideOverrideK.isDefined) overrideOverrideK else Some(0)
@@ -55,39 +56,47 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
   def generateChainForAtTime(E: Array[(Task, Int)], R: Array[(Task, Int)], chainID: String, position: Int, qualifierOption: Option[String]): Seq[Clause] = {
     val time0 = System.currentTimeMillis()
     // generate chain restriction for every SCC
-    val f1: Seq[Clause] = E.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (oi, i)) =>
-      // search forward for next R
-      var newR = rpos
-      while (newR < R.length && R(newR)._2 <= i) newR += 1
+    val f1: Seq[Clause] = E.foldLeft[(Seq[Clause], Int)]((Nil, 0))(
+      {
+        case ((clausesSoFar, rpos), (oi, i)) if ignoreActionInStateTransition(oi) =>
+          (clausesSoFar, rpos)
+        case ((clausesSoFar, rpos), (oi, i))                                      =>
+          // search forward for next R
+          var newR = rpos
+          while (newR < R.length && (R(newR)._2 <= i || ignoreActionInStateTransition(R(newR)._1))) newR += 1
 
-      if (newR < R.length) {
-        val newClause = qualifierOption match {
-          case None            => impliesSingle(action(K - 1, position, oi), chain(position, R(newR)._2, chainID))
-          case Some(qualifier) => Clause((action(K - 1, position, oi), false) :: (chain(position, R(newR)._2, chainID), true) :: (qualifier, false) :: Nil)
-        }
-        (clausesSoFar :+ newClause, newR)
-      } else
-        (clausesSoFar, newR)
-                                                                   })._1
+          if (newR < R.length) {
+            val newClause = qualifierOption match {
+              case None            => impliesSingle(action(K - 1, position, oi), chain(position, R(newR)._2, chainID))
+              case Some(qualifier) => Clause((action(K - 1, position, oi), false) :: (chain(position, R(newR)._2, chainID), true) :: (qualifier, false) :: Nil)
+            }
+            (clausesSoFar :+ newClause, newR)
+          } else
+            (clausesSoFar, newR)
+      })._1
     val time1 = System.currentTimeMillis()
 
-    val f2 = R.foldLeft[(Seq[Clause], Int)]((Nil, 0))({ case ((clausesSoFar, rpos), (ai, i)) =>
-      // search forward for next R
-      var newR = rpos
-      while (newR < R.length && R(newR)._2 <= i) newR += 1
+    val f2 = R.foldLeft[(Seq[Clause], Int)]((Nil, 0))(
+      {
+        case ((clausesSoFar, rpos), (ai, i)) if ignoreActionInStateTransition(ai) =>
+          (clausesSoFar, rpos)
+        case ((clausesSoFar, rpos), (ai, i))                                      =>
+          // search forward for next R
+          var newR = rpos
+          while (newR < R.length && (R(newR)._2 <= i || ignoreActionInStateTransition(R(newR)._1))) newR += 1
 
-      if (newR < R.length) {
-        val newClause = qualifierOption match {
-          case None            => impliesSingle(chain(position, i, chainID), chain(position, R(newR)._2, chainID))
-          case Some(qualifier) => Clause((chain(position, i, chainID), false) :: (chain(position, R(newR)._2, chainID), true) :: (qualifier, false) :: Nil)
-        }
-        (clausesSoFar :+ newClause, newR)
-      } else
-        (clausesSoFar, newR)
-                                                      })._1
+          if (newR < R.length) {
+            val newClause = qualifierOption match {
+              case None            => impliesSingle(chain(position, i, chainID), chain(position, R(newR)._2, chainID))
+              case Some(qualifier) => Clause((chain(position, i, chainID), false) :: (chain(position, R(newR)._2, chainID), true) :: (qualifier, false) :: Nil)
+            }
+            (clausesSoFar :+ newClause, newR)
+          } else
+            (clausesSoFar, newR)
+      })._1
     val time2 = System.currentTimeMillis()
 
-    val f3: Seq[Clause] = R map { case (ai, i) =>
+    val f3: Seq[Clause] = R collect { case (ai, i) if !ignoreActionInStateTransition(ai) =>
       qualifierOption match {
         case None            => impliesNot(chain(position, i, chainID), action(K - 1, position, ai))
         case Some(qualifier) => Clause((chain(position, i, chainID), false) :: (action(K - 1, position, ai), false) :: (qualifier, false) :: Nil)
@@ -128,7 +137,9 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     println("State Transition Formula: " + (t0004 - t0003) + "ms")
 
     val numberOfActionsRestriction = if (maxNumberOfActions == -1) Nil else {
-      val allActionsAtoms = domain.primitiveTasks filter ActionCost.hasCost flatMap { task => Range(0, taskSequenceLength + 1) map { case position => action(K - 1, position, task) } }
+      val allActionsAtoms = domain.primitiveTasks filter ActionCost.hasCost filterNot ignoreActionInStateTransition flatMap {
+        task => Range(0, taskSequenceLength + 1) map { case position => action(K - 1, position, task) }
+      }
       atMostKOf(allActionsAtoms, maxNumberOfActions)
     }
     val t0005 = System.currentTimeMillis()

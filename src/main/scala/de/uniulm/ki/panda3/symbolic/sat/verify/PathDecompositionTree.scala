@@ -167,6 +167,21 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       } else t -> Set[(Task, Task)]()
     } toMap
 
+  lazy val localConditionalMaxNumberOfLeafs: Map[Task, Int] =
+    if (children.length == 0 && possibleTasks.nonEmpty && possibleTasks.exists(_.isPrimitive)) possibleTasks map { t => t -> 1 } toMap
+    else
+      possibleTasks map { t =>
+        // if t is abstract
+        if (t.isAbstract) {
+          val applicableMethods = possibleMethods.zip(methodToPositions) filter { _._1._1.abstractTask == t }
+          val applicableMethodsMaxLeafs = applicableMethods map { case (m, positions) =>
+            m._1.subPlan.planStepSchemaArrayWithoutMethodPreconditions zip positions map { case (psSchema, pos) => children(pos).localConditionalMaxNumberOfLeafs(psSchema) } sum
+          } max
+
+          t -> applicableMethodsMaxLeafs
+        } else t -> 1 // for primitives this is one
+      } toMap
+
   ///////////////////////// RESTRICT PDT
 
   lazy val normalise: PathDecompositionTree[Payload] = if (isNormalised) this
@@ -300,7 +315,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     val winrar: Map[(Task, Int), Int] = // number of methods for which a specific task is assigned to a position. If this 1, we can add an implication
       possibleMethods.zipWithIndex flatMap { case ((dm, mGlobalID), mindex) =>
         dm.subPlan.planStepSchemaArray.zip(methodToPositions(mindex)) map { x => (x, mGlobalID) }
-      } groupBy { _._1 } filter { _._2.length == 1 } filterNot {possiblePrimitives contains _._1._1} map { case (k, v) => k -> v.head._2 }
+      } groupBy { _._1 } filter { _._2.length == 1 } filterNot { possiblePrimitives contains _._1._1 } map { case (k, v) => k -> v.head._2 }
 
     children.flatMap(_.assignmentImplications) ++ winrar.toSeq.map(a => path -> a)
   }

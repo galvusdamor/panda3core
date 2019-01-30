@@ -1032,7 +1032,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                     } map actionStringToTask
 
                   case t: SOGExistsStepForbiddenEncoding =>
-                    val pathToPosWithTask = allTrueAtoms filter { _.startsWith("withTaskPathToPos_") }
+                    val pathToPosWithTask = allTrueAtoms filter { a => a.startsWith("withTaskPathToPos_") || a.startsWith("withTaskPathGroupToPos_")}
                     //println(pathToPosWithTask mkString "\n")
                     val statePredicates = allTrueAtoms filter { _.startsWith("predicate^") }
                     val predicatesPerPosition = statePredicates groupBy { _.split("_")(1).split(",")(0).toInt }
@@ -1068,7 +1068,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                       val pos = solAction.split("_").last.split(",").head
                       val taskID = solAction.split("_").last.split(",").last
                       val pathToPosOption: Option[String] =
-                        if (t.tasksWithOnePosition exists { tt => t.taskIndex(tt) == taskID.toInt }) {
+                        //if (t.tasksWithOnePosition exists { tt => t.taskIndex(tt) == taskID.toInt })
+                        {
                           val allP2P = pathToPos filter { _.endsWith("-" + pos) }
                           // find the one whose path action is correct
                           allP2P find { p2p =>
@@ -1076,7 +1077,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                             allTrueAtoms.contains("pathaction!" + (path.count(_ == ';') + 1) + "_" + path + "," + taskID)
                           }
                         }
-                        else pathToPosWithTask find { _.endsWith("-" + pos + ":" + taskID) }
+                        //else pathToPosWithTask find { _.endsWith("-" + pos + ":" + taskID) }
                       val path = pathToPosOption match {
                         case Some(s) => s.split("_").last.split("-").head
                         case None    => exitIfNot(false, "action " + solAction + " has no connected path"); null
