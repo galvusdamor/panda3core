@@ -462,7 +462,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var solutionK: Int = -1
               var error: Boolean = false
-              var currentK = 0
+              print("Computing minimum decomposition height: ")
+              var currentK = if (domainAndPlan._2.planStepSchemaArray.isEmpty) 0 else
+                domainAndPlan._2.planStepSchemaArray map domainAndPlan._1.minimumDecompositionHeightToPrimitive max
+
+              println(currentK)
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
               var usedTime: Long = remainingTime //(remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
             var expansion: Boolean = true
@@ -491,44 +495,70 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               (solution, false)
 
             case FullLengthSATRun(optimise) =>
+
+              //VerifyEncoding.computeTheoreticalK(domainAndPlan._1,domainAndPlan._2,1)
+              //System exit 0
+
+              //////////////////////////////////////////////// 1. step run a satisficing search
               // start with K = 0 and loop
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
+              var solutionK: Int = -1
               var error: Boolean = false
-              var currentLength = 1
+              var currentK = 0
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-              var usedTime: Long = remainingTime //(remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
-            var expansion: Boolean = true
+              var usedTime: Long = remainingTime
+              var expansion: Boolean = true
               while (solution.isEmpty && !error && expansion && usedTime > 0) {
-                val nextK = VerifyEncoding.computeTheoreticalK(domainAndPlan._1, domainAndPlan._2, currentLength)
-                println("\nRunning SAT search with Length = " + currentLength + " and K = " + nextK)
+                println("\nRunning SAT search with K = " + currentK)
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
 
-                if (nextK > 0) {
-                  val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, currentLength, 0, defineK = Some(nextK),
-                                                                                         checkSolution = satSearch.checkResult)
-                  error |= satError
-                  solution = satResult
-                  expansion = expansionPossible
+                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) Math.pow(2, currentK).toInt else -1,
+                                                                                       0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
+                println("ERROR " + satError)
+                error |= satError
+                if (solution.isEmpty && satResult.isDefined) solutionK = currentK
+                solution = satResult
+                expansion = expansionPossible
 
+                if (domainAndPlan._1.isClassical) currentK += 1
+                else currentK += 1
+
+                remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
+                usedTime = remainingTime // (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
+              }
+
+              informationCapsule.set(Information.ACTUAL_K, solutionK)
+
+              var betterPossible = true
+
+              if (solution.nonEmpty) {
+                ////////////////////////////////////////////// 2. step optimise
+                val minK = currentK
+                var upperBound = solution.get._1.length
+
+                while (betterPossible && !error && usedTime > 0) {
+                  println("\nRunning SAT search with Length = " + (upperBound - 1))
+                  println("Time remaining for SAT search " + remainingTime + "ms")
+                  println("Time used for this run " + usedTime + "ms\n\n")
+
+                  val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, upperBound - 1,
+                                                                                         0, defineK = None, checkSolution = satSearch.checkResult)
+                  println("ERROR " + satError)
+                  error |= satError
 
                   remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
                   usedTime = remainingTime // (remainingTime / Math.max(1, 20.0 / (currentK + 1))).toLong
+
+                  if (satResult.isDefined) {
+                    solution = satResult
+                    upperBound -= 1
+                  } else betterPossible = false
                 }
-                currentLength *= 2
               }
 
-              // if the expansion is acyclic, we have to try it with its maximum length
-              if (!expansion && solution.isEmpty) {
-                val nextK = VerifyEncoding.computeTheoreticalK(domainAndPlan._1, domainAndPlan._2, currentLength)
-                val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, -1,
-                                                                                       0, defineK = Some(nextK), checkSolution = satSearch.checkResult)
-                error |= satError
-                solution = satResult
-                expansion = expansionPossible
-              }
-
-              (solution, false)
+              // I could not prove optimality
+              if (betterPossible || error || usedTime < 0) (None, false) else (solution, false)
 
             case OptimalSATRun(overrideK) if satSearch.encodingToUse == POCLDirectEncoding || satSearch.encodingToUse == POCLDeleteEncoding =>
               // TODO: 1 is just a placeholder for "generate the base formula"
@@ -540,7 +570,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               var error: Boolean = false
               var currentLength = 1
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
-              var usedTime: Long = remainingTime / Math.max(1, 10 / (currentLength + 1))
+              var usedTime: Long = remainingTime
               var expansion: Boolean = true
               while (solution.isEmpty && !error && expansion && usedTime > 0) {
                 println("\nRunning SAT search with K = " + currentLength)

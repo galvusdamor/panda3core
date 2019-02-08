@@ -75,6 +75,7 @@ trait VerifyEncoding {
   //println(taskIndices.toSeq.sortBy(_._2) map {case (t,i) => i + " " + t.name} mkString "\n")
   protected val predicateIndices     : Map[Predicate, Int]           = domain.predicates.zipWithIndex.toMap
   protected val methodIndices        : Map[DecompositionMethod, Int] = domain.decompositionMethods.zipWithIndex.toMap
+  //println(methodIndices.toSeq.sortBy(_._2) map {case (t,i) => i + " " + t.name} mkString "\n")
   protected val methodPlanStepIndices: Map[Int, Map[PlanStep, Int]]  = (domain.decompositionMethods map { method =>
     (methodIndices(method), method.subPlan.planStepsWithoutInitGoal.zipWithIndex.toMap)
   }).toMap
@@ -324,19 +325,31 @@ object VerifyEncoding {
 
     def printMap(map: Map[Task, Map[Int, Int]]): Unit = {
       println("\nMAP")
-      println(map.toSeq.sortBy(_._1.name) map { case (t, m) => t.name + " map: " + m.toSeq.sorted.map(x => x._1 + "->" + x._2).mkString(" ") } mkString "\n")
+      val blacklist = "SHOP_method" :: "direct_" :: "plug" :: Nil
+      println(map.toSeq.sortBy(_._1.name) collect { case (t, m) if !blacklist.exists(t.name.startsWith) =>
+        t.name + " map:\n\t" + m.toSeq.sorted.map(x => x._1 + "->" + x._2).mkString(" ")
+      } mkString "\n")
     }
 
-    def recomputePlan(plan: Plan, map: Map[Task, Map[Int, Int]]): Map[Int, Int] = {
-      val sortedTasks = plan.planStepsWithoutInitGoal map { _.schema } sortBy { map(_).size } toArray
-      val cached = new mutable.HashMap[(Int, Int), Option[Int]]()
+    def recomputePlan(plan: Plan, map: Map[Task, Map[Int, Int]], zeroCostMode: Boolean, currentSCC: Set[Task], minCosideredLength: Int): Map[Int, Int] = {
+      //val sortedTasks = plan.planStepSchemaArrayWithoutMethodPreconditions sortBy { map(_).size } toArray
+      val sortedTasks = plan.planStepSchemaArray sortBy { map(_).size } toArray
 
       Range(0, taskSequenceLength + 1) map { totalLength =>
+        val cached = new mutable.HashMap[(Int, Int), Option[Int]]()
+
         // try to distribute it to all tasks in the plan
         def minimumByDistribution(currentTask: Int, remainingLength: Int): Option[Int] = if (cached contains(currentTask, remainingLength)) cached((currentTask, remainingLength))
         else if (currentTask == sortedTasks.length) {if (remainingLength == 0) Some(0) else None } else {
           val firstTaskMap = map(sortedTasks(currentTask))
-          val subValues = Range(0, remainingLength + 1) collect { case l if firstTaskMap contains l => (l, minimumByDistribution(currentTask + 1, remainingLength - l)) }
+          val subValues = Range(minCosideredLength, remainingLength + 1) collect { case l if firstTaskMap contains l =>
+            val recVal = minimumByDistribution(currentTask + 1, remainingLength - l)
+            if (totalLength == 0 || (l == totalLength && sortedTasks.length > 1 && currentSCC.contains(sortedTasks(currentTask)))) {
+              if (zeroCostMode) (l, recVal) else (l, None)
+            } else {
+              if (zeroCostMode && l != 0) (l, None) else (l, recVal)
+            }
+          }
           val definedSubValues = subValues collect { case (l, Some(subHeight)) => Math.max(subHeight, firstTaskMap(l)) }
           val result = if (definedSubValues.isEmpty) None else Some(definedSubValues max)
           cached((currentTask, remainingLength)) = result
@@ -347,13 +360,18 @@ object VerifyEncoding {
       } collect { case (length, Some(height)) => length -> (1 + height) } toMap
     }
 
-    def recomputeTask(task: Task, m: Map[Task, Map[Int, Int]]): (Map[Task, Map[Int, Int]], Boolean) = if (task.isPrimitive) (m, false)
-    else {
-      val methodMaps = domain.methodsForAbstractTasks(task) map { method => recomputePlan(method.subPlan, m) }
-      val newMap: Map[Int, Int] = methodMaps.reduce[Map[Int, Int]]({ case (m1, m2) => m1 ++ m2.map({ case (l, h) => l -> accumulate(h, m1.getOrElse(l, initialValue)) }) })
+    def recomputeTask(task: Task, m: Map[Task, Map[Int, Int]], zeroCostMode: Boolean, currentSCC: Set[Task], minCosideredLength: Int): (Map[Int, Int], Boolean) =
+      if (task.isPrimitive) (m(task), false)
+      else {
+        val methodMaps: Seq[Map[Int, Int]] = domain.methodsForAbstractTasks(task) map { method =>
+          val r = recomputePlan(method.subPlan, m, zeroCostMode, currentSCC, minCosideredLength)
+          println(task.name + " " + method.name + " " + method.subPlan.planStepSchemaArray.map(_.name).mkString(" ") + " " + r)
+          r
+        }
+        val newMap: Map[Int, Int] = (methodMaps :+ m(task)).reduce[Map[Int, Int]]({ case (m1, m2) => m1 ++ m2.map({ case (l, h) => l -> accumulate(h, m1.getOrElse(l, initialValue)) }) })
 
-      (m + (task -> newMap), newMap != m(task))
-    }
+        (newMap, newMap != m(task))
+      }
 
     val condensedTSTG = domain.taskSchemaTransitionGraph.condensation
     val condensationTopSort: Seq[Set[Task]] = condensedTSTG.topologicalOrdering.get.reverse // this will always work, since it is a condensation
@@ -361,42 +379,59 @@ object VerifyEncoding {
     // run through the topological sorting of the condensation
     val expandedMap = condensationTopSort.foldLeft(Map[Task, Map[Int, Int]]())(
       { case (map, scc) =>
-        //println("deal with " + scc.map(_.name).mkString(" "))
-        var initalised = scc.foldLeft(map)({ case (m, t) => m + (t -> (if (t.isPrimitive) Map(1 -> 1) else Map())) })
+        println("deal with " + scc.map(_.name).mkString(" "))
+        var initalised = scc.foldLeft(map)({ case (m, t) => m + (t -> (if (t.isPrimitive) Map((if (t.name.startsWith("SHOP_method")) 0 else 1) -> 0) else Map())) })
 
-        var changed = true
-        while (changed) {
-          val (newMap, newChanged) = scc.foldLeft((initalised, false))({ case ((m, changedUntilNow), task) =>
-            val (newMap, changed) = recomputeTask(task, m)
-            (newMap, changed || changedUntilNow)
-                                                                       })
-          changed = newChanged
-          initalised = newMap
+        var zeroCostChanged = true
+        var zeroCostMode = false
+        var minCosideredLength = 0
+        while (zeroCostChanged) {
+          var r = 0
+          var changed = true
+          while (changed && (!zeroCostMode || r < scc.size)) {
+            //println("Recompute")
+            println("Round " + r + " " + zeroCostMode + " " + changed)
+            val allUpdate =
+              scc.map({ case task => (task, recomputeTask(task, initalised, zeroCostMode = zeroCostMode, scc, minCosideredLength)) })
+
+            changed = allUpdate.exists(_._2._2)
+            if (zeroCostMode) zeroCostChanged = changed
+            if (changed) {
+              initalised = allUpdate.foldLeft(initalised)({case (cm,(t,(m,c))) => if (c) cm + (t -> m) else cm})
+            }
+            //printMap(initalised)
+
+            r += 1
+            //if (r == 5) System exit 0
+          }
+          if (zeroCostMode) minCosideredLength += 1
+          zeroCostMode = !zeroCostMode
         }
 
         initalised
       })
 
-    val initialPlanMap = recomputePlan(initialPlan, expandedMap)
+    val initialPlanMap = recomputePlan(initialPlan, expandedMap, zeroCostMode = false, Set(), taskSequenceLength)
 
-    //printMap(expandedMap)
+    printMap(expandedMap)
 
     //println(initialPlan.planStepsWithoutInitGoal map {_.schema.name} mkString "\n")
 
     if (initialPlanMap.isEmpty) 0 else initialPlanMap.values.max
+    // just to be sure for edge cases ..
   }
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
+    println("LEN " + taskSequenceLength)
     val icapsPaperLimit = computeICAPSK(domain, plan, taskSequenceLength)
+    println("ICAPS: " + icapsPaperLimit)
     val TSTGPath = computeTSTGK(domain, plan, taskSequenceLength)
+    println("TSTG: " + TSTGPath)
     val minimumMethodSize = computeMethodSize(domain, plan, taskSequenceLength)
+    println("Method: " + minimumMethodSize)
     val tdg = computeTDG(domain, plan, taskSequenceLength, Math.max, 0)
     //val tdgmin = computeTDG(domain, plan, taskSequenceLength, Math.min, Integer.MAX_VALUE)
 
-    println("LEN " + taskSequenceLength)
-    println("ICAPS: " + icapsPaperLimit)
-    println("TSTG: " + TSTGPath)
-    println("Method: " + minimumMethodSize)
     println("DP max: " + tdg)
     //println("DP min: " + tdgmin)
     //System exit 0

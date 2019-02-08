@@ -102,7 +102,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       if (t.isAbstract) {
         val applicableMethods = possibleMethods.zip(methodToPositions) filter { _._1._1.abstractTask == t }
         val applicableMethodsReachable = applicableMethods map { case (m, positions) =>
-          m._1.subPlan.planStepSchemaArray zip positions flatMap { case (psSchema, pos) => children(pos).localConditionalReachable(psSchema) } toSet
+          m._1.subPlan.planStepSchemaArrayWithoutMethodPreconditions zip positions flatMap { case (psSchema, pos) => children(pos).localConditionalReachable(psSchema) } toSet
         }
 
         val unionOfReachable = applicableMethodsReachable.reduce[Set[Task]]({ case (s1, s2) => s1 union s2 })
@@ -118,7 +118,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       if (t.isAbstract) {
         val applicableMethods = possibleMethods.zip(methodToPositions) filter { _._1._1.abstractTask == t }
         val applicableMethodsLandmarks = applicableMethods map { case (m, positions) =>
-          m._1.subPlan.planStepSchemaArray zip positions flatMap { case (psSchema, pos) => children(pos).localConditionalLandmarks(psSchema) } toSet
+          m._1.subPlan.planStepSchemaArrayWithoutMethodPreconditions zip positions flatMap { case (psSchema, pos) => children(pos).localConditionalLandmarks(psSchema) } toSet
         }
 
         val intersectionOfLocalLandMarks = applicableMethodsLandmarks.reduce[Set[Task]]({ case (s1, s2) => s1 intersect s2 })
@@ -134,7 +134,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
       if (t.isAbstract) {
         val applicableMethods = possibleMethods.zip(methodToPositions) filter { _._1._1.abstractTask == t }
         val applicableMethodsMutexes: Array[(Set[(Task, Task)], Set[Task])] = applicableMethods map { case (m, positions) =>
-          val mutexesAndReachablePerPS: Array[(Set[(Task, Task)], Set[Task])] = m._1.subPlan.planStepSchemaArray zip positions map { case (psSchema, pos) =>
+          val mutexesAndReachablePerPS: Array[(Set[(Task, Task)], Set[Task])] = m._1.subPlan.planStepSchemaArrayWithoutMethodPreconditions zip positions map { case (psSchema, pos) =>
             val localMutexesForPS = children(pos).localConditionalMutexes(psSchema)
             val localReachableForPS = children(pos).localConditionalReachable(psSchema)
 
@@ -305,7 +305,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
   def possibleAssigmentsDFS(task: Task): Seq[(Seq[Int], Task)] = if (possiblePrimitives contains task) (path, task) :: Nil else {
     val subAssigments: Seq[(Seq[Int], Task)] = possibleMethods.zipWithIndex filter { _._1._1.abstractTask == task } flatMap { case ((method, _), idx) =>
-      methodToPositions(idx).zip(method.subPlan.planStepSchemaArray) flatMap { case (childIndex, childTask) => children(childIndex).possibleAssigmentsDFS(childTask) }
+      methodToPositions(idx).zip(method.subPlan.planStepSchemaArrayWithoutMethodPreconditions) flatMap { case (childIndex, childTask) => children(childIndex).possibleAssigmentsDFS(childTask) }
     }
 
     subAssigments :+ (path, task)
@@ -314,7 +314,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
   lazy val assignmentImplications: Seq[(Seq[Int], ((Task, Int), Int))] = {
     val winrar: Map[(Task, Int), Int] = // number of methods for which a specific task is assigned to a position. If this 1, we can add an implication
       possibleMethods.zipWithIndex flatMap { case ((dm, mGlobalID), mindex) =>
-        dm.subPlan.planStepSchemaArray.zip(methodToPositions(mindex)) map { x => (x, mGlobalID) }
+        dm.subPlan.planStepSchemaArrayWithoutMethodPreconditions.zip(methodToPositions(mindex)) map { x => (x, mGlobalID) }
       } groupBy { _._1 } filter { _._2.length == 1 } filterNot { possiblePrimitives contains _._1._1 } map { case (k, v) => k -> v.head._2 }
 
     children.flatMap(_.assignmentImplications) ++ winrar.toSeq.map(a => path -> a)
@@ -327,7 +327,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
     //println("Node")
     val possibleTasksPerMethod: Array[Array[(Int, Seq[(Seq[Int], Task)])]] = possibleMethods.zipWithIndex map { case ((method, _), methodIDX) =>
-      val taskPossible = methodToPositions(methodIDX).zip(method.subPlan.planStepSchemaArray) map { case (idx, task) => (idx, children(idx).possibleAssigmentsDFS(task)) }
+      val taskPossible = methodToPositions(methodIDX).zip(method.subPlan.planStepSchemaArrayWithoutMethodPreconditions) map { case (idx, task) => (idx, children(idx).possibleAssigmentsDFS(task)) }
 
       //println(taskPossible map { case (cIdx, poss) => "Child " + cIdx + ": " + poss.size } mkString "\n")
 

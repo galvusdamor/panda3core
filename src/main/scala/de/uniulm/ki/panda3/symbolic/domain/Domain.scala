@@ -159,10 +159,10 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
           def iterate(currentMinima: Map[Task, Int]): Map[Task, Int] = {
             val newPairs = newTasks map { t =>
               // minimise over all methods
-              t -> (methodsForAbstractTasks(t) map { m =>
+              t -> (if (methodsForAbstractTasks(t).isEmpty) 0 else (methodsForAbstractTasks(t) map { m =>
                 // take maximum within a method
                 m.subPlan.planStepsWithoutInitGoal map { _.schema } map currentMinima max
-              } min)
+              } min))
             } filter { _._2 != Integer.MAX_VALUE } map { case (a, b) => (a, b + 1) }
 
             val newMinima = currentMinima ++ newPairs

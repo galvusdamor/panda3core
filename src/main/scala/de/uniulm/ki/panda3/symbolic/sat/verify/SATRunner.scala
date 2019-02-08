@@ -287,6 +287,14 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
       informationCapsule.set(Information.OFFSET_K, offSetToK)
       informationCapsule.set(Information.ACTUAL_K, encoder.K)
 
+
+      // abort if K is zero
+      if (encoder.K == 0 && domain.abstractTasks.nonEmpty){
+        println("K = 0 ... aborting run as this cannot have a solution")
+
+        return None
+      }
+
       //println(informationCapsule.longInfo)
 
       timeCapsule start Timings.VERIFY_TOTAL
@@ -813,6 +821,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             val ps = actionStringToTask(idNodeMap(pathIDMap(extract)))
             val method = domain.decompositionMethods(m.split(",").last.toInt)
             exitIfNot(method.abstractTask == ps.schema, method.abstractTask.name + " != " + ps.schema.name + "\n" + m + "\n" + pathIDMap(extract) + "\n" + idNodeMap(pathIDMap(extract)))
+            //println("Consider " + m + " " + m.split(",").last.toInt + " "  + method.name)
+            //println(extract + " " + pathIDMap(extract) + " " + idNodeMap(pathIDMap(extract)))
             ps -> method
           } toMap
 
@@ -821,7 +831,10 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         val parentInDecompositionMap: Map[PlanStep, (PlanStep, PlanStep)] = if (!extractSolutionWithHierarchy) Map() else
           edges.map(_.swap) collect { case (child, father) if !child.contains("-") && (actionStringToTask(child).schema.isAbstract || graph.edges(child).isEmpty) =>
             // find all children
-            def getFirstFather(f: String): PlanStep = if (planStepsMethodMap.contains(actionStringToTask(f))) actionStringToTask(f) else getFirstFather(graph.reversedEdgesSet(f).head)
+            def getFirstFather(f: String): PlanStep = if (planStepsMethodMap.contains(actionStringToTask(f))) {
+              //println("USE F " + f)
+              actionStringToTask(f)
+            } else getFirstFather(graph.reversedEdgesSet(f).head)
 
             val fatherPS = getFirstFather(father)
             val childPS = actionStringToTask(child)
@@ -829,6 +842,11 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             val siblings: Seq[PlanStep] = graph.edges(father).sortWith(nodeSortingFunction).filterNot(_.contains("-")).map(actionStringToTask)
 
             exitIfNot(siblings.count(_.schema == childPS.schema) == 1)
+
+            //println("\n\nTASK " + child + " " + father + " " + planStepsMethodMap(fatherPS).name + " " + fatherPS.schema.name + " " + fatherPS.id)
+            //println(childPS.schema.name)
+            //println(planStepsMethodMap(fatherPS).subPlan.planStepsWithoutInitGoal.map(_.schema.name) mkString " ")
+            //println("SIBS " + siblings.map(_.schema.name).mkString(" "))
 
             val planStepInMethod = planStepsMethodMap(fatherPS).subPlan.planStepsWithoutInitGoal.find(_.schema == childPS.schema).get
 
@@ -1189,7 +1207,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           val tasksSchemaCount = subTasks groupBy { p => p }
           val possibleMethods = domain.methodsForAbstractTasks(myAction) map { m =>
             // only require the non-method preconditions to be present
-            m.subPlan.planStepsWithoutInitGoal filter { ps => ps.schema.isAbstract || !ps.schema.effect.isEmpty || !m.subPlan.orderingConstraints.fullGraph.sources.contains(ps)}
+            m.subPlan.planStepsWithoutInitGoal filter { ps => ps.schema.isAbstract || !ps.schema.effect.isEmpty || !m.subPlan.orderingConstraints.fullGraph.sources.contains(ps) ||
+              !ps.schema.name.contains("SHOP_method")}
           } filter { planSteps =>
             val sameSize = planSteps.length == subTasks.length
             val planSchemaCount = planSteps groupBy { _.schema }

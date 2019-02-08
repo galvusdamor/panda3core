@@ -90,7 +90,7 @@ trait ExsitsStepMappingEncoding[Payload, IntermediatePayload] extends PathBasedE
 
   def restrictionPathsPerPosition(pathsPerPosition: Map[Int, Seq[(Int, Int, String)]]): Seq[Clause] = {
     println("SOG paths: " + sogpaths.size)
-    println(sogpaths.map(_.map(_._1).mkString(" ")).mkString("\n"))
+    //println(sogpaths.map(_.map(_._1).mkString(" ")).mkString("\n"))
 
     println(taskOccurenceMap.toSeq.sortBy(_._1) map { case (a, bs) => "Occ: " + a + ": " + bs.size + " " + "actions" } mkString "\n")
     //println(taskOccurenceMap.toSeq.sortBy(_._1) map { case (a, bs) => "Occ: " + a + ": " + bs.map(_.name) } mkString "\n")

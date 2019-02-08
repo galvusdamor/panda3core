@@ -138,7 +138,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
 
     val numberOfActionsRestriction = if (maxNumberOfActions == -1) Nil else {
       val allActionsAtoms = domain.primitiveTasks filter ActionCost.hasCost filterNot ignoreActionInStateTransition flatMap {
-        task => Range(0, taskSequenceLength + 1) map { case position => action(K - 1, position, task) }
+        task => Range(0, taskSequenceLength) map { case position => action(K - 1, position, task) }
       }
       atMostKOf(allActionsAtoms, maxNumberOfActions)
     }

@@ -97,7 +97,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   lazy val planStepsWithoutInitGoal                     : Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
   lazy val planStepSchemaArray                          : Array[Task]   = planStepsWithoutInitGoal map { _.schema } toArray
   lazy val planStepSchemaArrayWithoutMethodPreconditions: Array[Task]   = planStepsWithoutInitGoal collect {
-    case ps if ps.schema.isAbstract || !ps.schema.effect.isEmpty || !orderingConstraints.fullGraph.sources.contains(ps) => ps.schema
+    case ps if ps.schema.isAbstract || !ps.schema.effect.isEmpty || !orderingConstraints.fullGraph.sources.contains(ps) || !ps.schema.name.contains("SHOP_method")=> ps.schema
   } toArray
 
   lazy val planStepsAndRemovedPlanStepsWithoutInitGoal: Seq[PlanStep] = planStepsAndRemovedPlanSteps filter { ps => ps != init && ps != goal }

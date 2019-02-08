@@ -88,7 +88,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       // one method must be applied
       val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, atPossibleMethods map { _._2 })
       val applicationForcesAbstractTask = atPossibleMethods map { _._2 } map { m => impliesSingle(m, possibleTasksToActions(abstractIndex)) }
-      val atMostOneCanBeApplied = atMostOneOf(atPossibleMethods map { _._2 })
+      val atMostOneCanBeApplied = atMostOneOf(atPossibleMethods map { _._2 })  // really not necessary
 
       applicationForcesAbstractTask ++ atMostOneCanBeApplied :+ oneMustBeApplied
     }
@@ -140,7 +140,10 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
         val decompositionMethod = possibleMethods(methodIndexOnApplicableMethods)._1
         val methodIndex = possibleMethods(methodIndexOnApplicableMethods)._2
         val methodTasks = if (omitMethodPreconditionActions) decompositionMethod.subPlan.planStepSchemaArrayWithoutMethodPreconditions else decompositionMethod.subPlan.planStepSchemaArray
-
+        val methodToken = method(layer, path, methodIndex)
+        ////
+        //println(methodToken + " " + decompositionMethod.name)
+        //println(methodTasks.map(_.name).mkString(" "))
 
         val usedPositions = new mutable.BitSet()
         val childAtoms: Seq[String] = methodToPositions(methodIndexOnApplicableMethods).zipWithIndex map {
@@ -152,12 +155,11 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
         }
         val unusedActions = Range(0, numberOfChildren) filterNot usedPositions flatMap { case index => tree.children(index).possibleTasks map { task => possibleChildTasks(index)(task) } }
 
-        val methodToken = method(layer, path, methodIndex)
 
         // prepare method representation for additionalClauses
         val methodChildrenPositions: Map[Int, Int] = decompositionMethod.subPlan.planStepsWithoutInitGoal collect {
-          case ps if (!omitMethodPreconditionActions || ps.schema.isAbstract || !ps.schema.effect.isEmpty ||
-            !decompositionMethod.subPlan.orderingConstraints.fullGraph.sources.contains(ps)) =>
+          case ps if !omitMethodPreconditionActions || ps.schema.isAbstract || !ps.schema.effect.isEmpty ||
+            !decompositionMethod.subPlan.orderingConstraints.fullGraph.sources.contains(ps) || ! ps.schema.name.contains("SHOP_method")=>
             val psBefore = decompositionMethod.subPlan.planStepsWithoutInitGoal.filter(_.schema == ps.schema)
             val psIndexOnSameType = psBefore.indexOf(ps)
             val psIndex = methodTasks.zipWithIndex.filter(_._1 == ps.schema)(psIndexOnSameType)._2
@@ -240,6 +242,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
     // first generate the path decomposition tree
     print("Generating initial PDT ... ")
+    //println(Thread.currentThread().getStackTrace() map { _.toString } mkString "\n")
     timeCapsule start GENERATE_PDT
     val initialPathDecompositionTree = generatePathDecompositionTree(Nil, Set(initialPlanOrdering.head.schema))
     timeCapsule stop GENERATE_PDT

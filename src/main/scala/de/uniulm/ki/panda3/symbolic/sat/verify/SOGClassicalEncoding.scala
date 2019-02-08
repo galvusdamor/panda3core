@@ -217,7 +217,8 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
         val methodPrecsAreTrue = node.possibleMethods flatMap { case (m, mid) =>
           val methodAtom = method(node.layer, node.path, mid)
 
-          val prec = m.subPlan.orderingConstraints.fullGraph.sources.filter(ps => ps.schema.isPrimitive && ps.schema.effect.isEmpty).flatMap(_.schema.posPreconditionAsPredicate)
+          val prec = m.subPlan.orderingConstraints.fullGraph.sources.filter(ps => ps.schema.isPrimitive && ps.schema.effect.isEmpty && ps.schema.name.contains("SHOP_method")).
+            flatMap(_.schema.posPreconditionAsPredicate)
 
           prec flatMap { p =>
             Range(0, taskSequenceLength) map { pos =>
@@ -274,7 +275,8 @@ case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Doma
 
   // TODO: determine this size more intelligently
   lazy val taskSequenceLength: Int = if (numberOfTimesteps != -1) numberOfTimesteps else {
-    val pathNumToUse = ((if (expansionPossible) primitivePaths.length else primitivePaths.length) * 0.66 + 0.5).toInt
+    //val pathNumToUse = ((if (expansionPossible) primitivePaths.length else primitivePaths.length) * 0.66 + 0.5).toInt
+    val pathNumToUse = if (expansionPossible) primitivePaths.length else primitivePaths.length
 
     Math.max(if (pathNumToUse == 0) 0 else 1, pathNumToUse - 0)
   }
