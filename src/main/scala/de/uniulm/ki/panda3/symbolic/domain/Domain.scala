@@ -161,7 +161,7 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
               // minimise over all methods
               t -> (if (methodsForAbstractTasks(t).isEmpty) 0 else (methodsForAbstractTasks(t) map { m =>
                 // take maximum within a method
-                m.subPlan.planStepsWithoutInitGoal map { _.schema } map currentMinima max
+                if (m.subPlan.planStepsWithoutInitGoal.isEmpty) 1 else m.subPlan.planStepsWithoutInitGoal map { _.schema } map currentMinima max
               } min))
             } filter { _._2 != Integer.MAX_VALUE } map { case (a, b) => (a, b + 1) }
 

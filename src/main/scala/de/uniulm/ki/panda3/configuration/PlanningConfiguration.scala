@@ -537,7 +537,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               var lowerBound = -1
 
               if (solution.nonEmpty) {
-                upperBound = solution.get._1.length
+                upperBound = solution.get._1.count(ps => ActionCost.hasCost(ps.schema))
                 lowerBound = VerifyEncoding.lowerBoundOnNonPlanExistence(domainAndPlan._1, domainAndPlan._2, currentK - 1)
                 ////////////////////////////////////////////// 2. step optimise
                 println("Starting plan length optimisation, using binary search = " + optimise)

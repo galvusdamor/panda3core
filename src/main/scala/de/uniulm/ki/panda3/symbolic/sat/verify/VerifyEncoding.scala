@@ -27,10 +27,11 @@ import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.sat.IntProblem
+import de.uniulm.ki.panda3.symbolic.sat.verify.Clause.atomIndices
 import de.uniulm.ki.util._
 
 import scala.collection._
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.Source
 
 /**
@@ -55,7 +56,7 @@ trait VerifyEncoding {
 
   def overrideK: Option[Int]
 
-  val K: Int = if (overrideK.isDefined) overrideK.get else VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
+  lazy val K: Int = if (overrideK.isDefined) overrideK.get else VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
 
   def numberOfChildrenClauses: Int
 
@@ -63,20 +64,20 @@ trait VerifyEncoding {
 
   def expansionPossible: Boolean
 
-  domain.tasks foreach { t => assert(t.parameters.isEmpty) }
-  domain.predicates foreach { p => assert(p.argumentSorts.isEmpty) }
+  //domain.tasks foreach { t => assert(t.parameters.isEmpty) }
+  //domain.predicates foreach { p => assert(p.argumentSorts.isEmpty) }
   //assert(initialPlan.init.substitutedEffects.length == domain.predicates.length)
 
-  val DELTA = domain.maximumMethodSize
+  lazy val DELTA          = domain.maximumMethodSize
   lazy val numberOfLayers = K
 
 
-  protected val taskIndices          : Map[Task, Int]                = (domain.tasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).zipWithIndex.toMap.withDefaultValue(-1)
+  protected lazy val taskIndices          : Map[Task, Int]                = (domain.tasks :+ initialPlan.init.schema :+ initialPlan.goal.schema).zipWithIndex.toMap.withDefaultValue(-1)
   //println(taskIndices.toSeq.sortBy(_._2) map {case (t,i) => i + " " + t.name} mkString "\n")
-  protected val predicateIndices     : Map[Predicate, Int]           = domain.predicates.zipWithIndex.toMap
-  protected val methodIndices        : Map[DecompositionMethod, Int] = domain.decompositionMethods.zipWithIndex.toMap
+  protected lazy val predicateIndices     : Map[Predicate, Int]           = domain.predicates.zipWithIndex.toMap
+  protected lazy val methodIndices        : Map[DecompositionMethod, Int] = domain.decompositionMethods.zipWithIndex.toMap
   //println(methodIndices.toSeq.sortBy(_._2) map {case (t,i) => i + " " + t.name} mkString "\n")
-  protected val methodPlanStepIndices: Map[Int, Map[PlanStep, Int]]  = (domain.decompositionMethods map { method =>
+  protected lazy val methodPlanStepIndices: Map[Int, Map[PlanStep, Int]]  = (domain.decompositionMethods map { method =>
     (methodIndices(method), method.subPlan.planStepsWithoutInitGoal.zipWithIndex.toMap)
   }).toMap
 
@@ -154,20 +155,44 @@ trait VerifyEncoding {
   }
 
   def atMostKOf(atoms: Seq[String], K: Int): Seq[Clause] = {
-    val buffer = new ArrayBuffer[Clause]()
+    val buffer = new ListBuffer[Clause]()
     atMostCounter += 1
     val N = atoms.length
 
-    val registers: Array[Array[String]] =
-      Range(0, N + 1) map { i => Range(0, K + 1) map { j => "atMost_" + atMostCounter + "_" + i + "_" + j } toArray } toArray
+    val registers: Array[Array[String]] = Range(0, N + 1) map { i => Range(0, K + 1) map { j => "atMost_" + atMostCounter + "_" + i + "_" + j } toArray } toArray
 
-    Range(1, N) foreach { i => buffer append Clause((atoms(i - 1), false) :: (registers(i)(1), true) :: Nil) }
+    //println("AT MOST")
+    val registersInts: Array[Array[Int]] = registers map { _ map { r => Clause.atomIndices.getOrElseUpdate(r, Clause.atomIndices.size) + 1 } }
+    val atomInts : Array[Int] = atoms.map({ a => Clause.atomIndices(a) + 1 }).toArray
+    //println("INTS")
+
+    var i = 1
+    while (i < N + 1) {
+      if (i < N) buffer append Clause(Array(-atomInts(i - 1), registersInts(i)(1)))
+      buffer append Clause(Array(-atomInts(i - 1), -registersInts(i - 1)(K)))
+
+      var j = 1
+      while (i > 1 && j < K + 1) {
+        buffer append Clause(Array(-registersInts(i - 1)(j), registersInts(i)(j)))
+        if (j > 1) buffer append Clause(Array(-atomInts(i - 1), -registersInts(i - 1)(j - 1), registersInts(i)(j)))
+        j += 1
+      }
+      i += 1
+    }
+
+    var j = 2
+    while (j < K + 1) {
+      buffer append Clause(Array(-registersInts(1)(j)))
+      j += 1
+    }
+
+    /*Range(1, N) foreach { i => buffer append Clause((atoms(i - 1), false) :: (registers(i)(1), true) :: Nil) }
     Range(2, K + 1) foreach { j => buffer append Clause((registers(1)(j), false)) }
     Range(2, N) foreach { i => Range(1, K + 1) foreach { j => buffer append Clause((registers(i - 1)(j), false) :: (registers(i)(j), true) :: Nil) } }
     Range(2, N) foreach { i => Range(2, K + 1) foreach { j => buffer append Clause((atoms(i - 1), false) :: (registers(i - 1)(j - 1), false) :: (registers(i)(j), true) :: Nil) } }
-    Range(1, N + 1) foreach { i => buffer append Clause((atoms(i - 1), false) :: (registers(i - 1)(K), false) :: Nil) }
+    Range(1, N + 1) foreach { i => buffer append Clause((atoms(i - 1), false) :: (registers(i - 1)(K), false) :: Nil) }*/
 
-    buffer.toSeq
+    buffer
   }
 
   def exactlyOneOf(atoms: Seq[String]): Seq[Clause] = atMostOneOf(atoms).+:(atLeastOneOf(atoms))
@@ -380,7 +405,7 @@ object VerifyEncoding {
     val expandedMap = condensationTopSort.foldLeft(Map[Task, Map[Int, Int]]())(
       { case (map, scc) =>
         //println("deal with " + scc.map(_.name).mkString(" "))
-        var initalised = scc.foldLeft(map)({ case (m, t) => m + (t -> (if (t.isPrimitive) Map((if (t.name.startsWith("SHOP_method")) 0 else 1) -> 0) else Map())) })
+        var initalised = scc.foldLeft(map)({ case (m, t) => m + (t -> (if (t.isPrimitive) Map((if (ActionCost.hasCost(t)) 1 else 0) -> 0) else Map())) })
 
         var zeroCostChanged = true
         var zeroCostMode = false

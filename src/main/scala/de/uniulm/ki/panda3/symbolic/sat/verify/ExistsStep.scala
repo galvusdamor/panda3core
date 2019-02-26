@@ -130,7 +130,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     }
 
     val t0003 = System.currentTimeMillis()
-    println("ExistsStep Formula: " + (t0003 - t00025) + "ms")
+    println("ExistsStep Formula: " + (t0003 - t00025) + "ms for " + taskSequenceLength + " timesteps")
 
     val transitionFormula = stateTransitionFormulaOfLength(taskSequenceLength)
     val t0004 = System.currentTimeMillis()
@@ -140,10 +140,14 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
       val allActionsAtoms = domain.primitiveTasks filter ActionCost.hasCost filterNot ignoreActionInStateTransition flatMap {
         task => Range(0, taskSequenceLength) map { case position => action(K - 1, position, task) }
       }
-      atMostKOf(allActionsAtoms, maxNumberOfActions)
+      val t0005 = System.currentTimeMillis()
+      val ret = atMostKOf(allActionsAtoms, maxNumberOfActions)
+      val t0006 = System.currentTimeMillis()
+      println("At most K: " + (t0006 - t0005) + "ms input: " + allActionsAtoms.size + " K = " + maxNumberOfActions)
+      ret
     }
-    val t0005 = System.currentTimeMillis()
-    println("Number of actions Formula: " + (t0005 - t0004) + "ms")
+    val t0007 = System.currentTimeMillis()
+    println("Number of actions Formula: " + (t0007 - t0004) + "ms for " + numberOfActionsRestriction.length + " clauses")
 
     transitionFormula ++ parallelismFormula ++ invariantFormula ++ numberOfActionsRestriction
   }
