@@ -30,7 +30,7 @@ import scala.collection.mutable.ArrayBuffer
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class EfficientTask(isPrimitive: Boolean, parameterSorts: Array[Int], constraints: Array[EfficientVariableConstraint], precondition: Array[EfficientLiteral],
-                         effect: Array[EfficientLiteral], allowedToInsert: Boolean, initOrGoalTask: Boolean) {
+                         effect: Array[EfficientLiteral], allowedToInsert: Boolean, initOrGoalTask: Boolean, isMethodPrecondition : Boolean) {
 
   val isAbstract = !isPrimitive
 
