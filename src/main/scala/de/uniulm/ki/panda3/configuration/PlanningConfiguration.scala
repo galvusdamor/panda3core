@@ -1355,7 +1355,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               case PlanningGraphWithMutexes => true
             }
             val x = runGroundedPlanningGraph(sasPlusResult._1._1, sasPlusResult._1._2, useMutexes, sasPlusResult._2, typing)
-            /*if (firstAnalysis) {
+            /*/*if (firstAnalysis) {
               println("Writing File")
               writeStringToFile(x(SymbolicGroundedReachability).reachableGroundPrimitiveActions.map(_.shortInfo).mkString("\n"), "allPrimAct.txt")
               println("File written")
@@ -1387,7 +1387,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
 
-            System exit 0
+            System exit 0*/
 
             x
           case IntegerPlanningGraph                     =>
