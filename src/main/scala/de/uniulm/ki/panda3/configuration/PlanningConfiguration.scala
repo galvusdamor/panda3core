@@ -1425,7 +1425,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       //println(newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.filter(_.isPositive).map(_.longInfo).mkString("\n"))
 
-      System exit 0
+      //System exit 0
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
     } else sasPlusResult
