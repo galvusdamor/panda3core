@@ -365,7 +365,7 @@ object VerifyEncoding {
       else {
         val methodMaps: Seq[Map[Int, Int]] = domain.methodsForAbstractTasks(task) map { method =>
           val r = recomputePlan(method.subPlan, m, zeroCostMode, currentSCC, minCosideredLength)
-          println(task.name + " " + method.name + " " + method.subPlan.planStepSchemaArray.map(_.name).mkString(" ") + " " + r)
+          //println(task.name + " " + method.name + " " + method.subPlan.planStepSchemaArray.map(_.name).mkString(" ") + " " + r)
           r
         }
         val newMap: Map[Int, Int] = (methodMaps :+ m(task)).reduce[Map[Int, Int]]({ case (m1, m2) => m1 ++ m2.map({ case (l, h) => l -> accumulate(h, m1.getOrElse(l, initialValue)) }) })
@@ -379,7 +379,7 @@ object VerifyEncoding {
     // run through the topological sorting of the condensation
     val expandedMap = condensationTopSort.foldLeft(Map[Task, Map[Int, Int]]())(
       { case (map, scc) =>
-        println("deal with " + scc.map(_.name).mkString(" "))
+        //println("deal with " + scc.map(_.name).mkString(" "))
         var initalised = scc.foldLeft(map)({ case (m, t) => m + (t -> (if (t.isPrimitive) Map((if (t.name.startsWith("SHOP_method")) 0 else 1) -> 0) else Map())) })
 
         var zeroCostChanged = true
@@ -390,14 +390,14 @@ object VerifyEncoding {
           var changed = true
           while (changed && (!zeroCostMode || r < scc.size)) {
             //println("Recompute")
-            println("Round " + r + " " + zeroCostMode + " " + changed)
+            //println("Round " + r + " " + zeroCostMode + " " + changed)
             val allUpdate =
               scc.map({ case task => (task, recomputeTask(task, initalised, zeroCostMode = zeroCostMode, scc, minCosideredLength)) })
 
             changed = allUpdate.exists(_._2._2)
             if (zeroCostMode) zeroCostChanged = changed
             if (changed) {
-              initalised = allUpdate.foldLeft(initalised)({case (cm,(t,(m,c))) => if (c) cm + (t -> m) else cm})
+              initalised = allUpdate.foldLeft(initalised)({ case (cm, (t, (m, c))) => if (c) cm + (t -> m) else cm })
             }
             //printMap(initalised)
 
@@ -413,7 +413,7 @@ object VerifyEncoding {
 
     val initialPlanMap = recomputePlan(initialPlan, expandedMap, zeroCostMode = false, Set(), taskSequenceLength)
 
-    printMap(expandedMap)
+    //printMap(expandedMap)
 
     //println(initialPlan.planStepsWithoutInitGoal map {_.schema.name} mkString "\n")
 
@@ -422,22 +422,35 @@ object VerifyEncoding {
   }
 
   def computeTheoreticalK(domain: Domain, plan: Plan, taskSequenceLength: Int): Int = {
-    println("LEN " + taskSequenceLength)
+    //println("LEN " + taskSequenceLength)
     val icapsPaperLimit = computeICAPSK(domain, plan, taskSequenceLength)
-    println("ICAPS: " + icapsPaperLimit)
+    //println("ICAPS: " + icapsPaperLimit)
     val TSTGPath = computeTSTGK(domain, plan, taskSequenceLength)
-    println("TSTG: " + TSTGPath)
+    //println("TSTG: " + TSTGPath)
     val minimumMethodSize = computeMethodSize(domain, plan, taskSequenceLength)
-    println("Method: " + minimumMethodSize)
+    //println("Method: " + minimumMethodSize)
     val tdg = computeTDG(domain, plan, taskSequenceLength, Math.max, 0)
     //val tdgmin = computeTDG(domain, plan, taskSequenceLength, Math.min, Integer.MAX_VALUE)
 
-    println("DP max: " + tdg)
+    //println("DP max: " + tdg)
     //println("DP min: " + tdgmin)
     //System exit 0
 
     Math.min(icapsPaperLimit, Math.min(TSTGPath, Math.min(minimumMethodSize, tdg)))
   }
+
+  def lowerBoundOnNonPlanExistence(domain: Domain, plan: Plan, largestKForWhichNoPlanExisted: Int): Int = {
+    var lower = 0
+    var found = false
+    while (!found) {
+      // compute K
+      lower += 1
+      val K = computeTheoreticalK(domain, plan, lower)
+      if (K >= largestKForWhichNoPlanExisted) found = true
+    }
+    lower - 1
+  }
+
 }
 
 case class Clause(disjuncts: Array[Int]) {

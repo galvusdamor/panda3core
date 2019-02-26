@@ -353,7 +353,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
       while ((next > 0 || next == planLength) && (lo + 1 < hi || hi == -1)) {
         timeCapsule startOrLetRun Timings.VERIFY_TOTAL
-        println("\t\t\t\t\tRunning with plan length " + next + " lo " + lo + " " + hi)
+        //println("\t\t\t\t\tRunning with plan length " + next + " lo " + lo + " " + hi)
         // generate appropriate formula
         val usedFormula = usedFormulaGeneral ++ encoder.planLengthDependentFormula(next)
 
@@ -361,15 +361,15 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         //writeStringToFile(usedFormula map { c => c.disjuncts map { case a => (if (a < 0) "not " else "") + bMAp(Math.abs(a) - 1) } mkString "\t" } mkString "\n", "formula.txt")
 
         timeCapsule start Timings.TRANSFORM_DIMACS
-        println("READY TO WRITE")
+        //println("READY TO WRITE")
         val uniqFileIdentifier = UUID.randomUUID().toString
-        println("UUID " + uniqFileIdentifier)
+        //println("UUID " + uniqFileIdentifier)
         val writer = new BufferedWriter(new FileWriter(new File(fileDir + "__cnfString" + uniqFileIdentifier)))
         val atomMap: Map[String, Int] = encoder.miniSATString(usedFormula, writer)
-        println("FLUSH")
+        //println("FLUSH")
         writer.flush()
         writer.close()
-        println("CLOSE")
+        //println("CLOSE")
         timeCapsule stop Timings.TRANSFORM_DIMACS
 
         val tritivallUnsatisfiable = encoder match {
@@ -753,7 +753,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
 
         print("\n\nCHECKING primitive solution of length " + primitiveSolution.length + " ...")
-        println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))
+        //println("\n" + (primitiveSolution map { t => t.schema.isPrimitive + " " + t.id + " " + t.schema.name } mkString "\n"))
 
         checkIfTaskSequenceIsAValidPlan(primitiveSolution map { _.schema }, checkGoal = true)
         println(" done.")

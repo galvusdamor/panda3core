@@ -100,8 +100,8 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
   lazy val isAcyclic: Boolean = condensation.vertices.length == vertices.length
 
   /** Remove as many edges as possible as long as the transitive hull stays the same */
-  lazy val transitiveReduction: DirectedGraph[T] = if (edgeList.exists({case (a,b) => a == b}))
-    SimpleDirectedGraph(vertices,edgeList filter {case (a,b) => a != b}).transitiveReduction
+  lazy val transitiveReduction: DirectedGraph[T] = if (edgeList.exists({ case (a, b) => a == b }))
+    SimpleDirectedGraph(vertices, edgeList filter { case (a, b) => a != b }).transitiveReduction
   else {
     val changingEdgeMap = edges map { case (k, v) => val h = new mutable.HashSet[T](); h ++= v; (k, h) }
 
@@ -115,6 +115,11 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
 
 
     SimpleDirectedGraph(vertices, changingEdgeMap map { case (k, v) => (k, v.toSeq) })
+  }
+
+  /** enumerate all independent sets of the graph */
+  lazy val allIndependentSets: Seq[Set[T]] = {
+    vertices.toSet.subsets() filter { case x => x forall { v => edges(v).intersect(x.toSeq).isEmpty } } toSeq
   }
 
 
@@ -156,14 +161,14 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
         val isParallel = setA forall { a => setB forall { b => !reachable(a).contains(b) && !reachable(b).contains(a) } }
         val isSequential = setA forall { a => setB forall { b => reachable(a).contains(b) && !reachable(b).contains(a) } }
 
-        (setA,setB,isParallel, isSequential)
+        (setA, setB, isParallel, isSequential)
     } collectFirst {
-        case (setA, setB, true, false) => (setA, setB, true)
-        case (setA, setB, false, true) => (setA, setB, false)
+      case (setA, setB, true, false) => (setA, setB, true)
+      case (setA, setB, false, true) => (setA, setB, false)
     }
 
     partitionA match {
-      case None                   => None
+      case None                         => None
       case Some((setA, setB, compTime)) =>
         val subGraph1 = SimpleDirectedGraph(setA.toSeq, edgeList filter { case (a, b) => setA.contains(a) && setA.contains(b) })
         val subGraph2 = SimpleDirectedGraph(setB.toSeq, edgeList filter { case (a, b) => setB.contains(a) && setB.contains(b) })
@@ -171,16 +176,16 @@ trait DirectedGraph[T] extends DotPrintable[DirectedGraphDotOptions] {
         val decomp1 = subGraph1.decomposition
         val decomp2 = subGraph2.decomposition
 
-        (decomp1,decomp2) match {
-          case (Some(a),Some(b)) =>
+        (decomp1, decomp2) match {
+          case (Some(a), Some(b)) =>
             Some(if (compTime) ParallelDecomposition(a :: b :: Nil) else SequentialDecomposition(a :: b :: Nil))
-          case _ => None
+          case _                  => None
         }
     }
   }
 
   // very slow, but it works
-  def isPath(vertices : Seq[T]) : Boolean = vertices.forall(v => vertices.forall(w => v == w || reachable(v).contains(w) || reachable(w).contains(v)))
+  def isPath(vertices: Seq[T]): Boolean = vertices.forall(v => vertices.forall(w => v == w || reachable(v).contains(w) || reachable(w).contains(v)))
 }
 
 
@@ -191,15 +196,15 @@ sealed trait GraphDecomposition[T]
 
 case class ElementaryDecomposition[T](element: T) extends GraphDecomposition[T]
 
-trait NonElementaryDecomposition[T] extends GraphDecomposition[T]{
-  def subelements : Seq[GraphDecomposition[T]]
+trait NonElementaryDecomposition[T] extends GraphDecomposition[T] {
+  def subelements: Seq[GraphDecomposition[T]]
 }
 
-case class ParallelDecomposition[T](parallelElements: Seq[GraphDecomposition[T]]) extends NonElementaryDecomposition[T]{
+case class ParallelDecomposition[T](parallelElements: Seq[GraphDecomposition[T]]) extends NonElementaryDecomposition[T] {
   val subelements: Seq[GraphDecomposition[T]] = parallelElements
 }
 
-case class SequentialDecomposition[T](sequentialElements: Seq[GraphDecomposition[T]]) extends NonElementaryDecomposition[T]{
+case class SequentialDecomposition[T](sequentialElements: Seq[GraphDecomposition[T]]) extends NonElementaryDecomposition[T] {
   val subelements: Seq[GraphDecomposition[T]] = sequentialElements
 }
 

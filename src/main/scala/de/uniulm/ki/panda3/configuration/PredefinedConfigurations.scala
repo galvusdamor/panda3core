@@ -53,6 +53,8 @@ object PredefinedConfigurations {
                                                        iterateReachabilityAnalysis = true, groundDomain = true,
                                                        stopDirectlyAfterGrounding = false)
 
+  val optimalityPreservingPreprocess = groundingPreprocess.copy(removeNoOps = false, compileUselessAbstractTasks = false)
+
   val sasGroundingPreprocess = PreprocessingConfiguration(compileNegativePreconditions = true, compileUnitMethods = false,
                                                           compileInitialPlan = true,
                                                           convertToSASP = true,
@@ -194,10 +196,10 @@ object PredefinedConfigurations {
          "IJCAI-2017-AdmissibleHeuristics(astar,relax)" -> (htnParsing, groundingPreprocess, AStarRelax),
          "IJCAI-2017-AdmissibleHeuristics(astar,oc)" -> (htnParsing, groundingPreprocess, AStarAOpenPreconditions),
 
-         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-c)" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPR),
-         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-c-rec)" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
-         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-m)" -> (htnParsing, groundingPreprocess, AStarActionLiftedPR),
-         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-m-rec)" -> (htnParsing, groundingPreprocess, AStarActionLiftedPRReachability),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-c)" -> (htnParsing, optimalityPreservingPreprocess, AStarActionLiftedPR),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-c-rec)" -> (htnParsing, optimalityPreservingPreprocess, AStarActionLiftedPRReachability),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-m)" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPR),
+         "IJCAI-2017-AdmissibleHeuristics(astar,TDG-m-rec)" -> (htnParsing, groundingPreprocess, AStarAPRLiftedPRReachability),
 
          // GA*
          "IJCAI-2017-AdmissibleHeuristics(gastar,add)" -> (htnParsing, groundingPreprocess, planSearchAStarADD),
@@ -276,8 +278,10 @@ object PredefinedConfigurations {
         ) yield
           encodingString + "(" + solverString + ")" -> (htnParsing, groundingPreprocess,
             SATSearch(solver, FullSATRun(), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
-          //encodingString + "(" + solverString + ")" -> (htnParsing, groundingPreprocess.copy(removeNoOps = false, compileUselessAbstractTasks = false),
+          //encodingString + "(" + solverString + ")" -> (htnParsing, optimalityPreservingPreprocess,
           //  SATSearch(solver, FullLengthSATRun(optimise = true), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
+          //encodingString + "(" + solverString + ")" -> (htnParsing, optimalityPreservingPreprocess,
+        //SATSearch(solver, OptimalSATRun(None), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
 
       x.toMap
     }

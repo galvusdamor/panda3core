@@ -41,6 +41,7 @@ import de.uniulm.ki.panda3.symbolic.domain.datastructures.hierarchicalreachabili
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{GroundedPrimitiveReachabilityAnalysis, HierarchyTyping, SASPlusGrounding}
 import de.uniulm.ki.panda3.symbolic.domain.updates.{AddPredicate, ExchangeTask, RemovePredicate}
+import de.uniulm.ki.panda3.symbolic.htn2strips.HTN2STRIPS
 import de.uniulm.ki.panda3.symbolic.logic.{And, GroundLiteral, Literal, Predicate}
 import de.uniulm.ki.panda3.symbolic.parser.FileTypeDetector
 import de.uniulm.ki.panda3.symbolic.parser.hddl.HDDLParser
@@ -59,7 +60,7 @@ import de.uniulm.ki.panda3.symbolic.writer.gtohp.GTOHPWriter
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.symbolic.writer.shop2.SHOP2Writer
 import de.uniulm.ki.panda3.symbolic.writer.simplehddl.SimpleHDDLWriter
-import de.uniulm.ki.panda3.{efficient, symbolic}
+import de.uniulm.ki.panda3.{MainGregor, efficient, symbolic}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 import de.uniulm.ki.util._
 
@@ -472,12 +473,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             var expansion: Boolean = true
               while ( /*(*/ solution.isEmpty /*|| (solution.isDefined && currentK < solutionK + 6))*/ && !error && expansion && usedTime > 0) {
                 println("\nRunning SAT search with K = " + currentK)
-                println("Time remaining for SAT search " + remainingTime + "ms")
-                println("Time used for this run " + usedTime + "ms\n\n")
+                //println("Time remaining for SAT search " + remainingTime + "ms")
+                //println("Time used for this run " + usedTime + "ms\n\n")
 
                 val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) Math.pow(2, currentK).toInt else -1,
                                                                                        0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
-                println("ERROR " + satError)
+                //println("ERROR " + satError)
                 error |= satError
                 if (solution.isEmpty && satResult.isDefined) solutionK = currentK
                 solution = satResult
@@ -504,18 +505,19 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               var solution: Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])] = None
               var solutionK: Int = -1
               var error: Boolean = false
-              var currentK = 0
+              var currentK = if (domainAndPlan._2.planStepSchemaArray.isEmpty) 0 else
+                domainAndPlan._2.planStepSchemaArray map domainAndPlan._1.minimumDecompositionHeightToPrimitive max
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
               var usedTime: Long = remainingTime
               var expansion: Boolean = true
               while (solution.isEmpty && !error && expansion && usedTime > 0) {
                 println("\nRunning SAT search with K = " + currentK)
-                println("Time remaining for SAT search " + remainingTime + "ms")
-                println("Time used for this run " + usedTime + "ms\n\n")
+                //println("Time remaining for SAT search " + remainingTime + "ms")
+                //println("Time used for this run " + usedTime + "ms\n\n")
 
                 val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, if (domainAndPlan._1.isClassical) Math.pow(2, currentK).toInt else -1,
                                                                                        0, defineK = Some(currentK), checkSolution = satSearch.checkResult)
-                println("ERROR " + satError)
+                //println("ERROR " + satError)
                 error |= satError
                 if (solution.isEmpty && satResult.isDefined) solutionK = currentK
                 solution = satResult
@@ -531,20 +533,30 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               informationCapsule.set(Information.ACTUAL_K, solutionK)
 
               var betterPossible = true
+              var upperBound = -1
+              var lowerBound = -1
 
               if (solution.nonEmpty) {
+                upperBound = solution.get._1.length
+                lowerBound = VerifyEncoding.lowerBoundOnNonPlanExistence(domainAndPlan._1, domainAndPlan._2, currentK - 1)
                 ////////////////////////////////////////////// 2. step optimise
-                val minK = currentK
-                var upperBound = solution.get._1.length
+                println("Starting plan length optimisation, using binary search = " + optimise)
+                println("=====================================================================")
+                println("  upper bound = " + upperBound)
+                println("  lower bound = " + lowerBound)
 
-                while (betterPossible && !error && usedTime > 0) {
-                  println("\nRunning SAT search with Length = " + (upperBound - 1))
-                  println("Time remaining for SAT search " + remainingTime + "ms")
-                  println("Time used for this run " + usedTime + "ms\n\n")
+                while (((!optimise && betterPossible) || (optimise && upperBound > lowerBound + 1)) && !error && usedTime > 0) {
+                  val lengthToCheck = if (optimise) (upperBound + lowerBound) / 2 else upperBound - 1
 
-                  val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, upperBound - 1,
-                                                                                         0, defineK = None, checkSolution = satSearch.checkResult)
-                  println("ERROR " + satError)
+                  println("\nRunning SAT search with Length = " + lengthToCheck)
+                  println("==================================================")
+                  println("  upper bound = " + upperBound)
+                  println("  lower bound = " + lowerBound)
+                  //println("Time remaining for SAT search " + remainingTime + "ms")
+                  //println("Time used for this run " + usedTime + "ms\n\n")
+
+                  val (satResult, satError, expansionPossible) = runner.runWithTimeLimit(usedTime, remainingTime, lengthToCheck, 0, defineK = None, checkSolution = satSearch.checkResult)
+                  //println("ERROR " + satError)
                   error |= satError
 
                   remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
@@ -552,13 +564,24 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
                   if (satResult.isDefined) {
                     solution = satResult
-                    upperBound -= 1
-                  } else betterPossible = false
+                    if (!optimise) {
+                      upperBound -= 1
+                    } else {
+                      upperBound = lengthToCheck
+                    }
+                  } else {
+                    if (!optimise)
+                      betterPossible = false
+                    else lowerBound = lengthToCheck
+                  }
                 }
               }
 
               // I could not prove optimality
-              if (betterPossible || error || usedTime < 0) (None, false) else (solution, false)
+              if ((!optimise && betterPossible) || (optimise && upperBound > lowerBound + 1) || error || usedTime < 0 || solution.isEmpty) (None, false) else {
+                informationCapsule.set(Information.SOLUTION_LENGTH, solution.get._1.length)
+                (solution, false)
+              }
 
             case OptimalSATRun(overrideK) if satSearch.encodingToUse == POCLDirectEncoding || satSearch.encodingToUse == POCLDeleteEncoding =>
               // TODO: 1 is just a placeholder for "generate the base formula"
@@ -571,9 +594,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               var currentLength = 1
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
               var usedTime: Long = remainingTime
-              var expansion: Boolean = true
-              while (solution.isEmpty && !error && expansion && usedTime > 0) {
-                println("\nRunning SAT search with K = " + currentLength)
+              while (solution.isEmpty && !error  && usedTime > 0 && domainAndPlan._1.primitiveTasks.nonEmpty) {
+                println("\nRunning SAT search with length = " + currentLength)
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
 
@@ -582,7 +604,6 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
                 error |= satError
                 solution = satResult
-                expansion = expansionPossible
                 currentLength += 1
                 remainingTime = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
                 usedTime = remainingTime / Math.max(1, 10 / (currentLength + 1))
@@ -629,7 +650,23 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
             runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
           })
         }
-      case FAPESearch                                    =>
+
+      case HTN2STRIPSSearch =>
+        val length = MainGregor.length
+        val depthBound = VerifyEncoding.computeTheoreticalK(domainAndPlan._1, domainAndPlan._2, length)
+
+        println("depth: " + depthBound)
+        val pb = HTN2STRIPS.computeProgressionBoundForDepth(domainAndPlan._1, domainAndPlan._2, depthBound)
+        //val pb = HTN2STRIPS.computeProgressionBoundForDepth(domainAndPlan._1,domainAndPlan._2,100)
+        println("pb: " + pb)
+
+
+        System exit 0
+        (domainAndPlan._1, null, null, null, informationCapsule, { _ =>
+          timeCapsule stop TOTAL_TIME
+          runPostProcessing(timeCapsule, informationCapsule, null, Nil, domainAndPlan, unprocessedDomain, analysisMap)
+        })
+      case FAPESearch       =>
 
         val notTranslatable = domainAndPlan._1.taskSchemaTransitionGraph.stronglyConnectedComponents exists { _.size > 1 }
         if (notTranslatable) {
@@ -1086,7 +1123,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
   private def runGroundedPlanningGraph(domain: Domain, problem: Plan, useMutexes: Boolean, analysisMap: AnalysisMap, typing: HierarchyTyping): AnalysisMap = {
     val groundedInitialState = problem.groundedInitialStateOnlyPositive filter { _.isPositive }
-    val chosenTyping = None //if (problem.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) None else Some(typing)
+    val chosenTyping = if (problem.isModificationAllowed(InsertPlanStepWithLink(null, null, null, null))) None else Some(typing)
     val config = GroundedPlanningGraphConfiguration(computeMutexes = useMutexes, hierarchyTyping = chosenTyping, debuggingMode = DebuggingMode.Disabled)
     val groundedReachabilityAnalysis: GroundedPrimitiveReachabilityAnalysis = GroundedPlanningGraph(domain, groundedInitialState.toSet, config)
     // add analysis to map
@@ -1324,7 +1361,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               println("File written")
             }*/
 
-            /*val compiledDomain = ReplaceInitialPlanByTop(sasPlusResult._1._1, sasPlusResult._1._2, ())
+            val compiledDomain = ReplaceInitialPlanByTop(sasPlusResult._1._1, sasPlusResult._1._2, ())
 
             // interface for the C++ implementation of PG and TDG
             val string = SimpleHDDLWriter.writeProblem(compiledDomain._1, compiledDomain._2)
@@ -1351,7 +1388,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
 
             System exit 0
-*/
+
             x
           case IntegerPlanningGraph                     =>
             /*val wrapper = Wrapping(sasPlusResult._1)
@@ -1382,10 +1419,13 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val disallowedTasks = sasPlusResult._1._1.primitiveTasks filterNot reachable.contains
       val pruned = PruneHierarchy.transform(sasPlusResult._1._1, sasPlusResult._1._2, disallowedTasks.toSet)
       val time1 = System.currentTimeMillis()
-      info("done.\n")
+      info("done in " + (time1 - time0)+ "ms.\n")
       info("\tNumber of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
-      info("\tNumber of Grounded Literals " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.length + "\n")
+      info("\tNumber of Grounded Literals " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.filter(_.isPositive).length + "\n")
 
+      //println(newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.filter(_.isPositive).map(_.longInfo).mkString("\n"))
+
+      System exit 0
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)
     } else sasPlusResult
@@ -2519,6 +2559,11 @@ case class SATPlanVerification(solverType: Solvertype, planToVerify: String) ext
 object FAPESearch extends SearchConfiguration {
   /** returns a detailed information about the object */
   override def longInfo: String = "Use FAPE for the search"
+}
+
+object HTN2STRIPSSearch extends SearchConfiguration {
+  /** returns a detailed information about the object */
+  override def longInfo: String = "Use HTN2STRIPS for search"
 }
 
 object SHOP2Search extends SearchConfiguration {
