@@ -44,7 +44,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
         //Seq<Task> updatedTasks = updateTasks(dIn.sorts(), dIn.tasks());
         Seq<DecompositionMethod> updatedMethods = updateMethods(dIn.sorts(), dIn.decompositionMethods());
 
-        Domain d = new Domain(dIn.sorts(), dIn.predicates(), dIn.tasks(), updatedMethods, dIn.decompositionAxioms(), None$.empty(),None$.empty());
+        Domain d = new Domain(dIn.sorts(), dIn.predicates(), dIn.tasks(), updatedMethods, dIn.decompositionAxioms(), dIn.costValues(), None$.empty(),None$.empty());
         Plan p = new Plan(pIn.planSteps(), pIn.causalLinks(), pIn.orderingConstraints(), pIn.variableConstraints(), pIn.init(), pIn.goal(), pIn.isModificationAllowed(),pIn
                 .isFlawAllowed(),pIn.planStepDecomposedByMethod(),pIn.planStepParentInDecompositionTree(),false, LTLTrue$.MODULE$);
 
@@ -92,7 +92,7 @@ public class forallAndExistsPrecCompiler implements DomainTransformer<Unit> {
             } else {
                 Set<Variable> inVars = t.parameters().toSet();
                 Tuple3<Set<Variable>, Seq<VariableConstraint>, Formula> updatedPrec = updatePrec(inVars, t.parameterConstraints(), t.precondition(), sorts);
-                GeneralTask updatedT = new GeneralTask(t.name(), t.isPrimitive(), updatedPrec._1().toSeq(), JavaToScala.<Variable>nil(), updatedPrec._2(), updatedPrec._3(), t.effect());
+                GeneralTask updatedT = new GeneralTask(t.name(), t.isPrimitive(), updatedPrec._1().toSeq(), JavaToScala.<Variable>nil(), updatedPrec._2(), updatedPrec._3(), t.effect(), t.cost());
                 updatedTasks.add(updatedT);
             }
         }

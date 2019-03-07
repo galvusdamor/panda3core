@@ -49,6 +49,7 @@ import scala.annotation.elidable._
   */
 case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task], decompositionMethods: Seq[DecompositionMethod],
                   decompositionAxioms: Seq[DecompositionAxiom],
+                  costValues : Map[GroundLiteral, Int],
                   mappingToOriginalGrounding: Option[GroundedDomainToDomainMapping] = None,
                   sasPlusRepresentation: Option[SASPlusRepresentation] = None) extends DomainUpdatable {
 
@@ -242,17 +243,17 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
 
   override def update(domainUpdate: DomainUpdate): Domain = domainUpdate match {
     case AddMethod(newMethods)               =>
-      Domain(sorts, predicates, tasks, decompositionMethods ++ newMethods, decompositionAxioms, mappingToOriginalGrounding, sasPlusRepresentation)
+      Domain(sorts, predicates, tasks, decompositionMethods ++ newMethods, decompositionAxioms, costValues, mappingToOriginalGrounding, sasPlusRepresentation)
     case AddPredicate(newPredicates)         =>
-      Domain(sorts, predicates ++ newPredicates, tasks, decompositionMethods, decompositionAxioms, mappingToOriginalGrounding, sasPlusRepresentation)
+      Domain(sorts, predicates ++ newPredicates, tasks, decompositionMethods, decompositionAxioms, costValues, mappingToOriginalGrounding, sasPlusRepresentation)
     case AddTask(newTasks)                   =>
-      Domain(sorts, predicates, tasks ++ newTasks, decompositionMethods, decompositionAxioms, mappingToOriginalGrounding, sasPlusRepresentation)
+      Domain(sorts, predicates, tasks ++ newTasks, decompositionMethods, decompositionAxioms, costValues, mappingToOriginalGrounding, sasPlusRepresentation)
     case ExchangeTaskSchemaInMethods(map)    =>
-      Domain(sorts, predicates, tasks, decompositionMethods map { _.update(ExchangeTask(map)) }, decompositionAxioms, mappingToOriginalGrounding, sasPlusRepresentation)
+      Domain(sorts, predicates, tasks, decompositionMethods map { _.update(ExchangeTask(map)) }, decompositionAxioms, costValues, mappingToOriginalGrounding, sasPlusRepresentation)
     case ExchangeLiteralsByPredicate(map, _) =>
       val newPredicates = map.values flatMap { case (a, b) => a :: b :: Nil }
-      Domain(sorts, newPredicates.toSeq, tasks map { _.update(domainUpdate) }, decompositionMethods map { _.update(domainUpdate) }, decompositionAxioms, mappingToOriginalGrounding,
-             sasPlusRepresentation map { _ update domainUpdate })
+      Domain(sorts, newPredicates.toSeq, tasks map { _.update(domainUpdate) }, decompositionMethods map { _.update(domainUpdate) }, decompositionAxioms, costValues,
+             mappingToOriginalGrounding,             sasPlusRepresentation map { _ update domainUpdate })
     case RemovePredicate(predicatesToRemove) => copy(predicates = predicates filterNot predicatesToRemove, tasks = tasks map { _ update domainUpdate },
                                                      decompositionMethods = decompositionMethods map { _.update(domainUpdate) },
                                                      decompositionAxioms = decompositionAxioms map { _.update(domainUpdate) },
@@ -260,14 +261,14 @@ case class Domain(sorts: Seq[Sort], predicates: Seq[Predicate], tasks: Seq[Task]
                                                     )
     case RemoveNoops                         =>
       Domain(sorts, predicates, abstractTasks ++ primitiveTasks.filterNot(_.isNoOp), decompositionMethods map { _.update(RemoveNoops) }, decompositionAxioms,
-             mappingToOriginalGrounding, sasPlusRepresentation map { _ update RemoveNoops })
+             costValues, mappingToOriginalGrounding, sasPlusRepresentation map { _ update RemoveNoops })
     case _                                   => Domain(sorts map { _.update(domainUpdate) }, predicates map { _.update(domainUpdate) }, tasks map { _.update(domainUpdate) },
                                                        decompositionMethods map { _.update(domainUpdate) },
-                                                       decompositionAxioms, mappingToOriginalGrounding,
+                                                       decompositionAxioms, costValues, mappingToOriginalGrounding,
                                                        sasPlusRepresentation map { _ update domainUpdate })
   }
 
-  lazy val classicalDomain: Domain = Domain(sorts, predicates, tasks filter { _.isPrimitive }, Nil, Nil, mappingToOriginalGrounding, sasPlusRepresentation)
+  lazy val classicalDomain: Domain = Domain(sorts, predicates, tasks filter { _.isPrimitive }, Nil, Nil, costValues, mappingToOriginalGrounding, sasPlusRepresentation)
 
   lazy val statistics      : Map[String, Any] = Map(
                                                      "number of constants" -> constants.size,

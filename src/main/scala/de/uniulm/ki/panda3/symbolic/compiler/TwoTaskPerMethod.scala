@@ -58,7 +58,7 @@ object TwoTaskPerMethod extends DecompositionMethodTransformer[Unit] {
                 val (rightTask, rightMethods, rightTasks) = dfs(right, None)
 
                 // create new abstract task
-                val newAt = ReducedTask("transformationName_" + name + "_" + globalATCounter, isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
+                val newAt = ReducedTask("transformationName_" + name + "_" + globalATCounter, isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
                 val newPlan = n match {
                   case SequentialDecomposition(_) => Plan.sequentialPlan(leftTask :: rightTask :: Nil)
                   case ParallelDecomposition(_)   => Plan.parallelPlan(leftTask :: rightTask :: Nil)

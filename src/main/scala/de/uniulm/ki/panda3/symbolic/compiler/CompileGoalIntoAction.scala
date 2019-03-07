@@ -17,7 +17,7 @@
 package de.uniulm.ki.panda3.symbolic.compiler
 
 import de.uniulm.ki.panda3.symbolic.csp.CSP
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, SimpleDecompositionMethod}
+import de.uniulm.ki.panda3.symbolic.domain.{ConstantActionCost, Domain, ReducedTask, SimpleDecompositionMethod}
 import de.uniulm.ki.panda3.symbolic.logic.{And, Literal}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
@@ -30,7 +30,7 @@ object CompileGoalIntoAction extends DomainTransformer[Unit] {
 
   /** takes a domain, an initial plan and some additional Information and transforms them */
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
-    val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+    val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
 
 
     ///////////// DECOMP METHOD for initial plan
@@ -38,7 +38,7 @@ object CompileGoalIntoAction extends DomainTransformer[Unit] {
     val noopInit = PlanStep(plan.init.id, initAndGoalNOOP, Nil)
     val noopGoal = PlanStep(plan.goal.id, initAndGoalNOOP, Nil)
     val initialPlanWithout = plan.replaceInitAndGoal(noopInit, noopGoal, plan.init.arguments ++ plan.goal.arguments)
-    val planTask = ReducedTask("__orig_plan", isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
+    val planTask = ReducedTask("__orig_plan", isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
     val planMethod = SimpleDecompositionMethod(planTask, initialPlanWithout, "__plan")
 
 

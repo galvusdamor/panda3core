@@ -82,12 +82,13 @@ trait NumberOfActionsRestrictionViaAutomaton[P, I] extends PathBasedEncoding[P, 
   def numberOfActionsFormula2(vertexOrder: Seq[(Seq[Int], Set[Task])]): Seq[Clause] = if (taskSequenceLength == -1) Nil else {
     val actionAtClauses = vertexOrder flatMap { case (path, ts) =>
       val ifPresent = ts map { t =>
-        if (ActionCost.hasCost(t))
+        if (t.cost.hasCostOne)
           impliesSingle(pathAction(path.length, path, t), actionAt(path))
-        else
+        else if (t.cost.hasCostZero)
           impliesNot(pathAction(path.length, path, t), actionAt(path))
+        else {assert(false, "can only handle costs 0 and 1"); ??? }
       }
-      val ifNotPresent = notImpliesAllNot(actionAt(path) :: Nil, ts.toSeq filter ActionCost.hasCost map { pathAction(path.length, path, _) })
+      val ifNotPresent = notImpliesAllNot(actionAt(path) :: Nil, ts.toSeq filter { _.cost.hasCostOne } map { pathAction(path.length, path, _) })
       ifPresent ++ ifNotPresent
     }
 

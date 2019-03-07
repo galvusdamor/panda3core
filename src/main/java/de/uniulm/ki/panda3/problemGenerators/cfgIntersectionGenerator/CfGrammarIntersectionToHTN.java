@@ -75,7 +75,7 @@ public class CfGrammarIntersectionToHTN {
             scala.collection.immutable.Map$.MODULE$.<PlanStep, Tuple2<PlanStep, PlanStep>>empty();
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 4){
+        if (args.length != 4) {
             System.out.println("Please provide the two grammars to be intersected and two files for the output (that will be overwritten!)." +
                     "\n program gr1.txt gr2.txt out-domain.txt out-problem.txt");
             return;
@@ -94,7 +94,9 @@ public class CfGrammarIntersectionToHTN {
     static String sG2 = "G2";
 
     static int id = 0;
-    static Task epsilon = new ReducedTask("epsilon", true, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<>(new Vector<Literal>(0, 0, 0)), new And<>(new Vector<Literal>(0, 0, 0)));
+    static Task epsilon = new ReducedTask("epsilon", true, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<>(new
+            Vector<Literal>(0, 0, 0)), new And<>(new Vector<Literal>(0, 0, 0)),
+            new ConstantActionCost(1));
 
     public static Tuple2<Domain, Plan> grammerInterProb(CfGrammar g1, CfGrammar g2) {
 
@@ -143,7 +145,8 @@ public class CfGrammarIntersectionToHTN {
             effLits.add(new Literal(tPred, true, new Vector<Variable>(0, 0, 0)));
             And<Literal> eff = new And<Literal>(effLits.result());
 
-            Task t = new ReducedTask(tname + sG1, true, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), prec, eff);
+            Task t = new ReducedTask(tname + sG1, true, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), prec, eff,
+                    new ConstantActionCost(1));
             tasksMap.put(tname + sG1, t);
             tasks.add(t);
         }
@@ -162,19 +165,22 @@ public class CfGrammarIntersectionToHTN {
             effLits.add(new Literal(tPred, false, new Vector<Variable>(0, 0, 0)));
             And<Literal> eff = new And<Literal>(effLits.result());
 
-            Task t = new ReducedTask(tname + sG2, true, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), prec, eff);
+            Task t = new ReducedTask(tname + sG2, true, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), prec, eff,
+                    new ConstantActionCost(1));
             tasksMap.put(tname + sG2, t);
             tasks.add(t);
         }
 
         for (String tname : g1.nonterminal) {
-            Task t = new ReducedTask(tname + sG1, false, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<>(new Vector<>(0, 0, 0)), new And<>(new Vector<>(0, 0, 0)));
+            Task t = new ReducedTask(tname + sG1, false, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<>(new
+                    Vector<>(0, 0, 0)), new And<>(new Vector<>(0, 0, 0)), new ConstantActionCost(0));
             tasksMap.put(tname + sG1, t);
             tasks.add(t);
         }
 
         for (String tname : g2.nonterminal) {
-            Task t = new ReducedTask(tname + sG2, false, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<>(new Vector<>(0, 0, 0)), new And<>(new Vector<>(0, 0, 0)));
+            Task t = new ReducedTask(tname + sG2, false, new Vector<Variable>(0, 0, 0), new Vector<Variable>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<>(new
+                    Vector<>(0, 0, 0)), new And<>(new Vector<>(0, 0, 0)), new ConstantActionCost(0));
             tasksMap.put(tname + sG2, t);
             tasks.add(t);
         }
@@ -184,14 +190,19 @@ public class CfGrammarIntersectionToHTN {
         addMethods(g2, allowedModifications, allowedFlaws, tasksMap, sG2, decompositionMethods);
 
         Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
-        Domain d = new Domain(sorts, predicates.result(), tasks.result(), decompositionMethods.result(), decompositionAxioms, None$.empty(),None$.empty());
+        Domain d = new Domain(sorts, predicates.result(), tasks.result(), decompositionMethods.result(), decompositionAxioms,
+                JavaToScala.toScalaMap(new HashMap<GroundLiteral, Object>()),
+                None$.empty(), None$.empty());
 
         seqProviderList<Literal> s0Lits = new seqProviderList<>();
         s0Lits.add(turnAPos);
         And<Literal> g1Turn = new And<Literal>(s0Lits.result());
 
-        ReducedTask initSchema = new ReducedTask("init", true, new Vector<>(0, 0, 0), new Vector<>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), g1Turn);
-        ReducedTask goalSchema = new ReducedTask("goal", true, new Vector<>(0, 0, 0), new Vector<>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), g1Turn, new And<Literal>(new Vector<Literal>(0, 0, 0)));
+        ReducedTask initSchema = new ReducedTask("init", true, new Vector<>(0, 0, 0), new Vector<>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new
+                Vector<Literal>(0, 0, 0)), g1Turn,
+                new ConstantActionCost(0));
+        ReducedTask goalSchema = new ReducedTask("goal", true, new Vector<>(0, 0, 0), new Vector<>(0, 0, 0), new Vector<VariableConstraint>(0, 0, 0), g1Turn, new And<Literal>
+                (new Vector<Literal>(0, 0, 0)), new ConstantActionCost(0));
         PlanStep psInit = new PlanStep(-1, initSchema, new Vector<>(0, 0, 0));
         PlanStep psGoal = new PlanStep(-2, goalSchema, new Vector<>(0, 0, 0));
 
@@ -217,7 +228,7 @@ public class CfGrammarIntersectionToHTN {
 
         TaskOrdering taskOrderings = new TaskOrdering(ordSeq.result(), planSteps.result());
         Plan p = new Plan(planSteps.result(), new seqProviderList<CausalLink>().result(), taskOrderings, csp, psInit, psGoal,
-                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents,false, LTLTrue$.MODULE$);
+                allowedModifications, allowedFlaws, planStepsDecomposedBy, planStepsDecompositionParents, false, LTLTrue$.MODULE$);
 
         return new Tuple2<>(d, p);
     }
@@ -249,8 +260,10 @@ public class CfGrammarIntersectionToHTN {
             }
             CSP csp = new CSP(JavaToScala.toScalaSet(new ArrayList<Variable>()), new seqProviderList<VariableConstraint>().result());
 
-            GeneralTask initSchema = new GeneralTask("init", true, absT.parameters(), absT.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(new Vector<Literal>(0, 0, 0)));
-            GeneralTask goalSchema = new GeneralTask("goal", true, absT.parameters(), absT.parameters(), new Vector<VariableConstraint>(0, 0, 0), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(new Vector<Literal>(0, 0, 0)));
+            GeneralTask initSchema = new GeneralTask("init", true, absT.parameters(), absT.parameters(), new Vector<VariableConstraint>(0, 0, 0),
+                    new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(new Vector<Literal>(0, 0, 0)), new ConstantActionCost(0));
+            GeneralTask goalSchema = new GeneralTask("goal", true, absT.parameters(), absT.parameters(), new Vector<VariableConstraint>(0, 0, 0),
+                    new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(new Vector<Literal>(0, 0, 0)), new ConstantActionCost(0));
             PlanStep psInit = new PlanStep(-1, initSchema, absT.parameters());
             PlanStep psGoal = new PlanStep(-2, goalSchema, absT.parameters());
             subtasks.add(psInit);
@@ -263,7 +276,7 @@ public class CfGrammarIntersectionToHTN {
 
             TaskOrdering ordering = new TaskOrdering(ordSeq.result(), subtasks.result());
             Plan subplan = new Plan(subtasks.result(), new Vector<CausalLink>(0, 0, 0), ordering, csp, psInit, psGoal, allowedModifications, allowedFlaws, planStepsDecomposedBy,
-                    planStepsDecompositionParents,false,LTLTrue$.MODULE$);
+                    planStepsDecompositionParents, false, LTLTrue$.MODULE$);
             DecompositionMethod dm = new SimpleDecompositionMethod(absT, subplan, name);
             decompositionMethods.add(dm);
         }

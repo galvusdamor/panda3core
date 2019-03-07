@@ -30,7 +30,7 @@ object MakeTasksInMethodsUnique extends DecompositionMethodTransformer[Unit] {
 
   override protected val allowToRemoveTopMethod: Boolean = false
 
-  val emptySchema = ReducedTask("empty", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+  val emptySchema = ReducedTask("empty", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
 
   override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, info: Unit, originalDomain: Domain): (Seq[DecompositionMethod], Seq[Task]) = {
     var newAbstractTaskID = 0
@@ -45,7 +45,7 @@ object MakeTasksInMethodsUnique extends DecompositionMethodTransformer[Unit] {
         val result: Seq[(Task, DecompositionMethod, (PlanStep, PlanStep))] = duplicatedPlanSteps flatMap { case (_, pss) =>
           pss map { case ps =>
             // create new abstract task
-            val newAbstract = ReducedTask(ps.schema.name + "_replacement_" + newAbstractTaskID, isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
+            val newAbstract = ReducedTask(ps.schema.name + "_replacement_" + newAbstractTaskID, isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
             val newPlan = Plan(PlanStep(2, ps.schema, Nil) :: Nil, emptySchema, emptySchema, Map[PlanStep, DecompositionMethod](), Map[PlanStep, (PlanStep, PlanStep)]())
             val newMethod = SimpleDecompositionMethod(newAbstract, newPlan, newAbstract.name)
             newAbstractTaskID += 1

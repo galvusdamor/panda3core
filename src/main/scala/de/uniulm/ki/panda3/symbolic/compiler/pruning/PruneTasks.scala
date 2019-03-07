@@ -33,6 +33,7 @@ object PruneTasks extends DomainTransformer[Set[Task]] {
   override def transform(domain: Domain, plan: Plan, removedTasks: Set[Task]): (Domain, Plan) = {
     val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks filterNot removedTasks.contains,
                                domain.decompositionMethods filterNot { _.containsAnyFrom(removedTasks) }, domain.decompositionAxioms,
+                               domain.costValues,
                                domain.mappingToOriginalGrounding,
                                domain.sasPlusRepresentation map { case SASPlusRepresentation(p, map1, map2) =>
                                  SASPlusRepresentation(p, map1 filterNot { case (i, t) => removedTasks contains t }, map2)
@@ -53,9 +54,12 @@ object PruneUselessAbstractTasks extends DomainTransformer[Unit] {
     val uselessAbstractTasks = (uselessAbstractTasksNoDecomposition ++ uselessAbstractTasksNeverOccurring) filterNot plan.planStepSchemaArray.contains
 
     val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks filterNot uselessAbstractTasks.contains,
-                               domain.decompositionMethods filter { m => !uselessAbstractTasks.contains(m.abstractTask) &&
-                                 m.subPlan.planStepTasksSet.forall{ rt => !uselessAbstractTasks.contains(rt) } },
+                               domain.decompositionMethods filter { m =>
+                                 !uselessAbstractTasks.contains(m.abstractTask) &&
+                                   m.subPlan.planStepTasksSet.forall { rt => !uselessAbstractTasks.contains(rt) }
+                               },
                                domain.decompositionAxioms,
+                               domain.costValues,
                                domain.mappingToOriginalGrounding, domain.sasPlusRepresentation)
     (reducedDomain, plan)
   }

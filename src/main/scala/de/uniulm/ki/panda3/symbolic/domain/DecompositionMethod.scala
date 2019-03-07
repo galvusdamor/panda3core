@@ -80,11 +80,11 @@ trait DecompositionMethod extends DomainUpdatable {
 case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: String) extends DecompositionMethod {
 
   abstractTask match {
-    case ReducedTask(_, _, _, _, _, prec, eff) =>
+    case ReducedTask(_, _, _, _, _, prec, eff,_) =>
       // check preconditions
       prec.conjuncts foreach { case l@Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
-          case ReducedTask(_, _, _, _, _, tPre, _) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
+          case ReducedTask(_, _, _, _, _, tPre, _,_) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
           case _                                   => true // was false
         }
         assert(canBeInherited, "Method " + name + "' subplan does not contain a precondition able to inherit " + l.shortInfo)
@@ -93,7 +93,7 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
       // check effects
       eff.conjuncts foreach { case l@Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
-          case ReducedTask(_, _, _, _, _, _, tEff) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
+          case ReducedTask(_, _, _, _, _, _, tEff,_) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
           case _                                   => true // was false
         }
         assert(canBeInherited, "Method " + name + "' subplan does not contain an effect able to inherit " + l.shortInfo)
@@ -112,8 +112,8 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
         val newVars = newAbstract.parameters filterNot abstractTask.parameters.contains
 
         // rebuild init and goal
-        val newInitSchema: Task = GeneralTask("init", isPrimitive = true, newAbstract.parameters, Nil, Nil, And(Nil), exchangeMap(abstractTask).precondition)
-        val newGoalSchema: Task = GeneralTask("goal", isPrimitive = true, newAbstract.parameters, Nil, Nil, exchangeMap(abstractTask).effect, And(Nil))
+        val newInitSchema: Task = GeneralTask("init", isPrimitive = true, newAbstract.parameters, Nil, Nil, And(Nil), exchangeMap(abstractTask).precondition, ConstantActionCost(0))
+        val newGoalSchema: Task = GeneralTask("goal", isPrimitive = true, newAbstract.parameters, Nil, Nil, exchangeMap(abstractTask).effect, And(Nil), ConstantActionCost(0))
         val extendedExchangeMap = exchangeMap.+((subPlan.init.schema, newInitSchema)).+((subPlan.goal.schema, newGoalSchema))
 
         SimpleDecompositionMethod(exchangeMap(abstractTask), subPlan.update(ExchangeTask(extendedExchangeMap)) update AddVariables(newVars), name)
@@ -186,8 +186,8 @@ case class SHOPDecompositionMethod(abstractTask: Task, subPlan: Plan, methodPrec
         val newVars = newAbstract.parameters filterNot abstractTask.parameters.contains
 
         // rebuild init and goal
-        val newInitSchema: Task = GeneralTask("init", isPrimitive = true, newAbstract.parameters, Nil, Nil, And(Nil), exchangeMap(abstractTask).precondition)
-        val newGoalSchema: Task = GeneralTask("goal", isPrimitive = true, newAbstract.parameters, Nil, Nil, exchangeMap(abstractTask).effect, And(Nil))
+        val newInitSchema: Task = GeneralTask("init", isPrimitive = true, newAbstract.parameters, Nil, Nil, And(Nil), exchangeMap(abstractTask).precondition, ConstantActionCost(0))
+        val newGoalSchema: Task = GeneralTask("goal", isPrimitive = true, newAbstract.parameters, Nil, Nil, exchangeMap(abstractTask).effect, And(Nil), ConstantActionCost(0))
         val extendedExchangeMap = exchangeMap.+((subPlan.init.schema, newInitSchema)).+((subPlan.goal.schema, newGoalSchema))
 
         SHOPDecompositionMethod(exchangeMap(abstractTask), subPlan.update(ExchangeTask(extendedExchangeMap)) update AddVariables(newVars), methodPrecondition, methodEffect, name)

@@ -53,12 +53,12 @@ object SplitIndependentParameters extends DecompositionMethodTransformer[Unit] {
         // generate a new Task for every planStep
         val exchange: Map[PlanStep, (PlanStep, DecompositionMethod, Task)] = groupedSplittable map { case (op@PlanStep(id, subSchema, arguments), freeVariables) =>
           val realArguments = arguments filterNot freeVariables.contains distinct
-          val reducedSchema = ReducedTask(subSchema.name + "_" + methodName + "_" + id, isPrimitive = false, realArguments, Nil, Nil, And(Nil), And(Nil))
+          val reducedSchema = ReducedTask(subSchema.name + "_" + methodName + "_" + id, isPrimitive = false, realArguments, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
           val reducedPlanStep = PlanStep(id, reducedSchema, realArguments)
 
           // build the new decomposition method
-          val extensionInit = PlanStep(0, ReducedTask("init", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil)), Nil)
-          val extensionGoal = PlanStep(1, ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil)), Nil)
+          val extensionInit = PlanStep(0, ReducedTask("init", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0)), Nil)
+          val extensionGoal = PlanStep(1, ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0)), Nil)
           val extensionPlanStep = op
           val allExtensionPlanSteps = extensionInit :: extensionGoal :: extensionPlanStep :: Nil
           val extensionOrdering = TaskOrdering(OrderingConstraint.allBetween(extensionInit, extensionGoal, extensionPlanStep), allExtensionPlanSteps)

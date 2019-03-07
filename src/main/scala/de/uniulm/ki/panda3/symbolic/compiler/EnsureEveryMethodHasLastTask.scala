@@ -27,7 +27,7 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
 object EnsureEveryMethodHasLastTask extends DecompositionMethodTransformer[Unit] {
 
   override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, info: Unit, originalDomain: Domain): (Seq[DecompositionMethod], Seq[Task]) = {
-    val noopTask = ReducedTask("noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+    val noopTask = ReducedTask("noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
 
     val transformedMethods = methods :+ topMethod map {
       case m if m.subPlan.orderingConstraints.graph.sinks.size == 1 => m

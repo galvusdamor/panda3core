@@ -178,7 +178,6 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
     val forbiddenness = forbiddenConnections ++ forbiddennessImplications ++ forbiddennessGetsInherited ++ forbiddenActuallyDoesSomething
 
 
-    //// TODO: method preconditions
     val methodPrecs = if (omitMethodPreconditionActions) {
       def methodPrecDFS(node: PathDecompositionTree[SOG]): Seq[Clause] = if (node.possibleMethods.isEmpty) Nil else {
         // matchable positions
@@ -266,15 +265,29 @@ case class SOGKautzSelmanForbiddenEncoding(timeCapsule: TimeCapsule, domain: Dom
 
 
 case class SOGExistsStepForbiddenEncoding(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
-                                          numberOfTimesteps: Int, maxNumberOfActions: Int,
+                                          numberOfTimesteps: Int, maxNumberOfActionsArg: Int,
                                           offsetToK: Int, overrideK: Option[Int] = None,
                                           useImplicationForbiddenness: Boolean, usePDTMutexes: Boolean, additionalDisablingGraphEdges: Seq[AdditionalEdgesInDisablingGraph])
   extends SOGClassicalForbiddenEncoding with ExsitsStepMappingEncoding[SOG, NonExpandedSOG] {
 
+  override lazy val maxNumberOfActions: Int = maxNumberOfActionsArg
+
   override def forbiddennessSubtractor: Int = 0
 
   // TODO: determine this size more intelligently
-  lazy val taskSequenceLength: Int = if (numberOfTimesteps != -1) numberOfTimesteps else {
+  lazy val taskSequenceLength: Int = if (numberOfTimesteps != -1) {
+    // determine the maximum number of actions that can be used to achieve this cost
+    val minimumCostsPerPath: Array[Int] = (primitivePaths map { _._2.map(_.cost.getFixedCost).min }).sorted.array
+
+    var l = 0
+    var c = 0
+    while (l < minimumCostsPerPath.length && c < numberOfTimesteps) {
+      c += minimumCostsPerPath(l)
+      if (c <= numberOfTimesteps) l += 1
+    }
+    println("Maximum plan length for cost bound " + numberOfTimesteps + ": " + l)
+    l
+  } else {
     //val pathNumToUse = ((if (expansionPossible) primitivePaths.length else primitivePaths.length) * 0.66 + 0.5).toInt
     val pathNumToUse = if (expansionPossible) primitivePaths.length else primitivePaths.length
 

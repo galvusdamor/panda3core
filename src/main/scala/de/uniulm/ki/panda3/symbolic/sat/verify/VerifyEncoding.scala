@@ -52,11 +52,13 @@ trait VerifyEncoding {
 
   def taskSequenceLength: Int
 
+  lazy val maxNumberOfActions = taskSequenceLength
+
   def offsetToK: Int
 
   def overrideK: Option[Int]
 
-  lazy val K: Int = if (overrideK.isDefined) overrideK.get else VerifyEncoding.computeTheoreticalK(domain, initialPlan, taskSequenceLength) + offsetToK
+  lazy val K: Int = if (overrideK.isDefined) overrideK.get else VerifyEncoding.computeTheoreticalK(domain, initialPlan, maxNumberOfActions) + offsetToK
 
   def numberOfChildrenClauses: Int
 
@@ -163,7 +165,7 @@ trait VerifyEncoding {
 
     //println("AT MOST")
     val registersInts: Array[Array[Int]] = registers map { _ map { r => Clause.atomIndices.getOrElseUpdate(r, Clause.atomIndices.size) + 1 } }
-    val atomInts : Array[Int] = atoms.map({ a => Clause.atomIndices(a) + 1 }).toArray
+    val atomInts: Array[Int] = atoms.map({ a => Clause.atomIndices.getOrElseUpdate(a, Clause.atomIndices.size) + 1 }).toArray
     //println("INTS")
 
     var i = 1
@@ -405,7 +407,7 @@ object VerifyEncoding {
     val expandedMap = condensationTopSort.foldLeft(Map[Task, Map[Int, Int]]())(
       { case (map, scc) =>
         //println("deal with " + scc.map(_.name).mkString(" "))
-        var initalised = scc.foldLeft(map)({ case (m, t) => m + (t -> (if (t.isPrimitive) Map((if (ActionCost.hasCost(t)) 1 else 0) -> 0) else Map())) })
+        var initalised = scc.foldLeft(map)({ case (m, t) => m + (t -> (if (t.isPrimitive) Map(t.cost.getFixedCost -> 0) else Map())) })
 
         var zeroCostChanged = true
         var zeroCostMode = false

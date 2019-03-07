@@ -33,15 +33,15 @@ trait HasExampleDomain1 {
   // tasks
   val task1         : ReducedTask = ReducedTask("task1", isPrimitive = true, variableSort1(2) :: Nil, Nil,Nil,
                                                 precondition = And[Literal](Literal(predicate1, isPositive = false, variableSort1(2) :: Nil) :: Nil),
-                                                effect = And[Literal](Literal(predicate1, isPositive = true, variableSort1(2) :: Nil) :: Nil))
+                                                effect = And[Literal](Literal(predicate1, isPositive = true, variableSort1(2) :: Nil) :: Nil), ConstantActionCost(0))
   val init          : ReducedTask = ReducedTask("init", isPrimitive = true, variableSort1(3) :: Nil, Nil, Nil,precondition = And[Literal](Nil),
-                                                effect = And[Literal](Literal(predicate1, isPositive = false, variableSort1(3) :: Nil) :: Nil))
+                                                effect = And[Literal](Literal(predicate1, isPositive = false, variableSort1(3) :: Nil) :: Nil), ConstantActionCost(0))
   val goal1         : ReducedTask = ReducedTask("goal", isPrimitive = true, variableSort1(4) :: Nil, Nil,Nil,
-                                                precondition = And[Literal](Literal(predicate1, isPositive = true, variableSort1(4) :: Nil) :: Nil), effect = And[Literal](Nil))
+                                                precondition = And[Literal](Literal(predicate1, isPositive = true, variableSort1(4) :: Nil) :: Nil), effect = And[Literal](Nil), ConstantActionCost(0))
   ////////////////////////////
   // the actual domain
   ////////////////////////////
-  val exampleDomain1: Domain      = Domain(sort1 :: Nil, predicate1 :: Nil, task1 :: Nil, Nil, Nil)
+  val exampleDomain1: Domain      = Domain(sort1 :: Nil, predicate1 :: Nil, task1 :: Nil, Nil, Nil, Map())
 
   // constants
   def constantSort1(i: Int): Constant = Constant("constant_" + i + "_sort_1")

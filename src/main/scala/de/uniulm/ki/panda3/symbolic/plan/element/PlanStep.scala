@@ -147,7 +147,7 @@ case class GroundTask(task: Task, arguments: Seq[Constant]) extends HashMemo wit
 
   lazy val argumentArray = arguments.toArray
 
-  private lazy val parameterSubstitution: TotalSubstitution[Variable, Constant] = TotalSubstitution(task.parameters, arguments)
+  lazy val parameterSubstitution: TotalSubstitution[Variable, Constant] = TotalSubstitution(task.parameters, arguments)
 
   lazy val substitutedPreconditions: Seq[GroundLiteral] = task match {
     case reduced: ReducedTask => reduced.precondition.conjuncts map { _ ground parameterSubstitution }

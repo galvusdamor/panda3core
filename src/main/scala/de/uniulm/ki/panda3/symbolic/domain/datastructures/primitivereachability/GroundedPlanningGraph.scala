@@ -19,7 +19,7 @@ package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.{HierarchyTyping, LayeredGroundedPrimitiveReachabilityAnalysis}
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability.DebuggingMode.DebuggingMode
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{ConstantActionCost, Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 import de.uniulm.ki.panda3.symbolic._
@@ -66,8 +66,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
 
   initialState foreach { f => assert(f.isPositive, "Initial state contains the negative fact " + f.longInfo) }
   domain.primitiveTasks foreach {
-    case ReducedTask(name, _, _, _, _, prec, _) => prec.conjuncts foreach { l => assert(l.isPositive, "Primitive task " + name + " has the negative precondition " + l.longInfo) }
-    case _                                      => noSupport(FORUMLASNOTSUPPORTED)
+    case ReducedTask(name, _, _, _, _, prec, _, _) => prec.conjuncts foreach { l => assert(l.isPositive, "Primitive task " + name + " has the negative precondition " + l.longInfo) }
+    case _                                         => noSupport(FORUMLASNOTSUPPORTED)
   }
 
 
@@ -772,7 +772,8 @@ case class GroundedPlanningGraph(domain: Domain, initialState: Set[GroundLiteral
     // Create a literal corresponding to the proposition.
     val literal: Literal = Literal(p, isPositive = true, parameters)
     // Create a lifted task that has the literal as precondition and add-effect.
-    val task: ReducedTask = ReducedTask("NO-OP[" + p.name + "]", isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
+    val task: ReducedTask = ReducedTask("NO-OP[" + p.name + "]", isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)),
+                                        ConstantActionCost(0))
 
     p -> task
   } toMap

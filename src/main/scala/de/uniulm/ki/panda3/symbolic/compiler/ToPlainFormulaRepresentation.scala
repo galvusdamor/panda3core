@@ -35,7 +35,7 @@ object ToPlainFormulaRepresentation extends DomainTransformer[Unit] {
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
     // remove quantifiers
     val replaceTasks: Seq[(Task, Task)] = domain.tasks flatMap {
-      case gt@GeneralTask(_, _, parameters, _, _, prec, eff) =>
+      case gt@GeneralTask(_, _, parameters, _, _, prec, eff,_) =>
         val (newPrec, precVars) = prec.compileQuantors()
         val (newEff, effVars) = eff.compileQuantors()
         val newTask = gt.copy(effect = newEff, precondition = newPrec, parameters = parameters ++ precVars ++ effVars)

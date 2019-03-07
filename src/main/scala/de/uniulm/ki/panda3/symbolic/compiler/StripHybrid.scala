@@ -34,7 +34,8 @@ object StripHybrid extends DomainTransformer[Unit] {
 
     // remove all preconditions and effects of abstract tasks
     val replacementMap: Map[Task, Task] =
-      domain.abstractTasks map { t => t -> ReducedTask(t.name, isPrimitive = false, t.parameters, t.artificialParametersRepresentingConstants, t.parameterConstraints, And(Nil), And(Nil))
+      domain.abstractTasks map { t => t -> ReducedTask(t.name, isPrimitive = false, t.parameters, t.artificialParametersRepresentingConstants, t.parameterConstraints, And(Nil), And(Nil),
+                                                       t.cost)
       } toMap
 
     (noLinksDomain update ExchangeTask(replacementMap), noLinksProblem update ExchangeTask(replacementMap))

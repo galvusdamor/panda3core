@@ -108,7 +108,7 @@ object ClosedWorldAssumption extends DomainTransformer[(Boolean, Set[String])] {
     val newInitSchema: ReducedTask = ReducedTask(oldInit.schema.name, isPrimitive = true, oldInit.schema.parameters ++ newVariables,
                                                  oldInit.schema.parameters ++ newVariables,
                                                  oldInit.schema.parameterConstraints ++ newVariableConstraints, oldInitSchema.precondition,
-                                                 And[Literal](newEffects ++ oldInitSchema.effect.conjuncts))
+                                                 And[Literal](newEffects ++ oldInitSchema.effect.conjuncts), oldInit.schema.cost)
     val newInit: PlanStep = PlanStep(oldInit.id, newInitSchema, oldInit.arguments ++ newVariables)
 
     (domain, plan.update(AddVariables(newVariables)).update(AddVariableConstraints(newVariableConstraints)).update(ExchangePlanSteps(oldInit, newInit)))

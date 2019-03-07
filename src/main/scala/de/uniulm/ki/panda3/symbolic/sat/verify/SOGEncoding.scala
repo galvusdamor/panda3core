@@ -71,7 +71,9 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     val methodTaskGraphs = (possibleMethods map { m =>
       val baseGraph = m.subPlan.orderingConstraints.fullGraph
       // TODO: hack!!
-      val methodPrecs = baseGraph.sources filter { _.schema.effect.isEmpty } filter { _.schema.isPrimitive } filter { _.schema.name.contains("SHOP_method")}
+      val methodPrecs = if (omitMethodPreconditionActions)
+        baseGraph.sources filter { _.schema.effect.isEmpty } filter { _.schema.isPrimitive } filter { _.schema.name.contains("SHOP_method") }
+      else Nil
 
       baseGraph.filter(ps => !methodPrecs.contains(ps))
     }) ++ (
@@ -106,8 +108,8 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     val tasksPerMethodToChildrenMapping: Array[Array[Int]] = methodMappings.zipWithIndex map { case (mapping, methodIndex) =>
       val methodPlanSteps = possibleMethods(methodIndex).subPlan.planStepsWithoutInitGoal
       (methodPlanSteps collect {
-        case ps if ps.schema.isAbstract || !ps.schema.effect.isEmpty || !possibleMethods(methodIndex).subPlan.orderingConstraints.fullGraph.sources.contains(ps) ||
-          !ps.schema.name.contains("SHOP_method") =>
+        case ps if !omitMethodPreconditionActions || ps.schema.isAbstract || !ps.schema.effect.isEmpty ||
+          !possibleMethods(methodIndex).subPlan.orderingConstraints.fullGraph.sources.contains(ps) || !ps.schema.name.contains("SHOP_method") =>
           // TODO: hack
           childrenIndicesToPossibleTasks(mapping(ps)) add ps.schema
           mapping(ps)
@@ -120,7 +122,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
       mapping.head._2
     } toArray
 
-    //println("\n\nGraph minisation")
+    //println("\n\nGraph minimisation")
     //println(childrenIndicesToPossibleTasks map {s => s map {t => t.name + " " + t.isAbstract} mkString " "} mkString "\n")
 
     val maxVertex = if (minimalSuperGraph.vertices.isEmpty) -1 else minimalSuperGraph.vertices.max
@@ -128,12 +130,16 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
 
     val childrenTasks: Array[Set[Task]] = childrenIndicesToPossibleTasks map { _.toSet } toArray
 
+    //println("SOG " + childrenTasks.length + " " + minimalSuperGraph.vertices.size + " " + possibleMethods.size + " " + possiblePrimitives.size)
+    //println(childrenTasks.map(_.map(_.name).mkString(", ")).mkString("\n"))
+
     //tasksPerMethodToChildrenMapping zip
 
     (tasksPerMethodToChildrenMapping, childrenForPrimitives, childrenTasks, NonExpandedSOG(minimalSuperGraph))
   }
 
   protected def combinePayloads(childrenPayload: Seq[SOG], intermediate: NonExpandedSOG): SOG = {
+    assert(childrenPayload.size == intermediate.ordering.vertices.size)
     val vertices = childrenPayload flatMap { _.ordering.vertices }
     val internalEdges = childrenPayload flatMap { _.ordering.edgeList }
 
@@ -161,22 +167,15 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
       {
         case (path, tasks) =>
           val matchingPaths = primitivePaths.filter(_._1 == path)
-          if (matchingPaths.isEmpty)
+          val x = if (matchingPaths.isEmpty)
             (path, Set[Task]())
           else
             (path, matchingPaths.head._2)
-      }) filter {_._2.nonEmpty} filter {_._2.exists(t => !t.name.startsWith("SHOP_method"))}
 
-    /*rootPayload.ordering.vertices foreach { case (path, tasks) =>
-      val matchingPaths = primitivePaths.filter(_._1 == path)
-      if (matchingPaths.isEmpty)
-        assert(tasks.isEmpty)
-      else
-        assert(matchingPaths.length == 1 && matchingPaths.head._2 == tasks)
+          x
+      }) filter { _._2.nonEmpty }
 
-    }*/
-
-    print("Compute Transitive reducton ... ")
+    print("Compute Transitive reduction ... ")
     //val sog = rootPayload.ordering.transitiveReduction
     val ss = pl.transitiveClosure
     val nodesToKeep = ss.vertices filter { _._2.exists(_.isPrimitive) } toSet
@@ -192,8 +191,6 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
 
     println("TREE P: " + primitivePaths.length + " S: " + taskSequenceLength)
 
-
-    //System exit 0
 
     assert(primitivePaths forall { p => finalSOG.vertices contains p })
 

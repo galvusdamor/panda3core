@@ -18,7 +18,7 @@ package de.uniulm.ki.panda3.symbolic.domain.datastructures
 
 import de.uniulm.ki.panda3.progression.htn.representation.SasPlusProblem
 import de.uniulm.ki.panda3.symbolic.csp.SymbolicUnionFind
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{ConstantActionCost, Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
@@ -68,6 +68,7 @@ case class SASPlusGrounding(domain: Domain, problem: Plan, sasPlusProblem: SasPl
             }
         })
       assert(remainingParameter.length == 0)
+      val groundTask = GroundTask(t, params)
 
       // build new task
       val sasGroundTask = {
@@ -76,20 +77,22 @@ case class SASPlusGrounding(domain: Domain, problem: Plan, sasPlusProblem: SasPl
         //val delEffects = sasPlusProblem.delLists(taskIndex) map { eff => Literal(sasPlusPredicates(eff), isPositive = false, Nil) }
         val delEffects = sasPlusProblem.expandedDelLists(taskIndex) map { eff => Literal(sasPlusPredicates(eff), isPositive = false, Nil) }
 
-        ReducedTask(t.name + params.map { _.name }.mkString("[", ",", "]"), isPrimitive = true, Nil, Nil, Nil, And(precondition), And(addEffects ++ delEffects))
+        // XXX grounding!!!
+        ReducedTask(t.name + params.map { _.name }.mkString("[", ",", "]"), isPrimitive = true, Nil, Nil, Nil, And(precondition), And(addEffects ++ delEffects),
+                    t.cost.evaluateOnGrounding(groundTask.parameterSubstitution, domain.costValues))
       }
 
-      (GroundTask(t, params) -> sasGroundTask, taskIndex -> sasGroundTask)
+      (groundTask -> sasGroundTask, taskIndex -> sasGroundTask)
     }
 
     val newInitTask = {
       val effects = sasPlusProblem.s0List map { eff => Literal(sasPlusPredicates(eff), isPositive = true, Nil) }
-      ReducedTask("init", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(effects))
+      ReducedTask("init", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(effects), ConstantActionCost(0))
     }
 
     val newGoalTask = {
       val preconditions = sasPlusProblem.gList map { prec => Literal(sasPlusPredicates(prec), isPositive = true, Nil) }
-      ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And(preconditions), And(Nil))
+      ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And(preconditions), And(Nil), ConstantActionCost(0))
     }
 
     //val groundedToNewGroundMap: Map[GroundTask, Task] = (generalActions map { _._1 })

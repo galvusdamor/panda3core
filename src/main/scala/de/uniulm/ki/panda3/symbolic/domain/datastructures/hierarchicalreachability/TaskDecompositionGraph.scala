@@ -58,7 +58,7 @@ trait TaskDecompositionGraph extends GroundedReachabilityAnalysis with WithTopMe
     if (!(abstractTaskGroundings contains topTask)) {
       messageFunction("Initial Plan cannot be decomposed into a primitive plan ... generating trivially unsolvable problem")
       val emptyInit = GroundTask(initAndGoalNOOP, Nil)
-      val abstractWithOutDecomposition = ReducedTask("__fail_abstract", isPrimitive = false, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil))
+      val abstractWithOutDecomposition = ReducedTask("__fail_abstract", isPrimitive = false, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil), ConstantActionCost(0))
       val abstractGT = GroundTask(abstractWithOutDecomposition, Nil)
       val abstractPlanTemp = Plan(PlanStep(3, abstractWithOutDecomposition, Nil) :: Nil, initAndGoalNOOP, initAndGoalNOOP,
                                   Map[PlanStep, DecompositionMethod](), Map[PlanStep, (PlanStep, PlanStep)]())
@@ -193,7 +193,7 @@ trait WithTopMethod {
     // TODO we cant handle this case (yet)
     assert(!(initialPlan.causalLinks exists { _.containsOne(initialPlan.initAndGoal: _*) }))
 
-    val noop = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+    val noop = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
     val topInit = PlanStep(initialPlan.init.id, noop, Nil)
     val topGoal = PlanStep(initialPlan.goal.id, noop, Nil)
 
@@ -205,7 +205,7 @@ trait WithTopMethod {
                                   initialPlan.isFlawAllowed, initialPlan.planStepDecomposedByMethod, initialPlan.planStepParentInDecompositionTree)
 
     // create an artificial method
-    val createdTopTask = ReducedTask("__grounding__top", isPrimitive = false, initialPlanAlreadyGroundedVariableMapping.keys.toSeq, Nil, Nil, And(Nil), And(Nil))
+    val createdTopTask = ReducedTask("__grounding__top", isPrimitive = false, initialPlanAlreadyGroundedVariableMapping.keys.toSeq, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
     val createdTopMethod = SimpleDecompositionMethod(createdTopTask, initialPlanWithout, "__top")
     val groundedTop = GroundTask(createdTopTask, createdTopTask.parameters map initialPlanAlreadyGroundedVariableMapping)
 

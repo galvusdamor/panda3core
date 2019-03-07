@@ -42,6 +42,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
   val parameterConstraints                     : Seq[VariableConstraint]
   val precondition                             : Formula
   val effect                                   : Formula
+  val cost                                     : ActionCost
   lazy val parameterArray: Array[Variable] = parameters.toArray
 
   lazy val isAbstract: Boolean = !isPrimitive
@@ -61,7 +62,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
         case (precAnd: And[Formula], effAnd: And[Formula]) =>
           if ((precAnd.conjuncts forall { case l: Literal => true case _ => false }) && (effAnd.conjuncts forall { case l: Literal => true case _ => false })) {
             ReducedTask.intern((name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, precAnd.asInstanceOf[And[Literal]],
-                                 effAnd.asInstanceOf[And[Literal]]))
+                                 effAnd.asInstanceOf[And[Literal]], cost))
           } else {
             this
           }
@@ -69,7 +70,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
       }
     case ExchangeLiteralsByPredicate(exchangeMap, invert) =>
       this match {
-        case ReducedTask(_, _, _, _, _, preconditionAnd, effectAnd) =>
+        case ReducedTask(_, _, _, _, _, preconditionAnd, effectAnd,_) =>
           val newPositivePrecondition = preconditionAnd.conjuncts map { _ update domainUpdate }
           val newNegativePrecondition = preconditionAnd.conjuncts map { _.negate update domainUpdate } map { _.negate }
           val newPositiveEffects = effectAnd.conjuncts map { _ update domainUpdate }
@@ -88,27 +89,27 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
             assert(newPrecondition.length == 2 * preconditionAnd.conjuncts.length)
           }
 
-          ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPrecondition), And(newEffects))
+          ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPrecondition), And(newEffects),cost)
         case _                                                      => noSupport(FORUMLASNOTSUPPORTED)
       }
     case RemoveEffects(unnecessaryPredicates, isInverted) =>
       this match {
-        case ReducedTask(_, _, _, _, _, preconditionAnd, effectAnd) =>
+        case ReducedTask(_, _, _, _, _, preconditionAnd, effectAnd, cost) =>
           val newEffects = effectAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
           val newPreconditions = preconditionAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
 
-          if (!isInverted) ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, preconditionAnd, And(newEffects))
-          else ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), effectAnd)
+          if (!isInverted) ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, preconditionAnd, And(newEffects), cost)
+          else ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), effectAnd, cost)
 
         case _ => noSupport(FORUMLASNOTSUPPORTED)
       }
     case RemovePredicate(unnecessaryPredicates)           =>
       this match {
-        case ReducedTask(_, _, _, _, _, preconditionAnd, effectAnd) =>
+        case ReducedTask(_, _, _, _, _, preconditionAnd, effectAnd, cost) =>
           val newEffects = effectAnd.conjuncts filterNot { case Literal(predicate, _, _) => unnecessaryPredicates contains predicate }
           val newPreconditions = preconditionAnd.conjuncts filterNot { case Literal(predicate, _, _) => unnecessaryPredicates contains predicate }
 
-          ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), And(newEffects))
+          ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), And(newEffects), cost)
 
         case _ => noSupport(FORUMLASNOTSUPPORTED)
       }
@@ -122,10 +123,10 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
           (!domainUpdate.isInstanceOf[SetExpandVariableConstraintsInPlans] || this.isInstanceOf[ReducedTask]) =>
           ReducedTask.intern(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
                              parameterConstraints map { _.update(domainUpdate) }, pre.asInstanceOf[And[Literal]],
-                             eff.asInstanceOf[And[Literal]])
+                             eff.asInstanceOf[And[Literal]], cost)
         case _                                                                                                =>
           GeneralTask(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
-                      parameterConstraints map { _.update(domainUpdate) }, newPrecondition, newEffect)
+                      parameterConstraints map { _.update(domainUpdate) }, newPrecondition, newEffect, cost)
       }
   }
 
@@ -191,7 +192,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
 }
 
 case class GeneralTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], artificialParametersRepresentingConstants: Seq[Variable],
-                       parameterConstraints: Seq[VariableConstraint], precondition: Formula, effect: Formula) extends Task with HashMemo {
+                       parameterConstraints: Seq[VariableConstraint], precondition: Formula, effect: Formula, cost : ActionCost) extends Task with HashMemo {
 
   assert(artificialParametersRepresentingConstants forall parameters.contains)
   override lazy val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)] = noSupport(FORUMLASNOTSUPPORTED)
@@ -201,7 +202,7 @@ case class GeneralTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 
 //scalastyle:off
 case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], artificialParametersRepresentingConstants: Seq[Variable],
-                       parameterConstraints: Seq[VariableConstraint], precondition: And[Literal], effect: And[Literal]) extends Task with HashMemo {
+                       parameterConstraints: Seq[VariableConstraint], precondition: And[Literal], effect: And[Literal], cost : ActionCost) extends Task with HashMemo {
   /*if (!((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })){
     (precondition.conjuncts ++ effect.conjuncts) foreach {l => l.parameterVariables foreach { v =>
       println("VARIABLE " + v)
@@ -226,7 +227,8 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 
   override def equals(o: scala.Any): Boolean =
     if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) this.name == o.asInstanceOf[ReducedTask].name else false
-    //if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[ReducedTask].productIterator) } else false
+
+  //if (o.isInstanceOf[ReducedTask] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[ReducedTask].productIterator) } else false
 
   lazy val preconditionPerPredicate: Map[Predicate, Seq[Literal]] = precondition.conjuncts.groupBy(_.predicate).map({ case (p, ls) => p -> ls }).withDefaultValue(Nil)
 
@@ -260,11 +262,6 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 
 }
 
-object ReducedTask extends Internable[(String, Boolean, Seq[Variable], Seq[Variable], Seq[VariableConstraint], And[Literal], And[Literal]), ReducedTask] {
+object ReducedTask extends Internable[(String, Boolean, Seq[Variable], Seq[Variable], Seq[VariableConstraint], And[Literal], And[Literal], ActionCost), ReducedTask] {
   override protected val applyTuple = (ReducedTask.apply _).tupled
-}
-
-
-object ActionCost {
-  def hasCost(task: Task): Boolean = !task.name.contains("SHOP") && !task.name.contains("SelectConGroupCfg")
 }

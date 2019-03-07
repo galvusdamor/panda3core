@@ -158,7 +158,7 @@ case class TotallyOrderedEncoding(timeCapsule: TimeCapsule,
   protected def filterPrimitivesFF(sortedPaths: Array[(Seq[Int], Set[Task])], fullTest: Boolean = false): Seq[Set[Task]] = {
     // perform simple PG-style reachability on the given list of actions
     val initialPredicates = initialPlan.init.schema.effectsAsPredicateBool collect { case (predicate, true) => predicate } toSet
-    val initialAchiever: Map[Predicate, Seq[(Int, Task)]] = initialPredicates map { p => p -> ((-1, ReducedTask("init", true, Nil, Nil, Nil, And(Nil), And(Nil))) :: Nil) } toMap
+    val initialAchiever: Map[Predicate, Seq[(Int, Task)]] = initialPredicates map { p => p -> ((-1, ReducedTask("init", true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))) :: Nil) } toMap
     val initialState = (initialPredicates, initialAchiever)
 
     val (finalState, tasksToRemoveFromPaths) = sortedPaths.zipWithIndex.foldLeft[((Set[Predicate], Map[Predicate, Seq[(Int, Task)]]), Seq[Set[Task]])]((initialState, Nil))(

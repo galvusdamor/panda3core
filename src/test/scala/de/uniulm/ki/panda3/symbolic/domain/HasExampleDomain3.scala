@@ -41,15 +41,15 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
 
   val abstractTask1: ReducedTask = ReducedTask("abstractTask_1", isPrimitive = false, variableSort1(7) :: Nil, Nil, Nil,
                                                precondition = And[Literal](Literal(predicate1, isPositive = false, variableSort1(7)
-                                                 :: Nil) :: Nil), effect = And[Literal](Literal(predicate1, isPositive = true, variableSort1(7) :: Nil) :: Nil))
+                                                 :: Nil) :: Nil), effect = And[Literal](Literal(predicate1, isPositive = true, variableSort1(7) :: Nil) :: Nil), ConstantActionCost(0))
 
 
   // decomposition method 1 -- the one without causal links
   val initTaskOfPlanOfDecompositionMethod1: ReducedTask = ReducedTask("initM1", isPrimitive = true, variableSort1(8) :: Nil, Nil, Nil, precondition = And[Literal](Nil),
-                                                                      effect = And[Literal](Literal(predicate1, isPositive = false, variableSort1(8) :: Nil) :: Nil))
+                                                                      effect = And[Literal](Literal(predicate1, isPositive = false, variableSort1(8) :: Nil) :: Nil), ConstantActionCost(0))
   val goalTaskOfPlanOfDecompositionMethod1: ReducedTask = ReducedTask("goalM1", isPrimitive = true, variableSort1(9) :: Nil, Nil, Nil,
                                                                       precondition = And[Literal](Literal(predicate1, isPositive = true, variableSort1(9) :: Nil) :: Nil),
-                                                                      effect = And[Literal](Nil))
+                                                                      effect = And[Literal](Nil), ConstantActionCost(0))
 
   val initOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(0, initTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil)
   val goalOfPlanOfDecompositionMethod1          : PlanStep     = PlanStep(2, goalTaskOfPlanOfDecompositionMethod1, variableSort1(7) :: Nil)
@@ -80,5 +80,5 @@ trait HasExampleDomain3 extends HasExampleDomain2 {
   val decompositionMethod2: SimpleDecompositionMethod = SimpleDecompositionMethod(abstractTask1, planOfDecompositionMethod2, "some method")
 
 
-  val domain3: Domain = Domain(sort1 :: Nil, predicate1 :: Nil, abstractTask1 :: task1 :: init :: goal1 :: Nil, decompositionMethod1 :: decompositionMethod2 :: Nil, Nil)
+  val domain3: Domain = Domain(sort1 :: Nil, predicate1 :: Nil, abstractTask1 :: task1 :: init :: goal1 :: Nil, decompositionMethod1 :: decompositionMethod2 :: Nil, Nil, Map())
 }

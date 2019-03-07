@@ -69,11 +69,12 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
   override def transform(domain: Domain, plan: Plan, info: Information): (Domain, Plan) = {
     // create an artificial method
     // TODO not yet correct for hybrid planning problems
-    val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+    val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
     val topInit = PlanStep(plan.init.id, initAndGoalNOOP, Nil)
     val topGoal = PlanStep(plan.goal.id, initAndGoalNOOP, Nil)
     val initialPlanWithout = plan.replaceInitAndGoal(topInit, topGoal, plan.init.arguments ++ plan.goal.arguments)
-    val topTask = ReducedTask("__" + transformationName + "Compilation__top_" + DecompositionMethodTransformer.instanceCounter, isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil))
+    val topTask = ReducedTask("__" + transformationName + "Compilation__top_" + DecompositionMethodTransformer.instanceCounter,
+                              isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
     val topMethod = SimpleDecompositionMethod(topTask, initialPlanWithout, "__top_" + DecompositionMethodTransformer.instanceCounter)
     DecompositionMethodTransformer.instanceCounter += 1
 

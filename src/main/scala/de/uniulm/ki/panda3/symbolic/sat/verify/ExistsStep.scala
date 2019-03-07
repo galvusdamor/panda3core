@@ -17,11 +17,11 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
 
-import de.uniulm.ki.panda3.symbolic.domain.{ActionCost, Domain, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{ActionCost, ConstantActionCost, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.sat.IntProblem
-import de.uniulm.ki.util.TimeCapsule
+import de.uniulm.ki.util.{TimeCapsule, memoise}
 
 import scala.collection.Seq
 
@@ -29,9 +29,11 @@ import scala.collection.Seq
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
 case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Plan, intProblem: IntProblem,
-                      taskSequenceLengthQQ: Int, maxNumberOfActions: Int,
+                      taskSequenceLengthQQ: Int, maxNumberOfActionsArg: Int,
                       ltlEncodings: Seq[AdditionalEdgesInDisablingGraph], overrideOverrideK: Option[Int] = None,
                       tasksToIgnore: Set[Task] = Set()) extends LinearPrimitivePlanEncoding {
+
+  override lazy val maxNumberOfActions: Int = maxNumberOfActionsArg
 
   override def ignoreActionInStateTransition(task: Task): Boolean = tasksToIgnore(task)
 
@@ -136,20 +138,7 @@ case class ExistsStep(timeCapsule: TimeCapsule, domain: Domain, initialPlan: Pla
     val t0004 = System.currentTimeMillis()
     println("State Transition Formula: " + (t0004 - t0003) + "ms")
 
-    val numberOfActionsRestriction = if (maxNumberOfActions == -1) Nil else {
-      val allActionsAtoms = domain.primitiveTasks filter ActionCost.hasCost filterNot ignoreActionInStateTransition flatMap {
-        task => Range(0, taskSequenceLength) map { case position => action(K - 1, position, task) }
-      }
-      val t0005 = System.currentTimeMillis()
-      val ret = atMostKOf(allActionsAtoms, maxNumberOfActions)
-      val t0006 = System.currentTimeMillis()
-      println("At most K: " + (t0006 - t0005) + "ms input: " + allActionsAtoms.size + " K = " + maxNumberOfActions)
-      ret
-    }
-    val t0007 = System.currentTimeMillis()
-    println("Number of actions Formula: " + (t0007 - t0004) + "ms for " + numberOfActionsRestriction.length + " clauses")
-
-    transitionFormula ++ parallelismFormula ++ invariantFormula ++ numberOfActionsRestriction
+    transitionFormula ++ parallelismFormula ++ invariantFormula
   }
 
   override lazy val goalState: Seq[Clause] =

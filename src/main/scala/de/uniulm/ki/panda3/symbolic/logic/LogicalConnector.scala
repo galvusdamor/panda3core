@@ -18,6 +18,7 @@ package de.uniulm.ki.panda3.symbolic.logic
 
 import de.uniulm.ki.panda3.symbolic.DefaultLongInfo
 import de.uniulm.ki.panda3.symbolic.csp.VariableConstraint
+import de.uniulm.ki.panda3.symbolic.domain.ActionCost
 
 //import de.uniulm.ki.panda3.symbolic.domain.updates.{ReduceFormula, DomainUpdate}
 
@@ -60,6 +61,12 @@ case class Not(formula: Formula) extends LogicalConnector with DefaultLongInfo w
     val (inner, vars) = formula.compileQuantors()
 
     (Not(inner), vars)
+  }
+
+  def splitFormulaAndCostFunction(): (Formula, Seq[ActionCost]) = {
+    val (f, ac) = formula.splitFormulaAndCostFunction()
+    assert(ac.isEmpty)
+    (f, Nil)
   }
 }
 
@@ -118,6 +125,12 @@ case class And[SubFormulas <: Formula](conjuncts: Seq[SubFormulas]) extends Logi
 
     (And.intern(newconj), newvars flatten)
   }
+
+  def splitFormulaAndCostFunction(): (Formula, Seq[ActionCost]) = {
+    val x: Seq[(Formula, Seq[ActionCost])] = conjuncts map { _.splitFormulaAndCostFunction() }
+    (And(x.map(_._1) filterNot  {case Identity() => true; case _ => false}), x.flatMap(_._2))
+  }
+
 }
 
 object And extends Internable[Seq[Formula], And[Formula]] {
@@ -136,6 +149,8 @@ case class Identity[SubFormulas <: Formula]() extends LogicalConnector with Defa
   override val isEmpty: Boolean = true
 
   override def compileQuantors(): (Formula, Seq[Variable]) = (this, Nil)
+
+  def splitFormulaAndCostFunction(): (Formula, Seq[ActionCost]) = (this,Nil)
 }
 
 case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends LogicalConnector with DefaultLongInfo with HashMemo {
@@ -160,6 +175,12 @@ case class Or[SubFormulas <: Formula](disjuncts: Seq[SubFormulas]) extends Logic
 
     (Or(newdis), newvars flatten)
   }
+
+  def splitFormulaAndCostFunction(): (Formula, Seq[ActionCost]) = {
+    val x: Seq[(Formula, Seq[ActionCost])] = disjuncts map { _.splitFormulaAndCostFunction() }
+    assert(x.forall(_._2.isEmpty))
+    (Or(x.map(_._1)), Nil)
+  }
 }
 
 case class Implies(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo {
@@ -178,6 +199,14 @@ case class Implies(left: Formula, right: Formula) extends LogicalConnector with 
     val (rForm, rVars) = right.compileQuantors()
 
     (Implies(lForm, rForm), lVars ++ rVars)
+  }
+
+  def splitFormulaAndCostFunction(): (Formula, Seq[ActionCost]) = {
+    val x: (Formula, Seq[ActionCost]) = left.splitFormulaAndCostFunction()
+    val y: (Formula, Seq[ActionCost]) = right.splitFormulaAndCostFunction()
+    assert(x._2.isEmpty)
+    assert(y._2.isEmpty)
+    (Implies(x._1,y._1), Nil)
   }
 }
 
@@ -198,6 +227,15 @@ case class When(left: Formula, right: Formula) extends LogicalConnector with Def
 
     (Implies(lForm, rForm), lVars ++ rVars)
   }
+
+  def splitFormulaAndCostFunction(): (Formula, Seq[ActionCost]) = {
+    val x: (Formula, Seq[ActionCost]) = left.splitFormulaAndCostFunction()
+    val y: (Formula, Seq[ActionCost]) = right.splitFormulaAndCostFunction()
+    assert(x._2.isEmpty)
+    assert(y._2.isEmpty)
+    (When(x._1,y._1), Nil)
+  }
+
 }
 
 case class Equivalence(left: Formula, right: Formula) extends LogicalConnector with DefaultLongInfo with HashMemo {
@@ -216,6 +254,14 @@ case class Equivalence(left: Formula, right: Formula) extends LogicalConnector w
     val (rForm, rVars) = right.compileQuantors()
 
     (Equivalence(lForm, rForm), lVars ++ rVars)
+  }
+
+  def splitFormulaAndCostFunction(): (Formula, Seq[ActionCost]) = {
+    val x: (Formula, Seq[ActionCost]) = left.splitFormulaAndCostFunction()
+    val y: (Formula, Seq[ActionCost]) = right.splitFormulaAndCostFunction()
+    assert(x._2.isEmpty)
+    assert(y._2.isEmpty)
+    (Equivalence(x._1,y._1), Nil)
   }
 }
 
@@ -237,6 +283,12 @@ case class Exists(v: Variable, formula: Formula) extends Quantor with DefaultLon
     val newVar = v.copy(name = v.name + "_compiled_" + Variable.nextFreeVariableID())
 
     (innerFormula update ExchangeVariable(v, newVar), innerVars :+ newVar)
+  }
+
+  def splitFormulaAndCostFunction(): (Formula, Seq[ActionCost]) = {
+    val x: (Formula, Seq[ActionCost]) = formula.splitFormulaAndCostFunction()
+    assert(x._2.isEmpty)
+    (Exists(v,formula), Nil)
   }
 }
 
@@ -269,11 +321,42 @@ case class Forall(v: Variable, formula: Formula) extends Quantor with DefaultLon
 
     (And(newForlumaeAndVars map { _._1 }), newForlumaeAndVars flatMap { _._2 })
   }
+
+  def splitFormulaAndCostFunction(): (Formula, Seq[ActionCost]) = {
+    val x: (Formula, Seq[ActionCost]) = formula.splitFormulaAndCostFunction()
+    assert(x._2.isEmpty)
+    (Forall(v,formula), Nil)
+  }
 }
 
 object Forall {
   def apply(vs: Seq[Variable], f: Formula): Formula = {
     if (vs.isEmpty) {f } else {Forall(vs.head, Forall(vs.tail, f)) }
   }
+}
+
+
+case class ActionCostFormula(cost: ActionCost) extends Formula {
+  def splitFormulaAndCostFunction(): (Formula, Seq[ActionCost]) = (Identity(), cost :: Nil)
+
+  //// THESE FUNCTIONS SHOULD NEVER BE CALLED!
+  override val isEmpty = true
+
+  override def update(domainUpdate: DomainUpdate) = ???
+
+  override val containedVariables = Set()
+
+  override def containedPredicatesWithSign = ???
+
+  override def compileQuantors() = ???
+
+  /** returns a string by which this object may be referenced */
+  override def shortInfo = ???
+
+  /** returns a string that can be utilized to define the object */
+  override def mediumInfo = ???
+
+  /** returns a detailed information about the object */
+  override def longInfo = ???
 }
 

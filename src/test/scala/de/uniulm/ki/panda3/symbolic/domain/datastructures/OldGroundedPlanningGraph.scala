@@ -18,7 +18,7 @@ package de.uniulm.ki.panda3.symbolic.domain.datastructures.primitivereachability
 
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.datastructures.LayeredGroundedPrimitiveReachabilityAnalysis
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{ConstantActionCost, Domain, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
 
@@ -315,7 +315,7 @@ case class OldGroundedPlanningGraph(domain: Domain, initialState: Set[GroundLite
     }
     val literal: Literal = Literal(groundLiteral.predicate, isPositive = true, parameters)
     val task: ReducedTask = ReducedTask("NO-OP[" + groundLiteral.predicate.name + "]",
-                                        isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)))
+                                        isPrimitive = true, parameters, Nil, Seq.empty[VariableConstraint], And(Vector(literal)), And(Vector(literal)), ConstantActionCost(0))
     GroundTask(task, groundLiteral.parameter)
   }
 }

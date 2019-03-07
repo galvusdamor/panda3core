@@ -21,7 +21,7 @@ import java.util.UUID
 import java.util.concurrent.Semaphore
 
 import de.uniulm.ki.panda3.configuration.Timings._
-import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, ReducedTask, Task}
+import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic.{And, GroundLiteral}
 import de.uniulm.ki.panda3.configuration._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -995,8 +995,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
                 val pathsToSinks: Map[String, (PlanStep, String)] = graph.sinks map { x =>
                   val actionID = x.split(",").last.toInt
-                  val (action, id) = if (actionID == domain.tasks.length) (ReducedTask("init", true, Nil, Nil, Nil, And(Nil), And(Nil)), -1)
-                  else if (actionID == domain.tasks.length + 1) (ReducedTask("goal", true, Nil, Nil, Nil, And(Nil), And(Nil)), -2)
+                  val (action, id) = if (actionID == domain.tasks.length) (ReducedTask("init", true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0)), -1)
+                  else if (actionID == domain.tasks.length + 1) (ReducedTask("goal", true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0)), -2)
                   else (domain.tasks(actionID), nodeIDMap(x))
                   val pathID = x.split("_")(1).split(",").head
 

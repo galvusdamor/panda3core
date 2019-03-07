@@ -68,7 +68,7 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
     Seq(problem.init.schema, problem.goal.schema)
   }
 
-  private def simplePlan(task: Task, initAndGoalArgs : Seq[Variable]): Plan = {
+  private def simplePlan(task: Task, initAndGoalArgs: Seq[Variable]): Plan = {
     val init = GeneralTask(
                             name = "init(simplePlan)",
                             isPrimitive = true,
@@ -76,17 +76,19 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
                             artificialParametersRepresentingConstants = Nil,
                             parameterConstraints = Nil,
                             precondition = And(Nil),
-                            effect = And(Nil)
+                            effect = And(Nil),
+                            ConstantActionCost(0)
                           )
     val goal = GeneralTask(
-      name = "goal(simplePlan)",
-      isPrimitive = true,
-      parameters = initAndGoalArgs,
-      artificialParametersRepresentingConstants = Nil,
-      parameterConstraints = Nil,
-      precondition = And(Nil),
-      effect = And(Nil)
-    )
+                            name = "goal(simplePlan)",
+                            isPrimitive = true,
+                            parameters = initAndGoalArgs,
+                            artificialParametersRepresentingConstants = Nil,
+                            parameterConstraints = Nil,
+                            precondition = And(Nil),
+                            effect = And(Nil),
+                            ConstantActionCost(0)
+                          )
     val psInit = PlanStep(id = 0, schema = init, arguments = initAndGoalArgs)
     val psTask = PlanStep(id = 1, schema = task, arguments = task.parameters)
     val psGoal = PlanStep(id = 2, schema = goal, arguments = initAndGoalArgs)
@@ -197,7 +199,8 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
                         gt.artificialParametersRepresentingConstants,
                         gt.parameterConstraints,
                         prec.left.get,
-                        eff.left.get))
+                        eff.left.get,
+                        gt.cost))
     }
   }
 
@@ -256,6 +259,7 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
       case Exists(v, g)             => Exists(v, moveNegationsInwards(g))
       case Forall(v, g)             => Forall(v, moveNegationsInwards(g))
       case Literal(_, _, _)         => f
+      case Identity()               => Identity()
       case _                        => throw new IllegalArgumentException("moveNegationInwards is not applicable to: " + f)
     }
   }

@@ -17,7 +17,7 @@
 package de.uniulm.ki.panda3.symbolic.plan.modification
 
 import de.uniulm.ki.panda3.symbolic.csp.CSP
-import de.uniulm.ki.panda3.symbolic.domain.{Domain, ReducedTask, HasExampleDomain2, Task}
+import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
@@ -76,7 +76,7 @@ trait AddOrderingTestData extends HasExampleDomain2 {
   val promotionDemotionPlanPS3    = PlanStep(3, task2, instance_variableSort1(3) :: Nil)
   val promotionDemotionPlanCL     = CausalLink(promotionDemotionPlanPS2, psgoal, psgoal.substitutedPreconditions.head)
   val promotionDemotionPlan: Plan = {
-    val psRealGoal = PlanStep(4, ReducedTask("realgoal", true, Nil, Nil, Nil, And(Nil), And(Nil)), Nil)
+    val psRealGoal = PlanStep(4, ReducedTask("realgoal", true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0)), Nil)
     val cl = CausalLink(promotionDemotionPlanPS2, psgoal, psgoal.substitutedPreconditions.head)
 
     // hacky as we use psgoal as a real action
@@ -86,7 +86,7 @@ trait AddOrderingTestData extends HasExampleDomain2 {
     Plan(planPlanSteps, cl :: Nil, ordering, CSP(Set(instance_variableSort1(1), instance_variableSort1(2), instance_variableSort1(3)), Nil), psinit, psRealGoal,
                  AllModifications, AllFlaws, Map(), Map())
   }
-  val promotionDemotionDomain     = Domain(sort1 :: Nil, predicate1 :: predicate2 :: Nil, task1 :: task2 :: goal1 :: Nil, Nil, Nil)
+  val promotionDemotionDomain     = Domain(sort1 :: Nil, predicate1 :: predicate2 :: Nil, task1 :: task2 :: goal1 :: Nil, Nil, Nil, Map())
 
   /*
     * This is the plan in question:

@@ -24,7 +24,7 @@ import javax.xml.transform.sax.SAXSource
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic
-import de.uniulm.ki.panda3.symbolic.logic.{Literal, Predicate, Sort}
+import de.uniulm.ki.panda3.symbolic.logic.{GroundLiteral, Literal, Predicate, Sort}
 import de.uniulm.ki.panda3.symbolic.parser.{Parser, StepwiseParser}
 import de.uniulm.ki.panda3.symbolic.parser.xml.problem.Problem
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
@@ -68,8 +68,8 @@ object XMLParser extends StepwiseParser {
     val dom: XMLDomain = marshaller.unmarshal(source).asInstanceOf[XMLDomain]
 
 
-
     val constantMap: mutable.Map[String, Seq[logic.Constant]] = mutable.Map()
+
     /**
       * @param input the whole sequence of constants from XMLDomain
       * @return the whole sequence of constants used in Domain
@@ -93,6 +93,7 @@ object XMLParser extends StepwiseParser {
     val stringToXMLConstant: Map[String, ConstantDeclaration] = (JavaConversions.asScalaBuffer(dom.getConstantDeclaration) map { decl => (decl.getName, decl) }).toMap
     // needed for Domain
     val generatedSorts: mutable.Map[SortDeclaration, Sort] = mutable.HashMap()
+
     /**
       * @param input a single SortDeclaration
       * @return the proper Object of type Sort
@@ -108,6 +109,7 @@ object XMLParser extends StepwiseParser {
 
       newSort
     }
+
     val sortSeq: Seq[Sort] = for (x <- JavaConversions.asScalaBuffer(dom.getSortDeclaration)) yield createSortSeq(x)
     val xmlSortsToScalaSorts: Map[SortDeclaration, Sort] = generatedSorts.toMap
 
@@ -136,7 +138,7 @@ object XMLParser extends StepwiseParser {
       val artificialVariables = variableConstraints map { case Equal(vari, _) => vari } distinct
 
       ReducedTask(taskSchema.getName, taskSchema.getType == "primitive", variables ++ artificialVariables, artificialVariables, variableConstraints,
-                  logic.And[Literal](preconditions._1), logic.And[Literal](effects._1))
+                  logic.And[Literal](preconditions._1), logic.And[Literal](effects._1), ConstantActionCost(1))
     }
     val xmlTaskToScalaTask: Map[TaskSchemaDeclaration, Task] = (JavaConversions.asScalaBuffer(dom.getTaskSchemaDeclaration) zip tasks).toMap
 
@@ -159,10 +161,10 @@ object XMLParser extends StepwiseParser {
 
       val abstractTaskParameterVariables = (JavaConversions.asScalaBuffer(xmlMethod.getVariableDeclaration) ++ additionalParameterList) map variables
 
-      val init: PlanStep = PlanStep(0, GeneralTask("method_init", isPrimitive = true, abstractTaskSchema.parameters,Nil, Nil, logic.And[Literal](Nil), abstractTaskSchema.precondition),
-                                    abstractTaskParameterVariables)
-      val goal: PlanStep = PlanStep(1, GeneralTask("method_goal", isPrimitive = true, abstractTaskSchema.parameters, Nil, Nil, abstractTaskSchema.effect, logic.And[Literal](Nil)),
-                                    abstractTaskParameterVariables)
+      val init: PlanStep = PlanStep(0, GeneralTask("method_init", isPrimitive = true, abstractTaskSchema.parameters, Nil, Nil, logic.And[Literal](Nil), abstractTaskSchema.precondition,
+                                                   ConstantActionCost(0)), abstractTaskParameterVariables)
+      val goal: PlanStep = PlanStep(1, GeneralTask("method_goal", isPrimitive = true, abstractTaskSchema.parameters, Nil, Nil, abstractTaskSchema.effect, logic.And[Literal](Nil),
+                                                   ConstantActionCost(0)), abstractTaskParameterVariables)
 
 
       SimpleDecompositionMethod(abstractTaskSchema,
@@ -178,7 +180,7 @@ object XMLParser extends StepwiseParser {
     // Sequence of Decomposition Methods
     // still to do:
     // Sequence of Decomposition Axioms
-    Domain(sortSeq, predicates, tasks, decompositionMethods, Nil,None,None)
+    Domain(sortSeq, predicates, tasks, decompositionMethods, Nil, scala.Predef.Map[GroundLiteral,Int](), None, None)
   }
 
 
@@ -233,6 +235,7 @@ object XMLParser extends StepwiseParser {
       }
       // TODO: handle existential quantifier
     }
+
     // run the extraction
     val literals = extract(xmlStruct, positive = true)
 
@@ -309,8 +312,9 @@ object XMLParser extends StepwiseParser {
     val orderingConstraintsImpliedByCausalLinks: Seq[element.OrderingConstraint] = (causalLinks filter { case (cl, _) => cl.producer.schema.isPrimitive && cl.consumer.schema.isPrimitive }
       map { cl => element.OrderingConstraint(cl._1.producer, cl._1.consumer) })
     val orderingConstraints: Seq[element.OrderingConstraint] = (orderingConstraintsImpliedByCausalLinks ++
-      (JavaConversions.asScalaBuffer(planDef.getOrderingConstraint) map { oc => element
-        .OrderingConstraint(xmlTaskNodesToScalaPlanSteps(oc.getPredecessor.asInstanceOf[TaskNode]), xmlTaskNodesToScalaPlanSteps(oc.getSuccessor.asInstanceOf[TaskNode]))
+      (JavaConversions.asScalaBuffer(planDef.getOrderingConstraint) map { oc =>
+        element
+          .OrderingConstraint(xmlTaskNodesToScalaPlanSteps(oc.getPredecessor.asInstanceOf[TaskNode]), xmlTaskNodesToScalaPlanSteps(oc.getSuccessor.asInstanceOf[TaskNode]))
       }) ++ element.OrderingConstraint.allBetween(init, goal, planSteps filterNot { ps => ps == init || ps == goal }: _*)).distinct
 
     val taskOrdering = TaskOrdering(orderingConstraints, planSteps)
@@ -350,12 +354,12 @@ object XMLParser extends StepwiseParser {
 
 
     // build init
-    val initTask: ReducedTask = ReducedTask("init", isPrimitive = true, variablesForConstants, variablesForConstants,variableConstraintsForConstants, logic.And[Literal](Nil),
+    val initTask: ReducedTask = ReducedTask("init", isPrimitive = true, variablesForConstants, variablesForConstants, variableConstraintsForConstants, logic.And[Literal](Nil),
                                             logic.And[Literal](JavaConversions.asScalaBuffer(problem.getInitialState.getFact)
-                                                                 map { factToLiteral(_, domain, nameToVariablesForConstants, isPositive = true) }))
+                                                                 map { factToLiteral(_, domain, nameToVariablesForConstants, isPositive = true) }),
+                                            ConstantActionCost(0))
 
     val init: PlanStep = PlanStep(0, initTask, variablesForConstants)
-
 
 
     // build goal, this is some kind of a formula
@@ -363,7 +367,8 @@ object XMLParser extends StepwiseParser {
     else JavaConversions.asScalaBuffer(problem.getGoals.getAtomicOrFactOrNotOrAndOrOrOrImplyOrForallOrExistsOrPreference) flatMap { goalLiteral =>
       extractProblemLiterals(goalLiteral, domain, nameToVariablesForConstants, Map())
     }
-    val goalTask: Task = ReducedTask("goal", isPrimitive = true, variablesForConstants,variablesForConstants, variableConstraintsForConstants, logic.And[Literal](goalLiterals), logic.And[Literal](Nil))
+    val goalTask: Task = ReducedTask("goal", isPrimitive = true, variablesForConstants, variablesForConstants, variableConstraintsForConstants, logic.And[Literal](goalLiterals),
+                                     logic.And[Literal](Nil), ConstantActionCost(0))
     val goal: PlanStep = PlanStep(1, goalTask, variablesForConstants)
 
     // variables declared in the plan steps

@@ -173,7 +173,8 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
                 tempDomain._2().goal().schema().artificialParametersRepresentingConstants(),
                 tempDomain._2().goal().schema().parameterConstraints(),
                 newGoal,
-                tempDomain._2().goal().schema().effect()
+                tempDomain._2().goal().schema().effect(),
+                tempDomain._2().goal().schema().cost()
         );
 
         scala.collection.immutable.HashMap map = new scala.collection.immutable.HashMap();
@@ -220,7 +221,8 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             Task newPrimitiveTask = new GeneralTask(newTaskName, true, relatedTask.parameters(), relatedTask.artificialParametersRepresentingConstants(),
                     JavaToScala.concatJavaListToScalaSeq(relatedTask.parameterConstraints(), newPrimVarConstraints),
                     new And<Formula>(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(relatedTask.precondition()), precLiteralList)),
-                    new And<Formula>(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(relatedTask.effect()), effectLiteralList)));
+                    new And<Formula>(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(relatedTask.effect()), effectLiteralList)),
+                    relatedTask.cost());
             newPrimitiveTasks.add(newPrimitiveTask);
         }
 
@@ -267,7 +269,8 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             }
 
             processTaskSchema = new ReducedTask(name, true, JavaToScala.toScalaSeq(processVariables), JavaToScala.<Variable>nil(), JavaToScala.toScalaSeq(processVariableConstraints),
-                    new And<Literal>(JavaToScala.toScalaSeq(precLiteralList)), new And<Literal>(JavaToScala.toScalaSeq(effektLiteralList)));
+                    new And<Literal>(JavaToScala.toScalaSeq(precLiteralList)), new And<Literal>(JavaToScala.toScalaSeq(effektLiteralList)),
+                    new ConstantActionCost(0));
         }
         AddTask updateObject = new AddTask(newPrimitiveTasks.result());
         return new Tuple2<Domain, Plan>(domPlan._1().update(updateObject), domPlan._2());
@@ -285,7 +288,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
             String tName = uniqueStringPrefix + prefixExtension + oName;
             Task relatedTask = getTaskFromDomainByName(domPlan._1(), oName);
             Task newCompoundTask = new GeneralTask(tName, false, relatedTask.parameters(), relatedTask.artificialParametersRepresentingConstants(), relatedTask.parameterConstraints(),
-                    relatedTask.precondition(), relatedTask.effect());
+                    relatedTask.precondition(), relatedTask.effect(), new ConstantActionCost(0));
             newCompoundTasks.add(newCompoundTask);
             map_M_t.put(relatedTask, newCompoundTask);
         }
@@ -315,7 +318,8 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
                 continue;
             } else {
                 Task tempNewPrimitiveTask = new GeneralTask(currentTask.name(), currentTask.isPrimitive(), currentTask.parameters(), currentTask.artificialParametersRepresentingConstants(),
-                        currentTask.parameterConstraints(), new And(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(currentTask.precondition()), precLiteralList)), currentTask.effect());
+                        currentTask.parameterConstraints(), new And(JavaToScala.concatJavaListToScalaSeq(JavaToScala.toScalaSeq(currentTask.precondition()), precLiteralList)), currentTask
+                        .effect(), currentTask.cost());
                 tempMap.put(currentTask, tempNewPrimitiveTask);
             }
         }
@@ -451,7 +455,7 @@ public class PrefixTransformer implements DomainTransformer<Unit> {
         String prefixExtension = "[GENERIC]";
 
         String tempName = uniqueStringPrefix + prefixExtension + "[" + java.util.UUID.randomUUID() + "]";
-        Task tempEmptyTask = new GeneralTask(tempName, true, variablesOfprecsAndEffects, JavaToScala.<Variable>nil(), JavaToScala.<VariableConstraint>nil(), precondition, effect);
+        Task tempEmptyTask = new GeneralTask(tempName, true, variablesOfprecsAndEffects, JavaToScala.<Variable>nil(), JavaToScala.<VariableConstraint>nil(), precondition, effect, new ConstantActionCost(0));
         return new PlanStep(id, tempEmptyTask, variablesOfprecsAndEffects);
     }
 

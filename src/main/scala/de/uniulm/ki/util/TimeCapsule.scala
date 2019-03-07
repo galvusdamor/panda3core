@@ -35,6 +35,8 @@ class TimeCapsule extends DataCapsule {
 
   def start(activity: String): Unit =
     this.synchronized {
+                        //System.err.println("===================================STARTING " + activity)
+                        //System.err.println(Thread.currentThread().getStackTrace().map(_.toString).mkString("\n"))
                         assert(!(currentStarts contains activity), "Tried to start measuring\"" + activity + "\", whose measurement is already running")
                         startOrLetRun(activity)
                       }
@@ -47,12 +49,15 @@ class TimeCapsule extends DataCapsule {
                         if (!(currentStarts contains activity)) {
                           currentStarts.put(activity, getCPUTimeOfCurrentThread()) // convert to milliseconds
                           currentThread.put(activity, threadID)
+                          //System.err.println("===================================CONTINUING " + activity)
+
                         } else
                           assert(threadID == currentThread(activity), "Tried to let-run a time measurement from another thread")
                       }
 
   def stop(activity: String): Unit =
     this.synchronized {
+                        //System.err.println("===================================STOPPING " + activity)
                         assert(currentStarts contains activity, "Tried to stop measuring\"" + activity + "\", whose measurement hasn't started")
                         val threadID: Long = Thread.currentThread().getId
                         assert(threadID == currentThread(activity), "Tried to stop time measurement from another thread")

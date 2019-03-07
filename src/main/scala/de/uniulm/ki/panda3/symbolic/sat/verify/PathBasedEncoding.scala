@@ -18,12 +18,12 @@ package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.configuration.Timings._
 import de.uniulm.ki.panda3.symbolic.{DefaultLongInfo, PrettyPrintable}
-import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{ConstantActionCost, DecompositionMethod, Task}
 import de.uniulm.ki.util._
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
-import scala.collection.{mutable, Seq}
+import scala.collection.{Seq, mutable}
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
@@ -42,6 +42,11 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
     assert(p.length == l, "path " + p.mkString("(", ",", ")") + " does not have length " + l)
     "pathaction!" + l + "_" + p.mkString(";") + "," + taskIndex(t)
   }
+
+
+  val actionCostCounter: ((Int, Seq[Int], Task, Int)) => String =
+    memoise[(Int, Seq[Int], Task, Int), String]({ case (l, p, t, c) => "actionCostCounter^" + l + "_" + p.mkString("(", ",", ")") + "," + taskIndex(t) + "=" + c })
+
 
   // layer, path to that action, actual method
   protected val method: ((Int, Seq[Int], Int)) => String = memoise[(Int, Seq[Int], Int), String]({ case (l, pos, methodIdx) => "method^" + l + "_" + pos.mkString(";") + "," + methodIdx })
@@ -88,7 +93,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       // one method must be applied
       val oneMustBeApplied = impliesRightOr(possibleTasksToActions(abstractIndex) :: Nil, atPossibleMethods map { _._2 })
       val applicationForcesAbstractTask = atPossibleMethods map { _._2 } map { m => impliesSingle(m, possibleTasksToActions(abstractIndex)) }
-      val atMostOneCanBeApplied = atMostOneOf(atPossibleMethods map { _._2 })  // really not necessary
+      val atMostOneCanBeApplied = atMostOneOf(atPossibleMethods map { _._2 }) // really not necessary
 
       applicationForcesAbstractTask ++ atMostOneCanBeApplied :+ oneMustBeApplied
     }
@@ -159,7 +164,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
         // prepare method representation for additionalClauses
         val methodChildrenPositions: Map[Int, Int] = decompositionMethod.subPlan.planStepsWithoutInitGoal collect {
           case ps if !omitMethodPreconditionActions || ps.schema.isAbstract || !ps.schema.effect.isEmpty ||
-            !decompositionMethod.subPlan.orderingConstraints.fullGraph.sources.contains(ps) || ! ps.schema.name.contains("SHOP_method")=>
+            !decompositionMethod.subPlan.orderingConstraints.fullGraph.sources.contains(ps) || !ps.schema.name.contains("SHOP_method") =>
             val psBefore = decompositionMethod.subPlan.planStepsWithoutInitGoal.filter(_.schema == ps.schema)
             val psIndexOnSameType = psBefore.indexOf(ps)
             val psIndex = methodTasks.zipWithIndex.filter(_._1 == ps.schema)(psIndexOnSameType)._2
@@ -228,8 +233,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
   protected def minimisePathDecompositionTree(pdt: PathDecompositionTree[Payload]): PathDecompositionTree[Payload]
 
-  lazy val (computedDecompositionFormula, primitivePaths, rootPayload, expansionPossible, pdt) :
-    (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean, PathDecompositionTree[Payload])= if (domain.maximumMethodSize == -1) {
+  private lazy val pdt_temp = if (domain.maximumMethodSize == -1) {
     val ret: (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean, PathDecompositionTree[Payload]) = (Nil, Array(), initialPayload(Set(), Nil), false,
       PathDecompositionTree(Nil, Set(), Array(), Array(), Array(), Array(), initialPayload(Set(), Nil), Array(), localExpansionPossible = false))
     ret
@@ -362,10 +366,43 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       //System exit 0
     }*/
 
+    val t0004 = System.currentTimeMillis()
+    val numberOfActionsRestriction = if (maxNumberOfActions == -1) Nil else {
+      val actionAtomsWithCost = pPaths map { case (path, tasks) =>
+
+        val temp = tasks filter { _.cost match {case ConstantActionCost(0) => false; case _ => true} } map { task =>
+          val costValue: Int = task.cost match {case ConstantActionCost(c) => c case _ => assert(false, "non constant action costs"); ???}
+          assert(costValue > 0, "negative action costs cannot be handled")
+          val actionAtom = pathAction(path.length, path, task)
+          val additionalCounters: Seq[String] = Range(2, costValue + 1) map { case costItem => actionCostCounter(path.length, path, task, costItem) }
+          val additionalClauses = additionalCounters map { counter => impliesSingle(actionAtom, counter) }
+
+          (additionalCounters :+ actionAtom, additionalClauses)
+        }
+
+        (temp flatMap { _._1 }, temp flatMap { _._2 })
+      }
+
+      val allActionsAtoms: Seq[String] = actionAtomsWithCost.flatMap(_._1)
+      val allCostClauses = actionAtomsWithCost.flatMap(_._2)
+
+      val t0005 = System.currentTimeMillis()
+      val ret = atMostKOf(allActionsAtoms, maxNumberOfActions)
+      val t0006 = System.currentTimeMillis()
+      println("At most K: " + (t0006 - t0005) + "ms input: " + allActionsAtoms.size + " K = " + maxNumberOfActions)
+      ret ++ allCostClauses
+    }
+    val t0007 = System.currentTimeMillis()
+    println("Number of actions Formula: " + (t0007 - t0004) + "ms for " + numberOfActionsRestriction.length + " clauses")
+
+
     val ret: (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean, PathDecompositionTree[Payload]) =
-      (mutexClauses ++ initialPlanClauses ++ uniqueMethodResult :+ assertedTask, pPaths, payload, expansion, pathDecompositionTree)
+      (numberOfActionsRestriction ++ mutexClauses ++ initialPlanClauses ++ uniqueMethodResult :+ assertedTask, pPaths, payload, expansion, pathDecompositionTree)
     ret
   }
+
+  lazy val (computedDecompositionFormula, primitivePaths, rootPayload, expansionPossible, pdt):
+    (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean, PathDecompositionTree[Payload]) = pdt_temp
 
   protected final lazy val primitivePathsOnlyPath = primitivePaths map { _._1 }
 

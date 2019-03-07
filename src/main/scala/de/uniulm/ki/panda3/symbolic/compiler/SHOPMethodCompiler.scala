@@ -37,7 +37,7 @@ object SHOPMethodCompiler extends DomainTransformerWithOutInformation {
           val containedVariables = (precondition.containedVariables ++ effect.containedVariables).toSeq.distinct
           val preconditionTaskSchema = GeneralTask("SHOP_method" + name + "_" + idx + "_precondition", isPrimitive = true, containedVariables,
                                                    Nil, subPlan.variableConstraints.constraints filter { _.getVariables.toSet.toSet.subsetOf(containedVariables.toSet) },
-                                                   precondition, effect)
+                                                   precondition, effect, ConstantActionCost(0))
           // instantiate
           val preconditionPlanStep = new PlanStep(subPlan.getFirstFreePlanStepID, preconditionTaskSchema, preconditionTaskSchema.parameters)
           // make this plan step the first actual task in the method
@@ -78,7 +78,7 @@ object SHOPMethodCompiler extends DomainTransformerWithOutInformation {
                                                             subPlan.ltlConstraint), name), additionalPlanSteps map { _.schema })
         }
     }
-    (Domain(domain.sorts, domain.predicates, domain.tasks ++ (compiledMethods flatMap { _._2 }), compiledMethods map { _._1 }, domain.decompositionAxioms,
+    (Domain(domain.sorts, domain.predicates, domain.tasks ++ (compiledMethods flatMap { _._2 }), compiledMethods map { _._1 }, domain.decompositionAxioms, domain.costValues,
             domain.mappingToOriginalGrounding, domain.sasPlusRepresentation), plan)
   }
 }

@@ -17,10 +17,10 @@
 package de.uniulm.ki.panda3.symbolic.plan.plan.implementation
 
 import de.uniulm.ki.panda3.symbolic.csp.CSP
-import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{ConstantActionCost, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
-import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, CausalLink, PlanStep}
+import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.ordering.TaskOrdering
 import de.uniulm.ki.panda3.symbolic.search.{AllFlaws, AllModifications}
 import org.scalatest.FlatSpec
@@ -35,8 +35,8 @@ class SymbolicPlanTest extends FlatSpec {
 
   val sort1     : Sort      = Sort("sort1", Vector() :+ Constant("a") :+ Constant("b"), Nil)
   val predicate1: Predicate = Predicate("predicate1", sort1 :: sort1 :: Nil)
-  val psInit                = PlanStep(0, ReducedTask("init", true, Nil, Nil, Nil, And(Nil), And(Nil)), Nil)
-  val psGoal                = PlanStep(1, ReducedTask("goal", true, Nil, Nil, Nil, And(Nil), And(Nil)), Nil)
+  val psInit                = PlanStep(0, ReducedTask("init", true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0)), Nil)
+  val psGoal                = PlanStep(1, ReducedTask("goal", true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0)), Nil)
 
 
   val d_v1 = Variable(1, "d_v1", sort1)
@@ -53,12 +53,12 @@ class SymbolicPlanTest extends FlatSpec {
 
 
   val schemaProd : ReducedTask = ReducedTask("task_prod", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, Nil, And[Literal](Nil), And[Literal](Literal(predicate1, isPositive = true, d_v1 :: d_v2 ::
-    Nil) :: Nil))
+    Nil) :: Nil), ConstantActionCost(0))
   val schemaCons : ReducedTask = ReducedTask("task_cons", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, Nil, And[Literal](Literal(predicate1, isPositive = true, d_v1 :: d_v2 :: Nil) :: Nil),
-                                             And[Literal](Nil))
+                                             And[Literal](Nil), ConstantActionCost(0))
   val schemaDestr: ReducedTask = ReducedTask("task_destr", isPrimitive = true, d_v1 :: d_v2 :: Nil, Nil, Nil, And[Literal](Nil),
                                              And[Literal](Literal(predicate1, isPositive = false, d_v1 :: d_v2 :: Nil) ::
-                                                            Nil))
+                                                            Nil), ConstantActionCost(0))
 
   "Computing open preconditions" must "be possible" in {
     val plan1PlanSteps = psInit :: psGoal :: PlanStep(2, schemaCons, p_v1 :: p_v2 :: Nil) :: Nil

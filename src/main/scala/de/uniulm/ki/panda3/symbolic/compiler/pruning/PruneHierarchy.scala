@@ -31,6 +31,7 @@ object PruneInconsistentDecompositionMethods extends DomainTransformer[Unit] {
   override def transform(domain: Domain, plan: Plan, unit: Unit): (Domain, Plan) = {
     val validDecompositionMethods = domain.decompositionMethods filter { _.subPlan.planStepsWithoutInitGoal map { _.schema } forall domain.taskSet.contains }
     val reducedDomain = Domain(domain.sorts, domain.predicates, domain.tasks, validDecompositionMethods, domain.decompositionAxioms,
+                               domain.costValues,
                                domain.mappingToOriginalGrounding, domain.sasPlusRepresentation)
     (reducedDomain, plan)
   }
@@ -76,7 +77,7 @@ object PruneHierarchy extends DomainTransformer[Set[Task]] {
 object PruneDecompositionMethods extends DomainTransformer[Seq[DecompositionMethod]] {
   /** takes a domain, an initial plan and some additional Information and transforms them */
   override def transform(domain: Domain, plan: Plan, remainingMethods: Seq[DecompositionMethod]): (Domain, Plan) = {
-    val domainWithOutMethods = Domain(domain.sorts, domain.predicates, domain.tasks, remainingMethods, domain.decompositionAxioms,
+    val domainWithOutMethods = Domain(domain.sorts, domain.predicates, domain.tasks, remainingMethods, domain.decompositionAxioms, domain.costValues,
                                       domain.mappingToOriginalGrounding, domain.sasPlusRepresentation)
     // run recursive pruning
     PruneHierarchy.transform(domainWithOutMethods, plan, Set())

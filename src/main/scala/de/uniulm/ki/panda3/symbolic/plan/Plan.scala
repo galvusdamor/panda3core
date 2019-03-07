@@ -273,10 +273,10 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       val initTask = init.schema match {
         case reduced: ReducedTask => ReducedTask(reduced.name, isPrimitive = true, reduced.parameters, reduced.artificialParametersRepresentingConstants,
                                                  reduced.parameterConstraints ++ constraints,
-                                                 reduced.precondition, And[Literal](reduced.effect.conjuncts ++ literalsInit))
+                                                 reduced.precondition, And[Literal](reduced.effect.conjuncts ++ literalsInit), reduced.cost)
         case general: GeneralTask =>
           GeneralTask(general.name, isPrimitive = true, general.parameters, general.artificialParametersRepresentingConstants, general.parameterConstraints ++ constraints,
-                      general.precondition, And[Formula](literalsInit :+ general.effect))
+                      general.precondition, And[Formula](literalsInit :+ general.effect), general.cost)
       }
       val newInit = PlanStep(init.id, initTask, init.arguments)
 
@@ -284,10 +284,10 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
       val goalTask = goal.schema match {
         case reduced: ReducedTask =>
           ReducedTask(reduced.name, isPrimitive = true, reduced.parameters, reduced.artificialParametersRepresentingConstants,
-                      reduced.parameterConstraints ++ constraints, And[Literal](reduced.precondition.conjuncts ++ literalsGoal), reduced.effect)
+                      reduced.parameterConstraints ++ constraints, And[Literal](reduced.precondition.conjuncts ++ literalsGoal), reduced.effect, reduced.cost)
         case general: GeneralTask =>
           GeneralTask(general.name, isPrimitive = true, general.parameters, general.artificialParametersRepresentingConstants,
-                      general.parameterConstraints ++ constraints, And[Formula](literalsGoal :+ general.precondition), general.effect)
+                      general.parameterConstraints ++ constraints, And[Formula](literalsGoal :+ general.precondition), general.effect, general.cost)
       }
       val newGoal = PlanStep(goal.id, goalTask, goal.arguments)
 
@@ -802,7 +802,7 @@ object Plan {
   def sequentialPlan(taskSequence: Seq[Task]): Plan = {
     assert(taskSequence forall { _.parameters.isEmpty })
 
-    val noopTask = ReducedTask("noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+    val noopTask = ReducedTask("noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
 
     val planStepSequence = ((noopTask :: noopTask :: Nil) ++ taskSequence).zipWithIndex map { case (t, i) => PlanStep(i, t, Nil) }
     val orderedPSSequence = ((planStepSequence.head :: Nil) ++ planStepSequence.drop(2)) :+ planStepSequence(1)
@@ -814,7 +814,7 @@ object Plan {
   def parallelPlan(taskSequence: Seq[Task]): Plan = {
     assert(taskSequence forall { _.parameters.isEmpty })
 
-    val noopTask = ReducedTask("noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+    val noopTask = ReducedTask("noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
 
     val planStepSequence = ((noopTask :: noopTask :: Nil) ++ taskSequence).zipWithIndex map { case (t, i) => PlanStep(i, t, Nil) }
     val totalOrdering = TaskOrdering(OrderingConstraint.allBetween(planStepSequence.head, planStepSequence(1), planStepSequence.drop(2): _*), planStepSequence)

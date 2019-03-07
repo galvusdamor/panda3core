@@ -16,7 +16,7 @@
 
 package de.uniulm.ki.panda3.symbolic.sat.verify.sogoptimiser
 
-import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{ConstantActionCost, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic.And
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
 import de.uniulm.ki.util.{DirectedGraph, SimpleDirectedGraph}
@@ -50,7 +50,7 @@ object GreedyNumberOfAbstractChildrenOptimiser extends SOGOptimiser {
       val nodes = glines.drop(1).take(n)
       val edges = glines.drop(1 + n).take(m)
 
-      val mappi = nodes.zipWithIndex map { case (s, i) => i -> PlanStep(i, ReducedTask(s, true, Nil, Nil, Nil, And(Nil), And(Nil)), Nil) } toMap
+      val mappi = nodes.zipWithIndex map { case (s, i) => i -> PlanStep(i, ReducedTask(s, true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0)), Nil) } toMap
 
       val realEdges = edges map { s =>
         val ss = s.split(" ")

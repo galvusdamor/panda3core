@@ -18,8 +18,9 @@ package de.uniulm.ki.panda3.symbolic.logic
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 import de.uniulm.ki.panda3.symbolic.csp._
-import de.uniulm.ki.panda3.symbolic.domain.updates.{ExchangeLiteralsByPredicate, DomainUpdate}
-import de.uniulm.ki.util.{Internable, HashMemo}
+import de.uniulm.ki.panda3.symbolic.domain.ActionCost
+import de.uniulm.ki.panda3.symbolic.domain.updates.{DomainUpdate, ExchangeLiteralsByPredicate}
+import de.uniulm.ki.util.{HashMemo, Internable}
 
 /**
   * A simple literal in First Order Logic
@@ -92,6 +93,8 @@ case class Literal(predicate: Predicate, isPositive: Boolean, parameterVariables
   def ground(totalSubstitution: TotalSubstitution[Variable, Constant]): GroundLiteral = GroundLiteral(predicate, isPositive, parameterVariables map totalSubstitution)
 
   def compileQuantors(): (Formula, Seq[Variable]) = (this, Nil)
+
+  def splitFormulaAndCostFunction() : (Formula, Seq[ActionCost]) = (this,Nil)
 }
 
 case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: Seq[Constant]) extends Formula with PrettyPrintable with HashMemo with Ordered[GroundLiteral] {
@@ -133,6 +136,8 @@ case class GroundLiteral(predicate: Predicate, isPositive: Boolean, parameter: S
   }
 
   def compileQuantors(): (Formula, Seq[Variable]) = (this, Nil)
+
+  def splitFormulaAndCostFunction() : (Formula, Seq[ActionCost]) = (this,Nil)
 }
 
 object Literal extends Internable[(Predicate, Boolean, Seq[Variable]), Literal] {

@@ -42,11 +42,11 @@ import scala.Tuple2;
 import scala.collection.JavaConversions;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
-import scala.collection.immutable.Map;
 import scala.collection.immutable.Nil$;
 import scala.collection.immutable.Vector;
 import scala.collection.immutable.VectorBuilder;
 
+import javax.swing.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -96,30 +96,22 @@ public class hddlPanda3Visitor {
 
     private List<String> requirements = new ArrayList<String>();
 
-    public Domain visitDomain(antlrHDDLParser.DomainContext domainCtx) {
-        Seq<Sort> sorts;
-        if ((domainCtx.type_def() != null) && (domainCtx.type_def().type_def_list() != null)) {
-            sorts = visitTypeAndObjDef(domainCtx, null);
-        } else {
-            sorts = new seqProviderList<Sort>().result();
-        }
-
-        Seq<Predicate> predicates = visitPredicateDeclaration(sorts, domainCtx.predicates_def());
-
-        Seq<Task> tasks = visitTaskDefs(sorts, predicates, domainCtx);
-
-        Seq<DecompositionMethod> decompositionMethods = visitMethodDef(domainCtx.method_def(), sorts, predicates, tasks);
-        Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
-
-        return new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms, None$.empty(), None$.empty());
-    }
-
     public Tuple2<Domain, Plan> visitInstance(@NotNull antlrHDDLParser.DomainContext ctxDomain, @NotNull antlrHDDLParser.ProblemContext ctxProblem) {
         if ((ctxDomain.require_def() != null)) {
             for (TerminalNode r : ctxDomain.require_def().require_defs().REQUIRE_NAME()) {
                 requirements.add(r.toString());
             }
         }
+
+        // if this domain has a metric, we have to extract the name of the cost function
+        String metricObjective = null;
+
+        if (ctxProblem.metric_spec() != null) {
+            assert (ctxProblem.metric_spec().optimization().getText().equals("minimize"));
+            assert (ctxProblem.metric_spec().ground_f_exp().func_symbol() != null); // can only optimise function symbols
+            metricObjective = ctxProblem.metric_spec().ground_f_exp().func_symbol().getText();
+        }
+
 
         Seq<Sort> sorts;
         if ((ctxDomain.type_def() != null) && (ctxDomain.type_def().type_def_list() != null)) {
@@ -129,6 +121,7 @@ public class hddlPanda3Visitor {
         }
 
         Seq<Predicate> predicates = visitPredicateDeclaration(sorts, ctxDomain.predicates_def());
+        Map<String, Predicate> functionSymbols = visitFunctionDeclaration(sorts, ctxDomain.funtions_def(), metricObjective);
 
         seqProviderList<VariableConstraint> varConstraints = new seqProviderList<>();
 
@@ -137,16 +130,17 @@ public class hddlPanda3Visitor {
             vctx.addParameter(v);
         }
 
-        Task init = visitInitialState(vctx, varConstraints, sorts, predicates, ctxProblem.p_init());
+        Tuple2<Task, scala.collection.immutable.Map<GroundLiteral, Object>> initAndCost = visitInitialState(vctx, varConstraints, sorts, predicates, ctxProblem.p_init(), metricObjective, functionSymbols);
+        Task init = initAndCost._1();
         Task goal = visitGoalState(vctx, varConstraints, sorts, predicates, ctxProblem.p_goal());
         LTLFormula ltlConstraints = LTLTrue$.MODULE$;
         if (ctxProblem.p_constraint() != null) ltlConstraints = visitConstraints(sorts, predicates, ctxProblem.p_constraint()).nnf();
-        Seq<Task> tasks = visitTaskDefs(sorts, predicates, ctxDomain);
+        Seq<Task> tasks = visitTaskDefs(sorts, predicates, ctxDomain, metricObjective, functionSymbols);
 
-        Seq<DecompositionMethod> decompositionMethods = visitMethodDef(ctxDomain.method_def(), sorts, predicates, tasks);
+        Seq<DecompositionMethod> decompositionMethods = visitMethodDef(ctxDomain.method_def(), sorts, predicates, tasks, metricObjective, functionSymbols);
         Seq<DecompositionAxiom> decompositionAxioms = new Vector<>(0, 0, 0);
 
-        Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms, None$.empty(), None$.empty());
+        Domain d = new Domain(sorts, predicates, tasks, decompositionMethods, decompositionAxioms, initAndCost._2(), None$.empty(), None$.empty());
 
         Seq<Variable> initArguments = init.parameters();
         PlanStep psInit = new PlanStep(0, init, initArguments);
@@ -277,8 +271,8 @@ public class hddlPanda3Visitor {
         } else if (ctx.gd_ltl_sometime_after() != null) {
             LTLFormula left = visitLTLGoalDefinition(ctx.gd_ltl_sometime_after().gd().get(0));
             LTLFormula right = visitLTLGoalDefinition(ctx.gd_ltl_sometime_after().gd().get(1));
-            return new LTLAlways(new LTLImply(left,new LTLEventually(right)));
-         } else if (ctx.gd_ltl_sometime_before() != null) {
+            return new LTLAlways(new LTLImply(left, new LTLEventually(right)));
+        } else if (ctx.gd_ltl_sometime_before() != null) {
             LTLFormula left = visitLTLGoalDefinition(ctx.gd_ltl_sometime_before().gd().get(0));
             LTLFormula right = visitLTLGoalDefinition(ctx.gd_ltl_sometime_before().gd().get(1));
             seqProviderList<LTLFormula> leftList = new seqProviderList<>();
@@ -289,7 +283,7 @@ public class hddlPanda3Visitor {
             rightList.add(new LTLNot(left));
             rightList.add(right);
 
-            return LTLWeakUntil.apply(new LTLAnd(leftList.result()),new LTLAnd(rightList.result()));
+            return LTLWeakUntil.apply(new LTLAnd(leftList.result()), new LTLAnd(rightList.result()));
         } else if (ctx.gd_preference() != null) {
             return visitLTLGoalDefinition(ctx.gd_preference().gd());
         } else {
@@ -303,8 +297,8 @@ public class hddlPanda3Visitor {
                                   seqProviderList<VariableConstraint> constraints, PlanStep psInit, PlanStep psGoal,
                                   Seq<Task> tasks, Seq<Predicate> predicates, Seq<Sort> sorts,
                                   IsModificationAllowed allowedModifications, IsFlawAllowed allowedFlaws,
-                                  Map<PlanStep, DecompositionMethod> planStepsDecomposedBy,
-                                  Map<PlanStep, Tuple2<PlanStep, PlanStep>> planStepsDecompositionParents) {
+                                  scala.collection.immutable.Map<PlanStep, DecompositionMethod> planStepsDecomposedBy,
+                                  scala.collection.immutable.Map<PlanStep, Tuple2<PlanStep, PlanStep>> planStepsDecompositionParents) {
         HashMap<String, PlanStep> idMap = new HashMap<>(); // used to define ordering constraints and causal links
         TaskOrdering taskOrderings = new TaskOrdering(new VectorBuilder<OrderingConstraint>().result(), new VectorBuilder<PlanStep>().result());
         seqProviderList<PlanStep> planSteps = new seqProviderList<>();
@@ -501,17 +495,37 @@ public class hddlPanda3Visitor {
         if (ctx != null) {
             f = visitGoalConditions(vctx, predicates, sorts, constraints, ctx.gd());
         }
-        return new GeneralTask("goal(<Instance>)", true, JavaToScala.toScalaSeq(vctx.parameters), JavaToScala.toScalaSeq(vctx.parameters), constraints.result(), f, new And<Literal>(new Vector<Literal>(0, 0, 0)));
+        return new GeneralTask("goal(<Instance>)", true, JavaToScala.toScalaSeq(vctx.parameters), JavaToScala.toScalaSeq(vctx.parameters), constraints.result(), f, new And<Literal>(new Vector<Literal>(0, 0, 0)), new ConstantActionCost(0));
     }
 
-    private Task visitInitialState(VarContext vctx, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.P_initContext ctx) {
+    private Tuple2<Task, scala.collection.immutable.Map<GroundLiteral, Object>> visitInitialState(VarContext vctx, seqProviderList<VariableConstraint> constraints, Seq<Sort> sorts, Seq<Predicate> predicates,
+                                                                                                  antlrHDDLParser.P_initContext ctx, String costMeasureName, Map<String, Predicate> functionSymbols) {
         seqProviderList<Literal> initEffects = new seqProviderList<>();
+        Map<GroundLiteral, Object> functionInitialisationMap = new HashMap<GroundLiteral, Object>();
         for (antlrHDDLParser.Init_elContext el : ctx.init_el()) {
             if (el.literal() != null) { // normal STRIPS init
                 if (el.literal().atomic_formula() != null) {
                     initEffects.add(visitAtomFormula(vctx, predicates, sorts, constraints, true, el.literal().atomic_formula()));
                 } else if (el.literal().neg_atomic_formula() != null) {
                     initEffects.add(visitAtomFormula(vctx, predicates, sorts, constraints, false, el.literal().atomic_formula()));
+                }
+            } else if (el.num_init() != null) { // numeric init, for action costs
+                assert (el.num_init().f_head().func_symbol() != null);
+                if (el.num_init().f_head().func_symbol().getText().equals(costMeasureName)) {
+                    // initialisiation of the cost measure
+                    assert (el.num_init().NUMBER().getText().equals("0")); // initial cost must be zero
+                } else {
+                    Predicate p = functionSymbols.get(el.num_init().f_head().func_symbol().getText());
+
+                    seqProviderList<Constant> arguments = new seqProviderList<>();
+                    for (antlrHDDLParser.TermContext term : el.num_init().f_head().term()) {
+                        arguments.add(new Constant(term.NAME().getText()));
+                    }
+
+                    GroundLiteral l = new GroundLiteral(p, true, arguments.result());
+                    Integer value = Integer.parseInt(el.num_init().NUMBER().getText());
+
+                    functionInitialisationMap.put(l, value);
                 }
             }
         }
@@ -559,7 +573,10 @@ public class hddlPanda3Visitor {
             }
         }
 
-        return new ReducedTask("init(<Instance>)", true, JavaToScala.toScalaSeq(vctx.parameters), JavaToScala.toScalaSeq(vctx.parameters), constraints.result(), new And<Literal>(new Vector<Literal>(0, 0, 0)), new And<Literal>(initEffects.result()));
+        Task init = new ReducedTask("init(<Instance>)", true, JavaToScala.toScalaSeq(vctx.parameters), JavaToScala.toScalaSeq(vctx.parameters), constraints.result(), new And<Literal>(new
+                Vector<Literal>(0, 0, 0)), new And<Literal>(initEffects.result()), new ConstantActionCost(0));
+
+        return new Tuple2<Task, scala.collection.immutable.Map<GroundLiteral, Object>>(init, JavaToScala.toScalaMap(functionInitialisationMap));
     }
 
     private seqProviderList<Variable> getVariableForEveryConst(Seq<Sort> sorts, seqProviderList<VariableConstraint> varConstraints) {
@@ -578,7 +595,7 @@ public class hddlPanda3Visitor {
         return taskParameter;
     }
 
-    private Seq<DecompositionMethod> visitMethodDef(List<antlrHDDLParser.Method_defContext> ctx, Seq<Sort> sorts, Seq<Predicate> predicates, Seq<Task> tasks) {
+    private Seq<DecompositionMethod> visitMethodDef(List<antlrHDDLParser.Method_defContext> ctx, Seq<Sort> sorts, Seq<Predicate> predicates, Seq<Task> tasks, String costMetricName, Map<String, Predicate> functionSymbols) {
         seqProviderList<DecompositionMethod> methods = new seqProviderList<>();
         for (antlrHDDLParser.Method_defContext m : ctx) {
             // Read abstract task
@@ -630,7 +647,7 @@ public class hddlPanda3Visitor {
             boolean hasEffect = false;
             Formula effect = new And<Literal>(new Vector<Literal>(0, 0, 0));
             if (m.effect() != null) {
-                effect = visitEffect(vctx, tnConstraints, sorts, predicates, m.effect());
+                effect = visitEffect(vctx, tnConstraints, sorts, predicates, costMetricName, functionSymbols, m.effect());
                 hasEffect = true;
             }
 
@@ -640,13 +657,15 @@ public class hddlPanda3Visitor {
                     abstractTask.parameters(),
                     new Vector<VariableConstraint>(0, 0, 0),
                     new And<Literal>(new Vector<Literal>(0, 0, 0)),
-                    abstractTask.precondition());
+                    abstractTask.precondition(),
+                    new ConstantActionCost(0));
             GeneralTask goalSchema = new GeneralTask("goal(" + nameStr + ")", true,
                     abstractTask.parameters(),
                     abstractTask.parameters(),
                     new Vector<VariableConstraint>(0, 0, 0),
                     abstractTask.effect(),
-                    new And<Literal>(new Vector<Literal>(0, 0, 0)));
+                    new And<Literal>(new Vector<Literal>(0, 0, 0)),
+                    new ConstantActionCost(0));
 
             PlanStep psInit = new PlanStep(-1, initSchema, abstractTask.parameters());
             PlanStep psGoal = new PlanStep(-2, goalSchema, abstractTask.parameters());
@@ -702,20 +721,20 @@ public class hddlPanda3Visitor {
         return paramsOk;
     }
 
-    private Seq<Task> visitTaskDefs(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.DomainContext ctxDomain) {
+    private Seq<Task> visitTaskDefs(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.DomainContext ctxDomain, String costMetricName, Map<String, Predicate> functionSymbols) {
         VectorBuilder<Task> tasks = new VectorBuilder<>();
         for (antlrHDDLParser.Action_defContext a : ctxDomain.action_def()) {
-            Task t = visitTaskDef(sorts, predicates, a.task_def(), true);
+            Task t = visitTaskDef(sorts, predicates, a.task_def(), true, costMetricName, functionSymbols);
             tasks.$plus$eq(t);
         }
         for (antlrHDDLParser.Comp_task_defContext c : ctxDomain.comp_task_def()) {
-            Task t = visitTaskDef(sorts, predicates, c.task_def(), false);
+            Task t = visitTaskDef(sorts, predicates, c.task_def(), false, costMetricName, functionSymbols);
             tasks.$plus$eq(t);
         }
         return tasks.result();
     }
 
-    private Task visitTaskDef(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Task_defContext ctxTask, boolean isPrimitive) {
+    private Task visitTaskDef(Seq<Sort> sorts, Seq<Predicate> predicates, antlrHDDLParser.Task_defContext ctxTask, boolean isPrimitive, String costMetricName, Map<String, Predicate> functionSymbols) {
         String taskName = ctxTask.task_symbol().NAME().toString();
         seqProviderList<Variable> parameters = typedParamsToVars(sorts, 0, ctxTask.typed_var_list().typed_vars());
         seqProviderList<VariableConstraint> constraints = new seqProviderList<>();
@@ -740,14 +759,29 @@ public class hddlPanda3Visitor {
         Formula f2 = new And<Literal>(new Vector<Literal>(0, 0, 0));
 
         if (ctxTask.effect() != null) {
-            f2 = visitEffect(vctx, constraints, sorts, predicates, ctxTask.effect());
+            f2 = visitEffect(vctx, constraints, sorts, predicates, costMetricName, functionSymbols, ctxTask.effect());
         }
+
+        Tuple2<Formula, Seq<ActionCost>> splittedCost = f2.splitFormulaAndCostFunction();
+        ActionCost actionCost;
+        if (costMetricName == null) {
+            actionCost = new ConstantActionCost(1);
+        } else {
+            if (splittedCost._2.isEmpty())
+                actionCost = new ConstantActionCost(0);
+            else {
+                assert (splittedCost._2.size() == 1);
+                actionCost = splittedCost._2().head();
+            }
+        }
+
         return new GeneralTask(
                 taskName,
                 isPrimitive,
                 JavaToScala.toScalaSeq(vctx.parameters),
                 JavaToScala.toScalaSeq(vctx.parameters).toVector().take(numOfParams),
-                constraints.result(), f, f2);
+                constraints.result(), f, splittedCost._1(),
+                actionCost);
     }
 
     private seqProviderList<Variable> typedParamsToVars(Seq<Sort> sorts, int startId, List<antlrHDDLParser.Typed_varsContext> vars) {
@@ -881,6 +915,7 @@ public class hddlPanda3Visitor {
             Seq<Sort> sorts,
             seqProviderList<VariableConstraint> constraints,
             List<antlrHDDLParser.Typed_varsContext> typed_varsContexts,
+            String costMetricName, Map<String, Predicate> functionSymbols,
             antlrHDDLParser.EffectContext ctx) {
 
         seqProviderList<Variable> quantifiedVars = new seqProviderList<>();
@@ -899,7 +934,7 @@ public class hddlPanda3Visitor {
             vctx.addQuantifiedVar(v);
         }
 
-        Formula inner = visitEffect(vctx, constraints, sorts, predicates, ctx);
+        Formula inner = visitEffect(vctx, constraints, sorts, predicates, costMetricName, functionSymbols, ctx);
         return new Tuple2<>(quantifiedVars.result(), inner);
     }
 
@@ -908,6 +943,7 @@ public class hddlPanda3Visitor {
             seqProviderList<VariableConstraint> constraints,
             Seq<Sort> sorts,
             Seq<Predicate> predicates,
+            String costMetricName, Map<String, Predicate> functionSymbols,
             antlrHDDLParser.EffectContext ctx) {
         if (ctx.literal() != null) {
             if (ctx.literal().atomic_formula() != null) {
@@ -919,19 +955,43 @@ public class hddlPanda3Visitor {
             return new And<Literal>(new Vector<Literal>(0, 0, 0));
         } else if (ctx.eff_conjunction() != null) {
             return new And<>(JavaToScala.toScalaSeq(ctx.eff_conjunction().effect().stream().map(x ->
-                    visitEffect(vctx, constraints, sorts, predicates, x)
+                    visitEffect(vctx, constraints, sorts, predicates, costMetricName, functionSymbols, x)
             ).collect(Collectors.toList())));
         } else if (ctx.eff_universal() != null) {
             Tuple2<Seq<Variable>, Formula> inner = readInnerEffect(
                     vctx.child(), predicates, sorts, constraints,
-                    ctx.eff_universal().typed_var_list().typed_vars(), ctx.eff_universal().effect());
+                    ctx.eff_universal().typed_var_list().typed_vars(), costMetricName, functionSymbols, ctx.eff_universal().effect());
             return Forall.apply(inner._1, inner._2);
         } else if (ctx.eff_conditional() != null) {
             return new When(
                     visitGoalConditions(vctx, predicates, sorts, constraints, ctx.eff_conditional().gd()),
-                    visitEffect(vctx, constraints, sorts, predicates, ctx.eff_conditional().effect()));
+                    visitEffect(vctx, constraints, sorts, predicates, costMetricName, functionSymbols, ctx.eff_conditional().effect()));
         } else if (ctx.p_effect() != null) {
-            this.report.reportNumericEffect();
+            if (ctx.p_effect().assign_op().getText().equals("increase") &&
+                    ctx.p_effect().f_head().func_symbol() != null &&
+                    ctx.p_effect().f_head().func_symbol().getText().equals(costMetricName)
+                    ) {
+                ActionCost actionCost;
+                if (ctx.p_effect().f_exp().NUMBER() != null) {
+                    actionCost = new ConstantActionCost(Integer.parseInt(ctx.p_effect().f_exp().NUMBER().toString()));
+                    return new ActionCostFormula(actionCost);
+                } else if (ctx.p_effect().f_exp().f_head() != null) {
+                    Predicate p = functionSymbols.get(ctx.p_effect().f_exp().f_head().func_symbol().getText());
+
+                    seqProviderList<Value> arguments = new seqProviderList<>();
+                    for (antlrHDDLParser.TermContext term : ctx.p_effect().f_exp().f_head().term()) {
+                        if (term.NAME() != null) arguments.add(new Constant(term.NAME().getText()));
+                        else if (term.VAR_NAME() != null) arguments.add(vctx.getVarByName(term.VAR_NAME().getText()));
+                    }
+
+                    actionCost = new FunctionalActionCost(p, arguments.result());
+                    return new ActionCostFormula(actionCost);
+                } else
+                    assert (false); // cant deal with more complex changes to the action costs<
+            } else {
+                // general numeric effects
+                this.report.reportNumericEffect();
+            }
             return new And<Literal>(new Vector<Literal>(0, 0, 0));
         } else if (ctx.eff_empty() != null && warningOutput) {
             System.out.println("ERROR: found an empty effect in action declaration.");
@@ -1109,6 +1169,28 @@ public class hddlPanda3Visitor {
             }
         }
         return var;
+    }
+
+
+    private Map<String, Predicate> visitFunctionDeclaration(Seq<Sort> sorts, antlrHDDLParser.Funtions_defContext ctx, String costMetricName) {
+        Map<String, Predicate> functions = new HashMap<>();
+
+        if (ctx == null) return functions;
+
+        for (int i = 0; i < ctx.atomic_formula_skeleton().size(); i++) {
+            antlrHDDLParser.Atomic_formula_skeletonContext def = ctx.atomic_formula_skeleton(i);
+            assert (ctx.var_type(i) == null); // must be declared as number
+            String predName = def.predicate().NAME().toString();
+            VectorBuilder<Sort> pSorts = new VectorBuilder<>();
+            readTypedList(pSorts, new VectorBuilder<String>(), sorts, def.typed_var_list().typed_vars(), "Predicate \"" + predName + "\"");
+
+            if (predName.equals(costMetricName)) {
+                assert (def.typed_var_list().typed_vars().isEmpty());
+            } else
+                functions.put(predName, new Predicate(predName, pSorts.result()));
+        }
+
+        return functions;
     }
 
     private Seq<Predicate> visitPredicateDeclaration(Seq<Sort> sorts, antlrHDDLParser.Predicates_defContext ctx) {

@@ -143,8 +143,9 @@ public class shopDomainReader {
             // todo @Gregor: muss ich im POCL-Sinne die negativen Effekte setzen?
             seqProviderList<Literal> initEffects = getLiterals(predsInDecentDataStructure, varsInDecentDataStructure, plInstance.initialState);
 
-            ReducedTask init = new ReducedTask("init(<Instance>)", true, JavaToScala.toScalaSeq(vctx.parameters), JavaToScala.toScalaSeq(vctx.parameters), varConstraints.result(), emptyAnd, new And<Literal>(initEffects.result()));
-            GeneralTask goal = new GeneralTask("goal(<Instance>)", true, JavaToScala.toScalaSeq(vctx.parameters), JavaToScala.toScalaSeq(vctx.parameters), varConstraints.result(), emptyAnd, emptyAnd);
+            ReducedTask init = new ReducedTask("init(<Instance>)", true, JavaToScala.toScalaSeq(vctx.parameters), JavaToScala.toScalaSeq(vctx.parameters), varConstraints.result(),
+                    emptyAnd, new And<Literal>(initEffects.result()), new ConstantActionCost(0));
+            GeneralTask goal = new GeneralTask("goal(<Instance>)", true, JavaToScala.toScalaSeq(vctx.parameters), JavaToScala.toScalaSeq(vctx.parameters), varConstraints.result(), emptyAnd, emptyAnd, new ConstantActionCost(0));
 
             // task definitions
             HashMap<String, Task> tasksInDecentDataStructure = new HashMap<>();
@@ -168,7 +169,7 @@ public class shopDomainReader {
                 ReducedTask task = new ReducedTask(name, true, params.result(),
                         new seqProviderList<Variable>().result(),
                         new seqProviderList<VariableConstraint>().result(),
-                        fPrec, effs);
+                        fPrec, effs, new ConstantActionCost(1));
                 tTasks.add(task);
                 tasksInDecentDataStructure.put(name, task);
             }
@@ -184,7 +185,7 @@ public class shopDomainReader {
                 Task t = new ReducedTask(taskName, false, params.result(),
                         new seqProviderList<Variable>().result(),
                         new seqProviderList<VariableConstraint>().result(),
-                        emptyAnd, emptyAnd);
+                        emptyAnd, emptyAnd, new ConstantActionCost(0));
                 tTasks.add(t);
                 tasksInDecentDataStructure.put(taskName, t);
             }
@@ -262,13 +263,13 @@ public class shopDomainReader {
                             abs.parameters(),
                             new Vector<>(0, 0, 0),
                             emptyAnd,
-                            abs.precondition());
+                            abs.precondition(), new ConstantActionCost(0));
                     GeneralTask goalSchema = new GeneralTask("goal", true,
                             abs.parameters(),
                             abs.parameters(),
                             new Vector<>(0, 0, 0),
                             abs.effect(),
-                            emptyAnd);
+                            emptyAnd, new ConstantActionCost(0));
 
                     PlanStep psInit = new PlanStep(-1, initSchema, abs.parameters());
                     PlanStep psGoal = new PlanStep(-2, goalSchema, abs.parameters());
@@ -298,7 +299,7 @@ public class shopDomainReader {
                 }
             }
             Domain d = new Domain(sorts, predicates, tasks, tMethods.result(),
-                    new seqProviderList<DecompositionAxiom>().result(), None$.empty(), None$.empty());
+                    new seqProviderList<DecompositionAxiom>().result(), JavaToScala.toScalaMap(new HashMap<GroundLiteral, Object>()),None$.empty(), None$.empty());
 
             PlanStep tniInit = new PlanStep(++currentVarId, init, JavaToScala.toScalaSeq(vctx.parameters));
             PlanStep tniGoal = new PlanStep(++currentVarId, goal, JavaToScala.toScalaSeq(vctx.parameters));

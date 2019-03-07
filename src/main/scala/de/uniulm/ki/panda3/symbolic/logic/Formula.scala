@@ -17,7 +17,7 @@
 package de.uniulm.ki.panda3.symbolic.logic
 
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
-import de.uniulm.ki.panda3.symbolic.domain.DomainUpdatable
+import de.uniulm.ki.panda3.symbolic.domain.{ActionCost, DomainUpdatable}
 import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
 import de.uniulm.ki.util.HashMemo
 
@@ -36,4 +36,6 @@ trait Formula extends DomainUpdatable with PrettyPrintable{
   def containedPredicatesWithSign : Set[(Predicate,Seq[Variable], Boolean)]
 
   def compileQuantors() : (Formula, Seq[Variable])
+
+  def splitFormulaAndCostFunction() : (Formula, Seq[ActionCost])
 }

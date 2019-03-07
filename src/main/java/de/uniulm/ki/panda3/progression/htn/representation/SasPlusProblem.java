@@ -16,6 +16,7 @@
 
 package de.uniulm.ki.panda3.progression.htn.representation;
 
+import de.uniulm.ki.panda3.symbolic.domain.ConstantActionCost;
 import de.uniulm.ki.panda3.symbolic.domain.Domain;
 import de.uniulm.ki.panda3.symbolic.domain.ReducedTask;
 import de.uniulm.ki.panda3.symbolic.domain.Task;
@@ -1286,7 +1287,8 @@ public class SasPlusProblem {
                 res.delLists[i][j++] = iDel;
             }
             res.opNames[i] = t.name();
-            res.costs[i] = 1;
+            assert t.cost() instanceof ConstantActionCost;
+            res.costs[i] = ((ConstantActionCost) t.cost()).cost();
         }
         res.expandedDelLists = res.delLists;
 

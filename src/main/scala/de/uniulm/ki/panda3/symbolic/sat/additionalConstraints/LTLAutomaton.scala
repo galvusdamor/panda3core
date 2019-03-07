@@ -16,7 +16,7 @@
 
 package de.uniulm.ki.panda3.symbolic.sat.additionalConstraints
 
-import de.uniulm.ki.panda3.symbolic.domain.{ReducedTask, Task}
+import de.uniulm.ki.panda3.symbolic.domain.{ConstantActionCost, ReducedTask, Task}
 import de.uniulm.ki.panda3.symbolic.logic.{And, Predicate}
 import de.uniulm.ki.util.DirectedGraphWithAlgorithms
 
@@ -41,4 +41,4 @@ trait LTLAutomaton[NodeType, EdgeToType] extends DirectedGraphWithAlgorithms[Nod
   }
 }
 
-object TaskAfterLastOne extends ReducedTask("--after-last", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil))
+object TaskAfterLastOne extends ReducedTask("--after-last", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))

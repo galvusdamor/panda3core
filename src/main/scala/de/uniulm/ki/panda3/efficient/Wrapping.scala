@@ -569,8 +569,8 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
       val (innerLinks, inheritedLinks) = allCausalLinks partition { link => (insertedPlanSteps contains link.producer) && (insertedPlanSteps contains link.consumer) }
 
       // inserted subplan
-      val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
-      val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil)), Nil)
+      val init = PlanStep(-1, ReducedTask("init", isPrimitive = true, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil), ConstantActionCost(0)), Nil)
+      val goal = PlanStep(-2, ReducedTask("goal", isPrimitive = true, Nil, Nil, Nil, And[Literal](Nil), And[Literal](Nil), ConstantActionCost(0)), Nil)
       val subPlanPlanSteps = insertedPlanSteps :+ init :+ goal
       val subPlanOrderingConstraints = for (before <- addedPlanSteps.indices; after <- addedPlanSteps.indices if subOrdering.get(before)(after) == TaskOrdering.BEFORE) yield
         OrderingConstraint(getPlanStep(before + wrappedPlan.getFirstFreePlanStepID), getPlanStep(after + wrappedPlan.getFirstFreePlanStepID))

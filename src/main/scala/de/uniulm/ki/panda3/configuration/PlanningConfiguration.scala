@@ -537,10 +537,11 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               var lowerBound = -1
 
               if (solution.nonEmpty) {
-                upperBound = solution.get._1.count(ps => ActionCost.hasCost(ps.schema))
+                //println(solution.get._1 map {ps => ps.schema.name + " " + ps.schema.cost} mkString("\n"))
+                upperBound = solution.get._1.map(ps => ps.schema.cost match {case ConstantActionCost(x) => x}).sum
                 lowerBound = VerifyEncoding.lowerBoundOnNonPlanExistence(domainAndPlan._1, domainAndPlan._2, currentK - 1)
                 ////////////////////////////////////////////// 2. step optimise
-                println("Starting plan length optimisation, using binary search = " + optimise)
+                println("Starting cost optimisation, using binary search = " + optimise)
                 println("=====================================================================")
                 println("  upper bound = " + upperBound)
                 println("  lower bound = " + lowerBound)
@@ -548,7 +549,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                 while (((!optimise && betterPossible) || (optimise && upperBound > lowerBound + 1)) && !error && usedTime > 0) {
                   val lengthToCheck = if (optimise) (upperBound + lowerBound) / 2 else upperBound - 1
 
-                  println("\nRunning SAT search with Length = " + lengthToCheck)
+                  println("\nRunning SAT search with cost bound = " + lengthToCheck)
                   println("==================================================")
                   println("  upper bound = " + upperBound)
                   println("  lower bound = " + lowerBound)
@@ -817,8 +818,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         val problemString = gtohpWriter.writeProblem(domainAndPlan._1, domainAndPlan._2)
 
 
-        println(problemString.split("\n").zipWithIndex.map({ case (s, i) => i + ": " + s }).mkString("\n"))
-        println(domainString.split("\n").zipWithIndex.map({ case (s, i) => i + ": " + s }).mkString("\n"))
+        //println(problemString.split("\n").zipWithIndex.map({ case (s, i) => i + ": " + s }).mkString("\n"))
+        //println(domainString.split("\n").zipWithIndex.map({ case (s, i) => i + ": " + s }).mkString("\n"))
 
         val uuid = UUID.randomUUID().toString
         val domFile = "fooD" + uuid + ".pddl"
@@ -826,7 +827,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         writeStringToFile(domainString, domFile)
         writeStringToFile(problemString, probFile)
 
-        System exit 0
+        //System exit 0
 
         val result = {
           import sys.process._
@@ -1218,7 +1219,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val pddlDomain = Domain(classicalDomain.sorts, classicalDomain.predicates :+ artificialGoal,
                               classicalDomain.tasks map {
                                 case rt: ReducedTask => rt.copy(effect = And(rt.effect.conjuncts :+ goalLiteral))
-                              }, Nil, Nil, None, None)
+                              }, Nil, Nil, ???, None, None)
 
       val withGoalPlan = {
         val oldGoal = liftedResult._1._2.goal.schema match {
@@ -1423,6 +1424,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       info("\tNumber of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
       info("\tNumber of Grounded Literals " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.filter(_.isPositive).length + "\n")
 
+      //println(newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.groupBy(_.task.name) map {case (n,l) => n -> l.size } mkString "\n")
       //println(newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.filter(_.isPositive).map(_.longInfo).mkString("\n"))
 
       //System exit 0
