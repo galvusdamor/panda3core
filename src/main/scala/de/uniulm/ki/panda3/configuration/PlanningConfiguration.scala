@@ -1084,8 +1084,12 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
     if (parsingConfiguration.stripHybrid) assert(!noHybrid._1.isHybrid)
     timeCapsule stop PARSER_STRIP_HYBRID
 
+    timeCapsule start PARSER_INHERIT_PRECONDITIONS
+    val inheritedConditions = if (parsingConfiguration.inheritPreconditions) InheritMethodPreconditions.transform(noHybrid, ()) else noHybrid
+    timeCapsule stop PARSER_INHERIT_PRECONDITIONS
+
     timeCapsule start PARSER_SHOP_METHODS
-    val simpleMethod = if (parsingConfiguration.compileSHOPMethods) SHOPMethodCompiler.transform(noHybrid, ()) else noHybrid
+    val simpleMethod = if (parsingConfiguration.compileSHOPMethods) SHOPMethodCompiler.transform(inheritedConditions, ()) else inheritedConditions
     timeCapsule stop PARSER_SHOP_METHODS
 
     timeCapsule start PARSER_FLATTEN_FORMULA
@@ -1852,6 +1856,7 @@ case class ParsingConfiguration(
                                  compileSHOPMethods: Boolean = true,
                                  eliminateEquality: Boolean = true,
                                  stripHybrid: Boolean = false,
+                                 inheritPreconditions : Boolean = false,
                                  reduceGneralTasks: Boolean = true
                                ) extends Configuration {
   /** returns a detailed information about the object */

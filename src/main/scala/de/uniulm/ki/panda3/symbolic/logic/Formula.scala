@@ -35,6 +35,8 @@ trait Formula extends DomainUpdatable with PrettyPrintable{
 
   def containedPredicatesWithSign : Set[(Predicate,Seq[Variable], Boolean)]
 
+  def containsOnly(allowedPredicates : Set[Predicate]) : Boolean = containedPredicatesWithSign.forall(allowedPredicates contains _._1)
+
   def compileQuantors() : (Formula, Seq[Variable])
 
   def splitFormulaAndCostFunction() : (Formula, Seq[ActionCost])

@@ -276,10 +276,10 @@ object PredefinedConfigurations {
                (ExistsStepForbiddenEncoding, "sat-exists-forbidden") :: (ExistsStepImplicationEncoding, "sat-exists-forbidden-implication") ::
                Nil
         ) yield
-          encodingString + "(" + solverString + ")" -> (htnParsing, groundingPreprocess,
-            SATSearch(solver, FullSATRun(), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
-          //encodingString + "(" + solverString + ")" -> (htnParsing, optimalityPreservingPreprocess,
-          //  SATSearch(solver, FullLengthSATRun(optimise = true), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
+          //encodingString + "(" + solverString + ")" -> (htnParsing, groundingPreprocess,
+          //  SATSearch(solver, FullSATRun(), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
+          encodingString + "(" + solverString + ")" -> (htnParsing, optimalityPreservingPreprocess,
+            SATSearch(solver, FullLengthSATRun(optimise = true), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
           //encodingString + "(" + solverString + ")" -> (htnParsing, optimalityPreservingPreprocess,
         //SATSearch(solver, OptimalSATRun(None), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
 

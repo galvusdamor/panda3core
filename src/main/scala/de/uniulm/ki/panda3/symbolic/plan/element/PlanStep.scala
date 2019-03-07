@@ -75,6 +75,7 @@ case class PlanStep(id: Int, schema: Task, arguments: Seq[Variable]) extends Dom
   }
 
   lazy val schemaParameterSubstitution = PartialSubstitution(schema.parameters, arguments)
+  lazy val parameterSchemaSubstitution = PartialSubstitution(arguments, schema.parameters)
 
   ///** check whether two literals are identical given a CSP */
   //def =?=(that: PlanStep)(csp: CSP): Boolean = this.schema == that.schema &&

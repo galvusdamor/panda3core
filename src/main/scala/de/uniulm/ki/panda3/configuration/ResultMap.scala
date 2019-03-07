@@ -134,14 +134,15 @@ object FinalGroundedReachability extends ResultType {
 object Timings {
   val TOTAL_TIME = "00 total:00:total"
 
-  val PARSING                   = "01 parsing:00:total"
-  val FILEPARSER                = "01 parsing:01:file parser"
-  val PARSER_SORT_EXPANSION     = "01 parsing:02:sort expansion"
-  val PARSER_CWA                = "01 parsing:03:closed world assumption"
-  val PARSER_SHOP_METHODS       = "01 parsing:04:shop methods"
-  val PARSER_ELIMINATE_EQUALITY = "01 parsing:05:eliminate identical variables"
-  val PARSER_STRIP_HYBRID       = "01 parsing:06:strip domain of hybridity"
-  val PARSER_FLATTEN_FORMULA    = "01 parsing:07:flatten formula"
+  val PARSING                      = "01 parsing:00:total"
+  val FILEPARSER                   = "01 parsing:01:file parser"
+  val PARSER_SORT_EXPANSION        = "01 parsing:02:sort expansion"
+  val PARSER_CWA                   = "01 parsing:03:closed world assumption"
+  val PARSER_INHERIT_PRECONDITIONS = "01 parsing:04:inherit preconditions"
+  val PARSER_SHOP_METHODS          = "01 parsing:05:shop methods"
+  val PARSER_ELIMINATE_EQUALITY    = "01 parsing:06:eliminate identical variables"
+  val PARSER_STRIP_HYBRID          = "01 parsing:07:strip domain of hybridity"
+  val PARSER_FLATTEN_FORMULA       = "01 parsing:08:flatten formula"
 
 
   val PREPROCESSING                        = "02 preprocessing:00:total"
