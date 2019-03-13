@@ -19,6 +19,7 @@ package de.uniulm.ki.util
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
 
 import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * Represented general (directed) Graphs with noes of type T.
@@ -249,6 +250,8 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
 
 
   lazy val stronglyConnectedComponents: Seq[Set[T]] = {
+    val edgesArrays: Map[T, IndexedSeq[T]] = edges map { case (k, v) => k -> v.toIndexedSeq }
+
     // use Tarjan's algorithm to find the SCCs
     val lowLink: mutable.Map[T, Int] = mutable.HashMap()
     val dfsNumber: mutable.Map[T, Int] = mutable.HashMap()
@@ -256,26 +259,30 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
     val onStack: mutable.Set[T] = mutable.HashSet()
 
     var dfs = 0
+    val sccs = new ArrayBuffer[Set[T]]()
 
-    def tarjan(node: T): Seq[Set[T]] = {
+    def tarjan(node: T): Unit = {
       dfsNumber(node) = dfs
       lowLink(node) = dfs
       dfs = dfs + 1
       stack.push(node)
       onStack.add(node)
 
-      val recursionResult: Seq[Set[T]] = if (!edges.contains(node)) Nil
-      else edges(node) flatMap { neighbour =>
-        if (dfsNumber.contains(neighbour)) {
-          // search on stack, if found adjust lowlink
-          if (onStack(neighbour))
-            lowLink(node) = math.min(lowLink(node), dfsNumber(neighbour))
-          Nil
-        } else {
-          val components = tarjan(neighbour)
-          // adjust lowlink
-          lowLink(node) = math.min(lowLink(node), lowLink(neighbour))
-          components
+      if (edgesArrays.contains(node)) {
+        var i = 0
+        while (i < edgesArrays(node).length) {
+          val neighbour = edgesArrays(node)(i)
+          if (dfsNumber.contains(neighbour)) {
+            // search on stack, if found adjust lowlink
+            if (onStack(neighbour))
+              lowLink(node) = math.min(lowLink(node), dfsNumber(neighbour))
+          } else {
+            tarjan(neighbour)
+            // adjust lowlink
+            lowLink(node) = math.min(lowLink(node), lowLink(neighbour))
+
+          }
+          i += 1
         }
       }
 
@@ -290,11 +297,13 @@ trait DirectedGraphWithAlgorithms[T] extends DirectedGraph[T] {
           if (v == node)
             stop = true
         }
-        recursionResult :+ sccNodes.toSet
-      } else recursionResult
+        sccs append sccNodes.toSet
+      }
     }
 
-    vertices flatMap { node => if (!dfsNumber.contains(node)) tarjan(node) else Nil }
+    vertices foreach { node => if (!dfsNumber.contains(node)) tarjan(node) }
+
+    sccs
   }
 
   lazy val getComponentOf: Map[T, Set[T]] = {
