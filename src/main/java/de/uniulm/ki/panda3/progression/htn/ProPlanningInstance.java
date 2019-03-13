@@ -47,7 +47,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 /**
- * Created by dhoeller on 01.07.16.
+ * Created by Daniel Höller on 01.07.16.
  */
 public class ProPlanningInstance {
 
@@ -61,6 +61,7 @@ public class ProPlanningInstance {
                        PriorityQueueSearch.abstractTaskSelection taskSelectionStrategy,
                        SearchHeuristic heuristic,
                        SearchAlgorithmType search,
+                       String searchEngineCall,
                        long randomSeed,
                        long quitAfterMs) throws ExecutionException, InterruptedException {
         if (d.sasPlusRepresentation().isEmpty()) {
@@ -111,11 +112,12 @@ public class ProPlanningInstance {
         }
         indexToTask = null; // do not use this anymore
 
+        // prepare method representation that is used internally
         HashMap<Task, List<ProMethod>> methods = getEfficientMethodRep(methodsByTask);
         finalizeMethods(methods);
         ProgressionNetwork.methods = methods;
 
-        if (!(p.planStepsWithoutInitGoal().size() == 1)) {
+        if (p.planStepsWithoutInitGoal().size() != 1) {
             System.out.println("Error: Progression search algorithm found more than one task in the initial task network.");
             System.exit(-1);
         }
@@ -136,9 +138,9 @@ public class ProPlanningInstance {
             initialNode.heuristic = new gphBFS();
         else if (search instanceof DFSType$) {
             initialNode.heuristic = new gphDFS();
-        } else if (search instanceof ExternalSearchEngine) {
+        } else if (search instanceof ExternalSearchEngine) { // write model to hd to use external search engine
             ExternalSearchEngine searchEngine = (ExternalSearchEngine) search;
-            writeModelToHD(methods, initialTasks, initialNode, searchEngine.uuid());
+            writeModelToHD(methods, initialTasks, initialNode, searchEngine.uuid(), searchEngineCall);
             System.exit(0);
         } else if (heuristic instanceof HierarchicalHeuristicRelaxedComposition) {
             HierarchicalHeuristicRelaxedComposition h = (HierarchicalHeuristicRelaxedComposition) heuristic;
@@ -215,10 +217,9 @@ public class ProPlanningInstance {
             return solution.toPrimitiveSequence();
     }
 
-    private void writeModelToHD(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, ProgressionNetwork initialNode, String uuid) {
-        String htnModelFile = "./" + uuid + ".htn";
-        String heuristicModelFile = "./" + uuid + ".rc";
-        String topDownReachabilityFile = "./" + uuid + ".tr";
+    private void writeModelToHD(HashMap<Task, List<ProMethod>> methods, List<ProgressionPlanStep> initialTasks, ProgressionNetwork initialNode, String uuid, String progName) {
+        String htnModelFile = System.getProperty("user.dir") + "/" + uuid + ".htn";
+        String heuristicModelFile = System.getProperty("user.dir") + "/" + uuid + ".rc";
 
         System.out.print("Writing HTN model...");
         initialNode.writeToDisk(htnModelFile);
@@ -226,7 +227,7 @@ public class ProPlanningInstance {
 
         System.out.println("Generating RC model");
         RelaxedCompositionSTRIPS compEnc = new RelaxedCompositionSTRIPS(ProgressionNetwork.flatProblem);
-        compEnc.generateTaskCompGraph(methods, initialTasks);
+        compEnc.generateTaskCompGraph(methods, initialTasks, false);
 
         try {
             System.out.print("Writing RC model...");
@@ -235,21 +236,7 @@ public class ProPlanningInstance {
             ps2.close();
             System.out.println("done");
 
-            System.out.print("Writing TDR model...");
-            ps2 = new PrintStream(new BufferedOutputStream(new FileOutputStream(topDownReachabilityFile)));
-            //((TDGLandmarkFactory) compEnc.tdRechability).writeToDisk(ps2);
-            ((TaskReachabilityGraph) compEnc.tdRechability).writeToDisk(ps2);
-            ps2.close();
-            System.out.println("done");
-/*
-            ps2 = new PrintStream(new FileOutputStream("/home/dh/Schreibtisch/instanceForC/instance.tr2"));
-            ((TaskReachabilityGraph) compEnc.tdRechability2).writeToDisk(ps2);
-            ps2.close();
-            System.exit(0);
-
-            Process process = new ProcessBuilder(
-                    "/media/dh/Volume/repositories/private-source-code/cpp-code/SearchEngine/Debug/SearchEngine"//,"param1","param2"
-            ).start();
+            Process process = new ProcessBuilder(progName, htnModelFile, heuristicModelFile).start();
             InputStream is = process.getInputStream();
             InputStreamReader isr = new InputStreamReader(is);
             BufferedReader br = new BufferedReader(isr);
@@ -260,7 +247,7 @@ public class ProPlanningInstance {
             while ((line = br.readLine()) != null) {
                 System.out.println(line);
             }
-            //System.exit(0);*/
+            //System.exit(0);
         } catch (Exception e) {
             e.printStackTrace();
         }

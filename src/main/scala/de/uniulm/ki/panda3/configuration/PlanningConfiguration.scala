@@ -353,6 +353,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
                                                            progression.abstractTaskSelectionStrategy,
                                                            progression.heuristic.getOrElse(null),
                                                            progression.searchAlgorithm,
+                                                           externalProgramPaths.getOrElse(PANDASEARCHENGINE, ""),
                                                            randomSeed,
                                                            timeLimit.getOrElse(Int.MaxValue).toLong * 1000)
 
@@ -595,7 +596,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               var currentLength = 1
               var remainingTime: Long = timeLimitInMilliseconds.getOrElse(Long.MaxValue) - timeCapsule.getCurrentElapsedTimeInThread(TOTAL_TIME)
               var usedTime: Long = remainingTime
-              while (solution.isEmpty && !error  && usedTime > 0 && domainAndPlan._1.primitiveTasks.nonEmpty) {
+              while (solution.isEmpty && !error && usedTime > 0 && domainAndPlan._1.primitiveTasks.nonEmpty) {
                 println("\nRunning SAT search with length = " + currentLength)
                 println("Time remaining for SAT search " + remainingTime + "ms")
                 println("Time used for this run " + usedTime + "ms\n\n")
@@ -1424,7 +1425,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       val disallowedTasks = sasPlusResult._1._1.primitiveTasks filterNot reachable.contains
       val pruned = PruneHierarchy.transform(sasPlusResult._1._1, sasPlusResult._1._2, disallowedTasks.toSet)
       val time1 = System.currentTimeMillis()
-      info("done in " + (time1 - time0)+ "ms.\n")
+      info("done in " + (time1 - time0) + "ms.\n")
       info("\tNumber of Grounded Actions " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.length + "\n")
       info("\tNumber of Grounded Literals " + newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.filter(_.isPositive).length + "\n")
 
@@ -1738,6 +1739,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
              case "expMC_LRB_VSIDS_Switch_2500"           => ExpMC_LRB_VSIDS_Switch_2500
              case "ReasonLS"                              => ReasonLS
              case "CaDiCaL"                               => CADICAL
+             case "searchEngine" | "searchengine"         => PANDASEARCHENGINE
            }
            this.copy(externalProgramPaths = externalProgramPaths.+((program, splittedPath(1)))).asInstanceOf[this.type]
          })
@@ -1856,7 +1858,7 @@ case class ParsingConfiguration(
                                  compileSHOPMethods: Boolean = true,
                                  eliminateEquality: Boolean = true,
                                  stripHybrid: Boolean = false,
-                                 inheritPreconditions : Boolean = false,
+                                 inheritPreconditions: Boolean = false,
                                  reduceGneralTasks: Boolean = true
                                ) extends Configuration {
   /** returns a detailed information about the object */
@@ -2665,6 +2667,8 @@ object FAPE extends ExternalProgram {override val longInfo: String = "FAPE"}
 object SHOP2 extends ExternalProgram {override val longInfo: String = "J-SHOP2"}
 
 object GTOHP extends ExternalProgram {override val longInfo: String = "GTOHP"}
+
+object PANDASEARCHENGINE extends ExternalProgram {override val longInfo: String = "PANDA search engine"}
 
 sealed trait Solvertype extends DefaultLongInfo with ExternalProgram
 

@@ -166,6 +166,8 @@ object PredefinedConfigurations {
   val shop2         = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
   val shop2Improved = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.random)
 
+  val externalSearch = ProgressionSearch(ExternalSearchEngine("external-search"), None, abstractTaskSelectionStrategy =  PriorityQueueSearch.abstractTaskSelection.branchOverAll)
+
   def pandaProConfig(algorithm: SearchAlgorithmType, sasHeuristic: SasHeuristics): ProgressionSearch =
     ProgressionSearch(algorithm, Some(HierarchicalHeuristicRelaxedComposition(sasHeuristic)), PriorityQueueSearch.abstractTaskSelection.random)
 
@@ -262,7 +264,10 @@ object PredefinedConfigurations {
          "sas-ICAPS-2018-RC(add,gastar)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(AStarActionsType(2), SasHeuristics.hAdd)),
          "sas-ICAPS-2018-RC(FF,greedy)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hFF)),
          "sas-ICAPS-2018-RC(lmcut,greedy)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hLmCut)),
-         "sas-ICAPS-2018-RC(add,greedy)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd))
+         "sas-ICAPS-2018-RC(add,greedy)" -> (htnParsing, sasGroundingPreprocess, pandaProConfig(GreedyType, SasHeuristics.hAdd)),
+
+
+         "externalSearch" -> (htnParsing, groundingPreprocess, externalSearch),
        ) ++ {
       val x: Seq[(String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration))] =
         for ((solver, solverString) <- (MapleCOMSPS, "MapleCOMSPS") :: (MapleLCMDistChronoBT, "MapleLCMDistChronoBT") :: (Maple_LCM_Scavel, "Maple_LCM_Scavel") ::
@@ -274,14 +279,11 @@ object PredefinedConfigurations {
              (TreeBeforeEncoding, "ICTAI-2018-treeBefore") :: (TreeBeforeExistsStepEncoding, "ICTAI-2018-treeBefore-exists") ::
              (ClassicalForbiddenEncoding, "sat-classical-forbidden") :: (ClassicalImplicationEncoding, "sat-classical-forbidden-implication") ::
                (ExistsStepForbiddenEncoding, "sat-exists-forbidden") :: (ExistsStepImplicationEncoding, "sat-exists-forbidden-implication") ::
-               Nil
+               Nil;
+               (solverMode,modeText) <- (FullSATRun(), "") :: (FullLengthSATRun(optimise = true), "-optimise(bin)") :: (FullLengthSATRun(optimise = false), "-optimise(dec)") :: Nil
         ) yield
-          //encodingString + "(" + solverString + ")" -> (htnParsing, groundingPreprocess,
-          //  SATSearch(solver, FullSATRun(), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
-          encodingString + "(" + solverString + ")" -> (htnParsing, optimalityPreservingPreprocess,
-            SATSearch(solver, FullLengthSATRun(optimise = true), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
-          //encodingString + "(" + solverString + ")" -> (htnParsing, optimalityPreservingPreprocess,
-        //SATSearch(solver, OptimalSATRun(None), reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
+          encodingString + modeText + "(" + solverString + ")" -> (htnParsing, optimalityPreservingPreprocess,
+            SATSearch(solver, solverMode, reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
 
       x.toMap
     }

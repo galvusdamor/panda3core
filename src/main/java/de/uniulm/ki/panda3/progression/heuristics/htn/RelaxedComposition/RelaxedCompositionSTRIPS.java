@@ -77,11 +77,17 @@ public class RelaxedCompositionSTRIPS extends RelaxedCompositionEncoding {
 
     public void generateTaskCompGraph(HashMap<Task, List<ProMethod>> methods,
                                       List<ProgressionPlanStep> initialTasks) {
+        generateTaskCompGraph(methods, initialTasks, true);
+    }
+
+    public void generateTaskCompGraph(HashMap<Task, List<ProMethod>> methods,
+                                      List<ProgressionPlanStep> initialTasks, boolean calcTDR) {
 
         this.numAnM = createMethodLookupTable(methods);
         this.numTasks = ProgressionNetwork.indexToTask.length;
         //tdRechability = new TDGLandmarkFactory(methods, initialTasks, this.numTasks, this.numOfOperators);
-        tdRechability = new TaskReachabilityGraph(methods, initialTasks, numTasks, this.numOfOperators);
+        if(calcTDR)
+          tdRechability = new TaskReachabilityGraph(methods, initialTasks, numTasks, this.numOfOperators);
 
         // set indices
         this.firstTdrIndex = this.numOfStateFeatures;
