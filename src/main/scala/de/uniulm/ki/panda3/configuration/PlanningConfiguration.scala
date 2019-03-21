@@ -60,7 +60,7 @@ import de.uniulm.ki.panda3.symbolic.writer.gtohp.GTOHPWriter
 import de.uniulm.ki.panda3.symbolic.writer.hddl.HDDLWriter
 import de.uniulm.ki.panda3.symbolic.writer.shop2.SHOP2Writer
 import de.uniulm.ki.panda3.symbolic.writer.simplehddl.SimpleHDDLWriter
-import de.uniulm.ki.panda3.{MainGregor, efficient, symbolic}
+import de.uniulm.ki.panda3.{efficient, symbolic}
 import de.uniulm.ki.util.{InformationCapsule, TimeCapsule}
 import de.uniulm.ki.util._
 
@@ -654,8 +654,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
         }
 
       case HTN2STRIPSSearch =>
-        val length = MainGregor.length
-        val depthBound = VerifyEncoding.computeTheoreticalK(domainAndPlan._1, domainAndPlan._2, length)
+        val depthBound = VerifyEncoding.computeTheoreticalK(domainAndPlan._1, domainAndPlan._2, ???)
 
         println("depth: " + depthBound)
         val pb = HTN2STRIPS.computeProgressionBoundForDepth(domainAndPlan._1, domainAndPlan._2, depthBound)
