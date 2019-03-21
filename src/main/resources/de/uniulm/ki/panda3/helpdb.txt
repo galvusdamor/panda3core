@@ -27,6 +27,8 @@ To run PANDA, you have to specify at least a domain and a problem file. For most
 PANDA's general call syntax is as follows:
     java -jar panda.jar [OPTIONS] domfile.xyz [OPTIONS] probfile.xyz [OPTIONS] [outputfile.{pdf|dot}] [OPTIONS]
 \n
+By default (i.e. when calling it only with a domain and problem file), PANDA uses the system configuration ICAPS-2018-RC(FF,gastar).
+\n
 If you want to use PANDA for scientific comparisons, we highly recommend to use the respective pre-defined system configurations using "-systemConfig" to prevent a misconfiguration of the system.
 \n
 By default the output is restricted to 80 characters per line.
