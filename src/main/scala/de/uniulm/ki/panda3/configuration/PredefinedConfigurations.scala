@@ -103,19 +103,19 @@ object PredefinedConfigurations {
                                                     stopDirectlyAfterGrounding = false)
 
   val noPreprocess = PreprocessingConfiguration(compileNegativePreconditions = false, compileUnitMethods = false,
-                                                    compileOrderInMethods = None,
-                                                    compileInitialPlan = false, splitIndependentParameters = false,
-                                                    convertToSASP = false,
-                                                    allowSASPFromStrips = false,
-                                                    removeUnnecessaryPredicates = false,
-                                                    removeNoOps = false,
-                                                    ensureMethodsHaveLastTask = false,
-                                                    ensureMethodsHaveAtMostTwoTasks = false,
-                                                    compileUselessAbstractTasks = false,
-                                                    liftedReachability = false, groundedReachability = None,
-                                                    groundedTaskDecompositionGraph = None,
-                                                    iterateReachabilityAnalysis = false, groundDomain = false,
-                                                    stopDirectlyAfterGrounding = false)
+                                                compileOrderInMethods = None,
+                                                compileInitialPlan = false, splitIndependentParameters = false,
+                                                convertToSASP = false,
+                                                allowSASPFromStrips = false,
+                                                removeUnnecessaryPredicates = false,
+                                                removeNoOps = false,
+                                                ensureMethodsHaveLastTask = false,
+                                                ensureMethodsHaveAtMostTwoTasks = false,
+                                                compileUselessAbstractTasks = false,
+                                                liftedReachability = false, groundedReachability = None,
+                                                groundedTaskDecompositionGraph = None,
+                                                iterateReachabilityAnalysis = false, groundDomain = false,
+                                                stopDirectlyAfterGrounding = false)
 
   val preprocessConfigs = Map(
                                "ordering" -> orderingGroundingPreprocess,
@@ -166,13 +166,15 @@ object PredefinedConfigurations {
   val shop2         = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
   val shop2Improved = ProgressionSearch(DFSType, None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.random)
 
-  val externalSearch = ProgressionSearch(ExternalSearchEngine("external-search"), None, abstractTaskSelectionStrategy =  PriorityQueueSearch.abstractTaskSelection.branchOverAll)
+  val externalSearch = ProgressionSearch(ExternalSearchEngine("external-search"), None, abstractTaskSelectionStrategy = PriorityQueueSearch.abstractTaskSelection.branchOverAll)
 
   def pandaProConfig(algorithm: SearchAlgorithmType, sasHeuristic: SasHeuristics): ProgressionSearch =
     ProgressionSearch(algorithm, Some(HierarchicalHeuristicRelaxedComposition(sasHeuristic)), PriorityQueueSearch.abstractTaskSelection.random)
 
   val defaultConfigurations: Map[String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration)] =
     Map(
+         "only-ground" -> (htnParsing, groundingPreprocess, NoSearch),
+
          //"panda-MAC" ->(htnParsing, groundingPreprocess, PlanBasedSearch(None, AStarActionsType(1), LiftedTDGMinimumAction(NeverRecompute) :: Nil, Nil, LCFR)),
          "IJCAI-2017-AdmissibleHeuristics(uniform)" -> (htnParsing, groundingPreprocess, planSearchDijkstra),
          "IJCAI-2017-AdmissibleHeuristics(DFS)" -> (htnParsing, groundingPreprocess, planSearchDFS),
@@ -268,19 +270,19 @@ object PredefinedConfigurations {
 
 
          "externalSearch" -> (htnParsing, groundingPreprocess, externalSearch),
-       ) ++ {
+         ) ++ {
       val x: Seq[(String, (ParsingConfiguration, PreprocessingConfiguration, SearchConfiguration))] =
         for ((solver, solverString) <- (MapleCOMSPS, "MapleCOMSPS") :: (MapleLCMDistChronoBT, "MapleLCMDistChronoBT") :: (Maple_LCM_Scavel, "Maple_LCM_Scavel") ::
           (CADICAL, "CaDiCaL") :: (RISS6, "riss6") :: (CRYPTOMINISAT, "cms5") :: (CRYPTOMINISAT55, "cms55") :: (ExpMC_LRB_VSIDS_Switch_2500, "expMC_LRB_VSIDS_Switch_2500") ::
-          (ReasonLS,"ReasonLS") :: (MINISAT,"minisat") ::
+          (ReasonLS, "ReasonLS") :: (MINISAT, "minisat") ::
 
           Nil;
              (encoding, encodingString) <-
              (TreeBeforeEncoding, "ICTAI-2018-treeBefore") :: (TreeBeforeExistsStepEncoding, "ICTAI-2018-treeBefore-exists") ::
-             (ClassicalForbiddenEncoding, "sat-classical-forbidden") :: (ClassicalImplicationEncoding, "sat-classical-forbidden-implication") ::
+               (ClassicalForbiddenEncoding, "sat-classical-forbidden") :: (ClassicalImplicationEncoding, "sat-classical-forbidden-implication") ::
                (ExistsStepForbiddenEncoding, "sat-exists-forbidden") :: (ExistsStepImplicationEncoding, "sat-exists-forbidden-implication") ::
                Nil;
-               (solverMode,modeText) <- (FullSATRun(), "") :: (FullLengthSATRun(optimise = true), "-optimise(bin)") :: (FullLengthSATRun(optimise = false), "-optimise(dec)") :: Nil
+             (solverMode, modeText) <- (FullSATRun(), "") :: (FullLengthSATRun(optimise = true), "-optimise(bin)") :: (FullLengthSATRun(optimise = false), "-optimise(dec)") :: Nil
         ) yield
           encodingString + modeText + "(" + solverString + ")" -> (htnParsing, optimalityPreservingPreprocess,
             SATSearch(solver, solverMode, reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))

@@ -1670,9 +1670,16 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       val noopCount = compiledResult._1.primitiveTasks.count(_.isNoOp)
       println("Tasks " + compiledResult._1.primitiveTasks.length + " - " + noopCount)
+      /*compiledResult._1.primitiveTasks foreach {t => println(t.name)}
+
+      println("==================")
+      compiledResult._1.abstractTasks foreach {t => println(t.name)}
+
+      println("==================")
+      compiledResult._1.decompositionMethods foreach {t => println(t.name)}
 
 
-      //System exit 0
+      System exit 0*/
 
 
       timeCapsule stop PREPROCESSING
