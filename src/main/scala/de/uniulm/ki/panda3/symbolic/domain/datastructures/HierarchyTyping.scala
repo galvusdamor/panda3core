@@ -73,13 +73,21 @@ trait WithHierarchyTyping extends WithTopMethod {
           var changed = true
           while (changed)
             changed = simpleMethod.subPlan.variableConstraints.constraints collect {
-              case Equal(var1: Variable, var2: Variable) =>
+              case Equal(var1: Variable, var2: Variable)                                      =>
                 val newDomain = setParameter(var1) intersect setParameter(var2)
                 val innerChanged = newDomain != setParameter(var1) || newDomain != setParameter(var2)
 
                 setParameter(var1) = newDomain
                 setParameter(var2) = newDomain
 
+                innerChanged
+              case NotEqual(var1: Variable, var2: Variable) if setParameter(var1).size == 1 =>
+                val innerChanged = setParameter(var2) contains setParameter(var1).head
+                setParameter(var2) = setParameter(var2) - setParameter(var1).head
+                innerChanged
+              case NotEqual(var1: Variable, var2: Variable) if setParameter(var2).size == 1 =>
+                val innerChanged = setParameter(var1) contains setParameter(var2).head
+                setParameter(var1) = setParameter(var1) - setParameter(var2).head
                 innerChanged
             } exists { x => x }
 
@@ -109,6 +117,17 @@ trait WithHierarchyTyping extends WithTopMethod {
 
   def initialise(): Unit = if (!omitTopDownStep) {
     dfs(cartesianTop)
+    /*println("Hierarchy Typing")
+
+    cartTasksMap foreach { case (t, cts) =>
+      println("Task " + t.name)
+      cts foreach { ct =>
+        println("\tCT")
+        ct.argumentMap foreach { case (v, cs) => println("\t\t" + v.name + ": " + cs.map(_.name).mkString(" ")) }
+        println()
+      }
+    }*/
+
   } else {
     // don't use top-down analysis, just fill the carthesian maps naively
     cartTasksMap(cartesianTop.task) = Set(cartesianTop)

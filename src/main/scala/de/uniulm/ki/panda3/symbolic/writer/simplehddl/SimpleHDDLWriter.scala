@@ -105,7 +105,7 @@ object SimpleHDDLWriter extends Writer {
 
     val variableReplacementMap: Map[(Any, Variable), Sort] = tasksAndMethodsWithVariablesAndConstraints map { case (t, constraints, v) =>
       val pertainingConstraints = constraints.filter(_.getVariables.contains(v))
-      println(v.name + " " + pertainingConstraints.length)
+      //println(v.name + " " + pertainingConstraints.length)
       if (pertainingConstraints.isEmpty) None else {
         val sort = reduceConstraints(v, pertainingConstraints)
         // detect sort
