@@ -31,7 +31,8 @@ object PrunePredicates extends DomainTransformer[Set[String]] {
       // it might be true and cannot be made false
       if ((plan.groundInitialStateOnlyPositivesSetOnlyPredicates contains p) && domain.producersOfPosNeg(p)._2.isEmpty)
         true
-      else if (!(plan.groundInitialStateOnlyPositivesSetOnlyPredicates contains p) && domain.consumersOf(p).isEmpty && domain.producersOfPosNeg(p)._1.isEmpty)
+      else if (!(plan.groundInitialStateOnlyPositivesSetOnlyPredicates contains p) && domain.consumersOf(p).isEmpty &&
+        !plan.goal.schema.posPreconditionAsPredicateSet.contains(p) && domain.producersOfPosNeg(p)._1.isEmpty)
         true
       else
         false
