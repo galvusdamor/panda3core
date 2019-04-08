@@ -285,7 +285,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
               case DijkstraType | DFSType                               =>
                 // just use the zero heuristic
                 val heuristicSearch = efficient.search.HeuristicSearch(Array[EfficientHeuristic[Unit]](AlwaysZeroHeuristic), 0, Array(), flawSelector,
-                                                                       addNumberOfPlanSteps = true, addDepth = false,
+                                                                       addNumberOfPlanSteps = search.searchAlgorithm != DFSType, addDepth = search.searchAlgorithm == DFSType,
                                                                        continueOnSolution = search.continueOnSolution,
                                                                        invertCosts = search.searchAlgorithm == DFSType)
 
