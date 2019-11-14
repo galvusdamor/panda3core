@@ -214,20 +214,22 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
 
         // if assigned and method, prec is true
         val methodPrecsAreTrue = node.possibleMethods flatMap { case (m, mid) =>
-          val methodAtom = method(node.layer, node.path, mid)
+          if (!m.subPlan.planStepSchemaArrayWithoutMethodPreconditions.isEmpty) {
+            val methodAtom = method(node.layer, node.path, mid)
 
-          val prec = m.subPlan.orderingConstraints.fullGraph.sources.filter(ps => ps.schema.isPrimitive && ps.schema.effect.isEmpty && ps.schema.name.contains("SHOP_method")).
-            flatMap(_.schema.posPreconditionAsPredicate)
+            val prec = m.subPlan.orderingConstraints.fullGraph.sources.filter(ps => ps.schema.isPrimitive && ps.schema.effect.isEmpty && ps.schema.name.contains("SHOP_method")).
+              flatMap(_.schema.posPreconditionAsPredicate)
 
-          prec flatMap { p =>
-            Range(0, taskSequenceLength) map { pos =>
-              val pathPosAtom = pathToPosMethod(node.path, pos)
-              val stateAtom = statePredicate(K - 1, pos, p)
+            prec flatMap { p =>
+              Range(0, taskSequenceLength) map { pos =>
+                val pathPosAtom = pathToPosMethod(node.path, pos)
+                val stateAtom = statePredicate(K - 1, pos, p)
 
-              val condition = methodAtom :: pathPosAtom :: Nil
-              impliesRightAndSingle(condition, stateAtom)
+                val condition = methodAtom :: pathPosAtom :: Nil
+                impliesRightAndSingle(condition, stateAtom)
+              }
             }
-          }
+          } else Nil
         }
 
         val recursiveCalls = node.children flatMap methodPrecDFS

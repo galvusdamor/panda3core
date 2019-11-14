@@ -186,7 +186,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
     val stateSequence = groundTasks.foldLeft(initialState :: Nil)(
       { case (states, action) =>
         //println("STATE")
-        //println(state map {x => "\t" + x.predicate.name} mkString("\n"))
+        //println(states.last map {x => "\t" + x.predicate.name} mkString("\n"))
         //println("PREC " + action.task.name)
         //println(action.task.preconditionsAsPredicateBool map {x => "\t" + x._1.name} mkString "\n")
         //println()
@@ -715,6 +715,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         val actionsPerPosition = primitiveActions groupBy { _.split("_")(1).split(",")(0).toInt }
         val predicatesPerPosition = statePredicates groupBy { _.split("_")(1).split(",")(0).toInt }
 
+
+
         //println(actionsPerPosition map { case (p, acts) => "Position " + p + "\n" + (acts map { "\t" + _ } mkString ("\n")) } mkString "\n")
         //println(predicatesPerPosition map { case (p, preds) => "Position " + p + "\n" + (preds map { "\t" + _ } mkString ("\n")) } mkString "\n")
 
@@ -763,6 +765,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         (Nil, Nil, primitiveSolution, Map(), Map())
       case pbe: PathBasedEncoding[_, _] =>
         val nodes = formulaVariables filter { _.startsWith("pathaction!") } filter allTrueAtoms.contains
+
+        //println(allTrueAtoms filter {_.startsWith("method_path_to_pos_")} mkString "\n")
+        //System exit 0
 
         val edges = nodes flatMap { parent =>
           nodes flatMap { child =>
@@ -1203,18 +1208,23 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           exitIfNot(nei.size == 1)
           exitIfNot(nei.head.name == v.name)
         } else {
-          val subTasks: Seq[Task] = nei map { n => n.id.split(",").last.toInt } collect { case i if domain.tasks.length > i => domain.tasks(i) }
+          val subTasks: Seq[Task] = nei map { n => n.id.split(",").last.toInt } collect { case i if domain.tasks.length > i => domain.tasks(i) } filter {t =>
+            t.isAbstract || ! t.name.contains("SHOP_method")}
           val tasksSchemaCount = subTasks groupBy { p => p }
+          //println("Checking " + v)
+          //println(tasksSchemaCount map {case (a,b) => a.name + " " + b.size} mkString "\n")
           val possibleMethods = domain.methodsForAbstractTasks(myAction) map { m =>
             // only require the non-method preconditions to be present
-            m.subPlan.planStepsWithoutInitGoal filter { ps => ps.schema.isAbstract || !ps.schema.effect.isEmpty || !m.subPlan.orderingConstraints.fullGraph.sources.contains(ps) ||
+            m.subPlan.planStepsWithoutInitGoal filter { ps => ps.schema.isAbstract || //!ps.schema.effect.isEmpty || !m.subPlan.orderingConstraints.fullGraph.sources.contains(ps) ||
               !ps.schema.name.contains("SHOP_method")}
           } filter { planSteps =>
+            //println("Plan steps " + planSteps.map(_.schema.name).mkString("\n\t"))
             val sameSize = planSteps.length == subTasks.length
             val planSchemaCount = planSteps groupBy { _.schema }
             val sameTasks = tasksSchemaCount.size == planSchemaCount.size && (tasksSchemaCount.keys forall planSchemaCount.contains)
 
-            if (sameSize && sameTasks) tasksSchemaCount.keys forall { t => planSchemaCount(t).size == tasksSchemaCount(t).size } else false
+            if (sameSize && sameTasks)
+              tasksSchemaCount.keys forall { t => planSchemaCount.getOrElse(t,Nil).size == tasksSchemaCount.getOrElse(t,Nil).size } else false
           }
           exitIfNot(possibleMethods.nonEmpty, "Node " + v + " has no valid decomposition")
         }

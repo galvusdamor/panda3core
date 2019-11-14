@@ -71,7 +71,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     val methodTaskGraphs = (possibleMethods map { m =>
       val baseGraph = m.subPlan.orderingConstraints.fullGraph
       // TODO: hack!!
-      val methodPrecs = if (omitMethodPreconditionActions)
+      val methodPrecs = if (omitMethodPreconditionActions && m.subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty)
         baseGraph.sources filter { _.schema.effect.isEmpty } filter { _.schema.isPrimitive } filter { _.schema.name.contains("SHOP_method") }
       else Nil
 
@@ -108,7 +108,8 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
     val tasksPerMethodToChildrenMapping: Array[Array[Int]] = methodMappings.zipWithIndex map { case (mapping, methodIndex) =>
       val methodPlanSteps = possibleMethods(methodIndex).subPlan.planStepsWithoutInitGoal
       (methodPlanSteps collect {
-        case ps if !omitMethodPreconditionActions || ps.schema.isAbstract || !ps.schema.effect.isEmpty ||
+        case ps if !(omitMethodPreconditionActions && possibleMethods(methodIndex).subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty) ||
+          ps.schema.isAbstract || !ps.schema.effect.isEmpty ||
           !possibleMethods(methodIndex).subPlan.orderingConstraints.fullGraph.sources.contains(ps) || !ps.schema.name.contains("SHOP_method") =>
           // TODO: hack
           childrenIndicesToPossibleTasks(mapping(ps)) add ps.schema

@@ -63,7 +63,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
   protected def computeTaskSequenceArrangement(possibleMethods: Array[DecompositionMethod], possiblePrimitives: Seq[Task]):
   (Array[Array[Int]], Array[Int], Array[Set[Task]], IntermediatePayload)
 
-  protected val omitMethodPreconditionActions: Boolean = false
+  protected def omitMethodPreconditionActions: Boolean = false
 
   // returns all clauses needed for the decomposition and all paths to the last layer
   private def generateDecompositionFormula(tree: PathDecompositionTree[Payload]): Seq[Clause] = {
@@ -143,8 +143,10 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       // 2. part: determine children according to selected method
       val methodChildren: Seq[Clause] = methodToPositions.indices flatMap { case methodIndexOnApplicableMethods =>
         val decompositionMethod = possibleMethods(methodIndexOnApplicableMethods)._1
+        val omittingMethodPreconditionsForThisMethod = omitMethodPreconditionActions && decompositionMethod.subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty
         val methodIndex = possibleMethods(methodIndexOnApplicableMethods)._2
-        val methodTasks = if (omitMethodPreconditionActions) decompositionMethod.subPlan.planStepSchemaArrayWithoutMethodPreconditions else decompositionMethod.subPlan.planStepSchemaArray
+        val methodTasks = if (omittingMethodPreconditionsForThisMethod)
+          decompositionMethod.subPlan.planStepSchemaArrayWithoutMethodPreconditions else decompositionMethod.subPlan.planStepSchemaArray
         val methodToken = method(layer, path, methodIndex)
         ////
         //println(methodToken + " " + decompositionMethod.name)
@@ -163,7 +165,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
         // prepare method representation for additionalClauses
         val methodChildrenPositions: Map[Int, Int] = decompositionMethod.subPlan.planStepsWithoutInitGoal collect {
-          case ps if !omitMethodPreconditionActions || ps.schema.isAbstract || !ps.schema.effect.isEmpty ||
+          case ps if !omittingMethodPreconditionsForThisMethod || ps.schema.isAbstract || !ps.schema.effect.isEmpty ||
             !decompositionMethod.subPlan.orderingConstraints.fullGraph.sources.contains(ps) || !ps.schema.name.contains("SHOP_method") =>
             val psBefore = decompositionMethod.subPlan.planStepsWithoutInitGoal.filter(_.schema == ps.schema)
             val psIndexOnSameType = psBefore.indexOf(ps)
@@ -197,7 +199,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       //println("Terminal path with " + possibleTasks.size + " tasks, of that primitive " + possibleTasks.count(_.isPrimitive))
       val expansionPossible = possibleTasks exists { _.isAbstract }
       PathDecompositionTree(path, possibleTasks filter { _.isPrimitive }, Array(), Array(), Array(), Array(), initialPayload(possibleTasks, path), Array(),
-                            localExpansionPossible = expansionPossible)
+                            localExpansionPossible = expansionPossible, omitMethodPreconditions = omitMethodPreconditionActions)
     } else {
       val (possibleAbstracts, possiblePrimitives) = possibleTaskOrder.toArray partition { _.isAbstract }
 
@@ -207,13 +209,20 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
       val (methodToPositions, primitivePositions, positionsToPossibleTasks, intermediatePayload) = computeTaskSequenceArrangement(possibleMethods map { _._1 }, possiblePrimitives)
       possibleMethods.zipWithIndex foreach { case ((m, _), index) =>
         // TODO: hack!
-        if (omitMethodPreconditionActions)
+        if (omitMethodPreconditionActions && m.subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty)
           methodToPositions(index) zip m.subPlan.planStepSchemaArrayWithoutMethodPreconditions foreach { case (p, t) => assert(positionsToPossibleTasks(p) contains t) }
         else
           methodToPositions(index) zip m.subPlan.planStepSchemaArray foreach { case (p, t) => assert(positionsToPossibleTasks(p) contains t) }
       }
 
       assert(possibleMethods.length == methodToPositions.length)
+      possibleMethods.zip(methodToPositions).foreach(
+        {
+          case (m, pos) =>
+            val numberOfPlansteps = (if (omitMethodPreconditionActions && m._1.subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty)
+              m._1.subPlan.planStepSchemaArrayWithoutMethodPreconditions else m._1.subPlan.planStepSchemaArray).length
+            assert(numberOfPlansteps == pos.length)
+        })
 
       ///////////////////////////////
       // recursive calls
@@ -227,7 +236,8 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
 
       ///////////////////////////////
-      PathDecompositionTree(path, possibleTasks, possiblePrimitives, possibleMethods, methodToPositions, primitivePositions, myPayload, subTreeResults, localExpansionPossible = false)
+      PathDecompositionTree(path, possibleTasks, possiblePrimitives, possibleMethods, methodToPositions, primitivePositions, myPayload, subTreeResults,
+                            omitMethodPreconditions = omitMethodPreconditionActions, localExpansionPossible = false)
     }
   }
 
@@ -235,7 +245,8 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
 
   private lazy val pdt_temp = if (domain.maximumMethodSize == -1) {
     val ret: (Seq[Clause], Array[(Seq[Int], Set[Task])], Payload, Boolean, PathDecompositionTree[Payload]) = (Nil, Array(), initialPayload(Set(), Nil), false,
-      PathDecompositionTree(Nil, Set(), Array(), Array(), Array(), Array(), initialPayload(Set(), Nil), Array(), localExpansionPossible = false))
+      PathDecompositionTree(Nil, Set(), Array(), Array(), Array(), Array(), initialPayload(Set(), Nil), Array(), localExpansionPossible = false,
+                            omitMethodPreconditions = omitMethodPreconditionActions))
     ret
   }
   else {

@@ -35,6 +35,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
                                           payload: Payload,
                                           children: Array[PathDecompositionTree[Payload]],
                                           localExpansionPossible: Boolean,
+                                          omitMethodPreconditions: Boolean,
                                           isNormalised: Boolean = false) extends DefaultLongInfo {
   /*@elidable(ASSERTION)
   def assertion() : Boolean= {
@@ -193,7 +194,8 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
   def checkMethodPossibility(method: DecompositionMethod, childrenAssignment: Array[Int], reducedChildren: Array[PathDecompositionTree[Payload]]): Boolean = {
     // HACK!!!
-    val ordering: Seq[Task] = method.subPlan.planStepSchemaArrayWithoutMethodPreconditions
+    val ordering: Seq[Task] = if (omitMethodPreconditions && method.subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty)
+      method.subPlan.planStepSchemaArrayWithoutMethodPreconditions else method.subPlan.planStepSchemaArray
     val methodPossible = ordering.zip(childrenAssignment) forall { case (task, position) => reducedChildren(position).possibleTasks contains task }
     //if (!methodPossible) println("Excluded method.") else println("Acceptable method.")
     methodPossible
@@ -212,10 +214,11 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
         val remainingMethods = possibleMethods filter { case (m, _) => remainingTasks.contains(m.abstractTask) && m.subPlan.planStepsWithoutInitGoal.isEmpty }
 
         PathDecompositionTree(path, remainingTasks, Array(), remainingMethods, remainingMethods map { _ => Array[Int]() }, Array(), payload, Array(),
-                              localExpansionPossible = localExpansionPossible, isNormalised = true)
+                              localExpansionPossible = localExpansionPossible, omitMethodPreconditions = omitMethodPreconditions, isNormalised = true)
       } else {
         assert(toRemoveFromLeafPaths.isEmpty)
-        PathDecompositionTree(path, Set(), Array(), Array(), Array(), Array(), payload, Array(), localExpansionPossible = localExpansionPossible, isNormalised = true)
+        PathDecompositionTree(path, Set(), Array(), Array(), Array(), Array(), payload, Array(), localExpansionPossible = localExpansionPossible,
+                              omitMethodPreconditions = omitMethodPreconditions, isNormalised = true)
       }
     } else {
       // separate toRemoveToChildren
@@ -284,7 +287,7 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
       PathDecompositionTree(path, stillPossibleTasks.toSet, remainingPrimitives,
                             remainingMethodsAfterATRemoval, remainingMethodsAssignmentsAfterATRemoval, remainingPrimitivesPositions, payload, propagatedChildren,
-                            localExpansionPossible = localExpansionPossible, isNormalised = true)
+                            localExpansionPossible = localExpansionPossible, omitMethodPreconditions = omitMethodPreconditions, isNormalised = true)
     }
 
   def restrictTo(restrictToTasks: Set[Task]): PathDecompositionTree[Payload] = if (restrictToTasks.size == possibleTasks.size) this
@@ -299,13 +302,15 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
     val restrictedChildren = childrenPossibleTasks.zip(children) map { case (tasks, child) => child.restrictTo(tasks) }
 
     PathDecompositionTree(path, restrictToTasks, remainingPrimitives map { _._1 }, remainingMethods map { _._1 }, remainingMethods map { _._2 }, remainingPrimitives map { _._2 },
-                          payload, restrictedChildren, localExpansionPossible = localExpansionPossible, isNormalised = isNormalised)
+                          payload, restrictedChildren, localExpansionPossible = localExpansionPossible, omitMethodPreconditions = omitMethodPreconditions, isNormalised = isNormalised)
   }
 
 
   def possibleAssigmentsDFS(task: Task): Seq[(Seq[Int], Task)] = if (possiblePrimitives contains task) (path, task) :: Nil else {
     val subAssigments: Seq[(Seq[Int], Task)] = possibleMethods.zipWithIndex filter { _._1._1.abstractTask == task } flatMap { case ((method, _), idx) =>
-      methodToPositions(idx).zip(method.subPlan.planStepSchemaArrayWithoutMethodPreconditions) flatMap { case (childIndex, childTask) => children(childIndex).possibleAssigmentsDFS(childTask) }
+      methodToPositions(idx).zip(method.subPlan.planStepSchemaArrayWithoutMethodPreconditions) flatMap { case (childIndex, childTask) => children(childIndex)
+        .possibleAssigmentsDFS(childTask)
+      }
     }
 
     subAssigments :+ (path, task)
@@ -327,7 +332,9 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
     //println("Node")
     val possibleTasksPerMethod: Array[Array[(Int, Seq[(Seq[Int], Task)])]] = possibleMethods.zipWithIndex map { case ((method, _), methodIDX) =>
-      val taskPossible = methodToPositions(methodIDX).zip(method.subPlan.planStepSchemaArrayWithoutMethodPreconditions) map { case (idx, task) => (idx, children(idx).possibleAssigmentsDFS(task)) }
+      val taskPossible = methodToPositions(methodIDX).zip(method.subPlan.planStepSchemaArrayWithoutMethodPreconditions) map { case (idx, task) => (idx, children(idx)
+        .possibleAssigmentsDFS(task))
+      }
 
       //println(taskPossible map { case (cIdx, poss) => "Child " + cIdx + ": " + poss.size } mkString "\n")
 
@@ -396,8 +403,10 @@ case class PathDecompositionTree[Payload](path: Seq[Int], possibleTasks: Set[Tas
 
     // add tasks from methods
     methods foreach { case (method, childrenPositions) =>
-      // TODO: Hack
-      method._1.subPlan.planStepSchemaArrayWithoutMethodPreconditions zip childrenPositions foreach { case (task, child) =>
+      val methodsToConsider = if (omitMethodPreconditions && method._1.subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty)
+        method._1.subPlan.planStepSchemaArrayWithoutMethodPreconditions else method._1.subPlan.planStepSchemaArray
+
+      methodsToConsider zip childrenPositions foreach { case (task, child) =>
         assert(children(child).possibleTasks.contains(task) || (!isNormalised && children(child).children.isEmpty && children(child).possibleAbstracts.isEmpty))
         if (children(child).possibleTasks contains task) // if not, this is an abstract task at the end of the hierarchy .. or something strange with empty methods ..
           childrenPossibleTasks(child) add task
