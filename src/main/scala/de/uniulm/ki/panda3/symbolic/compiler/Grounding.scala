@@ -57,7 +57,14 @@ object Grounding extends DomainTransformer[(GroundedReachabilityAnalysis, Map[Gr
     // ----- Tasks
     def groundTaskToGroundedTask(groundTask: GroundTask): Task = groundTask match {
       case g@GroundTask(ReducedTask(name, isPrimitive, _, _, _, _, _, _), constants) =>
-        val newTaskName = name + ((constants map { _.name }) mkString("[", ",", "]"))
+        assert(constants.size == g.task.parameters.size)
+        val constantsAndArguments = constants.zip(g.task.parameters)
+        val (artificialArguments, actualArguments) = constantsAndArguments.partition({ p =>
+          g.task.artificialParametersRepresentingConstantsSet.contains(p._2) || p._2.name.contains("__EXISTENTIAL") || p._2.name.contains("__UNIVERSAL")
+                                                                                     })
+
+        val newTaskName = name + "[" + (actualArguments.map { _._1.name } mkString ",") + ";" + (artificialArguments.map { _._1.name } mkString ",") + "]"
+
         // ground precondition and effect
         val preconditionLiterals = g.substitutedPreconditions map {
           case GroundLiteral(predicate, isPositive, parameter) =>
@@ -68,8 +75,13 @@ object Grounding extends DomainTransformer[(GroundedReachabilityAnalysis, Map[Gr
           case GroundLiteral(predicate, isPositive, parameter) => Literal(groundedPredicates(predicate)(parameter), isPositive, Nil)
         } toSet
 
-        // remove effects that occur also in the preconditions
-        val effectLiterals = effectLiteralsUnfiltered filterNot { l => l.isNegative && (effectLiteralsUnfiltered contains l.negate) }
+        // remove effects that occur both positive and negative, but look whether it was a compiled negative precondition
+        val effectLiterals = effectLiteralsUnfiltered filterNot { l =>
+          if (l.predicate.name.startsWith("-"))
+            l.isPositive && (effectLiteralsUnfiltered contains l.negate)
+          else
+            l.isNegative && (effectLiteralsUnfiltered contains l.negate)
+        }
 
         ReducedTask(newTaskName, isPrimitive, Nil, Nil, Nil, And(preconditionLiterals), And(effectLiterals.toSeq),
                     // compute new action costs

@@ -129,7 +129,9 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
 
   protected def pathToPosMethod(path: Seq[Int], position: Int): String = "method_path_to_pos_" + path.mkString(";") + "-" + position
 
-  protected def pathToPosMethodForbidden(path: Seq[Int], position: Int): String = "forbidden_method_path_to_pos_" + path.mkString(";") + "-" + position
+  protected def pathToPosMethodForbiddenAfter(path: Seq[Int], position: Int): String = "forbidden_method_path_to_pos_after_" + path.mkString(";") + "-" + position
+
+  protected def pathToPosMethodForbiddenBefore(path: Seq[Int], position: Int): String = "forbidden_method_path_to_pos_before_" + path.mkString(";") + "-" + position
 
   def forbiddennessSubtractor: Int = 1
 
@@ -144,7 +146,8 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
     // forbid certain connections if disallowed by the SOG
     /////////////////
     val forbiddenConnections: Seq[Clause] = primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
-      val successors = if (useImplicationForbiddenness) sog.reachable.find(_._1._1 == path).get._2.toSeq else sog.edges.find(_._1._1 == path).get._2
+      val successors = if (!useImplicationForbiddenness) sog.reachable.find(_._1._1 == path).get._2.toSeq else sog.edges.find(_._1._1 == path).get._2
+      assert(!successors.exists(_._1 == path))
 
       // start from 1 as we have to access the predecessor position
       Range(forbiddennessSubtractor, taskSequenceLength) flatMap { pos =>
@@ -153,9 +156,10 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
     }
     println("F " + forbiddenConnections.length)
 
-    val forbiddennessImplications: Seq[Clause] = if (useImplicationForbiddenness) Nil
+    val forbiddennessImplications: Seq[Clause] = if (!useImplicationForbiddenness) Nil
     else primitivePaths.zipWithIndex flatMap { case ((path, tasks), pindex) =>
-      val successors = if (useImplicationForbiddenness) sog.reachable.find(_._1._1 == path).get._2.toSeq else sog.edges.find(_._1._1 == path).get._2
+      val successors = if (!useImplicationForbiddenness) sog.reachable.find(_._1._1 == path).get._2.toSeq else sog.edges.find(_._1._1 == path).get._2
+      assert(!successors.exists(_._1 == path))
 
       Range(0, taskSequenceLength) flatMap { pos =>
         impliesRightAnd(pathPosForbidden(path, pos) :: Nil, successors map { case (succP, _) => pathPosForbidden(succP, pos) })
@@ -187,27 +191,46 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
           impliesRightOr(methodAtom :: Nil, allMatchings)
         }
 
+        val primitivePathsBelowMeSet = node.primitivePaths.map(_._1).toSet
+
+        val predecessors: Seq[Seq[Int]] =
+          (node.primitivePaths flatMap { case (path, _) =>
+            val nodePred = sog.inverseGraph.reachable.find(_._1._1 == path).get._2.toSeq.map(_._1).filterNot(primitivePathsBelowMeSet)
+            assert(!nodePred.contains(path))
+            nodePred
+          }).distinct
+
         // some matches are forbidden
-        val notToEarly = node.primitivePaths flatMap { case (path, _) =>
-          Range(0, taskSequenceLength) map { pos =>
-            impliesSingle(pathPosForbidden(path, pos - (1 - forbiddennessSubtractor)), pathToPosMethodForbidden(node.path, pos))
+        val notToEarly = Range(0, taskSequenceLength) flatMap { pos =>
+          val inheritence = impliesSingle(pathToPosMethodForbiddenBefore(node.path, pos), pathToPosMethodForbiddenBefore(node.path, pos - 1)) :: Nil
+
+          val generation = node.primitivePaths flatMap { case (path, _) =>
+
+            predecessors map { pred => impliesSingle(pathToPos(pred, pos), pathToPosMethodForbiddenBefore(node.path, pos)) }
           }
+
+          inheritence ++ generation
         }
 
 
-        val notToLate = node.primitivePaths flatMap { case (path, _) =>
-          Range(0, taskSequenceLength) flatMap { pos =>
+        val notToLate = Range(0, taskSequenceLength) flatMap { pos =>
+          val inheritence = impliesSingle(pathToPosMethodForbiddenAfter(node.path, pos), pathToPosMethodForbiddenAfter(node.path, pos + 1)) :: Nil
+
+          val generation = node.primitivePaths map { case (path, _) =>
             //Range(pos + 1, taskSequenceLength) map { laterPos =>
-            impliesSingle(pathToPos(path, pos), pathToPosMethodForbidden(node.path, pos + 1)) ::
-              impliesSingle(pathToPosMethodForbidden(node.path, pos), pathToPosMethodForbidden(node.path, pos + 1)) :: Nil
+            impliesSingle(pathToPos(path, pos), pathToPosMethodForbiddenAfter(node.path, pos + 1))
+
             //}
           }
+          inheritence ++ generation
         }
 
 
         val forbiddenIsForbidden = node.primitivePaths flatMap { case (path, _) =>
-          Range(0, taskSequenceLength) map { pos =>
-            impliesNot(pathToPosMethodForbidden(path, pos), pathToPosMethod(node.path, pos))
+          Range(0, taskSequenceLength) flatMap { pos =>
+            impliesNot(pathToPosMethodForbiddenAfter(node.path, pos), pathToPosMethod(node.path, pos)) ::
+              impliesNot(pathToPosMethodForbiddenBefore(node.path, pos), pathToPosMethod(node.path, pos)) ::
+              Nil
           }
         }
 
@@ -238,6 +261,7 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
         if (methodPrecsAreTrue.isEmpty)
           recursiveCalls
         else
+        //recursiveCalls ++ notToEarly ++ notToLate ++ atLeastOneAssignment ++ methodPrecsAreTrue
           recursiveCalls ++ notToEarly ++ notToLate ++ forbiddenIsForbidden ++ atLeastOneAssignment ++ methodPrecsAreTrue
       }
 

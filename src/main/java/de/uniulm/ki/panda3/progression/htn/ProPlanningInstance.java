@@ -235,6 +235,7 @@ public class ProPlanningInstance {
             compEnc.writeToDisk(ps2, true);
             ps2.close();
             System.out.println("done");
+            System.exit(0);
 
             Process process = new ProcessBuilder(progName, htnModelFile, heuristicModelFile).start();
             InputStream is = process.getInputStream();

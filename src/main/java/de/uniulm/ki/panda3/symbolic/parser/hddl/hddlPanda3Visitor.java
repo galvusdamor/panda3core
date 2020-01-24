@@ -779,7 +779,7 @@ public class hddlPanda3Visitor {
                 taskName,
                 isPrimitive,
                 JavaToScala.toScalaSeq(vctx.parameters),
-                JavaToScala.toScalaSeq(vctx.parameters).toVector().take(numOfParams),
+                JavaToScala.toScalaSeq(vctx.parameters).toVector().drop(numOfParams),
                 constraints.result(), f, splittedCost._1(),
                 actionCost);
     }

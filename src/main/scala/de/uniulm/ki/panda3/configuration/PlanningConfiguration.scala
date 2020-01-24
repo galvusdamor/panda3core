@@ -1594,6 +1594,8 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
 
       // if we are doing a plan verification curtail the model here, i.e. remove all unreachable primitive tasks
 
+      //println(groundingResult._1.primitiveTasks.map(_.name).sorted.mkString("\n"))
+
       val result = searchConfiguration match {
         case SATPlanVerification(_, plan) =>
           val planActions = plan.split(";")

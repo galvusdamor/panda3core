@@ -53,7 +53,9 @@ object SplitIndependentParameters extends DecompositionMethodTransformer[Unit] {
         // generate a new Task for every planStep
         val exchange: Map[PlanStep, (PlanStep, DecompositionMethod, Task)] = groupedSplittable map { case (op@PlanStep(id, subSchema, arguments), freeVariables) =>
           val realArguments = arguments filterNot freeVariables.contains distinct
-          val reducedSchema = ReducedTask(subSchema.name + "_" + methodName + "_" + id, isPrimitive = false, realArguments, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
+          val artificialVariables = arguments.zip(subSchema.parameters).filter({p => subSchema.artificialParametersRepresentingConstantsSet.contains(p._2)}).map(_._1)
+          val reducedSchema = ReducedTask(subSchema.name + "_" + methodName + "_sip_" + id, isPrimitive = false, realArguments, artificialVariables,
+                                          Nil, And(Nil), And(Nil), ConstantActionCost(0))
           val reducedPlanStep = PlanStep(id, reducedSchema, realArguments)
 
           // build the new decomposition method

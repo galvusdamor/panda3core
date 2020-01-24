@@ -77,6 +77,20 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
                        checkSolution: Boolean = false, runOptimiser: Boolean = false):
   (Option[(Seq[PlanStep], Map[PlanStep, DecompositionMethod], Map[PlanStep, (PlanStep, PlanStep)])], Boolean, Boolean) = {
 
+
+
+    /*domain.primitiveTasks foreach {pt =>
+      println(pt.name)
+      println("  pre:")
+      pt.preconditionsAsPredicateBool foreach {case (n,bool) => println("  " + bool + " " + n)}
+      println("  eff:")
+      pt.effectsAsPredicateBool foreach {case (n,bool) => println("  " + bool + " " + n)}
+    }
+
+    System exit 0*/
+
+
+
     val timerSemaphore = new Semaphore(0)
 
     val runner = new Runnable {
@@ -185,15 +199,15 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
     val initialState: Seq[GroundLiteral] = initialPlan.groundedInitialStateOnlyPositive
     val stateSequence = groundTasks.foldLeft(initialState :: Nil)(
       { case (states, action) =>
-        //println("STATE")
-        //println(states.last map {x => "\t" + x.predicate.name} mkString("\n"))
-        //println("PREC " + action.task.name)
-        //println(action.task.preconditionsAsPredicateBool map {x => "\t" + x._1.name} mkString "\n")
-        //println()
+        /*println("STATE")
+        println(states.last map {x => "\t" + x.predicate.name} mkString("\n"))
+        println("PREC " + action.task.name)
+        println(action.task.preconditionsAsPredicateBool map {x => "\t" + x._1.name} mkString "\n")
+        println()*/
         val state = states.last
 
         action.substitutedPreconditions foreach { prec => exitIfNot(state contains prec, "action " + action.task.name + " prec " + prec.predicate.name) }
-        val nextState = (state diff action.substitutedDelEffects.map(_.copy(isPositive = true))) ++ action.substitutedAddEffects
+        val nextState = ((state diff action.substitutedDelEffects.map(_.copy(isPositive = true))) ++ action.substitutedAddEffects).distinct
 
         states :+ nextState
       })
@@ -766,7 +780,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
       case pbe: PathBasedEncoding[_, _] =>
         val nodes = formulaVariables filter { _.startsWith("pathaction!") } filter allTrueAtoms.contains
 
-        //println(allTrueAtoms filter {_.startsWith("method_path_to_pos_")} mkString "\n")
+        println((allTrueAtoms filter {_.startsWith("method_path_to_pos_")}).toSeq.sorted mkString "\n")
+        println((allTrueAtoms filter {_.startsWith("forbidden_")}).toSeq.sorted mkString "\n")
+        println((allTrueAtoms filter {_.startsWith("pathToPos_")}).toSeq.sorted mkString "\n")
         //System exit 0
 
         val edges = nodes flatMap { parent =>
@@ -826,8 +842,8 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
             val ps = actionStringToTask(idNodeMap(pathIDMap(extract)))
             val method = domain.decompositionMethods(m.split(",").last.toInt)
             exitIfNot(method.abstractTask == ps.schema, method.abstractTask.name + " != " + ps.schema.name + "\n" + m + "\n" + pathIDMap(extract) + "\n" + idNodeMap(pathIDMap(extract)))
-            //println("Consider " + m + " " + m.split(",").last.toInt + " "  + method.name)
-            //println(extract + " " + pathIDMap(extract) + " " + idNodeMap(pathIDMap(extract)))
+            println("Consider " + m + " " + m.split(",").last.toInt + " "  + method.name)
+            println(extract + " " + pathIDMap(extract) + " " + idNodeMap(pathIDMap(extract)))
             ps -> method
           } toMap
 
@@ -866,6 +882,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
         val primitiveSolutionWithPotentialEmptyMethodApplications: Seq[PlanStep] = encoder match {
           case tot: TotallyOrderedEncoding =>
 
+
             //Dot2PdfCompiler.writeDotToFile(graph, "graph.pdf")
             /*graph.vertices foreach { t => val actionIDX = t.split(",").last.toInt;
               println("task " + t + " " + actionIDX + " " + domain.tasks(actionIDX).name)
@@ -898,7 +915,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
               println("Time " + p)
               //println(stateAtTime(p))
-              println(actionOrdering map { "\t" + _._1.name } mkString ("\n"))
+              println(actionOrdering map { x => "\t" + x._1.name + " " + x._2 } mkString ("\n"))
 
               actionOrdering map { _._2 }
             }
@@ -1079,7 +1096,7 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
 
                       println("Time " + p)
                       //println(stateAtTime(p))
-                      println(actionOrdering map { "\t" + _._1.name } mkString "\n")
+                      println(actionOrdering map { x => "\t" + x._1.name + " " + x._2 } mkString ("\n"))
 
                       actionOrdering map { _._2 }
                     }

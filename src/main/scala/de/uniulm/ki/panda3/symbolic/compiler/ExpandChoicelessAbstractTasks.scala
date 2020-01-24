@@ -31,6 +31,8 @@ object ExpandChoicelessAbstractTasks extends DecompositionMethodTransformer[Unit
 
   override protected val transformationName: String = "choicelessAT"
 
+  override protected val allowToRemoveTopMethod = false
+
   override protected def transformMethods(methods: Seq[DecompositionMethod], topMethod: DecompositionMethod, unit: Unit, originalDomain: Domain):
   (Seq[DecompositionMethod], Seq[Task]) = {
 
@@ -39,22 +41,32 @@ object ExpandChoicelessAbstractTasks extends DecompositionMethodTransformer[Unit
     assert(!originalDomain.isHybrid)
     // find choiceless ATs
     val choicelessAbstractTasksWithMethod: Map[Task, DecompositionMethod] = originalDomain.choicelessAbstractTasks map { at => at -> originalDomain.methodsForAbstractTasks(at).head } toMap
-    val uselessMethods = choicelessAbstractTasksWithMethod.values.toSet
+    val uselessMethods = choicelessAbstractTasksWithMethod.values.toSet - topMethod
+
+    println("\n" + choicelessAbstractTasksWithMethod.map(_._1.name).mkString("\n"))
 
     val remainingMethods = methods filterNot uselessMethods.contains
 
     (uselessMethods.toSeq ++ ((remainingMethods :+ topMethod) map { case sm@SimpleDecompositionMethod(abstractTask, subPlan, methodName) =>
       val planStepsToExpand = subPlan.planStepsWithoutInitGoal filter { ps => originalDomain.choicelessAbstractTasks contains ps.schema }
 
-      val newPlan = planStepsToExpand.foldLeft(subPlan)(
+      val (newPlan, newName) = planStepsToExpand.foldLeft((subPlan, methodName))(
         {
-          case (plan,planStepToReplace) =>
+          case ((plan, currentName), planStepToReplace) =>
             val possibleDecompositions = DecomposePlanStep(plan, planStepToReplace, originalDomain)
             assert(possibleDecompositions.length == 1)
-            plan.modify(possibleDecompositions.head).normalise
+
+            // determine topord of current plan
+
+            val currentTopOrd = plan.orderingConstraintsWithoutRemovedPlanSteps.fullGraph.topologicalOrdering.get.map(_.id).mkString(";")
+
+            val addedPlanSteps = possibleDecompositions.head.newSubPlan.orderingConstraints.fullGraph.topologicalOrdering.get.map(_.id).mkString(";")
+
+            (plan.modify(possibleDecompositions.head).normalise, currentName + "<" + planStepToReplace.id + "~" + currentTopOrd + "~" + planStepToReplace.schema.name + "~" +
+              addedPlanSteps + "#" + possibleDecompositions.head.originalDecompositionMethod.name +  ">")
         })
 
-      SimpleDecompositionMethod(abstractTask, newPlan, methodName)
+      SimpleDecompositionMethod(abstractTask, newPlan, newName)
     }), Nil)
 
   }
@@ -63,11 +75,20 @@ object ExpandChoicelessAbstractTasks extends DecompositionMethodTransformer[Unit
 
 object RemoveChoicelessAbstractTasks extends DomainTransformer[Unit] {
   /** takes a domain, an initial plan and some additional Information and transforms them */
-  override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = if (domain.choicelessAbstractTasks.isEmpty) (domain,plan) else {
-    // try to propagate
-    val propagated = ExpandChoicelessAbstractTasks.transform(domain, plan, ())
-    val removed = PruneUselessAbstractTasks.transform(propagated, ())
+  override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) =
+    if (domain.choicelessAbstractTasks.isEmpty ||
+      (domain.choicelessAbstractTasks.size == 1 && plan.planStepsWithoutInitGoal.size == 1) && domain.choicelessAbstractTasks.contains(plan.planStepsWithoutInitGoal.head.schema))
+      (domain, plan)
+    else {
+      // try to propagate
+      println("TOP A:  " + plan.planStepsWithoutInitGoal.head.schema.name)
+      val propagated = ExpandChoicelessAbstractTasks.transform(domain, plan, ())
+      println("TOP B:  " + propagated._2.planStepsWithoutInitGoal.head.schema.name)
+      val removed = PruneUselessAbstractTasks.transform(propagated, ())
+      println("TOP C:  " + removed._2.planStepsWithoutInitGoal.head.schema.name)
 
-    transform(removed, ())
-  }
+      //System.in.read()
+
+      transform(removed, ())
+    }
 }

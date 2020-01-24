@@ -44,6 +44,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
   val effect                                   : Formula
   val cost                                     : ActionCost
   lazy val parameterArray: Array[Variable] = parameters.toArray
+  lazy val artificialParametersRepresentingConstantsSet: Set[Variable] = artificialParametersRepresentingConstants.toSet
 
   lazy val isAbstract: Boolean = !isPrimitive
   lazy val taskCSP   : CSP     = CSP(parameters.toSet, parameterConstraints)
@@ -203,6 +204,8 @@ case class GeneralTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
 //scalastyle:off
 case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Variable], artificialParametersRepresentingConstants: Seq[Variable],
                        parameterConstraints: Seq[VariableConstraint], precondition: And[Literal], effect: And[Literal], cost : ActionCost) extends Task with HashMemo {
+
+
   /*if (!((precondition.conjuncts ++ effect.conjuncts) forall { l => l.parameterVariables forall parameters.contains })){
     (precondition.conjuncts ++ effect.conjuncts) foreach {l => l.parameterVariables foreach { v =>
       println("VARIABLE " + v)

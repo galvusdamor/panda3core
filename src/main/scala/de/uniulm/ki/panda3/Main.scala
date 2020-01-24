@@ -63,7 +63,7 @@ object Main {
                                                                                     //PlanningConfiguration.defaultPlanSearchConfiguration,
                                                                                     PredefinedConfigurations.defaultConfigurations("ICAPS-2018-RC(FF,gastar)")._3,
                                                                                     PostprocessingConfiguration(Set(SearchStatus, SearchResult,
-                                                                                                                    ProcessingTimings,
+                                                                                                                    ProcessingTimings, SearchResultWithDecompositionTree,
                                                                                                                     SearchStatistics)))) extends PrettyPrintable {
 
     def processCommandLineArguments(args: Seq[String]): RunConfiguration = {
@@ -393,42 +393,158 @@ object Main {
 
     // if we have found some kind of a search result, try to output it.
     if (results.map.contains(SearchResult) && results(SearchResult).isDefined) {
-
-      println("SOLUTION SEQUENCE")
       val plan = results(SearchResult).get
 
-      assert(plan.planSteps forall { _.schema.isPrimitive })
+      //println(plan.planStepsAndRemovedPlanSteps.map(_.schema).map({ t => t.isPrimitive + " " + t.name }).toSeq.sorted mkString "\n")
+      //println(plan.planStepDecomposedByMethod.values.map({ m => m.name + " " + m.abstractTask.name }).toSeq.sorted mkString "\n")
 
-      def psToString(ps: PlanStep): String = {
-        val name = ps.schema.name
-        val args = ps.arguments map plan.variableConstraints.getRepresentative map { _.shortInfo }
+      println("==>")
 
-        if (args.isEmpty && name.count(_ == '[') == 1 && name.count(_ == ']') == 1 && name.indexOf('[') < name.indexOf(']'))
-          name.replace('[', '(').replace(']', ')')
-        else
-          name + args.mkString("(", ",", ")")
-      }
+      def psToString(ps: PlanStep): String = psNameToSimpleName(ps.schema.name)
 
-      val selectedSolution: Seq[PlanStep] = plan.orderingConstraints.graph.topologicalOrdering.get filter { _.schema.isPrimitive }
-
-      println(selectedSolution.zipWithIndex map { case (ps, i) => i + ": " + psToString(ps) } mkString "\n")
+      // don't write method preconditions
+      val planTopologicalOrdering = plan.orderingConstraints.graph.topologicalOrdering.get
+      val solutionSequence = planTopologicalOrdering filter { _.schema.isPrimitive } filterNot { _.schema.name.startsWith("SHOP_method") }
+      println(solutionSequence.zipWithIndex map { case (ps, i) => i + " " + psToString(ps) } mkString "\n")
 
       // if we have also found a hierarchy, output that hierarchy
-      if (plannerConfiguration.config.postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree)) {
-        val planStepIndices: Map[PlanStep, Int] = selectedSolution.zipWithIndex.toMap ++
-          plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract).zipWithIndex.map({ case (ps, ind) => ps -> (ind + selectedSolution.length) })
+      if (plannerConfiguration.config.postprocessingConfiguration.resultsToProduce.contains(SearchResultWithDecompositionTree) &&
+        // safety for Daniel's planner
+        plan.planStepsAndRemovedPlanSteps.exists(_.schema.isAbstract)) {
 
-        val rootNodes = planStepIndices filterNot { case (ps, _) => plan.planStepParentInDecompositionTree.contains(ps) } keys
 
-        println("DECOMPOSITION HIERARCHY")
-        println("Root tasks: " + rootNodes.map(planStepIndices).mkString(" "))
 
-        plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract) foreach { case abstractPS =>
-          val children = plan.planStepParentInDecompositionTree.filter(_._2._1 == abstractPS)
-          val appliedMethod = plan.planStepDecomposedByMethod(abstractPS).name.replace('[', '(').replace(']', ')')
+        // first build the decomposition structure, then compact it
 
-          println(planStepIndices(abstractPS) + ": " + psToString(abstractPS) + " [" + appliedMethod + "] -> " + children.keys.map(planStepIndices).mkString(" "))
+
+
+
+
+
+
+
+
+
+        val topCompilationTasks = plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract).filter(_.schema.name.startsWith("__"))
+        val compilationTasks = plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract).filter({ ps =>
+          ps.schema.name.startsWith("__") ||
+            ps.schema.name.contains("_sip_") ||
+            ps.schema.name.contains("_UNIQUEreplacement_") ||
+            plan.planStepDecomposedByMethod(ps).name.contains("__ANTECEDENT") ||
+            plan.planStepDecomposedByMethod(ps).name.contains("__CONSEQUENT__") ||
+            plan.planStepDecomposedByMethod(ps).name.contains("__DISJUNCT")
+                                                                                                    }).toSet
+
+        val realAbstractTasks = plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract).filterNot(compilationTasks.contains)
+
+        val planStepIndices: Map[PlanStep, Int] = solutionSequence.zipWithIndex.toMap ++ realAbstractTasks.zipWithIndex.map({ case (ps, ind) => ps -> (ind + solutionSequence.length) })
+
+
+        // find the compilation task that results in the actual top methods
+
+        // children might stem from parameter splitting
+        def getNonCompiledChild(ps: PlanStep): PlanStep =
+          if (!compilationTasks.contains(ps)) ps
+          else {
+            val sipChildren = plan.planStepParentInDecompositionTree.filter(_._2._1 == ps).toSeq
+            assert(sipChildren.size == 1)
+            getNonCompiledChild(sipChildren.head._1)
+          }
+
+        def getSortedChildren(children: Seq[(PlanStep, (PlanStep, PlanStep))], abstractPS: PlanStep) = {
+
+          val topOrd = plan.planStepDecomposedByMethod(abstractPS).subPlan.orderingConstraints.fullGraph.topologicalOrdering.get
+          val topOrdIndices = topOrd.zipWithIndex.toMap
+
+          children.sortWith({ case (a, b) =>
+            val repA = a._2._2
+            val repB = b._2._2
+            topOrdIndices(repA) < topOrdIndices(repB)
+                            }) map { _._1 } map getNonCompiledChild
         }
+
+
+        var nextTaskID: Int = planStepIndices.size
+
+
+        def getDecompositionOf(abstractPS: PlanStep): (String, Seq[String], Seq[Int], Seq[PlanStep]) = {
+          val children: Seq[(PlanStep, (PlanStep, PlanStep))] =
+            plan.planStepParentInDecompositionTree.filter(_._2._1 == abstractPS).toSeq filterNot { _._1.schema.name.startsWith("SHOP_method") }
+          val fullMethodName = plan.planStepDecomposedByMethod(abstractPS).name
+
+          val appliedMethod = fullMethodName.takeWhile(_ != '[')
+
+          // sort the children
+          val sortedChildren = getSortedChildren(children, abstractPS)
+
+          var rootChildren: Seq[Int] = Nil
+
+          if (fullMethodName.contains("<")) {
+            var lines: Seq[String] = Nil
+
+            val iniDT = DecompositionTree.parse(fullMethodName)
+            val planStepIDIndices: Map[Int, Int] =
+              children map { case (globalPS, (_, localPS)) =>
+                localPS.id -> planStepIndices(getNonCompiledChild(globalPS))
+              } toMap
+
+            var buffer: Seq[Call] = Call(planStepIndices.getOrElse(abstractPS, -2), psToString(abstractPS), -1) :: Nil
+
+            while (buffer.nonEmpty) {
+              val next = buffer.head
+              buffer = buffer.drop(1)
+
+              val (line, newIDs, _newnextID, children) = iniDT.getLine(next.myID, planStepIDIndices, nextTaskID, next.atName, next.atIndex)
+              if (next.myID == -1) rootChildren = children
+
+              nextTaskID = _newnextID
+              lines = lines :+ line
+
+              newIDs foreach { case (planStepID, globalID) =>
+                buffer = buffer :+ Call(globalID, psNameToSimpleName(iniDT.tasksForID(planStepID)), planStepID)
+              }
+            }
+
+            (lines.head, lines.tail, rootChildren, sortedChildren)
+          } else {
+            if (abstractPS.schema.name.startsWith("__"))
+              ("", Nil, sortedChildren.map(planStepIndices), sortedChildren)
+            else
+              (planStepIndices(abstractPS) + " " + psToString(abstractPS) + " -> " + appliedMethod + " " + sortedChildren.map(planStepIndices).mkString(" "), Nil,
+                sortedChildren.map(planStepIndices), sortedChildren)
+          }
+        }
+
+
+        val abstractTasksOutput = realAbstractTasks map { case abstractPS =>
+          val x = getDecompositionOf(abstractPS)
+          (x._1 :: Nil ++ x._2, x._4)
+        }
+
+        var abstractLines = abstractTasksOutput.flatMap(_._1)
+
+        val rootNodes = if (topCompilationTasks.isEmpty) {
+          val rightHandSidePlanSteps: Set[PlanStep] = abstractTasksOutput flatMap { _._2 } toSet
+
+          planStepIndices.keys.filterNot(rightHandSidePlanSteps.contains).toSeq.map(planStepIndices)
+        } else {
+          val realRoot = topCompilationTasks filterNot { ps =>
+            plan.planStepParentInDecompositionTree.filter(_._2._1 == ps).exists(_._1.schema.name.startsWith("__"))
+          }
+          assert(realRoot.size == 1)
+
+          val x = getDecompositionOf(realRoot.head)
+
+          abstractLines = abstractLines ++ x._2
+
+          x._3
+        }
+
+        println("root " + rootNodes.mkString(" "))
+
+
+        abstractLines foreach println
+
       }
     }
 
@@ -443,4 +559,103 @@ object Main {
       }
     }
   }
+
+  def psNameToSimpleName(name: String): String =
+    name.split(";").head.replace('[', ' ').replace(',', ' ').replace("__ANTECEDENT", "").replace("__CONSEQUENT__", "").replaceAll("__DISJUNCT-[0-9]*", "")
+}
+
+case class Call(atIndex: Int, atName: String, myID: Int)
+
+
+case class Application(currentIDs: Seq[Int], replacedID: Int, replacedTask: String, newIDs: Seq[Int], appliedMethod: DecompositionTree)
+
+case class DecompositionTree(originalMethodName: String, blocks: Seq[Application]) {
+  lazy val originalIDs  = blocks.head.currentIDs
+  lazy val tasksForID   = blocks.map(b => (b.replacedID, b.replacedTask)).toMap
+  lazy val methodsForID = blocks.map(b => (b.replacedID, b.appliedMethod)).toMap
+
+  lazy val decomposedIDs                   = blocks.map(_.replacedID).toSet
+  lazy val originalDecomposedIDs: Seq[Int] = originalIDs filter decomposedIDs
+  lazy val tasksOriginalDecomposed         = originalDecomposedIDs map tasksForID
+
+  def getLine(myID: Int, outerIDs: Map[Int, Int], currentNext: Int, abstractPS: String, myGlobalID: Int) = {
+    var current = currentNext
+    var newSubTasks: Seq[(Int, Int)] = Nil
+
+    val children = getIDsBelow(myID) map { id =>
+      if (outerIDs.contains(id)) outerIDs(id)
+      else {
+        val ret = current
+        newSubTasks = newSubTasks :+ (id, ret)
+        current += 1
+        ret
+      }
+    }
+
+    val methodName = if (myID == -1) originalMethodName else {
+      assert(blocks.find(_.replacedID == myID).get.appliedMethod.blocks.isEmpty)
+      blocks.find(_.replacedID == myID).get.appliedMethod.originalMethodName
+    }
+
+    (myGlobalID + " " + abstractPS + " -> " + methodName.takeWhile(_ != '[') + " " + children.mkString(" "), newSubTasks, current, children)
+  }
+
+  def getIDsBelow(id: Int) = if (id == -1) originalIDs else {
+    blocks.find(_.replacedID == id).get.newIDs
+  }
+}
+
+object DecompositionTree {
+  def parse(method: String): DecompositionTree =
+    if (!method.contains('<')) DecompositionTree(method, Nil)
+    else {
+      val initialSplit = method.splitAt(method.indexOf("<"))
+      //println("SPLIT \n" + initialSplit._1 + "\n" + initialSplit._2)
+      val originalMethodName = initialSplit._1
+      val modifications = initialSplit._2
+
+
+      var blocks: Seq[String] = Nil
+      var currentBlock = ""
+
+      var i = 0
+      var depth = 0
+      while (i < modifications.length) {
+        if (modifications(i) == '<') {
+          if (depth != 0)
+            currentBlock = currentBlock + '<'
+          depth += 1
+        } else if (modifications(i) == '>') {
+          depth -= 1
+          if (depth == 0) {
+            blocks = blocks :+ currentBlock
+            currentBlock = ""
+          } else {
+            currentBlock = currentBlock + '>'
+          }
+        } else
+          currentBlock = currentBlock + modifications(i)
+
+        i += 1
+      }
+
+      val inner = blocks map { block =>
+        //println("BLOCK " + block)
+        val split = block.splitAt(block.indexOf('#'))
+        val innerDT = DecompositionTree.parse(split._2.drop(1))
+        //println("FIRST " + split._1)
+
+        val splitted = split._1.split("~")
+        val decomposedID = splitted(0).toInt
+        val currentIDs = splitted(1).split(";").map(_.toInt)
+        val task = splitted(2)
+        val newIDs = splitted(3).split(";").map(_.toInt)
+
+        //println("APPLI " + block)
+
+        Application(currentIDs, decomposedID, task, newIDs, innerDT)
+      }
+
+      DecompositionTree(originalMethodName, inner)
+    }
 }

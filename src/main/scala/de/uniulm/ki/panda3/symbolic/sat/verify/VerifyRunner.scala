@@ -244,6 +244,13 @@ object VerifyRunner {
 
   val prefix = ""
 
-  val fileDir = "/dev/shm/"
+  val fileDir =
+    System.getProperty("os.name").toLowerCase match {
+      case osname if osname startsWith "windows" => "" // current dir
+      case osname if osname startsWith "mac os x" => "/dev/shm/"
+      case _                                      => "/dev/shm/"
+
+    }
+
 
 }

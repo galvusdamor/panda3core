@@ -284,7 +284,7 @@ object PredefinedConfigurations {
                Nil;
              (solverMode, modeText) <- (FullSATRun(), "") :: (FullLengthSATRun(optimise = true), "-optimise(bin)") :: (FullLengthSATRun(optimise = false), "-optimise(dec)") :: Nil
         ) yield
-          encodingString + modeText + "(" + solverString + ")" -> (htnParsing, optimalityPreservingPreprocess,
+          encodingString + modeText + "(" + solverString + ")" -> (htnParsing, solverMode match {case FullSATRun() => groundingPreprocess; case _ => optimalityPreservingPreprocess},
             SATSearch(solver, solverMode, reductionMethod = OnlyNormalise, atMostOneEncodingMethod = SequentialEncoding, encodingToUse = encoding))
 
       x.toMap
