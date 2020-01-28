@@ -182,9 +182,10 @@ object Grounding extends DomainTransformer[(GroundedReachabilityAnalysis, Map[Gr
       case GroundedDecompositionMethod(liftedMethod, variableBinding, _) =>
         // ground the abstract actions
         val groundedAbstractTask = groundTaskToGroundedTask(GroundTask(liftedMethod.abstractTask, liftedMethod.abstractTask.parameters map variableBinding))
-        SimpleDecompositionMethod(groundedAbstractTask, groundPlan(liftedMethod.subPlan, variableBinding), liftedMethod.name + (
-          variableBinding map { case (v, c) => v.name + "=" + c.name }
-          ).mkString("[", ",", "]"))
+        SimpleDecompositionMethod(groundedAbstractTask, groundPlan(liftedMethod.subPlan, variableBinding), liftedMethod.name +
+          //(variableBinding map { case (v, c) => v.name + "=" + c.name }).mkString("[", ",", "]")
+          "" // more simple ground method names
+                                 )
     }) ++ tasksWithMultipleGroundings.flatMap({ case (gt, numberOfCopies) =>
       val abstractReplacement = gt.task.asInstanceOf[ReducedTask].copy(isPrimitive = false, name = gt.task.name + "#abstract", precondition = And(Nil), effect = And(Nil))
       val abstractGround = groundedTasks(abstractReplacement)(gt.arguments).head._1

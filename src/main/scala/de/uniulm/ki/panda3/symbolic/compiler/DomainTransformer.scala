@@ -75,7 +75,7 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
       val _topTask = plan.planStepsWithoutInitGoal.head.schema
       val _topMethod = domain.methodsForAbstractTasks(_topTask).head
 
-      //println("\n\nTaking existing top task " + _topTask.name)
+      println("\n\nTaking existing top task " + _topTask.name)
       (_topTask, _topMethod, false)
     } else {
       val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))

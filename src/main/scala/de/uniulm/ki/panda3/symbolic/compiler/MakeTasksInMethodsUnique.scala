@@ -47,7 +47,7 @@ object MakeTasksInMethodsUnique extends DecompositionMethodTransformer[Unit] {
             // create new abstract task
             val newAbstract = ReducedTask(ps.schema.name + "_UNIQUEreplacement_" + newAbstractTaskID, isPrimitive = false, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
             val newPlan = Plan(PlanStep(2, ps.schema, Nil) :: Nil, emptySchema, emptySchema, Map[PlanStep, DecompositionMethod](), Map[PlanStep, (PlanStep, PlanStep)]())
-            val newMethod = SimpleDecompositionMethod(newAbstract, newPlan, newAbstract.name)
+            val newMethod = SimpleDecompositionMethod(newAbstract, newPlan, "__UNIQUE-replacement_" + newAbstractTaskID)
             newAbstractTaskID += 1
 
             (newAbstract, newMethod, (ps, ps.copy(schema = newAbstract)))

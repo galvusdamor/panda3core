@@ -23,7 +23,7 @@ import de.uniulm.ki.panda3.symbolic.plan.modification.DecomposePlanStep
 
 /**
   * This expands choiceless abstract tasks as one step, but does not remove newly useless ATs (this would require full propagation).
-  * To use the transformator properly, we have to repeat it until nowthing changes
+  * To use the transformator properly, we have to repeat it until nothing changes
   *
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
@@ -43,7 +43,7 @@ object ExpandChoicelessAbstractTasks extends DecompositionMethodTransformer[Unit
     val choicelessAbstractTasksWithMethod: Map[Task, DecompositionMethod] = originalDomain.choicelessAbstractTasks map { at => at -> originalDomain.methodsForAbstractTasks(at).head } toMap
     val uselessMethods = choicelessAbstractTasksWithMethod.values.toSet - topMethod
 
-    println("\n" + choicelessAbstractTasksWithMethod.map(_._1.name).mkString("\n"))
+    println("\n" + uselessMethods.map(_.name).mkString("\n"))
 
     val remainingMethods = methods filterNot uselessMethods.contains
 
@@ -59,11 +59,35 @@ object ExpandChoicelessAbstractTasks extends DecompositionMethodTransformer[Unit
             // determine topord of current plan
 
             val currentTopOrd = plan.orderingConstraintsWithoutRemovedPlanSteps.fullGraph.topologicalOrdering.get.map(_.id).mkString(";")
+            val modifiedPlan = plan.modify(possibleDecompositions.head).normalise
 
-            val addedPlanSteps = possibleDecompositions.head.newSubPlan.orderingConstraints.fullGraph.topologicalOrdering.get.map(_.id).mkString(";")
 
-            (plan.modify(possibleDecompositions.head).normalise, currentName + "<" + planStepToReplace.id + "~" + currentTopOrd + "~" + planStepToReplace.schema.name + "~" +
-              addedPlanSteps + "#" + possibleDecompositions.head.originalDecompositionMethod.name +  ">")
+            val newSubPlan = possibleDecompositions.head.newSubPlan
+            // determined at hoc here. This method is "recreated" in the output
+            val addedPlanStepsIDsInOriginal = newSubPlan.subtasksWithOrderedIndices
+            val originalPlanStepsWithIDs = plan.subtasksWithOrderedIndices
+            val newPlanPlanStepsWithIDs = modifiedPlan.subtasksWithOrderedIndices
+
+            /*println("\n\nMETHOD\nNew")
+            println(newPlanPlanStepsWithIDs.map(ps => ps._2 + ": " + ps._1.id + " " + ps._1.schema.name).mkString("\n"))
+            println("Original")
+            println(originalPlanStepsWithIDs.map(ps => ps._2 + ": " + ps._1.id + " " + ps._1.schema.name).mkString("\n"))
+            println("Added")
+            println(addedPlanStepsIDsInOriginal.map(ps => ps._2 + ": " + ps._1.id + " " + ps._1.schema.name).mkString("\n"))*/
+
+
+            val newSubtasksToIDInEitherPlan = newPlanPlanStepsWithIDs.toSeq.map(_.swap).sortBy(_._1).map(
+              { case (newID, ps) =>
+                if (addedPlanStepsIDsInOriginal.contains(ps)) (newID, -addedPlanStepsIDsInOriginal(ps)-1)
+                else (newID, originalPlanStepsWithIDs(ps))
+              })
+
+
+            (modifiedPlan, "<" + currentName + ";" + planStepToReplace.schema.name.replaceAll(";.*]","]") + ";" + possibleDecompositions.head.originalDecompositionMethod.name + ";" +
+              originalPlanStepsWithIDs(planStepToReplace) + ";" +
+              newSubtasksToIDInEitherPlan.map({ case (a, b) => b }).mkString(",") +
+              ">"
+            )
         })
 
       SimpleDecompositionMethod(abstractTask, newPlan, newName)
@@ -81,11 +105,8 @@ object RemoveChoicelessAbstractTasks extends DomainTransformer[Unit] {
       (domain, plan)
     else {
       // try to propagate
-      println("TOP A:  " + plan.planStepsWithoutInitGoal.head.schema.name)
       val propagated = ExpandChoicelessAbstractTasks.transform(domain, plan, ())
-      println("TOP B:  " + propagated._2.planStepsWithoutInitGoal.head.schema.name)
       val removed = PruneUselessAbstractTasks.transform(propagated, ())
-      println("TOP C:  " + removed._2.planStepsWithoutInitGoal.head.schema.name)
 
       //System.in.read()
 

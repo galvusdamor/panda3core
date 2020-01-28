@@ -80,12 +80,12 @@ trait DecompositionMethod extends DomainUpdatable {
 case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: String) extends DecompositionMethod {
 
   abstractTask match {
-    case ReducedTask(_, _, _, _, _, prec, eff,_) =>
+    case ReducedTask(_, _, _, _, _, prec, eff, _) =>
       // check preconditions
       prec.conjuncts foreach { case l@Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
-          case ReducedTask(_, _, _, _, _, tPre, _,_) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
-          case _                                   => true // was false
+          case ReducedTask(_, _, _, _, _, tPre, _, _) => tPre.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
+          case _                                      => true // was false
         }
         assert(canBeInherited, "Method " + name + "' subplan does not contain a precondition able to inherit " + l.shortInfo)
       }
@@ -93,12 +93,12 @@ case class SimpleDecompositionMethod(abstractTask: Task, subPlan: Plan, name: St
       // check effects
       eff.conjuncts foreach { case l@Literal(pred, isPos, _) =>
         val canBeInherited = subPlan.planStepsWithoutInitGoal map { _.schema } exists {
-          case ReducedTask(_, _, _, _, _, _, tEff,_) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
-          case _                                   => true // was false
+          case ReducedTask(_, _, _, _, _, _, tEff, _) => tEff.conjuncts exists { l => l.predicate == pred && l.isPositive == isPos }
+          case _                                      => true // was false
         }
         assert(canBeInherited, "Method " + name + "' subplan does not contain an effect able to inherit " + l.shortInfo)
       }
-    case _                                     =>
+    case _                                        =>
   }
 
   override def update(domainUpdate: DomainUpdate): SimpleDecompositionMethod = domainUpdate match {

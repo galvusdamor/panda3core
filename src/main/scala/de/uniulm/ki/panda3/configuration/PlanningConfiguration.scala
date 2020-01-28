@@ -1431,6 +1431,7 @@ case class PlanningConfiguration(printGeneralInformation: Boolean, printAddition
       //println(newAnalysisMap(SymbolicGroundedReachability).reachableGroundPrimitiveActions.groupBy(_.task.name) map {case (n,l) => n -> l.size } mkString "\n")
       //println(newAnalysisMap(SymbolicGroundedReachability).reachableGroundLiterals.filter(_.isPositive).map(_.longInfo).mkString("\n"))
 
+      if (pruned._1.primitiveTasks.size == 0) System exit 0
       //System exit 0
       extra(pruned._1.statisticsString + "\n")
       (pruned, newAnalysisMap)

@@ -400,7 +400,15 @@ object Main {
 
       println("==>")
 
-      def psToString(ps: PlanStep): String = psNameToSimpleName(ps.schema.name)
+      val fullMode = false
+
+      def psToString(ps: PlanStep): String = psNameToSimpleName(ps.schema.name, fullMode)
+
+      def getAllSortedChildren(children: Seq[(PlanStep, (PlanStep, PlanStep))], abstractPS: PlanStep) = {
+        val topOrdIndices = plan.planStepDecomposedByMethod(abstractPS).subPlan.subtasksWithOrderedIndices
+
+        children.sortWith({ case (a, b) => topOrdIndices(a._2._2) < topOrdIndices(b._2._2) }) map { _._1 }
+      }
 
       // don't write method preconditions
       val planTopologicalOrdering = plan.orderingConstraints.graph.topologicalOrdering.get
@@ -412,27 +420,14 @@ object Main {
         // safety for Daniel's planner
         plan.planStepsAndRemovedPlanSteps.exists(_.schema.isAbstract)) {
 
-
-
-        // first build the decomposition structure, then compact it
-
-
-
-
-
-
-
-
-
-
-        val topCompilationTasks = plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract).filter(_.schema.name.startsWith("__"))
+        val topCompilationTasks = plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract).filter({ ps => fullMode && ps.schema.name.startsWith("__") })
         val compilationTasks = plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract).filter({ ps =>
-          ps.schema.name.startsWith("__") ||
+          fullMode && (ps.schema.name.startsWith("__") ||
             ps.schema.name.contains("_sip_") ||
             ps.schema.name.contains("_UNIQUEreplacement_") ||
             plan.planStepDecomposedByMethod(ps).name.contains("__ANTECEDENT") ||
             plan.planStepDecomposedByMethod(ps).name.contains("__CONSEQUENT__") ||
-            plan.planStepDecomposedByMethod(ps).name.contains("__DISJUNCT")
+            plan.planStepDecomposedByMethod(ps).name.contains("__DISJUNCT"))
                                                                                                     }).toSet
 
         val realAbstractTasks = plan.planStepsAndRemovedPlanSteps.filter(_.schema.isAbstract).filterNot(compilationTasks.contains)
@@ -451,17 +446,7 @@ object Main {
             getNonCompiledChild(sipChildren.head._1)
           }
 
-        def getSortedChildren(children: Seq[(PlanStep, (PlanStep, PlanStep))], abstractPS: PlanStep) = {
-
-          val topOrd = plan.planStepDecomposedByMethod(abstractPS).subPlan.orderingConstraints.fullGraph.topologicalOrdering.get
-          val topOrdIndices = topOrd.zipWithIndex.toMap
-
-          children.sortWith({ case (a, b) =>
-            val repA = a._2._2
-            val repB = b._2._2
-            topOrdIndices(repA) < topOrdIndices(repB)
-                            }) map { _._1 } map getNonCompiledChild
-        }
+        def getSortedChildren(children: Seq[(PlanStep, (PlanStep, PlanStep))], abstractPS: PlanStep) = getAllSortedChildren(children, abstractPS) map getNonCompiledChild
 
 
         var nextTaskID: Int = planStepIndices.size
@@ -472,14 +457,14 @@ object Main {
             plan.planStepParentInDecompositionTree.filter(_._2._1 == abstractPS).toSeq filterNot { _._1.schema.name.startsWith("SHOP_method") }
           val fullMethodName = plan.planStepDecomposedByMethod(abstractPS).name
 
-          val appliedMethod = fullMethodName.takeWhile(_ != '[')
+          val appliedMethod = if (fullMode) fullMethodName.takeWhile(_ != '[') else fullMethodName
 
           // sort the children
           val sortedChildren = getSortedChildren(children, abstractPS)
 
           var rootChildren: Seq[Int] = Nil
 
-          if (fullMethodName.contains("<")) {
+          if (fullMethodName.contains("<") && fullMode) {
             var lines: Seq[String] = Nil
 
             val iniDT = DecompositionTree.parse(fullMethodName)
@@ -501,13 +486,13 @@ object Main {
               lines = lines :+ line
 
               newIDs foreach { case (planStepID, globalID) =>
-                buffer = buffer :+ Call(globalID, psNameToSimpleName(iniDT.tasksForID(planStepID)), planStepID)
+                buffer = buffer :+ Call(globalID, psNameToSimpleName(iniDT.tasksForID(planStepID), fullMode), planStepID)
               }
             }
 
             (lines.head, lines.tail, rootChildren, sortedChildren)
           } else {
-            if (abstractPS.schema.name.startsWith("__"))
+            if (fullMode && abstractPS.schema.name.startsWith("__"))
               ("", Nil, sortedChildren.map(planStepIndices), sortedChildren)
             else
               (planStepIndices(abstractPS) + " " + psToString(abstractPS) + " -> " + appliedMethod + " " + sortedChildren.map(planStepIndices).mkString(" "), Nil,
@@ -560,8 +545,9 @@ object Main {
     }
   }
 
-  def psNameToSimpleName(name: String): String =
+  def psNameToSimpleName(name: String, fullMode: Boolean): String = if (fullMode)
     name.split(";").head.replace('[', ' ').replace(',', ' ').replace("__ANTECEDENT", "").replace("__CONSEQUENT__", "").replaceAll("__DISJUNCT-[0-9]*", "")
+  else name.split(";").head.replace('[', ' ').replace(',', ' ')
 }
 
 case class Call(atIndex: Int, atName: String, myID: Int)

@@ -780,9 +780,9 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
       case pbe: PathBasedEncoding[_, _] =>
         val nodes = formulaVariables filter { _.startsWith("pathaction!") } filter allTrueAtoms.contains
 
-        println((allTrueAtoms filter {_.startsWith("method_path_to_pos_")}).toSeq.sorted mkString "\n")
-        println((allTrueAtoms filter {_.startsWith("forbidden_")}).toSeq.sorted mkString "\n")
-        println((allTrueAtoms filter {_.startsWith("pathToPos_")}).toSeq.sorted mkString "\n")
+        //println((allTrueAtoms filter {_.startsWith("method_path_to_pos_")}).toSeq.sorted mkString "\n")
+        //println((allTrueAtoms filter {_.startsWith("forbidden_")}).toSeq.sorted mkString "\n")
+        //println((allTrueAtoms filter {_.startsWith("pathToPos_")}).toSeq.sorted mkString "\n")
         //System exit 0
 
         val edges = nodes flatMap { parent =>

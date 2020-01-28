@@ -776,6 +776,10 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   override def equals(o: scala.Any): Boolean = if (o.isInstanceOf[Plan] && this.hashCode == o.hashCode()) {productIterator.sameElements(o.asInstanceOf[Plan].productIterator) } else false
 
   override lazy val dotString: String = dotString(PlanDotOptions())
+
+  // don't include SHOP method preconditions, or their compiled abstract tasks (e.g. disjunctions in method preconditions) here
+  lazy val subtasksTopologicalOrdering = orderingConstraints.fullGraph.topologicalOrdering.get filterNot { _.schema.name.startsWith("SHOP_method") }
+  lazy val subtasksWithOrderedIndices  = subtasksTopologicalOrdering.zipWithIndex.toMap
 }
 
 
