@@ -16,6 +16,7 @@
 
 package de.uniulm.ki.panda3.symbolic.htn2strips
 
+import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler
 import de.uniulm.ki.panda3.symbolic.domain.Domain
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 
@@ -26,7 +27,7 @@ object HTN2STRIPS {
 
   def computeProgressionBoundForDepth(domain: Domain, plan: Plan, depth: Int): Int = {
     // initialise
-    val initialPBMap = domain.primitiveTasks map { p => p -> (if (p.name.startsWith("SHOP_method"))0 else 1) } toMap
+    val initialPBMap = domain.primitiveTasks map { p => p -> (if (p.name.startsWith(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX))0 else 1) } toMap
 
     val finalPBMap = Range(0, depth).foldRight(initialPBMap)(
       { case (d, pbMap) =>

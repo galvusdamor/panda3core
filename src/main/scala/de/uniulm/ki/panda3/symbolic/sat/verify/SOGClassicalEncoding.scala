@@ -16,6 +16,7 @@
 
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
+import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler
 import de.uniulm.ki.panda3.symbolic.domain.{Domain, Task}
 import de.uniulm.ki.panda3.symbolic.logic.Predicate
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -240,7 +241,8 @@ trait SOGClassicalForbiddenEncoding extends SOGClassicalEncoding {
           if (!m.subPlan.planStepSchemaArrayWithoutMethodPreconditions.isEmpty) {
             val methodAtom = method(node.layer, node.path, mid)
 
-            val prec = m.subPlan.orderingConstraints.fullGraph.sources.filter(ps => ps.schema.isPrimitive && ps.schema.effect.isEmpty && ps.schema.name.contains("SHOP_method")).
+            val prec = m.subPlan.orderingConstraints.fullGraph.sources.filter(ps => ps.schema.isPrimitive && ps.schema.effect.isEmpty &&
+              ps.schema.name.contains(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX)).
               flatMap(_.schema.posPreconditionAsPredicate)
 
             prec flatMap { p =>

@@ -17,6 +17,7 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.configuration.Timings._
+import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler
 import de.uniulm.ki.panda3.symbolic.{DefaultLongInfo, PrettyPrintable}
 import de.uniulm.ki.panda3.symbolic.domain.{ConstantActionCost, DecompositionMethod, Task}
 import de.uniulm.ki.util._
@@ -166,7 +167,7 @@ trait PathBasedEncoding[Payload, IntermediatePayload] extends VerifyEncoding {
         // prepare method representation for additionalClauses
         val methodChildrenPositions: Map[Int, Int] = decompositionMethod.subPlan.planStepsWithoutInitGoal collect {
           case ps if !omittingMethodPreconditionsForThisMethod || ps.schema.isAbstract || !ps.schema.effect.isEmpty ||
-            !decompositionMethod.subPlan.orderingConstraints.fullGraph.sources.contains(ps) || !ps.schema.name.contains("SHOP_method") =>
+            !decompositionMethod.subPlan.orderingConstraints.fullGraph.sources.contains(ps) || !ps.schema.name.contains(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX) =>
             val psBefore = decompositionMethod.subPlan.planStepsWithoutInitGoal.filter(_.schema == ps.schema)
             val psIndexOnSameType = psBefore.indexOf(ps)
             val psIndex = methodTasks.zipWithIndex.filter(_._1 == ps.schema)(psIndexOnSameType)._2

@@ -24,6 +24,7 @@ import de.uniulm.ki.panda3.configuration.Timings._
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic.{And, GroundLiteral}
 import de.uniulm.ki.panda3.configuration._
+import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.sat.additionalConstraints._
 import de.uniulm.ki.panda3.symbolic.plan.element.{GroundTask, PlanStep}
@@ -1226,14 +1227,14 @@ case class SATRunner(domain: Domain, initialPlan: Plan, intProblem: IntProblem,
           exitIfNot(nei.head.name == v.name)
         } else {
           val subTasks: Seq[Task] = nei map { n => n.id.split(",").last.toInt } collect { case i if domain.tasks.length > i => domain.tasks(i) } filter {t =>
-            t.isAbstract || ! t.name.contains("SHOP_method")}
+            t.isAbstract || ! t.name.contains(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX)}
           val tasksSchemaCount = subTasks groupBy { p => p }
           //println("Checking " + v)
           //println(tasksSchemaCount map {case (a,b) => a.name + " " + b.size} mkString "\n")
           val possibleMethods = domain.methodsForAbstractTasks(myAction) map { m =>
             // only require the non-method preconditions to be present
             m.subPlan.planStepsWithoutInitGoal filter { ps => ps.schema.isAbstract || //!ps.schema.effect.isEmpty || !m.subPlan.orderingConstraints.fullGraph.sources.contains(ps) ||
-              !ps.schema.name.contains("SHOP_method")}
+              !ps.schema.name.contains(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX)}
           } filter { planSteps =>
             //println("Plan steps " + planSteps.map(_.schema.name).mkString("\n\t"))
             val sameSize = planSteps.length == subTasks.length

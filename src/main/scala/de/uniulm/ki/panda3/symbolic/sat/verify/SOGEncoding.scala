@@ -17,6 +17,7 @@
 package de.uniulm.ki.panda3.symbolic.sat.verify
 
 import de.uniulm.ki.panda3.configuration.Timings
+import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler
 import de.uniulm.ki.panda3.symbolic.domain.{DecompositionMethod, Domain, Task}
 import de.uniulm.ki.panda3.symbolic.plan.Plan
 import de.uniulm.ki.panda3.symbolic.plan.element.PlanStep
@@ -72,7 +73,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
       val baseGraph = m.subPlan.orderingConstraints.fullGraph
       // TODO: hack!!
       val methodPrecs = if (omitMethodPreconditionActions && m.subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty)
-        baseGraph.sources filter { _.schema.effect.isEmpty } filter { _.schema.isPrimitive } filter { _.schema.name.contains("SHOP_method") }
+        baseGraph.sources filter { _.schema.effect.isEmpty } filter { _.schema.isPrimitive } filter { _.schema.name.contains(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX) }
       else Nil
 
       baseGraph.filter(ps => !methodPrecs.contains(ps))
@@ -110,7 +111,7 @@ trait SOGEncoding extends PathBasedEncoding[SOG, NonExpandedSOG] with LinearPrim
       (methodPlanSteps collect {
         case ps if !(omitMethodPreconditionActions && possibleMethods(methodIndex).subPlan.planStepSchemaArrayWithoutMethodPreconditions.nonEmpty) ||
           ps.schema.isAbstract || !ps.schema.effect.isEmpty ||
-          !possibleMethods(methodIndex).subPlan.orderingConstraints.fullGraph.sources.contains(ps) || !ps.schema.name.contains("SHOP_method") =>
+          !possibleMethods(methodIndex).subPlan.orderingConstraints.fullGraph.sources.contains(ps) || !ps.schema.name.contains(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX) =>
           // TODO: hack
           childrenIndicesToPossibleTasks(mapping(ps)) add ps.schema
           mapping(ps)

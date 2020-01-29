@@ -43,7 +43,7 @@ object ExpandChoicelessAbstractTasks extends DecompositionMethodTransformer[Unit
     val choicelessAbstractTasksWithMethod: Map[Task, DecompositionMethod] = originalDomain.choicelessAbstractTasks map { at => at -> originalDomain.methodsForAbstractTasks(at).head } toMap
     val uselessMethods = choicelessAbstractTasksWithMethod.values.toSet - topMethod
 
-    println("\n" + uselessMethods.map(_.name).mkString("\n"))
+    //println("\n" + uselessMethods.map(_.name).mkString("\n"))
 
     val remainingMethods = methods filterNot uselessMethods.contains
 
@@ -110,6 +110,7 @@ object RemoveChoicelessAbstractTasks extends DomainTransformer[Unit] {
 
       //System.in.read()
 
-      transform(removed, ())
+      removed
+      //transform(removed, ())
     }
 }

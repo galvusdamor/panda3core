@@ -18,11 +18,12 @@ package de.uniulm.ki.panda3.symbolic.domain
 
 import de.uniulm.ki.panda3.symbolic._
 import de.uniulm.ki.panda3.symbolic.PrettyPrintable
+import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler
 import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.GroundTask
-import de.uniulm.ki.util.{Internable, HashMemo}
+import de.uniulm.ki.util.{HashMemo, Internable}
 
 /**
   * Tasks are blue-prints for actions, actually contained in plans, i.e. they describe which variables a [[de.uniulm.ki.panda3.symbolic.plan.element.PlanStep]] of their type must have and
@@ -159,7 +160,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
   override def longInfo: String = mediumInfo + "\npreconditions:\n" + precondition.shortInfo + "\n" +
     "\neffects:\n" + effect.shortInfo + "\n"
 
-  lazy val isNoOp: Boolean = precondition.isEmpty && effect.isEmpty && cost.getFixedCost == 0 && name.startsWith("SHOP")
+  lazy val isNoOp: Boolean = precondition.isEmpty && effect.isEmpty && cost.getFixedCost == 0 && name.startsWith(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX)
 
   val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)]
   val effectsAsPredicateBool      : Seq[(Predicate, Boolean)]

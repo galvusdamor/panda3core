@@ -29,6 +29,7 @@ import de.uniulm.ki.panda3.symbolic.csp._
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic._
+import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
 import de.uniulm.ki.panda3.symbolic.plan.modification._
 import de.uniulm.ki.panda3.symbolic.plan.Plan
@@ -97,7 +98,7 @@ case class Wrapping(symbolicDomain: Domain, initialPlan: Plan) {
     val effects = reducedTask.effect.conjuncts map { computeEfficientLiteral(_, variableMap) }
 
     EfficientTask(isPrimitive = task.isPrimitive, parameterSorts.toArray, variableConstraints.toArray, preconditions.toArray, effects.toArray, allowedToInsert = !isInitOrGoal,
-                  initOrGoalTask = isInitOrGoal, isMethodPrecondition = task.name.startsWith("SHOP_method"))
+                  initOrGoalTask = isInitOrGoal, isMethodPrecondition = task.name.startsWith(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX))
   }
 
 

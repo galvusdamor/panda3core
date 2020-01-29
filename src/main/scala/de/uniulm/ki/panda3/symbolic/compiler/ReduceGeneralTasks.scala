@@ -123,7 +123,7 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
       gt.copy(name = s"${gt.name }__DISJUNCT-${i }", precondition = join(g, rest))
     }
     val newMethods = newTasks map { t =>
-      SimpleDecompositionMethod(replacement, simplePlan(t, replacement.parameters), s"M-${t.name }")
+      SimpleDecompositionMethod(replacement, simplePlan(t, replacement.parameters), s"_M-${t.name }")
     }
     Simplification(gt, replacement, newTasks, newMethods)
   }
@@ -138,8 +138,8 @@ object ReduceGeneralTasks extends DomainTransformer[Unit] {
                       name = s"${gt.name }__CONSEQUENT__",
                       precondition = join(f.left, gt.precondition),
                       effect = join(f.right, rest))
-    val m1 = SimpleDecompositionMethod(replacement, simplePlan(t1, replacement.parameters), s"M-${t1.name }")
-    val m2 = SimpleDecompositionMethod(replacement, simplePlan(t2, replacement.parameters), s"M-${t2.name }")
+    val m1 = SimpleDecompositionMethod(replacement, simplePlan(t1, replacement.parameters), s"_M-${t1.name }")
+    val m2 = SimpleDecompositionMethod(replacement, simplePlan(t2, replacement.parameters), s"_M-${t2.name }")
     Simplification(gt, replacement, Seq(t1, t2), Seq(m1, m2))
   }
 

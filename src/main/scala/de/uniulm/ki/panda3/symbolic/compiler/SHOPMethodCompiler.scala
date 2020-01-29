@@ -26,6 +26,8 @@ import de.uniulm.ki.panda3.symbolic.plan.element.{OrderingConstraint, PlanStep}
   */
 object SHOPMethodCompiler extends DomainTransformerWithOutInformation {
 
+  final val SHOP_METHOD_PRECONDITION_PREFIX = "__method_precondition_"
+
   /** transforms all SHOP2 style methods into ordinary methods */
   override def transform(domain: Domain, plan: Plan, info: Unit): (Domain, Plan) = {
     val compiledMethods: Seq[(SimpleDecompositionMethod, Seq[Task])] = domain.decompositionMethods.zipWithIndex map {
@@ -35,33 +37,13 @@ object SHOPMethodCompiler extends DomainTransformerWithOutInformation {
         else {
           // generate a new schema that represents the decomposition method
           val containedVariables = (precondition.containedVariables ++ effect.containedVariables).toSeq.distinct
-          val preconditionTaskSchema = GeneralTask("SHOP_method" + name + "_" + idx + "_precondition", isPrimitive = true, containedVariables,
+          val preconditionTaskSchema = GeneralTask(SHOP_METHOD_PRECONDITION_PREFIX + name + "_" + idx + "_precondition", isPrimitive = true, containedVariables,
                                                    Nil, subPlan.variableConstraints.constraints filter { _.getVariables.toSet.toSet.subsetOf(containedVariables.toSet) },
                                                    precondition, effect, ConstantActionCost(0))
           // instantiate
           val preconditionPlanStep = new PlanStep(subPlan.getFirstFreePlanStepID, preconditionTaskSchema, preconditionTaskSchema.parameters)
           // make this plan step the first actual task in the method
 
-
-          /* // generate a new schema that represents the decomposition method
-           val effectTaskSchema = GeneralTask("SHOP_method" + name + "_effect", isPrimitive = true, effect.containedVariables.toSeq, Nil, Nil,
-                                              new And[Formula](Nil), effect)
-           // instantiate
-           val effectPlanStep = new PlanStep(subPlan.getFirstFreePlanStepID + 1, effectTaskSchema, effectTaskSchema.parameters)
-           // make this plan step the first actual task in the method
-
-           val additionalPlanSteps: Seq[PlanStep] = (if (!precondition.isEmpty) preconditionPlanStep :: Nil else Nil) ++ (if (!effect.isEmpty) effectPlanStep :: Nil else Nil)
-
-           val newOrderingWithPrec =
-             if (!precondition.isEmpty) subPlan.orderingConstraints.addOrderings(OrderingConstraint.allAfter(preconditionPlanStep, subPlan.planStepsWithoutInitGoal ++
-               (if (!effect.isEmpty) effectPlanStep :: subPlan.goal :: Nil else subPlan.goal :: Nil): _*)).addOrdering(subPlan.init, preconditionPlanStep)
-             else subPlan.orderingConstraints
-
-           val newOrderingWithEffect =
-             if (!effect.isEmpty) newOrderingWithPrec.addOrderings(OrderingConstraint.allBefore(effectPlanStep, subPlan.planStepsWithoutInitGoal ++
-               (if (!precondition.isEmpty) preconditionPlanStep :: subPlan.init :: Nil else subPlan.init :: Nil): _*)).addOrdering(effectPlanStep, subPlan.goal)
-             else newOrderingWithPrec
- */
 
           val newOrderingWithPrec = if (!precondition.isEmpty)
             subPlan.orderingConstraints.addOrderings(OrderingConstraint.allAfter(preconditionPlanStep, subPlan.planStepsWithoutInitGoal :+ subPlan.goal: _*))

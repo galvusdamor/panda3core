@@ -75,7 +75,7 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
       val _topTask = plan.planStepsWithoutInitGoal.head.schema
       val _topMethod = domain.methodsForAbstractTasks(_topTask).head
 
-      println("\n\nTaking existing top task " + _topTask.name)
+      //println("\n\nTaking existing top task " + _topTask.name)
       (_topTask, _topMethod, false)
     } else {
       val initAndGoalNOOP = ReducedTask("__noop", isPrimitive = true, Nil, Nil, Nil, And(Nil), And(Nil), ConstantActionCost(0))
@@ -124,9 +124,9 @@ trait DecompositionMethodTransformer[Information] extends DomainTransformer[Info
     val numberOfTopMethods = extendedMethods count { _.abstractTask == topTask }
     if (numberOfTopMethods == 0) {
       // if the compiler does not want to add a top method, it's ok
-      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks), plan)
+      (domain.copy(decompositionMethods = extendedMethods :+ topMethod, tasks = domain.tasks ++ newTasks), plan)
     } else if (!addedTop) {
-      (domain.copy(decompositionMethods = extendedMethods, tasks = domain.tasks ++ newTasks, sasPlusRepresentation = newSasPlus), plan)
+      (domain.copy(decompositionMethods = extendedMethods :+ topMethod, tasks = domain.tasks ++ newTasks, sasPlusRepresentation = newSasPlus), plan)
     } else if (numberOfTopMethods == 1 && allowToRemoveTopMethod) {
       // regenerate the initial plan, as it may have changed
       val remainingTopMethod = (extendedMethods find { _.abstractTask == topTask }).get.subPlan

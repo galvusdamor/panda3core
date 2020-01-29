@@ -20,6 +20,7 @@ import de.uniulm.ki.panda3.symbolic.csp.{CSP, Equal, OfSort, PartialSubstitution
 import de.uniulm.ki.panda3.symbolic.domain._
 import de.uniulm.ki.panda3.symbolic.domain.updates._
 import de.uniulm.ki.panda3.symbolic._
+import de.uniulm.ki.panda3.symbolic.compiler.SHOPMethodCompiler
 import de.uniulm.ki.panda3.symbolic.logic._
 import de.uniulm.ki.panda3.symbolic.plan.element.{CausalLink, GroundTask, OrderingConstraint, PlanStep}
 import de.uniulm.ki.panda3.symbolic.plan.flaw._
@@ -97,7 +98,8 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   lazy val planStepsWithoutInitGoal                     : Seq[PlanStep] = planSteps filter { ps => ps != init && ps != goal }
   lazy val planStepSchemaArray                          : Array[Task]   = planStepsWithoutInitGoal map { _.schema } toArray
   lazy val planStepSchemaArrayWithoutMethodPreconditions: Array[Task]   = planStepsWithoutInitGoal collect {
-    case ps if ps.schema.isAbstract || !ps.schema.effect.isEmpty || !orderingConstraints.fullGraph.sources.contains(ps) || !ps.schema.name.contains("SHOP_method")=> ps.schema
+    case ps if ps.schema.isAbstract || !ps.schema.effect.isEmpty || !orderingConstraints.fullGraph.sources.contains(ps) ||
+      !ps.schema.name.contains(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX)=> ps.schema
   } toArray
 
   lazy val planStepsAndRemovedPlanStepsWithoutInitGoal: Seq[PlanStep] = planStepsAndRemovedPlanSteps filter { ps => ps != init && ps != goal }
@@ -778,7 +780,7 @@ case class Plan(planStepsAndRemovedPlanSteps: Seq[PlanStep], causalLinksAndRemov
   override lazy val dotString: String = dotString(PlanDotOptions())
 
   // don't include SHOP method preconditions, or their compiled abstract tasks (e.g. disjunctions in method preconditions) here
-  lazy val subtasksTopologicalOrdering = orderingConstraints.fullGraph.topologicalOrdering.get filterNot { _.schema.name.startsWith("SHOP_method") }
+  lazy val subtasksTopologicalOrdering = orderingConstraints.fullGraph.topologicalOrdering.get filterNot { _.schema.name.startsWith(SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX) }
   lazy val subtasksWithOrderedIndices  = subtasksTopologicalOrdering.zipWithIndex.toMap
 }
 

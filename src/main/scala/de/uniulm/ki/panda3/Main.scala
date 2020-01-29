@@ -412,7 +412,7 @@ object Main {
 
       // don't write method preconditions
       val planTopologicalOrdering = plan.orderingConstraints.graph.topologicalOrdering.get
-      val solutionSequence = planTopologicalOrdering filter { _.schema.isPrimitive } filterNot { _.schema.name.startsWith("SHOP_method") }
+      val solutionSequence = planTopologicalOrdering filter { _.schema.isPrimitive } //filterNot { _.schema.name.startsWith("SHOP_method") }
       println(solutionSequence.zipWithIndex map { case (ps, i) => i + " " + psToString(ps) } mkString "\n")
 
       // if we have also found a hierarchy, output that hierarchy
@@ -454,7 +454,7 @@ object Main {
 
         def getDecompositionOf(abstractPS: PlanStep): (String, Seq[String], Seq[Int], Seq[PlanStep]) = {
           val children: Seq[(PlanStep, (PlanStep, PlanStep))] =
-            plan.planStepParentInDecompositionTree.filter(_._2._1 == abstractPS).toSeq filterNot { _._1.schema.name.startsWith("SHOP_method") }
+            plan.planStepParentInDecompositionTree.filter(_._2._1 == abstractPS).toSeq //filterNot { _._1.schema.name.startsWith("SHOP_method") }
           val fullMethodName = plan.planStepDecomposedByMethod(abstractPS).name
 
           val appliedMethod = if (fullMode) fullMethodName.takeWhile(_ != '[') else fullMethodName
@@ -545,9 +545,8 @@ object Main {
     }
   }
 
-  def psNameToSimpleName(name: String, fullMode: Boolean): String = if (fullMode)
+  def psNameToSimpleName(name: String, fullMode: Boolean): String =
     name.split(";").head.replace('[', ' ').replace(',', ' ').replace("__ANTECEDENT", "").replace("__CONSEQUENT__", "").replaceAll("__DISJUNCT-[0-9]*", "")
-  else name.split(";").head.replace('[', ' ').replace(',', ' ')
 }
 
 case class Call(atIndex: Int, atName: String, myID: Int)

@@ -352,7 +352,7 @@ object VerifyEncoding {
 
     def printMap(map: Map[Task, Map[Int, Int]]): Unit = {
       println("\nMAP")
-      val blacklist = "SHOP_method" :: "direct_" :: "plug" :: Nil
+      val blacklist = SHOPMethodCompiler.SHOP_METHOD_PRECONDITION_PREFIX :: "direct_" :: "plug" :: Nil
       println(map.toSeq.sortBy(_._1.name) collect { case (t, m) if !blacklist.exists(t.name.startsWith) =>
         t.name + " map:\n\t" + m.toSeq.sorted.map(x => x._1 + "->" + x._2).mkString(" ")
       } mkString "\n")
