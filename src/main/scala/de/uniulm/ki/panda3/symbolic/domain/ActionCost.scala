@@ -17,12 +17,13 @@
 
 package de.uniulm.ki.panda3.symbolic.domain
 
+import de.uniulm.ki.panda3.symbolic.domain.updates.DomainUpdate
 import de.uniulm.ki.panda3.symbolic.logic._
 
 /**
   * @author Gregor Behnke (gregor.behnke@uni-ulm.de)
   */
-trait ActionCost {
+trait ActionCost extends DomainUpdatable {
   def evaluateOnGrounding(variableValues: (Variable => Constant), costValues: Map[GroundLiteral, Int]): ConstantActionCost
 
   def hasCostOne: Boolean
@@ -30,6 +31,8 @@ trait ActionCost {
   def hasCostZero: Boolean
 
   def getFixedCost: Int
+
+  override def update(domainUpdate: DomainUpdate) : ActionCost
 }
 
 case class ConstantActionCost(cost: Int) extends ActionCost {
@@ -38,6 +41,8 @@ case class ConstantActionCost(cost: Int) extends ActionCost {
   val hasCostOne  : Boolean = cost == 1
   val hasCostZero : Boolean = cost == 0
   val getFixedCost: Int     = cost
+
+  override def update(domainUpdate: DomainUpdate) : ConstantActionCost = this
 }
 
 case class FunctionalActionCost(predicate: Predicate, arguments: Seq[Value]) extends ActionCost {
@@ -58,4 +63,6 @@ case class FunctionalActionCost(predicate: Predicate, arguments: Seq[Value]) ext
     assert(false, "non-fixed cost")
     ???
   }
+
+  override def update(domainUpdate: DomainUpdate) : FunctionalActionCost = FunctionalActionCost(predicate update domainUpdate, arguments.map(_.update(domainUpdate)))
 }

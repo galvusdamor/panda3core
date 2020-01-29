@@ -64,7 +64,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
         case (precAnd: And[Formula], effAnd: And[Formula]) =>
           if ((precAnd.conjuncts forall { case l: Literal => true case _ => false }) && (effAnd.conjuncts forall { case l: Literal => true case _ => false })) {
             ReducedTask.intern((name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, precAnd.asInstanceOf[And[Literal]],
-                                 effAnd.asInstanceOf[And[Literal]], cost))
+                                 effAnd.asInstanceOf[And[Literal]], cost update domainUpdate))
           } else {
             this
           }
@@ -91,7 +91,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
             assert(newPrecondition.length == 2 * preconditionAnd.conjuncts.length)
           }
 
-          ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPrecondition), And(newEffects),cost)
+          ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPrecondition), And(newEffects),cost update domainUpdate)
         case _                                                      => noSupport(FORUMLASNOTSUPPORTED)
       }
     case RemoveEffects(unnecessaryPredicates, isInverted) =>
@@ -100,8 +100,10 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
           val newEffects = effectAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
           val newPreconditions = preconditionAnd.conjuncts filterNot { case Literal(predicate, isPositive, _) => unnecessaryPredicates contains ((predicate, isPositive)) }
 
-          if (!isInverted) ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, preconditionAnd, And(newEffects), cost)
-          else ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), effectAnd, cost)
+          if (!isInverted)
+            ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, preconditionAnd, And(newEffects), cost update domainUpdate)
+          else
+            ReducedTask.intern(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), effectAnd, cost update domainUpdate)
 
         case _ => noSupport(FORUMLASNOTSUPPORTED)
       }
@@ -111,7 +113,7 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
           val newEffects = effectAnd.conjuncts filterNot { case Literal(predicate, _, _) => unnecessaryPredicates contains predicate }
           val newPreconditions = preconditionAnd.conjuncts filterNot { case Literal(predicate, _, _) => unnecessaryPredicates contains predicate }
 
-          ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), And(newEffects), cost)
+          ReducedTask(name, isPrimitive, parameters, artificialParametersRepresentingConstants, parameterConstraints, And(newPreconditions), And(newEffects), cost update domainUpdate)
 
         case _ => noSupport(FORUMLASNOTSUPPORTED)
       }
@@ -125,10 +127,10 @@ trait Task extends DomainUpdatable with PrettyPrintable with Ordered[Task] {
           (!domainUpdate.isInstanceOf[SetExpandVariableConstraintsInPlans] || this.isInstanceOf[ReducedTask]) =>
           ReducedTask.intern(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
                              parameterConstraints map { _.update(domainUpdate) }, pre.asInstanceOf[And[Literal]],
-                             eff.asInstanceOf[And[Literal]], cost)
+                             eff.asInstanceOf[And[Literal]], cost update domainUpdate)
         case _                                                                                                =>
           GeneralTask(name, isPrimitive, parameters map { _.update(domainUpdate) }, artificialParametersRepresentingConstants map { _.update(domainUpdate) },
-                      parameterConstraints map { _.update(domainUpdate) }, newPrecondition, newEffect, cost)
+                      parameterConstraints map { _.update(domainUpdate) }, newPrecondition, newEffect, cost update domainUpdate)
       }
   }
 
@@ -223,6 +225,16 @@ case class ReducedTask(name: String, isPrimitive: Boolean, parameters: Seq[Varia
     effectsAsPredicateBool filterNot { _._2 } foreach { case (p, false) =>
       assert(!effectsAsPredicateBoolSet.contains((p, true)))
     }
+  }
+
+  cost match {
+    case FunctionalActionCost(_,args) =>
+      args foreach {
+        case c : Constant =>
+        case v : Variable =>
+          assert(parameters.contains(v))
+      }
+    case _ =>
   }
 
   lazy val preconditionsAsPredicateBool: Seq[(Predicate, Boolean)] = (precondition.conjuncts map { case Literal(p, isP, _) => (p, isP) }).distinct
